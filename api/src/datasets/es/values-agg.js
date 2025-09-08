@@ -3,8 +3,9 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 import { assertMetricAccepted } from './metric-agg.js'
+import es from '#es'
 
-export default async (client, dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
+export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw httpError(400, 'Le paramètre "field" est obligatoire')
@@ -164,7 +165,7 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
   }
   // Bound complexity with a timeout
   if (explain) explain.esQuery = esQuery
-  const esResponse = await client.search({
+  const esResponse = await es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout,

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('query modes', function () {
   it('Search in dataset using all supported query modes', async function () {
@@ -19,7 +19,7 @@ describe('query modes', function () {
       p2: 'phrase 2 mot1 mot3 mot2 mot4'
     }
     let res = await ax.post('/api/v1/datasets/qmodes/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
-    dataset = await workers.hook('finalizer/qmodes')
+    dataset = await workers.hook('finalize/qmodes')
     assert.ok(dataset.schema.find(f => f.key === '_id'))
     assert.ok(dataset.schema.find(f => f.key === '_updatedAt'))
     res = await ax.get('/api/v1/datasets/qmodes/lines')

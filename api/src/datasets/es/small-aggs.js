@@ -1,8 +1,9 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
+import es from '#es'
 
-export const max = async (client, dataset, fieldKey, query) => {
+export const max = async (dataset, fieldKey, query) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
   const esQuery = prepareQuery(dataset, query)
@@ -12,7 +13,7 @@ export const max = async (client, dataset, fieldKey, query) => {
       max: { field: fieldKey }
     }
   }
-  const esResponse = await client.search({
+  const esResponse = await es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
@@ -21,7 +22,7 @@ export const max = async (client, dataset, fieldKey, query) => {
   return esResponse.aggregations.max.value
 }
 
-export const min = async (client, dataset, fieldKey, query) => {
+export const min = async (dataset, fieldKey, query) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
   const esQuery = prepareQuery(dataset, query)
@@ -31,7 +32,7 @@ export const min = async (client, dataset, fieldKey, query) => {
       min: { field: fieldKey }
     }
   }
-  const esResponse = await client.search({
+  const esResponse = await es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,

@@ -101,7 +101,7 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
     patch.dataUpdatedBy = patch.updatedBy
   }
 
-  if (patch.extensions) extensions.prepareExtensions(locale, patch.extensions, dataset.extensions)
+  if (patch.extensions) extensions.prepareExtensions(locale, patch.extensions, dataset.extensions ?? [])
   if (patch.extensions || dataset.extensions) {
     const extendedSchema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
     await extensions.checkExtensions(extendedSchema, patch.extensions || dataset.extensions)

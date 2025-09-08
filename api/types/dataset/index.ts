@@ -1,6 +1,7 @@
 import type { Request as ExpressRequest } from 'express'
 import type { Dataset } from './.type/index.js'
 import { httpError, type Account } from '@data-fair/lib-express'
+import type { InitFrom } from '#doc/datasets/post-req/index.js'
 export * from './.type/index.js'
 
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'
@@ -24,6 +25,17 @@ export const isFileDataset = (dataset: Dataset): dataset is FileDataset => {
 }
 
 export type DatasetExt = Dataset & { visibility: 'public' | 'private' | 'protected', public: 'boolean' }
+
+export type DatasetInternal = Dataset & {
+  loaded?: { attachments?: boolean, dataset?: Partial<FileDataset['originalFile']> } | null,
+  descendants?: string[]
+  descendantsFull?: DatasetInternal[]
+  initFrom?: (InitFrom & { role: string, department?: string }) | null
+  _partialRestStatus?: 'updated' | 'extended' | 'indexed'
+  validateDraft?: boolean
+  _newRestAttachments?: string[]
+  _readApiKey?: { current: string, previous: string }
+}
 
 export type DatasetLine = {
   _id: string,

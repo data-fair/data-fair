@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
 import config from 'config'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 // run this test manually with "DEBUG=workers WORKER_CONCURRENCY=4 DEFAULT_LIMITS_DATASET_STORAGE=10000000 npm test"
 
@@ -27,7 +27,7 @@ describe('concurrency', function () {
       form.append('file', csv, 'dataset.csv')
       const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.equal(res.status, 201)
-      return workers.hook(`finalizer/${res.data.id}`)
+      return workers.hook(`finalize/${res.data.id}`)
     }
 
     const promises = []

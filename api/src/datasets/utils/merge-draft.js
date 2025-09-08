@@ -1,4 +1,4 @@
-// keep this in a standalone file as it is required by workers/index.js and we want to keep it as small as possible
+// keep this in a standalone file as it is required by workers/index.ts and we want to keep it as small as possible
 export default (dataset) => {
   if (!dataset.draft) return dataset
   Object.assign(dataset, dataset.draft)

@@ -1,8 +1,9 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
+import es from '#es'
 
-export default async (client, dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
+export default async (dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
 
   const esQuery = prepareQuery(dataset, query)
@@ -12,7 +13,7 @@ export default async (client, dataset, query = {}, allowPartialResults = false, 
   const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
   const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
   esQuery.aggs = { bbox: { geo_bounds: { field: geoCorners ? '_geocorners' : '_geopoint' } } }
-  const esResponse = await client.search({
+  const esResponse = await es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout,

@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('Calculated fields', function () {
   it('Should add special calculated fields', async function () {
@@ -36,7 +36,7 @@ describe('Calculated fields', function () {
     const keywordsProp = dataset.schema.find(p => p.key === 'keywords')
     keywordsProp.separator = ' ; '
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-    await workers.hook('finalizer')
+    await workers.hook('finalize/' + dataset.id)
     // result is rejoined by default
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata' } })
     assert.equal(res.data.total, 1)

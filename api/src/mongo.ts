@@ -1,6 +1,6 @@
 import { Mongo } from '@data-fair/lib-node/mongo.js'
 import config from '#config'
-import type { Application, ApplicationKey, Dataset, Limits, RemoteService, BaseApp } from '#types'
+import type { Application, ApplicationKey, DatasetInternal, Limits, RemoteService, BaseApp } from '#types'
 import type { DepartmentSettings } from '#types/department-settings/index.js'
 import type { Settings } from '#types/settings/index.js'
 
@@ -16,7 +16,7 @@ export class DfMongo {
   }
 
   get datasets () {
-    return this.mongo.db.collection<Dataset & { _id: string }>('datasets')
+    return this.mongo.db.collection<DatasetInternal & { _id: string }>('datasets')
   }
 
   get applications () {
@@ -47,11 +47,13 @@ export class DfMongo {
     this.mongo = new Mongo()
   }
 
-  connect = async () => {
-    // manage retro-compatibility with STORAGE_MONGO_URL and STORAGE_MONGO_CLIENT_OPTIONS
+  connected: boolean = false
+
+  connect = async (singleSocket: boolean = false) => {
+    if (this.connected) return
+    this.connected = true
     const options = { ...config.mongo.options }
-    // workers generate a lot of opened sockets if we do not change this setting
-    if (config.mode === 'task') options.maxPoolSize = 1
+    if (singleSocket) options.maxPoolSize = 1
     await this.mongo.connect(config.mongo.url, options)
   }
 

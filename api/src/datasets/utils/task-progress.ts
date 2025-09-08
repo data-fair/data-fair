@@ -6,7 +6,7 @@ const updateProgress = async (datasetId: string, task: string, progress: number)
   await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress: { task, progress } } })
 }
 
-export default (datasetId: string, task: string, nbSteps: number, progressCallback?: (progress: number) => void) => {
+export default (datasetId: string, task: string, nbSteps?: number, progressCallback?: (progress: number) => void) => {
   let step = 0
   let lastProgress = -1
   let lastTime = new Date().getTime() - 1000
@@ -16,6 +16,7 @@ export default (datasetId: string, task: string, nbSteps: number, progressCallba
       await updateProgress(datasetId, task, -1)
     },
     async inc (inc = 1) {
+      if (nbSteps === undefined) throw new Error('incrementing progress requires setting nbSteps')
       step += inc
       const progress = Math.min(Math.floor((step / nbSteps) * 100), 100)
       const time = new Date().getTime()

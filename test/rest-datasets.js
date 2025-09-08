@@ -4,7 +4,7 @@ import * as testUtils from './resources/test-utils.js'
 import path from 'node:path'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 import moment from 'moment'
 import zlib from 'zlib'
 import { Writable } from 'stream'
@@ -51,23 +51,23 @@ describe('REST datasets', function () {
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
     res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
-    await workers.hook('finalizer/rest1')
+    await workers.hook('finalize/rest1')
     assert.equal(res.status, 201)
     assert.ok(res.data._id)
     assert.equal(res.data.attr1, 'test1')
     res = await ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
-    await workers.hook('finalizer/rest1')
+    await workers.hook('finalize/rest1')
     assert.equal(res.data._id, 'id1')
     res = await ax.get('/api/v1/datasets/rest1/lines/id1')
     assert.equal(res.data._id, 'id1')
     assert.equal(res.data.attr1, 'test1')
     await ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test2', attr2: 'test2' })
-    await workers.hook('finalizer/rest1')
+    await workers.hook('finalize/rest1')
     res = await ax.get('/api/v1/datasets/rest1/lines/id1')
     assert.equal(res.data._id, 'id1')
     assert.equal(res.data.attr1, 'test2')
     await ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test3' })
-    await workers.hook('finalizer/rest1')
+    await workers.hook('finalize/rest1')
     res = await ax.get('/api/v1/datasets/rest1/lines/id1')
     assert.equal(res.data._id, 'id1')
     assert.equal(res.data.attr1, 'test3')
@@ -77,7 +77,7 @@ describe('REST datasets', function () {
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { _i: 10 }), err => err.status === 400)
 
     await ax.delete('/api/v1/datasets/rest1/lines/id1')
-    await workers.hook('finalizer/rest1')
+    await workers.hook('finalize/rest1')
     await assert.rejects(ax.get('/api/v1/datasets/rest1/lines/id1'), err => err.status === 404)
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4' }), err => err.status === 404)
     await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'update' }), err => err.status === 404)
@@ -114,7 +114,7 @@ describe('REST datasets', function () {
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
       { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' }
     ])
-    await workers.hook('finalizer/rest2')
+    await workers.hook('finalize/rest2')
     assert.equal(res.data.nbOk, 7)
     assert.equal(res.data.nbCreated, 4)
     assert.equal(res.data.nbDeleted, 1)
@@ -148,7 +148,7 @@ describe('REST datasets', function () {
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
-    let dataset = await workers.hook('finalizer/rest3')
+    let dataset = await workers.hook('finalize/rest3')
     assert.ok(dataset.schema.find(f => f.key === '_id'))
     assert.ok(dataset.schema.find(f => f.key === '_updatedAt'))
     res = await ax.get('/api/v1/datasets/rest3/lines')
@@ -175,7 +175,7 @@ describe('REST datasets', function () {
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 2)
 
-    dataset = await workers.hook('finalizer/rest3')
+    dataset = await workers.hook('finalize/rest3')
     console.log(dataset.updatedAt, dataset.createdAt)
     assert.equal(dataset.updatedAt, dataset.createdAt)
     assert.ok(dataset.dataUpdatedAt > dataset.updatedAt)
@@ -202,16 +202,20 @@ describe('REST datasets', function () {
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
-    let dataset = await workers.hook('finalizer/trigger-test-error')
+    let dataset = await workers.hook('finalize/trigger-test-error')
     await global.ax.superadmin.post('/api/v1/datasets/trigger-test-error/_reindex')
-    await assert.rejects(workers.hook('finalizer/trigger-test-error'))
+    // 1 failure with retry
+    await assert.rejects(workers.hook('finalize/trigger-test-error'))
+    // then definitive failure
+    await assert.rejects(workers.hook('finalize/trigger-test-error'))
     dataset = await ax.get('/api/v1/datasets/trigger-test-error').then(r => r.data)
     assert.equal(dataset.status, 'error')
     let journal = await ax.get('/api/v1/datasets/trigger-test-error/journal').then(r => r.data)
     assert.equal(journal[0].type, 'error')
+    assert.equal(journal[1].type, 'error-retry')
     await ax.patch('/api/v1/datasets/trigger-test-error', { slug: 'test-no-trigger' })
     await ax.get('/api/v1/datasets/trigger-test-error').then(r => r.data)
-    dataset = await workers.hook('finalizer/trigger-test-error')
+    dataset = await workers.hook('finalize/trigger-test-error')
     assert.equal(dataset.status, 'finalized')
     journal = await ax.get('/api/v1/datasets/trigger-test-error/journal').then(r => r.data)
     assert.equal(journal[0].type, 'finalize-end')
@@ -336,7 +340,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [{ _action: 'patch', _id: line._id, attr1: 'patched1' }])
     assert.equal(res.data.nbOk, 1)
 
-    await workers.hook('finalizer/rest4')
+    await workers.hook('finalize/rest4')
   })
 
   it('Use nonBlockingValidation option', async function () {
@@ -362,7 +366,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.warnings[0].line, 1)
     assert.equal(res.data.warnings[0].warning, '/attr1 doit être de type string')
 
-    await workers.hook('finalizer/rest4')
+    await workers.hook('finalize/rest4')
   })
 
   it('Send attachment with multipart request', async function () {
@@ -388,7 +392,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(line._id)
     assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
     assert.ok(line.attachmentPath.endsWith('/test.pdf'))
-    await workers.hook('finalizer/rest5')
+    await workers.hook('finalize/rest5')
 
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 1)
@@ -401,7 +405,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
 
     await ax.delete('/api/v1/datasets/rest5/lines/' + line._id)
-    await workers.hook('finalizer/rest5')
+    await workers.hook('finalize/rest5')
 
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 0)
@@ -427,7 +431,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     form.append('_body', '{"attr1":10}')
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    await workers.hook('finalizer/rest5')
+    await workers.hook('finalize/rest5')
 
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 1)
@@ -456,7 +460,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 2)
-    await workers.hook('finalizer/rest6')
+    await workers.hook('finalize/rest6')
     const ls = await lsAttachments(dataset)
     assert.equal(ls.length, 2)
 
@@ -471,7 +475,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     form1.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form1, { headers: testUtils.formHeaders(form1) })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer/rest6')
+    await workers.hook('finalize/rest6')
     const ls1 = await lsAttachments(dataset)
     assert.equal(ls1.length, 2)
     res = await ax.get('/api/v1/datasets/rest6/lines')
@@ -488,7 +492,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form2, { headers: testUtils.formHeaders(form2) })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 1)
-    await workers.hook('finalizer/rest6')
+    await workers.hook('finalize/rest6')
     const ls2 = await lsAttachments(dataset)
     assert.equal(ls2.length, 3)
 
@@ -506,7 +510,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form3, { headers: testUtils.formHeaders(form3), params: { drop: true } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 1)
-    await workers.hook('finalizer/rest6')
+    await workers.hook('finalize/rest6')
     const ls3 = await lsAttachments(dataset)
     assert.equal(ls3.length, 1)
 
@@ -525,7 +529,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form4, { headers: testUtils.formHeaders(form4) })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 2)
-    await workers.hook('finalizer/rest6')
+    await workers.hook('finalize/rest6')
     const ls4 = await lsAttachments(dataset)
     assert.equal(ls4.length, 2)
 
@@ -563,7 +567,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       params: { lock: 'true' }
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook('finalizer/restsync')
+    dataset = await workers.hook('finalize/restsync')
     const ls = await lsAttachments(dataset)
     assert.equal(ls.length, 2)
 
@@ -574,7 +578,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/restsync/_sync_attachments_lines', null, { params: { lock: 'true' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbCreated, 2)
-    dataset = await workers.hook('finalizer/restsync')
+    dataset = await workers.hook('finalize/restsync')
     res = await ax.get('/api/v1/datasets/restsync/lines')
     assert.equal(res.data.total, 2)
 
@@ -584,7 +588,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbCreated, 0)
     assert.equal(res.data.nbNotModified, 2)
-    dataset = await workers.hook('finalizer/restsync')
+    dataset = await workers.hook('finalize/restsync')
 
     // remove a file a resync, we sould have 1 line
     await fs.remove(path.join(attachmentsDir(dataset), 'test.odt'))
@@ -592,7 +596,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbCreated, 0)
     assert.equal(res.data.nbDeleted, 1)
-    dataset = await workers.hook('finalizer/restsync')
+    dataset = await workers.hook('finalize/restsync')
     res = await ax.get('/api/v1/datasets/restsync/lines')
     assert.equal(res.data.total, 1)
   })
@@ -630,7 +634,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbErrors, 0)
     assert.equal(res.data.nbOk, 20)
 
-    await workers.hook('finalizer/restndjson')
+    await workers.hook('finalize/restndjson')
     res = await ax.get('/api/v1/datasets/restndjson/lines')
     assert.equal(res.data.total, 20)
   })
@@ -672,7 +676,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
-    await workers.hook('finalizer/rest7')
+    await workers.hook('finalize/rest7')
 
     let res = await ax.get('/api/v1/stats')
     assert.equal(res.status, 200)
@@ -694,9 +698,9 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     })
     res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
-    await workers.hook('finalizer/resthist')
+    await workers.hook('finalize/resthist')
     res = await ax.patch('/api/v1/datasets/resthist/lines/id1', { attr1: 'test2' })
-    await workers.hook('finalizer/resthist')
+    await workers.hook('finalize/resthist')
     res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions')
     assert.equal(res.data.results[0]._id, 'id1')
     assert.equal(res.data.results[0].attr1, 'test2')
@@ -734,7 +738,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
 
     // delete a line, its history should still be available
     res = await ax.delete('/api/v1/datasets/resthist/lines/id1')
-    await workers.hook('finalizer/resthist')
+    await workers.hook('finalize/resthist')
     res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions')
     assert.equal(res.data.results.length, 3)
     assert.equal(res.data.results[0]._action, 'delete')
@@ -751,11 +755,11 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     })
     const line = (await ax.post('/api/v1/datasets/resthistprimary/lines', { attr1: 'test1', attr2: 'test2' })).data
     assert.ok(line._id)
-    await workers.hook('finalizer/resthistprimary')
+    await workers.hook('finalize/resthistprimary')
 
     // delete a line, its history should still be available and contain the primary key info
     res = await ax.delete('/api/v1/datasets/resthistprimary/lines/' + line._id)
-    await workers.hook('finalizer/resthistprimary')
+    await workers.hook('finalize/resthistprimary')
     res = await ax.get('/api/v1/datasets/resthistprimary/revisions')
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.results[0]._action, 'delete')
@@ -780,18 +784,18 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     const older = moment().subtract(2, 'day').toISOString()
     await axAdmin.post('/api/v1/datasets/resthistfill/lines',
       { _id: 'id1', attr1: 'test-older', _updatedAt: older })
-    await workers.hook('finalizer/resthistfill')
+    await workers.hook('finalize/resthistfill')
     const old = moment().subtract(1, 'day').toISOString()
     await axAdmin.post('/api/v1/datasets/resthistfill/lines',
       { _id: 'id1', attr1: 'test-old', _updatedAt: old })
-    await workers.hook('finalizer/resthistfill')
+    await workers.hook('finalize/resthistfill')
     const lines = (await ax.get('/api/v1/datasets/resthistfill/lines')).data.results
     assert.equal(lines.length, 1)
     assert.equal(lines[0]._updatedAt, old)
 
     await axAdmin.post('/api/v1/datasets/resthistfill/lines',
       { _id: 'id1', attr1: 'test-now' })
-    await workers.hook('finalizer/resthistfill')
+    await workers.hook('finalize/resthistfill')
     const newLines = (await ax.get('/api/v1/datasets/resthistfill/lines')).data.results
     assert.equal(newLines.length, 1)
     assert.ok(newLines[0]._updatedAt > old)
@@ -816,9 +820,9 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     const dataset = res.data
     res = await ax.post('/api/v1/datasets/resthistttl/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
-    await workers.hook('finalizer/resthistttl')
+    await workers.hook('finalize/resthistttl')
     res = await ax.patch('/api/v1/datasets/resthistttl/lines/id1', { attr1: 'test2' })
-    await workers.hook('finalizer/resthistttl')
+    await workers.hook('finalize/resthistttl')
     res = await ax.get('/api/v1/datasets/resthistttl/lines/id1/revisions')
     assert.equal(res.data.results[0]._id, 'id1')
     assert.equal(res.data.results[0].attr1, 'test2')
@@ -835,7 +839,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     // disable TTL
     dataset.rest.historyTTL = { active: false }
     res = await ax.patch('/api/v1/datasets/resthistttl', { rest: dataset.rest })
-    await workers.hook('finalizer/resthistttl')
+    await workers.hook('finalize/resthistttl')
     indexes = await revisionsCollection.listIndexes().toArray()
     assert.equal(indexes.length, 2)
     assert.ok(!indexes.find(i => i.name === 'history-ttl'))
@@ -849,19 +853,19 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     await ax.post('/api/v1/datasets/resthisttoggle/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
-    await workers.hook('finalizer/resthisttoggle')
+    await workers.hook('finalize/resthisttoggle')
     await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err) => err.status === 400)
     res = await ax.get('/api/v1/datasets/resthisttoggle')
     assert.equal(res.data.storage.revisions, undefined)
 
     res = await ax.patch('/api/v1/datasets/resthisttoggle', { rest: { history: true } })
-    await workers.hook('finalizer/resthisttoggle')
+    await workers.hook('finalize/resthisttoggle')
     res = await ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } })
     res = await ax.get('/api/v1/datasets/resthisttoggle')
     assert.equal(res.data.storage.revisions.count, 1)
 
     res = await ax.patch('/api/v1/datasets/resthisttoggle', { rest: { history: false } })
-    await workers.hook('finalizer/resthisttoggle')
+    await workers.hook('finalize/resthisttoggle')
     await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err) => err.status === 400)
     res = await ax.get('/api/v1/datasets/resthisttoggle')
     assert.equal(res.data.storage.revisions, undefined)
@@ -889,11 +893,11 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     form.append('attr2', 'test1')
     res = await ax.post('/api/v1/datasets/resthistattach/lines', form, { headers: testUtils.formHeaders(form) })
     const line = res.data
-    await workers.hook('finalizer/resthistattach')
+    await workers.hook('finalize/resthistattach')
 
     // patch a property but do not touch the attachment
     res = await ax.patch(`/api/v1/datasets/resthistattach/lines/${line._id}`, { attr1: 'test2' })
-    await workers.hook('finalizer/resthistattach')
+    await workers.hook('finalize/resthistattach')
 
     // patch the attachment
     const form2 = new FormData()
@@ -901,7 +905,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     form2.append('attachment', attachmentContent2, 'dir1/test.pdf')
     form2.append('attr2', 'test2')
     res = await ax.patch(`/api/v1/datasets/resthistattach/lines/${line._id}`, form2, { headers: testUtils.formHeaders(form2) })
-    await workers.hook('finalizer/resthistattach')
+    await workers.hook('finalize/resthistattach')
 
     res = await ax.get(`/api/v1/datasets/resthistattach/lines/${line._id}/revisions`)
     assert.equal(res.data.results.length, 3)
@@ -918,7 +922,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
 
     // delete the line, the attachments should still be there
     await ax.delete(`/api/v1/datasets/resthistattach/lines/${line._id}`)
-    await workers.hook('finalizer/resthistattach')
+    await workers.hook('finalize/resthistattach')
 
     res = await ax.get(`/api/v1/datasets/resthistattach/lines/${line._id}/revisions`)
     assert.equal(res.data.results.length, 4)
@@ -947,8 +951,8 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(2, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'hours').toISOString() })
-    await workers.hook('ttlManager/restttl')
-    await workers.hook('finalizer/restttl')
+    await workers.hook('manageTTL/restttl')
+    await workers.hook('finalize/restttl')
     const res = await ax.get('/api/v1/datasets/restttl/lines')
     assert.equal(res.data.total, 1)
   })
@@ -967,7 +971,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
-    let dataset = await workers.hook('finalizer/restidem')
+    let dataset = await workers.hook('finalize/restidem')
     res = await ax.get('/api/v1/datasets/restidem/lines')
     assert.equal(res.data.total, 4)
 
@@ -975,7 +979,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' }
     ])
-    await workers.hook('finalizer/restidem')
+    await workers.hook('finalize/restidem')
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
@@ -983,14 +987,14 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { _action: 'delete', _id: 'line2' }
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
-    await workers.hook('finalizer/restidem')
+    await workers.hook('finalize/restidem')
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
       { _action: 'patch', _id: 'line4', attr1: 'test1' }
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
-    dataset = await workers.hook('finalizer/restidem')
+    dataset = await workers.hook('finalize/restidem')
     assert.equal(dataset.count, 3)
   })
 
@@ -1007,7 +1011,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' }
     ])
-    await workers.hook('finalizer/resthistidem')
+    await workers.hook('finalize/resthistidem')
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
     assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line2/revisions')
@@ -1020,7 +1024,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     ])
     const collection = restDatasetsUtils.collection(dataset)
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
-    await workers.hook('finalizer/resthistidem')
+    await workers.hook('finalize/resthistidem')
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
     assert.equal(res.data.total, 2)
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line2/revisions')
@@ -1032,7 +1036,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { _action: 'patch', _id: 'line2', attr1: 'test1' }
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
-    await workers.hook('finalizer/resthistidem')
+    await workers.hook('finalize/resthistidem')
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
     assert.equal(res.data.total, 2)
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line2/revisions')
@@ -1053,11 +1057,11 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
-    dataset = await workers.hook('finalizer/restdel')
+    dataset = await workers.hook('finalize/restdel')
     assert.equal(dataset.count, 4)
 
     await ax.delete('/api/v1/datasets/restdel/lines')
-    dataset = await workers.hook('finalizer/restdel')
+    dataset = await workers.hook('finalize/restdel')
     assert.equal(dataset.count, 0)
     const collection = restDatasetsUtils.collection(dataset)
     assert.equal(await collection.countDocuments({}), 0)
@@ -1080,7 +1084,7 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
 line1,test1,test1,oui,2015-03-18T00:58:59Z
 line2,test1,test1,non,
 line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
-    dataset = await workers.hook('finalizer/restcsv')
+    dataset = await workers.hook('finalize/restcsv')
     assert.equal(dataset.count, 3)
     let lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0]._id, 'line1')
@@ -1097,7 +1101,7 @@ line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_action,_id,attr1,attr2
 patch,line1,test2
 update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
-    dataset = await workers.hook('finalizer/restcsv')
+    dataset = await workers.hook('finalize/restcsv')
     assert.equal(dataset.count, 3)
     lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0]._id, 'line3')
@@ -1112,7 +1116,7 @@ update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id;attr1;attr2;attr3;attr4
 line3;test1;test1;oui;2015-03-18T00:58:59
 line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/csv' }, params: { sep: ';' } })
-    dataset = await workers.hook('finalizer/restcsv')
+    dataset = await workers.hook('finalize/restcsv')
     assert.equal(dataset.count, 4)
   })
 
@@ -1130,7 +1134,7 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `Attr1,Attr2
 test1,test1
 test2,test2`, { headers: { 'content-type': 'text/csv' } })
-    dataset = await workers.hook('finalizer/restcsv')
+    dataset = await workers.hook('finalize/restcsv')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr1, 'test1')
@@ -1154,7 +1158,7 @@ test2,test2`, { headers: { 'content-type': 'text/csv' } })
 test1,test1
 test2,test2
 test3,test3`, { headers: { 'content-type': 'text/csv' } })
-    dataset = await workers.hook('finalizer/restcsv')
+    dataset = await workers.hook('finalize/restcsv')
     assert.equal(dataset.count, 3)
     let lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines.length, 3)
@@ -1162,7 +1166,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     const csvLines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { format: 'csv' } })).data
 
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', csvLines, { headers: { 'content-type': 'text/csv' } })
-    dataset = await workers.hook('finalizer/restcsv')
+    dataset = await workers.hook('finalize/restcsv')
     assert.equal(dataset.count, 6)
     lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines.length, 6)
@@ -1194,19 +1198,19 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
       schema: [{ key: 'attr1', type: 'string', format: 'date-time' }]
     })
     await ax.post('/api/v1/datasets/restdate/lines', { attr1: '1961-02-13 00:00:00+00:00' })
-    await workers.hook('finalizer/restdate')
+    await workers.hook('finalize/restdate')
     let lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
     assert.equal(lines.length, 1)
     assert.equal(lines[0].attr1, '1961-02-13T00:00:00+00:00')
 
     await ax.patch('/api/v1/datasets/restdate/lines/' + lines[0]._id, { attr1: '1961-02-14 00:00:00+00:00' })
-    await workers.hook('finalizer/restdate')
+    await workers.hook('finalize/restdate')
     lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
     assert.equal(lines.length, 1)
     assert.equal(lines[0].attr1, '1961-02-14T00:00:00+00:00')
 
     await ax.patch('/api/v1/datasets/restdate/lines/' + lines[0]._id, { attr1: null })
-    await workers.hook('finalizer/restdate')
+    await workers.hook('finalize/restdate')
     lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
     assert.equal(lines.length, 1)
     assert.ok(!lines[0].attr1)
@@ -1224,7 +1228,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
       { _id: '1', attr1: '1961-02-13 00:00:00+00:00', attr2: 'val1' },
       { _id: '2', attr1: '1961-02-13T00:00:00+00:00', attr2: 'val2' }
     ])
-    await workers.hook('finalizer/restdatebulk')
+    await workers.hook('finalize/restdatebulk')
     let lines = (await ax.get('/api/v1/datasets/restdatebulk/lines')).data.results
     assert.equal(lines.length, 2)
     assert.equal(lines[0].attr1, '1961-02-13T00:00:00+00:00')
@@ -1233,7 +1237,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[1].attr2, 'val1')
 
     await ax.post('/api/v1/datasets/restdatebulk/_bulk_lines', [{ _id: lines[0]._id, attr1: null, _action: 'patch' }])
-    await workers.hook('finalizer/restdatebulk')
+    await workers.hook('finalize/restdatebulk')
     lines = (await ax.get('/api/v1/datasets/restdatebulk/lines')).data.results
     assert.equal(lines.length, 2)
     assert.ok(!lines[0].attr1)
@@ -1252,7 +1256,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     line1,1961-02-13 00:00:00+00:00`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbErrors, 0)
     assert.equal(res.data.nbOk, 1)
-    await workers.hook('finalizer/restcsv')
+    await workers.hook('finalize/restcsv')
     const lines = (await ax.get('/api/v1/datasets/restcsv/lines')).data.results
     assert.equal(lines.length, 1)
     assert.equal(lines[0].attr1, '1961-02-13T00:00:00+00:00')
@@ -1267,7 +1271,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     await ax.post('/api/v1/datasets/restnull/lines', { attr1: 'val1', attr2: null })
-    await workers.hook('finalizer/restnull')
+    await workers.hook('finalize/restnull')
     const lines = (await ax.get('/api/v1/datasets/restnull/lines')).data.results
     assert.equal(lines.length, 1)
     assert.equal(lines[0].attr1, 'val1')
@@ -1305,7 +1309,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets/restgzcsv/_bulk_lines', zlib.gzipSync(`_id,attr1,attr2
 line1,test1,test1
 line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
-    dataset = await workers.hook('finalizer/restgzcsv')
+    dataset = await workers.hook('finalize/restgzcsv')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restgzcsv/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0]._id, 'line1')
@@ -1329,7 +1333,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     line1,test1,test1
     line2,test1,test1`, 'actions.csv')
     await ax.post('/api/v1/datasets/restcsvfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
-    dataset = await workers.hook('finalizer/restcsvfile')
+    dataset = await workers.hook('finalize/restcsvfile')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restcsvfile/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0]._id, 'line1')
@@ -1353,7 +1357,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     line1,test1,testé1
     line2,test1,testé1`, 'ISO-8859-1'), 'actions.csv')
     await ax.post('/api/v1/datasets/restcsvfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
-    dataset = await workers.hook('finalizer/restcsvfile')
+    dataset = await workers.hook('finalize/restcsvfile')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restcsvfile/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0]._id, 'line1')
@@ -1379,7 +1383,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     line1,test1,test1
     line2,test1,test1`), 'actions.csv.gz')
     await ax.post('/api/v1/datasets/restcsvgz/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
-    dataset = await workers.hook('finalizer/restcsvgz')
+    dataset = await workers.hook('finalize/restcsvgz')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restcsvgz/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0]._id, 'line1')
@@ -1400,7 +1404,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     const form = new FormData()
     form.append('actions', fs.readFileSync('./resources/datasets/actions.xlsx'), 'actions.xlsx')
     await ax.post('/api/v1/datasets/restxlsxfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
-    dataset = await workers.hook('finalizer/restxlsxfile')
+    dataset = await workers.hook('finalize/restxlsxfile')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restxlsxfile/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr1, 'test1')
@@ -1421,7 +1425,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     const form = new FormData()
     form.append('actions', fs.readFileSync('./resources/datasets/actions.xlsx'), 'actions.ods')
     await ax.post('/api/v1/datasets/restodsfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
-    dataset = await workers.hook('finalizer/restodsfile')
+    dataset = await workers.hook('finalize/restodsfile')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restodsfile/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr1, 'test1')
@@ -1444,7 +1448,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     const actionsContent = fs.readFileSync('./resources/datasets/dataset1.zip')
     form.append('actions', actionsContent, 'dataset1.zip')
     await ax.post('/api/v1/datasets/restcsvzip/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
-    dataset = await workers.hook('finalizer/restcsvzip')
+    dataset = await workers.hook('finalize/restcsvzip')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restcsvzip/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].id, 'koumoul')
@@ -1464,7 +1468,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 test1,test1,test1
 test2,test2,test2
 test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
-    dataset = await workers.hook('finalizer/restkey')
+    dataset = await workers.hook('finalize/restkey')
     assert.equal(dataset.count, 2)
     let lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr1, 'test1')
@@ -1481,7 +1485,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets/restkey/_bulk_lines', [
       { _action: 'delete', attr1: 'test1', attr2: 'test1' }
     ])
-    dataset = await workers.hook('finalizer/restkey')
+    dataset = await workers.hook('finalize/restkey')
     assert.equal(dataset.count, 1)
     lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr1, 'test2')
@@ -1491,7 +1495,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/restkey/_bulk_lines', `_action,attr1,attr2,attr3
 patch,test2,test2,test2
 patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
-    dataset = await workers.hook('finalizer/restkey')
+    dataset = await workers.hook('finalize/restkey')
     assert.equal(dataset.count, 1)
     lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr3, 'test3')
@@ -1522,7 +1526,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
           callback()
         }
       })),
-      workers.hook('finalizer/rest2')
+      workers.hook('finalize/rest2')
     ])
     assert.equal(i, 6)
   })
@@ -1537,13 +1541,13 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     let dataset = res.data
     res = await ax.post('/api/v1/datasets/restunset/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)
-    dataset = await workers.hook('finalizer/restunset')
+    dataset = await workers.hook('finalize/restunset')
     const storage1 = dataset.storage.size
 
     res = await ax.patch('/api/v1/datasets/restunset', { schema: [{ key: 'attr1', type: 'string', readOnly: true }] })
 
-    await workers.hook('indexer/restunset')
-    dataset = await workers.hook('finalizer/restunset')
+    await workers.hook('indexLines/restunset')
+    dataset = await workers.hook('finalize/restunset')
     const storage2 = dataset.storage.size
     assert.ok(storage2 < storage1)
 
@@ -1561,12 +1565,12 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test1' })
-    await workers.hook('finalizer/updatedby')
+    await workers.hook('finalize/updatedby')
 
     res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: true } })
 
-    await workers.hook('indexer/updatedby')
-    await workers.hook('finalizer/updatedby')
+    await workers.hook('indexLines/updatedby')
+    await workers.hook('finalize/updatedby')
 
     res = await ax.get('/api/v1/datasets/updatedby/lines')
     assert.ok(res.data.results[0].attr1)
@@ -1574,7 +1578,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     const lineId = res.data.results[0]._id
 
     await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test2' })
-    await workers.hook('finalizer/updatedby')
+    await workers.hook('finalize/updatedby')
     res = await ax.get('/api/v1/datasets/updatedby/lines')
     assert.ok(res.data.results[0].attr1)
     assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
@@ -1584,22 +1588,22 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     const apiKey = res.data.apiKeys[0]
     const axAPIKey = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': apiKey.clearKey } })
     await axAPIKey.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test3' })
-    await workers.hook('finalizer/updatedby')
+    await workers.hook('finalize/updatedby')
     res = await ax.get('/api/v1/datasets/updatedby/lines')
     assert.equal(res.data.results[0]._updatedBy, 'apiKey:' + apiKey.id)
     assert.equal(res.data.results[0]._updatedByName, 'api key')
 
     res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: true, history: true } })
-    await workers.hook('finalizer/updatedby')
+    await workers.hook('finalize/updatedby')
 
     await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test2' })
-    await workers.hook('finalizer/updatedby')
+    await workers.hook('finalize/updatedby')
     res = await ax.get(`/api/v1/datasets/updatedby/lines/${lineId}/revisions`)
     assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
     assert.equal(res.data.results[0]._updatedByName, 'Danna Meadus')
 
     res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: false, history: true } })
-    await workers.hook('finalizer/updatedby')
+    await workers.hook('finalize/updatedby')
     res = await ax.get('/api/v1/datasets/updatedby/lines')
     assert.ok(!res.data.results[0]._updatedBy)
     assert.ok(!res.data.results[0]._updatedByName)
@@ -1619,7 +1623,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       { attr1: 'test1-2' }
     ])
     assert.equal(res.data.nbCreated, 2)
-    dataset = await workers.hook('finalizer/restdrop')
+    dataset = await workers.hook('finalize/restdrop')
     assert.equal(dataset.count, 2)
 
     res = await ax.post('/api/v1/datasets/restdrop/_bulk_lines', [
@@ -1627,7 +1631,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       { attr1: 'test2-2' }
     ])
     assert.equal(res.data.nbCreated, 2)
-    dataset = await workers.hook('finalizer/restdrop')
+    dataset = await workers.hook('finalize/restdrop')
     assert.equal(dataset.count, 4)
 
     res = await ax.post('/api/v1/datasets/restdrop/_bulk_lines', [
@@ -1636,7 +1640,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     ], { params: { drop: true } })
     assert.equal(res.data.nbCreated, 2)
     assert.equal(res.data.dropped, true)
-    dataset = await workers.hook('finalizer/restdrop')
+    dataset = await workers.hook('finalize/restdrop')
     assert.equal(dataset.count, 2)
 
     res = await ax.get('/api/v1/datasets/restdrop/lines')
@@ -1677,19 +1681,19 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       { attr1: 'test2', attr2: 'v1' },
       { attr1: 'test3', attr2: 'v1' }
     ])
-    dataset = await workers.hook('finalizer/restdrophist')
+    dataset = await workers.hook('finalize/restdrophist')
 
     const lines = (await ax.get('/api/v1/datasets/restdrophist/lines')).data.results
     const line2 = lines.find(l => l.attr1 === 'test2')
     const line3 = lines.find(l => l.attr1 === 'test3')
     await ax.delete('/api/v1/datasets/restdrophist/lines/' + line3._id)
-    dataset = await workers.hook('finalizer/restdrophist')
+    dataset = await workers.hook('finalize/restdrophist')
 
     res = await ax.post('/api/v1/datasets/restdrophist/_bulk_lines', [
       { attr1: 'test1', attr2: 'v2' },
       { attr1: 'test2', attr2: 'v2' }
     ])
-    dataset = await workers.hook('finalizer/restdrophist')
+    dataset = await workers.hook('finalize/restdrophist')
 
     res = await ax.post('/api/v1/datasets/restdrophist/_bulk_lines', [
       { attr1: 'test1', attr2: 'v3' },
@@ -1698,7 +1702,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     ], { params: { drop: true } })
     assert.equal(res.data.nbCreated, 3)
     assert.equal(res.data.dropped, true)
-    dataset = await workers.hook('finalizer/restdrophist')
+    dataset = await workers.hook('finalize/restdrophist')
     assert.equal(dataset.count, 3)
 
     res = await ax.get(`/api/v1/datasets/restdrophist/lines/${line3._id}/revisions`)
@@ -1740,7 +1744,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.nbOk, 2)
 
-    await workers.hook('finalizer/restdatetimeformat')
+    await workers.hook('finalize/restdatetimeformat')
     res = await ax.get('/api/v1/datasets/restdatetimeformat/lines')
     assert.equal(res.data.total, 4)
   })
@@ -1762,7 +1766,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     ])
     assert.equal(res.data.nbOk, 2)
 
-    await workers.hook('finalizer/restgeo')
+    await workers.hook('finalize/restgeo')
     res = await ax.get('/api/v1/datasets/restgeo/lines?select=attr1,geom,_geopoint,_geocorners')
     assert.equal(res.data.total, 2)
     assert.ok(res.data.results[0]._geopoint)
@@ -1792,7 +1796,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(line._id)
     assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
     assert.ok(line.attachmentPath.endsWith('/Capture d’écran du 2024-11-19 10-20-57.png'))
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('finalize/' + dataset.id)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)

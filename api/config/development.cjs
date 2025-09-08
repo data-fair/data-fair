@@ -44,7 +44,7 @@ module.exports = {
     disabled: true
   },
   worker: {
-    spawnTask: false
+    closeTimeout: 1000
   },
   browserLogLevel: 'debug',
   catalogs: [{

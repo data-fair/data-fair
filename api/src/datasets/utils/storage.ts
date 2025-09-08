@@ -7,7 +7,6 @@ import fs from 'fs-extra'
 import * as limits from '../../misc/utils/limits.ts'
 import config from '#config'
 import mongo from '#mongo'
-import es from '#es'
 import debug from 'debug'
 import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.ts'
 import type { Account, AccountKeys } from '@data-fair/lib-express'
@@ -75,7 +74,7 @@ export const storage = async (dataset: Dataset) => {
       let storageRatio = remoteService.virtualDatasets?.storageRatio || 0
       const queryableDataset: VirtualDataset = { ...dataset }
       queryableDataset.descendants = [descendant.id]
-      const count = await esUtils.count(es.client, queryableDataset, {})
+      const count = await esUtils.count(queryableDataset, {})
       storageRatio *= (count / descendant.count)
       masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)
     }

@@ -1,14 +1,17 @@
 // Some edge cases with CSV files
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
+import { workers } from '@data-fair/data-fair-api/src/workers/tasks.ts'
 
 describe('CSV cases', function () {
-  before(function () {
+  before(async function () {
     process.env.NO_STORAGE_CHECK = 'true'
+    await workers.filesProcessor.run({ key: 'NO_STORAGE_CHECK', value: 'true' }, { name: 'setEnv' })
   })
 
-  after(function () {
+  after(async function () {
     delete process.env.NO_STORAGE_CHECK
+    await workers.filesProcessor.run({ key: 'NO_STORAGE_CHECK' }, { name: 'setEnv' })
   })
 
   it('Process newly uploaded CSV dataset', async function () {

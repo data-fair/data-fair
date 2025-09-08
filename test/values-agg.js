@@ -3,7 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
 import FormData from 'form-data'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('values aggs', function () {
   it('Get values buckets', async function () {
@@ -13,7 +13,7 @@ describe('values aggs', function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('finalize/' + res.data.id)
 
     // Simple value aggregation
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id`)
@@ -149,7 +149,7 @@ describe('values aggs', function () {
       { nb: 2 },
       { nb: 3 }
     ])
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=year&metric_field=nb&metric=sum`)
     assert.equal(res.data.aggs.length, 2)
@@ -186,7 +186,7 @@ describe('values aggs', function () {
       { nb: 2 },
       { nb: 3 }
     ])
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=active&metric_field=nb&metric=sum`)
     assert.equal(res.data.aggs.length, 2)

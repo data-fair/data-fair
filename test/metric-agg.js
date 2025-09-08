@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('metric agg', function () {
   beforeEach(async function () {
@@ -31,7 +31,7 @@ describe('metric agg', function () {
       { numfield: 9, textfield: 'j', datefield: '2020-12-10', datetimefield: '2020-12-01T10:10:10Z' },
       { numfield: 10, textfield: 'k', datefield: '2020-12-11', datetimefield: '2020-12-01T11:10:10Z' }
     ])
-    await workers.hook('finalizer/metric-agg')
+    await workers.hook('finalize/metric-agg')
   })
 
   it('performs calculations on a field', async function () {

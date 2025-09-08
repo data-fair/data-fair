@@ -1,15 +1,10 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
-import nock from 'nock'
 import FormData from 'form-data'
 import config from 'config'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 import * as esUtils from '../api/src/datasets/es/index.ts'
-
-// Prepare mock for outgoing HTTP requests
-nock('http://test-catalog.com').persist()
-  .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
 describe('workers', function () {
   it('Process newly uploaded CSV dataset', async function () {
@@ -22,7 +17,7 @@ describe('workers', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    let dataset = await workers.hook('csvAnalyzer')
+    let dataset = await workers.hook('analyzeCsv/' + res.data.id)
     assert.equal(dataset.status, 'analyzed')
     const idField = dataset.schema.find(f => f.key === 'id')
     const dateField = dataset.schema.find(f => f.key === 'some_date')
@@ -32,7 +27,7 @@ describe('workers', function () {
     assert.equal(dateField.format, 'date')
 
     // ES indexation and finalization
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     const idProp = dataset.schema.find(p => p.key === 'id')
@@ -52,7 +47,7 @@ describe('workers', function () {
     assert.equal(res.status, 200)
 
     // Second ES indexation
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     const esIndices2 = await global.es.indices.get({ index: esUtils.aliasName(dataset) })
@@ -69,7 +64,7 @@ describe('workers', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-    await assert.rejects(workers.hook('indexer'), () => true)
+    await assert.rejects(workers.hook('indexLines'), () => true)
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
     assert.equal(res.data[0].type, 'error')
@@ -89,7 +84,7 @@ describe('workers', function () {
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook('finalizer')
+    let dataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(dataset.status, 'finalized')
 
     // Update dataset to ask for a publication
@@ -97,35 +92,18 @@ describe('workers', function () {
     assert.equal(res.status, 200)
 
     // Go through the publisher worker
-    dataset = await workers.hook('datasetPublisher')
+    dataset = await workers.hook('publishDataset/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.publications[0].status, 'published')
     assert.equal(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')
   })
 
-  it('Run tasks in children processes', async function () {
-    config.worker.spawnTask = true
-    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
-    const form = new FormData()
-    form.append('file', datasetFd, 'dataset.csv')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    assert.equal(res.status, 201)
-    let dataset = await workers.hook(`csvAnalyzer/${res.data.id}`)
-    assert.equal(dataset.status, 'analyzed')
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
-    assert.equal(dataset.status, 'finalized')
-    assert.equal(dataset.count, 2)
-    config.worker.spawnTask = false
-  })
-
-  it('Process multiple datasets in parallel children processes', async function () {
+  it('Process multiple datasets in parallel worker threads', async function () {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')
     }
 
     this.timeout = 60000
-    // config.worker.spawnTask = true
     const ax = global.ax.dmeadus
     const datasets = await Promise.all([
       testUtils.sendDataset('geo/stations.zip', ax),
@@ -137,11 +115,9 @@ describe('workers', function () {
     assert.ok(datasets.find(d => d.slug === 'stations-2'))
     assert.ok(datasets.find(d => d.slug === 'stations-3'))
     assert.ok(datasets.find(d => d.slug === 'stations-4'))
-    // config.worker.spawnTask = false
   })
 
   it('Manage expected failure in children processes', async function () {
-    config.worker.spawnTask = true
     const datasetFd = fs.readFileSync('./resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken2.geojson')
@@ -149,30 +125,26 @@ describe('workers', function () {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await assert.rejects(workers.hook(`indexer/${dataset.id}`), () => true)
+    await assert.rejects(workers.hook(`indexLines/${dataset.id}`), () => true)
     // Check that there is an error message in the journal
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
     assert.equal(res.data[0].type, 'error')
     assert.ok(res.data[0].data.includes('100% des lignes sont en erreur'))
-    config.worker.spawnTask = false
   })
 
   it('Manage bad input in children processes', async function () {
-    config.worker.spawnTask = true
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error 400', schema: [{ key: 'test', type: 'string' }] })).data
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines?async=true`, [{ test: 'test' }])
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
     // Check that there is an error message in the journal
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, 'This is a test 400 error')
-    config.worker.spawnTask = false
   })
 
   it('Manage unexpected failure in children processes', async function () {
-    config.worker.spawnTask = true
     config.worker.errorRetryDelay = 120
 
     const form = new FormData()
@@ -181,8 +153,9 @@ describe('workers', function () {
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
 
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
     let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+
     assert.equal(journal[0].type, 'error-retry')
     assert.equal(journal[0].data, 'This is a test error')
     dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
@@ -192,7 +165,7 @@ describe('workers', function () {
 
     await new Promise(resolve => setTimeout(resolve, 100))
 
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
     journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, 'This is a test error')
@@ -201,7 +174,6 @@ describe('workers', function () {
     assert.equal(dataset.errorStatus, 'validated')
     assert.ok(!dataset.errorRetry)
 
-    config.worker.spawnTask = false
     config.worker.errorRetryDelay = 0
   })
 
@@ -216,13 +188,13 @@ describe('workers', function () {
     idProp.separator = ','
     let patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
     assert.equal(patchedDataset.status, 'validated')
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     // changing capabilities requires only refinalizing
     idProp['x-capabilities'] = { insensitive: false }
     patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
     assert.equal(patchedDataset.status, 'indexed')
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     // changing a title does not require any worker tasks
     idProp.title = 'Identifier'

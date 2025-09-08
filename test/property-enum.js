@@ -1,6 +1,6 @@
 // Some edge cases with CSV files
 import { strict as assert } from 'node:assert'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('Enum of actual values in schema', function () {
   it('Calculate enum of values in data', async function () {
@@ -23,7 +23,7 @@ describe('Enum of actual values in schema', function () {
       { attr1: 'test2', attr2: 'test9' },
       { attr1: '', attr2: 'test10' }
     ])
-    const dataset = await workers.hook('finalizer/rest2')
+    const dataset = await workers.hook('finalize/rest2')
     const attr1 = dataset.schema.find(p => p.key === 'attr1')
     assert.deepEqual(attr1.enum, ['test2', 'test1'])
 

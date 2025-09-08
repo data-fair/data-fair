@@ -106,28 +106,28 @@ const getDatasetPatch = (catalog, dataset, props = {}) => {
   return patch
 }
 
-const insertDataset = async (app, newDataset) => {
+const insertDataset = async (newDataset) => {
   await datasetUtils.insertWithId(mongo.db, newDataset)
   await journals.log('datasets', newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id })
   await sendResourceEvent('datasets', newDataset, 'dataset-created')
 }
 
-export const updateAllHarvestedDatasets = async (app, catalog) => {
+export const updateAllHarvestedDatasets = async (catalog) => {
   const datasets = await listDatasets(mongo.db, catalog, {})
   for (const dataset of datasets.results) {
     if (dataset.harvestedDataset) {
-      await harvestDataset(app, catalog, dataset.id)
+      await harvestDataset(catalog, dataset.id)
     }
     for (const resource of dataset.resources) {
       if (resource.harvestedDataset) {
-        await harvestDatasetResource(app, catalog, dataset.id, resource.id, false)
+        await harvestDatasetResource(catalog, dataset.id, resource.id, false)
       }
     }
   }
 }
 
 // create a simple metadata only dataset
-export const harvestDataset = async (app, catalog, datasetId) => {
+export const harvestDataset = async (catalog, datasetId) => {
   const connector = connectors.find(c => c.key === catalog.type)
   if (!connector) throw httpError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw httpError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
@@ -186,12 +186,12 @@ export const harvestDataset = async (app, catalog, datasetId) => {
     })
     if (attachments.length) newDataset.attachments = attachments
     await permissionsUtil.initResourcePermissions(newDataset)
-    await insertDataset(app, newDataset)
+    await insertDataset(newDataset)
   }
 }
 
 // create a file dataset from the resource of a dataset on the remote portal
-export const harvestDatasetResource = async (app, catalog, datasetId, resourceId, forceDownload = true) => {
+export const harvestDatasetResource = async (catalog, datasetId, resourceId, forceDownload = true) => {
   const connector = connectors.find(c => c.key === catalog.type)
   if (!connector) throw httpError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw httpError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
@@ -262,7 +262,7 @@ export const harvestDatasetResource = async (app, catalog, datasetId, resourceId
     }
     Object.assign(newDataset, getDatasetProps(dataset))
     await permissionsUtil.initResourcePermissions(newDataset)
-    await insertDataset(app, newDataset)
+    await insertDataset(newDataset)
   }
 }
 
@@ -273,7 +273,7 @@ export const searchOrganizations = async (type, url, q) => {
   return connector.searchOrganizations(url, q)
 }
 
-export const processPublications = async function (app, type, resource) {
+export const processPublications = async function (type, resource) {
   const db = mongo.db
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')

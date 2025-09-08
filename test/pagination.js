@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('data pagination', function () {
   it('get deeper into data', async function () {
@@ -20,7 +20,7 @@ describe('data pagination', function () {
       })
 
       const res = await ax.post(`/api/v1/datasets/rest-page${i}/_bulk_lines`, actions)
-      await workers.hook('finalizer/rest-page' + i)
+      await workers.hook('finalize/rest-page' + i)
       assert.equal(res.data.nbOk, 100)
       assert.equal(res.data.nbCreated, 100)
     }
@@ -31,7 +31,7 @@ describe('data pagination', function () {
       schema,
       title: 'a virtual dataset'
     })
-    await workers.hook('finalizer/virtual-page')
+    await workers.hook('finalize/virtual-page')
 
     let res = await ax.get('/api/v1/datasets/rest-page0/lines')
     assert.equal(res.data.total, 100)

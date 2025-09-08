@@ -224,7 +224,7 @@ export const getTransformStream = (schema, fileSchema, applyTransform = false) =
 }
 
 // Read the dataset file and get a stream of line items
-export const readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
+export const readStreams = async (dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(dataset)
   const p = full ? fullFilePath(dataset) : filePath(dataset)
 
@@ -343,8 +343,9 @@ export const writeExtendedStreams = async (dataset, extensions) => {
 export const sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
   let currentLine = 0
   let stopped = false
+  /** @type {Record<string, Set<string>>} */
   const sampleValues = {}
-  const streams = await readStreams(null, dataset, true, false, true)
+  const streams = await readStreams(dataset, true, false, true)
   if (onDecodedData) {
     const decodeStreamIndex = streams.findIndex(s => s instanceof DecodeStream)
     if (decodeStreamIndex !== -1) {

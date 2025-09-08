@@ -34,14 +34,15 @@ export const log = async function (resourceType: ResourceType, resource: Resourc
     }
   } catch (err) {
     // errors when writing to journal are never blocking for the actual task
-    console.warn('Failure when writing event to journal')
+    console.warn('Failure when writing event to journal', err)
   }
 }
 
-export const hasErrorRetry = async function (db, resource, type = 'dataset') {
-  const journal = await db.collection('journals')
+export const hasErrorRetry = async function (resource: any, resourceType: ResourceType = 'datasets') {
+  const singularResourceType = resourceType.substring(0, resourceType.length - 1)
+  const journal = await mongo.db.collection('journals')
     .findOne(
-      { id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },
+      { id: resource.id, type: singularResourceType, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },
       { projection: { events: 1 } }
     )
 

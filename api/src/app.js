@@ -21,12 +21,13 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
+import { isMainThread } from 'node:worker_threads'
 
 const debugDomain = debug('domain')
 
 // a global event emitter for testing
 if (process.env.NODE_ENV === 'test') {
-  global.events = new EventEmitter()
+  if (isMainThread) global.events = new EventEmitter()
 }
 
 let app, server, httpTerminator
@@ -271,6 +272,15 @@ export const run = async () => {
 
   await wsEmitter.init(db)
 
+  if (config.mode.includes('worker')) {
+    const workers = await import('./workers/index.ts')
+    await workers.init()
+    workers.loop().catch(error => {
+      internalError('workers-loop-error', error)
+      throw error
+    })
+  }
+
   if (config.mode.includes('server')) {
     const errorHandler = (await import('@data-fair/lib-express/error-handler.js')).default
 
@@ -316,24 +326,12 @@ export const run = async () => {
     }
   }
 
-  if (config.mode.includes('worker')) {
-    (await import('./workers/index.js')).start(app)
-  }
-
-  // special mode: run the process to execute a single worker tasks
-  // for  extra resiliency to fatal memory exceptions
-  if (config.mode === 'task') {
-    const resource = await mongo.db.collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
-    if (process.env.DATASET_DRAFT === 'true') {
-      const datasetUtils = await import('./datasets/utils/index.js')
-
-      datasetUtils.mergeDraft(resource)
-    }
-    const task = await (await import('./workers/index.js')).tasks[process.argv[2]]()
-    await task.process(app, resource)
-  } else if (config.observer.active) {
+  if (config.observer.active) {
     const { startObserver } = await import('@data-fair/lib-node/observer.js')
     await metrics.init(db)
+    if (config.mode.includes('server')) {
+      await import('./misc/utils/metrics-api.ts')
+    }
     await startObserver()
   }
 
@@ -347,12 +345,12 @@ export const stop = async () => {
   }
 
   if (config.mode.includes('worker')) {
-    await (await import('./workers/index.js')).stop()
+    await (await import('./workers/index.ts')).stop()
   }
 
   await locks.stop()
 
-  if (config.mode !== 'task' && config.observer.active) {
+  if (config.observer.active) {
     const { stopObserver } = await import('@data-fair/lib-node/observer.js')
     await stopObserver()
   }
