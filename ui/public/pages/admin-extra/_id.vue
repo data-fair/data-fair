@@ -1,15 +1,25 @@
 <template>
-  <v-iframe
-    v-if="iframeUrl"
-    :src="iframeUrl.href"
-    :sync-state="true"
-    @message="onMessage"
-  />
+  <div v-if="iframeUrl">
+    <d-frame
+      v-if="extra.dFrame"
+      :height="windowHeight - 48"
+      :src="iframeUrl.href"
+      sync-params
+      @message="message => onMessage(message.detail)"
+    />
+    <v-iframe
+      v-else
+      :src="iframeUrl.href"
+      :sync-state="true"
+      @message="onMessage"
+    />
+  </div>
 </template>
 
 <script>
 import { mapState } from 'vuex'
 import extraPageMixin from '~/mixins/extra-page'
+import '@data-fair/frame/lib/d-frame.js'
 
 export default {
   mixins: [extraPageMixin],
