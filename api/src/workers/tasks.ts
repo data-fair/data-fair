@@ -4,6 +4,7 @@ import { Piscina } from 'piscina'
 import config from '#config'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
+import { piscinaGauge } from '../misc/utils/metrics.ts'
 
 const createWorkers = () => {
   const workers = {
@@ -57,6 +58,7 @@ const createWorkers = () => {
 }
 
 export const workers = createWorkers()
+piscinaGauge(workers)
 
 export const pendingTasks = {
   shortProcessor: {} as Record<string, string>,

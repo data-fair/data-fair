@@ -329,6 +329,9 @@ export const run = async () => {
   if (config.observer.active) {
     const { startObserver } = await import('@data-fair/lib-node/observer.js')
     await metrics.init(db)
+    if (config.mode.includes('server')) {
+      await import('./misc/utils/metrics-api.ts')
+    }
     await startObserver()
   }
 
