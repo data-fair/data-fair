@@ -6,7 +6,10 @@
       :src="iframeUrl.href"
       sync-params
       sync-path
+      emit-iframe-messages
+      :adapter.prop="stateChangeAdapter"
       @message="message => onMessage(message.detail)"
+      @iframe-message="message => onMessage(message.detail)"
     />
     <v-iframe
       v-else
@@ -21,13 +24,17 @@
 import { mapState } from 'vuex'
 import extraPageMixin from '~/mixins/extra-page'
 import '@data-fair/frame/lib/d-frame.js'
+import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
 
 export default {
   mixins: [extraPageMixin],
   computed: {
     ...mapState(['env']),
     extra () {
-      return this.env.extraAdminNavigationItems.find(e => e.id === this.$route.params.id)
+      return this.env.extraNavigationItems.find(e => e.id === this.$route.params.id)
+    },
+    stateChangeAdapter () {
+      return createStateChangeAdapter(this.$router)
     }
   }
 }

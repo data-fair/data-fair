@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@data-fair/data-fair-api": "*",
-    "@data-fair/frame": "^0.8.4",
+    "@data-fair/frame": "^0.13.2",
     "@data-fair/sd-vue": "^3.0.1",
     "@koumoul/v-iframe": "^1.4.1",
     "@koumoul/vjsf": "^2.23.3",
