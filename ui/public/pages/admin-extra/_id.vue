@@ -5,6 +5,7 @@
       :height="(windowHeight - 48) + 'px'"
       :src="iframeUrl.href"
       sync-params
+      sync-path
       @message="message => onMessage(message.detail)"
     />
     <v-iframe
