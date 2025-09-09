@@ -126,7 +126,8 @@ const getRecords = async (req, res, next) => {
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
   const esQuery: any = { track_total_hits: true }
-  esQuery.size = query.limit ? Number(query.limit) : 20
+  esQuery.size = query.limit ? Number(query.limit) : 100
+  if (esQuery.size < 0) esQuery.size = 100 // -1 is interpreted as 100
   if (query.offset) esQuery.from = Number(query.offset)
 
   const fields = dataset.schema.map(f => f.key)
