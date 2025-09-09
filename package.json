@@ -86,7 +86,6 @@
   ],
   "dependencies": {
     "@turf/simplify": "^7.2.0",
-    "@turf/truncate": "^7.2.0",
-    "xlsx-write-stream": "^1.0.3"
+    "@turf/truncate": "^7.2.0"
   }
 }

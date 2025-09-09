@@ -19,6 +19,7 @@ import contentDisposition from 'content-disposition'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
+import { jsonSchema } from '../../../datasets/utils/data-schema.ts'
 
 dayjs.extend(timezone)
 dayjs.extend(utc)
@@ -341,6 +342,12 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
           callback(null, item)
         }
       }), new XLSXTransformStream()]
+  } else if (req.params.format === 'parquet') {
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.parquet'))
+    const parquet = await import('@dsnp/parquetjs')
+    const schema = jsonSchema(dataset.schema, req.publicBaseUrl, false)
+    const parquetSchema = parquet.ParquetSchema.fromJsonSchema(schema)
+    transformStreams = [new parquet.ParquetTransformer(parquetSchema)]
   } else {
     compatReqCounter.inc({ endpoint: 'exports', status: 'unsupported' })
     throw httpError(400, `le format "${req.params.format}" n'est pas supporté par l'export de données de cette couche de compatibilité pour la version d'API précédente.`)
