@@ -180,6 +180,29 @@ bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
     assert.equal(res.data.results[5].somedate, null)
   })
 
+  it('should manage date times', async function () {
+    const ax = global.ax.dmeadusOrg
+
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest1',
+      schema: [{ key: 'date1', type: 'string', format: 'date-time' }]
+    }).then(r => r.data)
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-10T08:00:00Z' })
+
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.results[0].date1, '2025-09-10T08:00:00+00:00')
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.results[0].date1, '2025-09-10T10:00:00+02:00')
+  })
+
   it.skip('manages geo data', async function () {
     const ax = global.ax.dmeadusOrg
 

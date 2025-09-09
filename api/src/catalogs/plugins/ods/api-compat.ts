@@ -15,6 +15,12 @@ import memoize from 'memoizee'
 import pump from '../../../misc/utils/pipe.ts'
 import { stringify as csvStrStream, type Options as CsvOptions } from 'csv-stringify'
 import { csvStringifyOptions } from '../../../datasets/utils/outputs.js'
+import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone.js'
+import utc from 'dayjs/plugin/utc.js'
+
+dayjs.extend(timezone)
+dayjs.extend(utc)
 
 const compatReqCounter = new Counter({
   name: 'df_compat_ods_req',
@@ -130,6 +136,20 @@ const parseFilters = (dataset, query, endpoint) => {
   return { bool: { filter, must, must_not: mustNot } }
 }
 
+const isoWithOffset = 'YYYY-MM-DDTHH:mm:ssZ'
+const prepareResult = (dataset, result, timezone = 'UTC') => {
+  for (const prop of dataset.schema) {
+    if (prop.type === 'string' && prop.format === 'date-time') {
+      if (typeof result[prop.key] === 'string') {
+        result[prop.key] = dayjs(result[prop.key]).tz(timezone).format(isoWithOffset)
+      }
+      if (Array.isArray(result[prop.key])) {
+        result[prop.key] = result[prop.key].map(d => dayjs(d).tz(timezone).format(isoWithOffset))
+      }
+    }
+  }
+}
+
 const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   (res as any).throttleEnd()
 
@@ -230,14 +250,16 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     for (let i = 0; i < esResponse.hits.hits.length; i++) {
       // avoid blocking the event loop
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
-      result.results.push(flatten(esResponse.hits.hits[i]._source))
+      const line = esResponse.hits.hits[i]._source
+      prepareResult(dataset, line, req.query.timezone)
+      result.results.push(flatten(line))
     }
     compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
     res.send(result)
   }
 }
 
-async function * iterHits (es, dataset, esQuery, totalSize = 50000) {
+async function * iterHits (es, dataset, esQuery, totalSize = 50000, timezone = 'utc') {
   const flatten = getFlatten(dataset, false, esQuery._source)
 
   let chunkSize = 1000
@@ -252,6 +274,9 @@ async function * iterHits (es, dataset, esQuery, totalSize = 50000) {
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
     })).hits.hits
+    for (const hit of hits) {
+      prepareResult(dataset, hit._source, timezone)
+    }
     yield hits.map(hit => flatten(hit._source))
     if (hits.length < chunkSize) break
     if (totalSize !== -1) {
@@ -293,7 +318,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1)),
+      Readable.from(iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1), query.timezone),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {
