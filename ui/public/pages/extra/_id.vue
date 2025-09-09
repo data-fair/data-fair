@@ -2,7 +2,7 @@
   <div v-if="iframeUrl">
     <d-frame
       v-if="extra.dFrame"
-      :height="windowHeight - 48"
+      :height="(windowHeight - 48) + 'px'"
       :src="iframeUrl.href"
       sync-params
       @message="message => onMessage(message.detail)"

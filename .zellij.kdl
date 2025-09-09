@@ -24,6 +24,10 @@ layout {
         command "bash"
         args "-ic" "nvm use && npm run dev-api"
       }
+      pane name="worker" {
+        command "bash"
+        args "-ic" "nvm use && npm run dev-worker"
+      }
     }
     pane size=1 borderless=true {
         command "bash"

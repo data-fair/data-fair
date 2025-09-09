@@ -332,7 +332,7 @@ export const run = async () => {
     if (config.mode.includes('server')) {
       await import('./misc/utils/metrics-api.ts')
     }
-    await startObserver()
+    await startObserver(config.observer.port)
   }
 
   return app
