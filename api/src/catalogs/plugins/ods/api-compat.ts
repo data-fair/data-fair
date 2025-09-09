@@ -118,6 +118,15 @@ const parseFilters = (dataset, query, endpoint) => {
     }
   }
 
+  if (query.refine) {
+    const [key, ...valueParts] = query.refine.split(':')
+    const prop = dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre refine sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    filter.push({
+      term: { [key]: valueParts.join(':') }
+    })
+  }
+
   return { bool: { filter, must, must_not: mustNot } }
 }
 
