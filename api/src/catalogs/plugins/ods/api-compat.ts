@@ -13,7 +13,8 @@ import { parse as parseWhere } from './where.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../../misc/utils/pipe.ts'
-import * as outputs from '../../../datasets/utils/outputs.js'
+import { stringify as csvStrStream, type Options as CsvOptions } from 'csv-stringify'
+import { csvStringifyOptions } from '../../../datasets/utils/outputs.js'
 
 const compatReqCounter = new Counter({
   name: 'df_compat_ods_req',
@@ -24,6 +25,11 @@ const compatReqCounter = new Counter({
 const router = express.Router()
 
 router.use('/v2.1/catalog/datasets', (req, res, next) => {
+  // @ts-ignore
+  req.resourceType = 'datasets'
+  next()
+})
+router.use('/v2.0/catalog/datasets', (req, res, next) => {
   // @ts-ignore
   req.resourceType = 'datasets'
   next()
@@ -115,7 +121,7 @@ const parseFilters = (dataset, query, endpoint) => {
   return { bool: { filter, must, must_not: mustNot } }
 }
 
-const getRecords = async (req, res, next) => {
+const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   (res as any).throttleEnd()
 
   const esClient = req.app.get('es') as any
@@ -247,7 +253,7 @@ async function * iterHits (es, dataset, esQuery, totalSize = 50000) {
   }
 }
 
-const exports = async (req, res, next) => {
+const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   const esClient = req.app.get('es') as any
   const dataset = (req as any).dataset
   const query = req.query
@@ -264,8 +270,14 @@ const exports = async (req, res, next) => {
 
   let transformStreams: Stream[] = []
   if (req.params.format === 'csv') {
+    // https://help.opendatasoft.com/apis/ods-explore-v2/#tag/Dataset/operation/exportRecordsCSV
     res.setHeader('content-type', 'text/csv')
-    transformStreams = outputs.csvStreams(req.dataset, query, query.use_labels === 'true')
+    const options: CsvOptions = csvStringifyOptions(dataset, query, query.use_labels === 'true')
+    if (version === '2.0') options.bom = req.query.with_bom === 'true'
+    else options.bom = req.query.with_bom !== 'false'
+    options.delimiter = req.query.delimiter ?? ';'
+    options.quoted_string = req.query.quote_all === 'true'
+    transformStreams = [csvStrStream(options)]
   } else {
     compatReqCounter.inc({ endpoint: 'exports', status: 'unsupported' })
     throw httpError(400, `le format "${req.params.format}" n'est pas supporté par l'export de données de cette couche de compatibilité pour la version d'API précédente.`)
@@ -299,7 +311,15 @@ router.get(
   datasetsApiKeyMiddleware,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
-  getRecords
+  getRecords('2.1')
+)
+router.get(
+  '/v2.0/catalog/datasets/:datasetId/records',
+  readDataset({ fillDescendants: true }),
+  datasetsApiKeyMiddleware,
+  permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
+  cacheHeaders.resourceBased('finalizedAt'),
+  getRecords('2.0')
 )
 router.get(
   '/v2.1/catalog/datasets/:datasetId/exports/:format',
@@ -307,7 +327,15 @@ router.get(
   datasetsApiKeyMiddleware,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
-  exports
+  exports('2.1')
+)
+router.get(
+  '/v2.0/catalog/datasets/:datasetId/exports/:format',
+  readDataset({ fillDescendants: true }),
+  datasetsApiKeyMiddleware,
+  permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
+  cacheHeaders.resourceBased('finalizedAt'),
+  exports('2.0')
 )
 
 // also expose the same endpoint on the datasets router to expose in the api doc
@@ -317,7 +345,7 @@ datasetsRouter.get(
   datasetsApiKeyMiddleware,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
-  getRecords
+  getRecords('2.1')
 )
 datasetsRouter.get(
   '/:datasetId/compat-ods/exports/:format',
@@ -325,7 +353,7 @@ datasetsRouter.get(
   datasetsApiKeyMiddleware,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
-  exports
+  exports('2.1')
 )
 
 router.use('/', (req, res, next) => {

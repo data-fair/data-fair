@@ -121,6 +121,9 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.total_count, 2)
 
+    res = await ax.get(`/api/v1/compat-ods/v2.0/catalog/datasets/${dataset.id}/records`)
+    assert.equal(res.status, 200)
+
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 2)
@@ -156,9 +159,9 @@ describe('compatibility layer for ods api', function () {
 
     // csv export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
-    assert.equal(res.data, `"id","adr","some date","loc","bool","nb"
-"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0,11
-"bidule","adresse inconnue","2017-10-10","45.5,2.6",1,22.2
+    assert.equal(res.data, `id;adr;some date;loc;bool;nb
+koumoul;19 rue de la voie lactée saint avé;2017-12-12;47.687375,-2.748526;0;11
+bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
 `)
   })
 

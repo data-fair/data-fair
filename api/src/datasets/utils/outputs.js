@@ -11,7 +11,7 @@ export const results2sheetPiscina = new Piscina({
   maxThreads: 1
 })
 
-const csvStringifyOptions = (dataset, query = {}, useTitle = false) => {
+export const csvStringifyOptions = (dataset, query = {}, useTitle = false) => {
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
   return {
