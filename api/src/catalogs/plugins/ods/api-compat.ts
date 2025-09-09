@@ -15,6 +15,7 @@ import memoize from 'memoizee'
 import pump from '../../../misc/utils/pipe.ts'
 import { stringify as csvStrStream, type Options as CsvOptions } from 'csv-stringify'
 import { csvStringifyOptions } from '../../../datasets/utils/outputs.js'
+import contentDisposition from 'content-disposition'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
@@ -301,17 +302,45 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   esQuery._source = parseSelect(fields, query.select, 'exports')
   esQuery.sort = parseOrderBy(dataset, fields, query)
   esQuery.query = parseFilters(dataset, query, 'exports')
-
+  const useLabels = query.use_labels === 'true'
+  console.log('format ?', req.params.format)
   let transformStreams: Stream[] = []
   if (req.params.format === 'csv') {
     // https://help.opendatasoft.com/apis/ods-explore-v2/#tag/Dataset/operation/exportRecordsCSV
-    res.setHeader('content-type', 'text/csv')
-    const options: CsvOptions = csvStringifyOptions(dataset, query, query.use_labels === 'true')
+    // res.setHeader('content-type', 'text/csv')
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
+    const options: CsvOptions = csvStringifyOptions(dataset, query, useLabels)
     if (version === '2.0') options.bom = req.query.with_bom === 'true'
     else options.bom = req.query.with_bom !== 'false'
     options.delimiter = req.query.delimiter ?? ';'
     options.quoted_string = req.query.quote_all === 'true'
     transformStreams = [csvStrStream(options)]
+  } else if (req.params.format === 'xlsx') {
+    // res.setHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
+    // basic streaming xlsx writer
+    const XLSXTransformStream = (await import('xlsx-write-stream')).default
+    let i = 0
+    transformStreams = [
+      new Transform({
+        objectMode: true,
+        transform (item, encoding, callback) {
+          if (i === 0) {
+            const properties = esQuery._source.map(key => dataset.schema.find(prop => prop.key === key))
+            this.push(properties.map(field => (useLabels ? field.title : field['x-originalName']) || field['x-originalName'] || field.key))
+          }
+          this.push(esQuery._source.map(key => '' + item[key]))
+          i++
+          callback()
+        }
+      }),
+      new Transform({
+        objectMode: true,
+        transform (item, encodingExists, callback) {
+          console.log('item', item)
+          callback(null, item)
+        }
+      }), new XLSXTransformStream()]
   } else {
     compatReqCounter.inc({ endpoint: 'exports', status: 'unsupported' })
     throw httpError(400, `le format "${req.params.format}" n'est pas supporté par l'export de données de cette couche de compatibilité pour la version d'API précédente.`)
