@@ -15,6 +15,7 @@ export const init = async () => {
   const collection = (await mongo.db.listCollections({ name: 'ping-workers' }).toArray())[0]
   if (!collection) await mongo.db.createCollection('ping-workers', { capped: true, size: 10000, max: 100 })
   messagesCollection = mongo.db.collection('ping-workers')
+  await messagesCollection.insertOne({ type: 'init' })
 }
 
 export const emit = async (type: ResourceType, id: string) => {
@@ -52,6 +53,7 @@ export const listen = async (callback: (type: ResourceType, id: string) => Promi
       cursor = messagesCollection!.find({}, { tailable: true, awaitData: true })
       for await (const doc of cursor) {
         debug('receive ping message', doc.type, doc.id, doc.date, startDate)
+        if (doc.type === 'init') continue
         if (doc.date && doc.date < startDate) continue
         callback(doc.type, doc.id).catch(err => internalError('worker-ping-callback', err))
       }
