@@ -3,7 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
 
 describe('compatibility layer for ods api', function () {
-  it('contains a parser for the where syntax', function () {
+  it.only('contains a parser for the where syntax', function () {
     assert.deepEqual(
       whereParser.parse('"koumoul"', { searchFields: ['id'] }),
       {
@@ -106,6 +106,44 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(
       whereParser.parse('date: date\'2020-12-01\'', { dataset: { schema: [{ key: 'date' }] } }),
       { term: { date: '2020-12-01' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('search(test1, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text'] }),
+      { multi_match: { fields: ['test1.text'], fuzziness: 'AUTO', query: 'bok of secret', type: 'bool_prefix' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('search(test1, test2, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text', 'test3.text'] }),
+      { multi_match: { fields: ['test1.text', 'test2.text'], fuzziness: 'AUTO', query: 'bok of secret', type: 'bool_prefix' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('search(*, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text', 'test3.text'] }),
+      { multi_match: { fields: ['test1.text', 'test2.text', 'test3.text'], fuzziness: 'AUTO', query: 'bok of secret', type: 'bool_prefix' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('suggest(test1, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text'] }),
+      { multi_match: { fields: ['test1.text'], query: 'bok of secret', type: 'phrase_prefix' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('startswith(test1, "star")', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { bool: { should: [{ prefix: { test1: 'star' } }] } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('startswith(*, "star")', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { bool: { should: [{ prefix: { test1: 'star' } }, { prefix: { test2: 'star' } }] } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'within_distance(geo, geom\'{"geometry": {"type": "Point","coordinates": [10, 10.1]}}\', 10km)',
+        { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }], bbox: [] } }
+      ),
+      { geo_distance: { _geopoint: [10, 10.1], distance: '10km' } }
     )
   })
 

@@ -1,3 +1,8 @@
+{{
+const LBRACE='{';
+const RBRACE='}';
+}}
+
 FieldName
   = identifier:IdentifierName {
     return identifier.name
@@ -9,10 +14,13 @@ FieldName
     return '' + identifier.value
   }
 
-DateLiteral = "date'" year:DateYear "/" month:DateMonth "/" day:DateDay "'" {
+Date = 'date'i
+
+DateLiteral
+  = Date"'" year:DateYear "/" month:DateMonth "/" day:DateDay "'" {
     return { value: year + '-' + month + '-' + day }
   }
-  / "date'" date:DatePartialIso "'" {
+  / Date"'" date:DatePartialIso "'" {
     return { value: date }
   }
 
@@ -20,6 +28,23 @@ DateYear = DecimalDigit DecimalDigit DecimalDigit DecimalDigit { return text() }
 DateMonth = DecimalDigit DecimalDigit { return text() }
 DateDay = DecimalDigit DecimalDigit { return text() }
 DatePartialIso = (DecimalDigit / "-" / "T" / "Z" / ":")* { return text() }
+
+Geom = 'geom'i
+
+GeometryLiteral
+  = Geom"'" chars:SingleStringCharacter* "'" {
+    const str = chars.join('')
+    if (str[0] === LBRACE) {
+      try {
+        return JSON.parse(str)
+      } catch (err) {
+        throw httpError(400, `Impossible de parser la géométrie ${str}, erreur: ${err.message}`)
+      }
+    } else {
+      return str
+    }
+  }
+
 
 // the following is copied and adapted from parts of
 // https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs
