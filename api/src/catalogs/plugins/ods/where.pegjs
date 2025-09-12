@@ -2,12 +2,31 @@
 {{
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../../datasets/es/commons.js'
+import { wktToGeoJSON } from '@terraformer/wkt'
+
 
 const esOperators = {
   '<': 'lt',
   '<=': 'lte',
   '>': 'gt',
   '>=': 'gte'
+}
+
+const geoShapeQuery = (dataset, shape, relation) => {
+  if (!dataset.bbox) throw httpError(400, 'geo filter cannot be used on this dataset. It is not geolocalized.')
+  if (typeof shape === 'string') shape = wktToGeoJSON(shape)
+  const geoShapeProp = dataset.schema.find(p => p.key === '_geoshape')
+  const geoShape = geoShapeProp && (!geoShapeProp['x-capabilities'] || geoShapeProp['x-capabilities'].geoShape !== false)
+  const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
+  const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
+  return {
+    geo_shape: {
+      [geoShape ? '_geoshape' : (geoCorners ? '_geocorners' : '_geopoint')]: {
+        relation,
+        shape
+      }
+    }
+  }
 }
 }}
 
@@ -29,6 +48,10 @@ PrimaryFilter
   / SuggestFunction
   / StartsWithFunction
   / WithinDistanceFunction
+  / InBboxFunction
+  / IntersectsFunction
+  / DisjointFunction
+  / WithinFunction
   / "(" _ filter:Filter _ ")" { return filter }
 
 EqualityFilter
@@ -117,8 +140,6 @@ StringFilter
     return { multi_match: {query: literal.value, fields: options.searchFields, operator: 'and', type: 'cross_fields' } }
   }
 
-Search = "search"i
-
 FieldNamesList
   = head:FieldName tail:(FieldNameAfterListSeparator)* {
     return [head, ...tail]
@@ -152,7 +173,7 @@ StringFieldNames
 
 // cf https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/search()
 SearchFunction
-  = Search '(' fieldNames:SearchFieldNames ListSeparator value:StringLiteral ')' {
+  = "search"i '(' fieldNames:SearchFieldNames ListSeparator value:StringLiteral ')' {
     return {
       multi_match: {
         query: value.value,
@@ -163,11 +184,9 @@ SearchFunction
     }
   }
 
-Suggest = "suggest"i
-
 // cf https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/suggest()
 SuggestFunction
-  = Suggest '(' fieldNames:SearchFieldNames ListSeparator value:StringLiteral ')' {
+  = "suggest"i '(' fieldNames:SearchFieldNames ListSeparator value:StringLiteral ')' {
     return {
       multi_match: {
         query: value.value,
@@ -177,19 +196,15 @@ SuggestFunction
     }
   }
 
-StartsWith = "startswith"i
-
 // https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/startswith()
 StartsWithFunction
-  = StartsWith '(' fieldNames:StringFieldNames ListSeparator value:StringLiteral ')' {
+  = "startswith"i '(' fieldNames:StringFieldNames ListSeparator value:StringLiteral ')' {
     return {
       bool: {
         should: fieldNames.map(f => ({prefix: {[f]: value.value}}))
       }
     }
   }
-
-WithinDistance = "within_distance"i
 
 DistanceUnit
   = 'm'
@@ -205,9 +220,9 @@ Distance
     return '' + value.value + unit
   }
 
-// cf https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/startswith()
+// cf https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/within_distance()
 WithinDistanceFunction
-  = WithinDistance '(' fieldName:FieldName ListSeparator geometry:GeometryLiteral ListSeparator distance:Distance ')' {
+  = "within_distance"i '(' FieldName ListSeparator geometry:GeometryLiteral ListSeparator distance:Distance ')' {
     if (!options.dataset.bbox) throw httpError(400, '"within_distance" filter cannot be used on this dataset. It is not geolocalized.')
     let point
     if (typeof geometry === 'string') {
@@ -227,6 +242,35 @@ WithinDistanceFunction
         _geopoint: point
       }
     }
+  }
+
+// cf https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/in_bbox()
+InBboxFunction
+  = 'in_bbox'i '(' FieldName ListSeparator lat1:NumericLiteral ListSeparator lon1:NumericLiteral ListSeparator lat2:NumericLiteral ListSeparator lon2:NumericLiteral ')' {
+    const left = lat1.value
+    const bottom = lon1.value
+    const right = lat2.value
+    const top = lon2.value
+    return geoShapeQuery(options.dataset, { type: 'envelope', coordinates: [[left, top], [right, bottom]] }, 'intersects')
+    
+  }
+
+// cf https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/intersects()
+IntersectsFunction
+  = 'intersects'i '(' FieldName ListSeparator geometry: GeometryLiteral ')' {
+    return geoShapeQuery(options.dataset, geometry, 'intersects')
+  }
+
+// cf https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/disjoint()
+DisjointFunction
+  = 'disjoint'i '(' FieldName ListSeparator geometry: GeometryLiteral ')' {
+    return geoShapeQuery(options.dataset, geometry, 'disjoint')
+  }
+
+// cf https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/within()
+WithinFunction
+  = 'within'i '(' FieldName ListSeparator geometry: GeometryLiteral ')' {
+    return geoShapeQuery(options.dataset, geometry, 'within')
   }
 
 OrFilter

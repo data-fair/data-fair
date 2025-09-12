@@ -3,7 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
 
 describe('compatibility layer for ods api', function () {
-  it.only('contains a parser for the where syntax', function () {
+  it('contains a parser for the where syntax', function () {
     assert.deepEqual(
       whereParser.parse('"koumoul"', { searchFields: ['id'] }),
       {
@@ -144,6 +144,36 @@ describe('compatibility layer for ods api', function () {
         { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }], bbox: [] } }
       ),
       { geo_distance: { _geopoint: [10, 10.1], distance: '10km' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'in_bbox(geo, 10, 11, 12, 13)',
+        { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }], bbox: [] } }
+      ),
+      {
+        geo_shape: {
+          _geopoint: {
+            relation: 'intersects',
+            shape: { coordinates: [[10, 13], [12, 11]], type: 'envelope' }
+          }
+        }
+      }
+    )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'intersects(geo, geom\'{"geometry": {"type": "Point","coordinates": [10, 10.1]}}\')',
+        { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }], bbox: [] } }
+      ),
+      {
+        geo_shape: {
+          _geopoint: {
+            relation: 'intersects',
+            shape: { geometry: { type: 'Point', coordinates: [10, 10.1] } }
+          }
+        }
+      }
     )
   })
 
