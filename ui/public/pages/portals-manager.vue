@@ -2,12 +2,12 @@
   <div>
     <nuxt-child />
     <d-frame
+      id="portals-manager"
       :height="(windowHeight - 48) + 'px'"
       src="/portals/"
       sync-params
       sync-path="/data-fair/portals-manager/"
       emit-iframe-messages
-      debug
       resize="no"
       :adapter.prop="stateChangeAdapter"
       @message="message => onMessage(message.detail)"

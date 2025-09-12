@@ -2,12 +2,12 @@
   <div>
     <nuxt-child />
     <d-frame
+      id="events"
       :height="(windowHeight - 48) + 'px'"
       src="/events/embed/"
       sync-params
       sync-path="/data-fair/events/"
       emit-iframe-messages
-      debug
       resize="no"
       :adapter.prop="stateChangeAdapter"
       @message="message => onMessage(message.detail)"
