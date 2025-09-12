@@ -30,7 +30,7 @@ export default {
       let p = to
       if (p.startsWith('/') && this.extra.basePath) p = this.extra.basePath + p
       if (p === this.iframePathName || (p + '/') === this.iframePathName) return undefined
-      if (p.startsWith(this.iframePathName)) p = p.replace(this.iframePathName, './')
+      if (p.startsWith(this.iframePathName)) p = p.replace(this.iframePathName, this.extra.dFrame ? '' : './')
       return p
     }
   }
