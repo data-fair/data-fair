@@ -159,7 +159,7 @@
           v-if="canAdminDep && env.portalsIntegration"
           :nuxt="true"
           dense
-          :to="`/portals/portals`"
+          :to="`/portals-manager/portals`"
         >
           <v-list-item-action><v-icon>mdi-clipboard-text-clock</v-icon></v-list-item-action>
           <v-list-item-content>
@@ -172,7 +172,7 @@
           v-if="canAdminDep && env.portalsIntegration"
           :nuxt="true"
           dense
-          :to="`/portals/pages`"
+          :to="`/portals-manager/pages`"
         >
           <v-list-item-action><v-icon>mdi-text-box-edit-outline</v-icon></v-list-item-action>
           <v-list-item-content>
