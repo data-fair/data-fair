@@ -2,44 +2,6 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   let publicUrl = window.location.origin + env.basePath
   if (publicUrl.endsWith('/')) publicUrl = publicUrl.substr(0, publicUrl.length - 1)
 
-  env.extraNavigationItems = env.extraNavigationItems ?? []
-  env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
-
-  if (env.eventsIntegration && !env.extraNavigationItems.some(e => e.id === 'events')) {
-    env.extraNavigationItems.push({
-      id: 'events',
-      title: 'Traçabilité (bêta)',
-      can: 'admin',
-      iframe: '/events/embed/events',
-      basePath: '/events',
-      icon: 'mdi-clipboard-text-clock',
-      dFrame: true
-    })
-  }
-
-  if (env.portalsIntegration) {
-    env.extraNavigationItems.push({
-      id: 'portals-manager-portals',
-      title: 'Portails (bêta)',
-      subtitle: 'Nouvelle version',
-      can: 'adminDep',
-      iframe: '/portals-manager/portals',
-      basePath: '/portals-manager',
-      icon: 'mdi-presentation',
-      dFrame: true
-    })
-    env.extraNavigationItems.push({
-      id: 'portals-manager-pages',
-      title: 'Pages de portails (bêta)',
-      subtitle: 'Nouvelle version',
-      can: 'adminDep',
-      iframe: '/portals-manager/pages',
-      basePath: '/portals-manager',
-      icon: 'mdi-text-box-edit-outline',
-      dFrame: true
-    })
-  }
-
   store.commit('setAny', {
     env: {
       ...env,

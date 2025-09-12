@@ -143,6 +143,44 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item
+          v-if="canAdmin && env.eventsIntegration"
+          :nuxt="true"
+          dense
+          :to="`/events/events`"
+        >
+          <v-list-item-action><v-icon>mdi-clipboard-text-clock</v-icon></v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Traçabilité (bêta)</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item
+          v-if="canAdminDep && env.portalsIntegration"
+          :nuxt="true"
+          dense
+          :to="`/portals/portals`"
+        >
+          <v-list-item-action><v-icon>mdi-clipboard-text-clock</v-icon></v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Portails (bêta)</v-list-item-title>
+            <v-list-item-subtitle>Nouvelle version</v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item
+          v-if="canAdminDep && env.portalsIntegration"
+          :nuxt="true"
+          dense
+          :to="`/portals/pages`"
+        >
+          <v-list-item-action><v-icon>mdi-text-box-edit-outline</v-icon></v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Pages de portails (bêta)</v-list-item-title>
+            <v-list-item-subtitle>Nouvelle version</v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+
         <template v-if="env.extraNavigationItems && user">
           <v-list-item
             v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin) || (extra.can === 'contribDep' && canContribDep) || (extra.can === 'adminDep' && canAdminDep))"
