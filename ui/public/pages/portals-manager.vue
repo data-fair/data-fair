@@ -4,7 +4,7 @@
     <d-frame
       id="portals-manager"
       :height="(windowHeight - 48) + 'px'"
-      src="/portals/"
+      src="/portals-manager/"
       sync-params
       sync-path="/data-fair/portals-manager/"
       emit-iframe-messages
