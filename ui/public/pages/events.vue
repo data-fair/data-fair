@@ -2,11 +2,11 @@
   <div>
     <nuxt-child />
     <d-frame
-      id="catalogs"
+      id="events"
       :height="(windowHeight - 48) + 'px'"
-      src="/catalogs/"
+      src="/events/embed/"
       sync-params
-      sync-path="/data-fair/catalogs/"
+      sync-path="/data-fair/events/"
       emit-iframe-messages
       resize="no"
       :adapter.prop="stateChangeAdapter"
@@ -32,7 +32,7 @@ export default {
       // we mirror its internal paths by using them as a "to" query param for our own current page
       if (message.breadcrumbs) {
         const localBreadcrumbs = message.breadcrumbs
-          .map(b => ({ ...b, exact: true, to: b.to && { path: '/catalogs' + b.to } }))
+          .map(b => ({ ...b, exact: true, to: b.to && { path: '/events' + b.to } }))
         this.$store.dispatch('breadcrumbs', localBreadcrumbs)
       }
     }
