@@ -17,28 +17,6 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
     })
   }
 
-  if (env.catalogsIntegration) {
-    env.extraNavigationItems.unshift({
-      id: 'catalogs',
-      title: 'Catalogues (bêta)',
-      subtitle: 'Nouvelle version',
-      can: 'adminDep',
-      iframe: '/catalogs/catalogs',
-      basePath: '/catalogs',
-      icon: 'mdi-transit-connection',
-      dFrame: true
-    })
-
-    env.extraAdminNavigationItems.push({
-      id: 'catalogs-plugins',
-      title: 'Plugins - Catalogues',
-      iframe: '/catalogs/admin/plugins',
-      basePath: '/catalogs',
-      icon: 'mdi-transit-connection',
-      dFrame: true
-    })
-  }
-
   if (env.portalsIntegration) {
     env.extraNavigationItems.push({
       id: 'portals-manager-portals',

@@ -121,13 +121,25 @@
           v-if="canAdminDep"
           :nuxt="true"
           dense
-          :to="`/catalogs`"
+          :to="`/catalogs-old`"
           :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
         >
           <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
           <v-list-item-content>
             <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
-            <v-list-item-subtitle>{{ $t('catalogsSub') }}</v-list-item-subtitle>
+            <v-list-item-subtitle>{{ $t('catalogsOldSub') }}</v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item
+          v-if="canAdminDep && env.catalogsIntegration"
+          :nuxt="true"
+          dense
+          :to="`/catalogs/catalogs`"
+        >
+          <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -316,7 +328,7 @@ fr:
   params: Paramètres
   paramsSub: Licences, thématiques ...
   catalogs: Catalogues
-  catalogsSub: Ancienne version
+  catalogsOldSub: Ancienne version
   storage: Stockage
   subscription: Abonnement
   doc: Documentation

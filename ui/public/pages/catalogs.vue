@@ -1,57 +1,40 @@
 <template>
-  <v-container fluid>
-    <catalog-list v-if="user" />
-    <!-- Anonymous: show jumbotron -->
-    <v-col
-      v-else-if="initialized"
-      md="6"
-      offset="3"
-    >
-      <v-responsive>
-        <v-container class="fill-height">
-          <v-row align="center">
-            <v-col class="text-center">
-              <h3 class="text-h4 mb-3 mt-5">
-                {{ $t('title') }}
-              </h3>
-              <p class="text-h6 mt-5">
-                {{ $t('authRequired') }}
-              </p>
-              <v-btn
-                color="primary"
-                @click="login"
-              >
-                {{ $t('login') }}
-              </v-btn>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-responsive>
-    </v-col>
-  </v-container>
+  <div>
+    <nuxt-child />
+    <d-frame
+      :height="(windowHeight - 48) + 'px'"
+      src="/catalogs/"
+      sync-params
+      sync-path="/data-fair/catalogs/"
+      @message="message => onMessage(message.detail)"
+    />
+  </div>
 </template>
 
-<i18n lang="yaml">
-fr:
-  title: Catalogues
-  authRequired: Vous devez être authentifié pour utiliser ce service.
-  login: Se connecter / S'inscrire
-
-en:
-  title: Interoperable services
-  authRequired: You must be logged in to use this service.
-  login: Login / Sign up
-</i18n>
-
 <script>
-import { mapState, mapActions } from 'vuex'
+import '@data-fair/frame/lib/d-frame.js'
 
 export default {
-  computed: {
-    ...mapState('session', ['user', 'initialized'])
-  },
   methods: {
-    ...mapActions('session', ['login'])
+    onMessage (message) {
+      // the iframe requests that we display a breadcrumb
+      // we mirror its internal paths by using them as a "to" query param for our own current page
+      if (message.breadcrumbs) {
+        const localBreadcrumbs = message.breadcrumbs
+          .map(b => ({ ...b, exact: true, to: b.to && { path: this.$route.path, query: { p: this.getBreadcrumbPath(b.to) } } }))
+        this.$store.dispatch('breadcrumbs', localBreadcrumbs)
+      }
+    },
+    getBreadcrumbPath (to) {
+      let p = to
+      if (p.startsWith('/') && this.extra.basePath) p = this.extra.basePath + p
+      if (p === this.iframeUrl.pathname) return undefined
+      if (p.startsWith(this.iframePathName)) p = p.replace(this.iframePathName, './')
+      return p
+    }
   }
 }
 </script>
+
+<style lang="css" scoped>
+</style>
