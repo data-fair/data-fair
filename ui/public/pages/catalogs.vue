@@ -6,31 +6,35 @@
       src="/catalogs/"
       sync-params
       sync-path="/data-fair/catalogs/"
+      emit-iframe-messages
+      debug
+      resize="no"
+      :adapter.prop="stateChangeAdapter"
       @message="message => onMessage(message.detail)"
+      @iframe-message="message => onMessage(message.detail)"
     />
   </div>
 </template>
 
 <script>
 import '@data-fair/frame/lib/d-frame.js'
+import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
 
 export default {
+  computed: {
+    stateChangeAdapter () {
+      return createStateChangeAdapter(this.$router)
+    }
+  },
   methods: {
     onMessage (message) {
       // the iframe requests that we display a breadcrumb
       // we mirror its internal paths by using them as a "to" query param for our own current page
       if (message.breadcrumbs) {
         const localBreadcrumbs = message.breadcrumbs
-          .map(b => ({ ...b, exact: true, to: b.to && { path: this.$route.path, query: { p: this.getBreadcrumbPath(b.to) } } }))
+          .map(b => ({ ...b, exact: true, to: b.to && { path: '/catalogs' + b.to } }))
         this.$store.dispatch('breadcrumbs', localBreadcrumbs)
       }
-    },
-    getBreadcrumbPath (to) {
-      let p = to
-      if (p.startsWith('/') && this.extra.basePath) p = this.extra.basePath + p
-      if (p === this.iframeUrl.pathname) return undefined
-      if (p.startsWith(this.iframePathName)) p = p.replace(this.iframePathName, './')
-      return p
     }
   }
 }
