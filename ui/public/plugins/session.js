@@ -10,7 +10,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       id: 'events',
       title: 'Traçabilité (bêta)',
       can: 'admin',
-      iframe: '/events/embed/events',
+      iframe: '/events/embed/events/',
       basePath: '/events',
       icon: 'mdi-clipboard-text-clock',
       dFrame: true
@@ -23,7 +23,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       title: 'Catalogues (bêta)',
       subtitle: 'Nouvelle version',
       can: 'adminDep',
-      iframe: '/catalogs/catalogs',
+      iframe: '/catalogs/catalogs/',
       basePath: '/catalogs',
       icon: 'mdi-transit-connection',
       dFrame: true
@@ -32,7 +32,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
     env.extraAdminNavigationItems.push({
       id: 'catalogs-plugins',
       title: 'Plugins - Catalogues',
-      iframe: '/catalogs/admin/plugins',
+      iframe: '/catalogs/admin/plugins/',
       basePath: '/catalogs',
       icon: 'mdi-transit-connection',
       dFrame: true
@@ -45,7 +45,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       title: 'Portails (bêta)',
       subtitle: 'Nouvelle version',
       can: 'adminDep',
-      iframe: '/portals-manager/portals',
+      iframe: '/portals-manager/portals/',
       basePath: '/portals-manager',
       icon: 'mdi-presentation',
       dFrame: true
@@ -55,7 +55,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       title: 'Pages de portails (bêta)',
       subtitle: 'Nouvelle version',
       can: 'adminDep',
-      iframe: '/portals-manager/pages',
+      iframe: '/portals-manager/pages/',
       basePath: '/portals-manager',
       icon: 'mdi-text-box-edit-outline',
       dFrame: true
