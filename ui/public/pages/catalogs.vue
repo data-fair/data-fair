@@ -32,7 +32,7 @@ export default {
       // we mirror its internal paths by using them as a "to" query param for our own current page
       if (message.breadcrumbs) {
         const localBreadcrumbs = message.breadcrumbs
-          .map(b => ({ ...b, exact: true, to: b.to && { path: '/catalogs' + b.to } }))
+          .map(b => ({ ...b, exact: true, to: b.to && { path: b.to } }))
         this.$store.dispatch('breadcrumbs', localBreadcrumbs)
       }
     }
