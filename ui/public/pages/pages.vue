@@ -4,9 +4,9 @@
     <d-frame
       id="portals-manager"
       :height="(windowHeight - 48) + 'px'"
-      src="/portals-manager/"
+      src="/portals-manager/pages/"
       sync-params
-      sync-path="/data-fair/portals-manager/"
+      sync-path="/data-fair/pages/"
       emit-iframe-messages
       resize="no"
       :adapter.prop="stateChangeAdapter"
@@ -32,7 +32,7 @@ export default {
       // we mirror its internal paths by using them as a "to" query param for our own current page
       if (message.breadcrumbs) {
         const localBreadcrumbs = message.breadcrumbs
-          .map(b => ({ ...b, exact: true, to: b.to && { path: '/portals-manager' + b.to } }))
+          .map(b => ({ ...b, exact: true, to: b.to && { path: '/pages' + b.to } }))
         this.$store.dispatch('breadcrumbs', localBreadcrumbs)
       }
     }

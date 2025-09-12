@@ -4,7 +4,7 @@
     <d-frame
       id="events"
       :height="(windowHeight - 48) + 'px'"
-      src="/events/embed/"
+      src="/events/embed/events/"
       sync-params
       sync-path="/data-fair/events/"
       emit-iframe-messages

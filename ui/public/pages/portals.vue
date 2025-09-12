@@ -2,11 +2,11 @@
   <div>
     <nuxt-child />
     <d-frame
-      id="catalogs"
+      id="portals-manager"
       :height="(windowHeight - 48) + 'px'"
-      src="/catalogs/catalogs/"
+      src="/portals-manager/portals/"
       sync-params
-      sync-path="/data-fair/catalogs/"
+      sync-path="/data-fair/portals/"
       emit-iframe-messages
       resize="no"
       :adapter.prop="stateChangeAdapter"
@@ -32,7 +32,7 @@ export default {
       // we mirror its internal paths by using them as a "to" query param for our own current page
       if (message.breadcrumbs) {
         const localBreadcrumbs = message.breadcrumbs
-          .map(b => ({ ...b, exact: true, to: b.to && { path: '/catalogs' + b.to } }))
+          .map(b => ({ ...b, exact: true, to: b.to && { path: '/portals' + b.to } }))
         this.$store.dispatch('breadcrumbs', localBreadcrumbs)
       }
     }
