@@ -118,9 +118,9 @@ const parseFilters = (dataset, query, endpoint) => {
   }
 
   if (query.where) {
-    const { searchFields } = esUtils.getFilterableFields(dataset)
+    const { searchFields, wildcardFields } = esUtils.getFilterableFields(dataset)
     try {
-      must.push(parseWhere(query.where, { searchFields, dataset }))
+      must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset }))
     } catch (err: any) {
       compatReqCounter.inc({ endpoint, status: 'invalid-where' })
       throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)

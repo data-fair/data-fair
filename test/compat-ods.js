@@ -29,6 +29,10 @@ describe('compatibility layer for ods api', function () {
       { term: { id: 'koumoul' } }
     )
     assert.deepEqual(
+      whereParser.parse('id like \'koumo*\'', { dataset: { schema: [{ key: 'id' }] }, searchFields: ['id.text'], wildCardFields: ['id.wildcard'] }),
+      { simple_query_string: { query: 'koumo*', fields: ['id.text', 'id.wildcard'] } }
+    )
+    assert.deepEqual(
       whereParser.parse('id: "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
       { term: { id: 'koumoul' } }
     )

@@ -212,7 +212,7 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []
-  // const wildcardFields = []
+  const wildcardFields = []
   const qSearchFields = []
   const qStandardFields = []
   const qWildcardFields = []
@@ -256,12 +256,12 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
         }
       }
       if (esProp.fields.wildcard) {
-        // wildcardFields.push(f.key + '.wildcard')
+        wildcardFields.push(f.key + '.wildcard')
         if (isQField) qWildcardFields.push(f.key + '.wildcard')
       }
     }
   }
-  return { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields }
+  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qWildcardFields, esFields }
 }, {
   profileName: 'getFilterableFields',
   primitive: true,
