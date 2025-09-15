@@ -21,6 +21,7 @@ import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
 import { jsonSchema } from '../../../datasets/utils/data-schema.ts'
 import JSONStream from 'JSONStream'
+import capabilities from '../../../../contract/capabilities.js'
 
 dayjs.extend(timezone)
 dayjs.extend(utc)
@@ -176,9 +177,13 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   const groupBy: string[] = query.group_by?.split(',')
   if (groupBy?.length) {
     for (const groupByKey of groupBy) {
-      if (!fields.includes(groupByKey)) {
+      const prop = dataset.schema.find(p => p.key === groupByKey)
+      if (!prop) {
         compatReqCounter.inc({ endpoint: 'records', status: 'invalid-group-by' })
         throw httpError(400, `Impossible de grouper par le champ ${groupByKey}, il n'existe pas dans le jeu de données ou alors il correspond à une capacité d'aggrégation non supportée par cette couche de compatibilité pour la version d'API précédente.`)
+      }
+      if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
+        throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
       }
     }
     const bucketSort = {
