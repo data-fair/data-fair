@@ -1,6 +1,7 @@
 import mongo from '#mongo'
 import es from '#es'
 import config from '#config'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import type { FileDataset, RestDataset, Dataset } from '#types'
 
@@ -21,6 +22,7 @@ export const indexLines = async function (dataset: Dataset) {
 export const validateFile = async function (dataset: FileDataset) {
   await mongo.connect(true)
   await wsEmitter.init(mongo.db)
+  await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const validateFile = await import('./validate-file.ts')
   await validateFile.default(dataset)
 }
