@@ -24,11 +24,7 @@ export default {
   computed: {
     ...mapState(['env']),
     extra () {
-      const extra = this.env.extraNavigationItems.find(e => e.id === this.$route.params.id)
-      if (!extra) {
-        console.log('extra page not found', this.$route.params.id, this.env.extraNavigationItems)
-      }
-      return extra
+      return this.env.extraAdminNavigationItems.find(e => e.id === this.$route.params.id)
     }
   }
 }
