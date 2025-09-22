@@ -6,6 +6,7 @@ import { CronJob } from 'cron'
 import * as catalogs from '../../catalogs/plugins/index.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import type { Application, Dataset, DatasetInternal, RestDataset } from '#types'
 
 export const harvest = async function (catalog: any) {
@@ -105,6 +106,7 @@ export const autoUpdateExtension = async function (dataset: Dataset) {
 export const finalize = async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
   await wsEmitter.init(mongo.db)
+  await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const finalize = await import('./finalize.ts')
   await finalize.default(dataset)
 }
