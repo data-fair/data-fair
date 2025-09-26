@@ -121,9 +121,17 @@
 				"title": "Nouvelle application {{label}}",
 				"body": "L'application' {{label}} vient d'être créée."
 			},
+			"publication-requested": {
+				"title": "Demande de publication d'application'",
+				"body": "Un contributeur demande de publier l'application {{label}} sur {{publicationSite}}."
+			},
 			"published": {
 				"title": "Publication de {{label}}",
 				"body": "L'application {{label}} a été publiée sur {{publicationSite}}."
+			},
+			"published-topic": {
+				"title": "Publication de {{label}} dans {{topic}}",
+				"body": "L'application {{label}} a été publiée sur {{publicationSite}} dans la thématique {{topic}}."
 			}
 		}
 	}
