@@ -70,7 +70,7 @@
 				"body": "The new dataset {{label}} was just created in draft mode."
 			},
 			"publication-requested": {
-				"title": "Request for publicatiin of a dataset",
+				"title": "Request for publication of a dataset",
 				"body": "A contributor is asking to publish the dataset {{label}} on {{publicationSite}}."
 			},
 			"published": {
@@ -119,9 +119,17 @@
 				"title": "New application {{label}}",
 				"body": "The new application {{label}} was just created."
 			},
+			"publication-requested": {
+				"title": "Request for publication of an application",
+				"body": "A contributor is asking to publish the application {{label}} on {{publicationSite}}."
+			},
 			"published": {
 				"title": "Publication of {{label}}",
 				"body": "The application {{label}} has been published on {{publicationSite}}."
+			},
+			"published-topic": {
+				"title": "Publication of {{label}} in {{topic}}",
+				"body": "The application {{label}} has been published on {{publicationSite}} in the topic {{topic}}."
 			}
 		}
 	}
