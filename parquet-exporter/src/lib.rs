@@ -1,4 +1,4 @@
-use neon::{object::Object, prelude::{Context, FunctionContext, Handle, JsBox, JsFunction, JsResult, ModuleContext, NeonResult}, types::JsArray};
+use neon::{object::Object, prelude::{Context, FunctionContext, JsBox, JsFunction, JsResult, ModuleContext, NeonResult}, types::JsArray};
 
 use crate::parquet_exporter::ParquetExporter;
 mod buffer_stream_writer;
@@ -7,8 +7,8 @@ mod parquet_exporter;
 
 fn create_parquet_exporter(mut cx: FunctionContext) -> JsResult<JsBox<parquet_exporter::ParquetExporter>> {
     let dataset_schema = cx.argument::<JsArray>(0)?;
-    let data_callback = cx.argument::<JsFunction>(1)?;
-    let end_callback = cx.argument::<JsFunction>(2)?;
+    let data_callback = cx.argument::<JsFunction>(1)?.root(&mut cx);
+    let end_callback = cx.argument::<JsFunction>(2)?.root(&mut cx);
     
     let exporter = ParquetExporter::new(&mut cx, dataset_schema, data_callback, end_callback);
     Ok(cx.boxed(exporter))

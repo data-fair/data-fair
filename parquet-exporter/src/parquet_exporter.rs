@@ -1,4 +1,4 @@
-use neon::prelude::{FunctionContext, Object, JsFunction, JsArray, JsObject, Handle, Finalize};
+use neon::prelude::{FunctionContext, Object, JsFunction, JsArray, JsObject, Handle, Root, Finalize};
 use parquet::data_type::{DoubleType, Int64Type};
 use parquet::{data_type::BoolType, file::{
   properties::WriterProperties,
@@ -8,14 +8,14 @@ use crate::{buffer_stream_writer::BufferStreamWriter, schema::BasicSchemaPropert
 use crate::schema::{create_basic_schema, create_parquet_schema};
 use std::sync::Arc;
 
-pub struct ParquetExporter <'cx> {
+pub struct ParquetExporter {
     // buffer_stream_writer: &'cx BufferStreamWriter<'cx>,
     basic_schema: Vec<BasicSchemaProperty>,
-    file_writer: SerializedFileWriter<BufferStreamWriter<'cx>>
+    file_writer: SerializedFileWriter<BufferStreamWriter>
 }
 
-impl <'cx> ParquetExporter <'cx> {
-    pub fn new(cx: &'cx mut FunctionContext<'cx>, dataset_schema: Handle<'cx, JsArray>, data_callback: Handle<'cx, JsFunction>, end_callback: Handle<'cx, JsFunction>) -> Self {
+impl ParquetExporter  {
+    pub fn new(cx: &mut FunctionContext, dataset_schema: Handle<JsArray>, data_callback: Root<JsFunction>, end_callback: Root<JsFunction>) -> Self {
         let basic_schema = create_basic_schema(cx, dataset_schema);
         let buffer_stream_writer = BufferStreamWriter::new(cx, data_callback, end_callback);
         let schema = create_parquet_schema(&basic_schema);
@@ -84,4 +84,4 @@ impl <'cx> ParquetExporter <'cx> {
 
 // The `Finalize` trait optionally provides a hook for executing code when the value
 // is garbage collected.
-impl Finalize for ParquetExporter<'_> {}
+impl Finalize for ParquetExporter {}
