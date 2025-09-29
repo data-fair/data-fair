@@ -20,17 +20,19 @@ pub struct JsParquetWriter {
 #[napi]
 impl JsParquetWriter {
   #[napi(constructor)]
-  pub fn new(basic_schema: Vec<BasicSchemaProperty>, buffer: Buffer) -> Self {
-    JsParquetWriter { parquet_writer: ParquetWriter::new(basic_schema, buffer) }
+  pub fn new(basic_schema: Vec<BasicSchemaProperty>) -> Self {
+    JsParquetWriter { parquet_writer: ParquetWriter::new(basic_schema) }
   }
 
   #[napi]
-  pub fn add_rows(&mut self, rows: Vec<Object<'_>>) {
-    self.parquet_writer.add_rows(rows);
+  pub fn add_rows(&mut self, env: Env, rows: Vec<Object<'_>>) -> BufferSlice<'_> {
+    let data = self.parquet_writer.add_rows(rows);
+    BufferSlice::from_data(&env, data).unwrap()
   }
 
   #[napi]
-  pub fn finish(&mut self) {
-    self.parquet_writer.finish();
+  pub fn finish(&mut self, env: Env) -> BufferSlice<'_> {
+    let data = self.parquet_writer.finish();
+    BufferSlice::from_data(&env, data).unwrap()
   }
 }

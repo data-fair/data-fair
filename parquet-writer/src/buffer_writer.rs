@@ -1,26 +1,28 @@
-use napi::bindgen_prelude::*;
 use std::io;
 
 pub struct BufferWriter {
-  buffer: Buffer
+    accumulated: Vec<u8>,
 }
 
-impl BufferWriter  {
-    pub fn new(buffer: Buffer) -> Self {
+impl BufferWriter {
+    pub fn new() -> Self {
         BufferWriter {
-            buffer
+            accumulated: Vec::new(),
         }
+    }
+
+    pub fn consume(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.accumulated)
     }
 }
 
 impl io::Write for BufferWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        println!("WRITE {} -> {}", buf.len(), self.buffer.len());
+        self.accumulated.extend_from_slice(buf);
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        println!("FLUSH {}", self.buffer.len());
         Ok(())
     }
 }

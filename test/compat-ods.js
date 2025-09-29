@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
+import parquetjs from '@dsnp/parquetjs'
 
 describe('compatibility layer for ods api', function () {
   it('contains a parser for the where syntax', function () {
@@ -235,6 +236,27 @@ describe('compatibility layer for ods api', function () {
 koumoul;19 rue de la voie lactée saint avé;2017-12-12;47.687375,-2.748526;0;11
 bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
 `)
+
+    // parquet export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/parquet`, { responseType: 'arraybuffer' })
+    assert.equal(typeof res.data, 'object')
+    const reader = await parquetjs.ParquetReader.openBuffer(res.data)
+    const cursor = reader.getCursor()
+    let record = null
+    let i = 0
+    while ((record = await cursor.next())) {
+      if (i === 0) {
+        assert.deepEqual(record, {
+          id: 'koumoul',
+          adr: '19 rue de la voie lactée saint avé',
+          some_date: new Date('2017-12-12T00:00:00.000Z'),
+          loc: '47.687375,-2.748526',
+          bool: false,
+          nb: 11
+        })
+      }
+      i++
+    }
   })
 
   it('should manage some other record list cases', async function () {

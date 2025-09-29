@@ -19,9 +19,9 @@ import contentDisposition from 'content-disposition'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
-import { jsonSchema } from '../../../datasets/utils/data-schema.ts'
 import JSONStream from 'JSONStream'
 import capabilities from '../../../../contract/capabilities.js'
+import type { DatasetInternal } from '#types'
 
 dayjs.extend(timezone)
 dayjs.extend(utc)
@@ -297,10 +297,11 @@ async function * iterHits (es, dataset, esQuery, totalSize = 50000, timezone = '
 
 const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   const esClient = req.app.get('es') as any
-  const dataset = (req as any).dataset
+  const dataset: DatasetInternal = (req as any).dataset
   const query = req.query
 
   if (!config.compatODS) throw httpError(404, 'unknown API')
+  if (!dataset.schema) throw httpError(404, 'dataset without data')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
   const esQuery: any = {}
@@ -310,7 +311,6 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   esQuery.sort = parseOrderBy(dataset, fields, query)
   esQuery.query = parseFilters(dataset, query, 'exports')
   const useLabels = query.use_labels === 'true'
-  console.log('format ?', req.params.format)
   let transformStreams: Stream[] = []
   if (req.params.format === 'csv') {
     // https://help.opendatasoft.com/apis/ods-explore-v2/#tag/Dataset/operation/exportRecordsCSV
@@ -350,11 +350,17 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       }), new XLSXTransformStream()]
   } else if (req.params.format === 'parquet') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.parquet'))
-    const parquet = await import('@dsnp/parquetjs')
+    // const parquet = await import('@dsnp/parquetjs')
     // TODO: should we flatten or nest multi-valued values ?
-    const schema = jsonSchema(dataset.schema, req.publicBaseUrl, false)
-    const parquetSchema = parquet.ParquetSchema.fromJsonSchema(schema)
-    transformStreams = [new parquet.ParquetTransformer(parquetSchema)]
+    // const schema = jsonSchema(dataset.schema, req.publicBaseUrl, false)
+    // const parquetSchema = parquet.ParquetSchema.fromJsonSchema(schema)
+    // transformStreams = [new parquet.ParquetTransformer(parquetSchema)]
+    const { ParquetWriterStream } = await import('../../../../../parquet-writer/parquet-writer-stream.mts')
+    const basicSchema = esQuery._source.map((key: string) => {
+      const prop = dataset.schema!.find(p => p.key === key)!
+      return { key: prop.key, type: prop.type, format: prop.format, required: prop['x-required'] }
+    })
+    transformStreams = [new ParquetWriterStream(basicSchema)]
   } else if (req.params.format === 'json') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.json'))
     // TODO: should we flatten or nest multi-valued values ?
@@ -380,7 +386,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   } catch (err) {
     compatReqCounter.inc({ endpoint: 'exports', status: 'es-error' })
     const { message, status } = esUtils.extractError(err)
-    console.warn('Error during streamed ods compat export', status, message)
+    console.warn('Error during streamed ods compat export', status, message, err)
     throw httpError(status, message)
   }
 }

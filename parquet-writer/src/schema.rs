@@ -11,8 +11,7 @@ pub struct BasicSchemaProperty {
     #[napi(js_name = "type")]
     pub typ: String,
     pub format: Option<String>,
-    #[napi(js_name = "x-required")]
-    pub required: bool
+    pub required: Option<bool>
 }
 
 pub fn create_parquet_schema (properties: & Vec<BasicSchemaProperty>) -> Type {
@@ -43,7 +42,7 @@ pub fn create_parquet_schema (properties: & Vec<BasicSchemaProperty>) -> Type {
 
     let field: Type = Type::primitive_type_builder(&prop.key, physical_type)
       .with_logical_type(logical_type)
-      .with_repetition(if prop.required { Repetition::REQUIRED } else { Repetition::OPTIONAL })
+      .with_repetition(if prop.required == Some(true) { Repetition::REQUIRED } else { Repetition::OPTIONAL })
       .build()
       .unwrap();
 

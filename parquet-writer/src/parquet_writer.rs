@@ -16,8 +16,8 @@ pub struct ParquetWriter {
 }
 
 impl<'a> ParquetWriter {
-  pub fn new(basic_schema: Vec<BasicSchemaProperty>, buffer: Buffer) -> Self {
-    let buffer_writer = BufferWriter::new(buffer);
+  pub fn new(basic_schema: Vec<BasicSchemaProperty>) -> Self {
+    let buffer_writer = BufferWriter::new();
     let schema = create_parquet_schema(&basic_schema);
     let file_writer_props = WriterProperties::builder()
       .set_compression(Compression::SNAPPY)
@@ -36,12 +36,10 @@ impl<'a> ParquetWriter {
     }
   }
 
-  pub fn add_rows(&mut self, rows: Vec<Object>) {
+  pub fn add_rows(&mut self, rows: Vec<Object>) -> Vec<u8> {
       // let batch = create_record_batch(&self.basic_schema, rows)?;
       // self.writer.write(&batch).unwrap();
       // Ok(())
-      println!("add rows ?");
-
       let mut row_group_writer = self.file_writer.next_row_group().unwrap();
         for prop in &self.basic_schema {
             let mut serialized_column_writer = row_group_writer.next_column().unwrap().unwrap();
@@ -97,21 +95,57 @@ impl<'a> ParquetWriter {
                     column_writer.write_batch(&values, Some(&definition_levels), None).unwrap();
                 }
             } else if prop.typ == "string" {
-                let column_writer = serialized_column_writer.typed::<ByteArrayType>();
-                let mut values = Vec::new();
-                let mut definition_levels = Vec::new();
-                for row in &rows {
-                    let value_str: Option<String> = row.get(prop.key.as_str()).unwrap();
-                    if value_str.is_none() {
-                        definition_levels.push(0);
-                    } else {
-                        let value = ByteArray::from(value_str.unwrap().as_str());
-                        values.push(value);
-                        definition_levels.push(1);
+                if prop.format.as_deref() == Some("date") {
+                    let column_writer = serialized_column_writer.typed::<Int32Type>();
+                    let mut values = Vec::new();
+                    let mut definition_levels = Vec::new();
+                    for row in &rows {
+                        let value = row.get(prop.key.as_str()).unwrap();
+                        if value.is_none() {
+                            definition_levels.push(0);
+                        } else {
+                            let value = value.unwrap();
+                            values.push(value);
+                            definition_levels.push(1);
+                        }
                     }
-                }
-                if values.len() > 0 {
-                    column_writer.write_batch(&values, Some(&definition_levels), None).unwrap();
+                    if values.len() > 0 {
+                        column_writer.write_batch(&values, Some(&definition_levels), None).unwrap();
+                    }
+                } else if prop.format.as_deref() == Some("date-time") {
+                    let column_writer = serialized_column_writer.typed::<Int64Type>();
+                    let mut values = Vec::new();
+                    let mut definition_levels = Vec::new();
+                    for row in &rows {
+                        let value = row.get(prop.key.as_str()).unwrap();
+                        if value.is_none() {
+                            definition_levels.push(0);
+                        } else {
+                            let value = value.unwrap();
+                            values.push(value);
+                            definition_levels.push(1);
+                        }
+                    }
+                    if values.len() > 0 {
+                        column_writer.write_batch(&values, Some(&definition_levels), None).unwrap();
+                    }
+                } else {
+                    let column_writer = serialized_column_writer.typed::<ByteArrayType>();
+                    let mut values = Vec::new();
+                    let mut definition_levels = Vec::new();
+                    for row in &rows {
+                        let value_str: Option<String> = row.get(prop.key.as_str()).unwrap();
+                        if value_str.is_none() {
+                            definition_levels.push(0);
+                        } else {
+                            let value = ByteArray::from(value_str.unwrap().as_str());
+                            values.push(value);
+                            definition_levels.push(1);
+                        }
+                    }
+                    if values.len() > 0 {
+                        column_writer.write_batch(&values, Some(&definition_levels), None).unwrap();
+                    }
                 }
             } else {
                 panic!("unsupported type for parquet writer, {} / {}", prop.key, prop.typ)
@@ -151,13 +185,12 @@ impl<'a> ParquetWriter {
 
         row_group_writer.close().unwrap();
 
-        println!("added rows");
+        self.file_writer.inner_mut().consume()
   }
 
-  pub fn finish(&mut self) {
-    println!("finish ?");
+  pub fn finish(&mut self) -> Vec<u8> {
     // self.writer.finish().unwrap();
     self.file_writer.finish().unwrap();
-    println!("finished");
+    self.file_writer.inner_mut().consume()
   }
 }
