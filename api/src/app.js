@@ -57,7 +57,11 @@ export const run = async () => {
     app.use((req, res, next) => {
       for (const key of Object.keys(req.query)) {
         if (Array.isArray(req.query[key])) {
-          return res.status(400).send(`query parameter "${key}" is defined multiple times`)
+          if (req.url.includes('/compat-ods/')) {
+            // prevent breaking compatibility
+          } else {
+            return res.status(400).send(`query parameter "${key}" is defined multiple times`)
+          }
         }
       }
       next()
