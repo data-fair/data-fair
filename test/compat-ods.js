@@ -203,6 +203,11 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.total_count, 2)
 
+    // select
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,nb,adr' } })
+    assert.equal(res.data.total_count, 2)
+    assert.equal(Object.keys(res.data.results[0]).length, 3)
+
     // simple filters
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: "koumoul"' } })
     assert.equal(res.data.results.length, 1)
@@ -245,7 +250,6 @@ bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
     await workbook.xlsx.load(res.data)
     const worksheet = workbook.getWorksheet(1)
     const json = worksheet?.getSheetValues()
-    console.log('JSON', json)
     // @ts-ignore
     assert.equal(json.pop().pop(), 22.2)
 

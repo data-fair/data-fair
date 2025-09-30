@@ -60,7 +60,7 @@ const getCompatODS = memoize(async (type: string, id: string) => {
 const parseSelect = (fields, select, endpoint) => {
   // do not include by default heavy calculated fields used for indexing geo data
   const _source = (select && select !== '*' && typeof select === 'string')
-    ? select.split(',')
+    ? select.split(',').map(key => key.trim())
     : fields.filter(key => !key.startsWith('_'))
 
   if (_source.some(s => s.includes(' as ') || s.includes(' AS '))) {
