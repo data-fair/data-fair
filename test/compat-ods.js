@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
 import parquetjs from '@dsnp/parquetjs'
+import Excel from 'exceljs'
 
 describe('compatibility layer for ods api', function () {
   it('contains a parser for the where syntax', function () {
@@ -236,6 +237,17 @@ describe('compatibility layer for ods api', function () {
 koumoul;19 rue de la voie lactée saint avé;2017-12-12;47.687375,-2.748526;0;11
 bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
 `)
+
+    // xlsx export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/xlsx`, { responseType: 'arraybuffer' })
+    assert.equal(typeof res.data, 'object')
+    const workbook = new Excel.Workbook()
+    await workbook.xlsx.load(res.data)
+    const worksheet = workbook.getWorksheet(1)
+    const json = worksheet?.getSheetValues()
+    console.log('JSON', json)
+    // @ts-ignore
+    assert.equal(json.pop().pop(), 22.2)
 
     // parquet export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/parquet`, { responseType: 'arraybuffer' })

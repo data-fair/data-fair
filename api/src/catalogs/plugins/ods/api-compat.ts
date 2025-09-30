@@ -296,6 +296,7 @@ async function * iterHits (es, dataset, esQuery, totalSize = 50000, timezone = '
 }
 
 const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
+  res.setHeader('X-Accel-Buffering', 'no')
   const esClient = req.app.get('es') as any
   const dataset: DatasetInternal = (req as any).dataset
   const query = req.query
@@ -336,18 +337,16 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
             const properties = esQuery._source.map(key => dataset.schema.find(prop => prop.key === key))
             this.push(properties.map(field => (useLabels ? field.title : field['x-originalName']) || field['x-originalName'] || field.key))
           }
-          this.push(esQuery._source.map(key => '' + item[key]))
+          this.push(esQuery._source.map(key => {
+            if (item[key] === null || item[key] === undefined) return undefined
+            if (typeof item[key] === 'number' || typeof item[key] === 'string') return item[key]
+            return '' + item[key]
+          }))
           i++
           callback()
         }
       }),
-      new Transform({
-        objectMode: true,
-        transform (item, encodingExists, callback) {
-          console.log('item', item)
-          callback(null, item)
-        }
-      }), new XLSXTransformStream()]
+      new XLSXTransformStream()]
   } else if (req.params.format === 'parquet') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.parquet'))
     // const parquet = await import('@dsnp/parquetjs')
@@ -413,7 +412,7 @@ router.get(
   readDataset({ fillDescendants: true }),
   datasetsApiKeyMiddleware,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
-  cacheHeaders.resourceBased('finalizedAt'),
+  cacheHeaders.noCache,
   exports('2.1')
 )
 router.get(
@@ -421,7 +420,7 @@ router.get(
   readDataset({ fillDescendants: true }),
   datasetsApiKeyMiddleware,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
-  cacheHeaders.resourceBased('finalizedAt'),
+  cacheHeaders.noCache,
   exports('2.0')
 )
 
