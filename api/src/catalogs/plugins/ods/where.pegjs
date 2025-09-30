@@ -139,7 +139,7 @@ ComparisonOperator
 Like = "like"i
 LikeFilter
   = key:FieldName __ Like __ value:StringLiteral {
-    const fields = options.searchFields.filter(f => f.startsWith(key + '.')).concat(options.wildCardFields.filter(f => f.startsWith(key + '.')))
+    const fields = options.searchFields.filter(f => f.startsWith(key + '.')).concat(options.wildcardFields.filter(f => f.startsWith(key + '.')))
     return { simple_query_string: {query: value.value, fields} }
   }
 

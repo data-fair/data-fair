@@ -430,8 +430,7 @@ function peg$parse(input, options) {
     return { range: { [key]: { [esOperator]: value.value } } }
   };
   var peg$f12 = function(key, value) {
-    const fields = options.searchFields.filter(f => f.startsWith(key + '.')).concat(options.wildCardFields.filter(f => f.startsWith(key + '.')))
-    console.log('FIELDS', fields)
+    const fields = options.searchFields.filter(f => f.startsWith(key + '.')).concat(options.wildcardFields.filter(f => f.startsWith(key + '.')))
     return { simple_query_string: {query: value.value, fields} }
   };
   var peg$f13 = function(literal) {
