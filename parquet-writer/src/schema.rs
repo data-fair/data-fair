@@ -1,20 +1,21 @@
 use napi_derive::napi;
 use parquet::{
-    basic::{ LogicalType, Repetition, TimeUnit, Type as PhysicalType},
-    format::{MilliSeconds}, schema::types::Type
+  basic::{LogicalType, Repetition, TimeUnit, Type as PhysicalType},
+  format::MilliSeconds,
+  schema::types::Type,
 };
-use std::{sync::Arc};
+use std::sync::Arc;
 
 #[napi(object)]
 pub struct BasicSchemaProperty {
-    pub key: String,
-    #[napi(js_name = "type")]
-    pub typ: String,
-    pub format: Option<String>,
-    pub required: Option<bool>
+  pub key: String,
+  #[napi(js_name = "type")]
+  pub typ: String,
+  pub format: Option<String>,
+  pub required: Option<bool>,
 }
 
-pub fn create_parquet_schema (properties: & Vec<BasicSchemaProperty>) -> Type {
+pub fn create_parquet_schema(properties: &Vec<BasicSchemaProperty>) -> Type {
   let mut fields: Vec<Arc<Type>> = vec![];
   for prop in properties {
     let mut physical_type: PhysicalType = PhysicalType::BYTE_ARRAY;
@@ -34,7 +35,10 @@ pub fn create_parquet_schema (properties: & Vec<BasicSchemaProperty>) -> Type {
         logical_type = Some(LogicalType::Date);
       } else if prop.format.as_deref() == Some("date-time") {
         physical_type = PhysicalType::INT64;
-        logical_type = Some(LogicalType::Timestamp { is_adjusted_to_u_t_c: false, unit: TimeUnit::MILLIS(MilliSeconds::default()) })
+        logical_type = Some(LogicalType::Timestamp {
+          is_adjusted_to_u_t_c: false,
+          unit: TimeUnit::MILLIS(MilliSeconds::default()),
+        })
       } else {
         logical_type = Some(LogicalType::String);
       }
@@ -42,11 +46,14 @@ pub fn create_parquet_schema (properties: & Vec<BasicSchemaProperty>) -> Type {
 
     let field: Type = Type::primitive_type_builder(&prop.key, physical_type)
       .with_logical_type(logical_type)
-      .with_repetition(if prop.required == Some(true) { Repetition::REQUIRED } else { Repetition::OPTIONAL })
+      .with_repetition(if prop.required == Some(true) {
+        Repetition::REQUIRED
+      } else {
+        Repetition::OPTIONAL
+      })
       .build()
       .unwrap();
 
-    
     fields.push(Arc::new(field));
   }
 
@@ -54,6 +61,6 @@ pub fn create_parquet_schema (properties: & Vec<BasicSchemaProperty>) -> Type {
     .with_fields(fields)
     .build()
     .unwrap();
-  
+
   schema
 }
