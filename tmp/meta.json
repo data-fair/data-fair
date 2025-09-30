@@ -1,0 +1,5830 @@
+{
+  "NumRowGroups": 25,
+  "RowGroups": [
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 68521,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3345,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-05-15T19:00:00.000Z",
+          "MinValue": "2025-04-30T22:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 252,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12855,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15498,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10162,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 6681,
+          "UncompressedSize": 7685,
+          "NumValues": 20000,
+          "NullCount": 14119,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00171431",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15842,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 68670,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3348,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-05-30T16:00:00.000Z",
+          "MinValue": "2025-05-15T19:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 254,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12856,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15506,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10164,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 6879,
+          "UncompressedSize": 7834,
+          "NumValues": 20000,
+          "NullCount": 13737,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00167103",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15843,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 68112,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-06-14T13:00:00.000Z",
+          "MinValue": "2025-05-30T16:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 253,
+          "UncompressedSize": 965,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12859,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15506,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10162,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 6326,
+          "UncompressedSize": 7277,
+          "NumValues": 20000,
+          "NullCount": 14796,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00144762",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15841,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 67827,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3345,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-06-29T10:00:00.000Z",
+          "MinValue": "2025-06-14T13:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 254,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12873,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15500,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10163,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 6152,
+          "UncompressedSize": 6992,
+          "NumValues": 20000,
+          "NullCount": 15142,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00144762",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15843,
+          "UncompressedSize": 16499,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 67004,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3996,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-07-14T07:00:00.000Z",
+          "MinValue": "2025-06-29T10:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 254,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12855,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15508,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5439,
+          "UncompressedSize": 6169,
+          "NumValues": 20000,
+          "NullCount": 15448,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00144762",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15841,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 66832,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3343,
+          "UncompressedSize": 3996,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-07-29T04:00:00.000Z",
+          "MinValue": "2025-07-14T07:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 254,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12856,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15508,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5314,
+          "UncompressedSize": 5997,
+          "NumValues": 20000,
+          "NullCount": 15803,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081170",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15837,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 66718,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3344,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-13T01:00:00.000Z",
+          "MinValue": "2025-07-29T04:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 251,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12862,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15508,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5304,
+          "UncompressedSize": 5882,
+          "NumValues": 20000,
+          "NullCount": 15804,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081170",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15842,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 66937,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-27T23:00:00.000Z",
+          "MinValue": "2025-08-13T02:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 252,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12857,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15506,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5353,
+          "UncompressedSize": 6101,
+          "NumValues": 20000,
+          "NullCount": 15687,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081170",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15843,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 67159,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3344,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-09-11T20:00:00.000Z",
+          "MinValue": "2025-08-27T23:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 256,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12858,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15510,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10164,
+          "UncompressedSize": 10194,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5587,
+          "UncompressedSize": 6324,
+          "NumValues": 20000,
+          "NullCount": 15049,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081170",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15847,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 67102,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3347,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-09-26T17:00:00.000Z",
+          "MinValue": "2025-09-11T20:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 252,
+          "UncompressedSize": 965,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12855,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15531,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10167,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5469,
+          "UncompressedSize": 6267,
+          "NumValues": 20000,
+          "NullCount": 15297,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081188",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15839,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 67176,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-10-11T14:00:00.000Z",
+          "MinValue": "2025-09-26T17:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 253,
+          "UncompressedSize": 965,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12854,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15496,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5541,
+          "UncompressedSize": 6341,
+          "NumValues": 20000,
+          "NullCount": 15158,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081188",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00052454",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15839,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 66583,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-10-26T11:00:00.000Z",
+          "MinValue": "2025-10-11T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 259,
+          "UncompressedSize": 965,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12854,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15508,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5170,
+          "UncompressedSize": 5748,
+          "NumValues": 20000,
+          "NullCount": 16160,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081188",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15842,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 66139,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3344,
+          "UncompressedSize": 3996,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-11-10T08:00:00.000Z",
+          "MinValue": "2025-10-26T11:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 254,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12857,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15498,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 4853,
+          "UncompressedSize": 5304,
+          "NumValues": 20000,
+          "NullCount": 16998,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081185",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15836,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 65093,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3344,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-11-25T05:00:00.000Z",
+          "MinValue": "2025-11-10T08:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 251,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12853,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15501,
+          "UncompressedSize": 15867,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10166,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3950,
+          "UncompressedSize": 4258,
+          "NumValues": 20000,
+          "NullCount": 18187,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00081180",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15843,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 62999,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-12-10T03:00:00.000Z",
+          "MinValue": "2025-11-25T06:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 251,
+          "UncompressedSize": 965,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12855,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15513,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10166,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 1407,
+          "UncompressedSize": 2164,
+          "NumValues": 20000,
+          "NullCount": 19469,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00077028",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15837,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 62417,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3345,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-12-25T00:00:00.000Z",
+          "MinValue": "2025-12-10T03:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 254,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12861,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15514,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10163,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 1028,
+          "UncompressedSize": 1581,
+          "NumValues": 20000,
+          "NullCount": 19643,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15838,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 62850,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2026-01-08T21:00:00.000Z",
+          "MinValue": "2025-12-25T00:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 255,
+          "UncompressedSize": 965,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12850,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15501,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10167,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 1346,
+          "UncompressedSize": 2015,
+          "NumValues": 20000,
+          "NullCount": 19499,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00086809",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15848,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 63690,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2026-01-23T18:00:00.000Z",
+          "MinValue": "2026-01-08T21:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 253,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12857,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15509,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10169,
+          "UncompressedSize": 10196,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 2087,
+          "UncompressedSize": 2853,
+          "NumValues": 20000,
+          "NullCount": 19125,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00086809",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15837,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 64862,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3346,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2026-02-07T15:00:00.000Z",
+          "MinValue": "2026-01-23T18:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 253,
+          "UncompressedSize": 965,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12857,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15502,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3248,
+          "UncompressedSize": 4027,
+          "NumValues": 20000,
+          "NullCount": 18356,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00086809",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15836,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 66092,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3344,
+          "UncompressedSize": 3996,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2026-02-22T12:00:00.000Z",
+          "MinValue": "2026-02-07T15:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 254,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12867,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15525,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10164,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 4784,
+          "UncompressedSize": 5257,
+          "NumValues": 20000,
+          "NullCount": 17050,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00124133",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15840,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 66952,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3345,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2026-03-09T09:00:00.000Z",
+          "MinValue": "2026-02-22T12:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 251,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12857,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15504,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10162,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5435,
+          "UncompressedSize": 6116,
+          "NumValues": 20000,
+          "NullCount": 15521,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00124133",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15843,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 67233,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3347,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2026-03-24T07:00:00.000Z",
+          "MinValue": "2026-03-09T10:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 252,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12859,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15494,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10164,
+          "UncompressedSize": 10194,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5608,
+          "UncompressedSize": 6398,
+          "NumValues": 20000,
+          "NullCount": 14970,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00124133",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15841,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 68369,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3345,
+          "UncompressedSize": 3997,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2026-04-08T04:00:00.000Z",
+          "MinValue": "2026-03-24T07:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 258,
+          "UncompressedSize": 966,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12856,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15515,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10165,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 6582,
+          "UncompressedSize": 7533,
+          "NumValues": 20000,
+          "NullCount": 14326,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00124133",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00058480",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15841,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 20000,
+      "TotalByteSize": 68126,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3344,
+          "UncompressedSize": 3996,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2026-04-23T01:00:00.000Z",
+          "MinValue": "2026-04-08T04:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 253,
+          "UncompressedSize": 965,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 12857,
+          "UncompressedSize": 12865,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15504,
+          "UncompressedSize": 15868,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 10164,
+          "UncompressedSize": 10195,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 6340,
+          "UncompressedSize": 7292,
+          "NumValues": 20000,
+          "NullCount": 14884,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00095809",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00071054",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 15840,
+          "UncompressedSize": 16500,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 20000,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    },
+    {
+      "NumRows": 10616,
+      "TotalByteSize": 37592,
+      "Columns": [
+        {
+          "PathInSchema": [
+            "date_et_heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 1620,
+          "UncompressedSize": 1959,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "2026-04-30T22:00:00.000Z",
+          "MinValue": "2026-04-23T01:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "heure_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 234,
+          "UncompressedSize": 629,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": 23,
+          "MinValue": 0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_juridique"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 72,
+          "UncompressedSize": 68,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "EDF SA",
+          "MinValue": "EDF SA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "perimetre_spatial"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 127,
+          "UncompressedSize": 122,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "MinValue": "France métropolitaine, sans la Corse ni les iles du ponant",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "spatial_perimeter"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 130,
+          "UncompressedSize": 125,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "MinValue": "Metropolitan France, excluding Corsica and the Ponant Islands",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "centrale"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 6975,
+          "UncompressedSize": 6980,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN (LE)",
+          "MinValue": "BELLEVILLE",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "tranche"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 8461,
+          "UncompressedSize": 8810,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "TRICASTIN 4",
+          "MinValue": "BELLEVILLE 1",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "puissance_disponible"
+          ],
+          "Type": "DOUBLE",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 5454,
+          "UncompressedSize": 5483,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": 1500,
+          "MinValue": -0,
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "unite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 68,
+          "UncompressedSize": 64,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "MW",
+          "MinValue": "MW",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "lien_de_publication_de_l_indisponibilite"
+          ],
+          "Type": "BYTE_ARRAY",
+          "ConvertedType": "convertedtype=UTF8",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 3110,
+          "UncompressedSize": 3844,
+          "NumValues": 10616,
+          "NullCount": 7863,
+          "MaxValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00095809",
+          "MinValue": "https://doaat.edf.fr/indisponibilite/05470-edf-t-00071054",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "point_gps_modifie_pour_afficher_la_carte_opendata"
+          ],
+          "Type": "BYTE_ARRAY",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 8781,
+          "UncompressedSize": 9442,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "AQEAAAD8j0yHTp8UQNKpK5/ls0ZA",
+          "MinValue": "AQEAAAAAV7JjIxDrP3hCrz+JDUZA",
+          "CompressionCodec": "SNAPPY"
+        },
+        {
+          "PathInSchema": [
+            "derniere_actualisation_opendataedf_fuseau_horaire_europe_paris"
+          ],
+          "Type": "INT64",
+          "ConvertedType": "convertedtype=TIMESTAMP_MILLIS",
+          "LogicalType": "logicaltype=TIMESTAMP, logicaltype.isadjustedtoutc=true, logicaltype.unit=MILLIS",
+          "Encodings": [
+            "PLAIN",
+            "RLE",
+            "RLE_DICTIONARY"
+          ],
+          "CompressedSize": 70,
+          "UncompressedSize": 66,
+          "NumValues": 10616,
+          "NullCount": 0,
+          "MaxValue": "2025-08-29T14:00:00.000Z",
+          "MinValue": "2025-08-29T14:00:00.000Z",
+          "CompressionCodec": "SNAPPY"
+        }
+      ]
+    }
+  ]
+}

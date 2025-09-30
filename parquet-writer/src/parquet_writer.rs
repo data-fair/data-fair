@@ -57,7 +57,7 @@ impl<'a> ParquetWriter {
             .unwrap();
         }
       } else if prop.typ == "integer" {
-        let column_writer = serialized_column_writer.typed::<Int64Type>();
+        let column_writer = serialized_column_writer.typed::<Int32Type>();
         let mut values = Vec::new();
         let mut definition_levels = Vec::new();
         for row in &rows {

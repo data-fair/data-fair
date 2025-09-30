@@ -24,7 +24,7 @@ pub fn create_parquet_schema(properties: &Vec<BasicSchemaProperty>) -> Type {
       physical_type = PhysicalType::DOUBLE;
     }
     if prop.typ == "integer" {
-      physical_type = PhysicalType::INT64;
+      physical_type = PhysicalType::INT32;
     }
     if prop.typ == "boolean" {
       physical_type = PhysicalType::BOOLEAN;

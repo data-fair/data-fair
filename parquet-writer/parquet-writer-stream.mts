@@ -23,6 +23,7 @@ export class ParquetWriterStream extends Transform {
       if (prop.type === 'string' && prop.format === 'date' && row[prop.key]) {
         row[prop.key] = Math.floor(new Date(row[prop.key]).getTime() / millisPerDay)
       }
+      if (row[prop.key] === null) delete row[prop.key]
     }
     this.rows.push(row)
     if (this.rows.length >= 20000) {

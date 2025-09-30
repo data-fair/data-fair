@@ -276,7 +276,6 @@ bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
 
   it('should manage date times', async function () {
     const ax = global.ax.dmeadusOrg
-
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
@@ -295,6 +294,54 @@ bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].date1, '2025-09-10T10:00:00+02:00')
+  })
+
+  it('should manage corner cases of parquet export', async function () {
+    const ax = global.ax.dmeadusOrg
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest-parquet',
+      schema: [
+        { key: 'date-time1', type: 'string', format: 'date-time', 'x-required': true },
+        { key: 'date1', type: 'string', format: 'date', 'x-required': true },
+        { key: 'str1', type: 'string', 'x-required': true },
+        { key: 'str2', type: 'string' },
+        { key: 'int1', type: 'integer', 'x-required': true },
+        { key: 'nb1', type: 'number' },
+      ]
+    }).then(r => r.data)
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [
+      { 'date-time1': '2025-09-10T08:00:00.000Z', date1: '2025-09-10', str1: 'String 1', str2: 'String 2', int1: 11, nb1: 1.1 },
+      { 'date-time1': '2025-09-11T08:00:00.000Z', date1: '2025-09-11', str1: 'String 1 - 2', int1: 22 },
+      { 'date-time1': '2025-09-12T08:00:00.000Z', date1: '2025-09-12', str1: 'String 1 - 3', str2: 'String 2 - 3', int1: 33, nb1: 3.3 },
+    ])
+
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/parquet?order_by=int1`, { responseType: 'arraybuffer' })
+    assert.equal(typeof res.data, 'object')
+    const reader = await parquetjs.ParquetReader.openBuffer(res.data)
+    const parquetSchema = reader.getSchema()
+    assert.equal(parquetSchema.schema['date-time1'].type, 'TIMESTAMP_MILLIS')
+    assert.equal(parquetSchema.schema.date1.type, 'DATE')
+    assert.equal(parquetSchema.schema.str1.type, 'UTF8')
+    assert.equal(parquetSchema.schema.str1.optional, false)
+    assert.equal(parquetSchema.schema.str2.type, 'UTF8')
+    assert.equal(parquetSchema.schema.str2.optional, true)
+    assert.equal(parquetSchema.schema.nb1.type, 'DOUBLE')
+    assert.equal(parquetSchema.schema.int1.type, 'INT32')
+    const cursor = reader.getCursor()
+    let record = null
+    let i = 0
+    while ((record = await cursor.next())) {
+      if (i === 0) {
+        assert.deepEqual(record, { 'date-time1': new Date('2025-09-10T08:00:00.000Z'), date1: new Date('2025-09-10'), str1: 'String 1', str2: 'String 2', int1: 11, nb1: 1.1 })
+      }
+      if (i === 1) {
+        assert.deepEqual(record, { 'date-time1': new Date('2025-09-11T08:00:00.000Z'), date1: new Date('2025-09-11'), str1: 'String 1 - 2', int1: 22, nb1: null, str2: null })
+      }
+      i++
+    }
   })
 
   it.skip('manages geo data', async function () {
