@@ -1,6 +1,6 @@
-FROM node:22.19.0-alpine3.21 AS base
+FROM node:24.9.0-alpine3.22 AS base
 
-RUN npm install -g npm@11.1.0
+# RUN npm install -g npm@11.1.0
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ FROM base AS geodeps
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
-RUN apk add --no-cache libressl4.0-libcrypto
+RUN apk add --no-cache libressl4.1-libcrypto
 RUN apk add --no-cache git
 
 # build CGAL (not yet present in alpine repos)
@@ -117,6 +117,14 @@ RUN mkdir -p /app/api/node_modules
 RUN mkdir -p /app/shared/node_modules
 
 ##########################
+FROM base AS parquet-writer-builder
+RUN apk add --no-cache cargo
+RUN npm i -g @napi-rs/cli@3.2.0
+ADD /parquet-writer parquet-writer
+WORKDIR /app/parquet-writer
+RUN npm run build
+
+##########################
 FROM nativedeps AS main
 
 # We could copy /app whole, but this is better for layering / efficient cache use
@@ -127,6 +135,11 @@ COPY --from=api-installer /app/api/doc /app/api/doc
 COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
 COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
 COPY --from=next-ui-builder /app/next-ui/dist next-ui/dist
+COPY --from=parquet-writer-builder /app/parquet-writer/package.json parquet-writer/
+COPY --from=parquet-writer-builder /app/parquet-writer/*.js parquet-writer/
+COPY --from=parquet-writer-builder /app/parquet-writer/*.d.ts parquet-writer/
+COPY --from=parquet-writer-builder /app/parquet-writer/*.mts parquet-writer/
+COPY --from=parquet-writer-builder /app/parquet-writer/*.node parquet-writer/
 ADD ui/nuxt.config.js ui/nuxt.config.js
 ADD ui/public/static ui/public/static
 ADD /api api
