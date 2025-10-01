@@ -133,9 +133,34 @@ const parseFilters = (dataset, query, endpoint) => {
     const [key, ...valueParts] = query.refine.split(sep)
     const prop = dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre refine sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-    filter.push({
-      term: { [key]: valueParts.join(':') }
-    })
+    const value = valueParts.join(':')
+    if (prop.type === 'string' && (prop.format === 'date' || prop.format === 'date-time')) {
+      let startDate, endDate
+      if (value.length === 10) {
+        let date = dayjs.tz(value, 'YYYY-MM-DD', query.timezone ?? 'UTC')
+        if (!date.isValid()) date = dayjs.tz(value, 'YYYY/MM/DD', query.timezone ?? 'UTC')
+        if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
+        startDate = date.toISOString()
+        endDate = date.endOf('day').toISOString()
+      }
+      if (value.length === 7) {
+        let date = dayjs.tz(value, 'YYYY-MM', query.timezone ?? 'UTC')
+        if (!date.isValid()) date = dayjs.tz(value, 'YYYY/MM', query.timezone ?? 'UTC')
+        if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
+        startDate = date.toISOString()
+        endDate = date.endOf('month').toISOString()
+      }
+      if (value.length === 4) {
+        let date = dayjs.tz(value, 'YYYY', query.timezone ?? 'UTC')
+        if (!date.isValid()) date = dayjs.tz(value, 'YYYY', query.timezone ?? 'UTC')
+        if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
+        startDate = date.toISOString()
+        endDate = date.endOf('year').toISOString()
+      }
+      filter.push({ range: { [key]: { gte: startDate, lte: endDate } } })
+    } else {
+      filter.push({ term: { [key]: value } })
+    }
   }
 
   return { bool: { filter, must, must_not: mustNot } }

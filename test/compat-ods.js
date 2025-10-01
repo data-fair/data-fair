@@ -220,6 +220,10 @@ describe('compatibility layer for ods api', function () {
 
     assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: koumoul' } }), { status: 400 })
 
+    // facet filtering
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { refine: 'id:koumoul' } })
+    assert.equal(res.data.total_count, 1)
+
     // sorting
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'id,nb' } })
     assert.equal(res.data.results[0].id, 'bidule')
@@ -316,17 +320,27 @@ bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
       title: 'rest1',
       schema: [{ key: 'date1', type: 'string', format: 'date-time' }]
     }).then(r => r.data)
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-11T06:00:00Z' })
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-10T08:00:00Z' })
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
-    assert.equal(res.status, 200)
-    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.results.length, 2)
     assert.equal(res.data.results[0].date1, '2025-09-10T08:00:00+00:00')
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`)
-    assert.equal(res.status, 200)
-    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.results.length, 2)
     assert.equal(res.data.results[0].date1, '2025-09-10T10:00:00+02:00')
+
+    // refine a date facet
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025/09/11`)
+    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.results[0].date1, '2025-09-11T08:00:00+02:00')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025/09`)
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025`)
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2026`)
+    assert.equal(res.data.results.length, 0)
   })
 
   it('should manage corner cases of parquet export', async function () {
