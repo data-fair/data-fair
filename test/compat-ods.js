@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
+import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 
@@ -273,6 +274,22 @@ bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
       }
       i++
     }
+
+    // json export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/json`)
+    assert.equal(res.data.length, 2)
+    assert.equal(res.data[0].id, 'koumoul')
+
+    // geojson export
+    const locProp = dataset.schema.find(p => p.key === 'loc')
+    locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
+    await workers.hook('finalize/' + dataset.id)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/geojson`)
+    assert.equal(res.data.type, 'FeatureCollection')
+    assert.equal(res.data.features.length, 2)
+    assert.equal(res.data.features[0].properties.id, 'koumoul')
+    assert.deepEqual(res.data.features[0].geometry, { type: 'Point', coordinates: [-2.748526, 47.687375] })
   })
 
   it('should manage some other record list cases', async function () {

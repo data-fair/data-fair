@@ -310,10 +310,21 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   const fields = dataset.schema.map(f => f.key)
   esQuery._source = parseSelect(fields, query.select, 'exports')
+  if (req.params.format === 'geojson') {
+    const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
+    if (!esQuery._source.includes('_geoshape') && geoshapeProp) {
+      esQuery._source.push('_geoshape')
+    }
+    if (!esQuery._source.includes('_geopoint')) esQuery._source.push('_geopoint')
+  }
   esQuery.sort = parseOrderBy(dataset, fields, query)
   esQuery.query = parseFilters(dataset, query, 'exports')
   const useLabels = query.use_labels === 'true'
   let transformStreams: Stream[] = []
+
+  // full potential list:
+  // "csv" "fgb" "geojson" "gpx" "json" "jsonl" "jsonld" "kml" "n3" "ov2" "parquet" "rdfxml" "shp" "turtle" "xlsx"
+
   if (req.params.format === 'csv') {
     // https://help.opendatasoft.com/apis/ods-explore-v2/#tag/Dataset/operation/exportRecordsCSV
     // res.setHeader('content-type', 'text/csv')
@@ -365,6 +376,34 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.json'))
     // TODO: should we flatten or nest multi-valued values ?
     transformStreams = [JSONStream.stringify('[', ',', ']')]
+  } else if (req.params.format === 'jsonl') {
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.jsonl'))
+    // TODO: should we flatten or nest multi-valued values ?
+    transformStreams = [
+      new Transform({
+        objectMode: true,
+        transform (item, encoding, callback) {
+          callback(null, JSON.stringify(encoding) + '\n')
+        }
+      })
+    ]
+  } else if (req.params.format === 'geojson') {
+    transformStreams = [
+      new Transform({
+        objectMode: true,
+        transform (properties, encoding, callback) {
+          let geometry = properties._geoshape
+          delete properties._geoshape
+          if (!geometry && properties._geopoint) {
+            const [lat, lon] = properties._geopoint.split(',')
+            delete properties._geopoint
+            geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
+          }
+          callback(null, { type: 'Feature', geometry, properties })
+        }
+      }),
+      JSONStream.stringify('{"type":"FeatureCollection","features": [', ',', ']}')
+    ]
   } else {
     compatReqCounter.inc({ endpoint: 'exports', status: 'unsupported' })
     throw httpError(400, `le format "${req.params.format}" n'est pas supporté par l'export de données de cette couche de compatibilité pour la version d'API précédente.`)
