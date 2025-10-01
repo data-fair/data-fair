@@ -338,9 +338,30 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   } else if (req.params.format === 'xlsx') {
     // res.setHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
-    // basic streaming xlsx writer
-    const XLSXTransformStream = (await import('xlsx-write-stream')).default
-    let i = 0
+    const { default: Excel } = await import('exceljs')
+    const workbookWriter = new Excel.stream.xlsx.WorkbookWriter({
+      stream: res,
+      useStyles: true,
+      useSharedStrings: true
+    })
+    const worksheet = workbookWriter.addWorksheet('Feuille 1')
+    // Define columns (optional)
+    const properties = esQuery._source.map(key => dataset.schema.find(prop => prop.key === key))
+    worksheet.columns = properties.map(p => ({
+      key: p.key,
+      header: (useLabels ? p.title : p['x-originalName']) || p['x-originalName'] || p.key
+    }))
+    const iter = iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1, query.timezone)
+    for await (const items of iter) {
+      for (const item of items) {
+        worksheet.addRow(item)
+      }
+      // Commit all pending changes
+      worksheet.commit()
+    }
+    await workbookWriter.commit()
+
+    /* let i = 0
     transformStreams = [
       new Transform({
         objectMode: true,
@@ -358,7 +379,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
           callback()
         }
       }),
-      new XLSXTransformStream()]
+      new XLSXTransformStream()] */
   } else if (req.params.format === 'parquet') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.parquet'))
     // const parquet = await import('@dsnp/parquetjs')
@@ -388,6 +409,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       })
     ]
   } else if (req.params.format === 'geojson') {
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.geojson'))
     transformStreams = [
       new Transform({
         objectMode: true,
@@ -410,7 +432,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1), query.timezone),
+      Readable.from(iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1, query.timezone)),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {

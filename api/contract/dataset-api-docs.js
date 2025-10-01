@@ -1100,7 +1100,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           name: 'format',
           schema: {
             type: 'string',
-            enum: ['csv', 'xlsx', 'parquet', 'json']
+            enum: ['csv', 'xlsx', 'parquet', 'json', 'jsonl', 'geojson']
           }
         }, {
           in: 'query',
