@@ -1,6 +1,7 @@
 import { stringify as csvStr } from 'csv-stringify/sync'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc.js'
+import { type WorkSheet } from 'xlsx'
 
 dayjs.extend(utc)
 
@@ -96,11 +97,7 @@ dayjs.extend(utc)
 // }
 
 // cf https://github.com/exceljs/exceljs/blob/master/lib/csv/csv.js#L127
-/**
- * @param {any} value
- * @returns {string}
- */
-const mapCellValue = (value) => {
+const mapCellValue = (value: any): string => {
   if (value) {
     if (value.text || value.hyperlink) {
       return value.hyperlink || value.text || ''
@@ -121,39 +118,52 @@ const mapCellValue = (value) => {
   return value
 }
 
-/**
- * @param {string} filePath
- */
-export const iterCSV = async function * (filePath) {
-  const Excel = (await import('exceljs')).default
+export const iterCSV = async function * (filePath: string) {
+  const worksheet = await getWorksheet(filePath)
+  if (worksheet) {
+    yield * iterCsv(worksheet)
+  } else {
+    yield * iterCsvOld(filePath)
+  }
+}
 
+const getWorksheet = async (filePath: string) => {
+  const Excel = (await import('exceljs')).default
   const workbook = new Excel.Workbook()
   try {
     await workbook.xlsx.readFile(filePath)
   } catch (err) {
     console.log('failed to use Excel module to parse file, use older parser', err)
-    yield * iterCSVOld(filePath)
     return
   }
   const worksheet = workbook.getWorksheet(1)
 
   // fallback to previous implementation
   if (!worksheet) {
-    yield * iterCSVOld(filePath)
+    console.log('failed to extract worksheet using Excel module, use older parser')
     return
   }
 
-  const json = /** @type {((string | number | Date | undefined)[])[]} */(worksheet.getSheetValues().filter(row => !!row))
+  return worksheet
+}
+
+const iterCsv = async function * (worksheet: WorkSheet) {
+  const json: ((string | number | Date | undefined)[])[] = worksheet.getSheetValues()
+  // attempt to free some memory now that values were extracted
+  delete worksheet['!rows']
 
   // loop on dates to check if there is a need for date-time format or if date is enough
-  /** @type {Record<number, boolean>} */
-  const hasSimpleDate = {}
+  const hasSimpleDate: Record<number, boolean> = {}
+  let ignoredStartingRows = 0
   let ignoredStartingCols = 0
   for (let lineNb = 0; lineNb < Math.min(json.length, 10000); lineNb++) {
     const row = json[lineNb]
-    if (!row) continue
+    if (!row) {
+      ignoredStartingRows++
+      continue
+    }
     for (let colNb = 0; colNb < row.length; colNb++) {
-      if (lineNb === 0) {
+      if (lineNb - ignoredStartingRows === 0) {
         if (row[colNb] === undefined && colNb === ignoredStartingCols) ignoredStartingCols++
       } else {
         if (hasSimpleDate[colNb] === false) continue
@@ -165,6 +175,7 @@ export const iterCSV = async function * (filePath) {
     }
   }
 
+  let rowsBuffer = []
   for (let lineNb = 0; lineNb < json.length; lineNb++) {
     const row = json[lineNb]
     if (!row) continue
@@ -176,30 +187,34 @@ export const iterCSV = async function * (filePath) {
       }
     }
     row.splice(0, ignoredStartingCols)
-    yield csvStr([row])
+    // attempt to free memory as we go
+    // @ts-ignore
+    json[lineNb] = null
+    rowsBuffer.push(row)
+    if (rowsBuffer.length > 1000) {
+      yield csvStr(rowsBuffer)
+      rowsBuffer = []
+    }
   }
+
+  if (rowsBuffer.length) yield csvStr(rowsBuffer)
 }
 
 // previous implementation using xlsx module.. kept around as a fallback and for ODS format
-/**
- * @param {string} filePath
- */
-const iterCSVOld = async function * (filePath) {
+const iterCsvOld = async function * (filePath: string) {
   const XLSX = (await import('xlsx')).default
 
   const workbook = XLSX.readFile(filePath, { cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]
 
-  // console.log(worksheet)
-  // const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, sheetStubs: true })
-  let json = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, sheetStubs: true })
+  const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true })
 
   if (!json || json.length < 2) throw new Error('La première feuille du classeur dans le fichier ne contient pas de table.')
 
-  const hasTime = {}
+  const hasTime: Record<number, boolean> = {}
 
   // first loop on dates to check if there is a need for date-time format or if date is enough
-  for (let r = 0; r < json.length; r++) {
+  for (let r = 0; r < Math.min(json.length, 10000); r++) {
     for (let c = 0; c < json[r].length; c++) {
       const cellRef = XLSX.utils.encode_cell({ c, r })
       const cell = worksheet[cellRef]
@@ -208,13 +223,15 @@ const iterCSVOld = async function * (filePath) {
         delete cell.w
         delete cell.z
         XLSX.utils.format_cell(cell, null, { dateNF: 'YYYY-MM-DD HH:mm:ss' })
-        if (cell.w.split(' ')[1] !== '00:00:00' && cell.v.toISOString && !cell.v.toISOString().endsWith('T00:00:00.000Z')) hasTime[c] = true
+        if (cell.w.split(' ')[1] !== '00:00:00' && cell.v.toISOString && !cell.v.toISOString().endsWith('T00:00:00.000Z')) {
+          hasTime[c] = true
+        }
       }
     }
   }
-
-  // fix dates
+  let rowsBuffer = []
   for (let r = 0; r < json.length; r++) {
+    // fix dates
     for (let c = 0; c < json[r].length; c++) {
       const cellRef = XLSX.utils.encode_cell({ c, r })
       const cell = worksheet[cellRef]
@@ -227,15 +244,16 @@ const iterCSVOld = async function * (filePath) {
         json[r][c] = cell.w
       }
     }
-  }
 
-  // remove empty lines
-  json = json.filter(row => {
-    return !!row.find(cell => cell !== null && cell !== undefined && cell !== '')
-  })
+    if (!json[r] || !json[r].find((cell: any) => cell !== null && cell !== undefined && cell !== '')) continue
 
-  for (const row of json) {
-    if (!row || !row.find(cell => cell !== null && cell !== undefined && cell !== '')) continue
-    yield csvStr([row])
+    // attempt to free memory as we go
+    rowsBuffer.push(json[r])
+    json[r] = null
+    if (rowsBuffer.length > 100) {
+      yield csvStr(rowsBuffer)
+      rowsBuffer = []
+    }
   }
+  if (rowsBuffer.length) yield csvStr(rowsBuffer)
 }
