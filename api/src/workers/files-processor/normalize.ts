@@ -4,20 +4,15 @@ import { pipeline } from 'node:stream/promises'
 import path from 'path'
 import fs from 'fs-extra'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import ogr2ogr from 'ogr2ogr'
 import pump from '../../misc/utils/pipe.ts'
-import { stringify as csvStrStream } from 'csv-stringify'
 import tmp from 'tmp-promise'
 import mime from 'mime-types'
-import zlib from 'node:zlib'
 import resolvePath from 'resolve-path'
 import { displayBytes } from '../../misc/utils/bytes.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import * as datasetService from '../../datasets/service.js'
 import { tmpDir as mainTmpDir, unzip } from '../../datasets/utils/files.ts'
-import * as icalendar from '../../misc/utils/icalendar.js'
-import * as xlsx from '../../misc/utils/xlsx.js'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import config from '#config'
 import debugLib from 'debug'
@@ -94,6 +89,8 @@ export default async function (dataset: FileDataset) {
   }
 
   if (dataset.originalFile.mimetype === 'application/gzip') {
+    const zlib = await import('node:zlib')
+
     const basicTypeFileName = dataset.originalFile.name.slice(0, dataset.originalFile.name.length - 3)
     const filePath = resolvePath(datasetUtils.dir(dataset), basicTypeFileName)
     await pump(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
@@ -111,6 +108,9 @@ export default async function (dataset: FileDataset) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
+    const icalendar = await import('../../misc/utils/icalendar.js')
+    const { stringify: csvStrStream } = await import('csv-stringify')
+
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
     const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
     await pump(
@@ -131,6 +131,7 @@ export default async function (dataset: FileDataset) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
+    const xlsx = await import('../../misc/utils/xlsx.ts')
     const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
     await pipeline(xlsx.iterCSV(originalFilePath), fs.createWriteStream(filePath))
     dataset.file = {
@@ -144,6 +145,7 @@ export default async function (dataset: FileDataset) {
     if (config.ogr2ogr.skip) {
       throw httpError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
     }
+    const { default: ogr2ogr } = await import('ogr2ogr')
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       // this rule is deactivated as ogr2ogr actually seems to take a negligible amount of RAM
       // for the transformation we use it for
