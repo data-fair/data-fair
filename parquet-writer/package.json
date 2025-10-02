@@ -1,0 +1,19 @@
+{
+  "name": "@data-fair/data-fair-parquet-writer",
+  "main": "index.js",
+  "napi": {
+    "binaryName": "data-fair-parquet-writer",
+    "targets": [
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl"
+    ]
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.2.0"
+  }
+}

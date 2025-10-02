@@ -82,7 +82,9 @@
     "next-ui",
     "doc",
     "shared",
-    "test"
+    "test",
+    "parquet-exporter",
+    "parquet-writer"
   ],
   "dependencies": {
     "@turf/simplify": "^7.2.0",

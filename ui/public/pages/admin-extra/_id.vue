@@ -1,10 +1,18 @@
 <template>
-  <v-iframe
-    v-if="iframeUrl"
-    :src="iframeUrl.href"
-    :sync-state="true"
-    @message="onMessage"
-  />
+  <div>
+    <v-iframe
+      v-if="iframeUrl"
+      :src="iframeUrl.href"
+      :sync-state="true"
+      @message="onMessage"
+    />
+    <v-alert
+      v-if="!extra"
+      type="error"
+    >
+      Page inconnue {{ $route.params.id }}
+    </v-alert>
+  </div>
 </template>
 
 <script>

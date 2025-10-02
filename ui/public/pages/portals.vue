@@ -2,11 +2,11 @@
   <div>
     <nuxt-child />
     <d-frame
-      id="catalogs"
+      id="portals-manager"
       :height="(windowHeight - 48) + 'px'"
-      src="/catalogs/catalogs/"
+      src="/portals-manager/portals/"
       sync-params
-      sync-path="/data-fair/catalogs/"
+      sync-path="/data-fair/portals/"
       emit-iframe-messages
       resize="no"
       :adapter.prop="stateChangeAdapter"

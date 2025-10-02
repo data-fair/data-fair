@@ -11,11 +11,12 @@ export const results2sheetPiscina = new Piscina({
   maxThreads: 1
 })
 
-const csvStringifyOptions = (dataset, query = {}) => {
+export const csvStringifyOptions = (dataset, query = {}, useTitle = false) => {
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
   return {
-    columns: properties.map(field => ({ key: field.key, header: field['x-originalName'] || field.key })),
+    bom: true,
+    columns: properties.map(field => ({ key: field.key, header: (useTitle ? field.title : field['x-originalName']) || field['x-originalName'] || field.key })),
     header: query.header !== 'false',
     // quoted_string to prevent bugs with strings containing \r or other edge cases
     quoted_string: true,
@@ -33,8 +34,7 @@ const csvStringifyOptions = (dataset, query = {}) => {
 const sliceSize = 200
 
 export const results2csv = async (req, results) => {
-  // add BOM for excel, cf https://stackoverflow.com/a/17879474
-  let csv = '\ufeff'
+  let csv = ''
 
   const options = csvStringifyOptions(req.dataset, req.query)
 
@@ -45,7 +45,7 @@ export const results2csv = async (req, results) => {
     let i = 0
     while (i < results.length) {
       // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
-      const sliceOptions = i === 0 ? options : { ...options, header: false }
+      const sliceOptions = i === 0 ? options : { ...options, header: false, bom: false }
       csv += csvStrSync(results.slice(i, i + sliceSize), sliceOptions).replace(/\0/g, '')
       i += sliceSize
       // avoid blocking the event loop
@@ -56,9 +56,9 @@ export const results2csv = async (req, results) => {
   return csv
 }
 
-export const csvStreams = (dataset, query = {}) => {
+export const csvStreams = (dataset, query = {}, useTitle = false) => {
   return [
-    csvStrStream(csvStringifyOptions(dataset, query)),
+    csvStrStream(csvStringifyOptions(dataset, query, useTitle)),
     new Transform({
       transform (item, encoding, callback) {
         // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)

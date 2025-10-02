@@ -64,7 +64,7 @@ export const refinalize = async (db, dataset) => {
 
 // Generate ids and try insertion until there is no conflict on id
 export const insertWithId = async (db, dataset, onClose) => {
-  const baseSlug = slug(dataset.title, { lower: true, strict: true })
+  const baseSlug = dataset.slug || slug(dataset.title, { lower: true, strict: true })
   const owner = dataset.owner
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug

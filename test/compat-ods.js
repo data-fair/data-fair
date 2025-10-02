@@ -1,6 +1,9 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
+import * as workers from '../api/src/workers/index.ts'
+import parquetjs from '@dsnp/parquetjs'
+import Excel from 'exceljs'
 
 describe('compatibility layer for ods api', function () {
   it('contains a parser for the where syntax', function () {
@@ -19,6 +22,18 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(
       whereParser.parse('id:"koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
       { term: { id: 'koumoul' } }
+    )
+    assert.deepEqual(
+      whereParser.parse('`10`:"koumoul"', { dataset: { schema: [{ key: '10' }] } }),
+      { term: { 10: 'koumoul' } }
+    )
+    assert.deepEqual(
+      whereParser.parse('id:\'koumoul\'', { dataset: { schema: [{ key: 'id' }] } }),
+      { term: { id: 'koumoul' } }
+    )
+    assert.deepEqual(
+      whereParser.parse('id like \'koumo*\'', { dataset: { schema: [{ key: 'id' }] }, searchFields: ['id.text'], wildcardFields: ['id.wildcard'] }),
+      { simple_query_string: { query: 'koumo*', fields: ['id.text', 'id.wildcard'] } }
     )
     assert.deepEqual(
       whereParser.parse('id: "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
@@ -63,9 +78,113 @@ describe('compatibility layer for ods api', function () {
       whereParser.parse('NOT id = "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
       { bool: { must_not: [{ term: { id: 'koumoul' } }] } }
     )
+
+    assert.deepEqual(
+      whereParser.parse('id in ("koumoul", "test1", "test2")', { dataset: { schema: [{ key: 'id' }] } }),
+      { terms: { id: ['koumoul', 'test1', 'test2'] } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('nb IN [1 TO 10]', { dataset: { schema: [{ key: 'nb' }] } }),
+      { range: { nb: { gte: 1, lte: 10 } } }
+    )
+    assert.deepEqual(
+      whereParser.parse('nb IN [1..10]', { dataset: { schema: [{ key: 'nb' }] } }),
+      { range: { nb: { gte: 1, lte: 10 } } }
+    )
+    assert.deepEqual(
+      whereParser.parse('nb IN [1 TO 10]', { dataset: { schema: [{ key: 'nb' }] } }),
+      { range: { nb: { gte: 1, lte: 10 } } }
+    )
+    assert.deepEqual(
+      whereParser.parse('nb IN ]1..10[', { dataset: { schema: [{ key: 'nb' }] } }),
+      { range: { nb: { gt: 1, lt: 10 } } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('10 IN nb', { dataset: { schema: [{ key: 'nb' }] } }),
+      { term: { nb: 10 } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('date: date\'2020/12/01\'', { dataset: { schema: [{ key: 'date' }] } }),
+      { term: { date: '2020-12-01' } }
+    )
+    assert.deepEqual(
+      whereParser.parse('date: date\'2020-12-01\'', { dataset: { schema: [{ key: 'date' }] } }),
+      { term: { date: '2020-12-01' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('search(test1, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text'] }),
+      { multi_match: { fields: ['test1.text'], fuzziness: 'AUTO', query: 'bok of secret', type: 'bool_prefix' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('search(test1, test2, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text', 'test3.text'] }),
+      { multi_match: { fields: ['test1.text', 'test2.text'], fuzziness: 'AUTO', query: 'bok of secret', type: 'bool_prefix' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('search(*, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text', 'test3.text'] }),
+      { multi_match: { fields: ['test1.text', 'test2.text', 'test3.text'], fuzziness: 'AUTO', query: 'bok of secret', type: 'bool_prefix' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('suggest(test1, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text'] }),
+      { multi_match: { fields: ['test1.text'], query: 'bok of secret', type: 'phrase_prefix' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('startswith(test1, "star")', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { bool: { should: [{ prefix: { test1: 'star' } }] } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('startswith(*, "star")', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { bool: { should: [{ prefix: { test1: 'star' } }, { prefix: { test2: 'star' } }] } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'within_distance(geo, geom\'{"geometry": {"type": "Point","coordinates": [10, 10.1]}}\', 10km)',
+        { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }], bbox: [] } }
+      ),
+      { geo_distance: { _geopoint: [10, 10.1], distance: '10km' } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'in_bbox(geo, 10, 11, 12, 13)',
+        { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }], bbox: [] } }
+      ),
+      {
+        geo_shape: {
+          _geopoint: {
+            relation: 'intersects',
+            shape: { coordinates: [[10, 13], [12, 11]], type: 'envelope' }
+          }
+        }
+      }
+    )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'intersects(geo, geom\'{"geometry": {"type": "Point","coordinates": [10, 10.1]}}\')',
+        { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }], bbox: [] } }
+      ),
+      {
+        geo_shape: {
+          _geopoint: {
+            relation: 'intersects',
+            shape: { geometry: { type: 'Point', coordinates: [10, 10.1] } }
+          }
+        }
+      }
+    )
   })
 
-  it('exposes records api on 2 urls', async function () {
+  it('exposes records and exports api on 2 urls', async function () {
     const ax = global.ax.dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
@@ -77,10 +196,18 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.total_count, 2)
 
+    res = await ax.get(`/api/v1/compat-ods/v2.0/catalog/datasets/${dataset.id}/records`)
+    assert.equal(res.status, 200)
+
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.total_count, 2)
+
+    // select
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,nb,adr' } })
+    assert.equal(res.data.total_count, 2)
+    assert.equal(Object.keys(res.data.results[0]).length, 3)
 
     // simple filters
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: "koumoul"' } })
@@ -92,6 +219,10 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.total_count, 1)
 
     assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: koumoul' } }), { status: 400 })
+
+    // facet filtering
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { refine: 'id:koumoul' } })
+    assert.equal(res.data.total_count, 1)
 
     // sorting
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'id,nb' } })
@@ -109,5 +240,168 @@ describe('compatibility layer for ods api', function () {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb', offset: 1 } })
     assert.deepEqual(res.data.results, [{ id: 'koumoul', nb: 11 }])
+
+    // csv export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
+    assert.equal(res.data, `id;adr;some date;loc;bool;nb
+koumoul;19 rue de la voie lactée saint avé;2017-12-12;47.687375,-2.748526;0;11
+bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
+`)
+
+    // xlsx export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/xlsx`, { responseType: 'arraybuffer' })
+    assert.equal(typeof res.data, 'object')
+    const workbook = new Excel.Workbook()
+    await workbook.xlsx.load(res.data)
+    const worksheet = workbook.getWorksheet(1)
+    const json = worksheet?.getSheetValues()
+    // @ts-ignore
+    assert.equal(json.pop().pop(), 22.2)
+
+    // parquet export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/parquet`, { responseType: 'arraybuffer' })
+    assert.equal(typeof res.data, 'object')
+    const reader = await parquetjs.ParquetReader.openBuffer(res.data)
+    const cursor = reader.getCursor()
+    let record = null
+    let i = 0
+    while ((record = await cursor.next())) {
+      if (i === 0) {
+        assert.deepEqual(record, {
+          id: 'koumoul',
+          adr: '19 rue de la voie lactée saint avé',
+          some_date: new Date('2017-12-12T00:00:00.000Z'),
+          loc: '47.687375,-2.748526',
+          bool: false,
+          nb: 11
+        })
+      }
+      i++
+    }
+
+    // json export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/json`)
+    assert.equal(res.data.length, 2)
+    assert.equal(res.data[0].id, 'koumoul')
+
+    // geojson export
+    const locProp = dataset.schema.find(p => p.key === 'loc')
+    locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
+    await workers.hook('finalize/' + dataset.id)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/geojson`)
+    assert.equal(res.data.type, 'FeatureCollection')
+    assert.equal(res.data.features.length, 2)
+    assert.equal(res.data.features[0].properties.id, 'koumoul')
+    assert.deepEqual(res.data.features[0].geometry, { type: 'Point', coordinates: [-2.748526, 47.687375] })
+  })
+
+  it('should manage some other record list cases', async function () {
+    const ax = global.ax.dmeadusOrg
+
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await testUtils.sendDataset('datasets/dataset2.csv', ax)
+
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, 6)
+    assert.equal(res.data.total_count, 6)
+    // missing values are "null"
+    assert.equal(res.data.results[5].somedate, null)
+  })
+
+  it('should manage date times', async function () {
+    const ax = global.ax.dmeadusOrg
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest1',
+      schema: [{ key: 'date1', type: 'string', format: 'date-time' }]
+    }).then(r => r.data)
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-11T06:00:00Z' })
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-10T08:00:00Z' })
+
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    assert.equal(res.data.results.length, 2)
+    assert.equal(res.data.results[0].date1, '2025-09-10T08:00:00+00:00')
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`)
+    assert.equal(res.data.results.length, 2)
+    assert.equal(res.data.results[0].date1, '2025-09-10T10:00:00+02:00')
+
+    // refine a date facet
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025/09/11`)
+    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.results[0].date1, '2025-09-11T08:00:00+02:00')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025/09`)
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025`)
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2026`)
+    assert.equal(res.data.results.length, 0)
+  })
+
+  it('should manage corner cases of parquet export', async function () {
+    const ax = global.ax.dmeadusOrg
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest-parquet',
+      schema: [
+        { key: 'date-time1', type: 'string', format: 'date-time', 'x-required': true },
+        { key: 'date1', type: 'string', format: 'date', 'x-required': true },
+        { key: 'str1', type: 'string', 'x-required': true },
+        { key: 'str2', type: 'string' },
+        { key: 'int1', type: 'integer', 'x-required': true },
+        { key: 'nb1', type: 'number' },
+      ]
+    }).then(r => r.data)
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [
+      { 'date-time1': '2025-09-10T08:00:00.000Z', date1: '2025-09-10', str1: 'String 1', str2: 'String 2', int1: 11, nb1: 1.1 },
+      { 'date-time1': '2025-09-11T08:00:00.000Z', date1: '2025-09-11', str1: 'String 1 - 2', int1: 22 },
+      { 'date-time1': '2025-09-12T08:00:00.000Z', date1: '2025-09-12', str1: 'String 1 - 3', str2: 'String 2 - 3', int1: 33, nb1: 3.3 },
+    ])
+
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/parquet?order_by=int1`, { responseType: 'arraybuffer' })
+    assert.equal(typeof res.data, 'object')
+    const reader = await parquetjs.ParquetReader.openBuffer(res.data)
+    const parquetSchema = reader.getSchema()
+    assert.equal(parquetSchema.schema['date-time1'].type, 'TIMESTAMP_MILLIS')
+    assert.equal(parquetSchema.schema.date1.type, 'DATE')
+    assert.equal(parquetSchema.schema.str1.type, 'UTF8')
+    assert.equal(parquetSchema.schema.str1.optional, false)
+    assert.equal(parquetSchema.schema.str2.type, 'UTF8')
+    assert.equal(parquetSchema.schema.str2.optional, true)
+    assert.equal(parquetSchema.schema.nb1.type, 'DOUBLE')
+    assert.equal(parquetSchema.schema.int1.type, 'INT32')
+    const cursor = reader.getCursor()
+    let record = null
+    let i = 0
+    while ((record = await cursor.next())) {
+      if (i === 0) {
+        assert.deepEqual(record, { 'date-time1': new Date('2025-09-10T08:00:00.000Z'), date1: new Date('2025-09-10'), str1: 'String 1', str2: 'String 2', int1: 11, nb1: 1.1 })
+      }
+      if (i === 1) {
+        assert.deepEqual(record, { 'date-time1': new Date('2025-09-11T08:00:00.000Z'), date1: new Date('2025-09-11'), str1: 'String 1 - 2', int1: 22, nb1: null, str2: null })
+      }
+      i++
+    }
+  })
+
+  it.skip('manages geo data', async function () {
+    const ax = global.ax.dmeadusOrg
+
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await testUtils.sendDataset('geo/geojson-example.geojson', ax)
+
+    const res = await ax.get(`/api/v1/compat-ods/v2.1/catalog/datasets/${dataset.id}/records`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.total_count, 3)
+    console.log(res.data)
   })
 })

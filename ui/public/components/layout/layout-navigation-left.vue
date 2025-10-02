@@ -135,7 +135,7 @@
           v-if="canAdminDep && env.catalogsIntegration"
           :nuxt="true"
           dense
-          :to="`/catalogs/catalogs`"
+          :to="`/catalogs`"
         >
           <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
           <v-list-item-content>
@@ -147,7 +147,7 @@
           v-if="canAdmin && env.eventsIntegration"
           :nuxt="true"
           dense
-          :to="`/events/events`"
+          :to="`/events`"
         >
           <v-list-item-action><v-icon>mdi-clipboard-text-clock</v-icon></v-list-item-action>
           <v-list-item-content>
@@ -159,7 +159,7 @@
           v-if="canAdminDep && env.portalsIntegration"
           :nuxt="true"
           dense
-          :to="`/portals-manager/portals`"
+          :to="`/portals`"
         >
           <v-list-item-action><v-icon>mdi-clipboard-text-clock</v-icon></v-list-item-action>
           <v-list-item-content>
@@ -172,7 +172,7 @@
           v-if="canAdminDep && env.portalsIntegration"
           :nuxt="true"
           dense
-          :to="`/portals-manager/pages`"
+          :to="`/pages`"
         >
           <v-list-item-action><v-icon>mdi-text-box-edit-outline</v-icon></v-list-item-action>
           <v-list-item-content>

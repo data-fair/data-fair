@@ -1299,7 +1299,6 @@ router.get('/:datasetId/raw', readDataset(), apiKeyMiddleware, permissions.middl
     query.select = query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.csv'))
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
-    res.write('\ufeff')
     await pump(
       ...await restDatasetsUtils.readStreams(req.dataset),
       ...outputs.csvStreams(req.dataset, query),

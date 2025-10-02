@@ -28,7 +28,7 @@ describe('REST datasets exported', function () {
     assert.ok(dataset.exports.restToCSV.nextExport !== nextExport)
     const exportedDataFile = dataset.storage.dataFiles.find(df => df.key === 'export-csv')
     assert.ok(exportedDataFile)
-    assert.equal(exportedDataFile.size, 48)
+    assert.equal(exportedDataFile.size, 51)
     assert.equal(dataset.storage.size, exportedDataFile.size + dataset.storage.collection.size)
     assert.equal(dataset.storage.indexed.size, dataset.storage.collection.size)
 

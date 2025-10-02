@@ -162,8 +162,7 @@ describe('workers', function () {
     assert.equal(dataset.status, 'error')
     assert.equal(dataset.errorStatus, 'validated')
     assert.ok(dataset.errorRetry)
-
-    await new Promise(resolve => setTimeout(resolve, 100))
+    workers.hook('finalize/' + dataset.id)
 
     await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
     journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data

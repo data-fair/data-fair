@@ -1,4 +1,53 @@
-// copied from parts of https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs
+{{
+const LBRACE='{';
+const RBRACE='}';
+}}
+
+FieldName
+  = identifier:IdentifierName {
+    return identifier.name
+  }
+  / "`" identifier:IdentifierName "`" {
+    return identifier.name
+  }
+  / "`" identifier:NumericLiteral "`" {
+    return '' + identifier.value
+  }
+
+Date = 'date'i
+
+DateLiteral
+  = Date"'" year:DateYear "/" month:DateMonth "/" day:DateDay "'" {
+    return { value: year + '-' + month + '-' + day }
+  }
+  / Date"'" date:DatePartialIso "'" {
+    return { value: date }
+  }
+
+DateYear = DecimalDigit DecimalDigit DecimalDigit DecimalDigit { return text() }
+DateMonth = DecimalDigit DecimalDigit { return text() }
+DateDay = DecimalDigit DecimalDigit { return text() }
+DatePartialIso = (DecimalDigit / "-" / "T" / "Z" / ":")* { return text() }
+
+Geom = 'geom'i
+
+GeometryLiteral
+  = Geom"'" chars:SingleStringCharacter* "'" {
+    const str = chars.join('')
+    if (str[0] === LBRACE) {
+      try {
+        return JSON.parse(str)
+      } catch (err) {
+        throw httpError(400, `Impossible de parser la géométrie ${str}, erreur: ${err.message}`)
+      }
+    } else {
+      return str
+    }
+  }
+
+
+// the following is copied and adapted from parts of
+// https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs
 
 IdentifierName "identifier"
   = head:IdentifierStart tail:IdentifierPart* {
@@ -73,6 +122,7 @@ Literal
   / BooleanLiteral
   / NumericLiteral
   / StringLiteral
+  / DateLiteral
 
 NullLiteral
   = NullToken { return { type: "Literal", value: null }; }
@@ -81,9 +131,19 @@ BooleanLiteral
   = TrueToken  { return { type: "Literal", value: true  }; }
   / FalseToken { return { type: "Literal", value: false }; }
 
+// Simplified numbers as the more complete ones created conflicts with some odsql syntax
+NumericLiteral "number"
+  = DecimalIntegerLiteral {
+      return { type: "Literal", value: parseFloat(text()) };
+    }
+  / DecimalIntegerLiteral "." DecimalDigit+ {
+      return { type: "Literal", value: parseFloat(text()) };
+    }
+
+
 // The "!(IdentifierStart / DecimalDigit)" predicate is not part of the official
 // grammar, it comes from text in section 7.8.3.
-NumericLiteral "number"
+/*NumericLiteral "number"
   = literal:HexIntegerLiteral !(IdentifierStart / DecimalDigit) {
       return literal;
     }
@@ -101,7 +161,7 @@ DecimalLiteral
   / DecimalIntegerLiteral ExponentPart? {
       return { type: "Literal", value: parseFloat(text()) };
     }
-
+*/
 DecimalIntegerLiteral
   = "0"
   / NonZeroDigit DecimalDigit*
@@ -190,8 +250,8 @@ UnicodeEscapeSequence
       return String.fromCharCode(parseInt(digits, 16));
     }
 
-FalseToken      = "false"      !IdentifierPart
-TrueToken       = "true"       !IdentifierPart
+FalseToken      = "false"i      !IdentifierPart
+TrueToken       = "true"i       !IdentifierPart
 NullToken       = "null"       !IdentifierPart
 
 // Letter, Lowercase
