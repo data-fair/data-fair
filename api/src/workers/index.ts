@@ -53,10 +53,10 @@ const matchOwner = (o1: AccountKeys, o2: AccountKeys) => o1.type === o2.type && 
 
 const getFreeWorkers = () => {
   return (Object.keys(workers) as WorkerId[])
-    .filter(key => !workers[key].needsDrain)
     .map(key => {
       const pending = pendingTasks[key] ?? {}
       const concurrency = workers[key].options.maxThreads * workers[key].options.concurrentTasksPerWorker
+      if (Object.keys(pending).length >= concurrency) return null
       const excludedOwners: AccountKeys[] = []
       if (concurrency >= 2) {
         // 1rst rule: prevent a owner from using more than half the available slots
@@ -82,6 +82,7 @@ const getFreeWorkers = () => {
       }
       return { key, excludedOwners }
     })
+    .filter(Boolean)
 }
 
 const getFreeTasks = (type: ResourceType) => {
