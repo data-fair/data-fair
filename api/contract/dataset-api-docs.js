@@ -1025,7 +1025,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         description: '**AVERTISSEMENT** : Cette opération est un prototype en cours de conception. Elle permettra de récupérer les enregistrements du jeu de données de manière identique à l\'API "/records" du portail précédent.',
         operationId: 'readCompatODSRecords',
         'x-permissionClass': 'read',
-        tags: ['Compatibilité ODS'],
+        tags: ['Rétrocompatibilité'],
         deprecated: true,
         parameters: [{
           in: 'query',
@@ -1093,7 +1093,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         description: '**AVERTISSEMENT** : Cette opération est un prototype en cours de conception. Elle permettra d\'exporter le contenu du jeu de données de manière identique à l\'API "/exports" du portail précédent.',
         operationId: 'readCompatODSExports',
         'x-permissionClass': 'read',
-        tags: ['Compatibilité ODS'],
+        tags: ['Rétrocompatibilité'],
         deprecated: true,
         parameters: [{
           in: 'path',
