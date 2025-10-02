@@ -13,6 +13,7 @@ import * as ping from './ping.ts'
 import taskProgress from '../datasets/utils/task-progress.ts'
 import { Histogram } from 'prom-client'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { type AccountKeys } from '@data-fair/lib-express'
 
 const debug = debugLib('workers')
 
@@ -34,13 +35,46 @@ export const hook = async (key: string) => {
   return newResource
 }
 
+const matchOwner = (o1: AccountKeys, o2: AccountKeys) => o1.type === o2.type && o1.id === o2.id
+
 const getFreeWorkers = () => {
-  return (Object.keys(workers) as WorkerId[]).filter(key => !workers[key].needsDrain)
+  return (Object.keys(workers) as WorkerId[])
+    .filter(key => !workers[key].needsDrain)
+    .map(key => {
+      const pending = pendingTasks[key] ?? {}
+      const concurrency = workers[key].options.maxThreads * workers[key].options.concurrentTasksPerWorker
+      const excludedOwners: AccountKeys[] = []
+      if (concurrency >= 2) {
+        // 1rst rule: prevent a owner from using more than half the available slots
+        const maxOwnerConcurrency = Math.floor(concurrency / 2)
+        for (const task of Object.values(pending)) {
+          if (!excludedOwners.some(o => matchOwner(o, task.owner))) {
+            const nbOwnerTasks = Object.values(pending).filter(t => matchOwner(t.owner, task.owner)).length
+            if (nbOwnerTasks >= maxOwnerConcurrency) {
+              debug('owner uses more than half concurrency slots for worker, exclude them', key, task.owner)
+              excludedOwners.push(task.owner)
+            }
+          }
+        }
+        // 2nd rule: prevent a owner who already has a running task from using the last slot
+        if (Object.keys(pending).length >= concurrency - 1) {
+          for (const task of Object.values(pending)) {
+            if (!excludedOwners.some(o => matchOwner(o, task.owner))) {
+              debug('owner uses a concurrency slot for worker and there is only one left, exclude them', key, task.owner)
+              excludedOwners.push(task.owner)
+            }
+          }
+        }
+      }
+      return { key, excludedOwners }
+    })
 }
 
 const getFreeTasks = (type: ResourceType) => {
   const freeWorkers = getFreeWorkers()
-  return tasks[type].filter(t => freeWorkers.includes(t.worker))
+  return tasks[type]
+    .filter(task => freeWorkers.some(w => w.key === task.worker))
+    .map(task => ({ task, excludedOwners: freeWorkers.find(w => w.key === task.worker)!.excludedOwners }))
 }
 
 export const queryNextResourceTask = async (_type?: string, _id?: string) => {
@@ -48,8 +82,20 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
     if (_type && _type !== type) continue
     const freeTasks = getFreeTasks(type)
     const facets: any = {}
-    for (const task of freeTasks) {
+    for (const freeTask of freeTasks) {
+      const task = freeTask.task
       const filter = task.mongoFilter()
+      if (freeTask.excludedOwners.length) {
+        const fullFilters = [filter]
+        for (const owner of freeTask.excludedOwners) {
+          fullFilters.push({
+            $or: [
+              { 'owner.type': { $ne: owner.type } },
+              { 'owner.id': { $ne: owner.id } }
+            ]
+          })
+        }
+      }
       // filters.push(filter)
       // projection['_' + task.name] = { $cond: { if: filter, then: true, else: false } }
       const facet = [
@@ -63,11 +109,12 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
       facets[task.name] = facet
     }
     const results = await mongo.db.collection<any>(type).aggregate([{ $facet: facets }]).toArray().then(agg => agg[0])
-    for (const task of freeTasks) {
+    for (const freeTask of freeTasks) {
+      const task = freeTask.task
       const resource = results[task.name][0]
       if (resource) {
         if (process.env.NODE_ENV === 'test') {
-          const resourceMatchedTasks = freeTasks.map(t => t.name).filter(t => results[t]?.some(r => r.id === resource.id))
+          const resourceMatchedTasks = freeTasks.map(t => t.task.name).filter(t => results[t]?.some((r: any) => r.id === resource.id))
           if (resourceMatchedTasks.length > 1) events.emit('error', new Error('task selecion was not exclusive ' + JSON.stringify(resourceMatchedTasks)))
         }
 
@@ -91,7 +138,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     return
   }
   const taskFullKey = `${type}/${resource.id}/${task.name}`
-  pendingTasks[task.worker][`${type}/${resource.id}/${task.name}`] = resource.slug
+  pendingTasks[task.worker][taskFullKey] = { type, id: resource.id, slug: resource.slug, owner: resource.owner }
 
   const endTask = workersTasksHistogram.startTimer({ task: task.name })
   let progress: ReturnType<typeof taskProgress> | null = null

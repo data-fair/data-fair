@@ -5,6 +5,8 @@ import config from '#config'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
 import { piscinaGauge } from '../misc/utils/metrics.ts'
+import { type ResourceType } from '#types'
+import { type AccountKeys } from '@data-fair/lib-express'
 
 const createWorkers = () => {
   const workers = {
@@ -41,7 +43,7 @@ const createWorkers = () => {
       minThreads: 0,
       idleTimeout: 60 * 1000,
       maxThreads: 1,
-      concurrentTasksPerWorker: config.worker.baseConcurrency,
+      concurrentTasksPerWorker: config.worker.baseConcurrency * 2,
       closeTimeout: config.worker.closeTimeout
     })
   }
@@ -60,11 +62,18 @@ const createWorkers = () => {
 export const workers = createWorkers()
 piscinaGauge(workers)
 
+type ResourceRef = {
+  type: ResourceType,
+  slug: string,
+  id: string,
+  owner: AccountKeys
+}
+
 export const pendingTasks = {
-  shortProcessor: {} as Record<string, string>,
-  filesManager: {} as Record<string, string>,
-  filesProcessor: {} as Record<string, string>,
-  batchProcessor: {} as Record<string, string>
+  shortProcessor: {} as Record<string, ResourceRef>,
+  filesManager: {} as Record<string, ResourceRef>,
+  filesProcessor: {} as Record<string, ResourceRef>,
+  batchProcessor: {} as Record<string, ResourceRef>
 }
 
 const isNormalizedMongoFilter = (draft = false, not = false) => {
