@@ -11,7 +11,7 @@ import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import * as journals from '../misc/utils/journals.ts'
 import * as ping from './ping.ts'
 import taskProgress from '../datasets/utils/task-progress.ts'
-import { Histogram } from 'prom-client'
+import { Histogram, Gauge } from 'prom-client'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { type AccountKeys } from '@data-fair/lib-express'
 
@@ -24,6 +24,20 @@ const workersTasksHistogram = new Histogram({
   help: 'Number and duration in seconds of tasks run by the workers',
   buckets: [0.1, 1, 10, 60, 600],
   labelNames: ['task', 'status']
+})
+
+// eslint-disable-next-line no-new
+new Gauge({
+  name: 'df_datasets_workers_concurrency',
+  help: 'Utilization of datasets worker threads',
+  labelNames: ['worker', 'status'],
+  async collect () {
+    for (const key of Object.keys(workers) as WorkerId[]) {
+      const concurrency = workers[key].options.maxThreads * workers[key].options.concurrentTasksPerWorker
+      this.set({ worker: key, status: 'max' }, concurrency)
+      this.set({ worker: key, status: 'pending' }, pendingTasks[key] ? Object.keys(pendingTasks[key]).length : 0)
+    }
+  }
 })
 
 export const events = new EventEmitter()
