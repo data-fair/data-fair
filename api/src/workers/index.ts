@@ -98,7 +98,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
     const facets: any = {}
     for (const freeTask of freeTasks) {
       const task = freeTask.task
-      const filter = task.mongoFilter()
+      let filter = task.mongoFilter()
       if (freeTask.excludedOwners.length) {
         const fullFilters = [filter]
         for (const owner of freeTask.excludedOwners) {
@@ -109,6 +109,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
             ]
           })
         }
+        filter = { $and: fullFilters }
       }
       // filters.push(filter)
       // projection['_' + task.name] = { $cond: { if: filter, then: true, else: false } }
