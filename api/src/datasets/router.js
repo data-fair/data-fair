@@ -1457,8 +1457,8 @@ router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, async (
   const esInfos = await datasetInfos(req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
   const locks = [
-    await mongo.db.collection('locks').findOne({ _id: `dataset:${req.dataset.id}` }),
-    await mongo.db.collection('locks').findOne({ _id: `dataset:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })
+    await mongo.db.collection('locks').findOne({ _id: `datasets:${req.dataset.id}` }),
+    await mongo.db.collection('locks').findOne({ _id: `datasets:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })
   ]
   res.json({ filesInfos, esInfos, locks })
 })
@@ -1481,8 +1481,8 @@ router.post('/:datasetId/_refinalize', readDataset(), async (req, res) => {
 router.delete('/:datasetId/_lock', readDataset(), async (req, res) => {
   reqAdminMode(req)
   const db = mongo.db
-  await db.collection('locks').deleteOne({ _id: `dataset:${req.dataset.id}` })
-  await db.collection('locks').deleteOne({ _id: `dataset:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })
+  await db.collection('locks').deleteOne({ _id: `datasets:${req.dataset.id}` })
+  await db.collection('locks').deleteOne({ _id: `datasets:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })
   res.status(204).send()
 })
 
