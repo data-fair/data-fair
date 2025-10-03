@@ -138,7 +138,11 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
         delete resource._lockId
         // if there is something to be done in the draft mode of the dataset, it is prioritary
         if (type === 'datasets' && resource.draft && resource.draft.status !== 'finalized' && (resource.draft.status !== 'error' || task.name === 'errorRetry')) {
-          mergeDraft(resource)
+          if (resource.draft.draftReason) {
+            mergeDraft(resource)
+          } else {
+            internalError('incomplete-draft', `dataset ${resource.id} has a draft object, but no draftReason`)
+          }
         }
         return { type, resource, task }
       }
