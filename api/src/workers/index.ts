@@ -222,7 +222,15 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
 
     await progress?.end(true)
 
-    const propertyPrefix = resource.draftReason ? 'draft.' : ''
+    let propertyPrefix = ''
+    if (resource.draftReason) {
+      // we check both that the dataset was processed in draft mode and that its draft was not validated
+      // this is for the spacial case of finalize that validated the draft then failed with another error
+      const newResource = await mongo.db.collection(type).findOne({ id: resource.id })
+      if (newResource?.draft?.status) {
+        propertyPrefix = 'draft.'
+      }
+    }
     const patch: any = {
       $set: {
         [propertyPrefix + 'status']: 'error',
