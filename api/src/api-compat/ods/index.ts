@@ -1,26 +1,26 @@
 import express from 'express'
 import { Readable, Stream, Transform } from 'node:stream'
-import * as permissions from '../../../misc/utils/permissions.ts'
-import { readDataset } from '../../../datasets/middlewares.js'
-import * as cacheHeaders from '../../../misc/utils/cache-headers.js'
-import * as esUtils from '../../../datasets/es/index.ts'
+import * as permissions from '../../misc/utils/permissions.ts'
+import { readDataset } from '../../datasets/middlewares.js'
+import * as cacheHeaders from '../../misc/utils/cache-headers.js'
+import * as esUtils from '../../datasets/es/index.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Counter } from 'prom-client'
-import { getFlatten } from '../../../datasets/utils/flatten.ts'
+import { getFlatten } from '../../datasets/utils/flatten.ts'
 import config from '#config'
-import datasetsRouter, { datasetsApiKeyMiddleware } from '../../../datasets/router.js'
+import datasetsRouter, { datasetsApiKeyMiddleware } from '../../datasets/router.js'
 import { parse as parseWhere } from './where.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
-import pump from '../../../misc/utils/pipe.ts'
+import pump from '../../misc/utils/pipe.ts'
 import { stringify as csvStrStream, type Options as CsvOptions } from 'csv-stringify'
-import { csvStringifyOptions } from '../../../datasets/utils/outputs.js'
+import { csvStringifyOptions } from '../../datasets/utils/outputs.js'
 import contentDisposition from 'content-disposition'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
 import JSONStream from 'JSONStream'
-import capabilities from '../../../../contract/capabilities.js'
+import capabilities from '../../../contract/capabilities.js'
 import type { DatasetInternal } from '#types'
 
 dayjs.extend(timezone)
@@ -412,7 +412,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     // const schema = jsonSchema(dataset.schema, req.publicBaseUrl, false)
     // const parquetSchema = parquet.ParquetSchema.fromJsonSchema(schema)
     // transformStreams = [new parquet.ParquetTransformer(parquetSchema)]
-    const { ParquetWriterStream } = await import('../../../../../parquet-writer/parquet-writer-stream.mts')
+    const { ParquetWriterStream } = await import('../../../../parquet-writer/parquet-writer-stream.mts')
     const basicSchema = esQuery._source.map((key: string) => {
       const prop = dataset.schema!.find(p => p.key === key)!
       return { key: prop.key, type: prop.type, format: prop.format, required: prop['x-required'] }

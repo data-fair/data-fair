@@ -5,7 +5,7 @@
 
 
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { requiredCapability } from '../../../datasets/es/commons.js'
+import { requiredCapability } from '../../datasets/es/commons.js'
 import { wktToGeoJSON } from '@terraformer/wkt'
 
 const LBRACE='{';
