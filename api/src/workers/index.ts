@@ -117,6 +117,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
       // projection['_' + task.name] = { $cond: { if: filter, then: true, else: false } }
       const facet = [
         { $match: filter },
+        { $project: { id: 1 } },
         { $addFields: { _lockId: { $concat: [type, ':', '$id'] } } },
         { $lookup: { from: 'locks', localField: '_lockId', foreignField: '_id', as: '_locks' } },
         { $match: { _locks: { $size: 0 } } },
@@ -129,8 +130,20 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
       .aggregate([{ $facet: facets }], { readPreference: 'primary' }).toArray().then(agg => agg[0])
     for (const freeTask of freeTasks) {
       const task = freeTask.task
-      const resource = results[task.name][0]
-      if (resource) {
+      const resourceRef = results[task.name][0]
+      if (resourceRef) {
+        const ack = await locks.acquire(`${type}:${resourceRef.id}`, 'worker')
+        if (!ack) {
+          debug('failed to acquire lock for resource', type, resourceRef.id)
+          continue
+        }
+        // re-fetch the resource to check that it was not mutated while waiting for lock
+        const resource = await mongo.db.collection<any>(type).findOne({ $and: [{ id: resourceRef.id }, task.mongoFilter()] })
+        if (!resource) {
+          await locks.release(`${type}:${resourceRef.id}`)
+          continue
+        }
+
         if (process.env.NODE_ENV === 'test') {
           const resourceMatchedTasks = freeTasks.map(t => t.task.name).filter(t => results[t]?.some((r: any) => r.id === resource.id))
           if (resourceMatchedTasks.length > 1) events.emit('error', new Error('task selecion was not exclusive ' + JSON.stringify(resourceMatchedTasks)))
@@ -145,11 +158,6 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
           } else {
             internalError('incomplete-draft', `dataset ${resource.id} has a draft object, but no draftReason`)
           }
-        }
-        const ack = await locks.acquire(`${type}:${resource.id}`, 'worker')
-        if (!ack) {
-          debug('failed to acquire lock for resource', type, resource.id)
-          return
         }
         return { type, resource, task }
       }
