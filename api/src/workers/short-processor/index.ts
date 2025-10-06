@@ -25,19 +25,6 @@ export const manageTTL = async function (dataset: RestDataset) {
   return restUtils.applyTTL(dataset)
 }
 
-export const autoUpdate = async function (dataset: Dataset) {
-  await mongo.connect(true)
-  const draft = {
-    status: 'imported',
-    draftReason: {
-      key: 'file-updated' as const,
-      message: 'Nouveau fichier chargé sur un jeu de données existant',
-      validationMode: 'always' as const
-    }
-  }
-  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { draft } })
-}
-
 export const errorRetry = async function (dataset: Dataset) {
   await mongo.connect(true)
   const propertyPrefix = dataset.draftReason ? 'draft.' : ''

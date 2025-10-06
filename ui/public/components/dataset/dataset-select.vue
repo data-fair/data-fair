@@ -98,7 +98,7 @@ export default {
         params: {
           q: this.search,
           size: 20,
-          select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
+          select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
           owner: ownerFilter,
           ...this.extraParams
         }

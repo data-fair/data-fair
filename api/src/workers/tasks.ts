@@ -117,11 +117,6 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'filesManager',
   mongoFilter: () => ({ $or: [{ status: 'loaded', ...noActiveDraftFilter }, { 'draft.status': 'loaded' }] })
 }, {
-  name: 'downloadFile',
-  eventsPrefix: 'download',
-  worker: 'filesManager',
-  mongoFilter: () => ({ $or: [{ status: 'imported', ...noActiveDraftFilter }, { 'draft.status': 'imported' }] })
-}, {
   name: 'normalizeFile',
   eventsPrefix: 'normalize',
   worker: 'filesProcessor',
@@ -235,15 +230,6 @@ const datasetTasks: DatasetTask[] = [{
     'rest.ttl.active': true,
     _partialRestStatus: null,
     $or: [{ 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } }, { 'rest.ttl.checkedAt': { $exists: false } }]
-  })
-}, {
-  name: 'autoUpdate',
-  worker: 'shortProcessor',
-  mongoFilter: () => ({
-    status: 'finalized',
-    draft: { $exists: false },
-    'remoteFile.autoUpdate.active': true,
-    'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() }
   })
 }, {
   name: 'errorRetry',
