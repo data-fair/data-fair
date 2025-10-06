@@ -125,7 +125,8 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
       if (_id) facet.unshift({ $match: { id: _id } })
       facets[task.name] = facet
     }
-    const results = await mongo.db.collection<any>(type).aggregate([{ $facet: facets }]).toArray().then(agg => agg[0])
+    const results = await mongo.db.collection<any>(type)
+      .aggregate([{ $facet: facets }], { readPreference: 'primary' }).toArray().then(agg => agg[0])
     for (const freeTask of freeTasks) {
       const task = freeTask.task
       const resource = results[task.name][0]
@@ -145,6 +146,11 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
             internalError('incomplete-draft', `dataset ${resource.id} has a draft object, but no draftReason`)
           }
         }
+        const ack = await locks.acquire(`${type}:${resource.id}`, 'worker')
+        if (!ack) {
+          debug('failed to acquire lock for resource', type, resource.id)
+          return
+        }
         return { type, resource, task }
       }
     }
@@ -153,11 +159,6 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
 
 export const processResourceTask = async (type: ResourceType, resource: any, task: Task) => {
   const id = resource.id
-  const ack = await locks.acquire(`${type}:${id}`, 'worker')
-  if (!ack) {
-    debug('failed to acquire lock for resource', type, id)
-    return
-  }
   const taskFullKey = `${type}/${resource.id}/${task.name}`
   pendingTasks[task.worker][taskFullKey] = { type, id: resource.id, slug: resource.slug, owner: resource.owner }
 
