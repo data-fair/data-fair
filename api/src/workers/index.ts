@@ -97,6 +97,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
     if (_type && _type !== type) continue
     const freeTasks = getFreeTasks(type)
     const facets: any = {}
+    if (!freeTasks.length) continue
     for (const freeTask of freeTasks) {
       const task = freeTask.task
       let filter = task.mongoFilter()
