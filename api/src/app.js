@@ -182,7 +182,6 @@ export const run = async () => {
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
     app.use('/api/v1/catalog', apiKey('datasets'), (await import('./misc/routers/catalog.js')).default)
-    app.use('/api/v1/catalogs', apiKey('catalogs'), (await import('./catalogs/router.js')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
     app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
@@ -193,7 +192,7 @@ export const run = async () => {
     app.use('/api/v1/activity', (await import('./misc/routers/activity.js')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
-      app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./catalogs/plugins/ods/api-compat.ts')).default)
+      app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./api-compat/ods/index.ts')).default)
     }
 
     app.use('/api/', (req, res) => {

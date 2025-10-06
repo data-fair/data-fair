@@ -1,5 +1,5 @@
 import path from 'node:path'
-import type { ApplicationTask, CatalogTask, DatasetTask } from './types.ts'
+import type { DatasetTask } from './types.ts'
 import { Piscina } from 'piscina'
 import config from '#config'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
@@ -222,14 +222,6 @@ const datasetTasks: DatasetTask[] = [{
     'exports.restToCSV.nextExport': { $lt: new Date().toISOString() }
   })
 }, {
-  name: 'publishDataset',
-  worker: 'shortProcessor',
-  mongoFilter: () => ({
-    $or: [{ isMetaOnly: true }, { status: 'finalized' }],
-    draftReason: { $exists: false },
-    'publications.status': { $in: ['waiting', 'delete'] }
-  })
-}, {
   name: 'renewApiKey',
   worker: 'shortProcessor',
   mongoFilter: () => ({ 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } })
@@ -268,22 +260,4 @@ const datasetTasks: DatasetTask[] = [{
   mongoFilter: () => ({ status: 'finalized', isRest: true, 'extensions.nextUpdate': { $lt: new Date().toISOString() } })
 }]
 
-const applicationTasks: ApplicationTask[] = [{
-  name: 'publishApplication',
-  worker: 'shortProcessor',
-  mongoFilter: () => ({
-    'publications.status': { $in: ['waiting', 'delete'] }
-  })
-}]
-
-const catalogTasks: CatalogTask[] = [{
-  name: 'harvest',
-  worker: 'shortProcessor',
-  mongoFilter: () => ({ 'autoUpdate.active': true, 'autoUpdate.nextUpdate': { $lt: new Date().toISOString() } })
-}]
-
-export const tasks = {
-  catalogs: catalogTasks,
-  datasets: datasetTasks,
-  applications: applicationTasks
-}
+export const tasks = { datasets: datasetTasks }

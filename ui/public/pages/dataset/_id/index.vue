@@ -283,17 +283,10 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="['admin', 'contrib'].includes(userOwnerRole(dataset.owner))"
+                  v-if="env.catalogsIntegration && userOwnerRole(dataset.owner) === 'admin'"
                   href="#share-publications"
                 >
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
-                </v-tab>
-
-                <v-tab
-                  v-if="env.catalogsIntegration && userOwnerRole(dataset.owner) === 'admin'"
-                  href="#share-publications-next"
-                >
-                  <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogsBeta') }}
                 </v-tab>
 
                 <v-tab
@@ -345,10 +338,6 @@
                 </v-tab-item>
 
                 <v-tab-item value="share-publications">
-                  <dataset-catalog-publications />
-                </v-tab-item>
-
-                <v-tab-item value="share-publications-next">
                   <d-frame
                     :src="publicationUrl"
                     sync-params
@@ -450,8 +439,7 @@ fr:
   share: Partage
   permissions: Permissions
   portals: Portails
-  catalogs: Catalogues
-  catalogsBeta: Catalogues (bêta)
+  catalogs: Catalogues distants
   tutorialShare: Configurez des portails pour mieux partager vos données au public ou en interne.
   activity: Activité
   journal: Journal
@@ -494,8 +482,7 @@ en:
   share: Share
   permissions: Permissions
   portals: Portals
-  catalogs: Catalogs
-  catalogsBeta: Catalogs (beta)
+  catalogs: Remote catalogs
   tutorialShare: Configure portals to better publish your data privately or publicly.
   activity: Activity
   journal: Journal
