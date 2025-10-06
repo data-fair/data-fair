@@ -292,9 +292,6 @@ module.exports = {
     __name: 'AGENTKEEPALIVE_OPTIONS',
     __format: 'json'
   },
-  exportRestDatasets: {
-    cron: 'EXPORT_REST_DATASETS_CRON'
-  },
   clamav: {
     active: {
       __name: 'CLAMAV_ACTIVE',

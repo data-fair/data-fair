@@ -208,15 +208,6 @@ const datasetTasks: DatasetTask[] = [{
     ]
   }),
 }, {
-  name: 'exportRest',
-  worker: 'batchProcessor',
-  mongoFilter: () => ({
-    status: 'finalized',
-    isRest: true,
-    'exports.restToCSV.active': true,
-    'exports.restToCSV.nextExport': { $lt: new Date().toISOString() }
-  })
-}, {
   name: 'renewApiKey',
   worker: 'shortProcessor',
   mongoFilter: () => ({ 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } })

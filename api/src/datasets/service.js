@@ -14,7 +14,7 @@ import * as webhooks from '../misc/utils/webhooks.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
-import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
+import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
 import { getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import { validateURLFriendly } from '../misc/utils/validation.js'
@@ -386,13 +386,6 @@ export const applyPatch = async (dataset, patch, removedRestProps, attemptMappin
   if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
 
   const db = mongo.db
-
-  // manage automatic export of REST datasets into files
-  if (patch.exports && patch.exports.restToCSV) {
-    if (!patch.exports.restToCSV.active && await fs.pathExists(exportedFilePath(dataset, '.csv'))) {
-      await fs.remove(exportedFilePath(dataset, '.csv'))
-    }
-  }
 
   if (patch.extensions && dataset.isRest && dataset.extensions) {
     // TODO: check extension type (remoteService or exprEval)

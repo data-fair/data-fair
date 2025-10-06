@@ -274,13 +274,6 @@
                 >
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                 </v-tab>
-
-                <v-tab
-                  v-if="dataset.isRest"
-                  href="#share-exports"
-                >
-                  <v-icon>mdi-export</v-icon>&nbsp;&nbsp;{{ $t('exports') }}
-                </v-tab>
               </template>
               <template #tabs-items>
                 <v-tab-item value="share-permissions">
@@ -329,10 +322,6 @@
                     sync-params
                     @notif="emitFrameNotif"
                   />
-                </v-tab-item>
-
-                <v-tab-item value="share-exports">
-                  <dataset-exports />
                 </v-tab-item>
               </template>
             </layout-section-tabs>

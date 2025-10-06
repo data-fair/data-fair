@@ -1,11 +1,9 @@
-import config from '#config'
 import mongo from '#mongo'
 import path from 'node:path'
 import equal from 'deep-equal'
 import moment from 'moment'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
-import { CronJob } from 'cron'
 import * as geo from './geo.js'
 import * as datasetUtils from './index.js'
 import * as extensions from './extensions.ts'
@@ -107,17 +105,6 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
     patch.schema = await extensions.prepareExtensionsSchema(patch.schema || dataset.schema, patch.extensions || dataset.extensions)
   } else if (patch.schema || ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage)) {
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
-  }
-
-  // manage automatic export of REST datasets into files
-  if (patch.exports && patch.exports.restToCSV) {
-    if (patch.exports.restToCSV.active) {
-      const job = new CronJob(config.exportRestDatasets.cron, () => {})
-      patch.exports.restToCSV.nextExport = job.nextDate().toISO()
-    } else {
-      delete patch.exports.restToCSV.nextExport
-    }
-    patch.exports.lastExport = dataset?.exports?.restToCSV?.lastExport
   }
 
   const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !patch.schema.find(f => f.key === df.key))) ?? []

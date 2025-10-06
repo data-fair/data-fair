@@ -727,24 +727,6 @@ const datasetProperties = {
       }
     }
   },
-  exports: {
-    type: 'object',
-    properties: {
-      restToCSV: {
-        type: 'object',
-        properties: {
-          active: { type: 'boolean', default: false },
-          nextExport: { type: 'string', format: 'date-time' },
-          lastExport: {
-            type: 'object',
-            properties: {
-              date: { type: 'string', format: 'date-time' }
-            }
-          }
-        }
-      }
-    }
-  },
   extras: {
     type: 'object',
     description: 'An object for extra content from client services of data-fair'

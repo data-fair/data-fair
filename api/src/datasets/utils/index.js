@@ -28,7 +28,6 @@ export const attachmentsDir = filesUtils.attachmentsDir
 export const metadataAttachmentsDir = filesUtils.metadataAttachmentsDir
 export const dir = filesUtils.dir
 export const fullFileName = filesUtils.fullFileName
-export const exportedFilePath = filesUtils.exportedFilePath
 export const loadedFilePath = filesUtils.loadedFilePath
 export const loadingDir = filesUtils.loadingDir
 export const loadedAttachmentsFilePath = filesUtils.loadedAttachmentsFilePath
