@@ -14,6 +14,7 @@ import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
+import { fsyncFile } from '../../datasets/utils/files.ts'
 
 export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:file-storer:${dataset.id}`)
@@ -41,6 +42,8 @@ export default async function (dataset: DatasetInternal) {
     // "GLOBALID": {7E1C9E26-9767-4AE4-9CBB-F353B15B3BFE},
     if (dataset.extras?.fixGeojsonGlobalId || dataset.extras?.fixGeojsonESRI) {
       const fixedFilePath = loadedFilePath + '.fixed'
+      // creating empty file before streaming seems to fix some weird bugs with NFS
+      await fs.ensureFile(fixedFilePath)
       const globalIdRegexp = /"GLOBALID": \{(.*)\}/g
       await pump(
         fs.createReadStream(loadedFilePath),
@@ -89,7 +92,9 @@ export default async function (dataset: DatasetInternal) {
     }
 
     const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+    await fsyncFile(loadedFilePath)
     await fs.move(loadedFilePath, newFilePath, { overwrite: true })
+    await fsyncFile(newFilePath)
     if (dataset.originalFile) {
       const oldFilePath = datasetUtils.originalFilePath(dataset)
       if (oldFilePath !== newFilePath) {
@@ -100,6 +105,7 @@ export default async function (dataset: DatasetInternal) {
     // this happens if we upload only the attachments, not the data file itself
     // in this case copy the one from prod
     await fs.copy(datasetUtils.originalFilePath(datasetFull), datasetUtils.originalFilePath(dataset))
+    await fsyncFile(datasetUtils.originalFilePath(dataset))
   }
 
   if (dataset.loaded?.attachments) {

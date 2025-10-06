@@ -15,7 +15,7 @@ import * as limits from '../../misc/utils/limits.ts'
 import * as catalogs from '../../catalogs/plugins/index.js'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import * as datasetService from '../../datasets/service.js'
-import { tmpDir } from '../../datasets/utils/files.ts'
+import { fsyncFile, tmpDir } from '../../datasets/utils/files.ts'
 import debugLib from 'debug'
 import type { Dataset, DatasetInternal } from '#types'
 
@@ -125,6 +125,7 @@ export default async function (dataset: Dataset) {
     }
 
     await fs.move(tmpFile.path, filePath, { overwrite: true })
+    await fsyncFile(filePath)
 
     patch.loaded!.dataset!.md5 = md5
     patch.loaded!.dataset!.size = (await fs.promises.stat(filePath)).size
