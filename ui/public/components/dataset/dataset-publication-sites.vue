@@ -92,6 +92,7 @@ fr:
   hasWarning: "métadonnées manquantes : "
   warning:
     title: titre
+    summary: résumé
     description: description
     topics: thématique
     license: licence
@@ -108,6 +109,7 @@ en:
   hasWarning: "missing metadata : "
   warning:
     title: title
+    summary: summary
     description: description
     topics: topic
     license: license
@@ -160,6 +162,8 @@ export default {
             if (!(this.dataset.topics && this.dataset.topics.length)) warnings.push(m)
           } else if (m === 'title') {
             if (!(this.dataset.title && this.dataset.title.length > 3)) warnings.push(m)
+          } else if (m === 'summary') {
+            if (!(this.dataset.summary && this.dataset.summary.length > 10)) warnings.push(m)
           } else if (m === 'description') {
             if (!(this.dataset.description && this.dataset.description.length > 10)) warnings.push(m)
           } else {

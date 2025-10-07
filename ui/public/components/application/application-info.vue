@@ -95,7 +95,22 @@
         v-model="application.title"
         :disabled="!can('writeDescription')"
         label="Titre"
+        outlined
+        dense
+        hide-details
+        class="mb-3"
         @change="patch({title: application.title})"
+      />
+      <v-textarea
+        v-model="application.summary"
+        :disabled="!can('writeDescription')"
+        label="Résumé"
+        rows="3"
+        outlined
+        dense
+        hide-details
+        class="mb-3"
+        @change="patch({summary: application.summary})"
       />
       <markdown-editor
         v-model="application.description"

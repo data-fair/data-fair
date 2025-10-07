@@ -339,6 +339,19 @@
         :rules="required.includes('title') ? [(val) => !!val]: []"
         @change="patch({title: dataset.title})"
       />
+      <v-textarea
+        v-model="dataset.summary"
+        :disabled="!can('writeDescription')"
+        :label="$t('summary')"
+        rows="3"
+        outlined
+        dense
+        hide-details
+        class="mb-3"
+        :required="required.includes('summary')"
+        :rules="required.includes('summary') ? [(val) => !!val]: []"
+        @change="patch({summary: dataset.summary})"
+      />
       <markdown-editor
         v-model="dataset.description"
         :disabled="!can('writeDescription')"
@@ -431,6 +444,7 @@ fr:
   slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
   newSlug: Nouvel identifiant de publication
   title: Titre
+  summary: Résumé
   description: Description
   frequencyItems:
     triennial: tous les 3 ans
@@ -480,6 +494,7 @@ en:
   slugWarning: "This unique and readable id is used in portal pages URLs, data APIs, etc. Warning : if you modify it you can break existing links and applications."
   newSlug: New publication identifier
   title: Title
+  summary: Summary
   description: Description
   frequencyItems:
     triennial: every 3 years

@@ -64,7 +64,7 @@ export class DfMongo {
         id_1: [{ id: 1 }, { unique: true }],
         'unique-refs': [{ _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }], // used to prevent conflicts accross ids and slugs
         'main-keys': { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, // used to fetch list sorted by creation
-        fulltext: [{ title: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text', keywords: 'text', 'topics.title': 'text' }, { weights: { title: 2 } }],
+        fulltext: [{ title: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text', keywords: 'text', 'topics.title': 'text' }, { weights: { title: 3, summary: 2 } }],
         // special purpose indexes for workers, etc
         'virtual.children_1': { 'virtual.children': 1 },
         publicationSites_1: { publicationSites: 1 },
@@ -90,7 +90,7 @@ export class DfMongo {
         id_1: [{ id: 1 }, { unique: true }],
         'unique-refs': [{ _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }], // used to prevent conflicts accross ids and slugs
         'main-keys': { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, // used to fetch list sorted by creation
-        fulltext: [{ title: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text' }, { weights: { title: 2 } }],
+        fulltext: [{ title: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text' }, { weights: { title: 3, summary: 2 } }],
         // get linked applications
         'configuration.datasets.href_1': { 'configuration.datasets.href': 1 },
         'datasets-id': [{ 'configuration.datasets.id': 1 }, { sparse: true }],
@@ -98,11 +98,6 @@ export class DfMongo {
       },
       'applications-keys': {
         'keys.id_1': { 'keys.id': 1 }
-      },
-      catalogs: {
-        id_1: [{ id: 1 }, { unique: true }],
-        'owner.type_1_owner.id_1': { 'owner.type': 1, 'owner.id': 1 },
-        fulltext: [{ title: 'text', description: 'text', 'owner.name': 'text' }, { weights: { title: 2 } }]
       },
       settings: {
         'main-keys': [{ type: 1, id: 1, department: 1 }, { unique: true }],

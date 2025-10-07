@@ -1,7 +1,7 @@
 import jsonSchema from '@data-fair/lib-utils/json-schema.js'
 import applicationSchema from '#types/application/schema.js'
 
-export const patchKeys = ['configuration', 'url', 'urlDraft', 'description', 'image', 'slug', 'title', 'publications', 'publicationSites', 'requestedPublicationSites', 'extras', 'topics', 'preferLargeDisplay', 'attachments']
+export const patchKeys = ['configuration', 'url', 'urlDraft', 'title', 'summary', 'description', 'image', 'slug', 'publications', 'publicationSites', 'requestedPublicationSites', 'extras', 'topics', 'preferLargeDisplay', 'attachments']
 
 const body = jsonSchema(applicationSchema)
   .makePatchSchema(patchKeys)
