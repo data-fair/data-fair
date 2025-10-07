@@ -41,6 +41,10 @@ export default {
       type: 'string',
       description: 'Short title of the application'
     },
+    summary: {
+      type: 'string',
+      description: 'Short description of the application'
+    },
     description: {
       type: 'string',
       description: 'Detailed description of the application'

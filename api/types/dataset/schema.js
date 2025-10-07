@@ -69,6 +69,10 @@ const datasetProperties = {
     type: 'string',
     description: 'Short title of the dataset'
   },
+  summary: {
+    type: 'string',
+    description: 'Short description of the dataset'
+  },
   description: {
     type: 'string',
     description: 'Detailed description of the dataset'
