@@ -88,8 +88,8 @@ const getFreeWorkers = () => {
 const getFreeTasks = (type: ResourceType) => {
   const freeWorkers = getFreeWorkers()
   return tasks[type]
-    .filter(task => freeWorkers.some(w => w.key === task.worker))
-    .map(task => ({ task, excludedOwners: freeWorkers.find(w => w.key === task.worker)!.excludedOwners }))
+    .filter(task => freeWorkers.some(w => w?.key === task.worker))
+    .map(task => ({ task, excludedOwners: freeWorkers.find(w => w?.key === task.worker)!.excludedOwners }))
 }
 
 export const queryNextResourceTask = async (_type?: string, _id?: string) => {
@@ -168,7 +168,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
 export const processResourceTask = async (type: ResourceType, resource: any, task: Task) => {
   const id = resource.id
   const taskFullKey = `${type}/${resource.id}/${task.name}`
-  pendingTasks[task.worker][taskFullKey] = { type, id: resource.id, slug: resource.slug, owner: resource.owner }
+  pendingTasks[task.worker][taskFullKey] = { type, id: resource.id, slug: resource.slug, owner: resource.owner, startedAt: new Date().toISOString() }
 
   const endTask = workersTasksHistogram.startTimer({ task: task.name })
   let progress: ReturnType<typeof taskProgress> | null = null
@@ -273,7 +273,15 @@ export const loop = async () => {
   debug('start workers loop')
   let resolveWaitInterval: (() => void) | undefined
 
+  if (debug.enabled) {
+    const { inspect } = await import('node:util')
+    setInterval(() => {
+      debug('pending tasks', inspect(pendingTasks, { depth: 3 }))
+    }, 30000)
+  }
+
   ping.listen(async (type, id) => {
+    if (stopped) return
     const resourceTask = await queryNextResourceTask(type, id)
     debug('fetch resourceTask from ping', type, id, resourceTask?.task.name)
     if (resourceTask) {
@@ -298,8 +306,10 @@ export const loop = async () => {
         // at the end of task ignore the wait interval and loop immediately
         if (resolveWaitInterval) resolveWaitInterval()
       })
+      if (stopped) break
       resourceTask = await queryNextResourceTask()
     }
+    if (stopped) break
     debug('wait for ' + config.worker.interval)
     await new Promise<void>(resolve => {
       resolveWaitInterval = resolve

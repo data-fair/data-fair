@@ -62,18 +62,19 @@ const createWorkers = () => {
 export const workers = createWorkers()
 piscinaGauge(workers)
 
-type ResourceRef = {
+type PendingTask = {
   type: ResourceType,
   slug: string,
   id: string,
-  owner: AccountKeys
+  owner: AccountKeys,
+  startedAt: string
 }
 
 export const pendingTasks = {
-  shortProcessor: {} as Record<string, ResourceRef>,
-  filesManager: {} as Record<string, ResourceRef>,
-  filesProcessor: {} as Record<string, ResourceRef>,
-  batchProcessor: {} as Record<string, ResourceRef>
+  shortProcessor: {} as Record<string, PendingTask>,
+  filesManager: {} as Record<string, PendingTask>,
+  filesProcessor: {} as Record<string, PendingTask>,
+  batchProcessor: {} as Record<string, PendingTask>
 }
 
 const isNormalizedMongoFilter = (draft = false, not = false) => {
