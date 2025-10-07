@@ -6,10 +6,10 @@ export default [
   { ignores: ['node_modules/*', 'data/*'] },
   ...dfLibRecommended,
   ...neostandard({ ts: true }),
-  mochaPlugin.configs.flat.recommended,
+  mochaPlugin.configs.recommended,
   {
     rules: {
-      'mocha/no-skipped-tests': 'off'
+      'mocha/no-pending-tests': 'off'
     }
   }
 ]
