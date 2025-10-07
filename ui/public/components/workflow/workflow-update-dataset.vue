@@ -461,7 +461,7 @@ export default {
   watch: {
     async currentStep () {
       if (this.datasetType === 'file' && this.currentStep === 3) {
-        this.similarDatasets = (await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner', ...this.fileDatasetsFilter } })).results
+        this.similarDatasets = (await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,-userPermissions,-links,-owner', ...this.fileDatasetsFilter } })).results
       }
     },
     '$route.query.updated' () {

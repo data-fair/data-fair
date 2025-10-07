@@ -93,7 +93,7 @@ const getFreeTasks = (type: ResourceType) => {
 }
 
 export const queryNextResourceTask = async (_type?: string, _id?: string) => {
-  for (const type of ['catalogs', 'applications', 'datasets'] as ResourceType[]) {
+  for (const type of ['datasets'] as ResourceType[]) {
     if (_type && _type !== type) continue
     const freeTasks = getFreeTasks(type)
     const facets: any = {}

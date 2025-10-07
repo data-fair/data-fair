@@ -267,15 +267,6 @@ module.exports = {
     locales: 'fr,en',
     defaultLocale: 'fr'
   },
-  exportRestDatasets: {
-    cron: '0 6 * * 0'
-  },
-  catalogAutoUpdates: {
-    cron: '0 22 * * 0'
-  },
-  remoteFilesAutoUpdates: {
-    cron: '0 23 * * 0'
-  },
   observer: {
     active: true,
     port: 9090

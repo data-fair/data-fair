@@ -9,8 +9,6 @@
           <v-col>
             <dataset-status v-if="!dataset.isMetaOnly" />
 
-            <dataset-remote-file v-if="!sections.find(s => s.id === 'structure') && dataset.remoteFile" />
-
             <layout-section-tabs
               :min-height="180"
               :svg="buildingSvg"
@@ -25,12 +23,6 @@
                 <template v-if="can('writeDescriptionBreaking') && dataset.isVirtual">
                   <v-tab href="#structure-virtual">
                     <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;{{ $t('virtual') }}
-                  </v-tab>
-                </template>
-
-                <template v-if="can('writeDescriptionBreaking') && dataset.remoteFile">
-                  <v-tab href="#structure-remote-file">
-                    <v-icon>mdi-cloud-download</v-icon>&nbsp;&nbsp;{{ $t('remoteFile') }}
                   </v-tab>
                 </template>
 
@@ -65,12 +57,6 @@
                 <v-tab-item value="structure-virtual">
                   <v-container fluid>
                     <dataset-virtual />
-                  </v-container>
-                </v-tab-item>
-
-                <v-tab-item value="structure-remote-file">
-                  <v-container fluid>
-                    <dataset-remote-file />
                   </v-container>
                 </v-tab-item>
 
@@ -283,24 +269,10 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="['admin', 'contrib'].includes(userOwnerRole(dataset.owner))"
+                  v-if="env.catalogsIntegration && userOwnerRole(dataset.owner) === 'admin'"
                   href="#share-publications"
                 >
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
-                </v-tab>
-
-                <v-tab
-                  v-if="env.catalogsIntegration && userOwnerRole(dataset.owner) === 'admin'"
-                  href="#share-publications-next"
-                >
-                  <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogsBeta') }}
-                </v-tab>
-
-                <v-tab
-                  v-if="dataset.isRest"
-                  href="#share-exports"
-                >
-                  <v-icon>mdi-export</v-icon>&nbsp;&nbsp;{{ $t('exports') }}
                 </v-tab>
               </template>
               <template #tabs-items>
@@ -345,19 +317,11 @@
                 </v-tab-item>
 
                 <v-tab-item value="share-publications">
-                  <dataset-catalog-publications />
-                </v-tab-item>
-
-                <v-tab-item value="share-publications-next">
                   <d-frame
                     :src="publicationUrl"
                     sync-params
                     @notif="emitFrameNotif"
                   />
-                </v-tab-item>
-
-                <v-tab-item value="share-exports">
-                  <dataset-exports />
                 </v-tab-item>
               </template>
             </layout-section-tabs>
@@ -429,7 +393,6 @@ fr:
   schema: Schéma
   extension: Enrichissement
   virtual: Jeu virtuel
-  remoteFile: Fichier distant
   masterData: Donnée de référence
   tutorialConcepts: Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des applications de données adaptées et des possibilités d'enrichissement.
   docLinkExtend: Consultez la documentation sur l'extension de jeux de données
@@ -445,13 +408,11 @@ fr:
   calendar: Calendrier
   files: Fichiers
   thumbnails: Vignettes
-  exports: Exports
   applications: Applications
   share: Partage
   permissions: Permissions
   portals: Portails
-  catalogs: Catalogues
-  catalogsBeta: Catalogues (bêta)
+  catalogs: Catalogues distants
   tutorialShare: Configurez des portails pour mieux partager vos données au public ou en interne.
   activity: Activité
   journal: Journal
@@ -474,7 +435,6 @@ en:
   schema: Schema
   extension: Extension
   virtual: Virtual dataset
-  remoteFile: Remote file
   masterData: Master-data
   tutorialConcepts: You should assign concepts to your columns. They will be used to help you configure applications and data extensions.
   docLinkExtend: Read the documentation about extending datasets
@@ -494,8 +454,7 @@ en:
   share: Share
   permissions: Permissions
   portals: Portals
-  catalogs: Catalogs
-  catalogsBeta: Catalogs (beta)
+  catalogs: Remote catalogs
   tutorialShare: Configure portals to better publish your data privately or publicly.
   activity: Activity
   journal: Journal

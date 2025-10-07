@@ -1,5 +1,5 @@
 import path from 'node:path'
-import type { ApplicationTask, CatalogTask, DatasetTask } from './types.ts'
+import type { DatasetTask } from './types.ts'
 import { Piscina } from 'piscina'
 import config from '#config'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
@@ -92,8 +92,7 @@ const isNormalizedMongoFilter = (draft = false, not = false) => {
 const isValidatedMongoFilter = (prefix = '') => ({
   $or: [
     { [prefix + 'file']: { $exists: 1 }, [prefix + 'status']: 'validated' },
-    { isRest: true, status: 'analyzed' },
-    { isRest: true, _partialRestStatus: 'updated' }
+    { isRest: true, status: 'analyzed' }
   ]
 })
 const activeExtensionMongoFilter = (draft = false, not = false) => {
@@ -117,11 +116,6 @@ const datasetTasks: DatasetTask[] = [{
   eventsPrefix: 'store',
   worker: 'filesManager',
   mongoFilter: () => ({ $or: [{ status: 'loaded', ...noActiveDraftFilter }, { 'draft.status': 'loaded' }] })
-}, {
-  name: 'downloadFile',
-  eventsPrefix: 'download',
-  worker: 'filesManager',
-  mongoFilter: () => ({ $or: [{ status: 'imported', ...noActiveDraftFilter }, { 'draft.status': 'imported' }] })
 }, {
   name: 'normalizeFile',
   eventsPrefix: 'normalize',
@@ -214,23 +208,6 @@ const datasetTasks: DatasetTask[] = [{
     ]
   }),
 }, {
-  name: 'exportRest',
-  worker: 'batchProcessor',
-  mongoFilter: () => ({
-    status: 'finalized',
-    isRest: true,
-    'exports.restToCSV.active': true,
-    'exports.restToCSV.nextExport': { $lt: new Date().toISOString() }
-  })
-}, {
-  name: 'publishDataset',
-  worker: 'shortProcessor',
-  mongoFilter: () => ({
-    $or: [{ isMetaOnly: true }, { status: 'finalized' }],
-    draftReason: { $exists: false },
-    'publications.status': { $in: ['waiting', 'delete'] }
-  })
-}, {
   name: 'renewApiKey',
   worker: 'shortProcessor',
   mongoFilter: () => ({ 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } })
@@ -244,15 +221,6 @@ const datasetTasks: DatasetTask[] = [{
     'rest.ttl.active': true,
     _partialRestStatus: null,
     $or: [{ 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } }, { 'rest.ttl.checkedAt': { $exists: false } }]
-  })
-}, {
-  name: 'autoUpdate',
-  worker: 'shortProcessor',
-  mongoFilter: () => ({
-    status: 'finalized',
-    draft: { $exists: false },
-    'remoteFile.autoUpdate.active': true,
-    'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() }
   })
 }, {
   name: 'errorRetry',
@@ -269,22 +237,4 @@ const datasetTasks: DatasetTask[] = [{
   mongoFilter: () => ({ status: 'finalized', isRest: true, 'extensions.nextUpdate': { $lt: new Date().toISOString() } })
 }]
 
-const applicationTasks: ApplicationTask[] = [{
-  name: 'publishApplication',
-  worker: 'shortProcessor',
-  mongoFilter: () => ({
-    'publications.status': { $in: ['waiting', 'delete'] }
-  })
-}]
-
-const catalogTasks: CatalogTask[] = [{
-  name: 'harvest',
-  worker: 'shortProcessor',
-  mongoFilter: () => ({ 'autoUpdate.active': true, 'autoUpdate.nextUpdate': { $lt: new Date().toISOString() } })
-}]
-
-export const tasks = {
-  catalogs: catalogTasks,
-  datasets: datasetTasks,
-  applications: applicationTasks
-}
+export const tasks = { datasets: datasetTasks }

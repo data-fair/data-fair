@@ -118,20 +118,6 @@
         </v-list-item>
 
         <v-list-item
-          v-if="canAdminDep"
-          :nuxt="true"
-          dense
-          :to="`/catalogs-old`"
-          :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
-        >
-          <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
-            <v-list-item-subtitle>{{ $t('catalogsOldSub') }}</v-list-item-subtitle>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
           v-if="canAdminDep && env.catalogsIntegration"
           :nuxt="true"
           dense
@@ -365,8 +351,7 @@ fr:
   dep: Gestion du département
   params: Paramètres
   paramsSub: Licences, thématiques ...
-  catalogs: Catalogues
-  catalogsOldSub: Ancienne version
+  catalogs: Catalogues distants
   storage: Stockage
   subscription: Abonnement
   doc: Documentation
@@ -389,8 +374,7 @@ en:
   dep: Manage department
   params: Parameters
   paramsSub: Licenses, topics ...
-  catalogs: Catalogs
-  catalogsSub: Old version
+  catalogs: Remote catalogs
   storage: Storage
   subscription: Subscription
   doc: Documentation

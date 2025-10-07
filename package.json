@@ -21,7 +21,7 @@
     "doc": "nuxt --port 3144 --config-file doc/nuxt.config.js",
     "build-doc": "npm -w doc run build",
     "serve-doc": "npm -w doc run serve",
-    "build-parsers": "peggy --dts --format es --output api/src/catalogs/plugins/ods/where.peg.js api/src/catalogs/plugins/ods/where.pegjs api/src/catalogs/plugins/ods/lexic.pegjs",
+    "build-parsers": "peggy --dts --format es --output api/src/api-compat/ods/where.peg.js api/src/api-compat/ods/where.pegjs api/src/api-compat/ods/lexic.pegjs",
     "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc",

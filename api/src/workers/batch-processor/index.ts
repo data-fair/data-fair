@@ -3,7 +3,7 @@ import es from '#es'
 import config from '#config'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
-import type { FileDataset, RestDataset, Dataset } from '#types'
+import type { FileDataset, Dataset } from '#types'
 
 export const extend = async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
@@ -25,12 +25,6 @@ export const validateFile = async function (dataset: FileDataset) {
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const validateFile = await import('./validate-file.ts')
   await validateFile.default(dataset)
-}
-
-export const exportRest = async function (dataset: RestDataset) {
-  await Promise.all([mongo.connect(true), es.connect()])
-  const exportRest = await import('./export-rest.ts')
-  await exportRest.default(dataset)
 }
 
 export type NockInfo = {

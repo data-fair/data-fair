@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
+import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'

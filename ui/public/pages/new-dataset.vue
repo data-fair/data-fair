@@ -75,37 +75,6 @@
         </v-stepper-step>
       </template>
 
-      <!-- REMOTE FILE steps -->
-      <template v-if="datasetType === 'remoteFile'">
-        <v-divider />
-        <v-stepper-step
-          :step="2"
-          editable
-          :complete="!!remoteFileDataset.initFrom"
-        >
-          {{ $t('stepInit') }}
-        </v-stepper-step>
-        <v-divider />
-        <v-stepper-step
-          :step="3"
-          editable
-          :complete="remoteFileParamsForm"
-        >
-          {{ $t('stepParams') }}
-          <small
-            v-if="fileParamsForm"
-            v-t="'completed'"
-          />
-        </v-stepper-step>
-        <v-divider />
-        <v-stepper-step
-          :step="4"
-          :editable="remoteFileParamsForm"
-        >
-          {{ $t('stepAction') }}
-        </v-stepper-step>
-      </template>
-
       <!-- REST steps -->
       <template v-if="datasetType === 'rest'">
         <v-divider />
@@ -405,96 +374,6 @@
         </v-stepper-content>
       </template>
 
-      <!-- REMOTE FILE steps -->
-      <template v-if="datasetType === 'remoteFile'">
-        <v-stepper-content step="2">
-          <v-alert
-            type="info"
-            outlined
-            dense
-            style="max-width:440px;"
-          >
-            {{ $t('optionalStep') }}
-          </v-alert>
-
-          <dataset-init-from
-            :dataset="remoteFileDataset"
-            :allow-data="false"
-          />
-
-          <v-btn
-            v-t="remoteFileDataset.initFrom ? 'continue' : 'ignore'"
-            color="primary"
-            class="ml-2 mt-4"
-            @click.native="currentStep += 1"
-          />
-        </v-stepper-content>
-
-        <v-stepper-content step="3">
-          <p v-t="'remoteFileMessage'" />
-
-          <v-form v-model="remoteFileParamsForm">
-            <v-text-field
-              v-model="remoteFileDataset.remoteFile.url"
-              :label="$t('inputRemoteFile')"
-              hide-details
-              outlined
-              dense
-              style="max-width: 600px;"
-              :rules="[val => val && val.startsWith('http://') || val.startsWith('https://')]"
-            />
-            <v-checkbox
-              v-model="remoteFileDataset.remoteFile.autoUpdate.active"
-              :label="$t('autoUpdate')"
-              class="ml-2"
-            />
-            <v-text-field
-              v-model="remoteFileDataset.title"
-              name="title"
-              outlined
-              dense
-              :label="$t('title')"
-              style="max-width: 600px"
-              :rules="[val => val && val.length > 3]"
-            />
-          </v-form>
-
-          <v-btn
-            v-t="'continue'"
-            class="mt-2"
-            :disabled="!remoteFileParamsForm"
-            color="primary"
-            @click.native="currentStep += 1"
-          />
-
-          <h3
-            v-t="'formats'"
-            class="text-h6 mt-4"
-          />
-          <dataset-file-formats />
-        </v-stepper-content>
-
-        <v-stepper-content step="4">
-          <owner-pick
-            v-model="remoteFileDataset.owner"
-            hide-single
-            :restriction="[activeAccount]"
-            message="Choisissez le propriétaire du nouveau jeu de données :"
-          />
-          <dataset-conflicts
-            v-if="datasetType === 'remoteFile' && currentStep === 4"
-            v-model="conflictsOk"
-            :dataset="remoteFileDataset"
-          />
-          <v-btn
-            v-t="'import'"
-            :disabled="!conflictsOk || !remoteFileDataset.owner"
-            color="primary"
-            @click.native="createDataset(remoteFileDataset)"
-          />
-        </v-stepper-content>
-      </template>
-
       <!-- REST steps -->
       <template v-if="datasetType === 'rest'">
         <v-stepper-content step="2">
@@ -748,8 +627,6 @@ fr:
   choseType: Choisissez le type de jeu de données que vous souhaitez créer.
   type_file: Fichier
   type_desc_file: Chargez un fichier parmi les nombreux formats supportés.
-  type_remoteFile: Fichier distant
-  type_desc_remoteFile: Créez un jeu de données dont le contenu sera chargé à partir d'une URL.
   type_rest: Éditable
   type_desc_rest: Créez un jeu de données dont le contenu sera saisissable directement avec un formulaire en ligne.
   type_virtual: Virtuel
@@ -796,8 +673,6 @@ fr:
   loaded: chargées
   masterData: Données de référence
   ownerDatasets: Vos jeux de données
-  remoteFileMessage: Utilisez un lien vers un fichier dont le format est supporté.
-  inputRemoteFile: URL du fichier distant
   autoUpdate: Activer la mise à jour automatique
 en:
   datasetType: Dataset type
@@ -807,8 +682,6 @@ en:
   choseType: Chose the type of dataset you wish to create.
   type_file: File
   type_desc_file: Load a file among the many supported formats.
-  type_remoteFile: Remote file
-  type_desc_remoteFile: Create a dataset whose content will be loaded from an URL.
   type_rest: Editable
   type_desc_rest: Create a dataset whose content will be writable directly through a form.
   type_virtual: Virtual
@@ -872,7 +745,6 @@ export default {
     importing: false,
     datasetTypeIcons: {
       file: 'mdi-file-upload',
-      remoteFile: 'mdi-cloud-download',
       rest: 'mdi-all-inclusive',
       virtual: 'mdi-picture-in-picture-bottom-right-outline',
       metaOnly: 'mdi-information-variant'
@@ -881,15 +753,6 @@ export default {
     fileDataset: {
       title: '',
       attachmentsAsImage: false
-    },
-    remoteFileDataset: {
-      title: '',
-      remoteFile: {
-        url: '',
-        autoUpdate: {
-          active: false
-        }
-      }
     },
     restDataset: {
       title: '',
@@ -914,7 +777,6 @@ export default {
     },
     filenameTitle: true,
     fileParamsForm: false,
-    remoteFileParamsForm: false,
     restParamsForm: false,
     virtualParamsForm: false,
     metaParamsForm: false,
@@ -935,7 +797,7 @@ export default {
     ...mapGetters('session', ['activeAccount']),
     ...mapState(['env', 'accepted']),
     datasetTypes () {
-      return this.$route.query.simple === 'true' ? ['file', 'rest', 'metaOnly'] : ['file', 'remoteFile', 'rest', 'virtual', 'metaOnly']
+      return this.$route.query.simple === 'true' ? ['file', 'rest', 'metaOnly'] : ['file', 'rest', 'virtual', 'metaOnly']
     },
     restDatasetAttachments: {
       get () {
@@ -1065,7 +927,7 @@ export default {
       this.refDatasets = remoteServicesRes.results.map(r => r.virtualDatasets.parent)
 
       const datasetsRes = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.search, size: 20, select: 'id,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,attachmentsAsImage,-userPermissions,-links,-owner', owner: `${this.activeAccount.type}:${this.activeAccount.id}`, queryable: true }
+        params: { q: this.search, size: 20, select: 'id,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,attachmentsAsImage,-userPermissions,-links,-owner', owner: `${this.activeAccount.type}:${this.activeAccount.id}`, queryable: true }
       })
 
       this.datasets = datasetsRes.results

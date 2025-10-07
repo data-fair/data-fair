@@ -39,10 +39,7 @@
             style="overflow: hidden;"
           >
             <v-list-item-avatar class="ml-0 my-0">
-              <v-icon v-if="dataset.remoteFile">
-                mdi-cloud-download
-              </v-icon>
-              <v-icon v-else>
+              <v-icon>
                 mdi-file
               </v-icon>
             </v-list-item-avatar>

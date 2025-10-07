@@ -283,52 +283,6 @@ const datasetProperties = {
       }]
     }
   },
-  remoteFile: {
-    type: 'object',
-    additionalProperties: true, // for properties such as catalogId or resourceId that are specific to kind of remote resources
-    required: ['url'],
-    properties: {
-      name: {
-        type: 'string',
-        description: 'Name of the remote file that was used to create or update this dataset'
-      },
-      url: {
-        type: 'string',
-        description: 'Url from where the file can be fetched'
-      },
-      catalog: {
-        type: 'string',
-        description: 'Identifiant du catalogue d\'origine'
-      },
-      size: {
-        type: 'number',
-        description: 'Size of the file on disk'
-      },
-      mimetype: {
-        type: 'string',
-        description: 'Mime type of the file'
-      },
-      etag: {
-        type: 'string',
-        description: 'content of the "etag" response header if it was provided'
-      },
-      lastModified: {
-        type: 'string',
-        description: 'content of the "last-modified" response header if it was provided'
-      },
-      autoUpdate: {
-        type: 'object',
-        properties: {
-          active: { type: 'boolean', default: false },
-          nextUpdate: { type: 'string', format: 'date-time' },
-          lastUpdate: { type: 'string', format: 'date-time' }
-        }
-      },
-      forceUpdate: {
-        type: 'boolean'
-      }
-    }
-  },
   storage: {
     type: 'object',
     description: 'All storage space info of this dataset',
@@ -770,24 +724,6 @@ const datasetProperties = {
         description: 'Define how the thumbnails will be adapted to the size requested by visualizations',
         enum: ['crop', 'smartCrop', 'fitIn'],
         default: 'crop'
-      }
-    }
-  },
-  exports: {
-    type: 'object',
-    properties: {
-      restToCSV: {
-        type: 'object',
-        properties: {
-          active: { type: 'boolean', default: false },
-          nextExport: { type: 'string', format: 'date-time' },
-          lastExport: {
-            type: 'object',
-            properties: {
-              date: { type: 'string', format: 'date-time' }
-            }
-          }
-        }
       }
     }
   },

@@ -4,8 +4,6 @@ import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import { resolvedSchema as remoteServicePatch } from '../doc/remote-services/patch-req/.type/index.js'
 import { resolvedSchema as remoteService } from '#types/remote-service/index.js'
-import catalog from './catalog.js'
-import catalogPatch from './catalog-patch.js'
 import { resolvedSchema as application } from '../types/application/.type/index.js'
 import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
 import * as utils from './utils.js'
@@ -44,8 +42,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         remoteServicePatch: remoteServicePatch.properties.body,
         application,
         applicationPatch: applicationPatchReq.properties.body,
-        catalog,
-        catalogPatch
       },
       securitySchemes: {
         apiKey: {
@@ -645,171 +641,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             }
           }
         }
-      },
-      '/catalogs': {
-        get: {
-          summary: 'Lister les catalogues',
-          description: 'Récupérer la liste des catalogues.',
-          operationId: 'listCatalogs',
-          tags: ['Catalogues'],
-          parameters: [
-            utils.qParam,
-            ...utils.ownerParams,
-            utils.selectParam(Object.keys(application.properties)),
-            ...utils.paginationParams,
-            ...utils.visibilityParams
-          ],
-          responses: {
-            200: {
-              description: 'Liste des catalogues que l\'utilisateur est autorisé à voir.',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      count: {
-                        type: 'number',
-                        description: 'Nombre total de catalogues'
-                      },
-                      results: {
-                        type: 'array',
-                        items: {
-                          $ref: '#/components/schemas/catalog'
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        post: {
-          summary: 'Configurer un catalogue',
-          operationId: 'postCatalog',
-          tags: ['Catalogues'],
-          requestBody: {
-            description: 'Les informations de configuration du catalogue.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/catalog'
-                }
-              }
-            }
-          },
-          responses: {
-            201: {
-              description: 'Les informations de configuration du catalogue.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/catalog'
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      '/catalogs/{id}': {
-        parameters: [utils.idParam],
-        get: {
-          summary: 'Lire les informations d\'un catalogue',
-          description: 'Récupérer les informations d\'un catalogue.',
-          operationId: 'getCatalog',
-          tags: ['Catalogues'],
-          responses: {
-            200: {
-              description: 'Informations d\'un catalogue.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/catalog'
-                  }
-                }
-              }
-            }
-          }
-        },
-        put: {
-          summary: 'Créer ou mettre à jour un catalogue',
-          operationId: 'putCatalog',
-          tags: ['Catalogues'],
-          requestBody: {
-            description: 'Informations du catalogue.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/catalog'
-                }
-              }
-            }
-          },
-          responses: {
-            201: {
-              description: 'Catalogue créé.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/catalog'
-                  }
-                }
-              }
-            },
-            200: {
-              description: 'Catalogue modifié.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/catalog'
-                  }
-                }
-              }
-            }
-          }
-        },
-        patch: {
-          summary: 'Modifier une informations',
-          description: 'Modifier seulement certaines informations d\'un catalogue.',
-          operationId: 'patchCatalog',
-          tags: ['Catalogues'],
-          requestBody: {
-            description: 'Informations à modifier.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/catalogPatch'
-                }
-              }
-            }
-          },
-          responses: {
-            200: {
-              description: 'Informations du catalogue modifié.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/catalog'
-                  }
-                }
-              }
-            }
-          }
-        },
-        delete: {
-          summary: 'Supprimer un catalogue',
-          operationId: 'deleteCatalog',
-          tags: ['Catalogues'],
-          responses: {
-            204: {
-              description: 'Catalogue supprimé.'
-            }
-          }
-        }
       }
     },
     externalDocs: {
@@ -823,10 +654,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
   delete doc.paths['/remote-services']
   // @ts-ignore
   delete doc.paths['/remote-services/{id}']
-  // @ts-ignore
-  delete doc.paths['/catalogs']
-  // @ts-ignore
-  delete doc.paths['/catalogs/{id}']
 
   return doc
 }

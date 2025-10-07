@@ -5,7 +5,6 @@ import { piscinaGauge } from './metrics.ts'
 import { results2sheetPiscina } from '../../datasets/utils/outputs.js'
 import { sheet2csvPiscina } from '../../datasets/utils/rest.ts'
 import { geojson2pbfPiscina } from '../../datasets/utils/tiles.ts'
-import { fetchDCATPiscina } from '../../catalogs/plugins/dcat.js'
 
 // eslint-disable-next-line no-new
 new Gauge({
@@ -25,5 +24,4 @@ piscinaGauge({
   results2sheet: results2sheetPiscina,
   sheet2csv: sheet2csvPiscina,
   geojson2pbf: geojson2pbfPiscina,
-  fetchDCAT: fetchDCATPiscina
 })

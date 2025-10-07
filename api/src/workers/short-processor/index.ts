@@ -2,47 +2,9 @@ import config from '#config'
 import mongo from '#mongo'
 import es from '#es'
 import debugLib from 'debug'
-import { CronJob } from 'cron'
-import * as catalogs from '../../catalogs/plugins/index.js'
-import { internalError } from '@data-fair/lib-node/observer.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
-import type { Application, Dataset, DatasetInternal, RestDataset } from '#types'
-
-export const harvest = async function (catalog: any) {
-  await mongo.connect(true)
-  const debug = debugLib(`worker:catalog-harvester:${catalog.id}`)
-  const db = mongo.db
-  const date = new Date()
-
-  const patch = { autoUpdate: JSON.parse(JSON.stringify(catalog.autoUpdate || {})) }
-  patch.autoUpdate.lastUpdate = { date }
-
-  try {
-    await catalogs.updateAllHarvestedDatasets(catalog)
-  } catch (err: any) {
-    internalError('catalog-harvester', err)
-    patch.autoUpdate.lastUpdate.error = err.message
-  }
-
-  const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
-  patch.autoUpdate.nextUpdate = job.nextDate().toISO()
-
-  await db.collection('catalogs').updateOne({ id: catalog.id }, { $set: patch })
-  debug('done')
-}
-
-export const publishApplication = async function (application: Application) {
-  await mongo.connect(true)
-  await wsEmitter.init(mongo.db)
-  return catalogs.processPublications('application', application)
-}
-
-export const publishDataset = async function (dataset: Dataset) {
-  await mongo.connect(true)
-  await wsEmitter.init(mongo.db)
-  return catalogs.processPublications('dataset', dataset)
-}
+import type { Dataset, DatasetInternal, RestDataset } from '#types'
 
 export const renewApiKey = async function (dataset: DatasetInternal) {
   await mongo.connect(true)
@@ -61,19 +23,6 @@ export const manageTTL = async function (dataset: RestDataset) {
   await mongo.connect(true)
   const restUtils = await import('../../datasets/utils/rest.ts')
   return restUtils.applyTTL(dataset)
-}
-
-export const autoUpdate = async function (dataset: Dataset) {
-  await mongo.connect(true)
-  const draft = {
-    status: 'imported',
-    draftReason: {
-      key: 'file-updated' as const,
-      message: 'Nouveau fichier chargé sur un jeu de données existant',
-      validationMode: 'always' as const
-    }
-  }
-  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { draft } })
 }
 
 export const errorRetry = async function (dataset: Dataset) {

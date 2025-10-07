@@ -51,7 +51,7 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
   const schemas = await childrenSchemas(dataset.owner, dataset.virtual.children, blackListedFields)
   for (const field of schema) {
     if (blackListedFields.has(field.key)) {
-      throw httpError(400, `Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
+      throw httpError(400, `[noretry] Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
     }
     const matchingFields = []
     for (const s of schemas) {
@@ -89,17 +89,17 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
     const xLabels: Record<string, string> = {}
     for (const f of matchingFields) {
       if (f.type !== field.type) {
-        let message = `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type}).`
+        let message = `[noretry] Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type}).`
         if (['number', 'integer'].includes(field.type) && ['number', 'integer'].includes(f.type)) {
           message += ' Vous pouvez corriger cette incohérence en forçant le traitement des colonnes comme des nombres flottants dans tous les jeux enfants.'
         }
         throw httpError(400, message)
       }
-      if (f.separator !== field.separator) throw httpError(400, `Le champ "${field.key}" a des séparateurs contradictoires  (${field.separator}, ${f.separator}).`)
+      if (f.separator !== field.separator) throw httpError(400, `[noretry] Le champ "${field.key}" a des séparateurs contradictoires  (${field.separator}, ${f.separator}).`)
       let format = f.format
       if (format === 'uri-reference') format = undefined
-      if (format !== field.format) throw httpError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
-      if (f['x-refersTo'] !== field['x-refersTo']) throw httpError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
+      if (format !== field.format) throw httpError(400, `[noretry] Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
+      if (f['x-refersTo'] !== field['x-refersTo']) throw httpError(400, `[noretry] Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
       for (const key in f['x-capabilities'] || {}) {
         if (capabilitiesDefaultFalse.includes(key)) {
           if (f['x-capabilities'][key] === false || !(key in f['x-capabilities'])) field['x-capabilities'][key] = false
@@ -123,7 +123,7 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
   const fieldsByConcept: Record<string, any> = {}
   for (const f of schema) {
     if (!f || !f['x-refersTo']) continue
-    if (fieldsByConcept[f['x-refersTo']]) throw httpError(400, `Le concept "${f['x-refersTo']}" est référencé par plusieurs champs (${fieldsByConcept[f['x-refersTo']]}, ${f.key}).`)
+    if (fieldsByConcept[f['x-refersTo']]) throw httpError(400, `[noretry] Le concept "${f['x-refersTo']}" est référencé par plusieurs champs (${fieldsByConcept[f['x-refersTo']]}, ${f.key}).`)
     fieldsByConcept[f['x-refersTo']] = f.key
   }
 

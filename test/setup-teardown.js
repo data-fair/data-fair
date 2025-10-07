@@ -218,7 +218,6 @@ beforeEach('scratch data', async function () {
       global.db.collection('datasets').deleteMany({}),
       global.db.collection('applications').deleteMany({}),
       global.db.collection('applications-keys').deleteMany({}),
-      global.db.collection('catalogs').deleteMany({}),
       global.db.collection('limits').deleteMany({}),
       global.db.collection('settings').deleteMany({}),
       global.db.collection('locks').deleteMany({}),

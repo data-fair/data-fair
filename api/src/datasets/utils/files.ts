@@ -52,10 +52,6 @@ export const fullFilePath = (dataset: any) => {
   return resolvePath(dir(dataset), fullFileName(dataset))
 }
 
-export const exportedFilePath = (dataset: any, ext: string) => {
-  return resolvePath(dir(dataset), `${dataset.id}-last-export${ext}`)
-}
-
 export const loadedAttachmentsFilePath = (dataset: any) => {
   return resolvePath(loadingDir(dataset), 'attachments.zip')
 }
@@ -161,19 +157,6 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
           })
         }
       }
-    }
-  }
-  if (dataset.isRest && dataset?.exports?.restToCSV?.active && dataset?.exports?.restToCSV?.lastExport) {
-    const name = `${dataset.id}-last-export.csv`
-    if (!files.includes(name)) {
-      console.warn('Exported data file not found', d, name)
-    } else {
-      results.push({
-        name,
-        key: 'export-csv',
-        title: 'Export CSV',
-        mimetype: 'text/csv'
-      })
     }
   }
 

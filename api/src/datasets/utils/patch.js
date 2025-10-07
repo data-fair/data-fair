@@ -1,11 +1,9 @@
-import config from '#config'
 import mongo from '#mongo'
 import path from 'node:path'
 import equal from 'deep-equal'
 import moment from 'moment'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
-import { CronJob } from 'cron'
 import * as geo from './geo.js'
 import * as datasetUtils from './index.js'
 import * as extensions from './extensions.ts'
@@ -40,7 +38,6 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
       patch.errorRetry = null
     } else if (dataset.isVirtual) patch.status = 'indexed'
     else if (dataset.isRest) patch.status = 'analyzed'
-    else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
     else patch.status = 'stored'
 
     await wsEmitter.emit('datasets/' + dataset.id + '/task-progress', {})
@@ -110,17 +107,6 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
   }
 
-  // manage automatic export of REST datasets into files
-  if (patch.exports && patch.exports.restToCSV) {
-    if (patch.exports.restToCSV.active) {
-      const job = new CronJob(config.exportRestDatasets.cron, () => {})
-      patch.exports.restToCSV.nextExport = job.nextDate().toISO()
-    } else {
-      delete patch.exports.restToCSV.nextExport
-    }
-    patch.exports.lastExport = dataset?.exports?.restToCSV?.lastExport
-  }
-
   const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !patch.schema.find(f => f.key === df.key))) ?? []
   if (dataset.isRest && dataset.rest?.storeUpdatedBy && patch.rest && !patch.rest.storeUpdatedBy) {
     removedRestProps.push({ key: '_updatedBy' })
@@ -166,16 +152,6 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
     patch.dataUpdatedAt = patch.updatedAt
     patch.status = 'loaded'
     patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draftValidationMode }
-  } else if (patch.remoteFile) {
-    if (patch.remoteFile?.url !== dataset.remoteFile?.url || patch.remoteFile?.name !== dataset.remoteFile?.name || patch.remoteFile.forceUpdate) {
-      patch.status = 'imported'
-      patch.remoteFile.forceUpdate = true
-      // TODO: do not use always as default value when the dataset is public or published ?
-      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draftValidationMode }
-    } else {
-      if (dataset.remoteFile.lastModified) patch.remoteFile.lastModified = dataset.remoteFile.lastModified
-      if (dataset.remoteFile.etag) patch.remoteFile.etag = dataset.remoteFile.etag
-    }
   } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
       patch.schema = await virtualDatasetsUtils.prepareSchema({ ...dataset, ...patch })

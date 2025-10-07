@@ -35,7 +35,7 @@
         <v-list-item
           v-if="dataset.file"
           style="overflow: hidden;"
-          :prepend-icon="dataset.remoteFile ? mdiCloudDownload : mdiFile"
+          :prepend-icon="mdiFile"
         >
           {{ truncateMiddle((dataset.originalFile || dataset.file).name, 40, 4, '...') }} {{ formatBytes(dataset.originalFile?.size || dataset.file?.size, locale) }}
         </v-list-item>
@@ -130,7 +130,7 @@ en:
 <script lang="ts" setup>
 import truncateMiddle from 'truncate-middle'
 import { type DatasetExt } from '#api/types'
-import { mdiAlert, mdiAllInclusive, mdiCloudDownload, mdiFile, mdiPictureInPictureBottomRightOutline, mdiProgressWrench, mdiViewHeadline } from '@mdi/js'
+import { mdiAlert, mdiAllInclusive, mdiFile, mdiPictureInPictureBottomRightOutline, mdiProgressWrench, mdiViewHeadline } from '@mdi/js'
 import formatBytes from '@data-fair/lib-vue/format/bytes'
 import { Account } from '@data-fair/lib-vue/session'
 

@@ -269,7 +269,7 @@ export default {
       const params = {
         size: this.size,
         page: this.page,
-        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,draft.file,draft.remoteFile,draft.originalFile,count,finalizedAt',
+        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt',
         sort: 'createdAt:-1',
         ...fullFilters
       }

@@ -1,5 +1,4 @@
 import { strict as assert } from 'node:assert'
-import * as workers from '../api/src/workers/index.ts'
 
 describe('meta only datasets', function () {
   it('Create simple meta only datasets', async function () {
@@ -7,16 +6,9 @@ describe('meta only datasets', function () {
 
     const res = await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'a meta only dataset' })
     assert.equal(res.status, 201)
-    let dataset = res.data
+    const dataset = res.data
     assert.equal(dataset.slug, 'a-meta-only-dataset')
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { title: 'a meta only dataset 2' })
-
-    // publish on a catalog
-    await ax.patch(`/api/v1/datasets/${dataset.id}`, { publications: [{ catalog: 'test', status: 'waiting' }] })
-
-    // Go through the publisher worker
-    dataset = await workers.hook('publishDataset/' + dataset.id)
-    assert.equal(dataset.publications[0].status, 'error')
   })
 })

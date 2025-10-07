@@ -190,7 +190,6 @@ export default {
     scopes: [
       { value: 'datasets', text: 'jeux de données' },
       { value: 'applications', text: 'applications' },
-      { value: 'catalogs', text: 'connecteurs aux catalogues' },
       { value: 'stats', text: 'récupération d\'informations statistiques' }
     ]
   }),

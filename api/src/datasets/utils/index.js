@@ -1,7 +1,6 @@
 import path from 'path'
 import config from '#config'
 import slug from 'slugify'
-import { CronJob } from 'cron'
 import locks from '@data-fair/lib-node/locks.js'
 import nanoid from '../../misc/utils/nanoid.js'
 import * as visibilityUtils from '../../misc/utils/visibility.js'
@@ -29,7 +28,6 @@ export const attachmentsDir = filesUtils.attachmentsDir
 export const metadataAttachmentsDir = filesUtils.metadataAttachmentsDir
 export const dir = filesUtils.dir
 export const fullFileName = filesUtils.fullFileName
-export const exportedFilePath = filesUtils.exportedFilePath
 export const loadedFilePath = filesUtils.loadedFilePath
 export const loadingDir = filesUtils.loadingDir
 export const loadedAttachmentsFilePath = filesUtils.loadedAttachmentsFilePath
@@ -225,13 +223,6 @@ export const setUniqueRefs = (resource) => {
 
 export const curateDataset = (dataset, existingDataset) => {
   if (dataset.title) dataset.title = dataset.title.trim()
-
-  if (dataset.remoteFile?.autoUpdate?.active) {
-    const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
-    dataset.remoteFile.autoUpdate.nextUpdate = job.nextDate().toISO()
-  } else if (dataset.remoteFile?.autoUpdate) {
-    delete dataset.remoteFile.autoUpdate.nextUpdate
-  }
 
   if (dataset.masterData?.bulkSearchs?.length) {
     for (const bulkSearch of dataset.masterData.bulkSearchs) {
