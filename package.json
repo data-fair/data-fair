@@ -18,9 +18,6 @@
     "dev-zellij": "zellij --layout .zellij.kdl",
     "build": "npm -w ui run build",
     "upgrade": "node upgrade",
-    "doc": "nuxt --port 3144 --config-file doc/nuxt.config.js",
-    "build-doc": "npm -w doc run build",
-    "serve-doc": "npm -w doc run serve",
     "build-parsers": "peggy --dts --format es --output api/src/api-compat/ods/where.peg.js api/src/api-compat/ods/where.pegjs api/src/api-compat/ods/lexic.pegjs",
     "postinstall": "patch-package",
     "prepare": "husky || true",
@@ -33,61 +30,34 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "type": "module",
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "parser": "@babel/eslint-parser",
-    "parserOptions": {
-      "requireConfigFile": false,
-      "babelOptions": {
-        "babelrc": false,
-        "configFile": false,
-        "presets": [
-          "@babel/preset-env"
-        ]
-      }
-    },
-    "extends": [
-      "eslint:recommended",
-      "standard",
-      "plugin:vue/recommended"
-    ]
-  },
   "devDependencies": {
     "@commitlint/cli": "^17.5.0",
     "@commitlint/config-conventional": "^17.4.4",
     "@data-fair/lib-types-builder": "^1.7.0",
-    "@koumoul/gh-pages-multi": "^0.7.1",
+    "@data-fair/lib-utils": "^1.6.1",
     "@types/content-disposition": "^0.5.8",
     "@types/mime-types": "^3.0.0",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.12.0",
     "@types/streamsaver": "^2.0.5",
     "@types/unzipper": "^0.10.10",
-    "clean-modules": "^2.0.4",
-    "eslint-plugin-mocha": "^10.5.0",
+    "eslint-plugin-mocha": "^11.2.0",
     "eslint-plugin-vue": "^9.32.0",
     "husky": "^9.1.7",
     "neostandard": "^0.12.0",
     "patch-package": "^8.0.0",
     "peggy": "^4.2.0",
-    "semver-extract": "^1.2.0",
     "typescript": "~5.6.3"
   },
   "workspaces": [
     "api",
     "ui",
     "next-ui",
-    "doc",
     "shared",
     "test",
-    "parquet-exporter",
     "parquet-writer"
   ],
   "dependencies": {
-    "@turf/simplify": "^7.2.0",
-    "@turf/truncate": "^7.2.0"
+    "@data-fair/lib-node": "^2.9.1"
   }
 }
