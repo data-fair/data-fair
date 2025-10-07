@@ -11,6 +11,7 @@ import { validate } from 'tableschema'
 const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
 
 let notifier
+
 describe('datasets', function () {
   before('prepare notifier', async function () {
     notifier = (await import('./resources/app-notifier.js')).default
