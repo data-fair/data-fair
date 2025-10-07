@@ -91,8 +91,7 @@ const isNormalizedMongoFilter = (draft = false, not = false) => {
 const isValidatedMongoFilter = (prefix = '') => ({
   $or: [
     { [prefix + 'file']: { $exists: 1 }, [prefix + 'status']: 'validated' },
-    { isRest: true, status: 'analyzed' },
-    { isRest: true, _partialRestStatus: 'updated' }
+    { isRest: true, status: 'analyzed' }
   ]
 })
 const activeExtensionMongoFilter = (draft = false, not = false) => {
