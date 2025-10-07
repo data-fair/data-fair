@@ -408,7 +408,6 @@ fr:
   calendar: Calendrier
   files: Fichiers
   thumbnails: Vignettes
-  exports: Exports
   applications: Applications
   share: Partage
   permissions: Permissions

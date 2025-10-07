@@ -4,7 +4,6 @@ import { sessionStoreBuilder } from '@data-fair/sd-vue/src'
 import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
-import catalog from './catalog'
 import style from './style'
 import eventBus from '~/event-bus'
 
@@ -27,7 +26,6 @@ export default () => {
       dataset: dataset(),
       remoteService: remoteService(),
       application: application(),
-      catalog: catalog(),
       session: sessionStoreBuilder(),
       style: style()
     },

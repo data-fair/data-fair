@@ -351,7 +351,7 @@ fr:
   dep: Gestion du département
   params: Paramètres
   paramsSub: Licences, thématiques ...
-  catalogs: Catalogues
+  catalogs: Catalogues distants
   storage: Stockage
   subscription: Abonnement
   doc: Documentation
@@ -374,7 +374,7 @@ en:
   dep: Manage department
   params: Parameters
   paramsSub: Licenses, topics ...
-  catalogs: Catalogs
+  catalogs: Remote catalogs
   storage: Storage
   subscription: Subscription
   doc: Documentation
