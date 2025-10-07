@@ -4,6 +4,9 @@ import es from '#es'
 import * as datasetUtils from '../utils/index.js'
 import { aliasName, esProperty } from './commons.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import debugModule from 'debug'
+
+const debug = debugModule('manage-indices')
 
 export const indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
@@ -111,7 +114,8 @@ export const deleteIndex = async (dataset) => {
 // replace the index referenced by a dataset's alias
 export const switchAlias = async (dataset, tempId) => {
   const name = aliasName(dataset)
-  await es.client.indices.updateAliases({
+  debug(`switch dataset index alias ${name} -> ${tempId}`)
+  const res = await es.client.indices.updateAliases({
     body: {
       actions: [
         { remove: { alias: name, index: '*' } },
@@ -119,22 +123,31 @@ export const switchAlias = async (dataset, tempId) => {
       ]
     }
   })
+  if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating aliases')
 
   // Delete indices of this dataset that are not referenced by either the draft or prod aliases
   const { prodAlias, draftAlias } = await getAliases(dataset)
+  if (dataset.draftReason && !draftAlias) throw new Error('missing draft elasticsearch alias right after it should have been created')
+  if (!dataset.draftReason && !prodAlias) throw new Error('missing production elasticsearch alias right after it should have been created')
+  debug('full aliases after update', prodAlias, draftAlias)
   const indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
   for (const index in indices) {
     if (prodAlias && prodAlias[index]) continue
     if (draftAlias && draftAlias[index]) continue
+    debug('remove index not referenced by an alias', index)
     await safeDeleteIndex(index)
   }
 }
 
 // move an index from the draft alias to the production alias
-export const validateDraftAlias = async (dataset, tempId) => {
+export const validateDraftAlias = async (dataset) => {
+  debug('validate draft alias of dataset', dataset.id)
   const { draftAlias } = await getAliases(dataset)
+  debug('existing draft alias', draftAlias)
   if (!draftAlias || Object.keys(draftAlias).length !== 1) throw new Error('no draft alias to validate')
-  await es.client.indices.deleteAlias({ name: aliasName({ ...dataset, draftReason: true }), index: '_all' })
+  const name = aliasName({ ...dataset, draftReason: true })
+  debug('delete previous alias', name)
+  await es.client.indices.deleteAlias({ name, index: '_all' })
   await switchAlias({ ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
 }
 
