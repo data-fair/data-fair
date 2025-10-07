@@ -51,10 +51,10 @@ export class DfMongo {
 
   connect = async (singleSocket: boolean = false) => {
     if (this.connected) return
-    this.connected = true
     const options = { ...config.mongo.options }
     if (singleSocket) options.maxPoolSize = 1
     await this.mongo.connect(config.mongo.url, options)
+    this.connected = true
   }
 
   init = async () => {
