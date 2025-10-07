@@ -2,28 +2,69 @@
   <v-stepper v-model="currentStep">
     <v-stepper-header>
       <v-stepper-step
-        v-t="'selectApplication'"
-        :complete="!!baseApp"
+        v-t="'selectCreationType'"
+        :complete="!!creationType"
         step="1"
         :editable="!!baseApp"
       />
       <v-divider />
       <v-stepper-step
+        v-if="creationType === 'baseApp'"
+        v-t="'selectApplication'"
+        :complete="!!baseApp"
+        step="2"
+        :editable="!!baseApp"
+      />
+      <v-divider />
+      <v-stepper-step
+        v-if="creationType"
         v-t="'info'"
         :complete="!!title"
-        step="2"
+        step="3"
         :editable="!!baseApp"
       />
     </v-stepper-header>
 
     <v-stepper-items>
       <v-stepper-content step="1">
+        <p v-t="'choseType'" />
+        <v-row
+          dense
+          class="mt-2 mb-6"
+        >
+          <v-card
+            v-for="type of creationTypes"
+            :key="type"
+            width="300px"
+            class="ma-1"
+            outlined
+            hover
+            tile
+            @click="creationType = type; $nextTick(() => currentStep = 2);"
+          >
+            <v-card-title class="primary--text">
+              <v-icon
+                color="primary"
+                class="mr-2"
+              >
+                {{ creationTypeIcons[type] }}
+              </v-icon>
+              {{ $t('type_' + type) }}
+            </v-card-title>
+            <v-card-text>
+              {{ $t('type_desc_' + type) }}
+            </v-card-text>
+          </v-card>
+        </v-row>
+      </v-stepper-content>
+
+      <v-stepper-content step="2">
         <p v-html="$t('customApp')" />
         <application-base-apps
           v-if="dataset || !$route.query.dataset"
           v-model="baseApp"
           :dataset="dataset"
-          @input="currentStep = 2; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
+          @input="currentStep = 3; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
         />
 
         <!--<v-btn
@@ -35,7 +76,7 @@
         </v-btn>-->
       </v-stepper-content>
 
-      <v-stepper-content step="2">
+      <v-stepper-content step="3">
         <owner-pick
           v-model="owner"
           hide-single
@@ -68,6 +109,8 @@
 
 <i18n lang="yaml">
 fr:
+  selectCreationType: Type d"initialisation
+  choseType: Choisissez la manière dont vous souhaitez initialiser une nouvelle application.
   selectApplication: Sélection du modèle d'application
   info: Informations
   customApp: Koumoul réalise aussi des <span class="accent--text">applications personnalisées</span> sur demande. N'hésitez pas à <a href="https://koumoul.com/contact" class="">nous contacter</a> !
@@ -75,6 +118,10 @@ fr:
   save: Enregistrer
   back: Retour
   creationError: Erreur pendant la création de l'application
+  type_copy: Depuis une application
+  type_desc_copy: Copiez une configuration complète depuis une application existante.
+  type_baseApp: Depuis un modèle
+  type_desc_baseApp: Créez une configuration vierge à partir d'un modèle d'application.
 en:
   selectApplication: Application model selection
   info: Informations
@@ -92,7 +139,7 @@ import eventBus from '~/event-bus'
 export default {
   props: ['initApp'],
   data: () => ({
-    currentStep: null,
+    currentStep: 1,
     datasetModel: null,
     noDataset: false,
     dataset: null,
@@ -101,7 +148,12 @@ export default {
     configurableApplications: [],
     importing: false,
     title: null,
-    owner: null
+    owner: null,
+    creationTypes: ['copy', 'baseApp'],
+    creationTypeIcons: {
+      copy: 'mdi-content-copy',
+      baseApp: 'mdi-apps'
+    }
   }),
   async fetch () {
     if (this.$route.query.dataset) {
