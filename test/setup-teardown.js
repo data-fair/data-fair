@@ -211,9 +211,6 @@ beforeEach('scratch data', async function () {
 
   debug('force reset the workers')
   await resetPing()
-  for (const pending of Object.values(pendingTasks)) {
-    if (Object.keys(pending).length > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
-  }
 
   debug('scratch data')
   try {
@@ -238,6 +235,12 @@ beforeEach('scratch data', async function () {
   }
   global.events.removeAllListeners()
   debug('scratch data ok')
+})
+
+afterEach('check pending tasks', function () {
+  for (const pending of Object.values(pendingTasks)) {
+    if (Object.keys(pending).length > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
+  }
 })
 
 after('stop app', async function () {
