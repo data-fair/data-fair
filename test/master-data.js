@@ -428,6 +428,9 @@ describe('Master data management', function () {
       assert.ok(err.message.includes('Impossible d\'effectuer cette recherche'))
       return true
     })
+    // 1 auto-retry
+    await assert.rejects(workers.hook('finalize/slave'), () => true)
+
     const journal = (await ax.get('/api/v1/datasets/slave/journal')).data
     assert.ok(journal[0].data.includes('Impossible d\'effectuer cette recherche'))
   })

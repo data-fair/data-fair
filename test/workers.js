@@ -72,32 +72,6 @@ describe('workers', function () {
     assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   })
 
-  it('Publish a dataset after finalization', async function () {
-    const ax = global.ax.dmeadus
-
-    // Prepare a catalog
-    const catalog = (await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })).data
-
-    // Send dataset
-    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
-    const form = new FormData()
-    form.append('file', datasetFd, 'dataset.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    assert.equal(res.status, 201)
-    let dataset = await workers.hook('finalize/' + res.data.id)
-    assert.equal(dataset.status, 'finalized')
-
-    // Update dataset to ask for a publication
-    res = await ax.patch('/api/v1/datasets/' + dataset.id, { publications: [{ catalog: catalog.id, status: 'waiting' }] })
-    assert.equal(res.status, 200)
-
-    // Go through the publisher worker
-    dataset = await workers.hook('publishDataset/' + dataset.id)
-    assert.equal(dataset.status, 'finalized')
-    assert.equal(dataset.publications[0].status, 'published')
-    assert.equal(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')
-  })
-
   it('Process multiple datasets in parallel worker threads', async function () {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')
@@ -137,7 +111,7 @@ describe('workers', function () {
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error 400', schema: [{ key: 'test', type: 'string' }] })).data
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines?async=true`, [{ test: 'test' }])
-    await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('indexLines/' + dataset.id), 'This is a test 400 error')
     // Check that there is an error message in the journal
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')

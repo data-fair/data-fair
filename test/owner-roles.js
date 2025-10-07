@@ -11,10 +11,6 @@ describe('owner roles', function () {
 
     const application = (await global.ax.dmeadus.post('/api/v1/applications', { title: 'An application', url: 'http://monapp1.com/' })).data
     await global.ax.dmeadus.get(`/api/v1/applications/${application.id}`)
-
-    const catalogInit = (await global.ax.dmeadus.post('/api/v1/catalogs/_init', null, { params: { url: 'http://test-catalog.com' } })).data
-    const catalog = (await global.ax.dmeadus.post('/api/v1/catalogs', { ...catalogInit, apiKey: 'apikey' })).data
-    await global.ax.dmeadus.get(`/api/v1/catalogs/${catalog.id}`)
   })
 
   it('organization admin can do everything', async function () {
@@ -27,11 +23,6 @@ describe('owner roles', function () {
     const application = (await global.ax.dmeadusOrg.post('/api/v1/applications', { title: 'An application', url: 'http://monapp1.com/' })).data
     await global.ax.dmeadusOrg.get(`/api/v1/applications/${application.id}`)
     await global.ax.dmeadusOrg.delete(`/api/v1/applications/${application.id}`)
-
-    const catalogInit = (await global.ax.dmeadusOrg.post('/api/v1/catalogs/_init', null, { params: { url: 'http://test-catalog.com' } })).data
-    const catalog = (await global.ax.dmeadusOrg.post('/api/v1/catalogs', { ...catalogInit, apiKey: 'apikey' })).data
-    await global.ax.dmeadusOrg.get(`/api/v1/catalogs/${catalog.id}`)
-    await global.ax.dmeadusOrg.delete(`/api/v1/catalogs/${catalog.id}`)
   })
 
   it('organization contrib has limited capabilities', async function () {
@@ -51,13 +42,8 @@ describe('owner roles', function () {
     const application = (await global.ax.ngernier4Org.post('/api/v1/applications', { title: 'An application', url: 'http://monapp1.com/' })).data
     await global.ax.ngernier4Org.get(`/api/v1/applications/${application.id}`)
 
-    // cannot create a catalog
-    try {
-      await global.ax.ngernier4Org.post('/api/v1/catalogs', {})
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    // cannot patch settings
+    await assert.rejects(global.ax.ngernier4Org.put('/api/v1/settings/organization/KWqAGZ4mG', { topics: [] }), { status: 403 })
   })
 
   it('organization user has even more limited capabilities', async function () {
@@ -77,8 +63,8 @@ describe('owner roles', function () {
     await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/applications/${application.id}`), err => err.status === 403)
     await assert.rejects(global.ax.bhazeldean7Org.delete(`/api/v1/applications/${application.id}`), err => err.status === 403)
 
-    // cannot create a catalog
-    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/catalogs', {}), err => err.status === 403)
+    // cannot patch settings
+    await assert.rejects(global.ax.bhazeldean7Org.put('/api/v1/settings/organization/KWqAGZ4mG', { topics: [] }), { status: 403 })
   })
 
   it('departments can be used to restrict contrib capabilities', async function () {

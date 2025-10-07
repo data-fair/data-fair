@@ -200,7 +200,7 @@ describe('datasets', function () {
   it('Upload new dataset with JSON body', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
-    form.append('body', JSON.stringify({ title: 'A dataset with both file and JSON body', publications: [{ catalog: 'test', status: 'waiting' }] }))
+    form.append('body', JSON.stringify({ title: 'A dataset with both file and JSON body' }))
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with both file and JSON body')

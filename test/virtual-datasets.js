@@ -460,14 +460,10 @@ describe('virtual datasets', function () {
     res = await ax.patch('/api/v1/datasets/' + dataset1.id, { schema: dataset1.schema })
     await workers.hook('finalize/' + dataset1.id)
 
-    try {
-      virtualDataset = await workers.hook('finalize/' + virtualDataset.id)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.message, 'Le champ "some_date" a des formats contradictoires (non défini, date).')
-    }
+    await assert.rejects(workers.hook('finalize/' + virtualDataset.id), 'Le champ "some_date" a des formats contradictoires (non défini, date).')
     virtualDataset = (await ax.get('/api/v1/datasets/' + virtualDataset.id)).data
     assert.equal(virtualDataset.status, 'error')
+    assert.ok(!virtualDataset.errorRetry)
   })
 
   it('A virtual dataset cannot have a private child from another owner', async function () {

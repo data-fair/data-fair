@@ -211,9 +211,6 @@ beforeEach('scratch data', async function () {
 
   debug('force reset the workers')
   await resetPing()
-  for (const pending of Object.values(pendingTasks)) {
-    if (Object.keys(pending).length > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
-  }
 
   debug('scratch data')
   try {
@@ -221,7 +218,6 @@ beforeEach('scratch data', async function () {
       global.db.collection('datasets').deleteMany({}),
       global.db.collection('applications').deleteMany({}),
       global.db.collection('applications-keys').deleteMany({}),
-      global.db.collection('catalogs').deleteMany({}),
       global.db.collection('limits').deleteMany({}),
       global.db.collection('settings').deleteMany({}),
       global.db.collection('locks').deleteMany({}),
@@ -238,6 +234,12 @@ beforeEach('scratch data', async function () {
   }
   global.events.removeAllListeners()
   debug('scratch data ok')
+})
+
+afterEach('check pending tasks', function () {
+  for (const pending of Object.values(pendingTasks)) {
+    if (Object.keys(pending).length > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
+  }
 })
 
 after('stop app', async function () {
