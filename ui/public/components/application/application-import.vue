@@ -175,9 +175,9 @@ export default {
   }),
   async fetch () {
     if (this.$route.query.dataset) {
-      await this.getDataset(this.$route.query.dataset)
       this.creationType = 'baseApp'
       this.currentStep = 2
+      await this.getDataset(this.$route.query.dataset)
     }
   },
   computed: {
