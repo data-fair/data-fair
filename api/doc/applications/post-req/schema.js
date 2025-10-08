@@ -7,6 +7,16 @@ const body = jsonSchema(applicationSchema)
   .removeId()
   .schema
 
+body.properties['initFrom'] = {
+  type: 'object',
+  required: ['application'],
+  properties: {
+    application: {
+      type: 'string'
+    }
+  }
+}
+
 export default {
   $id: 'https://github.com/data-fair/data-fair/applications/post-req',
   title: 'Post application req',

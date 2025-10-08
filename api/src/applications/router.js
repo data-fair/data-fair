@@ -116,14 +116,35 @@ const initNew = async (req, id) => {
 router.post('', async (req, res) => {
   const sessionState = reqSession(req)
   const application = await initNew((await import('#doc/applications/post-req/index.js')).returnValid(req))
-  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', reqSession(req))) return res.status(403).type('text/plain').send()
+  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send()
 
   if (application.slug) validateURLFriendly(req.getLocale(), application.slug)
+  application.id = nanoid()
+
+  if (application.initFrom) {
+    const parentApplication = await mongo.applications.findOne({ id: application.initFrom.application })
+    if (!parentApplication) throw new Error('[noretry] application d\'initialisation inconnue ' + application.initFrom.application)
+    const parentApplicationPermissions = permissions.list('applications', parentApplication, sessionState)
+    if (!parentApplicationPermissions.includes('readDescription')) {
+      throw new Error(`[noretry] permission manquante sur l'application d'initialisation "${parentApplication.slug}" (${parentApplication.id})`)
+    }
+    if (parentApplication.url !== application.url) throw httpError(400, 'application.url and initFrom application do not match')
+    application.configuration = parentApplication.configuration
+    if (parentApplication.summary) application.summary = parentApplication.summary
+    if (parentApplication.description) application.description = parentApplication.description
+    if (parentApplication.attachments?.length) {
+      for (const attachment of parentApplication.attachments) {
+        const newPath = attachmentPath(application, attachment.name)
+        await fs.ensureDir(path.dirname(newPath))
+        await fs.copyFile(attachmentPath(parentApplication, attachment.name), newPath)
+      }
+      application.attachments = parentApplication.attachments
+    }
+  }
 
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/').filter(part => !!part)
   const lastUrlPart = toks[toks.length - 1]
-  application.id = nanoid()
   const baseslug = application.slug || slug(application.title || application.applicationName || lastUrlPart, { lower: true, strict: true })
   application.slug = baseslug
   setUniqueRefs(application)

@@ -1,16 +1,25 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
+      <template v-if="!dataset">
+        <v-stepper-step
+          v-t="'selectCreationType'"
+          :complete="!!creationType"
+          step="1"
+          :editable="!!creationType"
+        />
+        <v-divider />
+      </template>
       <v-stepper-step
-        v-t="'selectCreationType'"
-        :complete="!!creationType"
-        step="1"
-        :editable="!!baseApp"
+        v-if="creationType === 'copy'"
+        v-t="'selectApp'"
+        :complete="!!copyApp"
+        step="2"
+        :editable="!!copyApp"
       />
-      <v-divider />
       <v-stepper-step
         v-if="creationType === 'baseApp'"
-        v-t="'selectApplication'"
+        v-t="'selectBaseApp'"
         :complete="!!baseApp"
         step="2"
         :editable="!!baseApp"
@@ -58,7 +67,20 @@
         </v-row>
       </v-stepper-content>
 
-      <v-stepper-content step="2">
+      <v-stepper-content
+        v-if="creationType === 'copy'"
+        step="2"
+      >
+        <application-select
+          v-model="copyApp"
+          @change="currentStep = 3; title = copyApp.title"
+        />
+      </v-stepper-content>
+
+      <v-stepper-content
+        v-if="creationType === 'baseApp'"
+        step="2"
+      >
         <p v-html="$t('customApp')" />
         <application-base-apps
           v-if="dataset || !$route.query.dataset"
@@ -66,14 +88,6 @@
           :dataset="dataset"
           @input="currentStep = 3; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
         />
-
-        <!--<v-btn
-          :disabled="!baseApp"
-          color="primary"
-          @click.native="currentStep = 3"
-        >
-          Continuer
-        </v-btn>-->
       </v-stepper-content>
 
       <v-stepper-content step="3">
@@ -111,7 +125,8 @@
 fr:
   selectCreationType: Type d"initialisation
   choseType: Choisissez la manière dont vous souhaitez initialiser une nouvelle application.
-  selectApplication: Sélection du modèle d'application
+  selectBaseApp: Sélection du modèle d'application
+  selectApp: Sélection de l'application à copier
   info: Informations
   customApp: Koumoul réalise aussi des <span class="accent--text">applications personnalisées</span> sur demande. N'hésitez pas à <a href="https://koumoul.com/contact" class="">nous contacter</a> !
   title: Titre
@@ -123,7 +138,8 @@ fr:
   type_baseApp: Depuis un modèle
   type_desc_baseApp: Créez une configuration vierge à partir d'un modèle d'application.
 en:
-  selectApplication: Application model selection
+  selectBaseApp: Application model selection
+  selectApp: Application to copy
   info: Informations
   customApp: Koumoul also creates <span class="accent--text">custom applications</span> on demand. Do not hesitate <a href="https://koumoul.com/contact" class="">contacting us</a> !
   title: Title
@@ -149,15 +165,19 @@ export default {
     importing: false,
     title: null,
     owner: null,
+    creationType: null,
     creationTypes: ['copy', 'baseApp'],
     creationTypeIcons: {
       copy: 'mdi-content-copy',
       baseApp: 'mdi-apps'
-    }
+    },
+    copyApp: null
   }),
   async fetch () {
     if (this.$route.query.dataset) {
       await this.getDataset(this.$route.query.dataset)
+      this.creationType = 'baseApp'
+      this.currentStep = 2
     }
   },
   computed: {
@@ -203,21 +223,25 @@ export default {
     async createApplication () {
       this.importing = true
       try {
-        const configurationDraft = {}
-        if (this.dataset) {
-          configurationDraft.datasets = [{
-            href: this.dataset.href,
-            title: this.dataset.title,
-            id: this.dataset.id,
-            schema: this.dataset.schema
-          }]
+        const body = { owner: this.owner, title: this.title, }
+
+        if (this.creationType === 'copy') {
+          body.url = this.copyApp.url
+          body.initFrom = { application: this.copyApp.id }
+        } else {
+          body.url = this.baseApp.url
+          body.configurationDraft = {}
+          if (this.dataset) {
+            body.configurationDraft.datasets = [{
+              href: this.dataset.href,
+              title: this.dataset.title,
+              id: this.dataset.id,
+              schema: this.dataset.schema
+            }]
+          }
         }
-        const application = await this.$axios.$post('api/v1/applications', {
-          owner: this.owner,
-          url: this.baseApp.url,
-          title: this.title,
-          configurationDraft
-        })
+
+        const application = await this.$axios.$post('api/v1/applications', body)
         this.$router.push({ path: `/application/${application.id}` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: this.$t('creationError') })
