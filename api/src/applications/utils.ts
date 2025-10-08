@@ -17,8 +17,9 @@ import { updateTotalStorage } from '../datasets/utils/storage.ts'
 import nodeDir from 'node-dir'
 import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
 import { reqSession } from '@data-fair/lib-express'
+import type { Application, PublicationSite, Request } from '#types'
 
-export const clean = (application, publicUrl, publicationSite, query = {}) => {
+export const clean = (application: Application, publicUrl: string, publicationSite: PublicationSite, query: Record<string, string> = {}) => {
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
     if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
@@ -48,25 +49,17 @@ export const clean = (application, publicUrl, publicationSite, query = {}) => {
   return application
 }
 
-const memoizedGetFreshDataset = memoize(async (id, db) => {
-  return await db.collection('datasets').findOne({ id })
+const memoizedGetFreshDataset = memoize(async (id) => {
+  return await mongo.db.collection('datasets').findOne({ id })
 }, {
   profileName: 'getAppFreshDataset',
   promise: true,
   primitive: true,
   max: 10000,
   maxAge: 1000 * 60, // 1 minute
-  length: 1 // ignore db parameter
 })
 
-/**
- * @param {import('express').Request} req
- * @param {any} application
- * @param {boolean} draft
- */
-export const refreshConfigDatasetsRefs = async (req, application, draft, checkWithPersonalSession = false) => {
-  const db = mongo.db
-  // @ts-ignore
+export const refreshConfigDatasetsRefs = async (req: Request, application: Application, draft: boolean, checkWithPersonalSession = false) => {
   const publicBaseUrl = req.publicBaseUrl
 
   const configuration = (draft ? (application.configurationDraft || application.configuration) : application.configuration) || {}
@@ -89,12 +82,12 @@ export const refreshConfigDatasetsRefs = async (req, application, draft, checkWi
       refreshKeys.push('finalizedAt')
       refreshKeys.push('slug')
 
-      const datasetFilters = application.baseApp.datasetsFilters?.[i] ?? {}
+      const datasetFilters = application.baseApp?.datasetsFilters?.[i] ?? {}
       if (datasetFilters.select) refreshKeys = refreshKeys.concat(datasetFilters.select)
 
       const freshDataset = tolerateStale
-        ? clone(await memoizedGetFreshDataset(dataset.id, db))
-        : (await db.collection('datasets').findOne({ id: dataset.id }))
+        ? clone(await memoizedGetFreshDataset(dataset.id))
+        : (await mongo.db.collection('datasets').findOne({ id: dataset.id }))
 
       if (freshDataset) {
         if (checkWithPersonalSession) {
@@ -125,22 +118,22 @@ export const refreshConfigDatasetsRefs = async (req, application, draft, checkWi
   }
 }
 
-export const dir = (application) => {
+export const dir = (application: Application) => {
   return resolvePath(
     ownerDir(application.owner),
     path.join('applications', application.id)
   )
 }
 
-export const attachmentsDir = (application) => {
+export const attachmentsDir = (application: Application) => {
   return resolvePath(dir(application), 'attachments')
 }
 
-export const attachmentPath = (application, name) => {
+export const attachmentPath = (application: Application, name: string) => {
   return resolvePath(attachmentsDir(application), name)
 }
 
-export const lsAttachments = async (application) => {
+export const lsAttachments = async (application: Application) => {
   const dirName = attachmentsDir(application)
   if (!await fs.pathExists(dirName)) return []
   const files = (await nodeDir.promiseFiles(dirName))
@@ -148,7 +141,7 @@ export const lsAttachments = async (application) => {
   return files
 }
 
-export const storage = async (db, es, application) => {
+const storage = async (application: Application) => {
   const storage = {
     attachments: { size: 0, count: 0 },
     size: 0
@@ -165,19 +158,14 @@ export const storage = async (db, es, application) => {
 }
 
 // After a change that might impact consumed storage, we store the value
-export const updateStorage = async (app, application, deleted = false, checkRemaining = false) => {
+export const updateStorage = async (application: Application, deleted = false, checkRemaining = false) => {
   const db = mongo.db
-  const es = app.get('es')
-  if (application.draftReason) {
-    console.warn(new Error('updateStorage should not be called on a draft dataset'))
-    return
-  }
   if (!deleted) {
     await db.collection('applications').updateOne({ id: application.id }, {
       $set: {
-        storage: await storage(db, es, application)
+        storage: await storage(application)
       }
     })
   }
-  return updateTotalStorage(db, application.owner, checkRemaining)
+  return updateTotalStorage(application.owner, checkRemaining)
 }

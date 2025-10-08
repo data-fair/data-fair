@@ -19,7 +19,7 @@ import * as usersUtils from '../misc/utils/users.ts'
 import * as findUtils from '../misc/utils/find.js'
 import * as journals from '../misc/utils/journals.ts'
 import * as capture from '../misc/utils/capture.ts'
-import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir, dir } from './utils.js'
+import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir, dir } from './utils.ts'
 import { findApplications } from './service.js'
 import { syncApplications } from '../datasets/service.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
@@ -124,7 +124,8 @@ router.post('', async (req, res) => {
   const toks = application.url.split('/').filter(part => !!part)
   const lastUrlPart = toks[toks.length - 1]
   application.id = nanoid()
-  const baseslug = application.slug || slug(application.title || application.applicationName || lastUrlPart, { lower: true, strict: true })
+  application.title = application.title || application.applicationName || lastUrlPart
+  const baseslug = application.slug || slug(application.title, { lower: true, strict: true })
   application.slug = baseslug
   setUniqueRefs(application)
   permissions.initResourcePermissions(application)
@@ -618,7 +619,7 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
 router.post('/:applicationId/attachments', readApplication, permissions.middleware('postAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
-  await updateStorage(req.app, req.application)
+  await updateStorage(req.application)
   res.status(200).send(req.body)
 })
 
@@ -658,7 +659,7 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {
   await fs.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
-  await updateStorage(req.app, req.application)
+  await updateStorage(req.application)
   res.status(204).send()
 })
 

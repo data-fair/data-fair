@@ -2,7 +2,7 @@ import jsonSchema from '@data-fair/lib-utils/json-schema.js'
 import applicationSchema from '#types/application/schema.js'
 
 const body = jsonSchema(applicationSchema)
-  .removeFromRequired(['id', 'slug', 'owner'])
+  .removeFromRequired(['id', 'slug', 'title', 'owner'])
   .set({ 'x-exports': ['validate', 'types'] })
   .removeId()
   .schema
