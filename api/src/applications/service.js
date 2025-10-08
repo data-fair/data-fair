@@ -1,7 +1,7 @@
 import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.ts'
-import { clean } from './utils.js'
+import { clean } from './utils.ts'
 import config from '#config'
 
 const filterFields = {

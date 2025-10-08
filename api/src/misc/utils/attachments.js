@@ -5,7 +5,7 @@ import multer from 'multer'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import { metadataAttachmentsDir as datasetAttachmentsDir, metadataAttachmentPath as datasetAttachmentPath } from '../../datasets/utils/files.ts'
-import { attachmentsDir as applicationAttachmentsDir, attachmentPath as applicationAttachmentPath } from '../../applications/utils.js'
+import { attachmentsDir as applicationAttachmentsDir, attachmentPath as applicationAttachmentPath } from '../../applications/utils.ts'
 import * as limits from './limits.ts'
 
 const debug = debugLib('attachments')

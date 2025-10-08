@@ -19,7 +19,7 @@ export default {
   'x-exports': ['types', 'validate', 'resolvedSchema'],
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'slug', 'url', 'owner'],
+  required: ['id', 'slug', 'url', 'title', 'owner'],
   properties: {
     id: {
       type: 'string',
