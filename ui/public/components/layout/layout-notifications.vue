@@ -7,15 +7,16 @@
     :timeout="notification.type === 'error' ? 0 : 300000"
     :text="notification.type === 'default'"
     class="notification"
-    tile
+    dense
     bottom
+    right
     :outlined="$vuetify.theme.dark"
   >
-    <p>{{ notification.msg }}</p>
+    <p class="mb-0">{{ notification.msg }}</p>
     <!-- errorMsg used to be displayed using v-html but this creates a XSS vulnerability and also weird graphical bugs when the error is returned as a full html page -->
     <p
       v-if="notification.errorMsg"
-      class="ml-3"
+      class="ml-3 mt-3 mb-0"
       v-text="notification.errorMsg"
     />
 
@@ -64,14 +65,19 @@ export default {
 <style lang="less">
 .notification.v-snack {
   .v-snack__wrapper {
-    min-width: 256px;
+    max-width: 900px;
+    min-height: auto;
+    margin: 4px;
   }
   .v-snack__content {
     height: auto;
-    p {
-      margin-bottom: 4px;
-      margin-top: 4px;
-    }
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 10px;
+    padding-right: 0;
+  }
+  .v-snack__action {
+    margin-right: 0;
   }
 }
 </style>

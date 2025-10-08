@@ -34,9 +34,6 @@ export default {
 
 </script>
 
-<i18n lang="yaml">
-</i18n>
-
 <style lang="less">
 
 body .v-application {
