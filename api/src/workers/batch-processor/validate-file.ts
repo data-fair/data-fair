@@ -56,7 +56,7 @@ class ValidateStream extends Writable {
 }
 
 export default async function (dataset: DatasetInternal) {
-  const debug = debugLib(`worker:indexer:${dataset.id}`)
+  const debug = debugLib(`worker:validator:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
   if (dataset.isRest) throw new Error('Un jeu de données éditable ne devrait pas passer par l\'étape validation.')

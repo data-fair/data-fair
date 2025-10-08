@@ -231,7 +231,12 @@ describe('REST datasets', function () {
     const dataset = await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
       title: 'rest4',
-      schema: [{ key: 'attr1', type: 'string', 'x-required': true }, { key: 'attr2', type: 'string', pattern: '^test[0-9]$' }, { key: 'attr3', type: 'string', pattern: '^test[0-9]$', separator: ', ' }]
+      schema: [
+        { key: 'attr1', type: 'string', 'x-required': true },
+        { key: 'attr2', type: 'string', pattern: '^test[0-9]$' },
+        { key: 'attr3', type: 'string', pattern: '^test[0-9]$', separator: ', ' },
+        { key: 'attr4', type: 'string', 'x-labels': { val1: 'Label 1', val2: 'Label 2' }, 'x-labelsRestricted': true },
+      ]
     }).then(r => r.data)
 
     await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attrko: 'test1' }), (err) => {
@@ -310,17 +315,20 @@ describe('REST datasets', function () {
       assert.equal(err.status, 400)
       return true
     })
-
-    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', `attr1,attr2,attr3
-test1,test1,test1
-test1,test1,"test1, test2"
-test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
-
-    assert.equal(res.data.nbOk, 2)
-    assert.equal(res.data.nbErrors, 1)
-    assert.equal(res.data.errors.length, 1)
+    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', `attr1,attr2,attr3,attr4
+test1,test1,test1,""
+test1,,"test1, test2",""
+test1,test1,"test1, testko",""
+test1,,"test1, ",""
+test1,,"",val1
+test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
+    assert.equal(res.data.nbOk, 4)
+    assert.equal(res.data.nbErrors, 2)
+    assert.equal(res.data.errors.length, 2)
     assert.equal(res.data.errors[0].line, 2)
     assert.ok(res.data.errors[0].error.startsWith('/attr3/1 doit correspondre au format'))
+    assert.equal(res.data.errors[1].line, 5)
+    assert.ok(res.data.errors[1].error.endsWith('/attr4 doit correspondre à exactement un schéma de "oneOf"'))
 
     res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { attr1: 'test1', attr2: 'test1', attr3: 'test1' },
