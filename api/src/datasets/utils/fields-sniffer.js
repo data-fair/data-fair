@@ -53,7 +53,9 @@ const checkInteger = (val) => {
 export const format = (value, prop, fileProp, ignoreSeparator) => {
   if (value === null || value === undefined || value === '') return null
   if (!ignoreSeparator && typeof value === 'string' && prop.separator) {
-    return value.split(prop.separator.trim()).map(part => format(part.trim(), prop, fileProp, true))
+    return value.split(prop.separator.trim())
+      .map(part => format(part.trim(), prop, fileProp, true))
+      .filter(v => v !== null)
   }
   if (typeof value !== 'string') value = JSON.stringify(value)
   value = value.trim()
