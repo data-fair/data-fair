@@ -218,6 +218,7 @@ const indexBase = (dataset) => {
 }
 
 export const datasetInfos = async (dataset) => {
+  if (dataset.isVirtual) return {}
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
   const indices = await es.client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
   for (const index of indices) {
