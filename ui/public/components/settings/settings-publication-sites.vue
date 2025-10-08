@@ -15,10 +15,12 @@
 
 <i18n lang="yaml">
 fr:
+  summary: résumé
   description: description
   license: licence
   topic: thématique
 en:
+  summary: summary
   description: description
   license: license
   topic: topic
@@ -62,6 +64,7 @@ export default {
     context () {
       return {
         datasetsMetadata: [
+          { key: 'summary', title: this.$t('summary') },
           { key: 'description', title: this.$t('description') },
           { key: 'license', title: this.$t('license') },
           { key: 'topics', title: this.$t('topic') }
