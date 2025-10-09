@@ -1,0 +1,71 @@
+<template>
+  <v-list-item
+    style="min-height:40px;"
+    v-bind="listItemProps"
+    @click="e => $emit('click', e)"
+  >
+    <v-list-item-action
+      v-if="checkbox !== null"
+      class="my-0 ml-1"
+    >
+      <v-checkbox
+        readonly
+        :value="checkbox"
+      />
+    </v-list-item-action>
+    <v-list-item-content>
+      <application-list-item-title
+        :application="application"
+        :show-topics="showTopics"
+        :no-link="noLink"
+      />
+    </v-list-item-content>
+
+    <v-list-item-action class="my-0">
+      <v-tooltip
+        v-if="application.status === 'error'"
+        top
+      >
+        <template #activator="{on}">
+          <v-icon
+            color="error"
+            v-on="on"
+          >
+            mdi-alert
+          </v-icon>
+        </template>
+        {{ $t('error') }}
+      </v-tooltip>
+    </v-list-item-action>
+    <v-list-item-action class="my-0 ml-1">
+      <visibility :visibility="application.visibility" />
+    </v-list-item-action>
+  </v-list-item>
+</template>
+
+<i18n lang="yaml">
+fr:
+  error: En erreur
+en:
+  error: Error status
+</i18n>
+
+<script>
+export default {
+  props: {
+    application: { type: Object, required: true },
+    showTopics: { type: Boolean, default: false },
+    showOwner: { type: Boolean, default: false },
+    noLink: { type: Boolean, default: false },
+    dense: { type: Boolean, default: false },
+    listItemProps: { type: Object, default: () => ({}) },
+    checkbox: { type: Boolean, default: null }
+  },
+  data: () => ({
+    hover: false
+  })
+}
+</script>
+
+<style lang="css" scoped>
+</style>
