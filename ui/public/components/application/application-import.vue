@@ -73,7 +73,7 @@
       >
         <application-select
           v-model="copyApp"
-          @change="currentStep = 3; title = copyApp.title"
+          @change="currentStep = 3; title = `${copyApp.title} (${$t('copy')})`"
         />
       </v-stepper-content>
 
@@ -129,23 +129,29 @@ fr:
   selectApp: Sélection de l'application à copier
   info: Informations
   customApp: Koumoul réalise aussi des <span class="accent--text">applications personnalisées</span> sur demande. N'hésitez pas à <a href="https://koumoul.com/contact" class="">nous contacter</a> !
-  title: Titre
+  title: Titre de la nouvelle application
   save: Enregistrer
   back: Retour
   creationError: Erreur pendant la création de l'application
-  type_copy: Depuis une application
+  copy: copie
+  type_copy: Copie d'application
   type_desc_copy: Copiez une configuration complète depuis une application existante.
-  type_baseApp: Depuis un modèle
+  type_baseApp: Nouvelle configuration
   type_desc_baseApp: Créez une configuration vierge à partir d'un modèle d'application.
 en:
   selectBaseApp: Application model selection
   selectApp: Application to copy
   info: Informations
   customApp: Koumoul also creates <span class="accent--text">custom applications</span> on demand. Do not hesitate <a href="https://koumoul.com/contact" class="">contacting us</a> !
-  title: Title
+  title: Title of the new application
   save: Save
   back: Back
   creationError: Error while creating the application
+  copy: copy
+  type_copy: Application copy
+  type_desc_copy: Copy a complete configuration from an existing application.
+  type_baseApp: New configuration
+  type_desc_baseApp: Create a blank configuration from an application model.
 </i18n>
 
 <script>
