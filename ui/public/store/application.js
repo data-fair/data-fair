@@ -184,7 +184,7 @@ export default () => ({
           params: {
             id: datasetsIds.join(','),
             size: 10000,
-            select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft,draft.originalFile,count,finalizedAt',
+            select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft,count,finalizedAt',
             sort: 'createdAt:-1'
           }
         })
