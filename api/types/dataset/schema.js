@@ -743,6 +743,9 @@ const datasetProperties = {
         type: 'string',
         default: 'slug',
         enum: ['legacy', 'slug', 'compat-ods']
+      },
+      encoding: {
+        type: 'string'
       }
     }
   },
