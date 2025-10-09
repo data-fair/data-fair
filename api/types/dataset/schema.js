@@ -742,7 +742,7 @@ const datasetProperties = {
       escapeKeyAlgorithm: {
         type: 'string',
         default: 'slug',
-        enum: ['legacy', 'slug']
+        enum: ['legacy', 'slug', 'compat-ods']
       }
     }
   },

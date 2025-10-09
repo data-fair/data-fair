@@ -39,7 +39,7 @@ export default async function (dataset: FileDataset) {
   crsParser.end()
 
   for (const property in sampleValues) {
-    const key = fieldsSniffer.escapeKey(property, dataset)
+    const key = fieldsSniffer.escapeKey(property, dataset?.analysis?.escapeKeyAlgorithm)
     const existingField = dataset.schema?.find(f => f.key === key)
     const field = {
       key,
