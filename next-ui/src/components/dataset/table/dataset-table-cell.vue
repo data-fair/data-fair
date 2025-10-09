@@ -61,6 +61,7 @@
       :property="header.property"
       :dense="dense"
       :hovered="hovered"
+      :no-interaction="noInteraction"
       :filter="filter"
       @filter="v => emit('filter', {property: header.property, operator: 'eq', value: v.raw, formattedValue: v.formatted})"
       @hoverstart="v => emit('hoverstart', result, v)"

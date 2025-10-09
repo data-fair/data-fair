@@ -6,7 +6,7 @@
     <v-chip
       v-for="(value, i) in extendedValues"
       :key="i"
-      :class="{'my-0': true, 'pr-1': value.filterable && dense, 'pr-2': value.filterable && !dense}"
+      :class="{'my-0': true, 'pr-1': !noInteraction && value.filterable && dense, 'pr-2': !noInteraction && value.filterable && !dense}"
       :color="hovered === value ? 'primary' : 'default'"
       :size="dense ? 'small' : undefined"
       @click="emit('filter', value)"
@@ -16,7 +16,7 @@
       <span>
         {{ value.formatted }}
         <v-icon
-          v-if="value.filterable && !value.displayDetail && filter?.value !== value.raw"
+          v-if="!noInteraction && value.filterable && !value.displayDetail && filter?.value !== value.raw"
           :style="{width: '14px'}"
           :size="dense ? 14 : 18"
           :icon="hovered === value ? mdiFilterVariant : undefined"
@@ -47,7 +47,8 @@ const { values: extendedValues } = defineProps({
   filter: { type: Object as () => DatasetFilter, default: null },
   lineHeight: { type: Number, default: 40 },
   hovered: { type: Object as () => ExtendedResultValue, default: null },
-  dense: { type: Boolean, default: false }
+  dense: { type: Boolean, default: false },
+  noInteraction: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{

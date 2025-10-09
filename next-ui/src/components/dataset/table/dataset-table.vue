@@ -1,5 +1,6 @@
 <template>
   <v-toolbar
+    v-if="!noInteraction"
     flat
     density="compact"
     color="surface"
@@ -56,7 +57,7 @@
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
       fixed-header
       :loading="fetchResults.loading.value"
-      :height="height- 48"
+      :height="height - (noInteraction ? 0 : 48)"
       class="dataset-table"
     >
       <thead ref="thead">
@@ -79,7 +80,7 @@
                 'min-width': header.property ? (colsWidths[i] ?? 50) + 'px' : '',
                 cursor: header.property && !noInteraction ? 'pointer' : 'default',
               }"
-              @mouseenter="hoveredHeader = header"
+              @mouseenter="hoveredHeader = noInteraction ? undefined : header"
               @mouseleave="hoveredHeader = undefined"
             >
               <div
@@ -162,13 +163,13 @@
                 :filters="filters"
                 :dense="displayMode === 'table-dense'"
                 :map-preview-height="mapPreviewHeight"
-                :hovered="hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+                :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
                 :filter="header.property && findEqFilter(filters, header.property, item)"
                 @hoverstart="hoverStart"
                 @hoverstop="hoverStop"
                 @show-map-preview="showMapPreview = item._id"
                 @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
-                @filter="f => addFilter(f)"
+                @filter="f => !noInteraction && addFilter(f)"
                 @edit="showEditDialog = item"
                 @delete="showDeleteDialog = item"
               />
@@ -470,10 +471,12 @@ const onScrollItem = async (index: number) => {
 const hovered = ref<[ExtendedResult, ExtendedResultValue]>()
 let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
 const hoverStart = (result: ExtendedResult, value: ExtendedResultValue) => {
+  if (noInteraction) return
   _hoverTimeout = setTimeout(() => { hovered.value = [result, value] }, 60)
 }
 
 const hoverStop = () => {
+  if (noInteraction) return
   if (_hoverTimeout) {
     clearTimeout(_hoverTimeout)
     _hoverTimeout = undefined
