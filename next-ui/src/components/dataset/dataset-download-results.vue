@@ -2,6 +2,7 @@
   <v-menu
     v-model="menu"
     :close-on-content-click="false"
+    max-width="300"
   >
     <template #activator="{ props }">
       <v-btn
@@ -33,7 +34,7 @@
         <v-list-item
           target="download"
           :disabled="largeCsvLoading"
-          @click="downloadLargeCSV.execute()"
+          @click="showCsvOptions = !showCsvOptions"
         >
           <template #prepend>
             <v-icon :icon="mdiFileDelimitedOutline" />
@@ -42,6 +43,12 @@
             {{ t('csv') }}
           </v-list-item-title>
         </v-list-item>
+        <dataset-download-csv-options
+          v-if="showCsvOptions"
+          v-model:csv-sep="csvSep"
+          :href="downloadUrls.csv"
+          @click="downloadLargeCSV.execute()"
+        />
         <v-btn
           v-if="largeCsvLoading"
           :icon="mdiCancel"
@@ -80,9 +87,8 @@
       >
         <v-list-item
           v-if="total <= pageSize"
-          :href="downloadUrls.csv"
           target="download"
-          @click="clickDownload('csv')"
+          @click="showCsvOptions = !showCsvOptions"
         >
           <template #prepend>
             <v-icon :icon="mdiFileDelimitedOutline" />
@@ -91,6 +97,13 @@
             {{ t('csv') }}
           </v-list-item-title>
         </v-list-item>
+        <dataset-download-csv-options
+          v-if="showCsvOptions"
+          v-model:csv-sep="csvSep"
+          :href="downloadUrls.csv"
+          @click="clickDownload('csv')"
+        />
+
         <v-list-item
           :href="downloadUrls.xlsx"
           target="download"
@@ -136,8 +149,8 @@
 <i18n lang="yaml">
 fr:
   downloadTitle: Télécharger les résultats
-  alert1: Ces téléchargements tiennent compte du tri et de la recherche
-  alert2: Les formats suivants sont limités aux 10 000 premières lignes
+  alert1: Ces téléchargements tiennent compte du tri et de la recherche.
+  alert2: Les formats suivants sont limités aux 10 000 premières lignes.
   csv: format CSV
   xlsx: format XLSX
   ods: format ODS
@@ -145,8 +158,8 @@ fr:
   cancel: Annuler
 en:
   downloadTitle: Download results
-  alert1: These downloads take into consideration the current filters and sorting
-  alert2: The next formats are limited to the 10,000 first lines
+  alert1: These downloads take into consideration the current filters and sorting.
+  alert2: The next formats are limited to the 10,000 first lines.
   csv: CSV format
   xlsx: XLSX format
   ods: ODS format
@@ -176,6 +189,8 @@ const largeCsvLoading = ref(false)
 const largeCsvBufferValue = ref(0)
 const largeCsvValue = ref(0)
 const largeCsvCancelled = ref(false)
+const showCsvOptions = ref(false)
+const csvSep = ref(',')
 
 const baseParams = computed(() => {
   const p: Record<string, any> = { size: pageSize, page: 1, truncate: undefined }
@@ -183,7 +198,7 @@ const baseParams = computed(() => {
   return p
 })
 const downloadUrls = computed(() => ({
-  csv: withQuery(baseUrl, { ...baseParams.value, format: 'csv' }),
+  csv: withQuery(baseUrl, { ...baseParams.value, format: 'csv', sep: csvSep.value }),
   xlsx: withQuery(baseUrl, { ...baseParams.value, format: 'xlsx' }),
   ods: withQuery(baseUrl, { ...baseParams.value, format: 'ods' }),
   geojson: withQuery(baseUrl, { ...baseParams.value, format: 'geojson' })
