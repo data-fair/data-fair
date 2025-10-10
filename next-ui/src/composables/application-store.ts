@@ -67,7 +67,7 @@ const createApplicationStore = (id: string) => {
     if (application.value) application.value.status = 'configured'
   }
 
-  const baseAppFetch = useFetch<BaseApp>($apiPath + `/applications/${id}/base-application`, { immediate: false })
+  const baseAppFetch = <BaseApp>($apiPath + `/applications/${id}/base-application`, { immediate: false })
   const privateAccess = computed(() => application.value && `${application.value.owner.type}:${application.value.owner.id}`)
   const baseAppsParams = computed(() => ({
     privateAccess: privateAccess.value,

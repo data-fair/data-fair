@@ -44,7 +44,10 @@ declare global {
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
+  const limitsStore: typeof import('../src/composables/limits-store')['default']
   const markRaw: typeof import('vue')['markRaw']
+  const navigation: typeof import('../src/composables/navigation')['default']
+  const navigationStore: typeof import('../src/composables/navigation-store')['default']
   const nextTick: typeof import('vue')['nextTick']
   const onActivated: typeof import('vue')['onActivated']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
@@ -81,6 +84,7 @@ declare global {
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
+  const useAccountPermissions: typeof import('../src/composables/account-permissions')['useAccountPermissions']
   const useApplicationStore: typeof import('../src/composables/application-store')['useApplicationStore']
   const useApplicationVersions: typeof import('../src/composables/application-versions')['useApplicationVersions']
   const useApplicationWatch: typeof import('../src/composables/application-watch')['useApplicationWatch']
@@ -100,10 +104,13 @@ declare global {
   const useHeadSafe: typeof import('@unhead/vue')['useHeadSafe']
   const useI18n: typeof import('vue-i18n')['useI18n']
   const useId: typeof import('vue')['useId']
+  const useLimitsStore: typeof import('../src/composables/limits-store')['useLimitsStore']
   const useLines: typeof import('../src/composables/dataset-lines')['useLines']
   const useLink: typeof import('vue-router')['useLink']
   const useLocaleDayjs: typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']
   const useModel: typeof import('vue')['useModel']
+  const useNavigation: typeof import('../src/composables/navigation')['useNavigation']
+  const useNavigationStore: typeof import('../src/composables/navigation-store')['useNavigationStore']
   const useNumberSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']
   const useReactiveSearchParams: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useReactiveSearchParams']
   const useRoute: typeof import('vue-router')['useRoute']
@@ -176,7 +183,9 @@ declare module 'vue' {
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
+    readonly limitsStore: UnwrapRef<typeof import('../src/composables/limits-store')['default']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
+    readonly navigationStore: UnwrapRef<typeof import('../src/composables/navigation-store')['default']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -213,6 +222,7 @@ declare module 'vue' {
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
+    readonly useAccountPermissions: UnwrapRef<typeof import('../src/composables/account-permissions')['useAccountPermissions']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['useApplicationStore']>
     readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['useApplicationVersions']>
     readonly useApplicationWatch: UnwrapRef<typeof import('../src/composables/application-watch')['useApplicationWatch']>
@@ -231,10 +241,12 @@ declare module 'vue' {
     readonly useHeadSafe: UnwrapRef<typeof import('@unhead/vue')['useHeadSafe']>
     readonly useI18n: UnwrapRef<typeof import('vue-i18n')['useI18n']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
+    readonly useLimitsStore: UnwrapRef<typeof import('../src/composables/limits-store')['useLimitsStore']>
     readonly useLines: UnwrapRef<typeof import('../src/composables/dataset-lines')['useLines']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useLocaleDayjs: UnwrapRef<typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
+    readonly useNavigationStore: UnwrapRef<typeof import('../src/composables/navigation-store')['useNavigationStore']>
     readonly useNumberSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']>
     readonly useReactiveSearchParams: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useReactiveSearchParams']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
