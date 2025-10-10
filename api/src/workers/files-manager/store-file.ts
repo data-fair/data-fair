@@ -80,9 +80,9 @@ export default async function (dataset: DatasetInternal) {
     }
 
     datasetFile.md5 = await md5File(loadedFilePath)
-    if (dataset.analysis?.encoding) {
-      debug(`Excplicit encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
-      datasetFile.encoding = dataset.analysis?.encoding
+    if (datasetFile.explicitEncoding) {
+      debug(`Explicit encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
+      datasetFile.encoding = datasetFile.explicitEncoding
     } else {
       const fileSample = await datasetFileSample(loadedFilePath)
       debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)

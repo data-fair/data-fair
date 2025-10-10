@@ -398,4 +398,23 @@ describe('datasets', function () {
     res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:-1' } })
     assert.deepEqual(res.data.results.map(d => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
   })
+
+  it('Upload new dataset and specify encoding', async function () {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    form.append('file_encoding', 'ISO-8859-1')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalize/' + res.data.id)
+    assert.equal(dataset.file.explicitEncoding, 'ISO-8859-1')
+    assert.equal(dataset.file.encoding, 'ISO-8859-1')
+
+    const form2 = new FormData()
+    form2.append('file', datasetFd, 'dataset1.csv')
+    form2.append('file_encoding', 'ISO-8859-2')
+    await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    dataset = await workers.hook('finalize/' + dataset.id)
+    assert.equal(dataset.file.explicitEncoding, 'ISO-8859-2')
+    assert.equal(dataset.file.encoding, 'ISO-8859-2')
+  })
 })

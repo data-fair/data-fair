@@ -316,6 +316,40 @@
               :label="$t('attachmentsAsImage')"
               class="pl-2"
             />
+            <h3
+              class="text-subtitle-1 mt-5 mb-3"
+              style="cursor: pointer"
+              @click="showAdvanced = !showAdvanced"
+            >
+              Paramètres avancés
+              <v-icon v-if="showAdvanced">mdi-chevron-up</v-icon>
+              <v-icon v-else>mdi-chevron-down</v-icon>
+            </h3>
+            <template v-if="showAdvanced">
+              <v-select
+                v-model="fileDataset.analysis.escapeKeyAlgorithm"
+                name="escapeKeyAlgorithm"
+                label="algorithme de normalisation des clés"
+                outlined
+                dense
+                persistent-hint
+                hint="Paramètre utile uniquement pour une gestion avancée de la rétro-compatibilité d'API."
+                :items="[{ text: 'Slug strict (par défaut)', value: 'slug' }, {text: 'Slug custom (rétro-compatible avec certains portails)', value: 'compat-ods'}]"
+                style="max-width: 500px"
+              />
+              <v-combobox
+                v-if="isTextFile"
+                v-model="fileEncoding"
+                name="encodig"
+                label="encodage"
+                outlined
+                dense
+                persistent-hint
+                hint="Laissez vide pour utiliser un algorithme de détection automatique de l'encodage."
+                :items="commonEncodings"
+                style="max-width: 500px"
+              />
+            </template>
           </v-form>
           <v-btn
             v-t="'continue'"
@@ -752,8 +786,12 @@ export default {
     datasetType: null,
     fileDataset: {
       title: '',
-      attachmentsAsImage: false
+      attachmentsAsImage: false,
+      analysis: {
+        escapeKeyAlgorithm: null
+      }
     },
+    fileEncoding: null,
     restDataset: {
       title: '',
       isRest: true,
@@ -790,7 +828,9 @@ export default {
     virtualDatasetFill: false,
     virtualDatasetInitFromDesc: false,
     virtualDatasetInitFromAttachments: false,
-    conflictsOk: false
+    conflictsOk: false,
+    showAdvanced: false,
+    commonEncodings: ['UTF-8', 'ASCII', 'UTF-16BE', 'UTF-16LE', 'UTF-32', 'UTF-32BE', 'UTF-32LE', 'windows-1252', 'ISO-8859-1', 'windows-1250', 'ISO-8859-2', 'ISO_2022']
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -830,6 +870,10 @@ export default {
     },
     initFileFromData () {
       return this.fileDataset?.initFrom?.parts?.includes('data')
+    },
+    isTextFile () {
+      if (!this.file || !this.fileDataset) return false
+      return this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt')
     }
   },
   watch: {
@@ -870,7 +914,17 @@ export default {
         }
         if (this.filenameTitle) delete this.fileDataset.title
       }
-      formData.append('body', JSON.stringify(this.fileDataset))
+      if (this.isTextFile && this.fileEncoding) {
+        formData.append('dataset_encoding', this.fileEncoding)
+      }
+      const body = { ...this.fileDataset }
+      if (!body.analysis.escapeKeyAlgorithm) {
+        delete body.analysis.escapeKeyAlgorithm
+      }
+      if (!Object.keys(body.analysis).length) {
+        delete body.analysis
+      }
+      formData.append('body', JSON.stringify(body))
       this.importing = true
       try {
         if (this.fileDataset.initFrom?.parts?.includes('schema') || this.file.size > 100000) options.params.draft = 'true'
