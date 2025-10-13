@@ -10,5 +10,7 @@ describe('escape key algorithme', function () {
     assert.equal(escapeKey('Nombre d\'habitants', 'compat-ods'), 'nombre_d_habitants')
     assert.equal(escapeKey('Consommation HTA  - Segments C1+C2+C3', 'compat-ods'), 'consommation_hta_segments_c1_c2_c3')
     assert.equal(escapeKey('Société', 'compat-ods'), 'societe')
+    assert.equal(escapeKey('Température normale lissée (°C)', 'compat-ods'), 'temperature_normale_lissee_degc')
+    assert.equal(escapeKey('Thermosensibilité moyenne (kWh DJU)', 'compat-ods'), 'thermosensibilite_moyenne_kwh_dju')
   })
 })
