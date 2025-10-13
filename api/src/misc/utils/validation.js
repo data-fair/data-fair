@@ -12,8 +12,7 @@ import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
  */
 export const validateURLFriendly = (locale, value, algorithm) => {
   if (!value) return
-  let slug
-  if (algorithm === 'compat-ods') slug = compatOdsEscapeKey(value)
-  else slug = slugify(value, { lower: true, strict: true })
-  if (slug !== value) throw httpError(400, i18n.__({ locale, phrase: 'errors.urlFriendly' }, { value, slug }))
+  const altSlug = algorithm === 'compat-ods' && compatOdsEscapeKey(value)
+  const slug = slugify(value, { lower: true, strict: true })
+  if (slug !== value && altSlug !== value) throw httpError(400, i18n.__({ locale, phrase: 'errors.urlFriendly' }, { value, slug }))
 }
