@@ -160,15 +160,21 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     name: 'filters',
     schema: {
       type: 'object',
+      title: 'Filtres sur colonnes',
       patternPropertiesLayout: {
-        items: filterKeys
+        items: filterKeys,
+        messages: {
+          addItem: 'Ajouter un filtre'
+        },
+        help: 'Filtres structurés sur colonne. La clé est constituée de la clé de la colonne concaténée avec un suffixe par type d\'opération de filtrage (_eq pour une égalité stricte, etc).'
       },
       patternProperties: {
         '.*': {
           type: 'string',
-          description: `
-Filtres structurés sur colonne. La clé est constituée de la clé de la colonne concaténée avec un suffixe par type d'opération de filtrage (_eq pour une égalité stricte, etc).
-      `
+          default: '',
+          layout: {
+            placeholder: 'saisissez la valeur du filtre'
+          }
         }
       }
     }

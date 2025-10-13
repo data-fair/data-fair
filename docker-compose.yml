@@ -82,7 +82,7 @@ services:
   openapi-viewer:
     profiles:
       - dev
-    image: ghcr.io/data-fair/openapi-viewer:master
+    image: ghcr.io/data-fair/openapi-viewer:feat-implement-serialize-query-params
     network_mode: host
     environment:
       - PORT=5680
