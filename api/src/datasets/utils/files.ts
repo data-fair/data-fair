@@ -186,7 +186,7 @@ export const fsyncFile = async (p: string) => {
 
 export const cleanTmp = async () => {
   debugCleanTmp('check tmp dir for old files')
-  const delay = 14 * 24 * 60 * 60 * 1000 // 14 day
+  const delay = 7 * 24 * 60 * 60 * 1000 // 7 days
   await fs.ensureDir(tmpDir)
   const dir = await fs.opendir(tmpDir)
   for await (const dirent of dir) {

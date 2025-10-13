@@ -164,15 +164,21 @@ export const extend = async (
     writeStreams = await writeExtendedStreams(dataset, extensions)
   }
 
-  await pump(
-    ...inputStreams,
-    new ExtensionsStream({ extensions: detailedExtensions, dataset, onlyEmitChanges: updateMode === 'updatedExtensions' }),
-    ...writeStreams
-  )
   const filePath = writeStreams[writeStreams.length - 1].path
-  if (filePath) {
-    await fs.move(filePath, fullFilePath(dataset), { overwrite: true })
-    await fsyncFile(fullFilePath(dataset))
+  let moved = false
+  try {
+    await pump(
+      ...inputStreams,
+      new ExtensionsStream({ extensions: detailedExtensions, dataset, onlyEmitChanges: updateMode === 'updatedExtensions' }),
+      ...writeStreams
+    )
+    if (filePath) {
+      await fs.move(filePath, fullFilePath(dataset), { overwrite: true })
+      moved = true
+      await fsyncFile(fullFilePath(dataset))
+    }
+  } finally {
+    if (filePath && !moved) await fs.remove(filePath)
   }
 
   debug('Extension is over')
