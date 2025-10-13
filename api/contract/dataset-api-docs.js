@@ -7,6 +7,7 @@ import * as datasetUtils from '../src/datasets/utils/index.js'
 import { acceptedMetricAggs } from '../src/datasets/es/metric-agg.js'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
+import { hasCapability } from '../src/datasets/es/commons.js'
 
 const dataFiles = datasetSchema.properties.storage.properties.dataFiles
 
@@ -65,6 +66,29 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
   const numberProperties = schema
     .filter((/** @type {any} */ p) => p.type === 'number')
   const imageProperty = schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
+
+  const filterKeys = []
+  for (const p of schema) {
+    if (hasCapability(p, 'index')) {
+      filterKeys.push(p.key + '_eq')
+      filterKeys.push(p.key + '_neq')
+      filterKeys.push(p.key + '_in')
+      filterKeys.push(p.key + '_nin')
+      filterKeys.push(p.key + '_lt')
+      filterKeys.push(p.key + '_lte')
+      filterKeys.push(p.key + '_gt')
+      filterKeys.push(p.key + '_gte')
+      filterKeys.push(p.key + '_starts')
+      filterKeys.push(p.key + '_exists')
+      filterKeys.push(p.key + '_nexists')
+    }
+    if (hasCapability(p, 'wildcard')) {
+      filterKeys.push(p.key + '_contains')
+    }
+    if (hasCapability(p, 'textStandard') || hasCapability(p, 'text')) {
+      filterKeys.push(p.key + '_search')
+    }
+  }
 
   /** @type {any} */
   const filterParams = [{
@@ -129,7 +153,27 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       title: 'Recherche textuelle avancée',
       type: 'string'
     }
+  }, {
+    // free-form query parameters support for open api v3
+    // cf https://stackoverflow.com/questions/49582559/how-to-document-dynamic-query-parameter-names-in-openapi-swagger
+    in: 'query',
+    name: 'filters',
+    schema: {
+      type: 'object',
+      patternPropertiesLayout: {
+        items: filterKeys
+      },
+      patternProperties: {
+        '.*': {
+          type: 'string',
+          description: `
+Filtres structurés sur colonne. La clé est constituée de la clé de la colonne concaténée avec un suffixe par type d'opération de filtrage (_eq pour une égalité stricte, etc).
+      `
+        }
+      }
+    }
   }]
+
   if (dataset.bbox && dataset.bbox.length === 4) {
     filterParams.push({
       in: 'query',
@@ -498,8 +542,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: 'Pagination en profondeur. Automatiquement renseigné par la propriété next du résultat de la requête précédente',
             schema: {
               title: 'Pagination en profondeur',
-              type: 'integer',
-              default: 1
+              type: 'integer'
             }
           }, {
             in: 'query',

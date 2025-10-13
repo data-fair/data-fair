@@ -201,9 +201,22 @@ function checkQuery (query, schema, esFields, currentField) {
  * @param {any} prop
  * @param {string} capability
  */
-export const requiredCapability = (prop, filterName, capability = 'index') => {
+export const hasCapability = (prop, capability = 'index') => {
   const propCapabilities = prop['x-capabilities'] ?? {}
   if (propCapabilities[capability] === false || (['wildcard', 'textAgg'].includes(capability) && propCapabilities[capability] !== true)) {
+    return false
+  }
+  return true
+}
+
+/**
+ *
+ * @param {any} prop
+ * @param {string} filterName
+ * @param {string} capability
+ */
+export const requiredCapability = (prop, filterName, capability = 'index') => {
+  if (!hasCapability(prop, capability)) {
     throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
   }
 }
