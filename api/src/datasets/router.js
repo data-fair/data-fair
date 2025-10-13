@@ -189,13 +189,14 @@ router.patch('/:datasetId',
     validateURLFriendly(locale, patch.slug)
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
-      .catch(err => {
-        if (err.code !== 11000) throw err
-        throw httpError(400, req.__('errors.dupSlug'))
-      })
+
     if (!isEmpty) {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
       await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate)
+        .catch(err => {
+          if (err.code !== 11000) throw err
+          throw httpError(400, req.__('errors.dupSlug'))
+        })
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
         await journals.log('datasets', dataset, { type: 'structure-updated' })

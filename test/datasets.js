@@ -395,7 +395,17 @@ describe('datasets', function () {
 
     let res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:1' } })
     assert.deepEqual(res.data.results.map(d => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])
-    res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:-1' } })
+    res = await ax.get('/api/v1/datasets', { params: { select: 'id,title', raw: true, sort: 'title:-1' } })
     assert.deepEqual(res.data.results.map(d => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
+
+    // manage slug unicity
+    await ax.patch('/api/v1/datasets/' + res.data.results[0].id, { slug: 'test-slug' })
+    await assert.rejects(ax.patch('/api/v1/datasets/' + res.data.results[1].id, { slug: 'test-slug' }), (error) => {
+      assert.equal(error.status, 400)
+      assert.ok(error.data.includes('Ce slug est déjà utilisé'))
+      return true
+    })
+    res = await ax.post('/api/v1/datasets', { isRest: true, title: 'test slug 2', slug: 'test-slug' })
+    assert.equal(res.data.slug, 'test-slug-2')
   })
 })
