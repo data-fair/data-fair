@@ -23,7 +23,6 @@ import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attach
 import { findApplications } from './service.js'
 import { syncApplications } from '../datasets/service.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
-import { validateURLFriendly } from '../misc/utils/validation.js'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { checkStorage } from '../datasets/middlewares.js'
 import * as attachments from '../misc/utils/attachments.js'
@@ -118,7 +117,6 @@ router.post('', async (req, res) => {
   const application = await initNew((await import('#doc/applications/post-req/index.js')).returnValid(req))
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send()
 
-  if (application.slug) validateURLFriendly(req.getLocale(), application.slug)
   application.id = nanoid()
 
   if (application.initFrom) {
@@ -304,7 +302,6 @@ router.patch('/:applicationId',
     // @ts-ignore
     const application = req.application
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
-    if (patch.slug) validateURLFriendly(req.getLocale(), patch.slug)
 
     // Retry previously failed publications
     if (!patch.publications) {
