@@ -147,6 +147,16 @@
               {{ currentPropRef.prop.enum.join(' - ') | truncate(100) }}
             </v-list-item>
           </v-list>
+          <v-text-field
+            id="key-input"
+            v-model="currentPropRef.prop.key"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable || dataset.isVirtual"
+            :label="$t('key')"
+            dense
+            hide-details
+            class="mb-3"
+            :rules="[(val) => !!val, (val) => !!val?.match(keyRegex)]"
+          />
           <template v-if="currentPropRef.prop.type === 'string' && currentFileProp && currentFileProp.dateTimeFormat">
             <lazy-time-zone-select
               v-model="currentPropRef.prop.timeZone"
@@ -327,7 +337,7 @@ fr:
   sep: Séparateur
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
   concept: Concept
-  conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et sa application.
+  conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et son utilisation dans une application.
   xDisplay: Format
   xDisplayHelp: Si vous choisissez "texte formatté" la colonne pourra contenir du markdown ou du HTML simple et les applications en tiendront compte.
   "singleline": "texte"
@@ -359,7 +369,7 @@ en:
   sep: Separator
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
   concept: Concept
-  conceptHelp: The concepts improve data processing and application.
+  conceptHelp: The concepts improve data processing and usage in an application.
   xDisplay: Format
   xDisplayHelp: If you chose "formatted text" the column will be able to contain markdown or HTML content that will be displayed as such by applications.
   "singleline": "text"
@@ -384,13 +394,16 @@ import { mapState, mapGetters, mapActions } from 'vuex'
 import datasetSchema from '../../../../api/types/dataset/schema'
 const Draggable = require('vuedraggable')
 
+const keyRegex = /^[a-z0-9]{1}[a-z0-9_\\-]*$/
+
 export default {
   components: { Draggable },
   props: ['propertiesRefs', 'editable', 'sortable', 'noBreakingChanges'],
   data () {
     return {
       datasetSchema,
-      currentProperty: null
+      currentProperty: null,
+      keyRegex
     }
   },
   computed: {

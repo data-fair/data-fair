@@ -24,12 +24,12 @@ export default {
     id: {
       type: 'string',
       description: 'Globally unique identifier of the application',
-      pattern: '^[a-z0-9_\\-]+$'
+      pattern: '^[a-z0-9]{1}[a-z0-9_\\-]*$'
     },
     slug: {
       type: 'string',
       description: 'Identifier of the application, usually a slug for URL readability (unique inside the tenant)',
-      pattern: '^[a-z0-9_\\-]+$'
+      pattern: '^[a-z0-9]{1}[a-z0-9_\\-]*$'
     },
     href: {
       type: 'string',
