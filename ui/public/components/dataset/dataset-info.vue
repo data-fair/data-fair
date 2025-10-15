@@ -441,10 +441,7 @@ fr:
   keywords: Mots clés
   frequency: Fréquence des mises à jour
   slug: Identifiant de publication
-  slugWarning: |
-    Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
-
-    Vous ne pouvez utiliser que des lettres minuscules non accentuées, des chiffres et des tirets.
+  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes. Vous ne pouvez utiliser que des lettres minuscules non accentuées, des chiffres et des tirets.
   newSlug: Nouvel identifiant de publication
   title: Titre
   summary: Résumé
