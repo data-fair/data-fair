@@ -70,6 +70,7 @@ export class DfMongo {
         publicationSites_1: { publicationSites: 1 },
         'rest.ttl.checkedAt_1': { 'rest.ttl.checkedAt': 1 },
         'rest.ttl.active_1': { 'rest.ttl.active': 1 },
+        'remoteFile.autoUpdate.nextUpdate_1': { 'remoteFile.autoUpdate.nextUpdate': 1 },
         '_readApiKey.renewAt_1': { '_readApiKey.renewAt': 1 },
         _partialRestStatus_1: [{ _partialRestStatus: 1 }, { sparse: true }],
         esWarning_1: { esWarning: 1 }

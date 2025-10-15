@@ -28,6 +28,8 @@ export default async function (dataset: DatasetInternal) {
   const patch: Partial<DatasetInternal> = { updatedAt: (new Date()).toISOString() }
   if (dataset.isRest) {
     patch.status = 'analyzed'
+  } else if (dataset.remoteFile) {
+    patch.status = 'imported'
   } else if (dataset.isVirtual) {
     patch.status = 'indexed'
   } else if (dataset.loaded) {

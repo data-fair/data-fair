@@ -242,6 +242,37 @@ describe('Datasets with auto-initialization from another one', function () {
     assert.equal(event.type, 'finalize-end')
   })
 
+  it('Create remote file dataset that doesn\'t match imported schema', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.csv', reply: { status: 200, body: 'col\nval1\nval' } }, { name: 'setNock' })
+    let initFromDataset = (await ax.post('/api/v1/datasets', {
+      title: 'init from schema remote file',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description']
+      },
+      remoteFile: { url: 'http://test-remote.com/data.csv', autoUpdate: { active: true } }
+    }, { params: { draft: true } })).data
+    initFromDataset = await workers.hook('finalize/' + initFromDataset.id)
+
+    assert.equal(initFromDataset.status, 'draft')
+    assert.equal(initFromDataset.draft.file.name, 'data.csv')
+    assert.equal(initFromDataset.schema[0].key, 'id')
+
+    const journal = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/journal`)).data
+    let event = journal.pop()
+    assert.equal(event.draft, true)
+    assert.equal(event.type, 'dataset-created')
+    event = journal.pop()
+    assert.equal(event.draft, true)
+    assert.equal(event.type, 'validation-error')
+    assert.ok(event.data.startsWith('La structure du fichier contient des ruptures de compatibilité :'))
+    event = journal.pop()
+    assert.equal(event.draft, true)
+    assert.equal(event.type, 'finalize-end')
+  })
+
   it('Create file dataset with copied information from a rest dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets/rest1', {
