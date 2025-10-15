@@ -1453,7 +1453,7 @@ router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middle
 })
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
-router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true }), cacheHeaders.noCache, async (req, res) => {
+router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptInitialDraft: true }), cacheHeaders.noCache, async (req, res) => {
   reqAdminMode(req)
   const esInfos = await datasetInfos(req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
