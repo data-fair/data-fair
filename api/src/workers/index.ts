@@ -51,16 +51,16 @@ export const hook = async (key: string) => {
 
 const matchOwner = (o1: AccountKeys, o2: AccountKeys) => o1.type === o2.type && o1.id === o2.id
 
-const getFreeWorkers = () => {
+const getWorkersStatus = () => {
   return (Object.keys(workers) as WorkerId[])
     .map(key => {
       const pending = pendingTasks[key] ?? {}
-      const concurrency = workers[key].options.maxThreads * workers[key].options.concurrentTasksPerWorker
-      if (Object.keys(pending).length >= concurrency) return null
+      const maxConcurrency = workers[key].options.maxThreads * workers[key].options.concurrentTasksPerWorker
+      const currentConcurrency = Object.keys(pending).length
       const excludedOwners: AccountKeys[] = []
-      if (concurrency >= 2) {
+      if (maxConcurrency >= 2) {
         // 1rst rule: prevent a owner from using more than half the available slots
-        const maxOwnerConcurrency = Math.floor(concurrency / 2)
+        const maxOwnerConcurrency = Math.floor(maxConcurrency / 2)
         for (const task of Object.values(pending)) {
           if (!excludedOwners.some(o => matchOwner(o, task.owner))) {
             const nbOwnerTasks = Object.values(pending).filter(t => matchOwner(t.owner, task.owner)).length
@@ -71,7 +71,7 @@ const getFreeWorkers = () => {
           }
         }
         // 2nd rule: prevent a owner who already has a running task from using the last slot
-        if (Object.keys(pending).length >= concurrency - 1) {
+        if (Object.keys(pending).length >= maxConcurrency - 1) {
           for (const task of Object.values(pending)) {
             if (!excludedOwners.some(o => matchOwner(o, task.owner))) {
               debug('owner uses a concurrency slot for worker and there is only one left, exclude them', key, task.owner)
@@ -80,28 +80,27 @@ const getFreeWorkers = () => {
           }
         }
       }
-      return { key, excludedOwners }
+      return { key, maxConcurrency, currentConcurrency, excludedOwners }
     })
-    .filter(Boolean)
 }
 
-const getFreeTasks = (type: ResourceType) => {
-  const freeWorkers = getFreeWorkers()
-  return tasks[type]
-    .filter(task => freeWorkers.some(w => w?.key === task.worker))
-    .map(task => ({ task, excludedOwners: freeWorkers.find(w => w?.key === task.worker)!.excludedOwners }))
+const getFreeTasks = () => {
+  const workersStatus = getWorkersStatus()
+  return tasks.datasets
+    .filter(task => workersStatus.some(w => w.key === task.worker && w.currentConcurrency < w.maxConcurrency))
+    .map(task => ({ task, excludedOwners: workersStatus.find(w => w.key === task.worker)!.excludedOwners }))
 }
 
 export const queryNextResourceTask = async (_type?: string, _id?: string) => {
   for (const type of ['datasets'] as ResourceType[]) {
     if (_type && _type !== type) continue
-    const freeTasks = getFreeTasks(type)
+    const freeTasks = getFreeTasks()
     const facets: any = {}
     if (!freeTasks.length) continue
     for (const freeTask of freeTasks) {
       const task = freeTask.task
       let filter = task.mongoFilter()
-      if (freeTask.excludedOwners.length) {
+      if (freeTask.excludedOwners?.length) {
         const fullFilters = [filter]
         for (const owner of freeTask.excludedOwners) {
           fullFilters.push({
@@ -277,6 +276,7 @@ export const loop = async () => {
     const { inspect } = await import('node:util')
     setInterval(() => {
       debug('pending tasks', inspect(pendingTasks, { depth: 3 }))
+      debug('workers status', inspect(getWorkersStatus(), { depth: 3 }))
     }, 30000)
   }
 
