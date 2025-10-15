@@ -131,7 +131,11 @@ const datasetProperties = {
       },
       encoding: {
         type: 'string',
-        description: 'Encoding of the file'
+        description: 'Encoding of the file (either explicitly defined or detected)'
+      },
+      explicitEncoding: {
+        type: 'string',
+        description: 'Encoding of the file explicitly defined when loading it'
       },
       mimetype: {
         type: 'string',
@@ -181,7 +185,11 @@ const datasetProperties = {
       },
       encoding: {
         type: 'string',
-        description: 'Encoding of the file'
+        description: 'Encoding of the file (either explicitly defined or detected)'
+      },
+      explicitEncoding: {
+        type: 'string',
+        description: 'Encoding of the file explicitly defined when loading it'
       },
       mimetype: {
         type: 'string',
@@ -744,7 +752,7 @@ const datasetProperties = {
       escapeKeyAlgorithm: {
         type: 'string',
         default: 'slug',
-        enum: ['legacy', 'slug']
+        enum: ['legacy', 'slug', 'compat-ods']
       }
     }
   },

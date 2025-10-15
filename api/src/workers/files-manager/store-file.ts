@@ -80,11 +80,16 @@ export default async function (dataset: DatasetInternal) {
     }
 
     datasetFile.md5 = await md5File(loadedFilePath)
-    const fileSample = await datasetFileSample(loadedFilePath)
-    debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
-    const encoding = chardet.detect(fileSample)
-    if (encoding) datasetFile.encoding = encoding
-    debug(`Detected encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
+    if (datasetFile.explicitEncoding) {
+      debug(`Explicit encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
+      datasetFile.encoding = datasetFile.explicitEncoding
+    } else {
+      const fileSample = await datasetFileSample(loadedFilePath)
+      debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
+      const encoding = chardet.detect(fileSample)
+      if (encoding) datasetFile.encoding = encoding
+      debug(`Detected encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
+    }
 
     patch.originalFile = datasetFile
     if (datasetUtils.basicTypes.includes(datasetFile.mimetype)) {

@@ -93,6 +93,10 @@ const getMulterFiles = promisifyMiddleware(middleware, 'files')
 export const getFiles = async (req, res) => {
   const files = await getMulterFiles(req, res)
   for (const file of files || []) {
+    if (req.body?.[file.fieldname + '_encoding']) {
+      file.explicitEncoding = req.body?.[file.fieldname + '_encoding']
+      delete req.body[file.fieldname + '_encoding']
+    }
     await fsyncFile(file.path)
   }
   return files

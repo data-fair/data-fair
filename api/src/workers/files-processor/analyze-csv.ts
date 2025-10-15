@@ -35,7 +35,7 @@ export default async function (dataset: FileDataset) {
 
   dataset.file.schema = sniffResult.labels
     .map((field, i) => ({
-      key: fieldsSniffer.escapeKey(field, dataset),
+      key: fieldsSniffer.escapeKey(field, dataset?.analysis?.escapeKeyAlgorithm),
       'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, '')
     }))
     // do not keep columns with empty string as header
@@ -63,7 +63,7 @@ export default async function (dataset: FileDataset) {
   debug('sniff sample values')
   for (const field of Object.keys(sampleValues)) {
     if (!field) continue // do not keep columns with empty string as header
-    const escapedKey = fieldsSniffer.escapeKey(field, dataset)
+    const escapedKey = fieldsSniffer.escapeKey(field, dataset?.analysis?.escapeKeyAlgorithm)
     const fileField = dataset.file.schema.find(f => f.key === escapedKey)
     if (fileField) {
       const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)

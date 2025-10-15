@@ -52,7 +52,8 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
       dataset: {
         name: datasetFile.originalname,
         size: datasetFile.size,
-        mimetype: datasetFile.mimetype
+        mimetype: datasetFile.mimetype,
+        explicitEncoding: datasetFile.explicitEncoding
       }
     }
   }

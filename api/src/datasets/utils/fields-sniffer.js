@@ -3,6 +3,7 @@ import addFormats from 'ajv-formats'
 import moment from 'moment-timezone'
 import config from '#config'
 import slug from 'slugify'
+import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
 
 const ajv = new Ajv()
 addFormats(ajv)
@@ -94,8 +95,7 @@ export const format = (value, prop, fileProp, ignoreSeparator) => {
 }
 
 // WARNING: this code is duplicated in public/assets/dataset-utils.js
-export const escapeKey = (key, dataset) => {
-  const algorithm = dataset?.analysis?.escapeKeyAlgorithm
+export const escapeKey = (key, algorithm) => {
   if (algorithm === 'legacy') {
     key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
     // prefixing by _ is reserved to fields calculated by data-fair
@@ -103,6 +103,8 @@ export const escapeKey = (key, dataset) => {
       key = key.slice(1)
     }
     return key
+  } else if (algorithm === 'compat-ods') {
+    return compatOdsEscapeKey(key)
   } else {
     return slug(key, { lower: true, strict: true, replacement: '_' })
   }
