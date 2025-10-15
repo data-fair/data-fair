@@ -9,6 +9,8 @@
           <v-col>
             <dataset-status v-if="!dataset.isMetaOnly" />
 
+            <dataset-remote-file v-if="!sections.find(s => s.id === 'structure') && dataset.remoteFile" />
+
             <layout-section-tabs
               :min-height="180"
               :svg="buildingSvg"
@@ -23,6 +25,12 @@
                 <template v-if="can('writeDescriptionBreaking') && dataset.isVirtual">
                   <v-tab href="#structure-virtual">
                     <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;{{ $t('virtual') }}
+                  </v-tab>
+                </template>
+
+                <template v-if="can('writeDescriptionBreaking') && dataset.remoteFile">
+                  <v-tab href="#structure-remote-file">
+                    <v-icon>mdi-cloud-download</v-icon>&nbsp;&nbsp;{{ $t('remoteFile') }}
                   </v-tab>
                 </template>
 
@@ -57,6 +65,12 @@
                 <v-tab-item value="structure-virtual">
                   <v-container fluid>
                     <dataset-virtual />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="structure-remote-file">
+                  <v-container fluid>
+                    <dataset-remote-file />
                   </v-container>
                 </v-tab-item>
 
@@ -393,6 +407,7 @@ fr:
   schema: Schéma
   extension: Enrichissement
   virtual: Jeu virtuel
+  remoteFile: Fichier distant
   masterData: Donnée de référence
   tutorialConcepts: Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des applications de données adaptées et des possibilités d'enrichissement.
   docLinkExtend: Consultez la documentation sur l'extension de jeux de données
@@ -435,6 +450,7 @@ en:
   schema: Schema
   extension: Extension
   virtual: Virtual dataset
+  remoteFile: Remote file
   masterData: Master-data
   tutorialConcepts: You should assign concepts to your columns. They will be used to help you configure applications and data extensions.
   docLinkExtend: Read the documentation about extending datasets
