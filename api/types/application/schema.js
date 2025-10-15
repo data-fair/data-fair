@@ -23,11 +23,13 @@ export default {
   properties: {
     id: {
       type: 'string',
-      description: 'Globally unique identifier of the application'
+      description: 'Globally unique identifier of the application',
+      pattern: '^[a-z0-9_\\-]+$'
     },
     slug: {
       type: 'string',
-      description: 'Identifier of the application, usually a slug for URL readability (unique inside the tenant)'
+      description: 'Identifier of the application, usually a slug for URL readability (unique inside the tenant)',
+      pattern: '^[a-z0-9]{1}[a-z0-9_\\-]*[a-z0-9]{1}$'
     },
     href: {
       type: 'string',

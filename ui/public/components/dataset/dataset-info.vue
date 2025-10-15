@@ -399,7 +399,7 @@
               dense
               hide-details
               :required="true"
-              :rules="[(val) => !!val]"
+              :rules="[(val) => !!val, (val) => !!val?.match(slugRegex)]"
             />
           </v-card-text>
           <v-card-actions>
@@ -412,7 +412,7 @@
             <v-btn
               v-t="'validate'"
               color="warning"
-              :disabled="newSlug === dataset.slug || !newSlug"
+              :disabled="newSlug === dataset.slug || !newSlug || !newSlug.match(slugRegex)"
               @click="patchAndCommit({slug: newSlug}); slugMenu = false"
             />
           </v-card-actions>
@@ -441,7 +441,7 @@ fr:
   keywords: Mots clés
   frequency: Fréquence des mises à jour
   slug: Identifiant de publication
-  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
+  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes. Vous ne pouvez utiliser que des lettres minuscules non accentuées, des chiffres et des tirets.
   newSlug: Nouvel identifiant de publication
   title: Titre
   summary: Résumé
@@ -530,6 +530,8 @@ const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
+const slugRegex = /^[a-z0-9]{1}[a-z0-9_\\-]*[a-z0-9]{1}$/
+
 export default {
   props: {
     required: { type: Array, default: () => ([]) },
@@ -544,7 +546,8 @@ export default {
       loadingKeywordsFacets: false,
       temporalMenu: false,
       slugMenu: false,
-      newSlug: ''
+      newSlug: '',
+      slugRegex
     }
   },
   computed: {

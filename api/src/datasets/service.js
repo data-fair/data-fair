@@ -17,7 +17,6 @@ import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
 import { getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
-import { validateURLFriendly } from '../misc/utils/validation.js'
 import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
@@ -223,9 +222,6 @@ export const memoizedGetDataset = memoize(getDataset, {
  * @returns {Promise<any>}
  */
 export const createDataset = async (db, es, locale, sessionState, owner, body, files, draft, onClose) => {
-  validateURLFriendly(locale, body.id)
-  validateURLFriendly(locale, body.slug, body?.analysis?.escapeKeyAlgorithm)
-
   const datasetFile = files?.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
   const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
