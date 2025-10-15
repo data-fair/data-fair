@@ -147,16 +147,6 @@
               {{ currentPropRef.prop.enum.join(' - ') | truncate(100) }}
             </v-list-item>
           </v-list>
-          <v-text-field
-            id="key-input"
-            v-model="currentPropRef.prop.key"
-            :disabled="!editable || noBreakingChanges || !currentPropRef.editable || dataset.isVirtual"
-            :label="$t('key')"
-            dense
-            hide-details
-            class="mb-3"
-            :rules="[(val) => !!val, (val) => !!val?.match(keyRegex)]"
-          />
           <template v-if="currentPropRef.prop.type === 'string' && currentFileProp && currentFileProp.dateTimeFormat">
             <lazy-time-zone-select
               v-model="currentPropRef.prop.timeZone"
@@ -394,16 +384,13 @@ import { mapState, mapGetters, mapActions } from 'vuex'
 import datasetSchema from '../../../../api/types/dataset/schema'
 const Draggable = require('vuedraggable')
 
-const keyRegex = /^[a-z0-9]{1}[a-z0-9_\\-]*$/
-
 export default {
   components: { Draggable },
   props: ['propertiesRefs', 'editable', 'sortable', 'noBreakingChanges'],
   data () {
     return {
       datasetSchema,
-      currentProperty: null,
-      keyRegex
+      currentProperty: null
     }
   },
   computed: {

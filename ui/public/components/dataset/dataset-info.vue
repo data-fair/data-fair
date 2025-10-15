@@ -533,7 +533,7 @@ const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
-const slugRegex = /^[a-z0-9]{1}[a-z0-9_\\-]*$/
+const slugRegex = /^[a-z0-9]{1}[a-z0-9_\\-]*[a-z0-9]{1}$/
 
 export default {
   props: {

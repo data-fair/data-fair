@@ -157,7 +157,7 @@
               dense
               hide-details
               :required="true"
-              :rules="[(val) => !!val]"
+              :rules="[(val) => !!val, (val) => !!val?.match(slugRegex)]"
             />
           </v-card-text>
           <v-card-actions>
@@ -170,7 +170,7 @@
             <v-btn
               v-t="'validate'"
               color="warning"
-              :disabled="newSlug === application.slug || !newSlug"
+              :disabled="newSlug === application.slug || !newSlug || !newSlug.match(slugRegex)"
               @click="patchAndCommit({slug: newSlug}); slugMenu = false"
             />
           </v-card-actions>
@@ -189,7 +189,7 @@ fr:
   topics: Thématiques
   title: Titre
   slug: Identifiant de publication
-  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, codes d'intégration, etc. Attention, si vous le modifiez vous pouvez casser des liens.
+  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, codes d'intégration, etc. Attention, si vous le modifiez vous pouvez casser des liens. Vous ne pouvez utiliser que des lettres minuscules non accentuées, des chiffres et des tirets.
   newSlug: Nouvel identifiant de publication
 en:
   version: version
@@ -206,11 +206,15 @@ en:
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
 
+const slugRegex = /^[a-z0-9]{1}[a-z0-9_\\-]*[a-z0-9]{1}$/
+
 export default {
   data () {
     return {
       slugMenu: false,
-      newSlug: ''
+      newSlug: '',
+      slugRegex
+
     }
   },
   computed: {
