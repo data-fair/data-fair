@@ -186,7 +186,7 @@ router.patch('/:datasetId',
     const sessionState = reqSessionAuthenticated(req)
 
     const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
-    validateURLFriendly(locale, patch.slug)
+    validateURLFriendly(locale, patch.slug, dataset?.analysis?.escapeKeyAlgorithm)
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
 
@@ -465,7 +465,7 @@ const updateDatasetRoute = async (req, res, next) => {
     }
 
     const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
-    validateURLFriendly(locale, patch.slug)
+    validateURLFriendly(locale, patch.slug, dataset?.analysis?.escapeKeyAlgorithm)
 
     // TODO: do not use always as default value when the dataset is public or published ?
     const canBreak = can('datasets', req.dataset, 'writeDescriptionBreaking', reqSession(req))

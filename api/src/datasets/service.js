@@ -224,7 +224,7 @@ export const memoizedGetDataset = memoize(getDataset, {
  */
 export const createDataset = async (db, es, locale, sessionState, owner, body, files, draft, onClose) => {
   validateURLFriendly(locale, body.id)
-  validateURLFriendly(locale, body.slug)
+  validateURLFriendly(locale, body.slug, body?.analysis?.escapeKeyAlgorithm)
 
   const datasetFile = files?.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
   const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
@@ -266,7 +266,8 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
         dataset: {
           name: datasetFile.originalname,
           size: datasetFile.size,
-          mimetype: datasetFile.mimetype
+          mimetype: datasetFile.mimetype,
+          explicitEncoding: datasetFile.explicitEncoding
         },
         attachments: !!attachmentsFile
       }

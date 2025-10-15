@@ -334,7 +334,7 @@
             :label="$t('selectFile')"
             outlined
             dense
-            style="max-width: 300px;"
+            style="max-width: 500px;"
             :accept="accepted.join(', ')"
             @change="onFileUpload"
           />
@@ -344,11 +344,24 @@
               :label="$t('selectAttachmentsFile')"
               outlined
               dense
-              style="max-width: 300px;"
+              style="max-width: 500px;"
               accept=".zip"
               @change="onAttachmentsFileUpload"
             />
           </template>
+          <v-combobox
+            v-if="isTextFile"
+            v-model="fileEncoding"
+            name="encodig"
+            label="encodage"
+            outlined
+            dense
+            clearable
+            persistent-hint
+            hint="Laissez vide pour utiliser un algorithme de détection automatique de l'encodage."
+            :items="commonEncodings"
+            style="max-width: 500px"
+          />
           <v-progress-linear
             v-if="uploading"
             v-model="uploadProgress"
@@ -498,6 +511,7 @@ import 'iframe-resizer/js/iframeResizer'
 import VIframe from '@koumoul/v-iframe'
 import eventBus from '~/event-bus'
 import settingsSchema from '~/../../api/types/settings/schema.js'
+import { commonEncodings } from '../../assets/encodings'
 const webhooksSchema = settingsSchema.properties.webhooks
 
 export default {
@@ -515,12 +529,14 @@ export default {
     showOwnerDialog: false,
     file: null,
     attachmentsFile: null,
+    fileEncoding: null,
     uploading: false,
     uploadProgress: 0,
     newOwner: null,
     showIntegrationDialog: false,
     showNotifDialog: false,
-    showWebhooksDialog: false
+    showWebhooksDialog: false,
+    commonEncodings
   }),
   computed: {
     ...mapState(['env', 'accepted']),
@@ -558,6 +574,10 @@ export default {
       let sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
       if (this.dataset.owner.department) sender += ':' + this.dataset.owner.department
       return `${this.env.notifyUrl}/embed/subscribe-webhooks?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&sender=${encodeURIComponent(sender)}`
+    },
+    isTextFile () {
+      if (!this.file) return false
+      return this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt')
     }
   },
   created () {
@@ -590,7 +610,10 @@ export default {
         params: { draft: 'true' }
       }
       const formData = new FormData()
-      if (this.file) formData.append('file', this.file)
+      if (this.file) {
+        formData.append('file', this.file)
+        if (this.fileEncoding) formData.append('file_encoding', this.fileEncoding)
+      }
       if (this.attachmentsFile) formData.append('attachments', this.attachmentsFile)
 
       this.uploading = true

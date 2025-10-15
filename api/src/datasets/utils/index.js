@@ -14,6 +14,7 @@ import * as readApiKeyUtils from './read-api-key.js'
 import mergeDraft from './merge-draft.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqSession } from '@data-fair/lib-express'
+import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
 
 export { default as mergeDraft } from './merge-draft.js'
 export * from './types.js'
@@ -62,7 +63,7 @@ export const refinalize = async (db, dataset) => {
 
 // Generate ids and try insertion until there is no conflict on id
 export const insertWithId = async (db, dataset, onClose) => {
-  const baseSlug = dataset.slug || slug(dataset.title, { lower: true, strict: true })
+  const baseSlug = dataset.slug || (dataset?.analysis?.escapeKeyAlgorithm === 'compat-ods' ? compatOdsEscapeKey(dataset.title) : slug(dataset.title, { lower: true, strict: true }))
   const owner = dataset.owner
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug
