@@ -52,7 +52,7 @@ const datasetProperties = {
   id: {
     type: 'string',
     description: 'Globally unique identifier of the dataset',
-    pattern: '^[a-z0-9]{1}[a-z0-9_\\-]*[a-z0-9]{1}$'
+    pattern: '^[a-z0-9_\\-]+$'
   },
   slug: {
     type: 'string',
