@@ -40,6 +40,7 @@ OrderByExpressionWithDirection
 
 OrderByExpressionWithoutDirection
   = OrderByAvg
+  / OrderByRandom
   / OrderByFieldName
 
 OrderByFieldName
@@ -47,6 +48,13 @@ OrderByFieldName
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop && !options.selectAggs?.[key]) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     return { key }
+  }
+
+OrderByRandom
+  = "random("i _ seed:NumericLiteral _ ")" {
+    // we ignore the seed that would require using a function_score ES query and replace it
+    // with pre-indexed _rand column (much faster)
+    return { key: '_rand' }
   }
 
 OrderByAvg

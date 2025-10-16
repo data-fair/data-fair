@@ -7,7 +7,7 @@ import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 
-describe.only('compatibility layer for ods api', function () {
+describe('compatibility layer for ods api', function () {
   it('contains a parser for the where syntax', function () {
     assert.deepEqual(
       whereParser.parse('"koumoul"', { searchFields: ['id'] }),
@@ -327,6 +327,11 @@ describe.only('compatibility layer for ods api', function () {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'id DESC,nb' } })
     assert.equal(res.data.results[0].id, 'koumoul')
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'random(1)' } })
+    const resRand2 = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'random(1) desc' } })
+    assert.equal(res.data.results[0].id, resRand2.data.results[1].id)
+    assert.equal(res.data.results[1].id, resRand2.data.results[0].id)
 
     // simple group by
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id' } })
