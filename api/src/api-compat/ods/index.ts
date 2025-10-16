@@ -11,6 +11,7 @@ import config from '#config'
 import datasetsRouter, { datasetsApiKeyMiddleware } from '../../datasets/router.js'
 import { parse as parseWhere } from './where.peg.js'
 import { parse as parseSelect } from './select.peg.js'
+import { parse as parseOrderBy } from './order-by.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
@@ -58,6 +59,7 @@ const getCompatODS = memoize(async (type: string, id: string) => {
   maxAge: 1000 * 60, // 1 minute
 })
 
+/*
 const parseOrderBy = (dataset, fields, query) => {
   const orderBy = query.order_by ? query.order_by.split(',') : []
   // recreate the sort string with our syntax
@@ -82,6 +84,24 @@ const parseOrderBy = (dataset, fields, query) => {
   }
 
   return sort
+}
+  */
+
+const completeSort = (dataset, sort, query) => {
+  // implicitly sort by score after other criteria
+  if (!sort.some(s => !!s._score) && query.where) sort.push('_score')
+  // every other things equal, sort by original line order
+  // this is very important as it provides a tie-breaker for search_after pagination
+  if (dataset.schema.some(p => p.key === '_updatedAt')) {
+    if (!sort.some(s => !!s._updatedAt)) sort.push({ _updatedAt: 'desc' })
+    if (!sort.some(s => !!s._i)) sort.push({ _i: 'desc' })
+  } else {
+    if (!sort.some(s => !!s._i)) sort.push('_i')
+  }
+  if (dataset.isVirtual) {
+    // _i is not a good enough tie-breaker in the case of virtual datasets
+    if (!sort.some(s => !!s._rand)) sort.push('_rand')
+  }
 }
 
 const parseFilters = (dataset, query, endpoint) => {
@@ -166,7 +186,7 @@ const prepareResult = (dataset, result, aliases, aggResults, timezone = 'UTC') =
   }
   if (aggResults) {
     for (const key of Object.keys(aggResults)) {
-      result[key] = aggResults[key].value
+      if (!key.startsWith('___order_by_')) result[key] = aggResults[key].value
     }
   }
   for (const key of Object.keys(aliases)) {
@@ -199,12 +219,19 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     const select = parseSelect(query.select, { dataset })
     esQuery._source = select.sources
     aliases = select.aliases
-    selectAggs = select.aggregations
+    esQuery.aggs = selectAggs = select.aggregations
   } else {
     esQuery._source = fields.filter(key => !key.startsWith('_'))
   }
 
-  esQuery.sort = parseOrderBy(dataset, fields, query)
+  if (query.order_by) {
+    const orderBy = parseOrderBy(query.order_by, { dataset, selectAggs: esQuery.aggs })
+    esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
+    esQuery.sort = orderBy.sort
+  } else {
+    esQuery.sort = []
+  }
+
   esQuery.query = parseFilters(dataset, query, 'records')
 
   const groupBy: string[] = query.group_by?.split(',')
@@ -221,10 +248,12 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     }
     const bucketSort = {
       bucket_sort: {
+        sort: esQuery.sort,
         size: esQuery.size,
         from: esQuery.from
       }
     }
+    const subAggs = esQuery.aggs
     if (groupBy.length > 1) {
       esQuery.aggs = {
         group_by: {
@@ -232,7 +261,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
             terms: groupBy.map(field => ({ field }))
           },
           aggs: {
-            ...selectAggs,
+            ...subAggs,
             sort: bucketSort,
           }
         }
@@ -242,7 +271,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         group_by: {
           terms: { field: groupBy[0] },
           aggs: {
-            ...selectAggs,
+            ...subAggs,
             sort: bucketSort
           }
         }
@@ -253,7 +282,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     delete esQuery._source
     delete esQuery.sort
   } else {
-    esQuery.aggs = selectAggs
+    completeSort(dataset, esQuery.sort, query)
   }
 
   let esResponse: any
@@ -279,12 +308,18 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         for (let i = 0; i < groupBy.length; i++) {
           item[groupBy[i]] = bucket.key[i]
         }
+        for (const aggKey of Object.keys(selectAggs)) {
+          item[aggKey] = bucket[aggKey].value
+        }
         result.results.push(item)
       }
     } else {
       for (const bucket of buckets) {
         const item: any = {}
         item[groupBy[0]] = bucket.key
+        for (const aggKey of Object.keys(selectAggs)) {
+          item[aggKey] = bucket[aggKey].value
+        }
         result.results.push(item)
       }
     }
@@ -365,7 +400,14 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     }
     if (!esQuery._source.includes('_geopoint')) esQuery._source.push('_geopoint')
   }
-  esQuery.sort = parseOrderBy(dataset, fields, query)
+  if (query.order_by) {
+    const orderBy = parseOrderBy(query.order_by, { dataset, selectAggs: esQuery.aggs })
+    esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
+    completeSort(dataset, orderBy.sort, query)
+    esQuery.sort = orderBy.sort
+  } else {
+    esQuery.sort = []
+  }
   esQuery.query = parseFilters(dataset, query, 'exports')
   const useLabels = query.use_labels === 'true'
   let transformStreams: Stream[] = []

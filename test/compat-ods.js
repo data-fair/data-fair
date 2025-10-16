@@ -2,11 +2,12 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
 import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
+import * as orderByParser from '../api/src/api-compat/ods/order-by.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 
-describe('compatibility layer for ods api', function () {
+describe.only('compatibility layer for ods api', function () {
   it('contains a parser for the where syntax', function () {
     assert.deepEqual(
       whereParser.parse('"koumoul"', { searchFields: ['id'] }),
@@ -232,6 +233,36 @@ describe('compatibility layer for ods api', function () {
     )
   })
 
+  it('contains a parser for the order-by syntax', function () {
+    assert.deepEqual(
+      orderByParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sort: [{ test1: { order: 'asc' } }], aggregations: {} }
+    )
+
+    assert.throws(
+      () => orderByParser.parse('testko', { dataset: { schema: [{ key: 'test1' }] } }),
+      { message: 'Impossible de trier sur le champ testko, il n\'existe pas dans le jeu de données.' }
+    )
+
+    assert.deepEqual(
+      orderByParser.parse('test1, test2 DESC', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sort: [{ test1: { order: 'asc' } }, { test2: { order: 'desc' } }], aggregations: {} }
+    )
+
+    assert.deepEqual(
+      orderByParser.parse('test1, avg_test2 DESC', { selectAggs: { avg_test2: { avg: { field: 'test1' } } }, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sort: [{ test1: { order: 'asc' } }, { avg_test2: { order: 'desc' } }], aggregations: {} }
+    )
+
+    assert.deepEqual(
+      orderByParser.parse('avg(test1) DESC, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
+      {
+        sort: [{ ___order_by_avg_test1: { order: 'desc' } }, { test2: { order: 'asc' } }],
+        aggregations: { ___order_by_avg_test1: { avg: { field: 'test1' } } }
+      }
+    )
+  })
+
   it('exposes records and exports api on 2 urls', async function () {
     const ax = global.ax.dmeadusOrg
 
@@ -306,6 +337,16 @@ describe('compatibility layer for ods api', function () {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb', offset: 1 } })
     assert.deepEqual(res.data.results, [{ id: 'koumoul', nb: 11 }])
+
+    // group by with sorting
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)' } })
+    assert.deepEqual(res.data.results, [{ id: 'koumoul' }, { id: 'bidule' }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb) DESC' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', select: 'avg(nb) as avg_nb', order_by: 'avg_nb DESC' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule', avg_nb: 22.2 }, { id: 'koumoul', avg_nb: 11 }])
 
     // csv export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
