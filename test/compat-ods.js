@@ -182,6 +182,26 @@ describe('compatibility layer for ods api', function () {
         }
       }
     )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'test1 is null',
+        { dataset: { schema: [{ key: 'test1' }] } }
+      ),
+      {
+        bool: {
+          must_not: [{ exists: { field: 'test1' } }]
+        }
+      }
+    )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'test1 is not null',
+        { dataset: { schema: [{ key: 'test1' }] } }
+      ),
+      { exists: { field: 'test1' } }
+    )
   })
 
   it('exposes records and exports api on 2 urls', async function () {
@@ -217,6 +237,14 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id = "koumoul"' } })
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.total_count, 1)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id is null' } })
+    assert.equal(res.data.results.length, 0)
+    assert.equal(res.data.total_count, 0)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id is not null' } })
+    assert.equal(res.data.results.length, 2)
+    assert.equal(res.data.total_count, 2)
 
     assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: koumoul' } }), { status: 400 })
 
@@ -402,6 +430,5 @@ bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 3)
     assert.equal(res.data.total_count, 3)
-    console.log(res.data)
   })
 })
