@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
+import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
@@ -204,6 +205,33 @@ describe('compatibility layer for ods api', function () {
     )
   })
 
+  it('contains a parser for the select syntax', function () {
+    assert.deepEqual(
+      selectParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sources: ['test1'], aliases: {}, aggregations: {} }
+    )
+
+    assert.throws(
+      () => selectParser.parse('testko', { dataset: { schema: [{ key: 'test1' }] } }),
+      { message: 'Impossible de sélectionner le champ testko, il n\'existe pas dans le jeu de données.' }
+    )
+
+    assert.deepEqual(
+      selectParser.parse('test1, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sources: ['test1', 'test2'], aliases: {}, aggregations: {} }
+    )
+
+    assert.deepEqual(
+      selectParser.parse('test1 as Test, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sources: ['test1', 'test2'], aliases: { test1: ['Test'] }, aggregations: {} }
+    )
+
+    assert.deepEqual(
+      selectParser.parse('avg(test1) as avg_test, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
+      { sources: ['test2'], aliases: {}, aggregations: { avg_test: { avg: { field: 'test1' } } } }
+    )
+  })
+
   it('exposes records and exports api on 2 urls', async function () {
     const ax = global.ax.dmeadusOrg
 
@@ -224,10 +252,20 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.total_count, 2)
 
-    // select
+    // simple select
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,nb,adr' } })
     assert.equal(res.data.total_count, 2)
     assert.equal(Object.keys(res.data.results[0]).length, 3)
+
+    // select with aliases
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,nb as number' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results[0], { id: 'koumoul', number: 11 })
+
+    // select with aggregation
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,avg(nb) AS avg_nb' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results[0], { id: 'koumoul', avg_nb: 16.6 })
 
     // simple filters
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: "koumoul"' } })

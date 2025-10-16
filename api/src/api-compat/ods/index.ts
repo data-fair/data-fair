@@ -10,6 +10,7 @@ import { getFlatten } from '../../datasets/utils/flatten.ts'
 import config from '#config'
 import datasetsRouter, { datasetsApiKeyMiddleware } from '../../datasets/router.js'
 import { parse as parseWhere } from './where.peg.js'
+import { parse as parseSelect } from './select.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
@@ -56,21 +57,6 @@ const getCompatODS = memoize(async (type: string, id: string) => {
   max: 10000,
   maxAge: 1000 * 60, // 1 minute
 })
-
-const parseSelect = (fields, select, endpoint) => {
-  // do not include by default heavy calculated fields used for indexing geo data
-  const _source = (select && select !== '*' && typeof select === 'string')
-    ? select.split(',').map(key => key.trim())
-    : fields.filter(key => !key.startsWith('_'))
-
-  if (_source.some(s => s.includes(' as ') || s.includes(' AS '))) {
-    compatReqCounter.inc({ endpoint, status: 'unsupported' })
-    throw httpError(400, 'la syntaxe " as " n\'est pas supportée dans le paramètre "select" de cette couche de compatibilité pour la version d\'API précédente.')
-  }
-  const unknownField = _source.find(s => !fields.includes(s))
-  if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données ou alors il correspond à une capacité d'aggrégation non supportée par cette couche de compatibilité pour la version d'API précédente.`)
-  return _source
-}
 
 const parseOrderBy = (dataset, fields, query) => {
   const orderBy = query.order_by ? query.order_by.split(',') : []
@@ -167,7 +153,7 @@ const parseFilters = (dataset, query, endpoint) => {
 }
 
 const isoWithOffset = 'YYYY-MM-DDTHH:mm:ssZ'
-const prepareResult = (dataset, result, timezone = 'UTC') => {
+const prepareResult = (dataset, result, aliases, aggResults, timezone = 'UTC') => {
   for (const prop of dataset.schema) {
     if (prop.type === 'string' && prop.format === 'date-time') {
       if (typeof result[prop.key] === 'string') {
@@ -177,6 +163,17 @@ const prepareResult = (dataset, result, timezone = 'UTC') => {
         result[prop.key] = result[prop.key].map(d => dayjs(d).tz(timezone).format(isoWithOffset))
       }
     }
+  }
+  if (aggResults) {
+    for (const key of Object.keys(aggResults)) {
+      result[key] = aggResults[key].value
+    }
+  }
+  for (const key of Object.keys(aliases)) {
+    for (const alias of aliases[key]) {
+      result[alias] = result[key]
+    }
+    delete result[key]
   }
 }
 
@@ -196,7 +193,17 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (query.offset) esQuery.from = Number(query.offset)
 
   const fields = dataset.schema.map(f => f.key)
-  esQuery._source = parseSelect(fields, query.select, 'records')
+  let aliases: Record<string, string[]> = {}
+  let selectAggs = {}
+  if (query.select) {
+    const select = parseSelect(query.select, { dataset })
+    esQuery._source = select.sources
+    aliases = select.aliases
+    selectAggs = select.aggregations
+  } else {
+    esQuery._source = fields.filter(key => !key.startsWith('_'))
+  }
+
   esQuery.sort = parseOrderBy(dataset, fields, query)
   esQuery.query = parseFilters(dataset, query, 'records')
 
@@ -225,7 +232,8 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
             terms: groupBy.map(field => ({ field }))
           },
           aggs: {
-            sort: bucketSort
+            ...selectAggs,
+            sort: bucketSort,
           }
         }
       }
@@ -234,6 +242,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         group_by: {
           terms: { field: groupBy[0] },
           aggs: {
+            ...selectAggs,
             sort: bucketSort
           }
         }
@@ -243,6 +252,8 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     delete esQuery.from
     delete esQuery._source
     delete esQuery.sort
+  } else {
+    esQuery.aggs = selectAggs
   }
 
   let esResponse: any
@@ -284,16 +295,16 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     for (let i = 0; i < esResponse.hits.hits.length; i++) {
       // avoid blocking the event loop
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
-      const line = esResponse.hits.hits[i]._source
-      prepareResult(dataset, line, req.query.timezone)
-      result.results.push(flatten(line))
+      const line = flatten(esResponse.hits.hits[i]._source)
+      prepareResult(dataset, line, aliases, esResponse.aggregations, req.query.timezone)
+      result.results.push(line)
     }
     compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
     res.send(result)
   }
 }
 
-async function * iterHits (es, dataset, esQuery, totalSize = 50000, timezone = 'utc') {
+async function * iterHits (es, dataset, esQuery, aliases, totalSize = 50000, timezone = 'utc') {
   const flatten = getFlatten(dataset, false, esQuery._source)
 
   let chunkSize = 1000
@@ -302,16 +313,20 @@ async function * iterHits (es, dataset, esQuery, totalSize = 50000, timezone = '
   while (true) {
     let size = chunkSize
     if (totalSize !== -1 && remaining < chunkSize) size = remaining
-    const hits = (await es.search({
+    const esResponse = (await es.search({
       index: esUtils.aliasName(dataset),
       body: { ...esQuery, size },
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
-    })).hits.hits
+    }))
+    const hits = esResponse.hits.hits
+    const lines = []
     for (const hit of hits) {
-      prepareResult(dataset, hit._source, timezone)
+      const line = flatten(hit._source)
+      prepareResult(dataset, line, aliases, esResponse.aggregations, timezone)
+      lines.push(line)
     }
-    yield hits.map(hit => flatten(hit._source))
+    yield lines
     if (hits.length < chunkSize) break
     if (totalSize !== -1) {
       remaining -= hits.length
@@ -334,7 +349,15 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   const esQuery: any = {}
 
   const fields = dataset.schema.map(f => f.key)
-  esQuery._source = parseSelect(fields, query.select, 'exports')
+  let aliases: Record<string, string[]> = {}
+  if (query.select) {
+    const select = parseSelect(query.select, { dataset })
+    esQuery._source = select.sources
+    aliases = select.aliases
+    esQuery.aggs = select.aggregations
+  } else {
+    esQuery._source = fields.filter(key => !key.startsWith('_'))
+  }
   if (req.params.format === 'geojson') {
     const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
     if (!esQuery._source.includes('_geoshape') && geoshapeProp) {
@@ -376,7 +399,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       key: p.key,
       header: (useLabels ? p.title : p['x-originalName']) || p['x-originalName'] || p.key
     }))
-    const iter = iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1, query.timezone)
+    const iter = iterHits(esClient, dataset, esQuery, aliases, query.limit ? Number(query.limit) : -1, query.timezone)
     for await (const items of iter) {
       for (const item of items) {
         worksheet.addRow(item)
@@ -457,7 +480,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1, query.timezone)),
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, query.limit ? Number(query.limit) : -1, query.timezone)),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {
