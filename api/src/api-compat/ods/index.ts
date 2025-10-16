@@ -213,10 +213,14 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (query.offset) esQuery.from = Number(query.offset)
 
   const fields = dataset.schema.map(f => f.key)
+
+  const groupBy: string[] = query.group_by?.split(',')
+  const grouped = groupBy?.length
+
   let aliases: Record<string, string[]> = {}
   let selectAggs = {}
   if (query.select) {
-    const select = parseSelect(query.select, { dataset })
+    const select = parseSelect(query.select, { dataset, grouped })
     esQuery._source = select.sources
     aliases = select.aliases
     esQuery.aggs = selectAggs = select.aggregations
@@ -234,8 +238,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   esQuery.query = parseFilters(dataset, query, 'records')
 
-  const groupBy: string[] = query.group_by?.split(',')
-  if (groupBy?.length) {
+  if (grouped) {
     for (const groupByKey of groupBy) {
       const prop = dataset.schema.find(p => p.key === groupByKey)
       if (!prop) {
@@ -299,7 +302,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     throw httpError(status, message)
   }
 
-  if (groupBy?.length) {
+  if (grouped) {
     const result = { results: [] as any[] }
     const buckets = esResponse.aggregations.group_by.buckets
     if (groupBy.length > 1) {

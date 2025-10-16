@@ -294,9 +294,9 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(res.data.results[0], { id: 'koumoul', number: 11 })
 
     // select with aggregation
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,avg(nb) AS avg_nb' } })
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,avg(nb) AS avg_nb,count(*) as total' } })
     assert.equal(res.data.total_count, 2)
-    assert.deepEqual(res.data.results[0], { id: 'koumoul', avg_nb: 16.6 })
+    assert.deepEqual(res.data.results[0], { id: 'koumoul', avg_nb: 16.6, total: 2 })
 
     // simple filters
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: "koumoul"' } })
@@ -343,6 +343,9 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb', offset: 1 } })
     assert.deepEqual(res.data.results, [{ id: 'koumoul', nb: 11 }])
 
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb', select: 'count(*) as count' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule', nb: 22.2, count: 1 }, { id: 'koumoul', nb: 11, count: 1 }])
+
     // group by with sorting
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)' } })
     assert.deepEqual(res.data.results, [{ id: 'koumoul' }, { id: 'bidule' }])
@@ -352,6 +355,12 @@ describe('compatibility layer for ods api', function () {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', select: 'avg(nb) as avg_nb', order_by: 'avg_nb DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule', avg_nb: 22.2 }, { id: 'koumoul', avg_nb: 11 }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'count(*) DESC' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'count(id) DESC' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
 
     // csv export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)

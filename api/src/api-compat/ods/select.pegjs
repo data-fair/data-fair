@@ -52,11 +52,13 @@ SelectFieldNameAlias
   = key:FieldName __ As __ alias:FieldName {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    return { source: key, alias: alias }
+    return { source: key, alias }
   }
 
 SelectAggregation
   = SelectAvg
+  / SelectCountAll
+  / SelectCountField
 
 SelectAvg
   = "avg("i _ key:FieldName _ ")" __ As __ name:FieldName {
@@ -64,4 +66,17 @@ SelectAvg
     if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
     if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la moyenne du champ ${key}, il n'est pas de type numérique.`)
     return { aggregation: { [name]: { avg: {field: key} } } }
+  }
+
+SelectCountAll
+  = "count(*)"i __ As __ name:FieldName {
+    // return options.grouped ? { source: 'doc_count', alias } : { source: '___total_hits', alias }
+    return { aggregation: { [name]: { value_count: {field: '_id'} } } }
+  }
+
+SelectCountField
+  = "count("i _ key:FieldName _ ")" __ As __ name:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    return { aggregation: { [name]: { value_count: {field: key} } } }
   }
