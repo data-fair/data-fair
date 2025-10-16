@@ -312,7 +312,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
           item[groupBy[i]] = bucket.key[i]
         }
         for (const aggKey of Object.keys(selectAggs)) {
-          item[aggKey] = bucket[aggKey].value
+          item[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
         }
         result.results.push(item)
       }
@@ -321,7 +321,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         const item: any = {}
         item[groupBy[0]] = bucket.key
         for (const aggKey of Object.keys(selectAggs)) {
-          item[aggKey] = bucket[aggKey].value
+          item[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
         }
         result.results.push(item)
       }

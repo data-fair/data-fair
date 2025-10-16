@@ -40,6 +40,8 @@ OrderByExpressionWithDirection
 
 OrderByExpressionWithoutDirection
   = OrderByAvg
+  / OrderByMax
+  / OrderByMin
   / OrderByRandom
   / OrderByCountAll
   / OrderByCountField
@@ -67,6 +69,22 @@ OrderByAvg
     if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de trier sur la moyenne du champ ${key}, il n'est pas de type numérique.`)
     const aggName = '___order_by_avg_' + key
     return { key: aggName, aggregation: { avg: {field: key} } }
+  }
+
+OrderByMax
+  = "max("i _ key:FieldName _ ")" {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    const aggName = '___order_by_max_' + key
+    return { key: aggName, aggregation: { max: {field: key} } }
+  }
+
+OrderByMin
+  = "min("i _ key:FieldName _ ")" {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    const aggName = '___order_by_min_' + key
+    return { key: aggName, aggregation: { min: {field: key} } }
   }
 
 OrderByCountAll

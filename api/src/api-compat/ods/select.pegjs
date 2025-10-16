@@ -60,6 +60,12 @@ SelectAggregation
   / SelectCountAll
   / SelectCountField
   / SelectCountDistinct
+  / SelectBBox
+  / SelectMax
+  / SelectMin
+  / SelectSum
+  / SelectPercentile
+  / SelectMedian
 
 SelectAvg
   = "avg("i _ key:FieldName _ ")" __ As __ name:FieldName {
@@ -87,4 +93,50 @@ SelectCountDistinct
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
     return { aggregation: { [name]: { cardinality: {field: key} } } }
+  }
+
+SelectBBox
+  = "bbox("i _ key:FieldName _ ")" __ As __ name:FieldName {
+    if (!options.dataset.bbox) throw httpError(400, '"bbox" function cannot be used on this dataset. It is not geolocalized.')
+    const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
+    const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
+    return { aggregation: { [name]: { geo_bounds: {field: geoCorners ? '_geocorners' : '_geopoint'} } } }
+  }
+
+SelectMax
+  = "max("i _ key:FieldName _ ")" __ As __ name:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    return { aggregation: { [name]: { max: {field: key} } } }
+  }
+
+SelectMin
+  = "min("i _ key:FieldName _ ")" __ As __ name:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    return { aggregation: { [name]: { min: {field: key} } } }
+  }
+
+SelectSum
+  = "sum("i _ key:FieldName _ ")" __ As __ name:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la somme du champ ${key}, il n'est pas de type numérique.`)
+    return { aggregation: { [name]: { sum: {field: key} } } }
+  }
+
+SelectPercentile
+  = "percentile("i _ key:FieldName _ "," _ percent:NumericLiteral _ ")" __ As __ name:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer les percentiles du champ ${key}, il n'est pas de type numérique.`)
+    return { aggregation: { [name]: { percentiles: {field: key, percents: [percent], keyed: false} } } }
+  }
+
+SelectMedian
+  = "median("i _ key:FieldName _ ")" __ As __ name:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la médiane du champ ${key}, il n'est pas de type numérique.`)
+    return { aggregation: { [name]: { percentiles: {field: key, percents: [50], keyed: false} } } }
   }
