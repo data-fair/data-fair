@@ -51,11 +51,13 @@ const fileSchema = {
 const datasetProperties = {
   id: {
     type: 'string',
-    description: 'Globally unique identifier of the dataset'
+    description: 'Globally unique identifier of the dataset',
+    pattern: '^[a-z0-9_\\-]+$'
   },
   slug: {
     type: 'string',
-    description: 'Identifier of the dataset, usually a slug for URL readability (unique inside the tenant)'
+    description: 'Identifier of the dataset, usually a slug for URL readability (unique inside the tenant)',
+    pattern: '^[a-z0-9]{1}[a-z0-9_\\-]*[a-z0-9]{1}$'
   },
   href: {
     type: 'string',
@@ -129,7 +131,11 @@ const datasetProperties = {
       },
       encoding: {
         type: 'string',
-        description: 'Encoding of the file'
+        description: 'Encoding of the file (either explicitly defined or detected)'
+      },
+      explicitEncoding: {
+        type: 'string',
+        description: 'Encoding of the file explicitly defined when loading it'
       },
       mimetype: {
         type: 'string',
@@ -179,7 +185,11 @@ const datasetProperties = {
       },
       encoding: {
         type: 'string',
-        description: 'Encoding of the file'
+        description: 'Encoding of the file (either explicitly defined or detected)'
+      },
+      explicitEncoding: {
+        type: 'string',
+        description: 'Encoding of the file explicitly defined when loading it'
       },
       mimetype: {
         type: 'string',
@@ -285,6 +295,53 @@ const datasetProperties = {
           }
         }
       }]
+    }
+  },
+  remoteFile: {
+    type: 'object',
+    deprecated: true,
+    additionalProperties: true, // for properties such as catalogId or resourceId that are specific to kind of remote resources
+    required: ['url'],
+    properties: {
+      name: {
+        type: 'string',
+        description: 'Name of the remote file that was used to create or update this dataset'
+      },
+      url: {
+        type: 'string',
+        description: 'Url from where the file can be fetched'
+      },
+      catalog: {
+        type: 'string',
+        description: 'Identifiant du catalogue d\'origine'
+      },
+      size: {
+        type: 'number',
+        description: 'Size of the file on disk'
+      },
+      mimetype: {
+        type: 'string',
+        description: 'Mime type of the file'
+      },
+      etag: {
+        type: 'string',
+        description: 'content of the "etag" response header if it was provided'
+      },
+      lastModified: {
+        type: 'string',
+        description: 'content of the "last-modified" response header if it was provided'
+      },
+      autoUpdate: {
+        type: 'object',
+        properties: {
+          active: { type: 'boolean', default: false },
+          nextUpdate: { type: 'string', format: 'date-time' },
+          lastUpdate: { type: 'string', format: 'date-time' }
+        }
+      },
+      forceUpdate: {
+        type: 'boolean'
+      }
     }
   },
   storage: {
@@ -742,7 +799,7 @@ const datasetProperties = {
       escapeKeyAlgorithm: {
         type: 'string',
         default: 'slug',
-        enum: ['legacy', 'slug']
+        enum: ['legacy', 'slug', 'compat-ods']
       }
     }
   },

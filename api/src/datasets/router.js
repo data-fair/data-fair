@@ -11,6 +11,7 @@ import mongodb from 'mongodb'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import LinkHeader from 'http-link-header'
 import equal from 'deep-equal'
+import slug from 'slugify'
 import * as journals from '../misc/utils/journals.ts'
 import axios from '../misc/utils/axios.js'
 import * as esUtils from './es/index.ts'
@@ -38,7 +39,6 @@ import userNotificationSchema from '../../contract/user-notification.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { bulkSearchStreams } from './utils/master-data.js'
 import applicationKey from '../misc/utils/application-key.ts'
-import { validateURLFriendly } from '../misc/utils/validation.js'
 import * as observe from '../misc/utils/observe.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import * as clamav from '../misc/utils/clamav.ts'
@@ -186,16 +186,16 @@ router.patch('/:datasetId',
     const sessionState = reqSessionAuthenticated(req)
 
     const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
-    validateURLFriendly(locale, patch.slug)
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
-      .catch(err => {
-        if (err.code !== 11000) throw err
-        throw httpError(400, req.__('errors.dupSlug'))
-      })
+
     if (!isEmpty) {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
       await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate)
+        .catch(err => {
+          if (err.code !== 11000) throw err
+          throw httpError(400, req.__('errors.dupSlug'))
+        })
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
         await journals.log('datasets', dataset, { type: 'structure-updated' })
@@ -382,7 +382,12 @@ const createDatasetRoute = async (req, res) => {
     // this is kept for retro-compatibility, but we should think of deprecating it
     // self chosen ids are not a good idea
     // there is a reason why we use a unique id generator and a slug system)
-    if (req.params.datasetId) body.id = req.params.datasetId
+    if (req.params.datasetId) {
+      if (!req.params.datasetId.match(/^[a-z0-9_\\-]+$/)) {
+        throw httpError(400, req.__('errors.urlFriendly', { value: req.params.datasetId, slug: slug(req.params.datasetId, { lower: true, strict: true }) }))
+      }
+      body.id = req.params.datasetId
+    }
 
     /**
      * @param {() => void} callback
@@ -464,7 +469,6 @@ const updateDatasetRoute = async (req, res, next) => {
     }
 
     const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
-    validateURLFriendly(locale, patch.slug)
 
     // TODO: do not use always as default value when the dataset is public or published ?
     const canBreak = can('datasets', req.dataset, 'writeDescriptionBreaking', reqSession(req))
@@ -1452,7 +1456,7 @@ router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middle
 })
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
-router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true }), cacheHeaders.noCache, async (req, res) => {
+router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptInitialDraft: true }), cacheHeaders.noCache, async (req, res) => {
   reqAdminMode(req)
   const esInfos = await datasetInfos(req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)

@@ -174,7 +174,7 @@ export const paginationParams = [{
   schema: {
     title: 'Taille de la page',
     type: 'integer',
-    default: 10,
+    default: 12,
     min: 1
   }
 }]

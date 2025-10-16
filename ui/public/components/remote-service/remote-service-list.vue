@@ -104,7 +104,8 @@ export default {
       return this.remoteServices.count > 1
     },
     size () {
-      return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
+      return 1000
+      // return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
     },
     importService () {
       return this.$route.query.import

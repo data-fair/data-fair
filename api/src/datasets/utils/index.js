@@ -1,6 +1,7 @@
 import path from 'path'
 import config from '#config'
 import slug from 'slugify'
+import { CronJob } from 'cron'
 import locks from '@data-fair/lib-node/locks.js'
 import nanoid from '../../misc/utils/nanoid.js'
 import * as visibilityUtils from '../../misc/utils/visibility.js'
@@ -14,6 +15,7 @@ import * as readApiKeyUtils from './read-api-key.js'
 import mergeDraft from './merge-draft.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqSession } from '@data-fair/lib-express'
+import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
 
 export { default as mergeDraft } from './merge-draft.js'
 export * from './types.js'
@@ -62,7 +64,7 @@ export const refinalize = async (db, dataset) => {
 
 // Generate ids and try insertion until there is no conflict on id
 export const insertWithId = async (db, dataset, onClose) => {
-  const baseSlug = dataset.slug || slug(dataset.title, { lower: true, strict: true })
+  const baseSlug = dataset.slug || (dataset?.analysis?.escapeKeyAlgorithm === 'compat-ods' ? compatOdsEscapeKey(dataset.title) : slug(dataset.title, { lower: true, strict: true }))
   const owner = dataset.owner
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug
@@ -223,6 +225,13 @@ export const setUniqueRefs = (resource) => {
 
 export const curateDataset = (dataset, existingDataset) => {
   if (dataset.title) dataset.title = dataset.title.trim()
+
+  if (dataset.remoteFile?.autoUpdate?.active) {
+    const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
+    dataset.remoteFile.autoUpdate.nextUpdate = job.nextDate().toISO()
+  } else if (dataset.remoteFile?.autoUpdate) {
+    delete dataset.remoteFile.autoUpdate.nextUpdate
+  }
 
   if (dataset.masterData?.bulkSearchs?.length) {
     for (const bulkSearch of dataset.masterData.bulkSearchs) {

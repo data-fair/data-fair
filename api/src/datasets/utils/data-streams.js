@@ -93,7 +93,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
               .filter(k => k !== '_i')
               .filter(k => !!chunk[k]?.trim())
               .find(k => !fileSchema.find(p => {
-                escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k, dataset)
+                escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k, dataset?.analysis?.escapeKeyAlgorithm)
                 return p.key === escapedKeys[k]
               }))
 
@@ -113,7 +113,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
         if (autoAdjustKeys) {
           for (const key of Object.keys(chunk)) {
             if (!adjustedKeys[key]) {
-              adjustedKeys[key] = fieldsSniffer.escapeKey(key, dataset)
+              adjustedKeys[key] = fieldsSniffer.escapeKey(key, dataset?.analysis?.escapeKeyAlgorithm)
               for (const prop of schema) {
                 if (prop.key === adjustedKeys[key] && !prop['x-originalName']) {
                   prop['x-originalName'] = key

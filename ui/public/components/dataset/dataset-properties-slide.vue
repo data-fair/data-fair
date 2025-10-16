@@ -327,7 +327,7 @@ fr:
   sep: Séparateur
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
   concept: Concept
-  conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et sa application.
+  conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et son utilisation dans une application.
   xDisplay: Format
   xDisplayHelp: Si vous choisissez "texte formatté" la colonne pourra contenir du markdown ou du HTML simple et les applications en tiendront compte.
   "singleline": "texte"
@@ -359,7 +359,7 @@ en:
   sep: Separator
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
   concept: Concept
-  conceptHelp: The concepts improve data processing and application.
+  conceptHelp: The concepts improve data processing and usage in an application.
   xDisplay: Format
   xDisplayHelp: If you chose "formatted text" the column will be able to contain markdown or HTML content that will be displayed as such by applications.
   "singleline": "text"

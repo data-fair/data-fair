@@ -2,6 +2,7 @@ import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
 import fs from 'fs-extra'
+import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import equal from 'deep-equal'
@@ -17,7 +18,6 @@ import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
 import { getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
-import { validateURLFriendly } from '../misc/utils/validation.js'
 import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
@@ -223,13 +223,10 @@ export const memoizedGetDataset = memoize(getDataset, {
  * @returns {Promise<any>}
  */
 export const createDataset = async (db, es, locale, sessionState, owner, body, files, draft, onClose) => {
-  validateURLFriendly(locale, body.id)
-  validateURLFriendly(locale, body.slug)
-
   const datasetFile = files?.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
   const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
-  if ([!!datasetFile, body.isVirtual, body.isRest, body.isMetaOnly].filter(b => b).length > 1) {
+  if ([!!datasetFile, !!body.remoteFile, body.isVirtual, body.isRest, body.isMetaOnly].filter(b => b).length > 1) {
     throw httpError(400, 'Un jeu de données ne peut pas être de plusieurs types à la fois')
   }
 
@@ -266,7 +263,8 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
         dataset: {
           name: datasetFile.originalname,
           size: datasetFile.size,
-          mimetype: datasetFile.mimetype
+          mimetype: datasetFile.mimetype,
+          explicitEncoding: datasetFile.explicitEncoding
         },
         attachments: !!attachmentsFile
       }
@@ -308,6 +306,19 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
   } else if (body.isMetaOnly) {
     if (!body.title) throw httpError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
     if (attachmentsFile) throw httpError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+  } else if (body.remoteFile) {
+    dataset.title = dataset.title || titleFromFileName(body.remoteFile.name || path.basename(new URL(body.remoteFile.url).pathname))
+    const filePatch = { status: 'created' }
+    if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
+      throw httpError(400, 'Un jeu de données basé sur fichier distant ne peut être initialisé ave la donnée d\'un jeu de données de référence')
+    }
+    if (draft) {
+      dataset.status = 'draft'
+      filePatch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
+      dataset.draft = filePatch
+    } else {
+      Object.assign(dataset, filePatch)
+    }
   } else if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
     // case of a file dataset initialized from master data
     if (draft) {

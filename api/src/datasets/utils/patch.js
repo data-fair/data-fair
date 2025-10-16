@@ -38,6 +38,7 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
       patch.errorRetry = null
     } else if (dataset.isVirtual) patch.status = 'indexed'
     else if (dataset.isRest) patch.status = 'analyzed'
+    else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
     else patch.status = 'stored'
 
     await wsEmitter.emit('datasets/' + dataset.id + '/task-progress', {})
@@ -52,7 +53,8 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
       dataset: {
         name: datasetFile.originalname,
         size: datasetFile.size,
-        mimetype: datasetFile.mimetype
+        mimetype: datasetFile.mimetype,
+        explicitEncoding: datasetFile.explicitEncoding
       }
     }
   }
@@ -152,6 +154,16 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
     patch.dataUpdatedAt = patch.updatedAt
     patch.status = 'loaded'
     patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draftValidationMode }
+  } else if (patch.remoteFile) {
+    if (patch.remoteFile?.url !== dataset.remoteFile?.url || patch.remoteFile?.name !== dataset.remoteFile?.name || patch.remoteFile.forceUpdate) {
+      patch.status = 'imported'
+      patch.remoteFile.forceUpdate = true
+      // TODO: do not use always as default value when the dataset is public or published ?
+      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draftValidationMode }
+    } else {
+      if (dataset.remoteFile.lastModified) patch.remoteFile.lastModified = dataset.remoteFile.lastModified
+      if (dataset.remoteFile.etag) patch.remoteFile.etag = dataset.remoteFile.etag
+    }
   } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
       patch.schema = await virtualDatasetsUtils.prepareSchema({ ...dataset, ...patch })
