@@ -59,6 +59,7 @@ SelectAggregation
   = SelectAvg
   / SelectCountAll
   / SelectCountField
+  / SelectCountDistinct
 
 SelectAvg
   = "avg("i _ key:FieldName _ ")" __ As __ name:FieldName {
@@ -79,4 +80,11 @@ SelectCountField
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
     return { aggregation: { [name]: { value_count: {field: key} } } }
+  }
+
+SelectCountDistinct
+  = "count(distinct"i __ key:FieldName _ ")" __ As __ name:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    return { aggregation: { [name]: { cardinality: {field: key} } } }
   }

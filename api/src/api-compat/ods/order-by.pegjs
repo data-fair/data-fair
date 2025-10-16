@@ -43,6 +43,7 @@ OrderByExpressionWithoutDirection
   / OrderByRandom
   / OrderByCountAll
   / OrderByCountField
+  / OrderByCountDistinct
   / OrderByFieldName
 
 OrderByFieldName
@@ -79,4 +80,12 @@ OrderByCountField
     if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     const aggName = '___order_by_count_' + key
     return { key: aggName, aggregation: { value_count: {field: key} } }
+  }
+
+OrderByCountDistinct
+  = "count(distinct"i __ key:FieldName _ ")" {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    const aggName = '___order_by_cardinality_' + key
+    return { key: aggName, aggregation: { cardinality: {field: key} } }
   }
