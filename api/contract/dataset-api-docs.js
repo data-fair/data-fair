@@ -1054,7 +1054,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           name: 'limit',
           schema: {
             type: 'integer',
-            default: 20
+            default: 100
           }
         }, {
           in: 'query',

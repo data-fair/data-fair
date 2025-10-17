@@ -219,13 +219,15 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   let aliases: Record<string, string[]> = {}
   let selectAggs = {}
+  let selectSource = []
   if (query.select) {
     const select = parseSelect(query.select, { dataset, grouped })
-    esQuery._source = select.sources
+    selectSource = esQuery._source = select.sources
+    if (esQuery._source.length === 0) esQuery._source = ['_id']
     aliases = select.aliases
     esQuery.aggs = selectAggs = select.aggregations
   } else {
-    esQuery._source = fields.filter(key => !key.startsWith('_'))
+    selectSource = esQuery._source = fields.filter(key => !key.startsWith('_'))
   }
 
   if (query.order_by) {
@@ -287,7 +289,6 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   } else {
     completeSort(dataset, esQuery.sort, query)
   }
-
   let esResponse: any
   try {
     esResponse = await esClient.search({
@@ -329,7 +330,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     res.send(result)
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
-    const flatten = getFlatten(dataset, false, esQuery._source)
+    const flatten = getFlatten(dataset, false, selectSource)
     for (let i = 0; i < esResponse.hits.hits.length; i++) {
       // avoid blocking the event loop
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
@@ -342,8 +343,8 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
 }
 
-async function * iterHits (es, dataset, esQuery, aliases, totalSize = 50000, timezone = 'utc') {
-  const flatten = getFlatten(dataset, false, esQuery._source)
+async function * iterHits (es, dataset, esQuery, aliases, selectSource, totalSize = 50000, timezone = 'utc') {
+  const flatten = getFlatten(dataset, false, selectSource)
 
   let chunkSize = 1000
   if (totalSize !== -1 && totalSize < chunkSize) chunkSize = totalSize
@@ -388,14 +389,17 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   const fields = dataset.schema.map(f => f.key)
   let aliases: Record<string, string[]> = {}
+  let selectSource: string[] = []
   if (query.select) {
     const select = parseSelect(query.select, { dataset })
-    esQuery._source = select.sources
+    selectSource = esQuery._source = select.sources
+    if (esQuery._source.length === 0) esQuery._source = ['_id']
     aliases = select.aliases
     esQuery.aggs = select.aggregations
   } else {
-    esQuery._source = fields.filter(key => !key.startsWith('_'))
+    selectSource = esQuery._source = fields.filter(key => !key.startsWith('_'))
   }
+
   if (req.params.format === 'geojson') {
     const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
     if (!esQuery._source.includes('_geoshape') && geoshapeProp) {
@@ -439,12 +443,12 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     })
     const worksheet = workbookWriter.addWorksheet('Feuille 1')
     // Define columns (optional)
-    const properties = esQuery._source.map(key => dataset.schema.find(prop => prop.key === key))
+    const properties = selectSource.map(key => dataset.schema.find(prop => prop.key === key))
     worksheet.columns = properties.map(p => ({
       key: p.key,
       header: (useLabels ? p.title : p['x-originalName']) || p['x-originalName'] || p.key
     }))
-    const iter = iterHits(esClient, dataset, esQuery, aliases, query.limit ? Number(query.limit) : -1, query.timezone)
+    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, query.limit ? Number(query.limit) : -1, query.timezone)
     for await (const items of iter) {
       for (const item of items) {
         worksheet.addRow(item)
@@ -481,9 +485,9 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     // const parquetSchema = parquet.ParquetSchema.fromJsonSchema(schema)
     // transformStreams = [new parquet.ParquetTransformer(parquetSchema)]
     const { ParquetWriterStream } = await import('../../../../parquet-writer/parquet-writer-stream.mts')
-    const basicSchema = esQuery._source.map((key: string) => {
+    const basicSchema = selectSource.map((key: string) => {
       const prop = dataset.schema!.find(p => p.key === key)!
-      return { key: prop.key, type: prop.type, format: prop.format, required: prop['x-required'] }
+      return { key: prop.key, type: prop.type as string, format: prop.format ?? undefined, required: prop['x-required'] }
     })
     transformStreams = [new ParquetWriterStream(basicSchema)]
   } else if (req.params.format === 'json') {
@@ -525,7 +529,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, aliases, query.limit ? Number(query.limit) : -1, query.timezone)),
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, query.limit ? Number(query.limit) : -1, query.timezone)),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {
