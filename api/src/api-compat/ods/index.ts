@@ -173,7 +173,7 @@ const parseFilters = (dataset, query, endpoint) => {
 }
 
 const isoWithOffset = 'YYYY-MM-DDTHH:mm:ssZ'
-const prepareResult = (dataset, result, aliases, aggResults, timezone = 'UTC') => {
+const prepareResult = (dataset, result, aggResults, timezone = 'UTC') => {
   for (const prop of dataset.schema) {
     if (prop.type === 'string' && prop.format === 'date-time') {
       if (typeof result[prop.key] === 'string') {
@@ -189,6 +189,9 @@ const prepareResult = (dataset, result, aliases, aggResults, timezone = 'UTC') =
       if (!key.startsWith('___order_by_')) result[key] = aggResults[key].value
     }
   }
+}
+
+const applyAliases = (result, aliases) => {
   for (const key of Object.keys(aliases)) {
     for (const alias of aliases[key]) {
       result[alias] = result[key]
@@ -231,7 +234,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
 
   if (query.order_by) {
-    const orderBy = parseOrderBy(query.order_by, { dataset, selectAggs: esQuery.aggs })
+    const orderBy = parseOrderBy(query.order_by, { dataset, aliases })
     esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
     esQuery.sort = orderBy.sort
   } else {
@@ -315,6 +318,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         for (const aggKey of Object.keys(selectAggs)) {
           item[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
         }
+        applyAliases(item, aliases)
         result.results.push(item)
       }
     } else {
@@ -324,6 +328,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         for (const aggKey of Object.keys(selectAggs)) {
           item[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
         }
+        applyAliases(item, aliases)
         result.results.push(item)
       }
     }
@@ -335,7 +340,8 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       // avoid blocking the event loop
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
       const line = flatten(esResponse.hits.hits[i]._source)
-      prepareResult(dataset, line, aliases, esResponse.aggregations, req.query.timezone)
+      prepareResult(dataset, line, esResponse.aggregations, req.query.timezone)
+      applyAliases(line, aliases)
       result.results.push(line)
     }
     compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
@@ -362,7 +368,8 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, totalSiz
     const lines = []
     for (const hit of hits) {
       const line = flatten(hit._source)
-      prepareResult(dataset, line, aliases, esResponse.aggregations, timezone)
+      prepareResult(dataset, line, esResponse.aggregations, timezone)
+      applyAliases(line, aliases)
       lines.push(line)
     }
     yield lines
@@ -408,7 +415,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     if (!esQuery._source.includes('_geopoint')) esQuery._source.push('_geopoint')
   }
   if (query.order_by) {
-    const orderBy = parseOrderBy(query.order_by, { dataset, selectAggs: esQuery.aggs })
+    const orderBy = parseOrderBy(query.order_by, { dataset, aliases })
     esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
     completeSort(dataset, orderBy.sort, query)
     esQuery.sort = orderBy.sort

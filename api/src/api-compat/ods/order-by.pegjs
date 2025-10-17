@@ -51,8 +51,9 @@ OrderByExpressionWithoutDirection
 OrderByFieldName
   = key:FieldName {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop && !options.selectAggs?.[key]) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-    return { key }
+    const aliasOf = Object.keys(options.aliases ?? {}).find(a => options.aliases[a].includes(key))
+    if (!prop && !aliasOf) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    return { key: aliasOf ?? key }
   }
 
 OrderByRandom

@@ -336,8 +336,9 @@ function peg$parse(input, options) {
   };
   var peg$f4 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop && !options.selectAggs?.[key]) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-    return { key }
+    const aliasOf = Object.keys(options.aliases ?? {}).find(a => options.aliases[a].includes(key))
+    if (!prop && !aliasOf) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    return { key: aliasOf ?? key }
   };
   var peg$f5 = function(seed) {
     // we ignore the seed that would require using a function_score ES query and replace it

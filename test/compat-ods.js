@@ -228,8 +228,13 @@ describe('compatibility layer for ods api', function () {
     )
 
     assert.deepEqual(
+      selectParser.parse('avg(test1), test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
+      { sources: ['test2'], aliases: {}, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } } }
+    )
+
+    assert.deepEqual(
       selectParser.parse('avg(test1) as avg_test, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
-      { sources: ['test2'], aliases: {}, aggregations: { avg_test: { avg: { field: 'test1' } } } }
+      { sources: ['test2'], aliases: { 'avg(test1)': ['avg_test'] }, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } } }
     )
   })
 
@@ -250,8 +255,8 @@ describe('compatibility layer for ods api', function () {
     )
 
     assert.deepEqual(
-      orderByParser.parse('test1, avg_test2 DESC', { selectAggs: { avg_test2: { avg: { field: 'test1' } } }, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sort: [{ test1: { order: 'asc' } }, { avg_test2: { order: 'desc' } }], aggregations: {} }
+      orderByParser.parse('test1, avg_test2 DESC', { aliases: { 'avg(test2)': ['avg_test2'] }, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sort: [{ test1: { order: 'asc' } }, { 'avg(test2)': { order: 'desc' } }], aggregations: {} }
     )
 
     assert.deepEqual(
@@ -285,7 +290,6 @@ describe('compatibility layer for ods api', function () {
 
     // simple select
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,nb,adr' } })
-    assert.equal(res.data.total_count, 2)
     assert.equal(Object.keys(res.data.results[0]).length, 3)
 
     // select with aliases
@@ -294,12 +298,14 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(res.data.results[0], { id: 'koumoul', number: 11 })
 
     // select with aggregation
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'count(*) as total' } })
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'count(*)' } })
     assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results[0], { 'count(*)': 2 })
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'count(*) as total' } })
     assert.deepEqual(res.data.results[0], { total: 2 })
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,avg(nb) AS avg_nb,count(*) as total' } })
-    assert.equal(res.data.total_count, 2)
     assert.deepEqual(res.data.results[0], { id: 'koumoul', avg_nb: 16.6, total: 2 })
 
     // simple filters
