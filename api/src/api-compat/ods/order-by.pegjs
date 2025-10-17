@@ -17,7 +17,7 @@ OrderBy
       const sort = []
       const aggregations = {}
       for (const part of parts) {
-        sort.push({ [part.key]: {order: part.direction ?? 'asc'} })
+        sort.push({ [part.key]: part.direction ?? 'asc' })
         if (part.aggregation) {
           aggregations[part.key] = part.aggregation
         }

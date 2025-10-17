@@ -241,7 +241,7 @@ describe('compatibility layer for ods api', function () {
   it('contains a parser for the order-by syntax', function () {
     assert.deepEqual(
       orderByParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sort: [{ test1: { order: 'asc' } }], aggregations: {} }
+      { sort: [{ test1: 'asc' }], aggregations: {} }
     )
 
     assert.throws(
@@ -251,18 +251,18 @@ describe('compatibility layer for ods api', function () {
 
     assert.deepEqual(
       orderByParser.parse('test1, test2 DESC', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sort: [{ test1: { order: 'asc' } }, { test2: { order: 'desc' } }], aggregations: {} }
+      { sort: [{ test1: 'asc' }, { test2: 'desc' }], aggregations: {} }
     )
 
     assert.deepEqual(
       orderByParser.parse('test1, avg_test2 DESC', { aliases: { 'avg(test2)': ['avg_test2'] }, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sort: [{ test1: { order: 'asc' } }, { 'avg(test2)': { order: 'desc' } }], aggregations: {} }
+      { sort: [{ test1: 'asc' }, { 'avg(test2)': 'desc' }], aggregations: {} }
     )
 
     assert.deepEqual(
       orderByParser.parse('avg(test1) DESC, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
       {
-        sort: [{ ___order_by_avg_test1: { order: 'desc' } }, { test2: { order: 'asc' } }],
+        sort: [{ ___order_by_avg_test1: 'desc' }, { test2: 'asc' }],
         aggregations: { ___order_by_avg_test1: { avg: { field: 'test1' } } }
       }
     )
@@ -345,6 +345,7 @@ describe('compatibility layer for ods api', function () {
 
     // simple group by
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id' } })
+    assert.equal(res.data.total_count, 2)
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb' } })
@@ -365,7 +366,14 @@ describe('compatibility layer for ods api', function () {
 
     // group by with sorting
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)' } })
+    assert.equal(res.data.total_count, 2)
     assert.deepEqual(res.data.results, [{ id: 'koumoul' }, { id: 'bidule' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)', limit: 1 } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ id: 'koumoul' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)', limit: 1, offset: 1 } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }])
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb) DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])

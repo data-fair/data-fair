@@ -210,10 +210,11 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!config.compatODS) throw httpError(404, 'unknown API')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const esQuery: any = { track_total_hits: true }
+  const esQuery: any = {}
   esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 10
   if (esQuery.size < 0) esQuery.size = 100 // -1 is interpreted as 100
-  if (query.offset) esQuery.from = Number(query.offset)
+  const size = esQuery.size
+  const from = esQuery.from = query.offset ? Number(query.offset) : 0
 
   const fields = dataset.schema.map(f => f.key)
 
@@ -244,6 +245,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   esQuery.query = parseFilters(dataset, query, 'records')
 
   if (grouped) {
+    if (esQuery.from + esQuery.size > 20000) throw httpError(400, 'group_by is defined, offset+limit should be less than 20000')
     for (const groupByKey of groupBy) {
       const prop = dataset.schema.find(p => p.key === groupByKey)
       if (!prop) {
@@ -254,43 +256,39 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
       }
     }
-    const bucketSort = {
-      bucket_sort: {
-        sort: esQuery.sort,
-        size: esQuery.size,
-        from: esQuery.from
-      }
-    }
+
     const subAggs = esQuery.aggs
     if (groupBy.length > 1) {
       esQuery.aggs = {
         group_by: {
           multi_terms: {
-            terms: groupBy.map(field => ({ field }))
+            terms: groupBy.map(field => ({ field })),
+            order: esQuery.sort?.length ? esQuery.sort : undefined,
+            size: 20000
           },
-          aggs: {
-            ...subAggs,
-            sort: bucketSort,
-          }
+          aggs: subAggs
         }
       }
     } else {
       esQuery.aggs = {
         group_by: {
-          terms: { field: groupBy[0] },
-          aggs: {
-            ...subAggs,
-            sort: bucketSort
-          }
+          terms: {
+            field: groupBy[0],
+            order: esQuery.sort?.length ? esQuery.sort : undefined,
+            size: 20000
+          },
+          aggs: subAggs
         }
       }
     }
+
     esQuery.size = 0
     delete esQuery.from
     delete esQuery._source
     delete esQuery.sort
   } else {
     completeSort(dataset, esQuery.sort, query)
+    esQuery.track_total_hits = true
   }
   let esResponse: any
   try {
@@ -307,10 +305,14 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
 
   if (grouped) {
-    const result = { results: [] as any[] }
-    const buckets = esResponse.aggregations.group_by.buckets
+    // WARNING pretty ugly pagination logic for aggregations
+    // this approach was attempted but didn't work:
+    // https://github.com/elastic/elasticsearch/issues/33880
+    const buckets: any[] = esResponse.aggregations.group_by.buckets
+    const result = { total_count: buckets.length, results: [] as any[] }
+    const bucketsPage = buckets.slice(from, from + size)
     if (groupBy.length > 1) {
-      for (const bucket of buckets) {
+      for (const bucket of bucketsPage) {
         const item: any = {}
         for (let i = 0; i < groupBy.length; i++) {
           item[groupBy[i]] = bucket.key[i]
@@ -322,7 +324,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         result.results.push(item)
       }
     } else {
-      for (const bucket of buckets) {
+      for (const bucket of bucketsPage) {
         const item: any = {}
         item[groupBy[0]] = bucket.key
         for (const aggKey of Object.keys(selectAggs)) {
