@@ -45,6 +45,8 @@ PrimaryFilter
   / ComparisonFilter
   / NotFilter
   / LikeFilter
+  / IsNullFilter
+  / IsNotNullFilter
   / SearchFunction
   / SuggestFunction
   / StartsWithFunction
@@ -141,6 +143,24 @@ LikeFilter
   = key:FieldName __ Like __ value:StringLiteral {
     const fields = options.searchFields.filter(f => f.startsWith(key + '.')).concat(options.wildcardFields.filter(f => f.startsWith(key + '.')))
     return { simple_query_string: {query: value.value, fields} }
+  }
+
+IsNull = "is null"i
+IsNullFilter
+  = key:FieldName __ IsNull {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    requiredCapability(prop, 'IS NULL', 'values')
+    return { bool: { must_not: [{ exists: {field: key} }] } }
+  }
+
+IsNotNull = "is not null"i
+IsNotNullFilter
+  = key:FieldName __ IsNotNull {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    requiredCapability(prop, 'IS NOT NULL', 'values')
+    return { exists: {field: key} }
   }
 
 StringFilter

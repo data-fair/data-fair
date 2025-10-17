@@ -10,6 +10,8 @@ import { getFlatten } from '../../datasets/utils/flatten.ts'
 import config from '#config'
 import datasetsRouter, { datasetsApiKeyMiddleware } from '../../datasets/router.js'
 import { parse as parseWhere } from './where.peg.js'
+import { parse as parseSelect } from './select.peg.js'
+import { parse as parseOrderBy } from './order-by.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
@@ -57,21 +59,7 @@ const getCompatODS = memoize(async (type: string, id: string) => {
   maxAge: 1000 * 60, // 1 minute
 })
 
-const parseSelect = (fields, select, endpoint) => {
-  // do not include by default heavy calculated fields used for indexing geo data
-  const _source = (select && select !== '*' && typeof select === 'string')
-    ? select.split(',').map(key => key.trim())
-    : fields.filter(key => !key.startsWith('_'))
-
-  if (_source.some(s => s.includes(' as ') || s.includes(' AS '))) {
-    compatReqCounter.inc({ endpoint, status: 'unsupported' })
-    throw httpError(400, 'la syntaxe " as " n\'est pas supportée dans le paramètre "select" de cette couche de compatibilité pour la version d\'API précédente.')
-  }
-  const unknownField = _source.find(s => !fields.includes(s))
-  if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données ou alors il correspond à une capacité d'aggrégation non supportée par cette couche de compatibilité pour la version d'API précédente.`)
-  return _source
-}
-
+/*
 const parseOrderBy = (dataset, fields, query) => {
   const orderBy = query.order_by ? query.order_by.split(',') : []
   // recreate the sort string with our syntax
@@ -96,6 +84,24 @@ const parseOrderBy = (dataset, fields, query) => {
   }
 
   return sort
+}
+  */
+
+const completeSort = (dataset, sort, query) => {
+  // implicitly sort by score after other criteria
+  if (!sort.some(s => !!s._score) && query.where) sort.push('_score')
+  // every other things equal, sort by original line order
+  // this is very important as it provides a tie-breaker for search_after pagination
+  if (dataset.schema.some(p => p.key === '_updatedAt')) {
+    if (!sort.some(s => !!s._updatedAt)) sort.push({ _updatedAt: 'desc' })
+    if (!sort.some(s => !!s._i)) sort.push({ _i: 'desc' })
+  } else {
+    if (!sort.some(s => !!s._i)) sort.push('_i')
+  }
+  if (dataset.isVirtual) {
+    // _i is not a good enough tie-breaker in the case of virtual datasets
+    if (!sort.some(s => !!s._rand)) sort.push('_rand')
+  }
 }
 
 const parseFilters = (dataset, query, endpoint) => {
@@ -167,7 +173,7 @@ const parseFilters = (dataset, query, endpoint) => {
 }
 
 const isoWithOffset = 'YYYY-MM-DDTHH:mm:ssZ'
-const prepareResult = (dataset, result, timezone = 'UTC') => {
+const prepareResult = (dataset, result, aggResults, timezone = 'UTC') => {
   for (const prop of dataset.schema) {
     if (prop.type === 'string' && prop.format === 'date-time') {
       if (typeof result[prop.key] === 'string') {
@@ -177,6 +183,20 @@ const prepareResult = (dataset, result, timezone = 'UTC') => {
         result[prop.key] = result[prop.key].map(d => dayjs(d).tz(timezone).format(isoWithOffset))
       }
     }
+  }
+  if (aggResults) {
+    for (const key of Object.keys(aggResults)) {
+      if (!key.startsWith('___order_by_')) result[key] = aggResults[key].value
+    }
+  }
+}
+
+const applyAliases = (result, aliases) => {
+  for (const key of Object.keys(aliases)) {
+    for (const alias of aliases[key]) {
+      result[alias] = result[key]
+    }
+    delete result[key]
   }
 }
 
@@ -190,18 +210,42 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!config.compatODS) throw httpError(404, 'unknown API')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const esQuery: any = { track_total_hits: true }
-  esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 100
+  const esQuery: any = {}
+  esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 10
   if (esQuery.size < 0) esQuery.size = 100 // -1 is interpreted as 100
-  if (query.offset) esQuery.from = Number(query.offset)
+  const size = esQuery.size
+  const from = esQuery.from = query.offset ? Number(query.offset) : 0
 
   const fields = dataset.schema.map(f => f.key)
-  esQuery._source = parseSelect(fields, query.select, 'records')
-  esQuery.sort = parseOrderBy(dataset, fields, query)
-  esQuery.query = parseFilters(dataset, query, 'records')
 
   const groupBy: string[] = query.group_by?.split(',')
-  if (groupBy?.length) {
+  const grouped = groupBy?.length
+
+  let aliases: Record<string, string[]> = {}
+  let selectAggs = {}
+  let selectSource = []
+  if (query.select) {
+    const select = parseSelect(query.select, { dataset, grouped })
+    selectSource = esQuery._source = select.sources
+    if (esQuery._source.length === 0) esQuery._source = ['_id']
+    aliases = select.aliases
+    esQuery.aggs = selectAggs = select.aggregations
+  } else {
+    selectSource = esQuery._source = fields.filter(key => !key.startsWith('_'))
+  }
+
+  if (query.order_by) {
+    const orderBy = parseOrderBy(query.order_by, { dataset, aliases })
+    esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
+    esQuery.sort = orderBy.sort
+  } else {
+    esQuery.sort = []
+  }
+
+  esQuery.query = parseFilters(dataset, query, 'records')
+
+  if (grouped) {
+    if (esQuery.from + esQuery.size > 20000) throw httpError(400, 'group_by is defined, offset+limit should be less than 20000')
     for (const groupByKey of groupBy) {
       const prop = dataset.schema.find(p => p.key === groupByKey)
       if (!prop) {
@@ -212,39 +256,40 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
         throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
       }
     }
-    const bucketSort = {
-      bucket_sort: {
-        size: esQuery.size,
-        from: esQuery.from
-      }
-    }
+
+    const subAggs = esQuery.aggs
     if (groupBy.length > 1) {
       esQuery.aggs = {
         group_by: {
           multi_terms: {
-            terms: groupBy.map(field => ({ field }))
+            terms: groupBy.map(field => ({ field })),
+            order: esQuery.sort?.length ? esQuery.sort : undefined,
+            size: 20000
           },
-          aggs: {
-            sort: bucketSort
-          }
+          aggs: subAggs
         }
       }
     } else {
       esQuery.aggs = {
         group_by: {
-          terms: { field: groupBy[0] },
-          aggs: {
-            sort: bucketSort
-          }
+          terms: {
+            field: groupBy[0],
+            order: esQuery.sort?.length ? esQuery.sort : undefined,
+            size: 20000
+          },
+          aggs: subAggs
         }
       }
     }
+
     esQuery.size = 0
     delete esQuery.from
     delete esQuery._source
     delete esQuery.sort
+  } else {
+    completeSort(dataset, esQuery.sort, query)
+    esQuery.track_total_hits = true
   }
-
   let esResponse: any
   try {
     esResponse = await esClient.search({
@@ -259,42 +304,55 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     throw httpError(status, message)
   }
 
-  if (groupBy?.length) {
-    const result = { results: [] as any[] }
-    const buckets = esResponse.aggregations.group_by.buckets
+  if (grouped) {
+    // WARNING pretty ugly pagination logic for aggregations
+    // this approach was attempted but didn't work:
+    // https://github.com/elastic/elasticsearch/issues/33880
+    const buckets: any[] = esResponse.aggregations.group_by.buckets
+    const result = { total_count: buckets.length, results: [] as any[] }
+    const bucketsPage = buckets.slice(from, from + size)
     if (groupBy.length > 1) {
-      for (const bucket of buckets) {
+      for (const bucket of bucketsPage) {
         const item: any = {}
         for (let i = 0; i < groupBy.length; i++) {
           item[groupBy[i]] = bucket.key[i]
         }
+        for (const aggKey of Object.keys(selectAggs)) {
+          item[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
+        }
+        applyAliases(item, aliases)
         result.results.push(item)
       }
     } else {
-      for (const bucket of buckets) {
+      for (const bucket of bucketsPage) {
         const item: any = {}
         item[groupBy[0]] = bucket.key
+        for (const aggKey of Object.keys(selectAggs)) {
+          item[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
+        }
+        applyAliases(item, aliases)
         result.results.push(item)
       }
     }
     res.send(result)
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
-    const flatten = getFlatten(dataset, false, esQuery._source)
+    const flatten = getFlatten(dataset, false, selectSource)
     for (let i = 0; i < esResponse.hits.hits.length; i++) {
       // avoid blocking the event loop
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
-      const line = esResponse.hits.hits[i]._source
-      prepareResult(dataset, line, req.query.timezone)
-      result.results.push(flatten(line))
+      const line = flatten(esResponse.hits.hits[i]._source)
+      prepareResult(dataset, line, esResponse.aggregations, req.query.timezone)
+      applyAliases(line, aliases)
+      result.results.push(line)
     }
     compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
     res.send(result)
   }
 }
 
-async function * iterHits (es, dataset, esQuery, totalSize = 50000, timezone = 'utc') {
-  const flatten = getFlatten(dataset, false, esQuery._source)
+async function * iterHits (es, dataset, esQuery, aliases, selectSource, totalSize = 50000, timezone = 'utc') {
+  const flatten = getFlatten(dataset, false, selectSource)
 
   let chunkSize = 1000
   if (totalSize !== -1 && totalSize < chunkSize) chunkSize = totalSize
@@ -302,16 +360,21 @@ async function * iterHits (es, dataset, esQuery, totalSize = 50000, timezone = '
   while (true) {
     let size = chunkSize
     if (totalSize !== -1 && remaining < chunkSize) size = remaining
-    const hits = (await es.search({
+    const esResponse = (await es.search({
       index: esUtils.aliasName(dataset),
       body: { ...esQuery, size },
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
-    })).hits.hits
+    }))
+    const hits = esResponse.hits.hits
+    const lines = []
     for (const hit of hits) {
-      prepareResult(dataset, hit._source, timezone)
+      const line = flatten(hit._source)
+      prepareResult(dataset, line, esResponse.aggregations, timezone)
+      applyAliases(line, aliases)
+      lines.push(line)
     }
-    yield hits.map(hit => flatten(hit._source))
+    yield lines
     if (hits.length < chunkSize) break
     if (totalSize !== -1) {
       remaining -= hits.length
@@ -334,7 +397,18 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   const esQuery: any = {}
 
   const fields = dataset.schema.map(f => f.key)
-  esQuery._source = parseSelect(fields, query.select, 'exports')
+  let aliases: Record<string, string[]> = {}
+  let selectSource: string[] = []
+  if (query.select) {
+    const select = parseSelect(query.select, { dataset })
+    selectSource = esQuery._source = select.sources
+    if (esQuery._source.length === 0) esQuery._source = ['_id']
+    aliases = select.aliases
+    esQuery.aggs = select.aggregations
+  } else {
+    selectSource = esQuery._source = fields.filter(key => !key.startsWith('_'))
+  }
+
   if (req.params.format === 'geojson') {
     const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
     if (!esQuery._source.includes('_geoshape') && geoshapeProp) {
@@ -342,7 +416,14 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     }
     if (!esQuery._source.includes('_geopoint')) esQuery._source.push('_geopoint')
   }
-  esQuery.sort = parseOrderBy(dataset, fields, query)
+  if (query.order_by) {
+    const orderBy = parseOrderBy(query.order_by, { dataset, aliases })
+    esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
+    completeSort(dataset, orderBy.sort, query)
+    esQuery.sort = orderBy.sort
+  } else {
+    esQuery.sort = []
+  }
   esQuery.query = parseFilters(dataset, query, 'exports')
   const useLabels = query.use_labels === 'true'
   let transformStreams: Stream[] = []
@@ -371,12 +452,12 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     })
     const worksheet = workbookWriter.addWorksheet('Feuille 1')
     // Define columns (optional)
-    const properties = esQuery._source.map(key => dataset.schema.find(prop => prop.key === key))
+    const properties = selectSource.map(key => dataset.schema.find(prop => prop.key === key))
     worksheet.columns = properties.map(p => ({
       key: p.key,
       header: (useLabels ? p.title : p['x-originalName']) || p['x-originalName'] || p.key
     }))
-    const iter = iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1, query.timezone)
+    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, query.limit ? Number(query.limit) : -1, query.timezone)
     for await (const items of iter) {
       for (const item of items) {
         worksheet.addRow(item)
@@ -413,9 +494,9 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     // const parquetSchema = parquet.ParquetSchema.fromJsonSchema(schema)
     // transformStreams = [new parquet.ParquetTransformer(parquetSchema)]
     const { ParquetWriterStream } = await import('../../../../parquet-writer/parquet-writer-stream.mts')
-    const basicSchema = esQuery._source.map((key: string) => {
+    const basicSchema = selectSource.map((key: string) => {
       const prop = dataset.schema!.find(p => p.key === key)!
-      return { key: prop.key, type: prop.type, format: prop.format, required: prop['x-required'] }
+      return { key: prop.key, type: prop.type as string, format: prop.format ?? undefined, required: prop['x-required'] }
     })
     transformStreams = [new ParquetWriterStream(basicSchema)]
   } else if (req.params.format === 'json') {
@@ -457,7 +538,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, query.limit ? Number(query.limit) : -1, query.timezone)),
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, query.limit ? Number(query.limit) : -1, query.timezone)),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {

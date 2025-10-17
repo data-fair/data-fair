@@ -1,6 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
+import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
+import * as orderByParser from '../api/src/api-compat/ods/order-by.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
@@ -182,6 +184,88 @@ describe('compatibility layer for ods api', function () {
         }
       }
     )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'test1 is null',
+        { dataset: { schema: [{ key: 'test1' }] } }
+      ),
+      {
+        bool: {
+          must_not: [{ exists: { field: 'test1' } }]
+        }
+      }
+    )
+
+    assert.deepEqual(
+      whereParser.parse(
+        'test1 is not null',
+        { dataset: { schema: [{ key: 'test1' }] } }
+      ),
+      { exists: { field: 'test1' } }
+    )
+  })
+
+  it('contains a parser for the select syntax', function () {
+    assert.deepEqual(
+      selectParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sources: ['test1'], aliases: {}, aggregations: {} }
+    )
+
+    assert.throws(
+      () => selectParser.parse('testko', { dataset: { schema: [{ key: 'test1' }] } }),
+      { message: 'Impossible de sélectionner le champ testko, il n\'existe pas dans le jeu de données.' }
+    )
+
+    assert.deepEqual(
+      selectParser.parse('test1, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sources: ['test1', 'test2'], aliases: {}, aggregations: {} }
+    )
+
+    assert.deepEqual(
+      selectParser.parse('test1 as Test, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sources: ['test1', 'test2'], aliases: { test1: ['Test'] }, aggregations: {} }
+    )
+
+    assert.deepEqual(
+      selectParser.parse('avg(test1), test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
+      { sources: ['test2'], aliases: {}, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } } }
+    )
+
+    assert.deepEqual(
+      selectParser.parse('avg(test1) as avg_test, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
+      { sources: ['test2'], aliases: { 'avg(test1)': ['avg_test'] }, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } } }
+    )
+  })
+
+  it('contains a parser for the order-by syntax', function () {
+    assert.deepEqual(
+      orderByParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sort: [{ test1: 'asc' }], aggregations: {} }
+    )
+
+    assert.throws(
+      () => orderByParser.parse('testko', { dataset: { schema: [{ key: 'test1' }] } }),
+      { message: 'Impossible de trier sur le champ testko, il n\'existe pas dans le jeu de données.' }
+    )
+
+    assert.deepEqual(
+      orderByParser.parse('test1, test2 DESC', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sort: [{ test1: 'asc' }, { test2: 'desc' }], aggregations: {} }
+    )
+
+    assert.deepEqual(
+      orderByParser.parse('test1, avg_test2 DESC', { aliases: { 'avg(test2)': ['avg_test2'] }, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { sort: [{ test1: 'asc' }, { 'avg(test2)': 'desc' }], aggregations: {} }
+    )
+
+    assert.deepEqual(
+      orderByParser.parse('avg(test1) DESC, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
+      {
+        sort: [{ ___order_by_avg_test1: 'desc' }, { test2: 'asc' }],
+        aggregations: { ___order_by_avg_test1: { avg: { field: 'test1' } } }
+      }
+    )
   })
 
   it('exposes records and exports api on 2 urls', async function () {
@@ -204,10 +288,25 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.total_count, 2)
 
-    // select
+    // simple select
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,nb,adr' } })
-    assert.equal(res.data.total_count, 2)
     assert.equal(Object.keys(res.data.results[0]).length, 3)
+
+    // select with aliases
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,nb as number' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results[0], { id: 'koumoul', number: 11 })
+
+    // select with aggregation
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'count(*)' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results[0], { 'count(*)': 2 })
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'count(*) as total' } })
+    assert.deepEqual(res.data.results[0], { total: 2 })
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,avg(nb) AS avg_nb,count(*) as total' } })
+    assert.deepEqual(res.data.results[0], { id: 'koumoul', avg_nb: 16.6, total: 2 })
 
     // simple filters
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: "koumoul"' } })
@@ -217,6 +316,14 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id = "koumoul"' } })
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.total_count, 1)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id is null' } })
+    assert.equal(res.data.results.length, 0)
+    assert.equal(res.data.total_count, 0)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id is not null' } })
+    assert.equal(res.data.results.length, 2)
+    assert.equal(res.data.total_count, 2)
 
     assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: koumoul' } }), { status: 400 })
 
@@ -231,8 +338,14 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'id DESC,nb' } })
     assert.equal(res.data.results[0].id, 'koumoul')
 
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'random(1)' } })
+    const resRand2 = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'random(1) desc' } })
+    assert.equal(res.data.results[0].id, resRand2.data.results[1].id)
+    assert.equal(res.data.results[1].id, resRand2.data.results[0].id)
+
     // simple group by
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id' } })
+    assert.equal(res.data.total_count, 2)
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb' } })
@@ -240,6 +353,39 @@ describe('compatibility layer for ods api', function () {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb', offset: 1 } })
     assert.deepEqual(res.data.results, [{ id: 'koumoul', nb: 11 }])
+
+    // group by with metrics
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb', select: 'count(*) as count' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule', nb: 22.2, count: 1 }, { id: 'koumoul', nb: 11, count: 1 }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', select: 'median(nb) as med' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule', med: 22.2 }, { id: 'koumoul', med: 11 }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', select: 'sum(nb) as sum' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule', sum: 22.2 }, { id: 'koumoul', sum: 11 }])
+
+    // group by with sorting
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ id: 'koumoul' }, { id: 'bidule' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)', limit: 1 } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ id: 'koumoul' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)', limit: 1, offset: 1 } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb) DESC' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', select: 'avg(nb) as avg_nb', order_by: 'avg_nb DESC' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule', avg_nb: 22.2 }, { id: 'koumoul', avg_nb: 11 }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'count(*) DESC' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'count(id) DESC' } })
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
 
     // csv export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
@@ -402,6 +548,5 @@ bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 3)
     assert.equal(res.data.total_count, 3)
-    console.log(res.data)
   })
 })

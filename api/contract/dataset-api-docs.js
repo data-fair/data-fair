@@ -1017,8 +1017,6 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   }
 
   if (settings?.compatODS) {
-    const schema = dataset.schema || []
-
     api.paths['/compat-ods/records'] = {
       get: {
         summary: 'Récupérer les enregistrements',
@@ -1031,14 +1029,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           in: 'query',
           name: 'select',
           schema: {
-            type: 'array',
-            items: {
-              type: 'string',
-              enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
-            }
-          },
-          style: 'form',
-          explode: false
+            type: 'string',
+          }
         }, {
           in: 'query',
           name: 'where',
@@ -1062,7 +1054,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           name: 'limit',
           schema: {
             type: 'integer',
-            default: 20
+            default: 10
           }
         }, {
           in: 'query',
@@ -1106,14 +1098,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           in: 'query',
           name: 'select',
           schema: {
-            type: 'array',
-            items: {
-              type: 'string',
-              enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
-            }
-          },
-          style: 'form',
-          explode: false
+            type: 'string'
+          }
         }, {
           in: 'query',
           name: 'where',
