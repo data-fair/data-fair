@@ -211,7 +211,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
   const esQuery: any = { track_total_hits: true }
-  esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 100
+  esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 10
   if (esQuery.size < 0) esQuery.size = 100 // -1 is interpreted as 100
   if (query.offset) esQuery.from = Number(query.offset)
 
