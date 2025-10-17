@@ -17,6 +17,7 @@ Select
       const sources = []
       const aliases = {}
       const aggregations = {}
+      const transforms = {}
       for (const part of parts) {
         if (part.source) {
           if (!sources.includes(part.source)) {
@@ -25,6 +26,9 @@ Select
           if (part.alias) {
             aliases[part.source] = aliases[part.source] ?? []
             aliases[part.source].push(part.alias)
+          }
+          if (part.transform) {
+            transforms[part.alias ?? part.source] = part.transform
           }
         }
         if (part.aggregation) {
@@ -139,4 +143,12 @@ SelectMedian
     if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
     if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la médiane du champ ${key}, il n'est pas de type numérique.`)
     return { aggregation: { [name]: { percentiles: {field: key, percents: [50], keyed: false} } } }
+  }
+
+SelectYear
+  = "year("i _ key:FieldName _ ")" __ As __ alias:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (prop.type !== 'string' || (prop.format !== 'date' || prop.format !== 'date-time')) throw httpError(400, `Impossible de calculer l'année du champ ${key}, il n'est pas de type date.`)
+    return { source: key, alias, transform: 'year' }
   }
