@@ -41,7 +41,12 @@ export function indexPrefix (dataset) {
 export const initDatasetIndex = async (dataset) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = await indexDefinition(dataset)
-  await es.client.indices.create({ index: tempId, body })
+  const res = await es.client.indices.create({
+    index: tempId,
+    body,
+    timeout: '60s'
+  })
+  if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after creating index ' + tempId)
   return tempId
 }
 
@@ -66,7 +71,12 @@ export const updateDatasetMapping = async (dataset, oldDataset) => {
       }
     }
   }
-  await es.client.indices.putMapping({ index, body: newMapping })
+  const res = await es.client.indices.putMapping({
+    index,
+    body: newMapping,
+    timeout: '60s'
+  })
+  if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating index mapping ' + index)
 }
 
 const getAliases = async (dataset) => {
@@ -121,9 +131,10 @@ export const switchAlias = async (dataset, tempId) => {
         { remove: { alias: name, index: '*' } },
         { add: { alias: name, index: tempId } }
       ]
-    }
+    },
+    timeout: '60s'
   })
-  if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating aliases')
+  if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating aliases ' + name)
 
   // Delete indices of this dataset that are not referenced by either the draft or prod aliases
   const { prodAlias, draftAlias } = await getAliases(dataset)
@@ -147,7 +158,12 @@ export const validateDraftAlias = async (dataset) => {
   if (!draftAlias || Object.keys(draftAlias).length !== 1) throw new Error('no draft alias to validate')
   const name = aliasName({ ...dataset, draftReason: true })
   debug('delete previous alias', name)
-  await es.client.indices.deleteAlias({ name, index: '_all' })
+  const res = await es.client.indices.deleteAlias({
+    name,
+    index: '_all',
+    timeout: '60s'
+  })
+  if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after deleting previous aliases ' + name)
   await switchAlias({ ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
 }
 
