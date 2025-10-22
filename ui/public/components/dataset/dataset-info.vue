@@ -310,6 +310,52 @@
         :rules="required.includes('frequency') ? [(val) => !!val]: []"
         @change="patch({frequency: dataset.frequency || ''})"
       />
+      <v-text-field
+        v-if="datasetsMetadata && datasetsMetadata.creator && datasetsMetadata.creator.active"
+        v-model="dataset.creator"
+        :disabled="!can('writeDescription')"
+        :label="$t('creator')"
+        hide-details
+        class="mb-3"
+        clearable
+        :required="required.includes('creator')"
+        :rules="required.includes('creator') ? [(val) => !!val]: []"
+        @change="patch({creator: dataset.creator})"
+      />
+      <v-text-field
+        v-if="datasetsMetadata && datasetsMetadata.modified && datasetsMetadata.modified.active"
+        :value="dataset.modified && $moment(dataset.modified).format('LL')"
+        readonly
+        :label="$t('modified')"
+        hide-details
+        class="mb-3"
+        clearable
+        :required="required.includes('modified')"
+        :rules="required.includes('modified') ? [(val) => !!val]: []"
+        @click="modifiedMenu = true"
+        @click:clear="patch({modified: null})"
+      >
+        <template #append>
+          <v-menu
+            v-model="modifiedMenu"
+            left
+            :close-on-content-click="false"
+          >
+            <template #activator="{attrs, on}">
+              <v-icon
+                v-bind="attrs"
+                v-on="on"
+              >
+                mdi-calendar
+              </v-icon>
+            </template>
+            <v-date-picker
+              v-model="dataset.modified"
+              @input="patch({modified: dataset.modified}); modifiedMenu = false;"
+            />
+          </v-menu>
+        </template>
+      </v-text-field>
       <v-checkbox
         v-if="dataset.schema.some(prop => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
         v-model="dataset.attachmentsAsImage"
@@ -440,6 +486,8 @@ fr:
   temporal: Couverture temporelle
   keywords: Mots clés
   frequency: Fréquence des mises à jour
+  creator: Personne ou organisme créateur
+  modified: Date de dernière modification de la source
   slug: Identifiant de publication
   slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes. Vous ne pouvez utiliser que des lettres minuscules non accentuées, des chiffres et des tirets.
   newSlug: Nouvel identifiant de publication
@@ -490,6 +538,8 @@ en:
   temporal: Temporal coverage
   keywords: Keywords
   frequency: Update frequency
+  creator: Creator person or entity
+  modified: Date of last modification of the source
   slug: Publication identifier
   slugWarning: "This unique and readable id is used in portal pages URLs, data APIs, etc. Warning : if you modify it you can break existing links and applications."
   newSlug: New publication identifier
@@ -545,6 +595,7 @@ export default {
       keywordsFacets: null,
       loadingKeywordsFacets: false,
       temporalMenu: false,
+      modifiedMenu: false,
       slugMenu: false,
       newSlug: '',
       slugRegex

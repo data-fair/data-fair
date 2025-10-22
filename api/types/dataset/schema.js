@@ -116,6 +116,15 @@ const datasetProperties = {
     description: 'update frequency',
     enum: ['', 'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly', 'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly', 'semiweekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular']
   },
+  // https://www.w3.org/TR/vocab-dcat-3/#Property:resource_creator
+  creator: {
+    type: 'string',
+  },
+  // https://www.w3.org/TR/vocab-dcat-3/#Property:distribution_update_date
+  modified: {
+    type: 'string',
+    format: 'date'
+  },
   file: {
     type: 'object',
     additionalProperties: false,
