@@ -333,7 +333,7 @@
         :required="required.includes('modified')"
         :rules="required.includes('modified') ? [(val) => !!val]: []"
         @click="modifiedMenu = true"
-        @click:clear="patch({modified: null})"
+        @click:clear="dataset.modified = null; patch({modified: null})"
       >
         <template #append>
           <v-menu
