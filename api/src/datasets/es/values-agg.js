@@ -150,7 +150,6 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
 
     // Prepare next nested level
     if (valuesFields[i + 1] || addGeoData) {
-      console.log('currentAggLevel', currentAggLevel)
       currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
       // Add centroid and bounding box children aggs if requested
       if (addGeoData) {
