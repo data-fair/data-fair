@@ -312,6 +312,26 @@ export default {
             }
           }
         },
+        creator: {
+          type: 'object',
+          properties: {
+            active: {
+              title: 'personne ou organisme créateur',
+              type: 'boolean',
+              default: false
+            }
+          }
+        },
+        modified: {
+          type: 'object',
+          properties: {
+            active: {
+              title: 'date de dernière modification de la source',
+              type: 'boolean',
+              default: false
+            }
+          }
+        },
         keywords: {
           type: 'object',
           properties: {

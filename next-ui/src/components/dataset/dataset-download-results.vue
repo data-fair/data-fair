@@ -46,7 +46,6 @@
         <dataset-download-csv-options
           v-if="showCsvOptions"
           v-model:csv-sep="csvSep"
-          :href="downloadUrls.csv"
           @click="downloadLargeCSV.execute()"
         />
         <v-btn
