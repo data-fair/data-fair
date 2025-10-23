@@ -67,26 +67,29 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     .filter((/** @type {any} */ p) => p.type === 'number')
   const imageProperty = schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
 
-  const filterKeys = []
+  const filterItems = []
   for (const p of schema) {
+    if (hasCapability(p, 'index') || hasCapability(p, 'wildcard') || hasCapability(p, 'text') || hasCapability(p, 'textStandard')) {
+      filterItems.push({ header: true, title: p.title ?? p['x-originalName'] ?? p.key })
+    }
     if (hasCapability(p, 'index')) {
-      filterKeys.push(p.key + '_eq')
-      filterKeys.push(p.key + '_neq')
-      filterKeys.push(p.key + '_in')
-      filterKeys.push(p.key + '_nin')
-      filterKeys.push(p.key + '_lt')
-      filterKeys.push(p.key + '_lte')
-      filterKeys.push(p.key + '_gt')
-      filterKeys.push(p.key + '_gte')
-      filterKeys.push(p.key + '_starts')
-      filterKeys.push(p.key + '_exists')
-      filterKeys.push(p.key + '_nexists')
+      filterItems.push(p.key + '_eq')
+      filterItems.push(p.key + '_neq')
+      filterItems.push(p.key + '_in')
+      filterItems.push(p.key + '_nin')
+      filterItems.push(p.key + '_lt')
+      filterItems.push(p.key + '_lte')
+      filterItems.push(p.key + '_gt')
+      filterItems.push(p.key + '_gte')
+      filterItems.push(p.key + '_starts')
+      filterItems.push(p.key + '_exists')
+      filterItems.push(p.key + '_nexists')
     }
     if (hasCapability(p, 'wildcard')) {
-      filterKeys.push(p.key + '_contains')
+      filterItems.push(p.key + '_contains')
     }
     if (hasCapability(p, 'textStandard') || hasCapability(p, 'text')) {
-      filterKeys.push(p.key + '_search')
+      filterItems.push(p.key + '_search')
     }
   }
 
@@ -140,20 +143,6 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     style: 'form',
     explode: false
   }, {
-    in: 'query',
-    name: 'qs',
-    description: `
-Colonne de filtre et recherche textuelle avancée. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par colonne, créer des combinaisons logiques à volonté, etc.
-
-Exemple: ma_colonne:"du texte" AND ma_colonne2:valeur
-
-Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html) correspondante.
-  `,
-    schema: {
-      title: 'Recherche textuelle avancée',
-      type: 'string'
-    }
-  }, {
     // free-form query parameters support for open api v3
     // cf https://stackoverflow.com/questions/49582559/how-to-document-dynamic-query-parameter-names-in-openapi-swagger
     in: 'query',
@@ -162,11 +151,30 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       type: 'object',
       title: 'Filtres sur colonnes',
       patternPropertiesLayout: {
-        items: filterKeys,
+        items: filterItems,
         messages: {
           addItem: 'Ajouter un filtre'
         },
-        help: 'Filtres structurés sur colonne. La clé est constituée de la clé de la colonne concaténée avec un suffixe par type d\'opération de filtrage (_eq pour une égalité stricte, etc).'
+        help: `Filtres structurés sur colonne.
+        
+Le nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre.
+
+Les types de filtres disponibles peuvent varier par colonne.
+
+  - \`_eq\` : égal à une valeur
+  - \`_neq\` : différent d'une valeur
+  - \`_in\` : appartient à une liste de valeurs (séparées par des virgules)
+  - \`_nin\` : n'appartient pas à une liste de valeurs (séparées par des virgules)
+  - \`_gt\` : strictement supérieur à une valeur
+  - \`_gte\` : supérieur ou égal à une valeur
+  - \`_lt\` : strictement inférieur à une valeur
+  - \`_lte\` : inférieur ou égal à une valeur
+  - \`_starts\` : commence par une série de caractères
+  - \`_contains\` : contient une série de caractères
+  - \`_search\` : effectue une recherche textuelle simple
+  - \`_exists\` : la colonne contient une valeur
+  - \`_nexists\` : la colonne ne contient pas une valeur
+  `
       },
       patternProperties: {
         '.*': {
@@ -177,6 +185,23 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
           }
         }
       }
+    }
+  },
+  {
+    in: 'query',
+    name: 'qs',
+    description: `
+Colonne de filtre et recherche textuelle avancée. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par colonne, créer des combinaisons logiques à volonté, etc.
+
+**Attention**, ce paramètre est d'utilisation technique et n'est vraiment nécessaire que pour effectuer des combinaisons logiques particulières. Dans la majorité des cas il est recommandé d'utiliser "Filtres sur colonnes" ci-dessus.
+
+Exemple : \`ma_colonne:"du texte" AND ma_colonne2:valeur\`
+
+Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html) correspondante.
+  `,
+    schema: {
+      title: 'Recherche textuelle avancée',
+      type: 'string'
     }
   }]
 
