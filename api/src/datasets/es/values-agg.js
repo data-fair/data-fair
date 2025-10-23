@@ -5,21 +5,29 @@ import capabilities from '../../../contract/capabilities.js'
 import { assertMetricAccepted } from './metric-agg.js'
 import es from '#es'
 
+// we used to split by ; but using , is more standard in open api
+const splitRetroCompat = (str) => {
+  if (!str) return []
+  const result = str.split(';')
+  if (result.length === 1 && str.includes(',')) return str.split(',')
+  return result
+}
+
 export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw httpError(400, 'Le paramètre "field" est obligatoire')
-  const valuesFields = query.field.split(';')
+  const valuesFields = splitRetroCompat(query.field)
   // matching properties from the schema
   const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
   // sorting for each level
-  const sorts = query.sort ? query.sort.split(';') : []
+  const sorts = splitRetroCompat(query.sort)
   // management of missing items
-  const missings = query.missing ? query.missing.split(';') : []
+  const missings = splitRetroCompat(query.missing)
   // interval for each level
-  const intervals = query.interval ? query.interval.split(';') : []
+  const intervals = splitRetroCompat(query.interval)
   // number of agg results for each level
-  const aggSizes = query.agg_size ? query.agg_size.split(';').map(s => Number(s)) : []
+  const aggSizes = splitRetroCompat(query.agg_size).map(s => Number(s))
   let combinedMaxSize = 1
   const aggTypes = []
   for (let i = 0; i < valuesFields.length; i++) {
@@ -142,6 +150,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
 
     // Prepare next nested level
     if (valuesFields[i + 1] || addGeoData) {
+      console.log('currentAggLevel', currentAggLevel)
       currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
       // Add centroid and bounding box children aggs if requested
       if (addGeoData) {
@@ -156,7 +165,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   if (size) {
     currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
     // the sort instruction after sort for aggregation results is used to sort inner hits
-    const hitsSort = parseSort(sorts[valuesFields.length], fields, dataset)
+    const hitsSort = parseSort(sorts.slice(valuesFields.length, sorts.length).join(','), fields, dataset)
     // Also implicitly sort by score
     hitsSort.push('_score')
     // And lastly random order for natural distribution (mostly important for geo results)

@@ -361,16 +361,6 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     }
   }
 
-  const metricFieldParam = {
-    in: 'query',
-    name: 'metric_field',
-    description: 'La colonne sur lequel effectuer la calcul de métrique',
-    schema: {
-      type: 'string',
-      enum: numberProperties.length ? numberProperties.map((/** @type {any} */ p) => p.key) : undefined
-    }
-  }
-
   const formatParam = {
     in: 'query',
     name: 'format',
@@ -627,38 +617,68 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       '/values_agg': {
         get: {
           summary: 'Agréger les valeurs',
-          description: 'Récupérer des informations agrégées en fonction des valeurs d\'une colonne.',
+          description: 'Récupérer des informations agrégées en fonction des valeurs de colonnes.',
           operationId: 'getValuesAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'La colonne en fonction des valeurs desquelles grouper les lignes du jeu de données',
+            description: 'La ou les colonnes en fonction des valeurs desquelles grouper les lignes du jeu de données',
             required: true,
+            explode: false,
             schema: {
-              title: 'Colonne de groupement',
-              type: 'string',
-              enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+              title: 'Colonne(s) de groupement',
+              type: 'array',
+              items: {
+                type: 'string',
+                enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+              }
             }
-          }, formatParam, htmlParam, {
+          }, htmlParam, {
             in: 'query',
             name: 'metric',
-            description: 'La métrique à appliquer',
+            description: 'La métrique à appliquer par niveau de groupement',
+            explode: false,
             schema: {
               title: 'Métrique',
               type: 'string',
               enum: ['avg', 'sum', 'min', 'max']
             }
-          }, metricFieldParam, {
+          }, {
+            in: 'query',
+            name: 'metric_field',
+            description: 'La colonne sur lequel effectuer la calcul de métrique par niveau de groupement',
+            schema: {
+              type: 'string',
+              enum: numberProperties.length ? numberProperties.map((/** @type {any} */ p) => p.key) : undefined
+            }
+          }, {
             in: 'query',
             name: 'missing',
             description: 'Nom du groupe des lignes pour lesquelles la colonne de groupement est vide',
+            explode: false,
             schema: {
               title: 'Groupe des valeurs manquantes',
-              type: 'string'
+              type: 'array',
+              items: {
+                type: 'string'
+              }
             }
-          }, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
+          }, {
+            in: 'query',
+            name: 'agg_size',
+            description: 'Le nombre de groupes par niveau de groupement',
+            explode: false,
+            schema: {
+              type: 'array',
+              items: {
+                default: 20,
+                type: 'integer',
+                maximum: 10000
+              }
+            }
+          }].concat(filterParams).concat(hitsParams(0, 100)),
           // TODO: document sort param and interval
           responses: {
             200: {
