@@ -12,6 +12,7 @@ import datasetsRouter, { datasetsApiKeyMiddleware } from '../../datasets/router.
 import { parse as parseWhere } from './where.peg.js'
 import { parse as parseSelect } from './select.peg.js'
 import { parse as parseOrderBy } from './order-by.peg.js'
+import { parse as parseGroupBy } from './group-by.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
@@ -22,7 +23,6 @@ import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
 import JSONStream from 'JSONStream'
-import capabilities from '../../../contract/capabilities.js'
 import type { DatasetInternal } from '#types'
 
 dayjs.extend(timezone)
@@ -200,6 +200,27 @@ const applyAliases = (result, aliases) => {
   }
 }
 
+const recurseGroupedResults = async (results: any[], previousLevel: any, buckets: any[], groupByAliases: any[], selectAggs: any) => {
+  for (const bucket of buckets) {
+    const alias = groupByAliases[0]
+    let key = bucket.key
+    if (alias.numberInterval !== undefined) {
+      key = `[${key}, ${key + alias.numberInterval}[`
+    }
+    const currentLevel = { ...previousLevel, [alias.name]: key }
+    if (groupByAliases.length > 1) {
+      await recurseGroupedResults(results, currentLevel, bucket.___group_by.buckets, groupByAliases.slice(1), selectAggs)
+    } else {
+      for (const aggKey of Object.keys(selectAggs)) {
+        currentLevel[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
+      }
+      // avoid blocking the event loop
+      if (results.length % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
+      results.push(currentLevel)
+    }
+  }
+}
+
 const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   (res as any).throttleEnd()
 
@@ -218,8 +239,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   const fields = dataset.schema.map(f => f.key)
 
-  const groupBy: string[] = query.group_by?.split(',')
-  const grouped = groupBy?.length
+  const grouped = !!query.group_by
 
   let aliases: Record<string, string[]> = {}
   let selectAggs = {}
@@ -244,44 +264,12 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   esQuery.query = parseFilters(dataset, query, 'records')
 
+  let groupByAliases = []
   if (grouped) {
+    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort })
+    groupByAliases = groupBy.aliases
+    esQuery.aggs = groupBy.aggs
     if (esQuery.from + esQuery.size > 20000) throw httpError(400, 'group_by is defined, offset+limit should be less than 20000')
-    for (const groupByKey of groupBy) {
-      const prop = dataset.schema.find(p => p.key === groupByKey)
-      if (!prop) {
-        compatReqCounter.inc({ endpoint: 'records', status: 'invalid-group-by' })
-        throw httpError(400, `Impossible de grouper par le champ ${groupByKey}, il n'existe pas dans le jeu de données ou alors il correspond à une capacité d'aggrégation non supportée par cette couche de compatibilité pour la version d'API précédente.`)
-      }
-      if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
-        throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
-      }
-    }
-
-    const subAggs = esQuery.aggs
-    if (groupBy.length > 1) {
-      esQuery.aggs = {
-        group_by: {
-          multi_terms: {
-            terms: groupBy.map(field => ({ field })),
-            order: esQuery.sort?.length ? esQuery.sort : undefined,
-            size: 20000
-          },
-          aggs: subAggs
-        }
-      }
-    } else {
-      esQuery.aggs = {
-        group_by: {
-          terms: {
-            field: groupBy[0],
-            order: esQuery.sort?.length ? esQuery.sort : undefined,
-            size: 20000
-          },
-          aggs: subAggs
-        }
-      }
-    }
-
     esQuery.size = 0
     delete esQuery.from
     delete esQuery._source
@@ -290,6 +278,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     completeSort(dataset, esQuery.sort, query)
     esQuery.track_total_hits = true
   }
+
   let esResponse: any
   try {
     esResponse = await esClient.search({
@@ -308,33 +297,14 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     // WARNING pretty ugly pagination logic for aggregations
     // this approach was attempted but didn't work:
     // https://github.com/elastic/elasticsearch/issues/33880
-    const buckets: any[] = esResponse.aggregations.group_by.buckets
-    const result = { total_count: buckets.length, results: [] as any[] }
-    const bucketsPage = buckets.slice(from, from + size)
-    if (groupBy.length > 1) {
-      for (const bucket of bucketsPage) {
-        const item: any = {}
-        for (let i = 0; i < groupBy.length; i++) {
-          item[groupBy[i]] = bucket.key[i]
-        }
-        for (const aggKey of Object.keys(selectAggs)) {
-          item[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
-        }
-        applyAliases(item, aliases)
-        result.results.push(item)
-      }
-    } else {
-      for (const bucket of bucketsPage) {
-        const item: any = {}
-        item[groupBy[0]] = bucket.key
-        for (const aggKey of Object.keys(selectAggs)) {
-          item[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
-        }
-        applyAliases(item, aliases)
-        result.results.push(item)
-      }
+    const buckets: any[] = esResponse.aggregations.___group_by.buckets
+    const results: any[] = []
+    await recurseGroupedResults(results, {}, buckets, groupByAliases, selectAggs)
+    const resultsPage = results.slice(from, from + size)
+    for (const result of resultsPage) {
+      applyAliases(result, aliases)
     }
-    res.send(result)
+    res.send({ total_count: results.length, results: resultsPage })
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
     const flatten = getFlatten(dataset, false, selectSource)

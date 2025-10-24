@@ -3,6 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
 import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
 import * as orderByParser from '../api/src/api-compat/ods/order-by.peg.js'
+import * as groupByParser from '../api/src/api-compat/ods/group-by.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
@@ -268,6 +269,75 @@ describe('compatibility layer for ods api', function () {
     )
   })
 
+  it('contains a parser for the group-by syntax', function () {
+    assert.deepEqual(
+      groupByParser.parse('test1', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      { aliases: [{ name: 'test1' }], aggs: { ___group_by: { terms: { field: 'test1', order: undefined, size: 20000 }, aggs: {} } } }
+    )
+
+    assert.throws(
+      () => groupByParser.parse('testko', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }] } }),
+      { message: 'Impossible de grouper par le champ testko, il n\'existe pas dans le jeu de données.' }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('test1,test2', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'test1' }, { name: 'test2' }],
+        aggs: {
+          ___group_by: {
+            terms: {
+              field: 'test1',
+              order: undefined,
+              size: 20000,
+            },
+            aggs: {
+              ___group_by: {
+                terms: { field: 'test2', order: undefined, size: 20000, },
+                aggs: {}
+              }
+            }
+          }
+        }
+      }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('test1 As Test1,test2', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'Test1' }, { name: 'test2' }],
+        aggs: {
+          ___group_by: {
+            terms: {
+              field: 'test1',
+              order: undefined,
+              size: 20000,
+            },
+            aggs: {
+              ___group_by: {
+                terms: { field: 'test2', order: undefined, size: 20000, },
+                aggs: {}
+              }
+            }
+          }
+        }
+      }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('range(test1, 10)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'range(test1, 10)', numberInterval: 10 }],
+        aggs: {
+          ___group_by: {
+            histogram: { field: 'test1', interval: 10, order: undefined },
+            aggs: {}
+          }
+        }
+      }
+    )
+  })
+
   it('exposes records and exports api on 2 urls', async function () {
     const ax = global.ax.dmeadusOrg
 
@@ -386,6 +456,13 @@ describe('compatibility layer for ods api', function () {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'count(id) DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
+
+    // group by number interval
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(nb, 10)', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { 'range(nb, 10)': '[10, 20[', 'count(*)': 1 },
+      { 'range(nb, 10)': '[20, 30[', 'count(*)': 1 }
+    ])
 
     // csv export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
