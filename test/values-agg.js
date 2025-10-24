@@ -61,9 +61,18 @@ describe('values aggs', function () {
     assert.ok(!res.data.next)
 
     // with inner hits as results array
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&size=10&sort=-count;employees`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&size=10&sort=-count;employees,_i`)
+    let resComma = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&size=10&sort=-count,employees,_i`)
     assert.equal(res.data.aggs[0].results.length, 3)
     assert.equal(res.data.aggs[0].results[0].employees, 0)
+    assert.equal(res.data.aggs[0].results[0]._i, 2)
+    assert.deepEqual(res.data, resComma.data)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&size=10&sort=-count;employees,-_i`)
+    resComma = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&size=10&sort=-count,employees,-_i`)
+    assert.equal(res.data.aggs[0].results.length, 3)
+    assert.equal(res.data.aggs[0].results[0].employees, 0)
+    assert.equal(res.data.aggs[0].results[0]._i, 3)
+    assert.deepEqual(res.data, resComma.data)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&size=10&sort=-count;-employees`)
     assert.equal(res.data.aggs[0].results.length, 3)
     assert.equal(res.data.aggs[0].results[0].employees, 3)
@@ -77,23 +86,27 @@ describe('values aggs', function () {
 
     // 2 level aggregation
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id;adr&metric_field=employees&metric=sum&sort=-count;-count`)
+    resComma = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id,adr&metric_field=employees&metric=sum&sort=-count,-count`)
     assert.equal(res.data.aggs[0].total, 3)
     assert.equal(res.data.aggs[0].aggs.length, 2)
     assert.equal(res.data.aggs[0].aggs[0].value, 'bureau')
     assert.equal(res.data.aggs[0].aggs[0].total, 2)
     assert.equal(res.data.aggs[0].aggs[0].metric, 0)
-    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id;adr&agg_size=100,100&size=100`), { status: 400 })
+    assert.deepEqual(res.data, resComma.data)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id;adr&agg_size=100|100&size=100`), { status: 400 })
 
     // 2 level aggregation with inner results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id;adr&metric_field=employees&metric=sum&sort=-count;-count&size=10`)
+    resComma = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id,adr&metric_field=employees&metric=sum&sort=-count,-count&size=10`)
     assert.equal(res.data.aggs[0].total, 3)
     assert.equal(res.data.aggs[0].aggs.length, 2)
     assert.equal(res.data.aggs[0].aggs[0].value, 'bureau')
     assert.equal(res.data.aggs[0].aggs[0].total, 2)
     assert.equal(res.data.aggs[0].aggs[0].metric, 0)
     assert.equal(res.data.aggs[0].aggs[0].results.length, 2)
+    assert.deepEqual(res.data, resComma.data)
 
-    // data histogram aggregation
+    // date histogram aggregation
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=somedate&interval=month&metric_field=employees&metric=sum`)
     assert.equal(res.data.aggs.length, 3)
     assert.equal(res.data.aggs[0].total, 2)

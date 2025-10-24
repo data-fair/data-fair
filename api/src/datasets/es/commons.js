@@ -201,9 +201,22 @@ function checkQuery (query, schema, esFields, currentField) {
  * @param {any} prop
  * @param {string} capability
  */
-export const requiredCapability = (prop, filterName, capability = 'index') => {
+export const hasCapability = (prop, capability = 'index') => {
   const propCapabilities = prop['x-capabilities'] ?? {}
   if (propCapabilities[capability] === false || (['wildcard', 'textAgg'].includes(capability) && propCapabilities[capability] !== true)) {
+    return false
+  }
+  return true
+}
+
+/**
+ *
+ * @param {any} prop
+ * @param {string} filterName
+ * @param {string} capability
+ */
+export const requiredCapability = (prop, filterName, capability = 'index') => {
+  if (!hasCapability(prop, capability)) {
     throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
   }
 }
@@ -444,7 +457,8 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     if (filterSuffix === '_in') {
       requiredCapability(prop, filterSuffix)
       try {
-        const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',')
+        const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
+        if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
         filter.push({ terms: { [prop.key]: values } })
       } catch (err) {
         throw httpError(400, `"${queryKey}" parameter is malformed`)
@@ -453,7 +467,8 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     if (filterSuffix === '_nin') {
       requiredCapability(prop, filterSuffix)
       try {
-        const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',')
+        const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
+        if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
         filter.push({ bool: { must_not: { terms: { [prop.key]: values } } } })
       } catch (err) {
         throw httpError(400, `"${queryKey}" parameter is malformed`)
@@ -461,27 +476,33 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     }
     if (filterSuffix === '_eq') {
       requiredCapability(prop, filterSuffix)
+      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ term: { [prop.key]: query[queryKey] } })
     }
     if (filterSuffix === '_neq') {
       requiredCapability(prop, filterSuffix)
+      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ bool: { must_not: { term: { [prop.key]: query[queryKey] } } } })
     }
     if (filterSuffix === '_gt') {
       // TODO: check if this filter required a "index" capability or "values"
       requiredCapability(prop, filterSuffix)
+      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
     }
     if (filterSuffix === '_gte') {
       requiredCapability(prop, filterSuffix)
+      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
     }
     if (filterSuffix === '_lt') {
       requiredCapability(prop, filterSuffix)
+      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
     }
     if (filterSuffix === '_lte') {
       requiredCapability(prop, filterSuffix)
+      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
     }
     if (filterSuffix === '_starts') {

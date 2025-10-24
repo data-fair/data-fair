@@ -7,6 +7,7 @@ import * as datasetUtils from '../src/datasets/utils/index.js'
 import { acceptedMetricAggs } from '../src/datasets/es/metric-agg.js'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
+import { hasCapability } from '../src/datasets/es/commons.js'
 
 const dataFiles = datasetSchema.properties.storage.properties.dataFiles
 
@@ -66,6 +67,32 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     .filter((/** @type {any} */ p) => p.type === 'number')
   const imageProperty = schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
 
+  const filterItems = []
+  for (const p of schema) {
+    if (hasCapability(p, 'index') || hasCapability(p, 'wildcard') || hasCapability(p, 'text') || hasCapability(p, 'textStandard')) {
+      filterItems.push({ header: true, title: p.title ?? p['x-originalName'] ?? p.key })
+    }
+    if (hasCapability(p, 'index')) {
+      filterItems.push(p.key + '_eq')
+      filterItems.push(p.key + '_neq')
+      filterItems.push(p.key + '_in')
+      filterItems.push(p.key + '_nin')
+      filterItems.push(p.key + '_lt')
+      filterItems.push(p.key + '_lte')
+      filterItems.push(p.key + '_gt')
+      filterItems.push(p.key + '_gte')
+      filterItems.push(p.key + '_starts')
+      filterItems.push(p.key + '_exists')
+      filterItems.push(p.key + '_nexists')
+    }
+    if (hasCapability(p, 'wildcard')) {
+      filterItems.push(p.key + '_contains')
+    }
+    if (hasCapability(p, 'textStandard') || hasCapability(p, 'text')) {
+      filterItems.push(p.key + '_search')
+    }
+  }
+
   /** @type {any} */
   const filterParams = [{
     in: 'query',
@@ -116,12 +143,59 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     style: 'form',
     explode: false
   }, {
+    // free-form query parameters support for open api v3
+    // cf https://stackoverflow.com/questions/49582559/how-to-document-dynamic-query-parameter-names-in-openapi-swagger
+    in: 'query',
+    name: 'filters',
+    schema: {
+      type: 'object',
+      title: 'Filtres sur colonnes',
+      patternPropertiesLayout: {
+        items: filterItems,
+        messages: {
+          addItem: 'Ajouter un filtre'
+        },
+        help: `Filtres structurés sur colonne.
+        
+Le nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre.
+
+Les types de filtres disponibles peuvent varier par colonne.
+
+  - \`_eq\` : égal à une valeur
+  - \`_neq\` : différent d'une valeur
+  - \`_in\` : appartient à une liste de valeurs (séparées par des virgules)
+  - \`_nin\` : n'appartient pas à une liste de valeurs (séparées par des virgules)
+  - \`_gt\` : strictement supérieur à une valeur
+  - \`_gte\` : supérieur ou égal à une valeur
+  - \`_lt\` : strictement inférieur à une valeur
+  - \`_lte\` : inférieur ou égal à une valeur
+  - \`_starts\` : commence par une série de caractères
+  - \`_contains\` : contient une série de caractères
+  - \`_search\` : effectue une recherche textuelle simple
+  - \`_exists\` : la colonne contient une valeur
+  - \`_nexists\` : la colonne ne contient pas une valeur
+  `
+      },
+      patternProperties: {
+        '.*': {
+          type: 'string',
+          default: '',
+          layout: {
+            placeholder: 'saisissez la valeur du filtre'
+          }
+        }
+      }
+    }
+  },
+  {
     in: 'query',
     name: 'qs',
     description: `
 Colonne de filtre et recherche textuelle avancée. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par colonne, créer des combinaisons logiques à volonté, etc.
 
-Exemple: ma_colonne:"du texte" AND ma_colonne2:valeur
+**Attention**, ce paramètre est d'utilisation technique et n'est vraiment nécessaire que pour effectuer des combinaisons logiques particulières. Dans la majorité des cas il est recommandé d'utiliser "Filtres sur colonnes" ci-dessus.
+
+Exemple : \`ma_colonne:"du texte" AND ma_colonne2:valeur\`
 
 Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html) correspondante.
   `,
@@ -130,6 +204,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       type: 'string'
     }
   }]
+
   if (dataset.bbox && dataset.bbox.length === 4) {
     filterParams.push({
       in: 'query',
@@ -283,16 +358,6 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
       default: 20,
       type: 'integer',
       maximum: 10000
-    }
-  }
-
-  const metricFieldParam = {
-    in: 'query',
-    name: 'metric_field',
-    description: 'La colonne sur lequel effectuer la calcul de métrique',
-    schema: {
-      type: 'string',
-      enum: numberProperties.length ? numberProperties.map((/** @type {any} */ p) => p.key) : undefined
     }
   }
 
@@ -498,8 +563,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: 'Pagination en profondeur. Automatiquement renseigné par la propriété next du résultat de la requête précédente',
             schema: {
               title: 'Pagination en profondeur',
-              type: 'integer',
-              default: 1
+              type: 'integer'
             }
           }, {
             in: 'query',
@@ -553,38 +617,68 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       '/values_agg': {
         get: {
           summary: 'Agréger les valeurs',
-          description: 'Récupérer des informations agrégées en fonction des valeurs d\'une colonne.',
+          description: 'Récupérer des informations agrégées en fonction des valeurs de colonnes.',
           operationId: 'getValuesAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'La colonne en fonction des valeurs desquelles grouper les lignes du jeu de données',
+            description: 'La ou les colonnes en fonction des valeurs desquelles grouper les lignes du jeu de données',
             required: true,
+            explode: false,
             schema: {
-              title: 'Colonne de groupement',
-              type: 'string',
-              enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+              title: 'Colonne(s) de groupement',
+              type: 'array',
+              items: {
+                type: 'string',
+                enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+              }
             }
-          }, formatParam, htmlParam, {
+          }, htmlParam, {
             in: 'query',
             name: 'metric',
-            description: 'La métrique à appliquer',
+            description: 'La métrique à appliquer par niveau de groupement',
+            explode: false,
             schema: {
               title: 'Métrique',
               type: 'string',
               enum: ['avg', 'sum', 'min', 'max']
             }
-          }, metricFieldParam, {
+          }, {
+            in: 'query',
+            name: 'metric_field',
+            description: 'La colonne sur lequel effectuer la calcul de métrique par niveau de groupement',
+            schema: {
+              type: 'string',
+              enum: numberProperties.length ? numberProperties.map((/** @type {any} */ p) => p.key) : undefined
+            }
+          }, {
             in: 'query',
             name: 'missing',
             description: 'Nom du groupe des lignes pour lesquelles la colonne de groupement est vide',
+            explode: false,
             schema: {
               title: 'Groupe des valeurs manquantes',
-              type: 'string'
+              type: 'array',
+              items: {
+                type: 'string'
+              }
             }
-          }, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
+          }, {
+            in: 'query',
+            name: 'agg_size',
+            description: 'Le nombre de groupes par niveau de groupement',
+            explode: false,
+            schema: {
+              type: 'array',
+              items: {
+                default: 20,
+                type: 'integer',
+                maximum: 10000
+              }
+            }
+          }].concat(filterParams).concat(hitsParams(0, 100)),
           // TODO: document sort param and interval
           responses: {
             200: {
