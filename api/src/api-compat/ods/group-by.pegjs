@@ -18,6 +18,20 @@ const assertGroupable = (groupByKey, dataset) => {
 // https://help.opendatasoft.com/apis/ods-explore-v2/#section/Opendatasoft-Query-Language-(ODSQL)/Group-by-clause
 // https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-grouping-functions
 
+// WARNING pretty ugly pagination and sorting logic for aggregations
+// this approach was attempted but didn't work:
+// https://github.com/elastic/elasticsearch/issues/33880
+
+// re-creating the group_by functionality of ods is weird
+// it combines un-paginated full exports which I think require search_after and therefore a composite
+// but it also allows for any sort which is not compatible with a composite agg
+// I think they use composite, fetch 20000 items and sort in memory
+// meaning the sort parameter is not correctly applied above 20000 groups
+// this seems consistent with these examples that fetch the same data either grouped
+// or not with more then 20000 groups, and the grouped results have inconsistent sorting
+// https://data.enedis.fr/api/explore/v2.1/catalog/datasets/donnees-de-temperature-et-de-pseudo-rayonnement/records?limit=20&group_by=horodate&select=avg(temperature_realisee_lissee_degc)%20as%20av,count(*)&order_by=av%20desc
+// https://data.enedis.fr/api/explore/v2.1/catalog/datasets/donnees-de-temperature-et-de-pseudo-rayonnement/records?limit=20&select=horodate,temperature_realisee_lissee_degc&order_by=temperature_realisee_lissee_degc%20desc
+
 start
   = GroupBy
 
@@ -25,17 +39,24 @@ GroupBy
   = before:GroupByExpression
     after:(_ "," _ GroupByExpression)* {
       const groupByExpressions = [before, ...after.map(a => a[3])]
-      const aliases = []
-      const aggs = {}
-      let previousAggLevel = aggs
-      for (const groupByExpression of groupByExpressions) {
-        aliases.push(groupByExpression.alias)
-        previousAggLevel.___group_by = groupByExpression.agg
-        previousAggLevel.___group_by.aggs = { ...options.aggs }
-        previousAggLevel = previousAggLevel.___group_by.aggs
+      const aliases = options.aliases ?? {}
+      
+      for (const e of groupByExpressions) {
+        const aggName = Object.keys(e.source)[0]
+        aliases[aggName] = aliases[aggName] ?? []
+        aliases[aggName].push(e.alias)
       }
-      return { aliases, aggs }
-   }
+      return {
+        aliases: groupByExpressions.map(e => e.alias),
+        agg: {
+          composite: {
+            size: 20000,
+            sources: groupByExpressions.map(e => e.source)
+          },
+          aggs: options.aggs
+        }
+      }      
+    }
 
 As = "as"i
 
@@ -52,13 +73,12 @@ GroupByField
     assertGroupable(field, options.dataset)
     return {
       alias: { name: text() },
-      agg: {
-        terms: {
-          field,
-          order: options.sort?.length ? options.sort : undefined,
-          size: 20000
-        },
-        aggs: options.aggs
+      source: {
+        [text()]: {
+          terms: {
+            field
+          }
+        }
       }
     }
   }
@@ -68,13 +88,13 @@ GroupByNumberInterval
       assertGroupable(key, options.dataset)
       return {
         alias: { name: text(), numberInterval: interval.value },
-        agg: {
-          histogram: {
-            field: key,
-            interval: interval.value,
-            order: options.sort?.length ? options.sort : undefined,
-          },
-          aggs: options.aggs
+        source: {
+          [text()]: {
+            histogram: {
+              field: key,
+              interval: interval.value
+            }
+          }
         }
       }
     }

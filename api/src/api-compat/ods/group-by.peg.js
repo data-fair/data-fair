@@ -316,30 +316,36 @@ function peg$parse(input, options) {
 
   var peg$f0 = function(before, after) {
       const groupByExpressions = [before, ...after.map(a => a[3])]
-      const aliases = []
-      const aggs = {}
-      let previousAggLevel = aggs
-      for (const groupByExpression of groupByExpressions) {
-        aliases.push(groupByExpression.alias)
-        previousAggLevel.___group_by = groupByExpression.agg
-        previousAggLevel.___group_by.aggs = { ...options.aggs }
-        previousAggLevel = previousAggLevel.___group_by.aggs
+      const aliases = options.aliases ?? {}
+      
+      for (const e of groupByExpressions) {
+        const aggName = Object.keys(e.source)[0]
+        aliases[aggName] = aliases[aggName] ?? []
+        aliases[aggName].push(e.alias)
       }
-      return { aliases, aggs }
-   };
+      return {
+        aliases: groupByExpressions.map(e => e.alias),
+        agg: {
+          composite: {
+            size: 20000,
+            sources: groupByExpressions.map(e => e.source)
+          },
+          aggs: options.aggs
+        }
+      }      
+    };
   var peg$f1 = function(groupByItem, alias) { return { ...groupByItem, alias: { ...groupByItem.alias, name: alias } } };
   var peg$f2 = function(groupByItem) { return groupByItem };
   var peg$f3 = function(field) {
     assertGroupable(field, options.dataset)
     return {
       alias: { name: text() },
-      agg: {
-        terms: {
-          field,
-          order: options.sort?.length ? options.sort : undefined,
-          size: 20000
-        },
-        aggs: options.aggs
+      source: {
+        [text()]: {
+          terms: {
+            field
+          }
+        }
       }
     }
   };
@@ -347,13 +353,13 @@ function peg$parse(input, options) {
       assertGroupable(key, options.dataset)
       return {
         alias: { name: text(), numberInterval: interval.value },
-        agg: {
-          histogram: {
-            field: key,
-            interval: interval.value,
-            order: options.sort?.length ? options.sort : undefined,
-          },
-          aggs: options.aggs
+        source: {
+          [text()]: {
+            histogram: {
+              field: key,
+              interval: interval.value
+            }
+          }
         }
       }
     };

@@ -193,32 +193,41 @@ const prepareResult = (dataset, result, aggResults, timezone = 'UTC') => {
 
 const applyAliases = (result, aliases) => {
   for (const key of Object.keys(aliases)) {
+    let shouldDelete = true
     for (const alias of aliases[key]) {
-      result[alias] = result[key]
+      if (alias.name === key) shouldDelete = false
+      let value = result[key]
+      if (alias.numberInterval !== undefined) {
+        value = `[${value}, ${value + alias.numberInterval}[`
+      }
+      result[alias.name] = value
     }
-    delete result[key]
+    if (shouldDelete) delete result[key]
   }
 }
 
-const recurseGroupedResults = async (results: any[], previousLevel: any, buckets: any[], groupByAliases: any[], selectAggs: any) => {
-  for (const bucket of buckets) {
-    const alias = groupByAliases[0]
-    let key = bucket.key
-    if (alias.numberInterval !== undefined) {
-      key = `[${key}, ${key + alias.numberInterval}[`
+const sortBuckets = (buckets: any[], sort: any[]) => {
+  if (!sort.length) return buckets
+  const sortTuples = sort.map(s => Object.entries(s)[0])
+  const comparator = (r1, r2) => {
+    for (const [key, direction] of sortTuples) {
+      const v1 = r1[key]?.value ?? r1[key] ?? r1.key[key]
+      const v2 = r2[key]?.value ?? r2[key] ?? r2.key[key]
+      if (v1 === v2) continue
+      if (v1 > v2) return direction === 'asc' ? 1 : -1
+      else return direction === 'asc' ? -1 : 1
     }
-    const currentLevel = { ...previousLevel, [alias.name]: key }
-    if (groupByAliases.length > 1) {
-      await recurseGroupedResults(results, currentLevel, bucket.___group_by.buckets, groupByAliases.slice(1), selectAggs)
-    } else {
-      for (const aggKey of Object.keys(selectAggs)) {
-        currentLevel[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
-      }
-      // avoid blocking the event loop
-      if (results.length % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
-      results.push(currentLevel)
-    }
+    return 0
   }
+  return buckets.sort(comparator)
+}
+
+const prepareBucketResult = (dataset, bucket, selectAggs) => {
+  const result = { ...bucket.key }
+  for (const aggKey of Object.keys(selectAggs)) {
+    result[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
+  }
+  return result
 }
 
 const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
@@ -244,6 +253,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   let aliases: Record<string, string[]> = {}
   let selectAggs = {}
   let selectSource = []
+  let sort = []
   if (query.select) {
     const select = parseSelect(query.select, { dataset, grouped })
     selectSource = esQuery._source = select.sources
@@ -257,18 +267,16 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (query.order_by) {
     const orderBy = parseOrderBy(query.order_by, { dataset, aliases })
     esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
-    esQuery.sort = orderBy.sort
+    esQuery.sort = sort = orderBy.sort
   } else {
     esQuery.sort = []
   }
 
   esQuery.query = parseFilters(dataset, query, 'records')
 
-  let groupByAliases = []
   if (grouped) {
-    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort })
-    groupByAliases = groupBy.aliases
-    esQuery.aggs = groupBy.aggs
+    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases })
+    esQuery.aggs = { ___group_by: groupBy.agg }
     if (esQuery.from + esQuery.size > 20000) throw httpError(400, 'group_by is defined, offset+limit should be less than 20000')
     esQuery.size = 0
     delete esQuery.from
@@ -294,17 +302,16 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
 
   if (grouped) {
-    // WARNING pretty ugly pagination logic for aggregations
-    // this approach was attempted but didn't work:
-    // https://github.com/elastic/elasticsearch/issues/33880
     const buckets: any[] = esResponse.aggregations.___group_by.buckets
+    sortBuckets(buckets, sort)
+    const bucketsPage = buckets.slice(from, from + size)
     const results: any[] = []
-    await recurseGroupedResults(results, {}, buckets, groupByAliases, selectAggs)
-    const resultsPage = results.slice(from, from + size)
-    for (const result of resultsPage) {
+    for (const bucket of bucketsPage) {
+      const result = prepareBucketResult(dataset, bucket, selectAggs)
       applyAliases(result, aliases)
+      results.push(result)
     }
-    res.send({ total_count: results.length, results: resultsPage })
+    res.send({ total_count: buckets.length, results })
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
     const flatten = getFlatten(dataset, false, selectSource)

@@ -336,7 +336,7 @@ function peg$parse(input, options) {
   };
   var peg$f4 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    const aliasOf = Object.keys(options.aliases ?? {}).find(a => options.aliases[a].includes(key))
+    const aliasOf = Object.keys(options.aliases ?? {}).find(a => options.aliases[a].some( a => a.name === key))
     if (!prop && !aliasOf) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     return { key: aliasOf ?? key }
   };

@@ -336,7 +336,7 @@ function peg$parse(input, options) {
           }
           if (part.alias) {
             aliases[part.source] = aliases[part.source] ?? []
-            aliases[part.source].push(part.alias)
+            aliases[part.source].push({name: part.alias})
           }
           if (part.transform) {
             transforms[part.alias ?? part.source] = part.transform
@@ -347,7 +347,7 @@ function peg$parse(input, options) {
           if (part.alias) {
             const aggName = Object.keys(part.aggregation)[0]
             aliases[aggName] = aliases[aggName] ?? []
-            aliases[aggName].push(part.alias)
+            aliases[aggName].push({name: part.alias})
           }
         }
       }
