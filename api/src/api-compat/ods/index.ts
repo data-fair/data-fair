@@ -240,15 +240,24 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!config.compatODS) throw httpError(404, 'unknown API')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
+  const grouped = !!query.group_by
+
   const esQuery: any = {}
   esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 10
   if (esQuery.size < 0) esQuery.size = 100 // -1 is interpreted as 100
+
   const size = esQuery.size
   const from = esQuery.from = query.offset ? Number(query.offset) : 0
 
-  const fields = dataset.schema.map(f => f.key)
+  if (grouped) {
+    if (size > 20000) throw httpError(400, 'limit should be less than 20000')
+    if (size + from > 20000) throw httpError(400, 'offset+limit should be less than 20000')
+  } else {
+    if (size > 100) throw httpError(400, 'limit should be less than 100')
+    if (size + from > 10000) throw httpError(400, 'offset+limit should be less than 10000')
+  }
 
-  const grouped = !!query.group_by
+  const fields = dataset.schema.map(f => f.key)
 
   let aliases: Record<string, string[]> = {}
   let selectAggs = {}
@@ -277,7 +286,6 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (grouped) {
     const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases })
     esQuery.aggs = { ___group_by: groupBy.agg }
-    if (esQuery.from + esQuery.size > 20000) throw httpError(400, 'group_by is defined, offset+limit should be less than 20000')
     esQuery.size = 0
     delete esQuery.from
     delete esQuery._source

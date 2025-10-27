@@ -32,6 +32,10 @@ const assertGroupable = (groupByKey, dataset) => {
 // https://data.enedis.fr/api/explore/v2.1/catalog/datasets/donnees-de-temperature-et-de-pseudo-rayonnement/records?limit=20&group_by=horodate&select=avg(temperature_realisee_lissee_degc)%20as%20av,count(*)&order_by=av%20desc
 // https://data.enedis.fr/api/explore/v2.1/catalog/datasets/donnees-de-temperature-et-de-pseudo-rayonnement/records?limit=20&select=horodate,temperature_realisee_lissee_degc&order_by=temperature_realisee_lissee_degc%20desc
 
+// requête en erreur
+// https://data.enedis.fr/api/explore/v2.1/catalog/datasets/donnees-de-temperature-et-de-pseudo-rayonnement/exports/csv?group_by=horodate&select=avg(temperature_realisee_lissee_degc)%20as%20av,count(*)&order_by=av%20desc
+// "ODSQL query is malformed: aggregation function in order by is not supported with a limit > 20000. Please remove the order by or set a limit parameter lower than 20001. Clause(s) containing the error(s): order_by."
+
 start
   = GroupBy
 
