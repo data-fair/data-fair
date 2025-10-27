@@ -17,7 +17,6 @@ import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
 import { stringify as csvStrStream, type Options as CsvOptions } from 'csv-stringify'
-import { csvStringifyOptions } from '../../datasets/utils/outputs.js'
 import contentDisposition from 'content-disposition'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
@@ -230,16 +229,7 @@ const prepareBucketResult = (dataset, bucket, selectAggs) => {
   return result
 }
 
-const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
-  (res as any).throttleEnd()
-
-  const esClient = req.app.get('es') as any
-  const dataset = (req as any).dataset
-  const query = req.query
-
-  if (!config.compatODS) throw httpError(404, 'unknown API')
-  if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
-
+const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
   const grouped = !!query.group_by
 
   const esQuery: any = {}
@@ -249,28 +239,23 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   const size = esQuery.size
   const from = esQuery.from = query.offset ? Number(query.offset) : 0
 
-  if (grouped) {
-    if (size > 20000) throw httpError(400, 'limit should be less than 20000')
-    if (size + from > 20000) throw httpError(400, 'offset+limit should be less than 20000')
-  } else {
-    if (size > 100) throw httpError(400, 'limit should be less than 100')
-    if (size + from > 10000) throw httpError(400, 'offset+limit should be less than 10000')
-  }
-
   const fields = dataset.schema.map(f => f.key)
 
   let aliases: Record<string, string[]> = {}
   let selectAggs = {}
   let selectSource = []
+  let selectFinalKeys = []
   let sort = []
   if (query.select) {
     const select = parseSelect(query.select, { dataset, grouped })
     selectSource = esQuery._source = select.sources
+    selectFinalKeys = select.finalKeys
     if (esQuery._source.length === 0) esQuery._source = ['_id']
     aliases = select.aliases
     esQuery.aggs = selectAggs = select.aggregations
   } else {
     selectSource = esQuery._source = fields.filter(key => !key.startsWith('_'))
+    selectFinalKeys = selectSource
   }
 
   if (query.order_by) {
@@ -293,6 +278,29 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   } else {
     completeSort(dataset, esQuery.sort, query)
     esQuery.track_total_hits = true
+  }
+
+  return { grouped, size, from, esQuery, selectAggs, selectSource, selectFinalKeys, aliases, sort }
+}
+
+const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
+  (res as any).throttleEnd()
+
+  const esClient = req.app.get('es') as any
+  const dataset = (req as any).dataset
+  const query = req.query
+
+  if (!config.compatODS) throw httpError(404, 'unknown API')
+  if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
+
+  const { grouped, size, from, esQuery, selectAggs, selectSource, aliases, sort } = prepareEsQuery(dataset, query)
+
+  if (grouped) {
+    if (size > 20000) throw httpError(400, 'limit should be less than 20000')
+    if (size + from > 20000) throw httpError(400, 'offset+limit should be less than 20000')
+  } else {
+    if (size > 100) throw httpError(400, 'limit should be less than 100')
+    if (size + from > 10000) throw httpError(400, 'offset+limit should be less than 10000')
   }
 
   let esResponse: any
@@ -336,11 +344,13 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
 }
 
-async function * iterHits (es, dataset, esQuery, aliases, selectSource, totalSize = 50000, timezone = 'utc') {
+const maxChunkSize = 1000
+
+async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, totalSize, grouped, timezone = 'utc') {
   const flatten = getFlatten(dataset, false, selectSource)
 
-  let chunkSize = 1000
-  if (totalSize !== -1 && totalSize < chunkSize) chunkSize = totalSize
+  let chunkSize = maxChunkSize
+  if (totalSize !== -1 && totalSize < maxChunkSize) chunkSize = totalSize
   let remaining = totalSize
   while (true) {
     let size = chunkSize
@@ -351,21 +361,33 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, totalSiz
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
     }))
-    const hits = esResponse.hits.hits
+
     const lines = []
-    for (const hit of hits) {
-      const line = flatten(hit._source)
-      prepareResult(dataset, line, esResponse.aggregations, timezone)
-      applyAliases(line, aliases)
-      lines.push(line)
+    if (grouped) {
+      const buckets: any[] = esResponse.aggregations.___group_by.buckets
+      for (const bucket of buckets) {
+        const result = prepareBucketResult(dataset, bucket, selectAggs)
+        applyAliases(result, aliases)
+        lines.push(result)
+      }
+
+      esQuery.aggs.___group_by.composite.after = esResponse.aggregations.___group_by.after_key
+    } else {
+      const hits = esResponse.hits.hits
+      for (const hit of hits) {
+        const line = flatten(hit._source)
+        prepareResult(dataset, line, esResponse.aggregations, timezone)
+        applyAliases(line, aliases)
+        lines.push(line)
+      }
+      esQuery.search_after = hits[hits.length - 1]?.sort
     }
     yield lines
-    if (hits.length < chunkSize) break
+    if (lines.length < chunkSize) break
     if (totalSize !== -1) {
-      remaining -= hits.length
+      remaining -= lines.length
       if (remaining <= 0) break
     }
-    esQuery.search_after = hits[hits.length - 1].sort
   }
 }
 
@@ -379,20 +401,9 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!dataset.schema) throw httpError(404, 'dataset without data')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const esQuery: any = {}
+  const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, aliases } = prepareEsQuery(dataset, query)
 
-  const fields = dataset.schema.map(f => f.key)
-  let aliases: Record<string, string[]> = {}
-  let selectSource: string[] = []
-  if (query.select) {
-    const select = parseSelect(query.select, { dataset })
-    selectSource = esQuery._source = select.sources
-    if (esQuery._source.length === 0) esQuery._source = ['_id']
-    aliases = select.aliases
-    esQuery.aggs = select.aggregations
-  } else {
-    selectSource = esQuery._source = fields.filter(key => !key.startsWith('_'))
-  }
+  if (from) throw httpError(400, 'offset parameter is not supported for exports')
 
   if (req.params.format === 'geojson') {
     const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
@@ -401,30 +412,38 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     }
     if (!esQuery._source.includes('_geopoint')) esQuery._source.push('_geopoint')
   }
-  if (query.order_by) {
-    const orderBy = parseOrderBy(query.order_by, { dataset, aliases })
-    esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
-    completeSort(dataset, orderBy.sort, query)
-    esQuery.sort = orderBy.sort
-  } else {
-    esQuery.sort = []
-  }
-  esQuery.query = parseFilters(dataset, query, 'exports')
+
   const useLabels = query.use_labels === 'true'
   let transformStreams: Stream[] = []
 
   // full potential list:
   // "csv" "fgb" "geojson" "gpx" "json" "jsonl" "jsonld" "kml" "n3" "ov2" "parquet" "rdfxml" "shp" "turtle" "xlsx"
 
+  const columns = selectFinalKeys.map(key => {
+    const field = dataset.schema?.find(p => p.key === key)
+    if (field) return { key: field.key, header: (useLabels ? field.title : field['x-originalName']) || field['x-originalName'] || field.key }
+    else return { key, header: key }
+  })
+
   if (req.params.format === 'csv') {
     // https://help.opendatasoft.com/apis/ods-explore-v2/#tag/Dataset/operation/exportRecordsCSV
     // res.setHeader('content-type', 'text/csv')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
-    const options: CsvOptions = csvStringifyOptions(dataset, query, useLabels)
+    const options: CsvOptions = {
+      columns,
+      header: true,
+      quoted_string: req.query.quote_all === 'true',
+      delimiter: req.query.delimiter ?? ';',
+      cast: {
+        boolean: (value) => {
+          if (value) return '1'
+          if (value === false) return '0'
+          return ''
+        }
+      }
+    }
     if (version === '2.0') options.bom = req.query.with_bom === 'true'
     else options.bom = req.query.with_bom !== 'false'
-    options.delimiter = req.query.delimiter ?? ';'
-    options.quoted_string = req.query.quote_all === 'true'
     transformStreams = [csvStrStream(options)]
   } else if (req.params.format === 'xlsx') {
     // res.setHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -437,12 +456,8 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     })
     const worksheet = workbookWriter.addWorksheet('Feuille 1')
     // Define columns (optional)
-    const properties = selectSource.map(key => dataset.schema.find(prop => prop.key === key))
-    worksheet.columns = properties.map(p => ({
-      key: p.key,
-      header: (useLabels ? p.title : p['x-originalName']) || p['x-originalName'] || p.key
-    }))
-    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, query.limit ? Number(query.limit) : -1, query.timezone)
+    worksheet.columns = columns
+    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, query.limit ? Number(query.limit) : -1, grouped, query.timezone)
     for await (const items of iter) {
       for (const item of items) {
         worksheet.addRow(item)
@@ -479,9 +494,10 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     // const parquetSchema = parquet.ParquetSchema.fromJsonSchema(schema)
     // transformStreams = [new parquet.ParquetTransformer(parquetSchema)]
     const { ParquetWriterStream } = await import('../../../../parquet-writer/parquet-writer-stream.mts')
-    const basicSchema = selectSource.map((key: string) => {
+    const basicSchema = selectFinalKeys.map((key: string) => {
       const prop = dataset.schema!.find(p => p.key === key)!
-      return { key: prop.key, type: prop.type as string, format: prop.format ?? undefined, required: prop['x-required'] }
+      if (prop) return { key: prop.key, type: prop.type as string, format: prop.format ?? undefined, required: prop['x-required'] }
+      return { key, type: 'string' }
     })
     transformStreams = [new ParquetWriterStream(basicSchema)]
   } else if (req.params.format === 'json') {
@@ -523,7 +539,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, query.limit ? Number(query.limit) : -1, query.timezone)),
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, query.limit ? Number(query.limit) : -1, grouped, query.timezone)),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {

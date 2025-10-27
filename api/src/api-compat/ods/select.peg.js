@@ -329,8 +329,10 @@ function peg$parse(input, options) {
       const aliases = {}
       const aggregations = {}
       const transforms = {}
+      const finalKeys = []
       for (const part of parts) {
         if (part.source) {
+          finalKeys.push(part.alias ?? part.source)
           if (!sources.includes(part.source)) {
             sources.push(part.source)
           }
@@ -343,15 +345,16 @@ function peg$parse(input, options) {
           }
         }
         if (part.aggregation) {
+          const aggName = Object.keys(part.aggregation)[0]
+          finalKeys.push(part.alias ?? aggName)
           Object.assign(aggregations, part.aggregation)
           if (part.alias) {
-            const aggName = Object.keys(part.aggregation)[0]
             aliases[aggName] = aliases[aggName] ?? []
             aliases[aggName].push({name: part.alias})
           }
         }
       }
-      return { sources, aliases, aggregations }
+      return { sources, aliases, aggregations, finalKeys }
    };
   var peg$f1 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)

@@ -338,11 +338,14 @@ function peg$parse(input, options) {
   var peg$f2 = function(groupByItem) { return groupByItem };
   var peg$f3 = function(field) {
     assertGroupable(field, options.dataset)
+    const sortItem = options.sort.find(s => !!s[field])
+    const order = sortItem ? sortItem[field] : 'asc'
     return {
       alias: { name: text() },
       source: {
         [text()]: {
           terms: {
+            order,
             field
           }
         }

@@ -75,11 +75,14 @@ GroupByItem
 GroupByField
   = field:FieldName {
     assertGroupable(field, options.dataset)
+    const sortItem = options.sort.find(s => !!s[field])
+    const order = sortItem ? sortItem[field] : 'asc'
     return {
       alias: { name: text() },
       source: {
         [text()]: {
           terms: {
+            order,
             field
           }
         }
