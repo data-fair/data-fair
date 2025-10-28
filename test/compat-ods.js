@@ -3,6 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
 import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
 import * as orderByParser from '../api/src/api-compat/ods/order-by.peg.js'
+import * as groupByParser from '../api/src/api-compat/ods/group-by.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
@@ -209,7 +210,7 @@ describe('compatibility layer for ods api', function () {
   it('contains a parser for the select syntax', function () {
     assert.deepEqual(
       selectParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1'], aliases: {}, aggregations: {} }
+      { sources: ['test1'], aliases: {}, aggregations: {}, finalKeys: ['test1'] }
     )
 
     assert.throws(
@@ -219,22 +220,22 @@ describe('compatibility layer for ods api', function () {
 
     assert.deepEqual(
       selectParser.parse('test1, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1', 'test2'], aliases: {}, aggregations: {} }
+      { sources: ['test1', 'test2'], aliases: {}, aggregations: {}, finalKeys: ['test1', 'test2'] }
     )
 
     assert.deepEqual(
       selectParser.parse('test1 as Test, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1', 'test2'], aliases: { test1: ['Test'] }, aggregations: {} }
+      { sources: ['test1', 'test2'], aliases: { test1: [{ name: 'Test' }] }, aggregations: {}, finalKeys: ['Test', 'test2'] }
     )
 
     assert.deepEqual(
       selectParser.parse('avg(test1), test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
-      { sources: ['test2'], aliases: {}, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } } }
+      { sources: ['test2'], aliases: {}, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } }, finalKeys: ['avg(test1)', 'test2'] }
     )
 
     assert.deepEqual(
       selectParser.parse('avg(test1) as avg_test, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
-      { sources: ['test2'], aliases: { 'avg(test1)': ['avg_test'] }, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } } }
+      { sources: ['test2'], aliases: { 'avg(test1)': [{ name: 'avg_test' }] }, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } }, finalKeys: ['avg_test', 'test2'] }
     )
   })
 
@@ -255,7 +256,7 @@ describe('compatibility layer for ods api', function () {
     )
 
     assert.deepEqual(
-      orderByParser.parse('test1, avg_test2 DESC', { aliases: { 'avg(test2)': ['avg_test2'] }, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      orderByParser.parse('test1, avg_test2 DESC', { aliases: { 'avg(test2)': [{ name: 'avg_test2' }] }, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       { sort: [{ test1: 'asc' }, { 'avg(test2)': 'desc' }], aggregations: {} }
     )
 
@@ -264,6 +265,136 @@ describe('compatibility layer for ods api', function () {
       {
         sort: [{ ___order_by_avg_test1: 'desc' }, { test2: 'asc' }],
         aggregations: { ___order_by_avg_test1: { avg: { field: 'test1' } } }
+      }
+    )
+  })
+
+  it('contains a parser for the group-by syntax', function () {
+    assert.deepEqual(
+      groupByParser.parse('test1', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'test1' }],
+        composite: true,
+        agg: {
+          composite: {
+            size: 20000,
+            sources: [{
+              test1: {
+                terms: { field: 'test1', order: 'asc' }
+              }
+            }]
+          },
+          aggs: {}
+        }
+      }
+    )
+
+    assert.throws(
+      () => groupByParser.parse('testko', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }] } }),
+      { message: 'Impossible de grouper par le champ testko, il n\'existe pas dans le jeu de données.' }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('test1,test2', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'test1' }, { name: 'test2' }],
+        composite: true,
+        agg: {
+          composite: {
+            size: 20000,
+            sources: [{
+              test1: { terms: { field: 'test1', order: 'asc' } }
+            }, {
+              test2: { terms: { field: 'test2', order: 'asc' } }
+            }]
+          },
+          aggs: {}
+        }
+      }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('test1 As Test1,test2', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'Test1' }, { name: 'test2' }],
+        composite: true,
+        agg: {
+          composite: {
+            size: 20000,
+            sources: [{
+              test1: { terms: { field: 'test1', order: 'asc' } }
+            }, {
+              test2: { terms: { field: 'test2', order: 'asc' } }
+            }]
+          },
+          aggs: {}
+        }
+      }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('range(test1, 10)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'range(test1, 10)', numberInterval: 10 }],
+        composite: true,
+        agg: {
+          composite: {
+            size: 20000,
+            sources: [{
+              'range(test1, 10)': {
+                histogram: { field: 'test1', interval: 10 }
+              }
+            }]
+          },
+          aggs: {}
+        }
+      }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('range(test1, 1 days)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'range(test1, 1 days)', dateInterval: { value: 1, unit: 'd' } }],
+        composite: true,
+        agg: {
+          composite: {
+            size: 20000,
+            sources: [{
+              'range(test1, 1 days)': {
+                date_histogram: { field: 'test1', calendar_interval: '1d', time_zone: undefined }
+              }
+            }]
+          },
+          aggs: {}
+        }
+      }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('range(test1, *, 10, *)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'range(test1, *, 10, *)', numberRanges: true }],
+        composite: false,
+        agg: {
+          range: { field: 'test1', ranges: [{ to: 10 }, { from: 10 }] },
+          aggs: {}
+        }
+      }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('range(test1, *, date\'2020-11-13\', date\'2021-01-01\')', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] }, timezone: 'UTC' }),
+      {
+        aliases: [{ name: 'range(test1, *, date\'2020-11-13\', date\'2021-01-01\')', dateRanges: true }],
+        composite: false,
+        agg: {
+          date_range: {
+            field: 'test1',
+            time_zone: 'UTC',
+            ranges: [{ to: '2020-11-13' }, { from: '2020-11-13', to: '2021-01-01' }]
+          },
+          aggs: {}
+        }
       }
     )
   })
@@ -387,11 +518,58 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'count(id) DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
 
+    // group by number interval
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(nb, 10)', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { 'range(nb, 10)': '[10, 20[', 'count(*)': 1 },
+      { 'range(nb, 10)': '[20, 30[', 'count(*)': 1 }
+    ])
+
+    // group by number ranges
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(nb, *, 20, *)', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { 'range(nb, *, 20, *)': '[*, 20.0[', 'count(*)': 1 },
+      { 'range(nb, *, 20, *)': '[20.0, *[', 'count(*)': 1 }
+    ])
+
+    // group by date interval
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(some_date, 1 day) as day', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { day: '[2017-10-10T00:00:00.000Z, 2017-10-11T00:00:00.000Z[', 'count(*)': 1 },
+      { day: '[2017-12-12T00:00:00.000Z, 2017-12-13T00:00:00.000Z[', 'count(*)': 1 }
+    ])
+    // same with timezone
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(some_date, 1 day) as day', select: 'count(*)', timezone: 'Europe/Paris' } })
+    assert.deepEqual(res.data.results, [
+      { day: '[2017-10-10T00:00:00+02:00, 2017-10-11T00:00:00+02:00[', 'count(*)': 1 },
+      { day: '[2017-12-12T00:00:00+01:00, 2017-12-13T00:00:00+01:00[', 'count(*)': 1 }
+    ])
+
+    // group by date ranges
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(some_date, *, date\'2017-10-10\', date\'2017-11-11\', *) as day', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { day: '[*, 2017-10-10T00:00:00.000Z[', 'count(*)': 0 },
+      { day: '[2017-10-10T00:00:00.000Z, 2017-11-11T00:00:00.000Z[', 'count(*)': 1 },
+      { day: '[2017-11-11T00:00:00.000Z, *[', 'count(*)': 1 }
+    ])
+    // same with timezone
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(some_date, *, date\'2017-10-10\', date\'2017-11-11\', *) as day', select: 'count(*)', timezone: 'Europe/Paris' } })
+    assert.deepEqual(res.data.results, [
+      { day: '[*, 2017-10-09T22:00:00.000Z[', 'count(*)': 0 },
+      { day: '[2017-10-09T22:00:00.000Z, 2017-11-10T23:00:00.000Z[', 'count(*)': 1 },
+      { day: '[2017-11-10T23:00:00.000Z, *[', 'count(*)': 1 }
+    ])
+
     // csv export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
     assert.equal(res.data, `id;adr;some date;loc;bool;nb
 koumoul;19 rue de la voie lactée saint avé;2017-12-12;47.687375,-2.748526;0;11
 bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
+`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`, { params: { group_by: 'id', select: 'id,count(*) as Count,avg(nb) as Avg', order_by: 'id desc' } })
+    assert.equal(res.data, `id;Count;Avg
+koumoul;1;11
+bidule;1;22.2
 `)
 
     // xlsx export
