@@ -112,9 +112,10 @@ GroupByExpression
   / groupByItem:GroupByItem { return groupByItem }
 
 GroupByItem
-  = GroupByNumberInterval
-  / GroupByDateInterval
-  / GroupByRanges
+  = GroupByDateInterval
+  / GroupByNumberInterval
+  / GroupByDateRanges
+  / GroupByNumberRanges
   / GroupByField
 
 GroupByField
@@ -150,6 +151,37 @@ GroupByNumberInterval
         }
       }
     }
+
+NumberRangePart
+  = value:NumericLiteral { return value.value }
+  / "*" { return "*" }
+
+GroupByNumberRanges
+  = "range("i _ field:FieldName rangeParts:(_ "," _ NumberRangePart)* _ ")" {
+    assertGroupable(field, options.dataset)
+    const parts = rangeParts.map(p => p[3])
+    const ranges = []
+    // https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-range-aggregation
+    for (let i = 0; i < parts.length - 1; i++) {
+      const range = {}
+      if (parts[i] !== '*') range.from = parts[i]
+      if (parts[i+1] !== '*') range.to = parts[i+1]
+      ranges.push(range)
+    }
+    return {
+      alias: { name: text(), numberRanges: true },
+      noComposite: true,
+      source: {
+        [text()]: {
+          range: {
+            field,
+            ranges
+          }
+        }
+      }
+    }
+  }
+
 
 DateUnit
   = "milliseconds" { return 'ms'}
@@ -196,6 +228,7 @@ GroupByDateInterval
         [text()]: {
           date_histogram: {
             field,
+            time_zone: options.timezone,
             calendar_interval: '' + interval.value + interval.unit
           }
         }
@@ -203,12 +236,12 @@ GroupByDateInterval
     }
   }
 
-RangePart
-  = interval:NumericLiteral { return interval.value }
+DateRangePart
+  = value:DateLiteral { return value.value }
   / "*" { return "*" }
 
-GroupByRanges
-  = "range("i _ field:FieldName rangeParts:(_ "," _ RangePart)* _ ")" {
+GroupByDateRanges
+  = "range("i _ field:FieldName rangeParts:(_ "," _ DateRangePart)* _ ")" {
     assertGroupable(field, options.dataset)
     const parts = rangeParts.map(p => p[3])
     const ranges = []
@@ -220,12 +253,13 @@ GroupByRanges
       ranges.push(range)
     }
     return {
-      alias: { name: text(), numberRanges: true },
+      alias: { name: text(), dateRanges: true },
       noComposite: true,
       source: {
         [text()]: {
-          range: {
+          date_range: {
             field,
+            time_zone: options.timezone,
             ranges
           }
         }

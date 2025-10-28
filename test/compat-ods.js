@@ -361,7 +361,7 @@ describe('compatibility layer for ods api', function () {
             size: 20000,
             sources: [{
               'range(test1, 1 days)': {
-                date_histogram: { field: 'test1', calendar_interval: '2d' }
+                date_histogram: { field: 'test1', calendar_interval: '1d', time_zone: undefined }
               }
             }]
           },
@@ -381,9 +381,25 @@ describe('compatibility layer for ods api', function () {
         }
       }
     )
+
+    assert.deepEqual(
+      groupByParser.parse('range(test1, *, date\'2020-11-13\', date\'2021-01-01\')', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] }, timezone: 'UTC' }),
+      {
+        aliases: [{ name: 'range(test1, *, date\'2020-11-13\', date\'2021-01-01\')', dateRanges: true }],
+        composite: false,
+        agg: {
+          date_range: {
+            field: 'test1',
+            time_zone: 'UTC',
+            ranges: [{ to: '2020-11-13' }, { from: '2020-11-13', to: '2021-01-01' }]
+          },
+          aggs: {}
+        }
+      }
+    )
   })
 
-  it.only('exposes records and exports api on 2 urls', async function () {
+  it('exposes records and exports api on 2 urls', async function () {
     const ax = global.ax.dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
@@ -521,6 +537,27 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(res.data.results, [
       { day: '[2017-10-10T00:00:00.000Z, 2017-10-11T00:00:00.000Z[', 'count(*)': 1 },
       { day: '[2017-12-12T00:00:00.000Z, 2017-12-13T00:00:00.000Z[', 'count(*)': 1 }
+    ])
+    // same with timezone
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(some_date, 1 day) as day', select: 'count(*)', timezone: 'Europe/Paris' } })
+    assert.deepEqual(res.data.results, [
+      { day: '[2017-10-10T00:00:00+02:00, 2017-10-11T00:00:00+02:00[', 'count(*)': 1 },
+      { day: '[2017-12-12T00:00:00+01:00, 2017-12-13T00:00:00+01:00[', 'count(*)': 1 }
+    ])
+
+    // group by date ranges
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(some_date, *, date\'2017-10-10\', date\'2017-11-11\', *) as day', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { day: '[*, 2017-10-10T00:00:00.000Z[', 'count(*)': 0 },
+      { day: '[2017-10-10T00:00:00.000Z, 2017-11-11T00:00:00.000Z[', 'count(*)': 1 },
+      { day: '[2017-11-11T00:00:00.000Z, *[', 'count(*)': 1 }
+    ])
+    // same with timezone
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(some_date, *, date\'2017-10-10\', date\'2017-11-11\', *) as day', select: 'count(*)', timezone: 'Europe/Paris' } })
+    assert.deepEqual(res.data.results, [
+      { day: '[*, 2017-10-09T22:00:00.000Z[', 'count(*)': 0 },
+      { day: '[2017-10-09T22:00:00.000Z, 2017-11-10T23:00:00.000Z[', 'count(*)': 1 },
+      { day: '[2017-11-10T23:00:00.000Z, *[', 'count(*)': 1 }
     ])
 
     // csv export

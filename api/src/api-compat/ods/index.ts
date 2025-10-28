@@ -171,15 +171,20 @@ const parseFilters = (dataset, query, endpoint) => {
   return { bool: { filter, must, must_not: mustNot } }
 }
 
-const isoWithOffset = 'YYYY-MM-DDTHH:mm:ssZ'
+const isoWithOffset = (dateValue, timezone, alwaysFormat = false) => {
+  const date = new Date(dateValue)
+  if (!alwaysFormat && (!timezone || timezone.toLowerCase() === 'utc')) return date.toISOString()
+  return dayjs.tz(date, timezone).format('YYYY-MM-DDTHH:mm:ssZ')
+}
+
 const prepareResult = (dataset, result, aggResults, timezone = 'UTC') => {
   for (const prop of dataset.schema) {
     if (prop.type === 'string' && prop.format === 'date-time') {
       if (typeof result[prop.key] === 'string') {
-        result[prop.key] = dayjs(result[prop.key]).tz(timezone).format(isoWithOffset)
+        result[prop.key] = isoWithOffset(result[prop.key], timezone, true)
       }
       if (Array.isArray(result[prop.key])) {
-        result[prop.key] = result[prop.key].map(d => dayjs(d).tz(timezone).format(isoWithOffset))
+        result[prop.key] = result[prop.key].map(d => isoWithOffset(d, timezone, true))
       }
     }
   }
@@ -190,7 +195,7 @@ const prepareResult = (dataset, result, aggResults, timezone = 'UTC') => {
   }
 }
 
-const applyAliases = (result, aliases) => {
+const applyAliases = (result, aliases, timezone) => {
   for (const key of Object.keys(aliases)) {
     let shouldDelete = true
     for (const alias of aliases[key]) {
@@ -205,7 +210,7 @@ const applyAliases = (result, aliases) => {
       }
       if (alias.dateInterval !== undefined) {
         const date = new Date(value)
-        value = `[${date.toISOString()}, ${dayjs(date).add(alias.dateInterval.value, alias.dateInterval.unit).toISOString()}[`
+        value = `[${isoWithOffset(date, timezone)}, ${isoWithOffset(dayjs(date).add(alias.dateInterval.value, alias.dateInterval.unit), timezone)}[`
       }
       result[alias.name] = value
     }
@@ -231,6 +236,9 @@ const sortBuckets = (buckets: any[], sort: any[]) => {
 
 const prepareBucketResult = (dataset, bucket, selectAggs, composite) => {
   const result = composite ? { ...bucket.key } : { key: bucket.key }
+  if (bucket.from_as_string || bucket.to_as_string) {
+    result.key = `[${bucket.from_as_string ? new Date(bucket.from_as_string).toISOString() : '*'}, ${bucket.to_as_string ? new Date(bucket.to_as_string).toISOString() : '*'}[`
+  }
   for (const aggKey of Object.keys(selectAggs)) {
     result[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
   }
@@ -278,7 +286,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
   esQuery.query = parseFilters(dataset, query, 'records')
 
   if (grouped) {
-    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases })
+    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, timezone: query.timezone })
     esQuery.aggs = { ___group_by: groupBy.agg }
     esQuery.size = 0
     delete esQuery.from
@@ -334,7 +342,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     const results: any[] = []
     for (const bucket of bucketsPage) {
       const result = prepareBucketResult(dataset, bucket, selectAggs, composite)
-      applyAliases(result, aliases)
+      applyAliases(result, aliases, query.timezone)
       results.push(result)
     }
     res.send({ total_count: buckets.length, results })
@@ -346,7 +354,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
       const line = flatten(esResponse.hits.hits[i]._source)
       prepareResult(dataset, line, esResponse.aggregations, req.query.timezone)
-      applyAliases(line, aliases)
+      applyAliases(line, aliases, query.timezone)
       result.results.push(line)
     }
     compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
@@ -377,7 +385,7 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
       const buckets: any[] = esResponse.aggregations.___group_by.buckets
       for (const bucket of buckets) {
         const result = prepareBucketResult(dataset, bucket, selectAggs, composite)
-        applyAliases(result, aliases)
+        applyAliases(result, aliases, timezone)
         lines.push(result)
       }
 
@@ -387,7 +395,7 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
       for (const hit of hits) {
         const line = flatten(hit._source)
         prepareResult(dataset, line, esResponse.aggregations, timezone)
-        applyAliases(line, aliases)
+        applyAliases(line, aliases, timezone)
         lines.push(line)
       }
       esQuery.search_after = hits[hits.length - 1]?.sort
