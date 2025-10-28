@@ -45,6 +45,48 @@ GroupBy
       const groupByExpressions = [before, ...after.map(a => a[3])]
       const aliases = options.aliases ?? {}
       
+      // range aggs are not compatible with composite, in this case it seems that odsql uses some imperfect merging strategy
+      // https://data.enedis.fr/api/explore/v2.1/catalog/datasets/donnees-de-temperature-et-de-pseudo-rayonnement/records?group_by=horodate,range(pseudo_rayonnement,%20*,20,25,30,35,40,45,%20*)
+      
+      const useComposite = !groupByExpressions.some(e => e.noComposite)
+      if (!useComposite) {
+        const aggs = {}
+
+        /* attempt at a nested strategy, but it doesn't exactly match odsql 
+
+        let previousAggLevel = aggs
+        groupByExpressions.sort((e1, e2) => {
+          if (e1.noComposite && !e2.noComposite) return -1
+          if (e2.noComposite && !e1.noComposite) return 1
+        })
+        for (const groupByExpression of groupByExpressions) {
+          Object.assign(previousAggLevel, groupByExpression.source)
+          const aggName = Object.keys(previousAggLevel)[0]
+          if (!groupByExpression.noComposite) {
+            previousAggLevel[aggName].size = 10
+          }
+          previousAggLevel[aggName].aggs = {}
+          previousAggLevel = previousAggLevel[aggName].aggs
+        }
+        Object.assign(previousAggLevel, options.aggs)
+        return {
+          aliases: groupByExpressions.map(e => e.alias),
+          aggs
+        }*/
+       if (groupByExpressions.length > 1) throw httpError(400, 'group_by with ranges cannot be combined with other merges')
+       const source = groupByExpressions[0].source
+       const aggName = Object.keys(source)[0]
+       aliases.key = [groupByExpressions[0].alias]
+       return {
+          aliases: groupByExpressions.map(e => e.alias),
+          composite: false,
+          agg: {
+            ...source[aggName],
+            aggs: options.aggs
+          }
+        }
+      }
+      
       for (const e of groupByExpressions) {
         const aggName = Object.keys(e.source)[0]
         aliases[aggName] = aliases[aggName] ?? []
@@ -52,6 +94,7 @@ GroupBy
       }
       return {
         aliases: groupByExpressions.map(e => e.alias),
+        composite: true,
         agg: {
           composite: {
             size: 20000,
@@ -70,6 +113,7 @@ GroupByExpression
 
 GroupByItem
   = GroupByNumberInterval
+  / GroupByRanges
   / GroupByField
 
 GroupByField
@@ -91,17 +135,47 @@ GroupByField
   }
 
 GroupByNumberInterval
-  = "range("i _ key:FieldName _ "," _ interval:NumericLiteral ")" {
-      assertGroupable(key, options.dataset)
+  = "range("i _ field:FieldName _ "," _ interval:NumericLiteral ")" {
+      assertGroupable(field, options.dataset)
       return {
         alias: { name: text(), numberInterval: interval.value },
         source: {
           [text()]: {
             histogram: {
-              field: key,
+              field,
               interval: interval.value
             }
           }
         }
       }
     }
+
+RangePart
+  = interval:NumericLiteral { return interval.value }
+  / "*" { return "*" }
+
+GroupByRanges
+  = "range("i _ field:FieldName rangeParts:(_ "," _ RangePart)* _ ")" {
+    assertGroupable(field, options.dataset)
+    const parts = rangeParts.map(p => p[3])
+    const ranges = []
+    // https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-range-aggregation
+    for (let i = 0; i < parts.length - 1; i++) {
+      const range = {}
+      if (parts[i] !== '*') range.from = parts[i]
+      if (parts[i+1] !== '*') range.to = parts[i+1]
+      ranges.push(range)
+    }
+    return {
+      alias: { name: text(), numberRanges: true },
+      noComposite: true,
+      source: {
+        [text()]: {
+          range: {
+            field,
+            ranges
+          }
+        }
+      }
+    }
+  }

@@ -199,6 +199,10 @@ const applyAliases = (result, aliases) => {
       if (alias.numberInterval !== undefined) {
         value = `[${value}, ${value + alias.numberInterval}[`
       }
+      if (alias.numberRanges) {
+        const parts = value.split('-')
+        value = `[${parts[0]}, ${parts[1]}[`
+      }
       result[alias.name] = value
     }
     if (shouldDelete) delete result[key]
@@ -221,8 +225,8 @@ const sortBuckets = (buckets: any[], sort: any[]) => {
   return buckets.sort(comparator)
 }
 
-const prepareBucketResult = (dataset, bucket, selectAggs) => {
-  const result = { ...bucket.key }
+const prepareBucketResult = (dataset, bucket, selectAggs, composite) => {
+  const result = composite ? { ...bucket.key } : { key: bucket.key }
   for (const aggKey of Object.keys(selectAggs)) {
     result[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
   }
@@ -246,6 +250,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
   let selectSource = []
   let selectFinalKeys = []
   let sort = []
+  let composite = false
   if (query.select) {
     const select = parseSelect(query.select, { dataset, grouped })
     selectSource = esQuery._source = select.sources
@@ -275,12 +280,13 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
     delete esQuery.from
     delete esQuery._source
     delete esQuery.sort
+    composite = groupBy.composite
   } else {
     completeSort(dataset, esQuery.sort, query)
     esQuery.track_total_hits = true
   }
 
-  return { grouped, size, from, esQuery, selectAggs, selectSource, selectFinalKeys, aliases, sort }
+  return { grouped, size, from, esQuery, selectAggs, selectSource, selectFinalKeys, aliases, sort, composite }
 }
 
 const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
@@ -293,7 +299,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!config.compatODS) throw httpError(404, 'unknown API')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const { grouped, size, from, esQuery, selectAggs, selectSource, aliases, sort } = prepareEsQuery(dataset, query)
+  const { grouped, size, from, esQuery, selectAggs, selectSource, aliases, sort, composite } = prepareEsQuery(dataset, query)
 
   if (grouped) {
     if (size > 20000) throw httpError(400, 'limit should be less than 20000')
@@ -323,7 +329,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     const bucketsPage = buckets.slice(from, from + size)
     const results: any[] = []
     for (const bucket of bucketsPage) {
-      const result = prepareBucketResult(dataset, bucket, selectAggs)
+      const result = prepareBucketResult(dataset, bucket, selectAggs, composite)
       applyAliases(result, aliases)
       results.push(result)
     }
@@ -346,7 +352,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
 
 const maxChunkSize = 1000
 
-async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, totalSize, grouped, timezone = 'utc') {
+async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, totalSize, grouped, composite, timezone = 'utc') {
   const flatten = getFlatten(dataset, false, selectSource)
 
   let chunkSize = maxChunkSize
@@ -366,7 +372,7 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
     if (grouped) {
       const buckets: any[] = esResponse.aggregations.___group_by.buckets
       for (const bucket of buckets) {
-        const result = prepareBucketResult(dataset, bucket, selectAggs)
+        const result = prepareBucketResult(dataset, bucket, selectAggs, composite)
         applyAliases(result, aliases)
         lines.push(result)
       }
@@ -401,7 +407,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!dataset.schema) throw httpError(404, 'dataset without data')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, aliases } = prepareEsQuery(dataset, query)
+  const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, aliases, composite } = prepareEsQuery(dataset, query)
 
   if (from) throw httpError(400, 'offset parameter is not supported for exports')
 
@@ -457,7 +463,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     const worksheet = workbookWriter.addWorksheet('Feuille 1')
     // Define columns (optional)
     worksheet.columns = columns
-    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, query.limit ? Number(query.limit) : -1, grouped, query.timezone)
+    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)
     for await (const items of iter) {
       for (const item of items) {
         worksheet.addRow(item)
@@ -539,7 +545,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, query.limit ? Number(query.limit) : -1, grouped, query.timezone)),
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {

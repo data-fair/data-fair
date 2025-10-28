@@ -210,7 +210,7 @@ describe('compatibility layer for ods api', function () {
   it('contains a parser for the select syntax', function () {
     assert.deepEqual(
       selectParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1'], aliases: {}, aggregations: {} }
+      { sources: ['test1'], aliases: {}, aggregations: {}, finalKeys: ['test1'] }
     )
 
     assert.throws(
@@ -220,22 +220,22 @@ describe('compatibility layer for ods api', function () {
 
     assert.deepEqual(
       selectParser.parse('test1, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1', 'test2'], aliases: {}, aggregations: {} }
+      { sources: ['test1', 'test2'], aliases: {}, aggregations: {}, finalKeys: ['test1', 'test2'] }
     )
 
     assert.deepEqual(
       selectParser.parse('test1 as Test, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1', 'test2'], aliases: { test1: [{ name: 'Test' }] }, aggregations: {} }
+      { sources: ['test1', 'test2'], aliases: { test1: [{ name: 'Test' }] }, aggregations: {}, finalKeys: ['Test', 'test2'] }
     )
 
     assert.deepEqual(
       selectParser.parse('avg(test1), test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
-      { sources: ['test2'], aliases: {}, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } } }
+      { sources: ['test2'], aliases: {}, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } }, finalKeys: ['avg(test1)', 'test2'] }
     )
 
     assert.deepEqual(
       selectParser.parse('avg(test1) as avg_test, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
-      { sources: ['test2'], aliases: { 'avg(test1)': [{ name: 'avg_test' }] }, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } } }
+      { sources: ['test2'], aliases: { 'avg(test1)': [{ name: 'avg_test' }] }, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } }, finalKeys: ['avg_test', 'test2'] }
     )
   })
 
@@ -274,12 +274,13 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('test1', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'test1' }],
+        composite: true,
         agg: {
           composite: {
             size: 20000,
             sources: [{
               test1: {
-                terms: { field: 'test1' }
+                terms: { field: 'test1', order: 'asc' }
               }
             }]
           },
@@ -297,13 +298,14 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('test1,test2', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'test1' }, { name: 'test2' }],
+        composite: true,
         agg: {
           composite: {
             size: 20000,
             sources: [{
-              test1: { terms: { field: 'test1' } }
+              test1: { terms: { field: 'test1', order: 'asc' } }
             }, {
-              test2: { terms: { field: 'test2' } }
+              test2: { terms: { field: 'test2', order: 'asc' } }
             }]
           },
           aggs: {}
@@ -315,13 +317,14 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('test1 As Test1,test2', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'Test1' }, { name: 'test2' }],
+        composite: true,
         agg: {
           composite: {
             size: 20000,
             sources: [{
-              test1: { terms: { field: 'test1' } }
+              test1: { terms: { field: 'test1', order: 'asc' } }
             }, {
-              test2: { terms: { field: 'test2' } }
+              test2: { terms: { field: 'test2', order: 'asc' } }
             }]
           },
           aggs: {}
@@ -333,6 +336,7 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('range(test1, 10)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'range(test1, 10)', numberInterval: 10 }],
+        composite: true,
         agg: {
           composite: {
             size: 20000,
@@ -342,6 +346,18 @@ describe('compatibility layer for ods api', function () {
               }
             }]
           },
+          aggs: {}
+        }
+      }
+    )
+
+    assert.deepEqual(
+      groupByParser.parse('range(test1, *, 10, *)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'range(test1, *, 10, *)', numberRanges: true }],
+        composite: false,
+        agg: {
+          range: { field: 'test1', ranges: [{ to: 10 }, { from: 10 }] },
           aggs: {}
         }
       }
@@ -472,6 +488,13 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(res.data.results, [
       { 'range(nb, 10)': '[10, 20[', 'count(*)': 1 },
       { 'range(nb, 10)': '[20, 30[', 'count(*)': 1 }
+    ])
+
+    // group by number ranges
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(nb, *, 20, *)', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { 'range(nb, *, 20, *)': '[*, 20.0[', 'count(*)': 1 },
+      { 'range(nb, *, 20, *)': '[20.0, *[', 'count(*)': 1 }
     ])
 
     // csv export
