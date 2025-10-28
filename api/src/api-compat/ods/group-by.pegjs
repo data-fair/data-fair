@@ -113,6 +113,7 @@ GroupByExpression
 
 GroupByItem
   = GroupByNumberInterval
+  / GroupByDateInterval
   / GroupByRanges
   / GroupByField
 
@@ -149,6 +150,58 @@ GroupByNumberInterval
         }
       }
     }
+
+DateUnit
+  = "milliseconds" { return 'ms'}
+  / "millisecond" { return 'ms'}
+  / "ms" { return 'ms'}
+  / "seconds" { return 's'}
+  / "second" { return 's'}
+  / "s" { return 's'}
+  / "minutes" { return 'm'}
+  / "minute" { return 'm'}
+  / "m" { return 'm'}
+  / "hours" { return 'h'}
+  / "hour" { return 'h'}  
+  / "h" { return 'h'}
+  / "days" { return 'd'}
+  / "day" { return 'd'}  
+  / "d" { return 'd'}
+  / "weeks" { return 'w'}
+  / "week" { return 'w'}
+  / "w" { return 'w'}
+  / "months" { return 'M'}
+  / "month" { return 'M'}
+  / "M" { return 'M'}
+  / "quarters" { return 'q'}
+  / "quarter" { return 'q'}
+  / "q" { return 'q'}
+  / "years" { return 'y'}
+  / "year" { return 'y'}
+  / "y" { return 'y'}
+
+DateInterval
+  = value:NumericLiteral _ unit:DateUnit {
+    if (value.value > 1) throw httpError(400, 'grouping by multiples of calendard units is not supported ')
+    return { value: value.value, unit }
+  }
+
+GroupByDateInterval
+  = "range("i _ field:FieldName _ "," _ interval:DateInterval _ ")" {
+    assertGroupable(field, options.dataset)
+    // https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation
+    return {
+      alias: { name: text(), dateInterval: interval },
+      source: {
+        [text()]: {
+          date_histogram: {
+            field,
+            calendar_interval: '' + interval.value + interval.unit
+          }
+        }
+      }
+    }
+  }
 
 RangePart
   = interval:NumericLiteral { return interval.value }

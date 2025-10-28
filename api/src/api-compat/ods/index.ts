@@ -203,6 +203,10 @@ const applyAliases = (result, aliases) => {
         const parts = value.split('-')
         value = `[${parts[0]}, ${parts[1]}[`
       }
+      if (alias.dateInterval !== undefined) {
+        const date = new Date(value)
+        value = `[${date.toISOString()}, ${dayjs(date).add(alias.dateInterval.value, alias.dateInterval.unit).toISOString()}[`
+      }
       result[alias.name] = value
     }
     if (shouldDelete) delete result[key]

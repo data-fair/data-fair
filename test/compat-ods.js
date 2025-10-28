@@ -352,6 +352,25 @@ describe('compatibility layer for ods api', function () {
     )
 
     assert.deepEqual(
+      groupByParser.parse('range(test1, 1 days)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'range(test1, 1 days)', dateInterval: { value: 1, unit: 'd' } }],
+        composite: true,
+        agg: {
+          composite: {
+            size: 20000,
+            sources: [{
+              'range(test1, 1 days)': {
+                date_histogram: { field: 'test1', calendar_interval: '2d' }
+              }
+            }]
+          },
+          aggs: {}
+        }
+      }
+    )
+
+    assert.deepEqual(
       groupByParser.parse('range(test1, *, 10, *)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'range(test1, *, 10, *)', numberRanges: true }],
@@ -364,7 +383,7 @@ describe('compatibility layer for ods api', function () {
     )
   })
 
-  it('exposes records and exports api on 2 urls', async function () {
+  it.only('exposes records and exports api on 2 urls', async function () {
     const ax = global.ax.dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
@@ -495,6 +514,13 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(res.data.results, [
       { 'range(nb, *, 20, *)': '[*, 20.0[', 'count(*)': 1 },
       { 'range(nb, *, 20, *)': '[20.0, *[', 'count(*)': 1 }
+    ])
+
+    // group by date interval
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'range(some_date, 1 day) as day', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { day: '[2017-10-10T00:00:00.000Z, 2017-10-11T00:00:00.000Z[', 'count(*)': 1 },
+      { day: '[2017-12-12T00:00:00.000Z, 2017-12-13T00:00:00.000Z[', 'count(*)': 1 }
     ])
 
     // csv export
