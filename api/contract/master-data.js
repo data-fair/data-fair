@@ -283,8 +283,8 @@ export const endpoints = (dataset) => {
     endpoints[`/master-data/single-searchs/${singleSearch.id}`] = {
       get: {
         tags: ['Données de référence'],
-        summary: 'Rechercher unitairement',
-        description: singleSearch.title + '. ' + (singleSearch.description || ''),
+        summary: singleSearch.title,
+        description: singleSearch.description || '',
         operationId: `masterData_singleSearch_${singleSearch.id}`,
         'x-operationType': 'http://schema.org/SearchAction',
         'x-permissionClass': 'read',
