@@ -285,6 +285,7 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('test1', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'test1' }],
+        transforms: {},
         composite: true,
         agg: {
           composite: {
@@ -309,6 +310,7 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('test1,test2', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'test1' }, { name: 'test2' }],
+        transforms: {},
         composite: true,
         agg: {
           composite: {
@@ -328,6 +330,7 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('test1 As Test1,test2', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'Test1' }, { name: 'test2' }],
+        transforms: {},
         composite: true,
         agg: {
           composite: {
@@ -347,6 +350,7 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('range(test1, 10)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'range(test1, 10)', numberInterval: 10 }],
+        transforms: {},
         composite: true,
         agg: {
           composite: {
@@ -366,6 +370,7 @@ describe('compatibility layer for ods api', function () {
       groupByParser.parse('range(test1, 1 days)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
         aliases: [{ name: 'range(test1, 1 days)', dateInterval: { value: 1, unit: 'd' } }],
+        transforms: {},
         composite: true,
         agg: {
           composite: {
@@ -383,7 +388,13 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(
       groupByParser.parse('year(test1)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
       {
-        aliases: [{ name: 'year(test1)', dateInterval: { value: 1, unit: 'y' } }],
+        aliases: [{ name: 'year(test1)' }],
+        transforms: {
+          'year(test1)': {
+            param: 'year',
+            type: 'date_part'
+          }
+        },
         composite: true,
         agg: {
           composite: {
@@ -501,6 +512,16 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.total_count, 2)
 
     assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: koumoul' } }), { status: 400 })
+
+    // date filters
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'year(some_date) = 2017' } })
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'year(some_date) = 2018' } })
+    assert.equal(res.data.results.length, 0)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'year(some_date) < 2018' } })
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'year(some_date) < 2017' } })
+    assert.equal(res.data.results.length, 0)
 
     // facet filtering
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { refine: 'id:koumoul' } })

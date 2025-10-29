@@ -38,10 +38,12 @@ Filter
 
 PrimaryFilter
   = StringFilter
+  / YearEqualityFilter
   / EqualityFilter
   / InLiteralsFilter
   / InRangeFilter
   / InMultiValued
+  / YearComparisonFilter
   / ComparisonFilter
   / NotFilter
   / LikeFilter
@@ -63,6 +65,14 @@ EqualityFilter
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'equal')
     return { term: { [key]: value.value } }
+  }
+
+YearEqualityFilter
+  = "year("i _ key:FieldName _ ")" _ EqualOperator _ value:NumericLiteral {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    requiredCapability(prop, 'equal')
+    return { range: { [key]: { gte: value.value + "||/y",  lte: value.value + "||/y", format: "yyyy" } } }
   }
 
 EqualOperator
@@ -130,6 +140,15 @@ ComparisonFilter
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
     return { range: { [key]: { [esOperator]: value.value } } }
+  }
+
+YearComparisonFilter
+  = "year("i _ key:FieldName _ ")"  _ operator:ComparisonOperator _ value:Literal {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    const esOperator = esOperators[operator]
+    requiredCapability(prop, 'comparison')
+    return { range: { [key]: { [esOperator]: value.value + "||/y", format: 'yyyy' } } }
   }
 
 ComparisonOperator
