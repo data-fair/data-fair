@@ -210,7 +210,7 @@ describe('compatibility layer for ods api', function () {
   it('contains a parser for the select syntax', function () {
     assert.deepEqual(
       selectParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1'], aliases: {}, aggregations: {}, finalKeys: ['test1'] }
+      { sources: ['test1'], aliases: {}, aggregations: {}, finalKeys: ['test1'], transforms: {} }
     )
 
     assert.throws(
@@ -220,22 +220,33 @@ describe('compatibility layer for ods api', function () {
 
     assert.deepEqual(
       selectParser.parse('test1, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1', 'test2'], aliases: {}, aggregations: {}, finalKeys: ['test1', 'test2'] }
+      { sources: ['test1', 'test2'], aliases: {}, aggregations: {}, finalKeys: ['test1', 'test2'], transforms: {} }
     )
 
     assert.deepEqual(
       selectParser.parse('test1 as Test, test2', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
-      { sources: ['test1', 'test2'], aliases: { test1: [{ name: 'Test' }] }, aggregations: {}, finalKeys: ['Test', 'test2'] }
+      { sources: ['test1', 'test2'], aliases: { test1: [{ name: 'Test' }] }, aggregations: {}, finalKeys: ['Test', 'test2'], transforms: {} }
     )
 
     assert.deepEqual(
       selectParser.parse('avg(test1), test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
-      { sources: ['test2'], aliases: {}, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } }, finalKeys: ['avg(test1)', 'test2'] }
+      { sources: ['test2'], aliases: {}, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } }, finalKeys: ['avg(test1)', 'test2'], transforms: {} }
     )
 
     assert.deepEqual(
       selectParser.parse('avg(test1) as avg_test, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
-      { sources: ['test2'], aliases: { 'avg(test1)': [{ name: 'avg_test' }] }, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } }, finalKeys: ['avg_test', 'test2'] }
+      { sources: ['test2'], aliases: { 'avg(test1)': [{ name: 'avg_test' }] }, aggregations: { 'avg(test1)': { avg: { field: 'test1' } } }, finalKeys: ['avg_test', 'test2'], transforms: {} }
+    )
+
+    assert.deepEqual(
+      selectParser.parse('year(test1) as annee, test2', { dataset: { schema: [{ key: 'test1', type: 'string', format: 'date-time' }, { key: 'test2' }] } }),
+      {
+        sources: ['test1', 'test2'],
+        aliases: { test1: [{ name: 'annee' }] },
+        aggregations: {},
+        finalKeys: ['annee', 'test2'],
+        transforms: { annee: { type: 'date_part', param: 'year', ignoreTimezone: false } }
+      }
     )
   })
 
@@ -438,6 +449,21 @@ describe('compatibility layer for ods api', function () {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,avg(nb) AS avg_nb,count(*) as total' } })
     assert.deepEqual(res.data.results[0], { id: 'koumoul', avg_nb: 16.6, total: 2 })
+
+    // select with transforms
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, {
+      params: { select: 'id,some_date as date,year(some_date) AS annee,month(some_date) as mois,day(some_date) as jour,hour(some_date) as heure,minute(some_date) as minute,second(some_date) as seconde' }
+    })
+    assert.deepEqual(res.data.results[0], {
+      id: 'koumoul',
+      date: '2017-12-12',
+      annee: 2017,
+      jour: 12,
+      mois: 12,
+      heure: 0,
+      minute: 0,
+      seconde: 0,
+    })
 
     // simple filters
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: "koumoul"' } })
