@@ -380,6 +380,24 @@ describe('compatibility layer for ods api', function () {
         }
       }
     )
+    assert.deepEqual(
+      groupByParser.parse('year(test1)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      {
+        aliases: [{ name: 'year(test1)', dateInterval: { value: 1, unit: 'y' } }],
+        composite: true,
+        agg: {
+          composite: {
+            size: 20000,
+            sources: [{
+              'year(test1)': {
+                date_histogram: { field: 'test1', calendar_interval: '1y', time_zone: undefined }
+              }
+            }]
+          },
+          aggs: {}
+        }
+      }
+    )
 
     assert.deepEqual(
       groupByParser.parse('range(test1, *, 10, *)', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
@@ -569,6 +587,12 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(res.data.results, [
       { day: '[2017-10-10T00:00:00+02:00, 2017-10-11T00:00:00+02:00[', 'count(*)': 1 },
       { day: '[2017-12-12T00:00:00+01:00, 2017-12-13T00:00:00+01:00[', 'count(*)': 1 }
+    ])
+
+    // group by year function
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'year(some_date) as annee', select: 'count(*)' } })
+    assert.deepEqual(res.data.results, [
+      { annee: 2017, 'count(*)': 2 }
     ])
 
     // group by date ranges

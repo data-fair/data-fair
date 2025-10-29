@@ -45,6 +45,13 @@ GeometryLiteral
     }
   }
 
+DatePart
+  = "year"i { return 'year' }
+  / "month"i { return 'month' }
+  / "day"i { return 'day' }
+  / "hour"i  { return 'hour' }
+  / "minute"i { return 'minute' }
+  / "second"i { return 'second' }
 
 // the following is copied and adapted from parts of
 // https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs

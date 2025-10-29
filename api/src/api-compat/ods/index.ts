@@ -294,7 +294,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
   esQuery.query = parseFilters(dataset, query, 'records')
 
   if (grouped) {
-    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, timezone: query.timezone })
+    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, transforms: selectTransforms, timezone: query.timezone })
     esQuery.aggs = { ___group_by: groupBy.agg }
     esQuery.size = 0
     delete esQuery.from

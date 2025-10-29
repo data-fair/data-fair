@@ -154,16 +154,8 @@ SelectMedian
     return { aggregation: { [text()]: { percentiles: {field: key, percents: [50], keyed: false} } } }
   }
 
-DatePart
-  = "year"i { return 'year' }
-  / "month"i { return 'month' }
-  / "day"i { return 'day' }
-  / "hour"i  { return 'hour' }
-  / "minute"i { return 'minute' }
-  / "second"i { return 'second' }
-
 SelectDatePart
-  = part:DatePart "("i _ key:FieldName _ ")" {
+  = part:DatePart "(" _ key:FieldName _ ")" {
     const prop = assertDate(options.dataset, key, text())
     return { source: key, transform: { type: 'date_part', param: part, ignoreTimezone: prop.format === 'date' } }
   }

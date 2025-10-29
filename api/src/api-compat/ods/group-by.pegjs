@@ -44,6 +44,7 @@ GroupBy
     after:(_ "," _ GroupByExpression)* {
       const groupByExpressions = [before, ...after.map(a => a[3])]
       const aliases = options.aliases ?? {}
+      const transforms = options.transforms ?? {}
       
       // range aggs are not compatible with composite, in this case it seems that odsql uses some imperfect merging strategy
       // https://data.enedis.fr/api/explore/v2.1/catalog/datasets/donnees-de-temperature-et-de-pseudo-rayonnement/records?group_by=horodate,range(pseudo_rayonnement,%20*,20,25,30,35,40,45,%20*)
@@ -91,9 +92,11 @@ GroupBy
         const aggName = Object.keys(e.source)[0]
         aliases[aggName] = aliases[aggName] ?? []
         aliases[aggName].push(e.alias)
+        if (e.transform) transforms[e.alias?.name ?? aggName] = e.transform
       }
       return {
         aliases: groupByExpressions.map(e => e.alias),
+        transforms,
         composite: true,
         agg: {
           composite: {
@@ -113,6 +116,7 @@ GroupByExpression
 
 GroupByItem
   = GroupByDateInterval
+  / GroupByYear
   / GroupByNumberInterval
   / GroupByDateRanges
   / GroupByNumberRanges
@@ -182,7 +186,6 @@ GroupByNumberRanges
     }
   }
 
-
 DateUnit
   = "milliseconds" { return 'ms'}
   / "millisecond" { return 'ms'}
@@ -230,6 +233,26 @@ GroupByDateInterval
             field,
             time_zone: options.timezone,
             calendar_interval: '' + interval.value + interval.unit
+          }
+        }
+      }
+    }
+  }
+
+GroupByYear
+  = "year("i _ field:FieldName _ ")" {
+    assertGroupable(field, options.dataset)
+    // grouping by other parts of the date (month, etc) separately (not as a continuous date histogram)
+    // would require indexing subfields
+    return {
+      alias: { name: text() },
+      transform: { type: 'date_part', param: 'year' },
+      source: {
+        [text()]: {
+          date_histogram: {
+            field,
+            time_zone: options.timezone,
+            calendar_interval: '1y'
           }
         }
       }
