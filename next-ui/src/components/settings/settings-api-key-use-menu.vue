@@ -31,7 +31,7 @@
         <p>
           {{ t('apiKeyUseDetails3') }}&nbsp;:
         </p>
-        <code>curl -v -H "x-apiKey: {{ apiKey.clearKey || 'XXX' }}" {{ $apiPath }}/{{ apiKey.scopes[0] }}</code>
+        <code>curl -v -H "x-apiKey: {{ apiKey.clearKey || 'XXX' }}" {{ $siteUrl }}{{ $apiPath }}/{{ apiKey.scopes[0] }}</code>
       </v-card-text>
       <v-card-actions>
         <v-spacer />

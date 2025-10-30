@@ -203,22 +203,11 @@
                       </p>
                     </template>
                     <template #tabs-items>
-                      <v-container
-                        fluid
-                        class="py-1"
-                      >
-                        <v-row>
-                          <v-col
-                            cols="12"
-                            md="6"
-                          >
-                            <settings-api-keys
-                              :settings="settings"
-                              @updated="save"
-                            />
-                          </v-col>
-                        </v-row>
-                      </v-container>
+                      <d-frame
+                        :src="`/data-fair/next-ui/embed/settings/${settingsAccount.type}/${settingsAccount.id}/api-keys`"
+                        resize="yes"
+                        @notif="emitFrameNotif"
+                      />
                     </template>
                   </layout-section-tabs>
 
@@ -389,8 +378,9 @@ en:
 </i18n>
 
 <script>
-import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 import eventBus from '~/event-bus'
+import '@data-fair/frame/lib/d-frame.js'
 
 export default {
   middleware: ['auth-required'],
@@ -497,6 +487,7 @@ export default {
     }
   },
   methods: {
+    ...mapActions(['emitFrameNotif']),
     async init () {
       this.settings = null
       if (this.settingsAccount.type === 'organization') {

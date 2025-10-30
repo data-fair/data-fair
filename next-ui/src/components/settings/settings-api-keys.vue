@@ -1,85 +1,84 @@
 <template>
-  <v-menu
-    v-model="createMenu"
-    max-width="700px"
-    :close-on-content-click="false"
-  >
-    <template #activator="{ props }">
-      <v-btn
-        v-bind="props"
-        color="primary"
-        class="mb-3"
-      >
-        {{ t('addApiKey') }}
-      </v-btn>
-    </template>
-    <v-card
-      data-iframe-height
-      :title="t('addNewApiKey')"
+  <v-row class="ma-0">
+    <v-btn
+      v-if="!createToggle"
+      color="primary"
+      class="mb-3"
+      @click="createToggle = true"
     >
-      <v-card-text>
-        <v-form v-model="newApiKeyValid">
-          <v-text-field
-            v-model="newApiKey.title"
-            :rules="[v => !!v || '']"
-            :label="t('title')"
-            hide-details
-            required
-          />
-          <v-checkbox
-            v-if="session.state.user.adminMode"
-            v-model="newApiKey.adminMode"
-            :label="t('superadminKey')"
-            class="text-warning"
-            density="comfortable"
-            hide-details
-          />
-          <v-checkbox
-            v-if="session.state.user.adminMode && newApiKey.adminMode"
-            v-model="newApiKey.asAccount"
-            :label="t('asAccountKey')"
-            class="text-warning"
-            density="comfortable"
-            hide-details
-          />
-          <template v-if="filteredScopes.length > 1">
+      {{ t('addApiKey') }}
+    </v-btn>
+    <v-slide-y-transition v-if="createToggle">
+      <v-card
+        :title="t('addNewApiKey')"
+      >
+        <v-card-text>
+          <v-form v-model="newApiKeyValid">
+            <v-text-field
+              v-model="newApiKey.title"
+              :rules="[v => !!v || '']"
+              :label="t('title')"
+              hide-details
+              required
+            />
             <v-checkbox
-              v-for="scope of filteredScopes"
-              :key="scope"
-              v-model="newApiKey.scopes"
-              :label="t(scope)"
-              :value="scope"
-              :rules="[v => !!v.length || '']"
+              v-if="session.state.user.adminMode"
+              v-model="newApiKey.adminMode"
+              :label="t('superadminKey')"
+              class="text-warning"
               density="comfortable"
-              color="primary"
               hide-details
             />
-          </template>
-        </v-form>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          @click="createMenu = false"
-        >
-          {{ t('cancel') }}
-        </v-btn>
-        <v-btn
-          color="primary"
-          variant="elevated"
-          :disabled="!newApiKeyValid"
-          @click="addApiKey"
-        >
-          {{ t('add') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-menu>
+            <v-checkbox
+              v-if="session.state.user.adminMode && newApiKey.adminMode"
+              v-model="newApiKey.asAccount"
+              :label="t('asAccountKey')"
+              class="text-warning"
+              density="comfortable"
+              hide-details
+            />
+            <template v-if="filteredScopes.length > 1">
+              <v-checkbox
+                v-for="scope of filteredScopes"
+                :key="scope"
+                v-model="newApiKey.scopes"
+                :label="t(scope)"
+                :value="scope"
+                :rules="[v => !!v.length || '']"
+                density="comfortable"
+                color="primary"
+                hide-details
+              />
+            </template>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            @click="createToggle = false"
+          >
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="elevated"
+            :disabled="!newApiKeyValid"
+            @click="addApiKey"
+          >
+            {{ t('add') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-slide-y-transition>
+  </v-row>
+
   <v-row>
     <v-col
       v-for="(apiKey, rowIndex) in settings.apiKeys"
       :key="rowIndex"
-      cols="12"
+      lg="4"
+      md="6"
+      sm="12"
     >
       <v-card
         variant="outlined"
@@ -195,7 +194,7 @@ const newApiKey = ref<{
 })
 
 const newApiKeyValid = ref(false)
-const createMenu = ref(false)
+const createToggle = ref(false)
 
 const filteredScopes = computed(() => {
   if (!restrictedScopes || restrictedScopes.length === 0) return scopes
@@ -211,7 +210,7 @@ onMounted(() => {
 const addApiKey = () => {
   const updatedSettings = { ...settings }
   updatedSettings.apiKeys?.push(newApiKey.value)
-  createMenu.value = false
+  createToggle.value = false
   newApiKey.value = {
     title: '',
     scopes: []
