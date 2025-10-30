@@ -27,6 +27,10 @@ import type { DatasetInternal } from '#types'
 dayjs.extend(timezone)
 dayjs.extend(utc)
 
+type Aliases = Record<string, { name: string, numberInterval?: number, dateInterval?: { value: number, unit: string }, numberRanges?: boolean }[]>
+type TransformType = 'date_part'
+type Transforms = Record<string, { type: TransformType, param?: any, ignoreTimezone?: boolean }>
+
 const compatReqCounter = new Counter({
   name: 'df_compat_ods_req',
   help: 'A counter of the usage of the ods compatibility layer.',
@@ -57,34 +61,6 @@ const getCompatODS = memoize(async (type: string, id: string) => {
   max: 10000,
   maxAge: 1000 * 60, // 1 minute
 })
-
-/*
-const parseOrderBy = (dataset, fields, query) => {
-  const orderBy = query.order_by ? query.order_by.split(',') : []
-  // recreate the sort string with our syntax
-  const sortStr = orderBy.map(o => {
-    const [field, order] = o.split(' ').filter(Boolean)
-    return (order === 'desc' || order === 'DESC') ? ('-' + field) : field
-  }).join(',')
-  const sort: any[] = sortStr ? esUtils.parseSort(sortStr, fields, dataset) : []
-  // implicitly sort by score after other criteria
-  if (!sort.some(s => !!s._score) && query.where) sort.push('_score')
-  // every other things equal, sort by original line order
-  // this is very important as it provides a tie-breaker for search_after pagination
-  if (fields.includes('_updatedAt')) {
-    if (!sort.some(s => !!s._updatedAt)) sort.push({ _updatedAt: 'desc' })
-    if (!sort.some(s => !!s._i)) sort.push({ _i: 'desc' })
-  } else {
-    if (!sort.some(s => !!s._i)) sort.push('_i')
-  }
-  if (dataset.isVirtual) {
-    // _i is not a good enough tie-breaker in the case of virtual datasets
-    if (!sort.some(s => !!s._rand)) sort.push('_rand')
-  }
-
-  return sort
-}
-  */
 
 const completeSort = (dataset, sort, query) => {
   // implicitly sort by score after other criteria
@@ -195,7 +171,32 @@ const prepareResult = (dataset, result, aggResults, timezone = 'UTC') => {
   }
 }
 
-const applyAliases = (result, aliases, timezone) => {
+const transforms: Record<TransformType, (value: any, timezone?: string, extra?: string) => any> = {
+  date_part: (dateStr, timezone, part) => {
+    const date = timezone && timezone?.toLocaleLowerCase() !== 'utc' ? dayjs(dateStr).tz(timezone) : dayjs(dateStr)
+    switch (part) {
+      case 'year':
+        return date.year()
+      case 'month':
+        return date.month() + 1
+      case 'day':
+        return date.date()
+      case 'hour':
+        return date.hour()
+      case 'minute':
+        return date.minute()
+      case 'second':
+        return date.second()
+    }
+    return dateStr
+  }
+  /* dayjs format does not match odsql https://day.js.org/docs/en/display/format#list-of-all-available-formats
+  date_format: (dateStr, timezone, format) => {
+    return dayjs(dateStr).tz(timezone ?? 'utc').format(format?.replace(/yy/g, 'YY'))
+  } */
+}
+
+const applyAliases = (result: any, aliases: Aliases, selectTransforms: Transforms, timezone?: string) => {
   for (const key of Object.keys(aliases)) {
     let shouldDelete = true
     for (const alias of aliases[key]) {
@@ -210,11 +211,16 @@ const applyAliases = (result, aliases, timezone) => {
       }
       if (alias.dateInterval !== undefined) {
         const date = new Date(value)
-        value = `[${isoWithOffset(date, timezone)}, ${isoWithOffset(dayjs(date).add(alias.dateInterval.value, alias.dateInterval.unit), timezone)}[`
+        value = `[${isoWithOffset(date, timezone)}, ${isoWithOffset(dayjs(date).add(alias.dateInterval.value, alias.dateInterval.unit as dayjs.ManipulateType), timezone)}[`
       }
       result[alias.name] = value
     }
     if (shouldDelete) delete result[key]
+  }
+  for (const [key, transform] of Object.entries(selectTransforms)) {
+    if (result[key] !== undefined && result[key] !== null) {
+      result[key] = transforms[transform.type](result[key], transform.ignoreTimezone ? undefined : timezone, transform.param)
+    }
   }
 }
 
@@ -257,16 +263,18 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
 
   const fields = dataset.schema.map(f => f.key)
 
-  let aliases: Record<string, string[]> = {}
+  let aliases: Aliases = {}
   let selectAggs = {}
   let selectSource = []
   let selectFinalKeys = []
+  let selectTransforms: Record<string, string> = {}
   let sort = []
   let composite = false
   if (query.select) {
     const select = parseSelect(query.select, { dataset, grouped })
     selectSource = esQuery._source = select.sources
     selectFinalKeys = select.finalKeys
+    selectTransforms = select.transforms
     if (esQuery._source.length === 0) esQuery._source = ['_id']
     aliases = select.aliases
     esQuery.aggs = selectAggs = select.aggregations
@@ -286,7 +294,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
   esQuery.query = parseFilters(dataset, query, 'records')
 
   if (grouped) {
-    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, timezone: query.timezone })
+    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, transforms: selectTransforms, timezone: query.timezone })
     esQuery.aggs = { ___group_by: groupBy.agg }
     esQuery.size = 0
     delete esQuery.from
@@ -298,7 +306,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
     esQuery.track_total_hits = true
   }
 
-  return { grouped, size, from, esQuery, selectAggs, selectSource, selectFinalKeys, aliases, sort, composite }
+  return { grouped, size, from, esQuery, selectAggs, selectSource, selectFinalKeys, selectTransforms, aliases, sort, composite }
 }
 
 const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
@@ -311,7 +319,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!config.compatODS) throw httpError(404, 'unknown API')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const { grouped, size, from, esQuery, selectAggs, selectSource, aliases, sort, composite } = prepareEsQuery(dataset, query)
+  const { grouped, size, from, esQuery, selectAggs, selectSource, selectTransforms, aliases, sort, composite } = prepareEsQuery(dataset, query)
 
   if (grouped) {
     if (size > 20000) throw httpError(400, 'limit should be less than 20000')
@@ -342,7 +350,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     const results: any[] = []
     for (const bucket of bucketsPage) {
       const result = prepareBucketResult(dataset, bucket, selectAggs, composite)
-      applyAliases(result, aliases, query.timezone)
+      applyAliases(result, aliases, selectTransforms, query.timezone)
       results.push(result)
     }
     res.send({ total_count: buckets.length, results })
@@ -354,7 +362,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
       const line = flatten(esResponse.hits.hits[i]._source)
       prepareResult(dataset, line, esResponse.aggregations, req.query.timezone)
-      applyAliases(line, aliases, query.timezone)
+      applyAliases(line, aliases, selectTransforms, query.timezone)
       result.results.push(line)
     }
     compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
@@ -364,7 +372,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
 
 const maxChunkSize = 1000
 
-async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, totalSize, grouped, composite, timezone = 'utc') {
+async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, totalSize, grouped, composite, timezone = 'utc') {
   const flatten = getFlatten(dataset, false, selectSource)
 
   let chunkSize = maxChunkSize
@@ -385,7 +393,7 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
       const buckets: any[] = esResponse.aggregations.___group_by.buckets
       for (const bucket of buckets) {
         const result = prepareBucketResult(dataset, bucket, selectAggs, composite)
-        applyAliases(result, aliases, timezone)
+        applyAliases(result, aliases, selectTransforms, timezone)
         lines.push(result)
       }
 
@@ -395,7 +403,7 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
       for (const hit of hits) {
         const line = flatten(hit._source)
         prepareResult(dataset, line, esResponse.aggregations, timezone)
-        applyAliases(line, aliases, timezone)
+        applyAliases(line, aliases, selectTransforms, timezone)
         lines.push(line)
       }
       esQuery.search_after = hits[hits.length - 1]?.sort
@@ -419,7 +427,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!dataset.schema) throw httpError(404, 'dataset without data')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, aliases, composite } = prepareEsQuery(dataset, query)
+  const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, selectTransforms, aliases, composite } = prepareEsQuery(dataset, query)
 
   if (from) throw httpError(400, 'offset parameter is not supported for exports')
 
@@ -475,7 +483,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     const worksheet = workbookWriter.addWorksheet('Feuille 1')
     // Define columns (optional)
     worksheet.columns = columns
-    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)
+    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)
     for await (const items of iter) {
       for (const item of items) {
         worksheet.addRow(item)
@@ -557,7 +565,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)),
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {

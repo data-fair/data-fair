@@ -2,6 +2,13 @@
 {{
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/commons.js'
+
+const assertDate = (dataset, key, operation) => {
+  const prop = dataset.schema.find(p => p.key === key)
+  if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+  if (prop.type !== 'string' || (prop.format !== 'date' && prop.format !== 'date-time')) throw httpError(400, `Impossible de calculer ${operation}, la colonne n'est pas de type date.`)
+  return prop
+}
 }}
 
 // https://help.opendatasoft.com/apis/ods-explore-v2/#section/Opendatasoft-Query-Language-(ODSQL)/Select-clause
@@ -43,32 +50,14 @@ Select
           }
         }
       }
-      return { sources, aliases, aggregations, finalKeys }
+      return { sources, aliases, transforms, aggregations, finalKeys }
    }
 
 SelectExpression
-  = SelectAggregationAlias
-  / SelectAggregation
-  / SelectFieldNameAlias
-  / SelectFieldName
+  = selectItem:SelectItem __ As __ alias:FieldName { return { ...selectItem, alias } }
+  / selectItem:SelectItem { return selectItem }
 
-SelectFieldName
-  = key:FieldName {
-    const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    return { source: key }
-  }
-
-As = "as"i
-
-SelectFieldNameAlias
-  = key:FieldName __ As __ alias:FieldName {
-    const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    return { source: key, alias }
-  }
-
-SelectAggregation
+SelectItem
   = SelectAvg
   / SelectCountAll
   / SelectCountField
@@ -79,10 +68,16 @@ SelectAggregation
   / SelectSum
   / SelectPercentile
   / SelectMedian
+  / SelectDatePart
+  / SelectFieldName
 
-SelectAggregationAlias
-  = aggregation:SelectAggregation __ As __ alias:FieldName {
-    return { ...aggregation, alias }
+As = "as"i
+
+SelectFieldName
+  = key:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    return { source: key }
   }
 
 SelectAvg
@@ -159,10 +154,14 @@ SelectMedian
     return { aggregation: { [text()]: { percentiles: {field: key, percents: [50], keyed: false} } } }
   }
 
-SelectYear
-  = "year("i _ key:FieldName _ ")" {
-    const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'string' || (prop.format !== 'date' || prop.format !== 'date-time')) throw httpError(400, `Impossible de calculer l'année du champ ${key}, il n'est pas de type date.`)
-    return { source: key, alias, transform: 'year' }
+SelectDatePart
+  = part:DatePart "(" _ key:FieldName _ ")" {
+    const prop = assertDate(options.dataset, key, text())
+    return { source: key, transform: { type: 'date_part', param: part, ignoreTimezone: prop.format === 'date' } }
+  }
+
+SelectDateFormat
+  = "date_format("i _ key:FieldName _ "," _ format:StringLiteral ")" {
+    const prop = assertDate(options.dataset, key, text())
+    return { source: key, transform: { type: 'date_format', param: format.value, ignoreTimezone: prop.format === 'date' } }
   }
