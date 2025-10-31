@@ -3,6 +3,7 @@ import express, { type Request as ExpressRequest, type Response, type NextFuncti
 import { nanoid } from 'nanoid'
 import slug from 'slugify'
 import dayjs from 'dayjs'
+import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type Settings, assertValid as validateSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
@@ -89,13 +90,22 @@ function isOwnerMember (req: ExpressRequest, res: Response, next: NextFunction) 
   next()
 }
 
+function cleanSettings (settings: Settings | DepartmentSettings) {
+  if (settings.apiKeys) {
+    for (const apiKey of settings.apiKeys) {
+      delete apiKey.key
+    }
+  }
+  return settings
+}
+
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
   assertSettingsRequest(req)
   const settings = mongo.settings
   const result = await settings
     .findOne(req.ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
-  res.status(200).send(result || {})
+  res.status(200).send(result ? cleanSettings(result) : {})
 })
 
 const fillSettings = (owner: AccountKeys, user: User, settings: any): Settings | DepartmentSettings => {
@@ -126,28 +136,57 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   fillSettings(req.owner, user, settings)
   validate(settings)
 
-  const fullApiKeys = settings.apiKeys?.map(apiKey => ({ ...apiKey })) || []
-  if (settings.apiKeys) {
-    for (let i = 0; i < settings.apiKeys.length; i++) {
-      const apiKey = settings.apiKeys[i]
-      const fullApiKey = fullApiKeys[i]
-      if (apiKey.adminMode && !user.adminMode) {
-        throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
-      }
-      if (!apiKey.id) fullApiKey.id = apiKey.id = nanoid()
+  settings.apiKeys = settings.apiKeys ?? []
+  const existingApiKeys = (await mongo.settings.findOne(req.ownerFilter))?.apiKeys ?? []
 
+  // a copy of the api keys where the clearKey is returned for the user that created a new key
+  const returnedApiKeys = settings.apiKeys?.map(apiKey => ({ ...apiKey })) || []
+
+  for (let i = 0; i < settings.apiKeys.length; i++) {
+    const apiKey = settings.apiKeys[i]
+
+    if (!apiKey.id) {
+      // creating a new key
+
+      const returnedApiKey = returnedApiKeys[i]
+      if (apiKey.adminMode && !user.adminMode) {
+        throw httpError(403, 'Only superadmin can create api keys with adminMode=true')
+      }
       if (apiKey.expireAt && apiKey.expireAt > dayjs().add(config.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')) {
         throw httpError(400, 'API key expiration is too far in the future')
       }
+      returnedApiKey.id = apiKey.id = nanoid()
 
-      if (!apiKey.key) {
-        const clearKeyParts = [req.owner.type.slice(0, 1), req.owner.id]
-        if (req.owner.department) clearKeyParts.push(req.owner.department)
-        clearKeyParts.push(nanoid())
-        fullApiKey.clearKey = Buffer.from(clearKeyParts.join(':')).toString('base64url')
-        const hash = crypto.createHash('sha512')
-        hash.update(fullApiKey.clearKey)
-        fullApiKeys[i].key = apiKey.key = hash.digest('hex')
+      const clearKeyParts = [req.owner.type.slice(0, 1), req.owner.id]
+      if (req.owner.department) clearKeyParts.push(req.owner.department)
+      clearKeyParts.push(nanoid())
+      returnedApiKey.clearKey = Buffer.from(clearKeyParts.join(':')).toString('base64url')
+      const hash = crypto.createHash('sha512')
+      hash.update(returnedApiKey.clearKey)
+      returnedApiKeys[i].key = apiKey.key = hash.digest('hex')
+    } else {
+      // re-sending an existing key
+
+      const existingApiKey = existingApiKeys.find(k => k.id === apiKey.id)
+      if (!existingApiKey) {
+        throw httpError(400, 'API key cannot be created with an id')
+      }
+      apiKey.key = existingApiKey.key
+      if (!equal(existingApiKey, apiKey)) {
+        throw httpError(400, 'existing API keys are immutable')
+      }
+      // should be covered by previous check, but double check to be sure
+      if (apiKey.adminMode && !existingApiKey.adminMode && !user.adminMode) {
+        throw httpError(403, 'Only superadmin can create api keys with adminMode=true')
+      }
+    }
+  }
+
+  // deleting an api key
+  for (const existingApiKey of existingApiKeys) {
+    if (!settings.apiKeys.some(k => k.id === existingApiKey.id)) {
+      if (existingApiKey.adminMode && !user.adminMode) {
+        throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
     }
   }
@@ -169,7 +208,7 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
     await topicsUtils.updateTopics(req.owner, oldSettings.topics || [], settings.topics)
   }
-  res.status(200).send({ ...settings, apiKeys: fullApiKeys })
+  res.status(200).send(cleanSettings({ ...settings, apiKeys: returnedApiKeys }))
 })
 
 // Get topics list as owner

@@ -8,12 +8,46 @@ describe('API keys', function () {
     await assert.rejects(ax.get('/api/v1/stats'), { status: 401 })
   })
 
-  it('Fail to create an api key too far away expiration', async function () {
+  it('Manage some invald input', async function () {
+    // too far in the future
     await assert.rejects(global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
       apiKeys: [
-        { title: 'key3', scopes: ['stats'], expireAt: dayjs().add(2, 'year').format('YYYY-MM-DD') }
+        { title: 'key', scopes: ['stats'], expireAt: dayjs().add(2, 'year').format('YYYY-MM-DD') }
       ]
     }), { status: 400 })
+
+    // id is readonly
+    await assert.rejects(global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: [
+        { title: 'key', scopes: ['stats'], id: 'test' }
+      ]
+    }), { status: 400 })
+
+    // api keys are immutable
+    const res = await global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: [
+        { title: 'key', scopes: ['stats'] }
+      ]
+    })
+    assert.equal(res.data.apiKeys.length, 1)
+    assert.ok(res.data.apiKeys[0].clearKey)
+    assert.ok(res.data.apiKeys[0].id)
+    assert.ok(!res.data.apiKeys[0].key)
+    await global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: res.data.apiKeys
+    })
+    await assert.rejects(global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: [
+        { ...res.data.apiKeys[0], title: 'renamed api key' }
+      ]
+    }), { status: 400 })
+
+    // adminMode can only created by a superadmin
+    await assert.rejects(global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: [
+        { title: 'admin key', scopes: ['datasets'], adminMode: true, asAccount: true }
+      ]
+    }), { status: 403 })
   })
 
   it('Create and use a User level api key', async function () {
@@ -124,5 +158,31 @@ describe('API keys', function () {
     assert.equal(dataset.owner.type, 'organization')
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
     assert.equal(dataset.owner.name, 'Fivechat testé')
+
+    // user cannot delete the key
+    assert.rejects(global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: [
+        { ...res.data.apiKeys[0], scopes: ['stats'] }
+      ]
+    }), { status: 403 })
+    // user cannot mutate the key
+    assert.rejects(global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: []
+    }), { status: 403 })
+    // user can add another key
+    global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: [
+        res.data.apiKeys[0],
+        { title: 'uset key', scopes: ['datasets'] }
+      ]
+    })
+    // the admin key is still working
+    await axKey.get('/api/v1/datasets/' + dataset.id)
+    // superadmin can delete the key
+    await global.ax.superadmin.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: []
+    })
+    // the admin key is no longer working
+    await assert.rejects(axKey.get('/api/v1/datasets/' + dataset.id), { status: 401 })
   })
 })
