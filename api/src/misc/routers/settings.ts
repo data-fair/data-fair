@@ -18,6 +18,7 @@ import debugLib from 'debug'
 import { reqHost } from '@data-fair/lib-express/req-origin.js'
 import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type User } from '@data-fair/lib-express'
 import { type Request } from '#types'
+import eventsLog from '@data-fair/lib-express/events-log.js'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -72,6 +73,7 @@ function isOwnerAdmin (req: ExpressRequest, res: Response, next: NextFunction) {
   if (sessionState.user.adminMode) {
     // ok
   } else if (permissions.getOwnerRole(req.owner, sessionState) !== 'admin') {
+    eventsLog.alert('df.apikeys.permission', 'a user attempted to overwrite settings from another account', { req, account: req.owner })
     res.sendStatus(403)
     return
   }
@@ -146,12 +148,22 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   for (let i = 0; i < settings.apiKeys.length; i++) {
     const apiKey = settings.apiKeys[i]
 
+    if (apiKey.key) {
+      eventsLog.alert('df.apikeys.writesecret', 'a user attempted to write and api key internal secret', { req, account: req.owner })
+      throw httpError(403, 'Attempt to write an api key secret')
+    }
+
     if (!apiKey.id) {
       // creating a new key
 
       const returnedApiKey = returnedApiKeys[i]
       if (apiKey.adminMode && !user.adminMode) {
+        eventsLog.alert('df.apikeys.createadmin', 'a user attempted to create an adminMode api key', { req, account: req.owner })
         throw httpError(403, 'Only superadmin can create api keys with adminMode=true')
+      }
+      if (apiKey.email) {
+        eventsLog.alert('df.apikeys.setemail', 'a user attempted to define the email address of an api key', { req, account: req.owner })
+        throw httpError(403, 'API key email is readonly')
       }
       if (apiKey.expireAt && apiKey.expireAt > dayjs().add(config.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')) {
         throw httpError(400, 'API key expiration is too far in the future')
@@ -169,20 +181,25 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
       if (settings.type !== 'user') {
         returnedApiKey.email = apiKey.email = `${slug.default(apiKey.title, { lower: true, strict: true })}-${apiKey.id}@api-key.${reqHost(req)}`
       }
+
+      eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id})`, { req, account: req.owner })
     } else {
       // re-sending an existing key
 
       const existingApiKey = existingApiKeys.find(k => k.id === apiKey.id)
       if (!existingApiKey) {
+        eventsLog.alert('df.apikeys.setid', 'a user tried to create an api key with id', { req, account: req.owner })
         throw httpError(400, 'API key cannot be created with an id')
+      }
+      // should be covered by next general immutability check, but double check to be sure
+      if (apiKey.adminMode && !existingApiKey.adminMode && !user.adminMode) {
+        eventsLog.alert('df.apikeys.setadmin', 'a user attempted to mutate an api key and make it admin', { req, account: req.owner })
+        throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
       apiKey.key = existingApiKey.key
       if (!equal(existingApiKey, apiKey)) {
+        eventsLog.alert('df.apikeys.mutate', `a user tried to mutate an existing api key ${existingApiKey.title} (${existingApiKey.id})`, { req, account: req.owner })
         throw httpError(400, 'existing API keys are immutable')
-      }
-      // should be covered by previous check, but double check to be sure
-      if (apiKey.adminMode && !existingApiKey.adminMode && !user.adminMode) {
-        throw httpError(403, 'Only superadmin can create api keys with adminMode=true')
       }
     }
   }
@@ -191,6 +208,7 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   for (const existingApiKey of existingApiKeys) {
     if (!settings.apiKeys.some(k => k.id === existingApiKey.id)) {
       if (existingApiKey.adminMode && !user.adminMode) {
+        eventsLog.alert('df.apikeys.deleteadmin', 'a user attempted to delete an admin api key', { req, account: req.owner })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
     }
