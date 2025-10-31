@@ -1,6 +1,10 @@
 // this is run in a thread as it is quite cpu and memory intensive
 
-import XLSX from 'xlsx'
+// It is strongly recommended to use CommonJS in NodeJS.
+// https://docs.sheetjs.com/docs/getting-started/installation/nodejs#usage
+import Module from 'node:module'
+const require = Module.createRequire(import.meta.url)
+const XLSX = require('@e965/xlsx')
 
 // cf https://stackoverflow.com/a/57673262
 const val2string = (val) => {

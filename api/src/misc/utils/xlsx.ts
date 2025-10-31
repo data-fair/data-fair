@@ -1,7 +1,7 @@
 import { stringify as csvStr } from 'csv-stringify/sync'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc.js'
-import { type WorkSheet } from 'xlsx'
+import { type WorkSheet } from '@e965/xlsx'
 
 dayjs.extend(utc)
 
@@ -202,7 +202,11 @@ const iterCsv = async function * (worksheet: WorkSheet) {
 
 // previous implementation using xlsx module.. kept around as a fallback and for ODS format
 const iterCsvOld = async function * (filePath: string) {
-  const XLSX = (await import('xlsx')).default
+  // It is strongly recommended to use CommonJS in NodeJS.
+  // https://docs.sheetjs.com/docs/getting-started/installation/nodejs#usage
+  const { createRequire } = await import('node:module')
+  const require = createRequire(import.meta.url)
+  const XLSX = require('@e965/xlsx')
 
   const workbook = XLSX.readFile(filePath, { cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]
