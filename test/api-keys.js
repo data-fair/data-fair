@@ -58,7 +58,8 @@ describe('API keys', function () {
         { title: 'key1', scopes: ['stats'], expireAt: tomorrow },
         { title: 'key2', scopes: ['datasets'] },
         { title: 'key3', scopes: ['stats'], expireAt: yesterday },
-        { title: 'key4', scopes: [] }
+        { title: 'key4', scopes: [] },
+        { title: 'key5', scopes: ['datasets-read'] },
       ]
     })
     assert.equal(res.data.name, 'Danna Meadus')
@@ -67,12 +68,10 @@ describe('API keys', function () {
     assert.equal(key1.email, 'dmeadus0@answers.com')
     assert.equal(res.data.email, 'dmeadus0@answers.com')
     const key2 = res.data.apiKeys[1]
-    assert.ok(key2.clearKey)
     const key3 = res.data.apiKeys[2]
-    assert.ok(key3.clearKey)
     const key4 = res.data.apiKeys[3]
-    assert.ok(key4.clearKey)
     assert.ok(key4.email.endsWith('@api-key.localhost:5600'))
+    const key5 = res.data.apiKeys[4]
 
     // Right scope
     const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1.clearKey } })
@@ -85,6 +84,8 @@ describe('API keys', function () {
       assert.ok(err.response.data.includes('Cette clé d\'API n\'a pas la portée nécessaire.'))
       return true
     })
+    const axKey5 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key5.clearKey } })
+    await assert.rejects(testUtils.sendDataset('datasets/dataset1.csv', axKey5), { status: 403 })
 
     // expired key
     const axKey3 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key3.clearKey } })
@@ -99,6 +100,8 @@ describe('API keys', function () {
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'user')
     assert.equal(dataset.owner.id, 'dmeadus0')
+    await axKey2.get('/api/v1/datasets/' + dataset.id + '/lines')
+    await axKey5.get('/api/v1/datasets/' + dataset.id + '/lines')
 
     // API key should react to permission granted through user email
     const orgDataset = await testUtils.sendDataset('datasets/dataset1.csv', global.ax.hlalonde3Org)

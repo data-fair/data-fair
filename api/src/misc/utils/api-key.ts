@@ -10,7 +10,7 @@ import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../routers/settings.ts'
 import dayjs from 'dayjs'
 
-export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
+export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
   if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
     req.bypassPermissions = { classes: ['read'] }
     const user = {
@@ -56,7 +56,7 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
       sessionState.accountRole = config.adminRole
       return sessionState
     }
-    if (!apiKey.scopes.includes(scope)) {
+    if (!apiKey.scopes.some(scope => scopes.includes(scope))) {
       throw httpError(403, 'Cette clé d\'API n\'a pas la portée nécessaire.')
     }
 
@@ -136,13 +136,14 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
   }
 }
 
-export const middleware = (scope: string) => {
+export const middleware = (scopes: string[] | string) => {
+  if (typeof scopes === 'string') scopes = [scopes]
   return async (_req: Request, res: Response, next: NextFunction) => {
     const req = _req as RequestWithResource
     const reqApiKey = req.get('x-apiKey') || req.get('x-api-key') || req.query.apiKey
     const asAccountStr = req.get('x-account') || req.query.account
     if (typeof reqApiKey === 'string') {
-      const sessionState = await readApiKey(reqApiKey, scope, asAccountStr, req)
+      const sessionState = await readApiKey(reqApiKey, scopes, asAccountStr, req)
       setReqSession(req, sessionState)
     }
     next()
