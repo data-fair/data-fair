@@ -18,7 +18,6 @@
               v-model="newApiKey.title"
               :rules="[v => !!v || '']"
               :label="t('title')"
-              hide-details
               required
             />
             <v-checkbox
@@ -37,19 +36,21 @@
               density="comfortable"
               hide-details
             />
-            <template v-if="filteredScopes.length > 1">
-              <v-checkbox
-                v-for="scope of filteredScopes"
-                :key="scope"
-                v-model="newApiKey.scopes"
-                :label="t(scope)"
-                :value="scope"
-                :rules="[v => !!v.length || '']"
-                density="comfortable"
-                color="primary"
-                hide-details
-              />
-            </template>
+            <tutorial-alert
+              id="api-key-scope"
+              :text="t('scopeMsg')"
+              persistent
+              initial
+            />
+            <v-select
+              v-if="filteredScopes.length > 1"
+              v-model="newApiKey.scopes"
+              :label="t('scope')"
+              :items="filteredScopes"
+              :item-title="t"
+              multiple
+              density="comfortable"
+            />
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -109,10 +110,30 @@
             class="mb-2"
             :text="t('asAccountKeyAlert')"
           />
-          <p v-if="!!apiKey.clearKey">
+          <p
+            v-if="!!apiKey.clearKey"
+            class="mb-4"
+          >
             {{ t('secretKey') }} : <strong>{{ apiKey.clearKey }}</strong>
           </p>
-          <p>{{ t('scope') }} : {{ apiKey.scopes?.map(s => t(s)).join(', ') }}</p>
+          <p
+            v-if="apiKey.scopes?.length"
+            class="mb-4"
+          >
+            {{ t('scope') }} : {{ apiKey.scopes?.map(s => t(s)).join(', ') }}
+          </p>
+          <tutorial-alert
+            id="api-key-email"
+            :text="t('emailMsg')"
+            persistent
+            :initial="false"
+          />
+          <p
+            v-if="apiKey.email"
+            class="mb-4"
+          >
+            {{ t('email') }} : {{ apiKey.email }}
+          </p>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -142,9 +163,15 @@ fr:
   asAccountKeyAlert: Cette clé permet de travailler dans le contexte d'autres comptes
   secretKey: Clé secrète
   scope: Portée
+  scopeMsg: Si vous donnez une portée à cette clé d'API elle pourra servir à effectuer toutes les opérations correspondantes sur toutes les ressources pour lesquelles les administrateurs de ce compte ont la permission requise. Si vous ne donnez aucune portée les seules permissions appliquées seront celles affectées explicitement à la pseudo adresse mail de la clé.
+  email: Email
+  emailMsg: Ce pseudo email peut être utilisé pour affecter des permissions fines à cette clé d'API.
   deleteKey: Supprimer cette clé d'API
   deleteKeyDetails: Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
-  datasets: Jeux de données
+  datasets: Jeux de données - toutes opérations
+  datasets-read: Jeux de données - lecture
+  datasets-write: Jeux de données - écriture
+  datasets-admin: Jeux de données - administration
   applications: Applications
   catalogs: Connecteurs aux catalogues
   stats: Récupération d'informations statistiques
@@ -161,9 +188,15 @@ en:
   asAccountKeyAlert: Key to work in the context of other accounts
   secretKey: Secret key
   scope: Scope
+  scopeMsg: If you give a scope to this API key it will be able to perform all corresponding operations on all resources for which the account administrators have the required permissions. If you don't give any scope the only permissions applied will be those explicitly assigned to the key's pseudo email address.
+  email: Email
+  emailMsg: This pseudo email address can be used to assign fine-grained permissions to this API key.
   deleteKey: Delete this API key
   deleteKeyDetails: Do you really want to delete this API key ? Softwares or scripts that use this key won't work anymore.
-  datasets: Datasets
+  datasets: Datasets - all operations
+  datasets-read: Datasets - read
+  datasets-write: Datasets - write
+  datasets-admin: Datasets - admin
   applications: Applications
   catalogs: Catalogs
   stats: Stats
@@ -226,8 +259,10 @@ const removeApiKey = (rowIndex: number) => {
 
 const scopes = [
   'datasets',
+  'datasets-read',
+  'datasets-write',
+  'datasets-admin',
   'applications',
-  'catalogs',
   'stats'
 ]
 
