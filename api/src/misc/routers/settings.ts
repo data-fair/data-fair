@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import express, { type Request as ExpressRequest, type Response, type NextFunction } from 'express'
 import { nanoid } from 'nanoid'
 import slug from 'slugify'
+import dayjs from 'dayjs'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type Settings, assertValid as validateSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
@@ -134,6 +135,10 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
         throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
       }
       if (!apiKey.id) fullApiKey.id = apiKey.id = nanoid()
+
+      if (apiKey.expireAt && apiKey.expireAt > dayjs().add(config.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')) {
+        throw httpError(400, 'API key expiration is too far in the future')
+      }
 
       if (!apiKey.key) {
         const clearKeyParts = [req.owner.type.slice(0, 1), req.owner.id]

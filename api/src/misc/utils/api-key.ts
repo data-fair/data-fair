@@ -8,6 +8,7 @@ import { type RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account } from '@data-fair/lib-express'
 import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../routers/settings.ts'
+import dayjs from 'dayjs'
 
 export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
   if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
@@ -35,6 +36,9 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
     const apiKey = settings.apiKeys?.[0]
     if (!apiKey) throw httpError(401, 'Cette clé d\'API est inconnue.')
     if (!apiKey.scopes.includes(scope)) throw httpError(403, 'Cette clé d\'API n\'a pas la portée nécessaire.')
+    if (apiKey.expireAt && apiKey.expireAt < dayjs().format('YYYY-MM-DD')) {
+      throw httpError(403, 'Cette clé d\'API est expirée.')
+    }
 
     const sessionState: SessionState & { isApiKey: true } = {
       lang: 'fr',

@@ -206,6 +206,10 @@ export default {
               type: 'string'
             }
           },
+          expireAt: {
+            type: 'string',
+            format: 'date'
+          },
           adminMode: {
             type: 'boolean',
             default: false

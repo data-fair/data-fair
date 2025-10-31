@@ -1,5 +1,6 @@
 import * as testUtils from './resources/test-utils.js'
 import { strict as assert } from 'node:assert'
+import dayjs from 'dayjs'
 
 describe('API keys', function () {
   it('Reject wrong api key', async function () {
@@ -7,11 +8,22 @@ describe('API keys', function () {
     await assert.rejects(ax.get('/api/v1/stats'), { status: 401 })
   })
 
+  it('Fail to create an api key too far away expiration', async function () {
+    await assert.rejects(global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: [
+        { title: 'key3', scopes: ['stats'], expireAt: dayjs().add(2, 'year').format('YYYY-MM-DD') }
+      ]
+    }), { status: 400 })
+  })
+
   it('Create and use a User level api key', async function () {
+    const yesterday = dayjs().add(-1, 'day').format('YYYY-MM-DD')
+    const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD')
     const res = await global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
       apiKeys: [
-        { title: 'key1', scopes: ['stats'] },
-        { title: 'key2', scopes: ['datasets'] }
+        { title: 'key1', scopes: ['stats'], expireAt: tomorrow },
+        { title: 'key2', scopes: ['datasets'] },
+        { title: 'key3', scopes: ['stats'], expireAt: yesterday }
       ]
     })
     assert.equal(res.data.name, 'Danna Meadus')
@@ -19,6 +31,8 @@ describe('API keys', function () {
     assert.ok(key1)
     const key2 = res.data.apiKeys[1].clearKey
     assert.ok(key2)
+    const key3 = res.data.apiKeys[2].clearKey
+    assert.ok(key3)
     assert.equal(res.data.email, 'dmeadus0@answers.com')
 
     // Right scope
@@ -27,7 +41,19 @@ describe('API keys', function () {
 
     // Wrong scope
     const axKey2 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key2 } })
-    await assert.rejects(axKey2.get('/api/v1/stats'), { status: 403 })
+    await assert.rejects(axKey2.get('/api/v1/stats'), (err) => {
+      assert.equal(err.status, 403)
+      assert.ok(err.response.data.includes('Cette clé d\'API n\'a pas la portée nécessaire.'))
+      return true
+    })
+
+    // expired key
+    const axKey3 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key3 } })
+    await assert.rejects(axKey3.get('/api/v1/stats'), (err) => {
+      assert.equal(err.status, 403)
+      assert.ok(err.response.data.includes('Cette clé d\'API est expirée.'))
+      return true
+    })
 
     // Set the correct owner
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey2)
