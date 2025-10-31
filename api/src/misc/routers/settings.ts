@@ -180,7 +180,9 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
       hash.update(returnedApiKey.clearKey)
       returnedApiKey.key = apiKey.key = hash.digest('hex')
 
-      if (settings.type !== 'user') {
+      if (settings.type === 'user' && apiKey.scopes.length) {
+        returnedApiKey.email = apiKey.email = (settings as Settings).email
+      } else {
         returnedApiKey.email = apiKey.email = `${slug.default(apiKey.title, { lower: true, strict: true })}-${apiKey.id}@api-key.${reqHost(req)}`
       }
 

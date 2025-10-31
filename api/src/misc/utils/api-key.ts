@@ -35,15 +35,31 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
     if (!settings) throw httpError(401, 'Cette clé d\'API est inconnue.')
     const apiKey = settings.apiKeys?.[0]
     if (!apiKey) throw httpError(401, 'Cette clé d\'API est inconnue.')
-    if (!apiKey.scopes.includes(scope)) throw httpError(403, 'Cette clé d\'API n\'a pas la portée nécessaire.')
     if (apiKey.expireAt && apiKey.expireAt < dayjs().format('YYYY-MM-DD')) {
       throw httpError(403, 'Cette clé d\'API est expirée.')
     }
-
     const sessionState: SessionState & { isApiKey: true } = {
       lang: 'fr',
       isApiKey: true
     }
+
+    if (!apiKey.scopes.length && apiKey.email) {
+      // an api key without scope acts as a single separate user (not an org member)
+      // so that only individual email based permissions can apply
+      sessionState.user = {
+        id: apiKey.id as string,
+        name: `${settings.name} (${apiKey.title})`,
+        email: apiKey.email,
+        organizations: []
+      }
+      sessionState.account = { type: 'user', id: sessionState.user.id, name: sessionState.user.name }
+      sessionState.accountRole = config.adminRole
+      return sessionState
+    }
+    if (!apiKey.scopes.includes(scope)) {
+      throw httpError(403, 'Cette clé d\'API n\'a pas la portée nécessaire.')
+    }
+
     if (apiKey.adminMode && apiKey.asAccount) {
       if (!asAccount) throw httpError(403, 'Cette clé d\'API requiert de spécifier le compte à incarner')
       let account: Account

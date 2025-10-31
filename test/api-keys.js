@@ -57,24 +57,29 @@ describe('API keys', function () {
       apiKeys: [
         { title: 'key1', scopes: ['stats'], expireAt: tomorrow },
         { title: 'key2', scopes: ['datasets'] },
-        { title: 'key3', scopes: ['stats'], expireAt: yesterday }
+        { title: 'key3', scopes: ['stats'], expireAt: yesterday },
+        { title: 'key4', scopes: [] }
       ]
     })
     assert.equal(res.data.name, 'Danna Meadus')
-    const key1 = res.data.apiKeys[0].clearKey
-    assert.ok(key1)
-    const key2 = res.data.apiKeys[1].clearKey
-    assert.ok(key2)
-    const key3 = res.data.apiKeys[2].clearKey
-    assert.ok(key3)
+    const key1 = res.data.apiKeys[0]
+    assert.ok(key1.clearKey)
+    assert.equal(key1.email, 'dmeadus0@answers.com')
     assert.equal(res.data.email, 'dmeadus0@answers.com')
+    const key2 = res.data.apiKeys[1]
+    assert.ok(key2.clearKey)
+    const key3 = res.data.apiKeys[2]
+    assert.ok(key3.clearKey)
+    const key4 = res.data.apiKeys[3]
+    assert.ok(key4.clearKey)
+    assert.ok(key4.email.endsWith('@api-key.localhost:5600'))
 
     // Right scope
-    const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1 } })
+    const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1.clearKey } })
     await axKey1.get('/api/v1/stats')
 
     // Wrong scope
-    const axKey2 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key2 } })
+    const axKey2 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key2.clearKey } })
     await assert.rejects(axKey2.get('/api/v1/stats'), (err) => {
       assert.equal(err.status, 403)
       assert.ok(err.response.data.includes('Cette clé d\'API n\'a pas la portée nécessaire.'))
@@ -82,7 +87,7 @@ describe('API keys', function () {
     })
 
     // expired key
-    const axKey3 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key3 } })
+    const axKey3 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key3.clearKey } })
     await assert.rejects(axKey3.get('/api/v1/stats'), (err) => {
       assert.equal(err.status, 403)
       assert.ok(err.response.data.includes('Cette clé d\'API est expirée.'))
@@ -102,12 +107,22 @@ describe('API keys', function () {
       { type: 'user', email: 'dmeadus0@answers.com', classes: ['read'] }
     ])
     await axKey2.get('/api/v1/datasets/' + orgDataset.id + '/lines')
+
+    // API key without scope should only react to permission granted through specific email
+    const axKey4 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key4.clearKey } })
+    await assert.rejects(axKey4.get('/api/v1/datasets/' + dataset.id + '/lines'), { status: 403 })
+    await assert.rejects(axKey4.get('/api/v1/datasets/' + orgDataset.id + '/lines'), { status: 403 })
+    await global.ax.hlalonde3Org.put('/api/v1/datasets/' + orgDataset.id + '/permissions', [
+      { type: 'user', email: key4.email, classes: ['read'] }
+    ])
+    await axKey4.get('/api/v1/datasets/' + orgDataset.id + '/lines')
   })
 
   it('Create and use an organization level api key', async function () {
     const res = await global.ax.dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG', {
       apiKeys: [
-        { title: 'Key 1', scopes: ['datasets'] }
+        { title: 'Key 1', scopes: ['datasets'] },
+        { title: 'Key 2', scopes: [] }
       ]
     })
     assert.equal(res.data.name, 'Fivechat')
@@ -117,6 +132,7 @@ describe('API keys', function () {
     assert.ok(key1.email.startsWith('key-1-'))
     assert.ok(key1.id)
     assert.ok(!key1.key)
+    const key2 = res.data.apiKeys[1]
 
     // Set the correct owner
     const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1.clearKey } })
@@ -132,6 +148,15 @@ describe('API keys', function () {
       { type: 'user', email: key1.email, classes: ['read'] }
     ])
     await axKey1.get('/api/v1/datasets/' + otherDataset.id + '/lines')
+
+    // API key without a scope only gets explicit permissions
+    const axKey2 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key2.clearKey } })
+    await assert.rejects(axKey2.get('/api/v1/datasets/' + dataset.id + '/lines'), { status: 403 })
+    await assert.rejects(axKey2.get('/api/v1/datasets/' + otherDataset.id + '/lines'), { status: 403 })
+    await global.ax.hlalonde3.put('/api/v1/datasets/' + otherDataset.id + '/permissions', [
+      { type: 'user', email: key2.email, classes: ['read'] }
+    ])
+    await axKey2.get('/api/v1/datasets/' + otherDataset.id + '/lines')
   })
 
   it('Create and use a department level api key', async function () {
