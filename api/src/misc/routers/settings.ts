@@ -19,6 +19,7 @@ import { reqHost } from '@data-fair/lib-express/req-origin.js'
 import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type User } from '@data-fair/lib-express'
 import { type Request } from '#types'
 import eventsLog from '@data-fair/lib-express/events-log.js'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -135,7 +136,8 @@ const fillSettings = (owner: AccountKeys, user: User, settings: any): Settings |
 router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   assertSettingsRequest(req)
   const settings = req.body
-  const user = reqUserAuthenticated(req)
+  const sessionState = reqSessionAuthenticated(req)
+  const user = sessionState.user
   fillSettings(req.owner, user, settings)
   validate(settings)
 
@@ -182,7 +184,15 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
         returnedApiKey.email = apiKey.email = `${slug.default(apiKey.title, { lower: true, strict: true })}-${apiKey.id}@api-key.${reqHost(req)}`
       }
 
-      eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id})`, { req, account: req.owner })
+      eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { req, account: req.owner })
+      eventsQueue.pushEvent({
+        title: 'Création d\'une clé d\'API',
+        body: `${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`,
+        topic: {
+          key: 'data-fair:settings:api-key-created'
+        },
+        sender: req.owner
+      }, sessionState)
     } else {
       // re-sending an existing key
 
@@ -211,6 +221,14 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
         eventsLog.alert('df.apikeys.deleteadmin', 'a user attempted to delete an admin api key', { req, account: req.owner })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
+      eventsQueue.pushEvent({
+        title: 'Suppression d\'une clé d\'API',
+        body: `${existingApiKey.title} (${existingApiKey.id}), scopes=${existingApiKey.scopes.join(', ')}`,
+        topic: {
+          key: 'data-fair:settings:api-key-deleted'
+        },
+        sender: req.owner
+      }, sessionState)
     }
   }
 
