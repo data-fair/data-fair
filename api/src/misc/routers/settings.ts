@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import express, { type Request as ExpressRequest, type Response, type NextFunction } from 'express'
-import { nanoid } from 'nanoid'
+import nanoid from '../utils/nanoid.js'
 import slug from 'slugify'
 import dayjs from 'dayjs'
 import equal from 'fast-deep-equal'
@@ -15,6 +15,7 @@ import config from '#config'
 import mongo from '#mongo'
 import standardLicenses from '../../../contract/licenses.js'
 import debugLib from 'debug'
+import { reqHost } from '@data-fair/lib-express/req-origin.js'
 import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type User } from '@data-fair/lib-express'
 import { type Request } from '#types'
 
@@ -163,7 +164,11 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
       returnedApiKey.clearKey = Buffer.from(clearKeyParts.join(':')).toString('base64url')
       const hash = crypto.createHash('sha512')
       hash.update(returnedApiKey.clearKey)
-      returnedApiKeys[i].key = apiKey.key = hash.digest('hex')
+      returnedApiKey.key = apiKey.key = hash.digest('hex')
+
+      if (settings.type !== 'user') {
+        returnedApiKey.email = apiKey.email = `${slug.default(apiKey.title, { lower: true, strict: true })}-${apiKey.id}@api-key.${reqHost(req)}`
+      }
     } else {
       // re-sending an existing key
 

@@ -107,19 +107,31 @@ describe('API keys', function () {
   it('Create and use an organization level api key', async function () {
     const res = await global.ax.dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG', {
       apiKeys: [
-        { title: 'key1', scopes: ['datasets'] }
+        { title: 'Key 1', scopes: ['datasets'] }
       ]
     })
     assert.equal(res.data.name, 'Fivechat')
-    const key1 = res.data.apiKeys[0].clearKey
-    assert.ok(key1)
+    const key1 = res.data.apiKeys[0]
+    assert.ok(key1.clearKey)
+    assert.ok(key1.email)
+    assert.ok(key1.email.startsWith('key-1-'))
+    assert.ok(key1.id)
+    assert.ok(!key1.key)
 
     // Set the correct owner
-    const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1 } })
+    const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1.clearKey } })
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
+
+    // API key should react to permission granted through its pseudo email
+    const otherDataset = await testUtils.sendDataset('datasets/dataset1.csv', global.ax.hlalonde3)
+    await assert.rejects(axKey1.get('/api/v1/datasets/' + otherDataset.id + '/lines'), { status: 403 })
+    await global.ax.hlalonde3.put('/api/v1/datasets/' + otherDataset.id + '/permissions', [
+      { type: 'user', email: key1.email, classes: ['read'] }
+    ])
+    await axKey1.get('/api/v1/datasets/' + otherDataset.id + '/lines')
   })
 
   it('Create and use a department level api key', async function () {

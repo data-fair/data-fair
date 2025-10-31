@@ -200,6 +200,9 @@ export default {
           key: {
             type: 'string'
           },
+          email: {
+            type: 'string'
+          },
           scopes: {
             type: 'array',
             items: {

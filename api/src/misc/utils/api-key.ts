@@ -106,6 +106,8 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
           email: '',
           organizations: [userOrg]
         }
+        // this should always be defined from now own, but not in older api keys
+        if (apiKey.email) sessionState.user.email = apiKey.email
         sessionState.organization = userOrg
         sessionState.account = { type: 'organization', ...userOrg }
         // @ts-ignore
