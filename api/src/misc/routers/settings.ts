@@ -167,7 +167,7 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
         eventsLog.alert('df.apikeys.setemail', 'a user attempted to define the email address of an api key', { req, account: req.owner })
         throw httpError(403, 'API key email is readonly')
       }
-      if (apiKey.expireAt && apiKey.expireAt > dayjs().add(config.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')) {
+      if (apiKey.expireAt && apiKey.expireAt > dayjs().add(config.apiKeysMaxDuration + 1, 'day').format('YYYY-MM-DD')) {
         throw httpError(400, 'API key expiration is too far in the future')
       }
       returnedApiKey.id = apiKey.id = nanoid()

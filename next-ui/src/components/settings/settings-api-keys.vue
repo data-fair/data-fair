@@ -51,6 +51,13 @@
               multiple
               density="comfortable"
             />
+            <v-date-input
+              :model-value="new Date(newApiKey.expireAt)"
+              :label="t('expireAt')"
+              :rules="[v => !!v || '']"
+              :max="new Date(maxDate)"
+              @update:model-value="v => newApiKey.expireAt = dayjs(v).format('YYYY-MM-DD')"
+            />
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -134,6 +141,12 @@
           >
             {{ t('email') }} : {{ apiKey.email }}
           </p>
+          <p
+            v-if="apiKey.expireAt"
+            class="mb-4"
+          >
+            {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('l') }}
+          </p>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -166,6 +179,7 @@ fr:
   scopeMsg: Si vous donnez une portée à cette clé d'API elle pourra servir à effectuer toutes les opérations correspondantes sur toutes les ressources pour lesquelles les administrateurs de ce compte ont la permission requise. Si vous ne donnez aucune portée les seules permissions appliquées seront celles affectées explicitement à la pseudo adresse mail de la clé.
   email: Email
   emailMsg: Ce pseudo email peut être utilisé pour affecter des permissions fines à cette clé d'API.
+  expireAt: Date d'expiration
   deleteKey: Supprimer cette clé d'API
   deleteKeyDetails: Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
   datasets: Jeux de données - toutes opérations
@@ -191,6 +205,7 @@ en:
   scopeMsg: If you give a scope to this API key it will be able to perform all corresponding operations on all resources for which the account administrators have the required permissions. If you don't give any scope the only permissions applied will be those explicitly assigned to the key's pseudo email address.
   email: Email
   emailMsg: This pseudo email address can be used to assign fine-grained permissions to this API key.
+  expireAt: Expiration date
   deleteKey: Delete this API key
   deleteKeyDetails: Do you really want to delete this API key ? Softwares or scripts that use this key won't work anymore.
   datasets: Datasets - all operations
@@ -203,6 +218,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { VDateInput } from 'vuetify/labs/VDateInput'
 import type { Settings } from '#api/types'
 
 const { settings, restrictedScopes } = defineProps<{
@@ -215,16 +231,22 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n()
 const session = useSessionAuthenticated()
+const { dayjs } = useLocaleDayjs()
+
+const maxDate = dayjs().add($uiConfig.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')
+const createNewApiKey = () => ({
+  title: '',
+  scopes: [],
+  expireAt: maxDate
+})
 
 const newApiKey = ref<{
   title: string
   scopes: string[]
+  expireAt: string
   adminMode?: boolean
   asAccount?: boolean
-}>({
-  title: '',
-  scopes: []
-})
+}>(createNewApiKey())
 
 const newApiKeyValid = ref(false)
 const createToggle = ref(false)
@@ -244,10 +266,7 @@ const addApiKey = () => {
   const updatedSettings = { ...settings }
   updatedSettings.apiKeys?.push(newApiKey.value)
   createToggle.value = false
-  newApiKey.value = {
-    title: '',
-    scopes: []
-  }
+  newApiKey.value = createNewApiKey()
   emit('updated', updatedSettings)
 }
 
