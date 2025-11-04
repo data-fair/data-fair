@@ -108,22 +108,11 @@
                       </p>
                     </template>
                     <template #tabs-items>
-                      <v-container
-                        fluid
-                        class="py-1"
-                      >
-                        <v-row>
-                          <v-col
-                            cols="12"
-                            md="6"
-                          >
-                            <settings-licenses
-                              :settings="settings"
-                              @license-updated="save('fetchLicenses')"
-                            />
-                          </v-col>
-                        </v-row>
-                      </v-container>
+                      <d-frame
+                        :src="`/data-fair/embed/settings/${settingsPath}/licenses`"
+                        resize="yes"
+                        @notif="emitFrameNotif"
+                      />
                     </template>
                   </layout-section-tabs>
 
@@ -142,22 +131,11 @@
                       </p>
                     </template>
                     <template #tabs-items>
-                      <v-container
-                        fluid
-                        class="py-1"
-                      >
-                        <v-row>
-                          <v-col
-                            cols="12"
-                            md="6"
-                          >
-                            <settings-topics
-                              :settings="settings"
-                              @updated="save('fetchTopics')"
-                            />
-                          </v-col>
-                        </v-row>
-                      </v-container>
+                      <d-frame
+                        :src="`/data-fair/embed/settings/${settingsPath}/topics`"
+                        resize="yes"
+                        @notif="emitFrameNotif"
+                      />
                     </template>
                   </layout-section-tabs>
 
@@ -203,22 +181,11 @@
                       </p>
                     </template>
                     <template #tabs-items>
-                      <v-container
-                        fluid
-                        class="py-1"
-                      >
-                        <v-row>
-                          <v-col
-                            cols="12"
-                            md="6"
-                          >
-                            <settings-api-keys
-                              :settings="settings"
-                              @updated="save"
-                            />
-                          </v-col>
-                        </v-row>
-                      </v-container>
+                      <d-frame
+                        :src="`/data-fair/embed/settings/${settingsPath}/api-keys`"
+                        resize="yes"
+                        @notif="emitFrameNotif"
+                      />
                     </template>
                   </layout-section-tabs>
 
@@ -235,22 +202,11 @@
                       </p>
                     </template>
                     <template #tabs-items>
-                      <v-container
-                        fluid
-                        class="pt-1 pb-6"
-                      >
-                        <v-row>
-                          <v-col
-                            cols="12"
-                            md="6"
-                          >
-                            <settings-webhooks
-                              :settings="settings"
-                              @webhook-updated="save"
-                            />
-                          </v-col>
-                        </v-row>
-                      </v-container>
+                      <d-frame
+                        :src="`/data-fair/embed/settings/${settingsPath}/webhooks`"
+                        resize="yes"
+                        @notif="emitFrameNotif"
+                      />
                     </template>
                   </layout-section-tabs>
 
@@ -475,15 +431,18 @@ export default {
       }
       return sections
     },
-    settingsUrl () {
-      let url = 'api/v1/settings/' + this.settingsAccount.type + '/' + this.settingsAccount.id
-      if (this.settingsAccount.department) url += ':' + this.settingsAccount.department
-      return url
-    },
     settingsAccount () {
       if (this.selectedDepartment) return { ...this.activeAccount, department: this.selectedDepartment }
       else return this.activeAccount
-    }
+    },
+    settingsPath () {
+      let settingsPath = this.settingsAccount.type + '/' + this.settingsAccount.id
+      if (this.settingsAccount.department) settingsPath += ':' + this.settingsAccount.department
+      return settingsPath
+    },
+    settingsUrl () {
+      return 'api/v1/settings/' + this.settingsPath
+    },
   },
   watch: {
     authorized: {

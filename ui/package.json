@@ -40,7 +40,6 @@
     "js-file-download": "^0.4.12",
     "less": "^4.2.2",
     "less-loader": "^7.3.0",
-    "maplibre-gl": "^5.0.1",
     "markdown-it": "^12.3.2",
     "marked": "^4.3.0",
     "nuxt": "^2.18.1",
