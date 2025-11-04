@@ -1,22 +1,5 @@
 <template lang="html">
   <v-card>
-    <v-text-field
-      v-if="search"
-      v-model="editQ"
-      style="position: absolute;z-index:2;width:250px;"
-      placeholder="Rechercher"
-      :append-inner-icon="mdiMagnify"
-      variant="solo"
-      color="primary"
-      bg-color="white"
-      hide-details
-      clearable
-      density="compact"
-      class="ma-2"
-      @keyup.enter="q = editQ"
-      @click:append-inner="q = editQ"
-      @click:clear="q = ''"
-    />
     <div
       id="map"
       :style="'height:' + height + 'px'"
@@ -38,7 +21,6 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiMagnify } from '@mdi/js'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { type BBox } from 'geojson'
 import maplibregl, { LayerSpecification, LngLatBoundsLike } from 'maplibre-gl'
@@ -46,8 +28,7 @@ import { useTheme } from 'vuetify'
 import bbox from '@turf/bbox'
 import bboxPolygon from '@turf/bbox-polygon'
 
-const { search, height } = defineProps({
-  search: { type: Boolean, default: true },
+const { height } = defineProps({
   height: { type: Number, required: true }
 })
 

@@ -65,6 +65,8 @@
           <pre>
   &lt;d-frame
     height="500px"
+    scrolling="no"
+    resize="no"
     src="{{ syncedHref || (previewUrl + '?d-frame=true') }}{{ syncParamsAttr }}
   /&gt;
             </pre>
@@ -79,6 +81,9 @@
             :src="previewUrl + '?d-frame=true'"
             state-change-events
             height="500px"
+            scrolling="no"
+            resize="no"
+            debug
             @state-change="s => syncedHref = s.detail[1]"
           />
         </div>
