@@ -9,7 +9,7 @@
 import { provideApplicationStore } from '~/composables/application-store'
 
 useFrameContent()
-const route = useRoute<'/embed/application/[id]/config'>()
+const route = useRoute<'/application/[id]/config'>()
 
 provideApplicationStore(route.params.id)
 </script>

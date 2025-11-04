@@ -16,7 +16,7 @@
 import type { Settings } from '#api/types'
 
 useFrameContent()
-const route = useRoute<'/embed/settings/[type]/[id]/api-keys'>()
+const route = useRoute<'/settings/[type]/[id]/api-keys'>()
 const settings = ref<Settings | null>(null)
 
 const scopes = computed(() => {

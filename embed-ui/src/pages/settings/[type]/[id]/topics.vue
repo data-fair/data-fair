@@ -15,7 +15,7 @@
 import type { Settings } from '#api/types'
 
 useFrameContent()
-const route = useRoute<'/embed/settings/[type]/[id]/topics'>()
+const route = useRoute<'/settings/[type]/[id]/topics'>()
 const settings = ref<Settings | null>(null)
 
 const save = useAsyncAction(async (updatedSettings: Settings) => {
