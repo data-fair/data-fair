@@ -222,7 +222,7 @@ export const run = async () => {
         '/embed/application/:id/config',
         '/embed/workflow/update-dataset'
       ].map(p => pathToRegexp.match(p))
-      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+      app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../embed-ui/dist'), uiConfig, {
         ignoreSitePath: true,
         csp: {
           nonce: true,

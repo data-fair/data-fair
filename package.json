@@ -8,8 +8,8 @@
     "test": "npm -w test run test",
     "test-deps": "docker compose --profile test up -d --wait",
     "report": "nyc report --reporter=html",
-    "lint": "eslint . && npm -w ui run lint && npm -w test run lint && npm -w next-ui run lint",
-    "lint-fix": "eslint --fix . && npm -w ui run lint-fix && npm -w test run lint-fix && npm -w next-ui run lint-fix",
+    "lint": "eslint . && npm -w ui run lint && npm -w test run lint && npm -w embed-ui run lint",
+    "lint-fix": "eslint --fix . && npm -w ui run lint-fix && npm -w test run lint-fix && npm -w embed-ui run lint-fix",
     "dev-deps": "docker compose --profile dev up -d --wait",
     "stop-dev-deps": "docker compose --profile dev stop",
     "dev-api": "MODE=server npm -w api run dev",
@@ -26,7 +26,7 @@
     "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc",
-    "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w next-ui run build && npm -w parquet-writer run build && npm run test && npm audit --omit=dev --audit-level=critical"
+    "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm run test && npm audit --omit=dev --audit-level=critical"
   },
   "engines": {
     "node": "v24"
@@ -56,7 +56,7 @@
   "workspaces": [
     "api",
     "ui",
-    "next-ui",
+    "embed-ui",
     "shared",
     "test",
     "parquet-writer"

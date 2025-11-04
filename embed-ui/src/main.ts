@@ -20,7 +20,7 @@ const debug = debugModule('df:main');
 
 (async function () {
   debug('Starting data-fair app')
-  const router = createRouter({ history: createWebHistory($sitePath + '/data-fair/next-ui/'), routes })
+  const router = createRouter({ history: createWebHistory($sitePath + '/data-fair/embed/'), routes })
   dFrameContent(router)
   const reactiveSearchParams = createReactiveSearchParams(router)
   const session = await createSession({ directoryUrl: $sitePath + '/simple-directory', siteInfo: true })
