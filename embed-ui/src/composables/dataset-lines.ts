@@ -3,6 +3,7 @@ import { useWindowSize } from '@vueuse/core'
 import { withQuery } from 'ufo'
 import { useDisplay } from 'vuetify'
 import truncateMiddle from 'truncate-middle'
+import { MaybeRefOrGetter } from 'vue'
 
 export type ExtendedResultValue = {
   raw: number | boolean | string,
@@ -20,7 +21,7 @@ export type ExtendedResult = {
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 
-export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, selectedCols: Ref<string[]>, q: Ref<string>, sort: Ref<string | undefined>, extraParams: Ref<Record<string, string>>, indexedAt: Ref<string | undefined>) => {
+export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeRefOrGetter<number>, selectedCols: MaybeRefOrGetter<string[]>, q: Ref<string>, sort: MaybeRefOrGetter<string | undefined>, extraParams: MaybeRefOrGetter<Record<string, string>>, indexedAt: MaybeRefOrGetter<string | undefined>) => {
   const { id, dataset, draftMode } = useDatasetStore()
   const { width: windowWidth } = useWindowSize()
 
@@ -28,14 +29,14 @@ export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, select
   const localeDayjs = useLocaleDayjs()
 
   const truncate = computed(() => {
-    if (!selectedCols.value.length) return 200
-    if (displayMode.value === 'list') return 200
+    if (!toValue(selectedCols).length) return 200
+    if (toValue(displayMode) === 'list') return 200
     const minTruncate = display.mdAndUp.value ? 50 : 40
     const maxTruncate = 200
-    const estimatedTruncate = windowWidth.value / selectedCols.value.length / 8 // 8px is about a char's width
+    const estimatedTruncate = windowWidth.value / toValue(selectedCols).length / 8 // 8px is about a char's width
     const roundedTruncate = Math.round(estimatedTruncate / 20) * 20
     let truncate = Math.min(maxTruncate, Math.max(minTruncate, roundedTruncate))
-    if (displayMode.value === 'table-dense') truncate -= 10
+    if (toValue(displayMode) === 'table-dense') truncate -= 10
     return truncate
   })
   const baseFetchUrl = computed(() => {
@@ -43,13 +44,13 @@ export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, select
     if (truncate.value === null) return null
     const query: Record<string, any> = {
       draftMode,
-      size: pageSize.value,
+      size: toValue(pageSize),
       truncate: truncate.value,
       q: q.value || undefined,
-      sort: sort.value || undefined,
-      ...extraParams.value
+      sort: toValue(sort) || undefined,
+      ...toValue(extraParams)
     }
-    if (indexedAt.value) query.indexedAt = indexedAt.value
+    if (toValue(indexedAt)) query.indexedAt = toValue(indexedAt)
     else query.finalizedAt = dataset.value.finalizedAt
     return withQuery($apiPath + `/datasets/${id}/lines`, query)
   })

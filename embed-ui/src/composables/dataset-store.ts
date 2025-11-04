@@ -28,10 +28,10 @@ export const createDatasetStore = (id: string, draftMode?: boolean, html?: boole
   const jsonSchemaFetch = useFetch<any>($apiPath + `/datasets/${id}/schema`, { query: { draftMode, mimeType: 'application/schema+json', extension: 'true', arrays: true }, immediate: false, watch: false })
 
   const imageProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/image'))
-  const labelProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))
-  const descriptionProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/description'))
-  const digitalDocumentProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument'))
-  const webPageProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'https://schema.org/WebPage'))
+  const labelField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))
+  const descriptionField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/description'))
+  const digitalDocumentField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument'))
+  const webPageField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'https://schema.org/WebPage'))
 
   const canCache: Record<string, ComputedRef<boolean>> = {}
   const can = (operation: string) => {
@@ -52,10 +52,10 @@ export const createDatasetStore = (id: string, draftMode?: boolean, html?: boole
     taskProgress,
     jsonSchemaFetch,
     imageProperty,
-    labelField: labelProperty,
-    descriptionField: descriptionProperty,
-    digitalDocumentField: digitalDocumentProperty,
-    webPageField: webPageProperty,
+    labelField,
+    descriptionField,
+    digitalDocumentField,
+    webPageField,
     can
   }
 }

@@ -24,6 +24,7 @@ declare module 'vue-router/auto-routes' {
     '/dataset/[id]/journal': RouteRecordInfo<'/dataset/[id]/journal', '/dataset/:id/journal', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/map': RouteRecordInfo<'/dataset/[id]/map', '/dataset/:id/map', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/map-bounds': RouteRecordInfo<'/dataset/[id]/map-bounds', '/dataset/:id/map-bounds', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/dataset/[id]/search-files': RouteRecordInfo<'/dataset/[id]/search-files', '/dataset/:id/search-files', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/table': RouteRecordInfo<'/dataset/[id]/table', '/dataset/:id/table', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/table-edit': RouteRecordInfo<'/dataset/[id]/table-edit', '/dataset/:id/table-edit', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dev': RouteRecordInfo<'/dev', '/dev', Record<never, never>, Record<never, never>>,
