@@ -57,7 +57,7 @@ export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?
       return sessionState
     }
     if (!apiKey.scopes.some(scope => scopes.includes(scope))) {
-      throw httpError(403, 'Cette clé d\'API n\'a pas la portée nécessaire.')
+      throw httpError(403, `Cette clé d'API n'a pas la portée nécessaire (attendu=${scopes.join(',')} - reçu=${apiKey.scopes.join(',')}).`)
     }
 
     if (apiKey.adminMode && apiKey.asAccount) {
