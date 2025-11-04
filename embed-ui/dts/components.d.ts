@@ -10,7 +10,6 @@ declare module 'vue' {
     ApplicationConfig: typeof import('./../src/components/application/application-config.vue')['default']
     CharsMeasurer: typeof import('./../src/components/dataset/table/chars-measurer.vue')['default']
     ConfirmMenu: typeof import('./../src/components/confirm-menu.vue')['default']
-    copy: typeof import('./../src/components/dataset/map/dataset-map copy.vue')['default']
     DatasetCard: typeof import('./../src/components/dataset/dataset-card.vue')['default']
     DatasetDownloadCsvOptions: typeof import('./../src/components/dataset/dataset-download-csv-options.vue')['default']
     DatasetDownloadResults: typeof import('./../src/components/dataset/dataset-download-results.vue')['default']

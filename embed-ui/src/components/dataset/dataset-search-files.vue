@@ -36,12 +36,20 @@
     :items="results"
   >
     <template #default="{ item, index }">
-      <v-row v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)">
-        <v-col cols="12">
+      <v-row
+        v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)"
+        class="ma-0"
+      >
+        <v-col
+          cols="12"
+          class="pt-4"
+        >
           <!-- attachment_url is empty if the value is an external link -->
-          <h4><a :href="item.raw._attachment_url || item.raw[digitalDocumentField!.key]">{{ item.raw[digitalDocumentField!.key] }}</a></h4>
+
+          <a :href="item.raw._attachment_url || item.raw[digitalDocumentField!.key]">{{ item.raw[digitalDocumentField!.key] }}</a>
           <p
             class="text-body-1"
+            style="word-break:break-word;"
             v-html="item.raw._highlight['_file.content'].join('... ')"
           />
         </v-col>
