@@ -48,6 +48,7 @@
               :label="t('scope')"
               :items="filteredScopes"
               :item-title="t"
+              :item-value="v => v"
               multiple
               density="comfortable"
             />
