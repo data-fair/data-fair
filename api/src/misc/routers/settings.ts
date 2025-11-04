@@ -150,8 +150,15 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   for (let i = 0; i < settings.apiKeys.length; i++) {
     const apiKey = settings.apiKeys[i]
 
+    // this check should not be necessary as later on we check adminMode at creation then immutability
+    // this is just here as an extra safety
+    if (apiKey.adminMode && !user.isAdmin) {
+      eventsLog.alert('df.apikeys.manageadmin', 'a non-admin user attempted to manage settings that include an adminMode api key', { req, account: req.owner })
+      throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
+    }
+
     if (apiKey.key) {
-      eventsLog.alert('df.apikeys.writesecret', 'a user attempted to write and api key internal secret', { req, account: req.owner })
+      eventsLog.alert('df.apikeys.writesecret', 'a user attempted to write an api key internal secret', { req, account: req.owner })
       throw httpError(403, 'Attempt to write an api key secret')
     }
 
