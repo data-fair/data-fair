@@ -49,13 +49,9 @@
 
 <i18n lang="yaml">
 fr:
-  noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
-  readJournal: Vous pouvez consulter le journal pour en savoir plus.
   search: Rechercher
   lines: lignes
 en:
-  noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
-  readJournal: You can check the activity journal to learn more.
   search: Search
   lines: lines
 </i18n>

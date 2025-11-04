@@ -27,6 +27,7 @@ declare module 'vue-router/auto-routes' {
     '/dataset/[id]/search-files': RouteRecordInfo<'/dataset/[id]/search-files', '/dataset/:id/search-files', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/table': RouteRecordInfo<'/dataset/[id]/table', '/dataset/:id/table', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/table-edit': RouteRecordInfo<'/dataset/[id]/table-edit', '/dataset/:id/table-edit', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/dataset/[id]/thumbnails': RouteRecordInfo<'/dataset/[id]/thumbnails', '/dataset/:id/thumbnails', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dev': RouteRecordInfo<'/dev', '/dev', Record<never, never>, Record<never, never>>,
     '/settings/[type]/[id]/api-keys': RouteRecordInfo<'/settings/[type]/[id]/api-keys', '/settings/:type/:id/api-keys', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
     '/settings/[type]/[id]/licenses': RouteRecordInfo<'/settings/[type]/[id]/licenses', '/settings/:type/:id/licenses', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,

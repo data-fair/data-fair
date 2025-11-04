@@ -14,7 +14,7 @@ export type TableHeader = {
 export type TableHeaderWithProperty = Omit<TableHeader, 'property'> & Required<Pick<TableHeader, 'property'>>
 
 export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, edit: boolean, fixed: Ref<string | undefined>) => {
-  const { dataset, imageProperty, can } = useDatasetStore()
+  const { dataset, imageField, can } = useDatasetStore()
   const { vocabulary } = useStore()
 
   const headers = computed(() => {
@@ -34,7 +34,7 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, 
       property: p
     }))
     if (headers) {
-      if (imageProperty.value) {
+      if (imageField.value) {
         headers.unshift({ title: '', key: '_thumbnail' })
       }
       if (dataset.value?.bbox && !noInteraction) {
