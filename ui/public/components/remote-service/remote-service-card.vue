@@ -9,10 +9,10 @@
       {{ remoteService.title || remoteService.id }}
     </v-card-title>
     <v-card-text
-      style="height:170px"
+      style="height:170px; overflow-y:hidden"
       class="py-0"
     >
-      <v-clamp
+      <div
         :max-height="170"
         class="card-desc170"
         autoresize
@@ -35,10 +35,7 @@
 </template>
 
 <script>
-import VClamp from 'vue-clamp'
-
 export default {
-  components: { VClamp },
   props: ['remoteService']
 }
 </script>
