@@ -1,3 +1,6 @@
+<!-- eslint-disable vue/no-v-html -->
+<!-- eslint-disable vue/no-lone-template -->
+
 <template>
   <v-toolbar
     flat
@@ -39,7 +42,7 @@
           <h4><a :href="item.raw._attachment_url || item.raw[digitalDocumentField!.key]">{{ item.raw[digitalDocumentField!.key] }}</a></h4>
           <p
             class="text-body-1"
-            v-html="item._highlight['_file.content'].join('... ')"
+            v-html="item.raw._highlight['_file.content'].join('... ')"
           />
         </v-col>
       </v-row>

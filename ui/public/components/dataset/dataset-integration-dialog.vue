@@ -107,12 +107,9 @@
 
 <script>
 import { mapState } from 'vuex'
-import 'iframe-resizer/js/iframeResizer'
-import VIframe from '@koumoul/v-iframe'
 import '@data-fair/frame/lib/d-frame.js'
 
 export default {
-  components: { VIframe },
   props: {
     show: {
       type: Boolean,
