@@ -81,7 +81,7 @@ describe('API keys', function () {
     const axKey2 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key2.clearKey } })
     await assert.rejects(axKey2.get('/api/v1/stats'), (err) => {
       assert.equal(err.status, 403)
-      assert.ok(err.response.data.includes('Cette clé d\'API n\'a pas la portée nécessaire.'))
+      assert.ok(err.response.data.includes('Cette clé d\'API n\'a pas la portée nécessaire'))
       return true
     })
     const axKey5 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key5.clearKey } })

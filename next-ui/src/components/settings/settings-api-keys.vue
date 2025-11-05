@@ -49,6 +49,7 @@
               :items="filteredScopes"
               :item-title="t"
               :item-value="v => v"
+              :item-props="v => (v.startsWith('datasets-') && newApiKey.scopes.includes('datasets')) ? {disabled: true} : {}"
               multiple
               density="comfortable"
             />
@@ -97,7 +98,7 @@
           <h4 class="text-h6">
             {{ apiKey.title }}
           </h4>
-          <settings-api-key-use-menu :api-key="apiKey" />
+          <settings-api-key-use-menu />
         </v-card-title>
         <v-card-text>
           <v-alert
@@ -177,7 +178,7 @@ fr:
   asAccountKeyAlert: Cette clé permet de travailler dans le contexte d'autres comptes
   secretKey: Clé secrète
   scope: Portée
-  scopeMsg: Si vous donnez une portée à cette clé d'API elle pourra servir à effectuer toutes les opérations correspondantes sur toutes les ressources pour lesquelles les administrateurs de ce compte ont la permission requise. Si vous ne donnez aucune portée les seules permissions appliquées seront celles affectées explicitement à la pseudo adresse mail de la clé.
+  scopeMsg: En attribuant des portées à cette clé d’API, celle-ci pourra effectuer les opérations sélectionnées sur l’ensemble des ressources accessibles aux administrateurs du compte. Sans portée définie, la clé ne bénéficiera que des permissions explicitement associées à son identifiant (pseudo adresse mail).
   email: Email
   emailMsg: Ce pseudo email peut être utilisé pour affecter des permissions fines à cette clé d'API.
   expireAt: Date d'expiration
@@ -203,7 +204,7 @@ en:
   asAccountKeyAlert: Key to work in the context of other accounts
   secretKey: Secret key
   scope: Scope
-  scopeMsg: If you give a scope to this API key it will be able to perform all corresponding operations on all resources for which the account administrators have the required permissions. If you don't give any scope the only permissions applied will be those explicitly assigned to the key's pseudo email address.
+  scopeMsg: The scope of this API key defines the operations it can perform on all resources accessible to account administrators. Without a defined scope, the key will only have permissions explicitly associated with its identifier (pseudo email address).
   email: Email
   emailMsg: This pseudo email address can be used to assign fine-grained permissions to this API key.
   expireAt: Expiration date
@@ -285,5 +286,11 @@ const scopes = [
   'applications',
   'stats'
 ]
+
+watch(() => newApiKey.value.scopes, () => {
+  if (newApiKey.value.scopes.includes('datasets') && newApiKey.value.scopes.some(s => s.startsWith('datasets-'))) {
+    newApiKey.value.scopes = newApiKey.value.scopes.filter(s => !s.startsWith('datasets-'))
+  }
+})
 
 </script>
