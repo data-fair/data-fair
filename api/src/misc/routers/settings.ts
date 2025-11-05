@@ -1,7 +1,9 @@
 import crypto from 'crypto'
 import express, { type Request as ExpressRequest, type Response, type NextFunction } from 'express'
-import { nanoid } from 'nanoid'
+import nanoid from '../utils/nanoid.js'
 import slug from 'slugify'
+import dayjs from 'dayjs'
+import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type Settings, assertValid as validateSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
@@ -13,8 +15,11 @@ import config from '#config'
 import mongo from '#mongo'
 import standardLicenses from '../../../contract/licenses.js'
 import debugLib from 'debug'
+import { reqHost } from '@data-fair/lib-express/req-origin.js'
 import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type User } from '@data-fair/lib-express'
 import { type Request } from '#types'
+import eventsLog from '@data-fair/lib-express/events-log.js'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -69,6 +74,7 @@ function isOwnerAdmin (req: ExpressRequest, res: Response, next: NextFunction) {
   if (sessionState.user.adminMode) {
     // ok
   } else if (permissions.getOwnerRole(req.owner, sessionState) !== 'admin') {
+    eventsLog.alert('df.apikeys.permission', 'a user attempted to overwrite settings from another account', { req, account: req.owner })
     res.sendStatus(403)
     return
   }
@@ -88,13 +94,22 @@ function isOwnerMember (req: ExpressRequest, res: Response, next: NextFunction) 
   next()
 }
 
+function cleanSettings (settings: Settings | DepartmentSettings) {
+  if (settings.apiKeys) {
+    for (const apiKey of settings.apiKeys) {
+      delete apiKey.key
+    }
+  }
+  return settings
+}
+
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
   assertSettingsRequest(req)
   const settings = mongo.settings
   const result = await settings
     .findOne(req.ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
-  res.status(200).send(result || {})
+  res.status(200).send(result ? cleanSettings(result) : {})
 })
 
 const fillSettings = (owner: AccountKeys, user: User, settings: any): Settings | DepartmentSettings => {
@@ -121,29 +136,108 @@ const fillSettings = (owner: AccountKeys, user: User, settings: any): Settings |
 router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   assertSettingsRequest(req)
   const settings = req.body
-  const user = reqUserAuthenticated(req)
+  const sessionState = reqSessionAuthenticated(req)
+  const user = sessionState.user
   fillSettings(req.owner, user, settings)
   validate(settings)
 
-  const fullApiKeys = settings.apiKeys?.map(apiKey => ({ ...apiKey })) || []
-  if (settings.apiKeys) {
-    for (let i = 0; i < settings.apiKeys.length; i++) {
-      const apiKey = settings.apiKeys[i]
-      const fullApiKey = fullApiKeys[i]
-      if (apiKey.adminMode && !user.adminMode) {
-        throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
-      }
-      if (!apiKey.id) fullApiKey.id = apiKey.id = nanoid()
+  settings.apiKeys = settings.apiKeys ?? []
+  const existingApiKeys = (await mongo.settings.findOne(req.ownerFilter))?.apiKeys ?? []
 
-      if (!apiKey.key) {
-        const clearKeyParts = [req.owner.type.slice(0, 1), req.owner.id]
-        if (req.owner.department) clearKeyParts.push(req.owner.department)
-        clearKeyParts.push(nanoid())
-        fullApiKey.clearKey = Buffer.from(clearKeyParts.join(':')).toString('base64url')
-        const hash = crypto.createHash('sha512')
-        hash.update(fullApiKey.clearKey)
-        fullApiKeys[i].key = apiKey.key = hash.digest('hex')
+  // a copy of the api keys where the clearKey is returned for the user that created a new key
+  const returnedApiKeys = settings.apiKeys?.map(apiKey => ({ ...apiKey })) || []
+
+  for (let i = 0; i < settings.apiKeys.length; i++) {
+    const apiKey = settings.apiKeys[i]
+
+    // this check should not be necessary as later on we check adminMode at creation then immutability
+    // this is just here as an extra safety
+    if (apiKey.adminMode && !user.isAdmin) {
+      eventsLog.alert('df.apikeys.manageadmin', 'a non-admin user attempted to manage settings that include an adminMode api key', { req, account: req.owner })
+      throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
+    }
+
+    if (apiKey.key) {
+      eventsLog.alert('df.apikeys.writesecret', 'a user attempted to write an api key internal secret', { req, account: req.owner })
+      throw httpError(403, 'Attempt to write an api key secret')
+    }
+
+    if (!apiKey.id) {
+      // creating a new key
+
+      const returnedApiKey = returnedApiKeys[i]
+      if (apiKey.adminMode && !user.adminMode) {
+        eventsLog.alert('df.apikeys.createadmin', 'a user attempted to create an adminMode api key', { req, account: req.owner })
+        throw httpError(403, 'Only superadmin can create api keys with adminMode=true')
       }
+      if (apiKey.email) {
+        eventsLog.alert('df.apikeys.setemail', 'a user attempted to define the email address of an api key', { req, account: req.owner })
+        throw httpError(403, 'API key email is readonly')
+      }
+      if (apiKey.expireAt && apiKey.expireAt > dayjs().add(config.apiKeysMaxDuration + 1, 'day').format('YYYY-MM-DD')) {
+        throw httpError(400, 'API key expiration is too far in the future')
+      }
+      returnedApiKey.id = apiKey.id = nanoid()
+
+      const clearKeyParts = [req.owner.type.slice(0, 1), req.owner.id]
+      if (req.owner.department) clearKeyParts.push(req.owner.department)
+      clearKeyParts.push(nanoid())
+      returnedApiKey.clearKey = Buffer.from(clearKeyParts.join(':')).toString('base64url')
+      const hash = crypto.createHash('sha512')
+      hash.update(returnedApiKey.clearKey)
+      returnedApiKey.key = apiKey.key = hash.digest('hex')
+
+      if (settings.type === 'user' && apiKey.scopes.length) {
+        returnedApiKey.email = apiKey.email = (settings as Settings).email
+      } else {
+        returnedApiKey.email = apiKey.email = `${slug.default(apiKey.title, { lower: true, strict: true })}-${apiKey.id}@api-key.${reqHost(req)}`
+      }
+
+      eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { req, account: req.owner })
+      eventsQueue.pushEvent({
+        title: 'Création d\'une clé d\'API',
+        body: `${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`,
+        topic: {
+          key: 'data-fair:settings:api-key-created'
+        },
+        sender: req.owner
+      }, sessionState)
+    } else {
+      // re-sending an existing key
+
+      const existingApiKey = existingApiKeys.find(k => k.id === apiKey.id)
+      if (!existingApiKey) {
+        eventsLog.alert('df.apikeys.setid', 'a user tried to create an api key with id', { req, account: req.owner })
+        throw httpError(400, 'API key cannot be created with an id')
+      }
+      // should be covered by next general immutability check, but double check to be sure
+      if (apiKey.adminMode && !existingApiKey.adminMode && !user.adminMode) {
+        eventsLog.alert('df.apikeys.setadmin', 'a user attempted to mutate an api key and make it admin', { req, account: req.owner })
+        throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
+      }
+      apiKey.key = existingApiKey.key
+      if (!equal(existingApiKey, apiKey)) {
+        eventsLog.alert('df.apikeys.mutate', `a user tried to mutate an existing api key ${existingApiKey.title} (${existingApiKey.id})`, { req, account: req.owner })
+        throw httpError(400, 'existing API keys are immutable')
+      }
+    }
+  }
+
+  // deleting an api key
+  for (const existingApiKey of existingApiKeys) {
+    if (!settings.apiKeys.some(k => k.id === existingApiKey.id)) {
+      if (existingApiKey.adminMode && !user.adminMode) {
+        eventsLog.alert('df.apikeys.deleteadmin', 'a user attempted to delete an admin api key', { req, account: req.owner })
+        throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
+      }
+      eventsQueue.pushEvent({
+        title: 'Suppression d\'une clé d\'API',
+        body: `${existingApiKey.title} (${existingApiKey.id}), scopes=${existingApiKey.scopes.join(', ')}`,
+        topic: {
+          key: 'data-fair:settings:api-key-deleted'
+        },
+        sender: req.owner
+      }, sessionState)
     }
   }
 
@@ -164,7 +258,7 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
     await topicsUtils.updateTopics(req.owner, oldSettings.topics || [], settings.topics)
   }
-  res.status(200).send({ ...settings, apiKeys: fullApiKeys })
+  res.status(200).send(cleanSettings({ ...settings, apiKeys: returnedApiKeys }))
 })
 
 // Get topics list as owner

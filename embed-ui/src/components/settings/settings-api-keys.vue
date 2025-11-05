@@ -1,85 +1,94 @@
 <template>
-  <v-menu
-    v-model="createMenu"
-    max-width="700px"
-    :close-on-content-click="false"
-  >
-    <template #activator="{ props }">
-      <v-btn
-        v-bind="props"
-        color="primary"
-        class="mb-3"
-      >
-        {{ t('addApiKey') }}
-      </v-btn>
-    </template>
-    <v-card
-      data-iframe-height
-      :title="t('addNewApiKey')"
+  <v-row class="ma-0">
+    <v-btn
+      v-if="!createToggle"
+      color="primary"
+      class="mb-3"
+      @click="createToggle = true"
     >
-      <v-card-text>
-        <v-form v-model="newApiKeyValid">
-          <v-text-field
-            v-model="newApiKey.title"
-            :rules="[v => !!v || '']"
-            :label="t('title')"
-            hide-details
-            required
-          />
-          <v-checkbox
-            v-if="session.state.user.adminMode"
-            v-model="newApiKey.adminMode"
-            :label="t('superadminKey')"
-            class="text-warning"
-            density="comfortable"
-            hide-details
-          />
-          <v-checkbox
-            v-if="session.state.user.adminMode && newApiKey.adminMode"
-            v-model="newApiKey.asAccount"
-            :label="t('asAccountKey')"
-            class="text-warning"
-            density="comfortable"
-            hide-details
-          />
-          <template v-if="filteredScopes.length > 1">
+      {{ t('addApiKey') }}
+    </v-btn>
+    <v-slide-y-transition v-if="createToggle">
+      <v-card
+        :title="t('addNewApiKey')"
+      >
+        <v-card-text>
+          <v-form v-model="newApiKeyValid">
+            <v-text-field
+              v-model="newApiKey.title"
+              :rules="[v => !!v || '']"
+              :label="t('title')"
+              required
+            />
             <v-checkbox
-              v-for="scope of filteredScopes"
-              :key="scope"
-              v-model="newApiKey.scopes"
-              :label="t(scope)"
-              :value="scope"
-              :rules="[v => !!v.length || '']"
+              v-if="session.state.user.adminMode"
+              v-model="newApiKey.adminMode"
+              :label="t('superadminKey')"
+              class="text-warning"
               density="comfortable"
-              color="primary"
               hide-details
             />
-          </template>
-        </v-form>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          @click="createMenu = false"
-        >
-          {{ t('cancel') }}
-        </v-btn>
-        <v-btn
-          color="primary"
-          variant="elevated"
-          :disabled="!newApiKeyValid"
-          @click="addApiKey"
-        >
-          {{ t('add') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-menu>
+            <v-checkbox
+              v-if="session.state.user.adminMode && newApiKey.adminMode"
+              v-model="newApiKey.asAccount"
+              :label="t('asAccountKey')"
+              class="text-warning"
+              density="comfortable"
+              hide-details
+            />
+            <tutorial-alert
+              id="api-key-scope"
+              :text="t('scopeMsg')"
+              persistent
+              initial
+            />
+            <v-select
+              v-if="filteredScopes.length > 1"
+              v-model="newApiKey.scopes"
+              :label="t('scope')"
+              :items="filteredScopes"
+              :item-title="t"
+              :item-value="v => v"
+              :item-props="v => (v.startsWith('datasets-') && newApiKey.scopes.includes('datasets')) ? {disabled: true} : {}"
+              multiple
+              density="comfortable"
+            />
+            <v-date-input
+              :model-value="new Date(newApiKey.expireAt)"
+              :label="t('expireAt')"
+              :rules="[v => !!v || '']"
+              :max="new Date(maxDate)"
+              @update:model-value="v => newApiKey.expireAt = dayjs(v).format('YYYY-MM-DD')"
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            @click="createToggle = false"
+          >
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="elevated"
+            :disabled="!newApiKeyValid"
+            @click="addApiKey"
+          >
+            {{ t('add') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-slide-y-transition>
+  </v-row>
+
   <v-row>
     <v-col
       v-for="(apiKey, rowIndex) in settings.apiKeys"
       :key="rowIndex"
-      cols="12"
+      lg="4"
+      md="6"
+      sm="12"
     >
       <v-card
         variant="outlined"
@@ -89,7 +98,7 @@
           <h4 class="text-h6">
             {{ apiKey.title }}
           </h4>
-          <settings-api-key-use-menu :api-key="apiKey" />
+          <settings-api-key-use-menu />
         </v-card-title>
         <v-card-text>
           <v-alert
@@ -110,10 +119,36 @@
             class="mb-2"
             :text="t('asAccountKeyAlert')"
           />
-          <p v-if="!!apiKey.clearKey">
+          <p
+            v-if="!!apiKey.clearKey"
+            class="mb-4"
+          >
             {{ t('secretKey') }} : <strong>{{ apiKey.clearKey }}</strong>
           </p>
-          <p>{{ t('scope') }} : {{ apiKey.scopes?.map(s => t(s)).join(', ') }}</p>
+          <p
+            v-if="apiKey.scopes?.length"
+            class="mb-4"
+          >
+            {{ t('scope') }} : {{ apiKey.scopes?.map(s => t(s)).join(', ') }}
+          </p>
+          <tutorial-alert
+            id="api-key-email"
+            :text="t('emailMsg')"
+            persistent
+            :initial="false"
+          />
+          <p
+            v-if="apiKey.email"
+            class="mb-4"
+          >
+            {{ t('email') }} : {{ apiKey.email }}
+          </p>
+          <p
+            v-if="apiKey.expireAt"
+            class="mb-4"
+          >
+            {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('l') }}
+          </p>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -143,9 +178,16 @@ fr:
   asAccountKeyAlert: Cette clé permet de travailler dans le contexte d'autres comptes
   secretKey: Clé secrète
   scope: Portée
+  scopeMsg: En attribuant des portées à cette clé d’API, celle-ci pourra effectuer les opérations sélectionnées sur l’ensemble des ressources accessibles aux administrateurs du compte. Sans portée définie, la clé ne bénéficiera que des permissions explicitement associées à son identifiant (pseudo adresse mail).
+  email: Email
+  emailMsg: Ce pseudo email peut être utilisé pour affecter des permissions fines à cette clé d'API.
+  expireAt: Date d'expiration
   deleteKey: Supprimer cette clé d'API
   deleteKeyDetails: Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
-  datasets: Jeux de données
+  datasets: Jeux de données - toutes opérations
+  datasets-read: Jeux de données - lecture
+  datasets-write: Jeux de données - écriture
+  datasets-admin: Jeux de données - administration
   applications: Applications
   catalogs: Connecteurs aux catalogues
   stats: Récupération d'informations statistiques
@@ -162,15 +204,23 @@ en:
   asAccountKeyAlert: Key to work in the context of other accounts
   secretKey: Secret key
   scope: Scope
+  scopeMsg: The scope of this API key defines the operations it can perform on all resources accessible to account administrators. Without a defined scope, the key will only have permissions explicitly associated with its identifier (pseudo email address).
+  email: Email
+  emailMsg: This pseudo email address can be used to assign fine-grained permissions to this API key.
+  expireAt: Expiration date
   deleteKey: Delete this API key
   deleteKeyDetails: Do you really want to delete this API key ? Softwares or scripts that use this key won't work anymore.
-  datasets: Datasets
+  datasets: Datasets - all operations
+  datasets-read: Datasets - read
+  datasets-write: Datasets - write
+  datasets-admin: Datasets - admin
   applications: Applications
   catalogs: Catalogs
   stats: Stats
 </i18n>
 
 <script lang="ts" setup>
+import { VDateInput } from 'vuetify/labs/VDateInput'
 import type { Settings } from '#api/types'
 
 const { settings, restrictedScopes } = defineProps<{
@@ -183,19 +233,25 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n()
 const session = useSessionAuthenticated()
+const { dayjs } = useLocaleDayjs()
+
+const maxDate = dayjs().add($uiConfig.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')
+const createNewApiKey = () => ({
+  title: '',
+  scopes: [],
+  expireAt: maxDate
+})
 
 const newApiKey = ref<{
   title: string
   scopes: string[]
+  expireAt: string
   adminMode?: boolean
   asAccount?: boolean
-}>({
-  title: '',
-  scopes: []
-})
+}>(createNewApiKey())
 
 const newApiKeyValid = ref(false)
-const createMenu = ref(false)
+const createToggle = ref(false)
 
 const filteredScopes = computed(() => {
   if (!restrictedScopes || restrictedScopes.length === 0) return scopes
@@ -211,11 +267,8 @@ onMounted(() => {
 const addApiKey = () => {
   const updatedSettings = { ...settings }
   updatedSettings.apiKeys?.push(newApiKey.value)
-  createMenu.value = false
-  newApiKey.value = {
-    title: '',
-    scopes: []
-  }
+  createToggle.value = false
+  newApiKey.value = createNewApiKey()
   emit('updated', updatedSettings)
 }
 
@@ -227,9 +280,17 @@ const removeApiKey = (rowIndex: number) => {
 
 const scopes = [
   'datasets',
+  'datasets-read',
+  'datasets-write',
+  'datasets-admin',
   'applications',
-  'catalogs',
   'stats'
 ]
+
+watch(() => newApiKey.value.scopes, () => {
+  if (newApiKey.value.scopes.includes('datasets') && newApiKey.value.scopes.some(s => s.startsWith('datasets-'))) {
+    newApiKey.value.scopes = newApiKey.value.scopes.filter(s => !s.startsWith('datasets-'))
+  }
+})
 
 </script>

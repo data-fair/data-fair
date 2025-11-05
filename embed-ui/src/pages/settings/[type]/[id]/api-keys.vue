@@ -2,6 +2,7 @@
   <v-container
     data-iframe-height
     fluid
+    class="bg-surface"
   >
     <settings-api-keys
       v-if="settings"

@@ -345,8 +345,9 @@ en:
 </i18n>
 
 <script>
-import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 import eventBus from '~/event-bus'
+import '@data-fair/frame/lib/d-frame.js'
 
 export default {
   middleware: ['auth-required'],
@@ -456,6 +457,7 @@ export default {
     }
   },
   methods: {
+    ...mapActions(['emitFrameNotif']),
     async init () {
       this.settings = null
       if (this.settingsAccount.type === 'organization') {
