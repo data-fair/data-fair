@@ -88,8 +88,8 @@
                             md="6"
                           >
                             <settings-info
-                              :settings="settings"
-                              @updated="save"
+                              v-model="settings.info"
+                              @input="patch({info: settings.info})"
                             />
                           </v-col>
                         </v-row>
@@ -159,8 +159,8 @@
                             md="6"
                           >
                             <settings-datasets-metadata
-                              :settings="settings"
-                              @updated="save('fetchDatasetsMetadata')"
+                              v-model="settings.datasetsMetadata"
+                              @input="patch({datasetsMetadata: settings.datasetsMetadata})"
                             />
                           </v-col>
                         </v-row>
@@ -236,8 +236,8 @@
                             md="6"
                           >
                             <settings-private-vocabulary
-                              :settings="settings"
-                              @updated="save('fetchVocabulary')"
+                              v-model="settings.privateVocabulary"
+                              @input="patch({privateVocabulary: settings.privateVocabulary})"
                             />
                           </v-col>
                         </v-row>
@@ -268,8 +268,9 @@
                             md="6"
                           >
                             <settings-publication-sites
-                              :settings="settings"
-                              @updated="save('fetchPublicationSites')"
+                              v-model="settings.publicationSites"
+                              :datasets-metadata="settings.datasetsMetadata"
+                              @input="patch({publicationSites: settings.publicationSites})"
                             />
                           </v-col>
                         </v-row>
@@ -298,7 +299,7 @@
                             <v-checkbox
                               v-model="settings.compatODS"
                               :label="$t('compatODS')"
-                              @change="save()"
+                              @change="patch({compatODS: settings.compatODS})"
                             />
                           </v-col>
                         </v-row>
@@ -346,10 +347,18 @@ en:
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
-import eventBus from '~/event-bus'
 import '@data-fair/frame/lib/d-frame.js'
 
 export default {
+  async beforeRouteLeave (to, from, next) {
+    await this.$store.dispatch('fetchLicenses', this.settingsAccount)
+    await this.$store.dispatch('fetchTopics', this.settingsAccount)
+    await this.$store.dispatch('fetchDatasetsMetadata', this.settingsAccount)
+    await this.$store.dispatch('fetchDatasetsMetadata', this.settingsAccount)
+    await this.$store.dispatch('fetchPublicationSites', this.settingsAccount)
+    await this.$store.dispatch('fetchVocabulary', true)
+    next()
+  },
   middleware: ['auth-required'],
   data: () => ({
     api: null,
@@ -486,10 +495,8 @@ export default {
         })
         */
     },
-    async save (action) {
-      this.settings = await this.$axios.$put(this.settingsUrl, this.settings)
-      eventBus.$emit('notification', 'Les paramètres ont été mis à jour')
-      if (action) this.$store.dispatch(action, this.settingsAccount)
+    async patch (patch) {
+      this.settings = await this.$axios.$patch(this.settingsUrl, patch)
     },
     async fetchAccountDetails () {
       this.accountDetails = {

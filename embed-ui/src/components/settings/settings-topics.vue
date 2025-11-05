@@ -3,10 +3,9 @@
     v-model="valid"
   >
     <vjsf
-      v-model="topics"
+      v-model="editTopics"
       :schema="settingsSchema.properties.topics"
       :options="vjsfOptions"
-      @update:model-value="valid ? emit('updated', { ...settings, topics: $event }) : null"
     />
   </v-form>
 </template>
@@ -15,16 +14,15 @@
 import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
-const { settings } = defineProps<{
-  settings: Settings
-}>()
-
 const valid = ref(true)
-const topics = ref(settings.topics)
-
-const emit = defineEmits<{
-  (event: 'updated', settings: Settings): void
-}>()
+const topics = defineModel<Settings['topics']>()
+const editTopics = ref<Settings['topics']>()
+watchDeepDiff(topics, () => {
+  editTopics.value = topics.value
+}, { immediate: true })
+watchDeepDiff(editTopics, () => {
+  if (valid.value) topics.value = editTopics.value
+}, {})
 
 const vjsfOptions: VjsfOptions = {
   readOnlyPropertiesMode: 'hide',

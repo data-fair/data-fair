@@ -16,7 +16,7 @@ import mongo from '#mongo'
 import standardLicenses from '../../../contract/licenses.js'
 import debugLib from 'debug'
 import { reqHost } from '@data-fair/lib-express/req-origin.js'
-import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type User } from '@data-fair/lib-express'
+import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type SessionStateAuthenticated, type User } from '@data-fair/lib-express'
 import { type Request } from '#types'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
@@ -100,6 +100,8 @@ function cleanSettings (settings: Settings | DepartmentSettings) {
       delete apiKey.key
     }
   }
+  // @ts-ignore
+  delete settings._id
   return settings
 }
 
@@ -132,17 +134,13 @@ const fillSettings = (owner: AccountKeys, user: User, settings: any): Settings |
   return settings
 }
 
-// update settings as owner
-router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
-  assertSettingsRequest(req)
-  const settings = req.body
-  const sessionState = reqSessionAuthenticated(req)
+const writeSettings = async (req: SettingsRequest, existingSettings: Settings | DepartmentSettings | null, settings: any, sessionState: SessionStateAuthenticated) => {
   const user = sessionState.user
   fillSettings(req.owner, user, settings)
   validate(settings)
 
   settings.apiKeys = settings.apiKeys ?? []
-  const existingApiKeys = (await mongo.settings.findOne(req.ownerFilter))?.apiKeys ?? []
+  const existingApiKeys = existingSettings?.apiKeys ?? []
 
   // a copy of the api keys where the clearKey is returned for the user that created a new key
   const returnedApiKeys = settings.apiKeys?.map(apiKey => ({ ...apiKey })) || []
@@ -242,7 +240,7 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   }
 
   if (isMainSettings(settings) && settings.privateVocabulary) {
-    for (const concept of req.body.privateVocabulary) {
+    for (const concept of settings.privateVocabulary) {
       if (!concept.id) concept.id = slug.default(concept.title, { lower: true, strict: true })
       if (!concept.identifiers || !concept.identifiers.length) concept.identifiers = [concept.id]
     }
@@ -258,7 +256,27 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
     await topicsUtils.updateTopics(req.owner, oldSettings.topics || [], settings.topics)
   }
-  res.status(200).send(cleanSettings({ ...settings, apiKeys: returnedApiKeys }))
+
+  return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
+}
+
+// update settings as owner
+router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
+  assertSettingsRequest(req)
+  const settings = req.body
+  const sessionState = reqSessionAuthenticated(req)
+  const existingSettings = await mongo.settings.findOne(req.ownerFilter)
+  const returnedSettings = await writeSettings(req, existingSettings, settings, sessionState)
+  res.status(200).send(returnedSettings)
+})
+router.patch('/:type/:id', isOwnerAdmin, async (req, res) => {
+  assertSettingsRequest(req)
+  const partialSettings = req.body
+  const sessionState = reqSessionAuthenticated(req)
+  const existingSettings = await mongo.settings.findOne(req.ownerFilter)
+  const settings = { ...(existingSettings ? cleanSettings(existingSettings) : {}), ...partialSettings }
+  const returnedSettings = await writeSettings(req, existingSettings, settings, sessionState)
+  res.status(200).send(returnedSettings)
 })
 
 // Get topics list as owner

@@ -6,38 +6,19 @@
   >
     <settings-api-keys
       v-if="settings"
-      :settings="settings"
+      v-model="settings.apiKeys"
       :restricted-scopes="scopes"
-      @updated="save.execute($event)"
+      @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
     />
   </v-container>
 </template>
 
 <script setup lang="ts">
-import type { Settings } from '#api/types'
-
 useFrameContent()
 const route = useRoute<'/settings/[type]/[id]/api-keys'>()
-const settings = ref<Settings | null>(null)
+const { patch, settings } = useSettingsStore(route.params.type, route.params.id)
 
 const scopes = computed(() => {
   return (route.query.scopes && typeof route.query.scopes === 'string' && route.query.scopes.split(',')) || undefined
 })
-
-const save = useAsyncAction(async (updatedSettings: Settings) => {
-  settings.value = await $fetch('/settings/' + route.params.type + '/' + route.params.id, {
-    method: 'PUT',
-    body: JSON.stringify(updatedSettings)
-  })
-}, {
-  error: 'Erreur pendant la mise à jour des paramètres',
-  success: 'Les paramètres ont été mis à jour'
-})
-
-onMounted(async () => {
-  settings.value = await $fetch('/settings/' + route.params.type + '/' + route.params.id, {
-    method: 'GET'
-  })
-})
-
 </script>

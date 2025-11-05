@@ -3,10 +3,9 @@
     v-model="valid"
   >
     <vjsf
-      v-model="webhooks"
+      v-model="editWebhooks"
       :schema="settingsSchema.properties.webhooks"
       :options="vjsfOptions"
-      @update:model-value="valid ? emit('updated', { ...settings, webhooks: $event }) : null"
     />
   </v-form>
 </template>
@@ -15,16 +14,15 @@
 import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
-const { settings } = defineProps<{
-  settings: Settings
-}>()
-
 const valid = ref(true)
-const webhooks = ref(settings.webhooks)
-
-const emit = defineEmits<{
-  (event: 'updated', settings: Settings): void
-}>()
+const webhooks = defineModel<Settings['']>()
+const editWebhooks = ref<Settings['webhooks']>()
+watchDeepDiff(webhooks, () => {
+  editWebhooks.value = webhooks.value
+}, { immediate: true })
+watchDeepDiff(editWebhooks, () => {
+  if (valid.value) webhooks.value = editWebhooks.value
+}, {})
 
 const vjsfOptions: VjsfOptions = {
   validateOn: 'input',

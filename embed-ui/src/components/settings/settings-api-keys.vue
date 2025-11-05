@@ -84,7 +84,7 @@
 
   <v-row>
     <v-col
-      v-for="(apiKey, rowIndex) in settings.apiKeys"
+      v-for="(apiKey, rowIndex) in apiKeys"
       :key="rowIndex"
       lg="4"
       md="6"
@@ -223,14 +223,12 @@ en:
 import { VDateInput } from 'vuetify/labs/VDateInput'
 import type { Settings } from '#api/types'
 
-const { settings, restrictedScopes } = defineProps<{
-  settings: Settings
+const { restrictedScopes } = defineProps<{
   restrictedScopes?: string[]
 }>()
 
-const emit = defineEmits<{
-  (event: 'updated', settings: Settings): void
-}>()
+const apiKeys = defineModel<Settings['apiKeys']>()
+
 const { t } = useI18n()
 const session = useSessionAuthenticated()
 const { dayjs } = useLocaleDayjs()
@@ -265,17 +263,13 @@ onMounted(() => {
 })
 
 const addApiKey = () => {
-  const updatedSettings = { ...settings }
-  updatedSettings.apiKeys?.push(newApiKey.value)
+  apiKeys.value = [...(apiKeys.value ?? []), newApiKey.value]
   createToggle.value = false
   newApiKey.value = createNewApiKey()
-  emit('updated', updatedSettings)
 }
 
 const removeApiKey = (rowIndex: number) => {
-  const updatedSettings = { ...settings }
-  updatedSettings.apiKeys?.splice(rowIndex, 1)
-  emit('updated', updatedSettings)
+  apiKeys.value = apiKeys.value!.splice(rowIndex, 1)
 }
 
 const scopes = [

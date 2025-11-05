@@ -2,8 +2,8 @@
   <div style="min-height:60px;">
     <v-form ref="form">
       <lazy-v-jsf
-        v-model="wrapper"
-        :schema="wrapperSchema"
+        v-model="localValue"
+        :schema="infoSchema"
         :options="{locale: 'fr', textFieldProps: {outlined:true, dense: true}}"
         @change="change"
       />
@@ -12,36 +12,25 @@
 </template>
 
 <script>
-import eventBus from '~/event-bus'
 import settingsSchema from '~/../../api/types/settings/schema.js'
 
 const infoSchema = settingsSchema.properties.info
-const wrapperSchema = {
-  type: 'object',
-  properties: {
-    info: infoSchema
-  }
-}
 
 export default {
-  props: ['settings'],
+  props: ['value'],
   data: () => ({
-    eventBus,
-    wrapperSchema,
+    infoSchema,
     formValid: true,
-    wrapper: {
-      info: {}
-    }
+    localValue: {}
   }),
   created () {
-    this.wrapper.info = JSON.parse(JSON.stringify(this.settings.info || {}))
+    this.localValue = JSON.parse(JSON.stringify(this.value || {}))
   },
   methods: {
     async change () {
       await new Promise(resolve => setTimeout(resolve, 10))
       if (this.$refs.form.validate()) {
-        this.settings.info = JSON.parse(JSON.stringify(this.wrapper.info))
-        this.$emit('updated')
+        this.$emit('input', this.localValue)
       }
     }
   }

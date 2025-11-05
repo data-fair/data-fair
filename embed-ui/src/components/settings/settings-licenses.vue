@@ -3,10 +3,9 @@
     v-model="valid"
   >
     <vjsf
-      v-model="licenses"
+      v-model="editLicenses"
       :schema="settingsSchema.properties.licenses"
       :options="vjsfOptions"
-      @update:model-value="valid ? emit('updated', { ...settings, licenses: $event }) : null"
     />
   </v-form>
 </template>
@@ -15,17 +14,15 @@
 import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
-const { settings } = defineProps<{
-  settings: Settings
-}>()
-
 const valid = ref(true)
-const licenses = ref(settings.licenses)
-
-const emit = defineEmits<{
-  (event: 'updated', settings: Settings): void
-}>()
-
+const licenses = defineModel<Settings['licenses']>()
+const editLicenses = ref<Settings['licenses']>()
+watchDeepDiff(licenses, () => {
+  editLicenses.value = licenses.value
+}, { immediate: true })
+watchDeepDiff(editLicenses, () => {
+  if (valid.value) licenses.value = editLicenses.value
+}, {})
 const vjsfOptions: VjsfOptions = {
   validateOn: 'input',
   updateOn: 'blur',
@@ -33,4 +30,5 @@ const vjsfOptions: VjsfOptions = {
   xI18n: true
 }
 
+// http://localhost:5600/data-fair/embed/settings/user/superadmin/licenses
 </script>

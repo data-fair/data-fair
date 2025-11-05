@@ -124,6 +124,7 @@ declare global {
   const useServerSeoMeta: typeof import('@unhead/vue')['useServerSeoMeta']
   const useSession: typeof import('@data-fair/lib-vue/session.js')['useSession']
   const useSessionAuthenticated: typeof import('@data-fair/lib-vue/session.js')['useSessionAuthenticated']
+  const useSettingsStore: typeof import('../src/composables/settings-store')['useSettingsStore']
   const useSlots: typeof import('vue')['useSlots']
   const useStore: typeof import('../src/composables/use-store')['default']
   const useStringSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringSearchParam']
@@ -266,6 +267,7 @@ declare module 'vue' {
     readonly useServerSeoMeta: UnwrapRef<typeof import('@unhead/vue')['useServerSeoMeta']>
     readonly useSession: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSession']>
     readonly useSessionAuthenticated: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSessionAuthenticated']>
+    readonly useSettingsStore: UnwrapRef<typeof import('../src/composables/settings-store')['useSettingsStore']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useStore: UnwrapRef<typeof import('../src/composables/use-store')['default']>
     readonly useStringSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringSearchParam']>
