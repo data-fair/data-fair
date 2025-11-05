@@ -200,11 +200,18 @@ export default {
           key: {
             type: 'string'
           },
+          email: {
+            type: 'string'
+          },
           scopes: {
             type: 'array',
             items: {
               type: 'string'
             }
+          },
+          expireAt: {
+            type: 'string',
+            format: 'date'
           },
           adminMode: {
             type: 'boolean',

@@ -8,8 +8,9 @@ import { type RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account } from '@data-fair/lib-express'
 import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../routers/settings.ts'
+import dayjs from 'dayjs'
 
-export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
+export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
   if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
     req.bypassPermissions = { classes: ['read'] }
     const user = {
@@ -34,12 +35,31 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
     if (!settings) throw httpError(401, 'Cette clé d\'API est inconnue.')
     const apiKey = settings.apiKeys?.[0]
     if (!apiKey) throw httpError(401, 'Cette clé d\'API est inconnue.')
-    if (!apiKey.scopes.includes(scope)) throw httpError(403, 'Cette clé d\'API n\'a pas la portée nécessaire.')
-
+    if (apiKey.expireAt && apiKey.expireAt < dayjs().format('YYYY-MM-DD')) {
+      throw httpError(403, 'Cette clé d\'API est expirée.')
+    }
     const sessionState: SessionState & { isApiKey: true } = {
       lang: 'fr',
       isApiKey: true
     }
+
+    if (!apiKey.scopes.length && apiKey.email) {
+      // an api key without scope acts as a single separate user (not an org member)
+      // so that only individual email based permissions can apply
+      sessionState.user = {
+        id: apiKey.id as string,
+        name: `${settings.name} (${apiKey.title})`,
+        email: apiKey.email,
+        organizations: []
+      }
+      sessionState.account = { type: 'user', id: sessionState.user.id, name: sessionState.user.name }
+      sessionState.accountRole = config.adminRole
+      return sessionState
+    }
+    if (!apiKey.scopes.some(scope => scopes.includes(scope))) {
+      throw httpError(403, `Cette clé d'API n'a pas la portée nécessaire (attendu=${scopes.join(',')} - reçu=${apiKey.scopes.join(',')}).`)
+    }
+
     if (apiKey.adminMode && apiKey.asAccount) {
       if (!asAccount) throw httpError(403, 'Cette clé d\'API requiert de spécifier le compte à incarner')
       let account: Account
@@ -102,6 +122,8 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
           email: '',
           organizations: [userOrg]
         }
+        // this should always be defined from now own, but not in older api keys
+        if (apiKey.email) sessionState.user.email = apiKey.email
         sessionState.organization = userOrg
         sessionState.account = { type: 'organization', ...userOrg }
         // @ts-ignore
@@ -114,13 +136,14 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
   }
 }
 
-export const middleware = (scope: string) => {
+export const middleware = (scopes: string[] | string) => {
+  if (typeof scopes === 'string') scopes = [scopes]
   return async (_req: Request, res: Response, next: NextFunction) => {
     const req = _req as RequestWithResource
     const reqApiKey = req.get('x-apiKey') || req.get('x-api-key') || req.query.apiKey
     const asAccountStr = req.get('x-account') || req.query.account
     if (typeof reqApiKey === 'string') {
-      const sessionState = await readApiKey(reqApiKey, scope, asAccountStr, req)
+      const sessionState = await readApiKey(reqApiKey, scopes, asAccountStr, req)
       setReqSession(req, sessionState)
     }
     next()
