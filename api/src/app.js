@@ -22,6 +22,7 @@ import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { isMainThread } from 'node:worker_threads'
+import { reqOrigin } from '@data-fair/lib-express/index.js'
 
 const debugDomain = debug('domain')
 
@@ -244,6 +245,11 @@ export const run = async () => {
         }
       }))
     }
+    app.use('/next-ui', (req, res) => {
+      // next-ui urls were a temporary alternate UI we redirect
+      // them in case some are still in use somewhere
+      res.redirect(reqOrigin(req) + '/data-fair' + req.url)
+    })
 
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')
