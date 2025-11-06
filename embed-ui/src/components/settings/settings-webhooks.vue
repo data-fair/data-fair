@@ -15,7 +15,7 @@ import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
 const valid = ref(true)
-const webhooks = defineModel<Settings['']>()
+const webhooks = defineModel<Settings['webhooks']>()
 const editWebhooks = ref<Settings['webhooks']>()
 watchDeepDiff(webhooks, () => {
   editWebhooks.value = webhooks.value

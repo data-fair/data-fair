@@ -762,6 +762,7 @@ describe('virtual datasets', function () {
         { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
+    await workers.hook('finalize/' + res.data.id)
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/attachments/${child.id}/${attachmentPath}`)
     assert.equal(res.status, 200)
