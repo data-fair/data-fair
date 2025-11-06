@@ -221,7 +221,10 @@ export const run = async () => {
         '/embed/dataset/:id/table-edit',
         '/embed/dataset/:id/form',
         '/embed/application/:id/config',
-        '/embed/workflow/update-dataset'
+        '/embed/workflow/update-dataset',
+        '/embed/settings/:type/:id/licenses',
+        '/embed/settings/:type/:id/topics',
+        '/embed/settings/:type/:id/webhooks',
       ].map(p => pathToRegexp.match(p))
       app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../embed-ui/dist'), uiConfig, {
         ignoreSitePath: true,
