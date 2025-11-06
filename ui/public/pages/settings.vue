@@ -108,11 +108,23 @@
                       </p>
                     </template>
                     <template #tabs-items>
-                      <d-frame
-                        :src="`/data-fair/embed/settings/${settingsPath}/licenses`"
-                        resize="yes"
-                        @notif="emitFrameNotif"
-                      />
+                      <v-container
+                        fluid
+                        class="py-1"
+                      >
+                        <v-row>
+                          <v-col
+                            cols="12"
+                            md="6"
+                          >
+                            <d-frame
+                              :src="`/data-fair/embed/settings/${settingsPath}/licenses`"
+                              resize="yes"
+                              @notif="emitFrameNotif"
+                            />
+                          </v-col>
+                        </v-row>
+                      </v-container>
                     </template>
                   </layout-section-tabs>
 
@@ -131,11 +143,23 @@
                       </p>
                     </template>
                     <template #tabs-items>
-                      <d-frame
-                        :src="`/data-fair/embed/settings/${settingsPath}/topics`"
-                        resize="yes"
-                        @notif="emitFrameNotif"
-                      />
+                      <v-container
+                        fluid
+                        class="py-1"
+                      >
+                        <v-row>
+                          <v-col
+                            cols="12"
+                            md="6"
+                          >
+                            <d-frame
+                              :src="`/data-fair/embed/settings/${settingsPath}/topics`"
+                              resize="yes"
+                              @notif="emitFrameNotif"
+                            />
+                          </v-col>
+                        </v-row>
+                      </v-container>
                     </template>
                   </layout-section-tabs>
 
@@ -202,11 +226,23 @@
                       </p>
                     </template>
                     <template #tabs-items>
-                      <d-frame
-                        :src="`/data-fair/embed/settings/${settingsPath}/webhooks`"
-                        resize="yes"
-                        @notif="emitFrameNotif"
-                      />
+                      <v-container
+                        fluid
+                        class="py-1"
+                      >
+                        <v-row>
+                          <v-col
+                            cols="12"
+                            md="6"
+                          >
+                            <d-frame
+                              :src="`/data-fair/embed/settings/${settingsPath}/webhooks`"
+                              resize="yes"
+                              @notif="emitFrameNotif"
+                            />
+                          </v-col>
+                        </v-row>
+                      </v-container>
                     </template>
                   </layout-section-tabs>
 
