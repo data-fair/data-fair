@@ -5,7 +5,7 @@ import config from '#config'
 import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type RequestWithResource } from '#types'
-import { type OrganizationMembership, type SessionState, setReqSession, type Account } from '@data-fair/lib-express'
+import { type OrganizationMembership, type SessionState, setReqSession, type Account, assertReqInternal } from '@data-fair/lib-express'
 import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../routers/settings.ts'
 import dayjs from 'dayjs'
@@ -144,6 +144,8 @@ export const middleware = (scopes: string[] | string) => {
     const asAccountStr = req.get('x-account') || req.query.account
     if (typeof reqApiKey === 'string') {
       const sessionState = await readApiKey(reqApiKey, scopes, asAccountStr, req)
+      // only use superadmin api key from inside the infrastructure
+      if (sessionState.user?.adminMode) assertReqInternal(req)
       setReqSession(req, sessionState)
     }
     next()

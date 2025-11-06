@@ -98,7 +98,6 @@ module.exports = {
     catalogs: 'SECRET_CATALOGS',
     notifications: 'SECRET_NOTIFICATIONS',
     events: 'SECRET_EVENTS',
-    masterData: 'SECRET_MASTER_DATA',
     ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
   },
   globalWebhooks: {

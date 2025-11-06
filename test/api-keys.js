@@ -12,7 +12,7 @@ describe('API keys', function () {
     // too far in the future
     await assert.rejects(global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
       apiKeys: [
-        { title: 'key', scopes: ['stats'], expireAt: dayjs().add(2, 'year').format('YYYY-MM-DD') }
+        { title: 'key', scopes: ['stats'], expireAt: dayjs().add(4, 'year').format('YYYY-MM-DD') }
       ]
     }), { status: 400 })
 
