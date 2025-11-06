@@ -22,7 +22,7 @@ import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { isMainThread } from 'node:worker_threads'
-import { reqOrigin } from '@data-fair/lib-express/index.js'
+import { reqSiteUrl } from '@data-fair/lib-express/site.js'
 
 const debugDomain = debug('domain')
 
@@ -49,6 +49,7 @@ export const run = async () => {
     const limits = await import('./misc/utils/limits.ts')
     const rateLimiting = await import('./misc/utils/rate-limiting.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
+    const { reqIsInternal, reqHost, createSiteMiddleware } = await import('@data-fair/lib-express/index.js')
     session.init(config.privateDirectoryUrl || config.directoryUrl)
 
     app.set('trust proxy', 1)
@@ -98,6 +99,7 @@ export const run = async () => {
       if (urlParts[urlParts.length - 2] === 'bulk-searchs') return next()
       bodyParser(req, res, next)
     })
+    app.use(createSiteMiddleware('data-fair', { prefixOptional: true }))
     app.use((await import('cookie-parser')).default())
     app.use((await import('../i18n/utils.ts')).middleware)
     app.use(session.middleware())
@@ -108,10 +110,6 @@ export const run = async () => {
     // set current baseUrl, i.e. the url of data-fair on the current user's domain
     // check for the matching publicationSite, etc
     const parsedPublicUrl = new URL(config.publicUrl)
-    let basePath = parsedPublicUrl.pathname
-    if (!basePath.endsWith('/')) basePath += '/'
-    const { default: originalUrl } = await import('original-url')
-    const { format: formatUrl } = await import('url')
     const getPublicationSiteSettings = async (publicationSiteUrl, publicationSiteQuery, db) => {
       const elemMatch = publicationSiteQuery
         ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
@@ -138,17 +136,15 @@ export const run = async () => {
       global.memoizedGetPublicationSiteSettings = memoizedGetPublicationSiteSettings
     }
     app.use('/', async (req, res, next) => {
-      const u = originalUrl(req)
-      const urlParts = { protocol: parsedPublicUrl.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
-      if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
-      req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
+      const mainDomain = reqIsInternal(req) || reqHost(req) === parsedPublicUrl.host
+      req.publicBaseUrl = mainDomain ? config.publicUrl : (reqSiteUrl(req) + '/data-fair')
+      req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
+      debugDomain('req.publicBaseUrl', req.publicBaseUrl)
 
-      const mainDomain = req.publicBaseUrl === config.publicUrl
-
-      const publicationSiteUrl = parsedPublicUrl.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
-      const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, mongo.db)
+      const siteUrl = mainDomain ? parsedPublicUrl.origin : reqSiteUrl(req)
+      const settings = await memoizedGetPublicationSiteSettings(siteUrl, mainDomain && req.query.publicationSites, mongo.db)
       if (!settings && !mainDomain) {
-        internalError('publication-site-unknown', 'no publication site is associated to URL ' + publicationSiteUrl)
+        internalError('publication-site-unknown', 'no publication site is associated to URL ' + siteUrl)
         return res.status(404).send('publication site unknown')
       }
       if (settings) {
@@ -157,7 +153,7 @@ export const run = async () => {
           ...settings.publicationSites[0]
         }
         if (mainDomain) {
-          if (publicationSite.url === publicationSiteUrl) {
+          if (publicationSite.url === siteUrl) {
             req.mainPublicationSite = publicationSite
           }
           if (req.query.publicationSites === publicationSite.type + ':' + publicationSite.id) {
@@ -167,13 +163,6 @@ export const run = async () => {
           req.publicationSite = publicationSite
         }
       }
-
-      req.directoryUrl = u.full ? formatUrl({ ...urlParts, pathname: '/simple-directory' }) : config.directoryUrl
-      debugDomain('req.publicBaseUrl', req.publicBaseUrl)
-      req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
-      debugDomain('req.publicWsBaseUrl', req.publicWsBaseUrl)
-      req.publicBasePath = basePath
-      debugDomain('req.publicBasePath', req.publicBasePath)
       next()
     })
 
@@ -251,7 +240,7 @@ export const run = async () => {
     app.use('/next-ui', (req, res) => {
       // next-ui urls were a temporary alternate UI we redirect
       // them in case some are still in use somewhere
-      res.redirect(reqOrigin(req) + '/data-fair' + req.url)
+      res.redirect(reqSiteUrl(req) + '/data-fair' + req.url)
     })
 
     server = (await import('http')).createServer(app)

@@ -16,7 +16,7 @@ import * as serviceWorkers from '../misc/utils/service-workers.js'
 import { refreshConfigDatasetsRefs } from './utils.ts'
 import Debug from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { reqSession, reqUserAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSiteUrl, reqUserAuthenticated } from '@data-fair/lib-express'
 
 const debugIframeRedirect = Debug('iframe-redirect')
 
@@ -115,13 +115,14 @@ router.get('/:applicationId/manifest.json', setResource, async (req, res) => {
 // this is so that we expose a minimalist password based auth in the scope of the current application
 // prevents opening a browser if the app is installed standalone
 router.get('/:applicationId/login', setResource, (req, res) => {
+  const siteUrl = reqSiteUrl(req)
   res.setHeader('Content-Type', 'text/html')
-  const authUrl = new URL(`${req.directoryUrl}/api/auth/password`)
-  authUrl.searchParams.set('redirect', `${req.publicBaseUrl}/app/${req.params.applicationId}`)
+  const authUrl = new URL(`${siteUrl}/simple-directory/api/auth/password`)
+  authUrl.searchParams.set('redirect', `${siteUrl}/data-fair/app/${req.params.applicationId}`)
   if (req.application.owner.type === 'organization') {
     authUrl.searchParams.set('org', req.application.owner.id)
   }
-  const logoUrl = new URL(`${req.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`)
+  const logoUrl = new URL(`${siteUrl}/simple-directory/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`)
   res.send(loginHtml
     .replace('{ERROR}', req.query.error ? `<p style="color:red">${escapeHtml(req.query.error)}</p>` : '')
     .replace('{AUTH_ROUTE}', authUrl.href)
