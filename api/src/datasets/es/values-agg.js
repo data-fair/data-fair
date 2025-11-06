@@ -4,6 +4,7 @@ import { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } fro
 import capabilities from '../../../contract/capabilities.js'
 import { assertMetricAccepted } from './metric-agg.js'
 import es from '#es'
+import eventsLog from '@data-fair/lib-express/events-log.js'
 
 // we used to split by ; but using , is more standard in open api
 const splitRetroCompat = (str) => {
@@ -71,6 +72,9 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   combinedMaxSize *= size
   // TODO: remove the condition on size and only use combinedMaxSize, but to do this we must check if we break some existing usage
   if (size > 100 && combinedMaxSize > 100000) throw httpError(400, '"size" x "agg_size" cannot be more than 100000')
+  if (combinedMaxSize > 100000) {
+    eventsLog.warn('values_agg_combined_size', `query values_agg on dataset ${dataset.slug} (${dataset.id}) with a combined max size of ${combinedMaxSize} was received, it will be blocked in an incoming release`, { account: dataset.owner })
+  }
 
   // Get a ES query to filter the aggregation results
   delete query.sort

@@ -2,6 +2,7 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.js'
 import { type Client } from '@elastic/elasticsearch'
+import eventsLog from '@data-fair/lib-express/events-log.js'
 
 export default async (client: Client, dataset, query, publicBaseUrl, vtXYZ) => {
   const esQuery = prepareQuery(dataset, query)
@@ -12,9 +13,10 @@ export default async (client: Client, dataset, query, publicBaseUrl, vtXYZ) => {
     if (!collapseField) {
       throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il n'existe pas dans le jeu de données.`)
     }
-    /* if (collapseField.separator) {
-      throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
-    } */
+    if (collapseField.separator) {
+      // throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
+      eventsLog.warn('collapse_multi_valued', `query parameter collapse was used on a multi-valued property ${query.collapse} on dataset ${dataset.slug} (${dataset.id}), this can cause breakage`, { account: dataset.owner })
+    }
     esQuery.collapse = { field: query.collapse }
     // number after which we accept that cardinality is approximative
     const precisionThreshold = Number(query.precision_threshold ?? '40000')
