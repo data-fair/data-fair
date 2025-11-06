@@ -1449,7 +1449,7 @@ router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('ge
   res.send(req.dataset._readApiKey)
 })
 
-router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
+router.post('/:datasetId/_simulate-extension', readDataset(), apiKeyMiddlewareWrite, permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
   const line = req.body
   const dataset = clone(req.dataset)
   if (!dataset.extensions?.length) throw httpError(400, 'no extension to simulate')
