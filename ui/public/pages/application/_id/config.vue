@@ -2,7 +2,7 @@
   <div v-if="application">
     <d-frame
       v-if="baseAppDraft?.meta?.['df:vjsf'] === '3'"
-      :src="`/data-fair/next-ui/embed/application/${$route.params.id}/config`"
+      :src="`/data-fair/embed/application/${$route.params.id}/config`"
       :height="`${windowHeight - 48}px`"
       resize="no"
       sync-params

@@ -160,12 +160,14 @@
                   <v-icon>mdi-map</v-icon>&nbsp;&nbsp;{{ $t('map') }}
                 </v-tab>
 
+                <!--
                 <v-tab
                   v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))"
                   href="#data-calendar"
                 >
                   <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;{{ $t('calendar') }}
                 </v-tab>
+                -->
 
                 <v-tab
                   v-if="fileProperty && (!fileProperty['x-capabilities'] || fileProperty['x-capabilities'].indexAttachment !== false)"
@@ -183,7 +185,20 @@
               </template>
               <template #tabs-items>
                 <v-tab-item value="data-table">
-                  <dataset-table />
+                  <d-frame
+                    v-if="dataset.isRest && can('createLine')"
+                    :src="`/data-fair/embed/dataset/${$route.params.id}/table-edit`"
+                    :height="`500px`"
+                    resize="no"
+                    @notif="emitFrameNotif"
+                  />
+                  <d-frame
+                    v-else
+                    :src="`/data-fair/embed/dataset/${$route.params.id}/table`"
+                    :height="`500px`"
+                    resize="no"
+                    @notif="emitFrameNotif"
+                  />
                 </v-tab-item>
 
                 <v-tab-item value="data-revisions">
@@ -195,13 +210,17 @@
                     fluid
                     class="pa-0"
                   >
-                    <dataset-map
-                      v-if="dataset.bbox"
-                      fixed-height="600"
+                    <d-frame
+                      :src="`/data-fair/embed/dataset/${$route.params.id}/map`"
+                      :height="`500px`"
+                      resize="no"
+                      scrolling="no"
+                      @notif="emitFrameNotif"
                     />
                   </v-container>
                 </v-tab-item>
 
+                <!--
                 <v-tab-item value="data-calendar">
                   <v-container
                     fluid
@@ -210,20 +229,31 @@
                     <dataset-calendar />
                   </v-container>
                 </v-tab-item>
+                -->
 
                 <v-tab-item value="data-files">
                   <v-container
                     fluid
                     class="pa-0"
                   >
-                    <dataset-search-files />
+                    <d-frame
+                      :src="`/data-fair/embed/dataset/${$route.params.id}/search-files`"
+                      :height="`500px`"
+                      resize="no"
+                      @notif="emitFrameNotif"
+                    />
                   </v-container>
                 </v-tab-item>
 
                 <v-tab-item value="data-thumbnails">
                   <v-container fluid>
                     <dataset-thumbnails-opts v-if="can('writeDescription')" />
-                    <dataset-thumbnails />
+                    <d-frame
+                      :src="`/data-fair/embed/dataset/${$route.params.id}/thumbnails`"
+                      :height="`500px`"
+                      resize="no"
+                      @notif="emitFrameNotif"
+                    />
                   </v-container>
                 </v-tab-item>
               </template>

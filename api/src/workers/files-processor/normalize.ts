@@ -163,7 +163,6 @@ export default async function (dataset: FileDataset) {
 
       const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.geojson')
       // using the .shp file instead of the zip seems to help support more shapefiles for some reason
-      console.log('shapefile ??', shapefile ?? originalFilePath)
       await ogr2ogr(shapefile ?? originalFilePath, {
         format: 'GeoJSON',
         options: ogrOptions,

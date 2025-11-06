@@ -2,8 +2,8 @@
   <div style="min-height:60px;">
     <v-form v-model="formValid">
       <lazy-v-jsf
-        v-model="wrapper"
-        :schema="wrapperSchema"
+        v-model="localValue"
+        :schema="datasetsMetadataSchema"
         :options="opts"
         @change="change"
       />
@@ -13,7 +13,6 @@
 
 <script>
 import Vue from 'vue'
-import eventBus from '~/event-bus'
 import settingsSchema from '~/../../api/types/settings/schema.js'
 
 if (process.browser) {
@@ -22,22 +21,13 @@ if (process.browser) {
 }
 
 const datasetsMetadataSchema = settingsSchema.properties.datasetsMetadata
-const wrapperSchema = {
-  type: 'object',
-  properties: {
-    datasetsMetadata: datasetsMetadataSchema
-  }
-}
 
 export default {
-  props: ['settings'],
+  props: ['value'],
   data: () => ({
-    eventBus,
-    wrapperSchema,
+    datasetsMetadataSchema,
     formValid: true,
-    wrapper: {
-      datasetsMetadata: []
-    },
+    localValue: [],
     opts: {
       locale: 'fr',
       hideReadOnly: true,
@@ -48,15 +38,12 @@ export default {
     }
   }),
   created () {
-    this.wrapper.datasetsMetadata = JSON.parse(JSON.stringify(this.settings.datasetsMetadata || {}))
+    this.localValue = JSON.parse(JSON.stringify(this.value || []))
   },
   methods: {
     async change () {
       await new Promise(resolve => setTimeout(resolve, 10))
-      if (this.formValid) {
-        this.settings.datasetsMetadata = JSON.parse(JSON.stringify(this.wrapper.datasetsMetadata))
-        this.$emit('updated')
-      }
+      if (this.formValid) this.$emit('input', this.localValue)
     }
   }
 }

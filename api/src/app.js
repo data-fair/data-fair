@@ -22,6 +22,7 @@ import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { isMainThread } from 'node:worker_threads'
+import { reqOrigin } from '@data-fair/lib-express/index.js'
 
 const debugDomain = debug('domain')
 
@@ -217,12 +218,15 @@ export const run = async () => {
       const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
 
       const unsafePaths = [
-        '/embed/dataset/:id/table-edit',
-        '/embed/dataset/:id/form',
-        '/embed/application/:id/config',
-        '/embed/workflow/update-dataset'
+        '/dataset/:id/table-edit',
+        '/dataset/:id/form',
+        '/application/:id/config',
+        '/workflow/update-dataset',
+        '/settings/:type/:id/licenses',
+        '/settings/:type/:id/topics',
+        '/settings/:type/:id/webhooks',
       ].map(p => pathToRegexp.match(p))
-      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+      app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../embed-ui/dist'), uiConfig, {
         ignoreSitePath: true,
         csp: {
           nonce: true,
@@ -244,6 +248,11 @@ export const run = async () => {
         }
       }))
     }
+    app.use('/next-ui', (req, res) => {
+      // next-ui urls were a temporary alternate UI we redirect
+      // them in case some are still in use somewhere
+      res.redirect(reqOrigin(req) + '/data-fair' + req.url)
+    })
 
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')

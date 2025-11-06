@@ -2,10 +2,9 @@
   <div style="min-height:60px;">
     <v-form ref="form">
       <lazy-v-jsf
-        :key="randomKey"
-        v-model="wrapper"
-        :schema="wrapperSchema"
-        :options="{locale: 'fr', arrayItemCardProps: {outlined: true, tile: true}, editMode: 'inline'}"
+        v-model="localValue"
+        :schema="privateVocabularySchema"
+        :options="vjsfOptions"
         @change="change"
       />
     </v-form>
@@ -23,43 +22,25 @@ if (process.browser) {
 }
 
 const privateVocabularySchema = settingsSchema.properties.privateVocabulary
-const wrapperSchema = {
-  type: 'object',
-  properties: {
-    privateVocabulary: privateVocabularySchema
-  }
-}
 
 export default {
-  props: ['settings'],
+  props: ['value'],
   data: () => ({
     eventBus,
-    wrapperSchema,
-    formValid: true,
-    wrapper: {
-      privateVocabulary: []
-    },
-    randomKey: Math.random()
+    privateVocabularySchema,
+    localValue: [],
+    randomKey: Math.random(),
+    vjsfOptions: { locale: 'fr', arrayItemCardProps: { outlined: true, tile: true }, editMode: 'inline' }
   }),
-  watch: {
-    settings () {
-      this.refresh()
-    }
-  },
   created () {
-    this.refresh()
+    this.localValue = JSON.parse(JSON.stringify(this.value || []))
   },
   methods: {
     async change () {
       await new Promise(resolve => setTimeout(resolve, 10))
       if (this.$refs.form.validate()) {
-        this.settings.privateVocabulary = JSON.parse(JSON.stringify(this.wrapper.privateVocabulary))
-        this.$emit('updated')
+        this.$emit('input', this.localValue)
       }
-    },
-    refresh () {
-      this.wrapper.privateVocabulary = JSON.parse(JSON.stringify(this.settings.privateVocabulary || []))
-      this.randomKey = Math.random()
     }
   }
 }

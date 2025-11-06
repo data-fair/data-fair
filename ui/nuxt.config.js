@@ -78,8 +78,7 @@ const nuxtConfig = {
     { src: '~plugins/cell-values' },
     { src: '~plugins/filter-bytes' },
     { src: '~plugins/logger', ssr: false },
-    { src: '~plugins/analytics', ssr: false },
-    { src: '~plugins/polyfill', ssr: false }
+    { src: '~plugins/analytics', ssr: false }
   ],
   router: {
     base: config.basePath

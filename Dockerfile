@@ -68,7 +68,7 @@ COPY --from=package-strip /app/package-lock.json package-lock.json
 ADD ui/package.json ui/package.json
 ADD api/package.json api/package.json
 ADD shared/package.json shared/package.json
-ADD next-ui/package.json next-ui/package.json
+ADD embed-ui/package.json embed-ui/package.json
 ADD patches patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
@@ -95,14 +95,14 @@ ENV NODE_ENV=production
 RUN npm run build
 
 ##########################
-FROM installer AS next-ui-builder
+FROM installer AS embed-ui-builder
 
 ADD /api/config api/config
 ADD /api/src/config.ts api/src/config.ts
 ADD /api/src/ui-config.ts api/src/ui-config.ts
 ADD /shared shared
-ADD /next-ui next-ui
-RUN npm -w next-ui run build
+ADD /embed-ui embed-ui
+RUN npm -w embed-ui run build
 
 ##########################
 FROM installer AS api-installer
@@ -134,7 +134,7 @@ COPY --from=api-installer /app/api/types /app/api/types
 COPY --from=api-installer /app/api/doc /app/api/doc
 COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
 COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
-COPY --from=next-ui-builder /app/next-ui/dist next-ui/dist
+COPY --from=embed-ui-builder /app/embed-ui/dist embed-ui/dist
 COPY --from=parquet-writer-builder /app/parquet-writer/package.json parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.js parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.d.ts parquet-writer/

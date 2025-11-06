@@ -88,8 +88,8 @@
                             md="6"
                           >
                             <settings-info
-                              :settings="settings"
-                              @updated="save"
+                              v-model="settings.info"
+                              @input="patch({info: settings.info})"
                             />
                           </v-col>
                         </v-row>
@@ -117,9 +117,10 @@
                             cols="12"
                             md="6"
                           >
-                            <settings-licenses
-                              :settings="settings"
-                              @license-updated="save('fetchLicenses')"
+                            <d-frame
+                              :src="`/data-fair/embed/settings/${settingsPath}/licenses`"
+                              resize="yes"
+                              @notif="emitFrameNotif"
                             />
                           </v-col>
                         </v-row>
@@ -151,9 +152,10 @@
                             cols="12"
                             md="6"
                           >
-                            <settings-topics
-                              :settings="settings"
-                              @updated="save('fetchTopics')"
+                            <d-frame
+                              :src="`/data-fair/embed/settings/${settingsPath}/topics`"
+                              resize="yes"
+                              @notif="emitFrameNotif"
                             />
                           </v-col>
                         </v-row>
@@ -181,8 +183,8 @@
                             md="6"
                           >
                             <settings-datasets-metadata
-                              :settings="settings"
-                              @updated="save('fetchDatasetsMetadata')"
+                              v-model="settings.datasetsMetadata"
+                              @input="patch({datasetsMetadata: settings.datasetsMetadata})"
                             />
                           </v-col>
                         </v-row>
@@ -204,7 +206,7 @@
                     </template>
                     <template #tabs-items>
                       <d-frame
-                        :src="`/data-fair/next-ui/embed/settings/${settingsAccount.type}/${settingsAccount.id}/api-keys`"
+                        :src="`/data-fair/embed/settings/${settingsPath}/api-keys`"
                         resize="yes"
                         @notif="emitFrameNotif"
                       />
@@ -226,16 +228,17 @@
                     <template #tabs-items>
                       <v-container
                         fluid
-                        class="pt-1 pb-6"
+                        class="py-1"
                       >
                         <v-row>
                           <v-col
                             cols="12"
                             md="6"
                           >
-                            <settings-webhooks
-                              :settings="settings"
-                              @webhook-updated="save"
+                            <d-frame
+                              :src="`/data-fair/embed/settings/${settingsPath}/webhooks`"
+                              resize="yes"
+                              @notif="emitFrameNotif"
                             />
                           </v-col>
                         </v-row>
@@ -269,8 +272,8 @@
                             md="6"
                           >
                             <settings-private-vocabulary
-                              :settings="settings"
-                              @updated="save('fetchVocabulary')"
+                              v-model="settings.privateVocabulary"
+                              @input="patch({privateVocabulary: settings.privateVocabulary})"
                             />
                           </v-col>
                         </v-row>
@@ -301,8 +304,9 @@
                             md="6"
                           >
                             <settings-publication-sites
-                              :settings="settings"
-                              @updated="save('fetchPublicationSites')"
+                              v-model="settings.publicationSites"
+                              :datasets-metadata="settings.datasetsMetadata"
+                              @input="patch({publicationSites: settings.publicationSites})"
                             />
                           </v-col>
                         </v-row>
@@ -331,7 +335,7 @@
                             <v-checkbox
                               v-model="settings.compatODS"
                               :label="$t('compatODS')"
-                              @change="save()"
+                              @change="patch({compatODS: settings.compatODS})"
                             />
                           </v-col>
                         </v-row>
@@ -379,10 +383,18 @@ en:
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
-import eventBus from '~/event-bus'
 import '@data-fair/frame/lib/d-frame.js'
 
 export default {
+  async beforeRouteLeave (to, from, next) {
+    await this.$store.dispatch('fetchLicenses', this.settingsAccount)
+    await this.$store.dispatch('fetchTopics', this.settingsAccount)
+    await this.$store.dispatch('fetchDatasetsMetadata', this.settingsAccount)
+    await this.$store.dispatch('fetchDatasetsMetadata', this.settingsAccount)
+    await this.$store.dispatch('fetchPublicationSites', this.settingsAccount)
+    await this.$store.dispatch('fetchVocabulary', true)
+    next()
+  },
   middleware: ['auth-required'],
   data: () => ({
     api: null,
@@ -465,15 +477,18 @@ export default {
       }
       return sections
     },
-    settingsUrl () {
-      let url = 'api/v1/settings/' + this.settingsAccount.type + '/' + this.settingsAccount.id
-      if (this.settingsAccount.department) url += ':' + this.settingsAccount.department
-      return url
-    },
     settingsAccount () {
       if (this.selectedDepartment) return { ...this.activeAccount, department: this.selectedDepartment }
       else return this.activeAccount
-    }
+    },
+    settingsPath () {
+      let settingsPath = this.settingsAccount.type + '/' + this.settingsAccount.id
+      if (this.settingsAccount.department) settingsPath += ':' + this.settingsAccount.department
+      return settingsPath
+    },
+    settingsUrl () {
+      return 'api/v1/settings/' + this.settingsPath
+    },
   },
   watch: {
     authorized: {
@@ -516,10 +531,8 @@ export default {
         })
         */
     },
-    async save (action) {
-      this.settings = await this.$axios.$put(this.settingsUrl, this.settings)
-      eventBus.$emit('notification', 'Les paramètres ont été mis à jour')
-      if (action) this.$store.dispatch(action, this.settingsAccount)
+    async patch (patch) {
+      this.settings = await this.$axios.$patch(this.settingsUrl, patch)
     },
     async fetchAccountDetails () {
       this.accountDetails = {

@@ -1,12 +1,10 @@
 <template>
   <div style="min-height:60px;">
     <v-form ref="form">
-      <!--{{ context }}<br>
-      {{ wrapper }}-->
       <lazy-v-jsf
-        v-model="wrapper"
+        v-model="localValue"
         :schema="schema"
-        :options="{locale: 'fr', arrayItemCardProps: {outlined: true, tile: true}, editMode: 'inline', context}"
+        :options="vjsfOptions"
         @change="change"
       />
     </v-form>
@@ -43,22 +41,24 @@ const publicationSitesAdminSchema = publicationSitesContract(true)
 const datasetsMetadataSchema = settingsSchema.properties.datasetsMetadata
 
 export default {
-  props: ['settings'],
+  props: ['value', 'datasetsMetadata'],
   data: () => ({
     eventBus,
     formValid: true,
-    wrapper: {
-      publicationSites: []
-    }
+    localValue: [],
+
   }),
   computed: {
     ...mapState('session', ['user']),
     schema () {
+      return this.user.adminMode ? publicationSitesAdminSchema : publicationSitesSchema
+    },
+    vjsfOptions () {
       return {
-        type: 'object',
-        properties: {
-          publicationSites: this.user.adminMode ? publicationSitesAdminSchema : publicationSitesSchema
-        }
+        locale: 'fr',
+        arrayItemCardProps: { outlined: true, tile: true },
+        editMode: 'inline',
+        context: this.context
       }
     },
     context () {
@@ -68,8 +68,8 @@ export default {
           { key: 'description', title: this.$t('description') },
           { key: 'license', title: this.$t('license') },
           { key: 'topics', title: this.$t('topic') }
-        ].concat(Object.keys(this.settings.datasetsMetadata || {})
-          .filter(metadata => this.settings.datasetsMetadata[metadata].active)
+        ].concat(Object.keys(this.datasetsMetadata || {})
+          .filter(metadata => this.datasetsMetadata[metadata].active)
           .map(metadata => ({
             key: metadata,
             title: datasetsMetadataSchema.properties[metadata].title || datasetsMetadataSchema.properties[metadata].properties.active.title
@@ -78,14 +78,13 @@ export default {
     }
   },
   created () {
-    this.wrapper.publicationSites = JSON.parse(JSON.stringify(this.settings.publicationSites || []))
+    this.localValue = JSON.parse(JSON.stringify(this.value || []))
   },
   methods: {
     async change () {
       await new Promise(resolve => setTimeout(resolve, 10))
       if (this.$refs.form.validate()) {
-        this.settings.publicationSites = JSON.parse(JSON.stringify(this.wrapper.publicationSites))
-        this.$emit('updated')
+        this.$emit('input', this.localValue)
       }
     }
   }

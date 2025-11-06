@@ -55,12 +55,6 @@
     width="100%" height="500px" style="background-color: transparent; border: none;"
   /&gt;&lt;/iframe&gt;
             </pre>
-          <br>
-          Résultat:
-          <v-iframe
-            :src="previewUrl"
-            @state="s => syncedState = s"
-          />
         </template>
         <template v-if="mode === 'd-frame'">
           <p v-html="$t('dFrameIntro')" />
@@ -70,17 +64,29 @@
           />
           <pre>
   &lt;d-frame
+    height="500px"
+    scrolling="no"
+    resize="no"
     src="{{ syncedHref || (previewUrl + '?d-frame=true') }}{{ syncParamsAttr }}
   /&gt;
             </pre>
-          <br>
-          Résultat:
+        </template>
+        Résultat:
+        <div
+          style="height:500px;"
+          class="mb-4"
+        >
           <d-frame
+            v-if="togglePreview"
             :src="previewUrl + '?d-frame=true'"
             state-change-events
+            height="500px"
+            scrolling="no"
+            resize="no"
+            debug
             @state-change="s => syncedHref = s.detail[1]"
           />
-        </template>
+        </div>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -101,12 +107,9 @@
 
 <script>
 import { mapState } from 'vuex'
-import 'iframe-resizer/js/iframeResizer'
-import VIframe from '@koumoul/v-iframe'
 import '@data-fair/frame/lib/d-frame.js'
 
 export default {
-  components: { VIframe },
   props: {
     show: {
       type: Boolean,
@@ -122,7 +125,8 @@ export default {
     syncedHref: '',
     previewId: 'table',
     mode: 'iframe',
-    syncParams: false
+    syncParams: false,
+    togglePreview: true
   }),
   computed: {
     ...mapState('dataset', ['dataset']),
@@ -138,6 +142,12 @@ export default {
       this.previewId = 'table'
       this.syncedState = {}
       this.syncedHref = ''
+    },
+    previewUrl () {
+      this.togglePreview = false
+      setTimeout(resolve => {
+        this.togglePreview = true
+      }, 0)
     }
   }
 }

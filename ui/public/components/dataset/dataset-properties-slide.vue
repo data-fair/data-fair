@@ -234,7 +234,6 @@
             v-model.number="maxLength"
             :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             :label="$t('maxLength')"
-            hide-details
             type="number"
           >
             <!--<template #append-outer>
