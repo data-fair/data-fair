@@ -291,5 +291,5 @@ module.exports = {
   extensionUpdateDelay: 600,
   compatODS: false,
   openapiViewerV2: false,
-  apiKeysMaxDuration: 365 // in days
+  apiKeysMaxDuration: 2 * 365 // in days
 }

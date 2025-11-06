@@ -57,6 +57,8 @@
               :model-value="new Date(newApiKey.expireAt)"
               :label="t('expireAt')"
               :rules="[v => !!v || '']"
+              required
+              :min="new Date()"
               :max="new Date(maxDate)"
               @update:model-value="v => newApiKey.expireAt = dayjs(v).format('YYYY-MM-DD')"
             />
