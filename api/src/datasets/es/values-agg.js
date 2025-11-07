@@ -1,6 +1,6 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } from './commons.js'
+import { parseSort, prepareQuery, aliasName, prepareResultItem } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 import { assertMetricAccepted } from './metric-agg.js'
 import es from '#es'
@@ -12,6 +12,17 @@ const splitRetroCompat = (str) => {
   const result = str.split(';')
   if (result.length === 1 && str.includes(',')) return str.split(',')
   return result
+}
+
+const parseOrder = (sortStr, fields, dataset, valuesField, hasMetric) => {
+  const sort = parseSort(sortStr, fields, dataset)
+  const knownKeys = ['_count', '_key', '_time', valuesField]
+  if (hasMetric) knownKeys.push('metric')
+  return sort.map(s => {
+    const key = Object.keys(s)[0]
+    if (!knownKeys.includes(key)) throw httpError(400, `Impossible de trier les groupes de la colonne ${valuesField} par ${key.split('.')[0]}`)
+    return { [key]: s[key].order }
+  })
 }
 
 export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
@@ -82,10 +93,12 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   esQuery.size = 0
   let currentAggLevel = esQuery.aggs = {}
   for (let i = 0; i < valuesFields.length; i++) {
+    const valuesField = valuesFields[i]
+    const hasMetric = query.metric && query.metric_field
     if (aggSizes[i] !== 0) {
       currentAggLevel.values = {
         [aggTypes[i]]: {
-          field: valuesFields[i],
+          field: valuesField,
           size: aggSizes[i]
         }
       }
@@ -120,8 +133,8 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
     }
 
     if (currentAggLevel.values) {
-      currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset)
-      if (query.metric && query.metric_field) {
+      currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset, valuesField, hasMetric)
+      if (hasMetric) {
         const metricField = dataset.schema.find(p => p.key === query.metric_field)
         if (!metricField) {
           throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)

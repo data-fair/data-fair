@@ -59,9 +59,8 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
   const textAggProperties = stringProperties
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
-  const stringValuesProperties = stringProperties
-    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
   const valuesProperties = schema
+    .filter((/** @type {any} */ p) => !p.key.startsWith('_geo'))
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
   const numberProperties = schema
     .filter((/** @type {any} */ p) => p.type === 'number')
@@ -100,7 +99,7 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     description: `
   Colonne de recherche simple. Ce paramètre peut-être utilisé pour exposer une fonctionalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.
 
-  Exemple: "open data" | "open source"
+  Exemple : \`"open data" | "open source"\`
 
   Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante.
     `,
@@ -251,7 +250,17 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     })
   }
 
-  const hitsParams = (defaultSize = 12, maxSize = 10000) => {
+  const hitsParams = (defaultSize = 12, maxSize = 10000, /** @type {string} */method) => {
+    /** @type {string[]} */
+    let sortItems = []
+    if (method === 'values_agg') {
+      sortItems = ['metric', '-metric', 'count', '-count', 'key', '-key']
+    }
+    for (const valuesProperty of valuesProperties) {
+      sortItems.push(valuesProperty.key)
+      sortItems.push('-' + valuesProperty.key)
+    }
+
     /** @type {any[]} */
     const params = [{
       in: 'query',
@@ -266,18 +275,27 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     }, {
       in: 'query',
       name: 'sort',
-      description: `
+      description: method === 'values_agg'
+        ? `
+Le tri à effectuer sous forme d'une liste de clés séparées par des virgules.
+
+Pour chaque niveau d'agrégation il est possible de trier par le nombre d'éléments dans le groupe ("count" et "-count") ou par la clé du groupe ("key" et "-key").
+
+Ensuite il est possible d'ajouter des instructions de tri pour les résultats imbriqués dans le dernier niveau d'agrégation sous forme d'une liste de clés de colonnes.
+
+Exemple : \`-count,key,ma_colonne,-ma_colonne2\``
+        : `
 Le tri à effectuer sous forme d'une liste de clés de colonnes séparées par des virgules.
 
 Par défaut le tri est ascendant, si un nom de colonne est préfixé par un "-" alors le tri sera descendant.
 
-Exemple: ma_colonne,-ma_colonne2`,
+Exemple : \`ma_colonne,-ma_colonne2\``,
       schema: {
         title: 'Ordre des résultats',
         type: 'array',
         items: {
           type: 'string',
-          enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+          enum: sortItems
         }
       },
       style: 'form',
@@ -468,7 +486,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     ],
     responses: {
       200: {
-        description: 'La liste des colonnes.',
+        description: 'La liste des colonnes',
         content: {
           'application/json': {
             schema: {
@@ -560,7 +578,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'query',
             name: 'after',
-            description: 'Pagination en profondeur. Automatiquement renseigné par la propriété next du résultat de la requête précédente',
+            description: 'Pagination en profondeur.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*',
             schema: {
               title: 'Pagination en profondeur',
               type: 'integer'
@@ -568,7 +586,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'page',
-            description: 'Le numéro de la page (indice de la pagination). Débute à 1. *Pour paginer sur de gros volumes de données utilisez plutôt le paramètre **after***',
+            description: 'Le numéro de la page (indice de la pagination). Débute à 1.\n\n*Pour paginer sur de gros volumes de données utilisez plutôt le paramètre **after***.',
             schema: {
               title: 'Numéro de la page',
               type: 'integer',
@@ -578,11 +596,11 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }].concat(hitsParams()).concat([formatParam, htmlParam]).concat(filterParams).concat([{
             in: 'query',
             name: 'collapse',
-            description: 'Afficher une ligne de résultat par valeur distince d\'un champ',
+            description: 'Afficher une ligne de résultat par valeur distince d\'un champ.',
             schema: {
               type: 'string',
               // @ts-ignore
-              enum: [null].concat(stringValuesProperties.map((/** @type {any} */ p) => p.key))
+              enum: [null].concat(valuesProperties.map((/** @type {any} */ p) => p.key))
             }
           }]),
           responses: {
@@ -595,7 +613,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                     properties: {
                       total: {
                         type: 'integer',
-                        description: 'Le nombre total de résultat si on ignore la pagination'
+                        description: 'Le nombre total de résultat si on ignore la pagination.'
                       },
                       results: {
                         type: 'array',
@@ -624,7 +642,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'La ou les colonnes en fonction des valeurs desquelles grouper les lignes du jeu de données',
+            description: 'La ou les colonnes en fonction des valeurs desquelles grouper les lignes du jeu de données.',
             required: true,
             explode: false,
             schema: {
@@ -632,13 +650,32 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'array',
               items: {
                 type: 'string',
-                enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+                enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+              }
+            }
+          }, {
+            in: 'query',
+            name: 'interval',
+            description: `La manière de grouper les valeurs par niveau d'agrégation.
+            
+Pour grouper par valeur distincte utilisez "value" (comportement par défaut).
+
+Si la colonne de groupement est de type date vous pouvez utiliser un interval de calendrier comme "year", "month", etc (<a href="https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation#calendar_intervals">voir la documentation Elasticsearch</a>).
+
+Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comme interval de groupement des valeurs.`,
+            required: false,
+            explode: false,
+            schema: {
+              title: 'Interval(s) de groupement',
+              type: 'array',
+              items: {
+                type: 'string'
               }
             }
           }, htmlParam, {
             in: 'query',
             name: 'metric',
-            description: 'La métrique à appliquer par niveau de groupement',
+            description: 'La métrique à appliquer par niveau de groupement.',
             explode: false,
             schema: {
               title: 'Métrique',
@@ -648,7 +685,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'metric_field',
-            description: 'La colonne sur lequel effectuer la calcul de métrique par niveau de groupement',
+            description: 'La colonne numérique sur lequel effectuer le calcul de métrique par niveau de groupement.',
             schema: {
               type: 'string',
               enum: numberProperties.length ? numberProperties.map((/** @type {any} */ p) => p.key) : undefined
@@ -656,7 +693,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'missing',
-            description: 'Nom du groupe des lignes pour lesquelles la colonne de groupement est vide',
+            description: 'Nom du groupe des lignes pour lesquelles la colonne de groupement est vide.',
             explode: false,
             schema: {
               title: 'Groupe des valeurs manquantes',
@@ -668,7 +705,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'agg_size',
-            description: 'Le nombre de groupes par niveau de groupement',
+            description: 'Le nombre de groupes par niveau de groupement.',
             explode: false,
             schema: {
               type: 'array',
@@ -678,7 +715,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                 maximum: 10000
               }
             }
-          }].concat(filterParams).concat(hitsParams(0, 100)),
+          }].concat(hitsParams(0, 100, 'values_agg')).concat(filterParams),
           // TODO: document sort param and interval
           responses: {
             200: {
@@ -704,12 +741,12 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'path',
             name: 'field',
-            description: 'La colonne pour laquelle récupérer les valeurs distinctes',
+            description: 'La colonne pour laquelle récupérer les valeurs distinctes.',
             required: true,
             schema: {
               title: 'Colonne',
               type: 'string',
-              enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+              enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
             }
           }, {
             in: 'query',
@@ -724,10 +761,11 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'sort',
-            description: 'Tri des valeurs ("**asc**" ou "**desc**").\n"**asc**" par défaut',
+            description: 'Tri des valeurs ("**asc**" ou "**desc**").',
             schema: {
               title: 'Ordre de tri',
               type: 'string',
+              default: 'asc',
               oneOf: [
                 {
                   const: 'asc',
@@ -767,7 +805,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             {
               in: 'query',
               name: 'metric',
-              description: 'La métrique à calculer',
+              description: 'La métrique à calculer.',
               required: true,
               schema: {
                 title: 'Métrique à calculer',
@@ -778,7 +816,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             {
               in: 'query',
               name: 'field',
-              description: 'La colonne sur laquelle calculer la métrique',
+              description: 'La colonne sur laquelle calculer la métrique.',
               schema: {
                 title: 'Colonne pour le calcul de métrique',
                 type: 'string',
@@ -875,7 +913,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'La colonne sur lequel effectuer l\'analyse',
+            description: 'La colonne sur lequel effectuer l\'analyse.',
             required: true,
             schema: {
               title: 'Colonne pour l\'analyse',
@@ -885,7 +923,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'analysis',
-            description: 'Le type d\'analyse textuelle effectuée sur la colonne.\nL\'analyse "**lang**" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\nL\'analyse "**standard**" effectue un travail plus basique d\'extraction de mots bruts depuis le texte',
+            description: 'Le type d\'analyse textuelle effectuée sur la colonne.\n\nL\'analyse "**lang**" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\n\nL\'analyse "**standard**" effectue un travail plus basique d\'extraction de mots bruts depuis le texte.',
             schema: {
               title: 'Type d\'analyse à effectuer',
               type: 'string',
@@ -1004,11 +1042,9 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   if (textAggProperties.length === 0) {
     delete api.paths['/words_agg']
   }
-  if (stringValuesProperties.length === 0) {
+  if (valuesProperties.length === 0) {
     delete api.paths['/values_agg']
     delete api.paths['/values/{field}']
-  }
-  if (valuesProperties.length === 0) {
     delete api.paths['/metric_agg']
     delete api.paths['/simple_metrics_agg']
   }
@@ -1022,7 +1058,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         'x-permissionClass': 'read',
         tags: ['Données'],
         // @ts-ignore
-        parameters: [aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)).concat([formatParam, htmlParam]),
+        parameters: [aggSizeParam].concat(hitsParams(0, 100)).concat([formatParam, htmlParam]).concat(filterParams),
         responses: {
           200: {
             description: 'Les informations du jeu de données agrégées spatialement',
@@ -1044,7 +1080,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     const before = {
       in: 'query',
       name: 'before',
-      description: 'Pagination pour remonter dans l\'historique. Automatiquement renseigné par la propriété next du résultat de la requête précédente',
+      description: 'Pagination pour remonter dans l\'historique.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*',
       schema: {
         title: 'Pagination pour remonter dans l\'historique',
         default: 1,
@@ -1160,7 +1196,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         }],
         responses: {
           200: {
-            description: 'Les enregistrements.',
+            description: 'Les enregistrements',
             content: {
               'application/json': {
                 schema: {
@@ -1216,7 +1252,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         }],
         responses: {
           200: {
-            description: 'Les enregistrements.',
+            description: 'Les enregistrements',
             content: {
               'application/json': {
                 schema: {

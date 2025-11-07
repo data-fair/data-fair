@@ -146,6 +146,28 @@ describe('values aggs', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values-labels/id`)
     assert.equal(res.data.length, 2)
     assert.deepEqual(res.data[0], { value: 'bidule', label: 'Bidule' })
+
+    // return readable errors for invalid parameters
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=unknown`), (/** @type {any} */err) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes('Le paramètre "field" référence un champ inconnu unknown'))
+      return true
+    })
+    const newSchema = [...dataset.schema]
+    const adrProp = newSchema.find(p => p.key === 'adr')
+    adrProp['x-capabilities'] = { values: false }
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: newSchema })
+    await workers.hook(`finalize/${dataset.id}`)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=adr`), (/** @type {any} */err) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes('Impossible de grouper sur le champ adr'))
+      return true
+    })
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&sort=adr`), (/** @type {any} */err) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes('Impossible de trier les groupes de la colonne id par adr'))
+      return true
+    })
   })
 
   it('Get values buckets based on number values', async function () {
