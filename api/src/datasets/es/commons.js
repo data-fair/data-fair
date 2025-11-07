@@ -133,14 +133,6 @@ export const parseSort = (sortStr, fields, dataset) => {
   return result
 }
 
-export const parseOrder = (sortStr, fields, dataset) => {
-  const sort = parseSort(sortStr, fields, dataset)
-  return sort.map(s => {
-    const key = Object.keys(s)[0]
-    return { [key]: s[key].order }
-  })
-}
-
 // Check that a query_string query (lucene syntax)
 // does not try to use fields outside the current schema
 const capabilitiesSuffixes = [
@@ -770,15 +762,18 @@ export const extractError = (err) => {
   if (errBody.reason) {
     parts.push(errBody.reason)
   }
-  if (errBody.root_cause && errBody.root_cause.reason && !parts.includes(errBody.root_cause.reason)) {
+  if (errBody.root_cause?.reason && !parts.includes(errBody.root_cause.reason)) {
     parts.push(errBody.root_cause.reason)
   }
-  if (errBody.root_cause && errBody.root_cause[0] && errBody.root_cause[0].reason && !parts.includes(errBody.root_cause[0].reason)) {
+  if (errBody.caused_by?.reason && !parts.includes(errBody.caused_by.reason)) {
+    parts.push(errBody.caused_by.reason)
+  }
+  if (errBody.root_cause?.[0]?.reason && !parts.includes(errBody.root_cause[0].reason)) {
     parts.push(errBody.root_cause[0].reason)
   }
-  if (errBody.failed_shards && errBody.failed_shards[0] && errBody.failed_shards[0].reason) {
+  if (errBody.failed_shards?.[0]?.reason) {
     const shardReason = errBody.failed_shards[0].reason
-    if (shardReason.caused_by && shardReason.caused_by.reason && !parts.includes(shardReason.caused_by.reason)) {
+    if (shardReason.caused_by?.reason && !parts.includes(shardReason.caused_by.reason)) {
       parts.push(shardReason.caused_by.reason)
     } else {
       const reason = shardReason.reason || shardReason
