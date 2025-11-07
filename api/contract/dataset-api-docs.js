@@ -59,8 +59,6 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
   const textAggProperties = stringProperties
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
-  const stringValuesProperties = stringProperties
-    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
   const valuesProperties = schema
     .filter((/** @type {any} */ p) => !p.key.startsWith('_geo'))
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
@@ -602,7 +600,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             schema: {
               type: 'string',
               // @ts-ignore
-              enum: [null].concat(stringValuesProperties.map((/** @type {any} */ p) => p.key))
+              enum: [null].concat(valuesProperties.map((/** @type {any} */ p) => p.key))
             }
           }]),
           responses: {
@@ -652,7 +650,26 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'array',
               items: {
                 type: 'string',
-                enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+                enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+              }
+            }
+          }, {
+            in: 'query',
+            name: 'interval',
+            description: `La manière de grouper les valeurs par niveau d'agrégation.
+            
+Pour grouper par valeur distincte utilisez "value" (comportement par défaut).
+
+Si la colonne de groupement est de type date vous pouvez utiliser un interval de calendrier comme "year", "month", etc (<a href="https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation#calendar_intervals">voir la documentation Elasticsearch</a>).
+
+Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comme interval de groupement des valeurs.`,
+            required: false,
+            explode: false,
+            schema: {
+              title: 'Interval(s) de groupement',
+              type: 'array',
+              items: {
+                type: 'string'
               }
             }
           }, htmlParam, {
@@ -729,7 +746,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             schema: {
               title: 'Colonne',
               type: 'string',
-              enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+              enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
             }
           }, {
             in: 'query',
@@ -1025,11 +1042,9 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   if (textAggProperties.length === 0) {
     delete api.paths['/words_agg']
   }
-  if (stringValuesProperties.length === 0) {
+  if (valuesProperties.length === 0) {
     delete api.paths['/values_agg']
     delete api.paths['/values/{field}']
-  }
-  if (valuesProperties.length === 0) {
     delete api.paths['/metric_agg']
     delete api.paths['/simple_metrics_agg']
   }
