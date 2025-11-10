@@ -133,7 +133,8 @@ GroupByField
         [text()]: {
           terms: {
             order,
-            field
+            field,
+            missing_bucket: true
           }
         }
       }

@@ -292,7 +292,7 @@ describe('compatibility layer for ods api', function () {
             size: 20000,
             sources: [{
               test1: {
-                terms: { field: 'test1', order: 'asc' }
+                terms: { field: 'test1', order: 'asc', missing_bucket: true }
               }
             }]
           },
@@ -316,9 +316,9 @@ describe('compatibility layer for ods api', function () {
           composite: {
             size: 20000,
             sources: [{
-              test1: { terms: { field: 'test1', order: 'asc' } }
+              test1: { terms: { field: 'test1', order: 'asc', missing_bucket: true } }
             }, {
-              test2: { terms: { field: 'test2', order: 'asc' } }
+              test2: { terms: { field: 'test2', order: 'asc', missing_bucket: true } }
             }]
           },
           aggs: {}
@@ -336,9 +336,9 @@ describe('compatibility layer for ods api', function () {
           composite: {
             size: 20000,
             sources: [{
-              test1: { terms: { field: 'test1', order: 'asc' } }
+              test1: { terms: { field: 'test1', order: 'asc', missing_bucket: true } }
             }, {
-              test2: { terms: { field: 'test2', order: 'asc' } }
+              test2: { terms: { field: 'test2', order: 'asc', missing_bucket: true } }
             }]
           },
           aggs: {}
@@ -698,12 +698,20 @@ bidule;1;22.2
 
     const dataset = await testUtils.sendDataset('datasets/dataset2.csv', ax)
 
-    const res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 6)
     assert.equal(res.data.total_count, 6)
     // missing values are "null"
     assert.equal(res.data.results[5].somedate, null)
+
+    // group by considers "null" as the lower value
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=somedate`)
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results[0].somedate, null)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=somedate&order_by=somedate desc`)
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results[2].somedate, null)
   })
 
   it('should manage date times', async function () {
