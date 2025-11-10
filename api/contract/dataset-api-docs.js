@@ -62,8 +62,6 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
   const valuesProperties = schema
     .filter((/** @type {any} */ p) => !p.key.startsWith('_geo'))
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
-  const numberProperties = schema
-    .filter((/** @type {any} */ p) => p.type === 'number')
   const imageProperty = schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
 
   const filterItems = []
@@ -675,20 +673,28 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           }, htmlParam, {
             in: 'query',
             name: 'metric',
-            description: 'La métrique à appliquer par niveau de groupement.',
+            description: `La métrique à appliquer par niveau de groupement :
+  - \`avg\` : moyenne
+  - \`sum\` : somme
+  - \`min\` : valeur minimal
+  - \`max\` : valeur maximale
+  - \`value_count\` : nombre de valeurs
+  - \`cardinality\` : nombre de valeurs distinctes (approximatif à partir de 40 000)
+
+            `,
             explode: false,
             schema: {
               title: 'Métrique',
               type: 'string',
-              enum: ['avg', 'sum', 'min', 'max']
+              enum: ['avg', 'sum', 'min', 'max', 'cardinality', 'value_count']
             }
           }, {
             in: 'query',
             name: 'metric_field',
-            description: 'La colonne numérique sur lequel effectuer le calcul de métrique par niveau de groupement.',
+            description: 'La colonne sur laquelle effectuer le calcul de métrique par niveau de groupement.',
             schema: {
               type: 'string',
-              enum: numberProperties.length ? numberProperties.map((/** @type {any} */ p) => p.key) : undefined
+              enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
             }
           }, {
             in: 'query',

@@ -5,7 +5,7 @@ import { prepareQuery, aliasName } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 
 const acceptedMetricAggsByType = {
-  number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles'],
+  number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
   string: ['min', 'max', 'cardinality', 'value_count'],
   other: ['value_count']
 }
