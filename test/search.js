@@ -199,7 +199,7 @@ describe('search', function () {
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     await workers.hook('finalize/' + dataset.id)
 
-    // TODO: this should be 400
-    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?collapse=roles`), { status: 500 })
+    // collapse on multi-valued property
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?collapse=roles`), { status: 400 })
   })
 })
