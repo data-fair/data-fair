@@ -456,7 +456,8 @@ function peg$parse(input, options) {
         [text()]: {
           terms: {
             order,
-            field
+            field,
+            missing_bucket: true
           }
         }
       }
