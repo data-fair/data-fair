@@ -15,7 +15,7 @@ export default async (client: Client, dataset, query, publicBaseUrl, vtXYZ) => {
     }
     if (collapseField.separator) {
       // throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
-      eventsLog.warn('collapse_multi_valued', `query parameter collapse was used on a multi-valued property ${query.collapse} on dataset ${dataset.slug} (${dataset.id}), this can cause breakage`, { account: dataset.owner })
+      eventsLog.warn('collapse_multi_valued', `query parameter collapse was used on a multi-valued property "${query.collapse}" on dataset ${dataset.slug} (${dataset.id}), this can cause breakage`, { account: dataset.owner })
     }
     esQuery.collapse = { field: query.collapse }
     // number after which we accept that cardinality is approximative
