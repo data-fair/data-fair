@@ -229,9 +229,8 @@ export const run = async () => {
                 directives['connect-src'] = "'self' https:"
               }
             }
-            if (urlPath.startsWith('/embed/')) {
-              directives['frame-ancestors'] = "'self' http: https:"
-            }
+            // all embed pages allow cross domain iframe integration
+            directives['frame-ancestors'] = "'self' http: https:"
             return directives
           }
         }
