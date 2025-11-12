@@ -483,7 +483,7 @@ export default {
     },
     settingsPath () {
       let settingsPath = this.settingsAccount.type + '/' + this.settingsAccount.id
-      if (this.settingsAccount.department) settingsPath += ':' + this.settingsAccount.department
+      if (this.settingsAccount.department) settingsPath += encodeURIComponent(':') + this.settingsAccount.department
       return settingsPath
     },
     settingsUrl () {
