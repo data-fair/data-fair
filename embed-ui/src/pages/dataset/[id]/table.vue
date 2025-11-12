@@ -27,8 +27,9 @@ const { height: windowHeight } = useWindowSize()
 
 useFrameContent()
 const route = useRoute<'/dataset/[id]/table'>()
+const draft = useBooleanSearchParam('draft')
 
-provideDatasetStore(route.params.id, false, true)
+provideDatasetStore(route.params.id, draft.value ?? undefined, true)
 
 const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')
