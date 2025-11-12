@@ -37,19 +37,26 @@ export default async function (dataset: FileDataset) {
     }
 
     let shapefile: string | undefined
+    let mapinfo: string | undefined
     if (dataset.originalFile.mimetype === 'application/zip') {
       debug('decompress', dataset.originalFile.mimetype, originalFilePath, tmpDir)
       const files = (await unzip(originalFilePath, tmpDir)).filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
       const filePaths = files.map(f => ({ path: f, parsed: path.parse(f) }))
 
-      // Check if this archive is actually a shapefile source
+      // Check if this archive is actually a shapefile or a mapingosource
       const shpFile = filePaths.find(f => f.parsed.ext.toLowerCase().endsWith('.shp'))
+      const mapinfoFile = filePaths.find(f => f.parsed.ext.toLowerCase().endsWith('.tab'))
       if (shpFile &&
         filePaths.find(f => f.parsed.name === shpFile.parsed.name && f.parsed.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.parsed.name === shpFile.parsed.name && f.parsed.ext.toLowerCase().endsWith('.dbf'))) {
         shapefile = resolvePath(tmpDir, shpFile.path)
+      } else if (mapinfoFile &&
+        filePaths.find(f => f.parsed.name === mapinfoFile.parsed.name && f.parsed.ext.toLowerCase().endsWith('.map')) &&
+        filePaths.find(f => f.parsed.name === mapinfoFile.parsed.name && f.parsed.ext.toLowerCase().endsWith('.id')) &&
+        filePaths.find(f => f.parsed.name === mapinfoFile.parsed.name && f.parsed.ext.toLowerCase().endsWith('.dat'))) {
+        mapinfo = resolvePath(tmpDir, mapinfoFile.path)
       } else if (filePaths.length === 1 && datasetUtils.basicTypes.includes(mime.lookup(filePaths[0].parsed.base) as string)) {
-      // case of a single data file in an archive
+        // case of a single data file in an archive
         const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].parsed.base)
         await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
         dataset.file = {
@@ -142,7 +149,7 @@ export default async function (dataset: FileDataset) {
         encoding: 'utf-8',
         schema: []
       }
-    } else if (shapefile || datasetUtils.geographicalTypes.has(dataset.originalFile.mimetype)) {
+    } else if (shapefile || mapinfo || datasetUtils.geographicalTypes.has(dataset.originalFile.mimetype)) {
       if (config.ogr2ogr.skip) {
         throw httpError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
       }
@@ -163,7 +170,7 @@ export default async function (dataset: FileDataset) {
 
       const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.geojson')
       // using the .shp file instead of the zip seems to help support more shapefiles for some reason
-      await ogr2ogr(shapefile ?? originalFilePath, {
+      await ogr2ogr(shapefile ?? mapinfo ?? originalFilePath, {
         format: 'GeoJSON',
         options: ogrOptions,
         timeout: config.ogr2ogr.timeout,
