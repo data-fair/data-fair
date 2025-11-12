@@ -271,7 +271,9 @@ const addApiKey = () => {
 }
 
 const removeApiKey = (rowIndex: number) => {
-  apiKeys.value = apiKeys.value!.splice(rowIndex, 1)
+  const newApiKeys = [...apiKeys.value ?? []]
+  newApiKeys!.splice(rowIndex, 1)
+  apiKeys.value = newApiKeys
 }
 
 const scopes = [
