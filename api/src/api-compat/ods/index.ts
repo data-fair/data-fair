@@ -8,7 +8,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Counter } from 'prom-client'
 import { getFlatten } from '../../datasets/utils/flatten.ts'
 import config from '#config'
-import datasetsRouter, { datasetsApiKeyMiddleware } from '../../datasets/router.js'
+import datasetsRouter, { apiKeyMiddlewareRead } from '../../datasets/router.js'
 import { parse as parseWhere } from './where.peg.js'
 import { parse as parseSelect } from './select.peg.js'
 import { parse as parseOrderBy } from './order-by.peg.js'
@@ -589,7 +589,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 router.get(
   '/v2.1/catalog/datasets/:datasetId/records',
   readDataset({ fillDescendants: true }),
-  datasetsApiKeyMiddleware,
+  apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
   getRecords('2.1')
@@ -597,7 +597,7 @@ router.get(
 router.get(
   '/v2.0/catalog/datasets/:datasetId/records',
   readDataset({ fillDescendants: true }),
-  datasetsApiKeyMiddleware,
+  apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
   getRecords('2.0')
@@ -605,7 +605,7 @@ router.get(
 router.get(
   '/v2.1/catalog/datasets/:datasetId/exports/:format',
   readDataset({ fillDescendants: true }),
-  datasetsApiKeyMiddleware,
+  apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
   cacheHeaders.noCache,
   exports('2.1')
@@ -613,7 +613,7 @@ router.get(
 router.get(
   '/v2.0/catalog/datasets/:datasetId/exports/:format',
   readDataset({ fillDescendants: true }),
-  datasetsApiKeyMiddleware,
+  apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
   cacheHeaders.noCache,
   exports('2.0')
@@ -623,7 +623,7 @@ router.get(
 datasetsRouter.get(
   '/:datasetId/compat-ods/records',
   readDataset({ fillDescendants: true }),
-  datasetsApiKeyMiddleware,
+  apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
   getRecords('2.1')
@@ -631,7 +631,7 @@ datasetsRouter.get(
 datasetsRouter.get(
   '/:datasetId/compat-ods/exports/:format',
   readDataset({ fillDescendants: true }),
-  datasetsApiKeyMiddleware,
+  apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
   exports('2.1')

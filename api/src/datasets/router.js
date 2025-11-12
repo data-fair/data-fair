@@ -70,11 +70,9 @@ const clean = datasetUtils.clean
 const debugFiles = debugModule('files')
 const debugLimits = debugModule('limits')
 
-const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
+export const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
 const apiKeyMiddlewareWrite = apiKeyUtils.middleware(['datasets', 'datasets-write'])
 const apiKeyMiddlewareAdmin = apiKeyUtils.middleware(['datasets', 'datasets-admin'])
-
-export const datasetsApiKeyMiddleware = apiKeyMiddlewareWrite
 
 router.use((req, res, next) => {
   // @ts-ignore
