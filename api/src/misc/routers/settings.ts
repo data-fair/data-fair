@@ -20,6 +20,7 @@ import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type S
 import { type Request } from '#types'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
+import clone from '@data-fair/lib-utils/clone.js'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -213,7 +214,11 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
         eventsLog.alert('df.apikeys.setadmin', 'a user attempted to mutate an api key and make it admin', { req, account: req.owner })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
-      apiKey.key = existingApiKey.key
+      if (existingApiKey.key) {
+        apiKey.key = existingApiKey.key
+      } else {
+        eventsLog.warn('df.apikeys.missingKey', `an API ${apiKey.id} key seems to be missing its internal secret`, { req, account: req.owner })
+      }
       if (!equal(existingApiKey, apiKey)) {
         eventsLog.alert('df.apikeys.mutate', `a user tried to mutate an existing api key ${existingApiKey.title} (${existingApiKey.id})`, { req, account: req.owner })
         throw httpError(400, 'existing API keys are immutable')
@@ -273,8 +278,8 @@ router.patch('/:type/:id', isOwnerAdmin, async (req, res) => {
   assertSettingsRequest(req)
   const partialSettings = req.body
   const sessionState = reqSessionAuthenticated(req)
-  const existingSettings = await mongo.settings.findOne(req.ownerFilter)
-  const settings = { ...(existingSettings ? cleanSettings(existingSettings) : {}), ...partialSettings }
+  const existingSettings = await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0 } })
+  const settings = cleanSettings({ ...(clone(existingSettings ?? {})), ...partialSettings })
   const returnedSettings = await writeSettings(req, existingSettings, settings, sessionState)
   res.status(200).send(returnedSettings)
 })
