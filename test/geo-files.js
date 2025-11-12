@@ -330,4 +330,30 @@ describe('geo files support', function () {
     config.defaultLimits = oldLimit
     await workers.workers.filesProcessor.run({ key: 'defaultLimits', value: oldLimit }, { name: 'setConfig' })
   })
+
+  it('Process uploaded mapinfo dataset', async function () {
+    if (config.ogr2ogr.skip) {
+      return console.log('Skip ogr2ogr test in this environment')
+    }
+
+    // Send dataset
+    const datasetFd = fs.readFileSync('./resources/geo/troncon-mapinfo.zip')
+    const form = new FormData()
+    form.append('file', datasetFd, 'troncon-mapinfo.zip')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+
+    // dataset converted
+    const dataset = await workers.hook('normalizeFile/' + res.data.id)
+    assert.equal(dataset.status, 'normalized')
+    assert.equal(dataset.file.name, 'troncon-mapinfo.geojson')
+
+    assert.equal(dataset.storage.dataFiles.length, 2)
+    assert.equal(dataset.storage.attachments.size, 0)
+    await workers.hook('finalize/' + dataset.id)
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.total, 33)
+  })
 })
