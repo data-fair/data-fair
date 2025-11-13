@@ -18,8 +18,9 @@ useFrameContent()
 const { height: windowHeight } = useWindowSize()
 
 const route = useRoute<'/dataset/[id]/map-bounds'>()
+const draft = useBooleanSearchParam('draft')
 
-provideDatasetStore(route.params.id)
+provideDatasetStore(route.params.id, draft.value ?? undefined)
 </script>
 
 <style>

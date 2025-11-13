@@ -212,7 +212,7 @@
                     class="pa-0"
                   >
                     <d-frame
-                      :src="`/data-fair/embed/dataset/${$route.params.id}/map`"
+                      :src="`/data-fair/embed/dataset/${$route.params.id}/map?draft=${!!dataset.draftReason}`"
                       :height="`500px`"
                       :reload="dataset.finalizedAt"
                       resize="no"
@@ -239,7 +239,7 @@
                     class="pa-0"
                   >
                     <d-frame
-                      :src="`/data-fair/embed/dataset/${$route.params.id}/search-files`"
+                      :src="`/data-fair/embed/dataset/${$route.params.id}/search-files?draft=${!!dataset.draftReason}`"
                       :height="`500px`"
                       :reload="dataset.finalizedAt"
                       resize="no"
@@ -252,7 +252,7 @@
                   <v-container fluid>
                     <dataset-thumbnails-opts v-if="can('writeDescription')" />
                     <d-frame
-                      :src="`/data-fair/embed/dataset/${$route.params.id}/thumbnails`"
+                      :src="`/data-fair/embed/dataset/${$route.params.id}/thumbnails?draft=${!!dataset.draftReason}`"
                       :height="`500px`"
                       :reload="dataset.finalizedAt"
                       resize="no"
