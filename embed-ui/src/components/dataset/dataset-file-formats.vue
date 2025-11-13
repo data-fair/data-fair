@@ -33,6 +33,7 @@ fr:
   KMLKMZ: Format de données géospatiales basé sur le formalisme XML
   GPX: Format de fichier permettant l'échange de coordonnées GPS
   ESRIShapefile: Format de fichier pour les systèmes d'informations géographiques
+  Mapinfo: Archive ZIP de fichiers Mapinfo
   iCalendar: Format de données pour les échanges de données de calendrier
 en:
   CSV: Textual file format for tabular data where values are separated by commas
@@ -44,6 +45,7 @@ en:
   KMLKMZ: Format for geospatial data using the XML standard
   GPX: File format for exchanging GPS coordinates
   ESRIShapefile: File format for geographic information systems
+  Mapinfo: MapInfo ZIP archive files
   iCalendar: File format for exchanging calendar contents
 </i18n>
 
@@ -95,6 +97,10 @@ const formats = [
     type: 'ESRI Shapefile',
     description: 'Format de fichier pour les systèmes d\'informations géographiques',
     formatsInArchive: '.shp, .dbf, .shx (.prj optionel) dans une archive .zip'
+  }, {
+    type: 'Mapinfo',
+    description: 'MapInfo ZIP archive files',
+    formatsInArchive: '.map, .tab, .id .dat dans une archive .zip'
   }, {
     type: 'iCalendar',
     format: '.ics'

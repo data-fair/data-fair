@@ -19,8 +19,9 @@ const { height: windowHeight } = useWindowSize()
 
 useFrameContent()
 const route = useRoute<'/dataset/[id]/search-files'>()
+const draft = useBooleanSearchParam('draft')
 
-provideDatasetStore(route.params.id, false, true)
+provideDatasetStore(route.params.id, draft.value ?? undefined, true)
 
 const q = useStringSearchParam('q')
 </script>

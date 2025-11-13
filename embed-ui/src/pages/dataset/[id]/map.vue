@@ -23,8 +23,9 @@ useFrameContent()
 const { height: windowHeight } = useWindowSize()
 
 const route = useRoute<'/dataset/[id]/map'>()
+const draft = useBooleanSearchParam('draft')
 
-provideDatasetStore(route.params.id)
+provideDatasetStore(route.params.id, draft.value ?? undefined)
 
 const q = useStringSearchParam('q')
 const interaction = useBooleanSearchParam('interaction', true)
