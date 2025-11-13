@@ -5,7 +5,7 @@ export type WatchKey = 'journal' | 'info' | 'taskProgress'
 
 export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | WatchKey[]) => {
   const { sendUiNotif } = useUiNotif()
-  const { id, dataset, journal, datasetFetch, draftMode, taskProgress } = datasetStore
+  const { id, dataset, journal, datasetFetch, draft, taskProgress } = datasetStore
 
   if (!Array.isArray(keys)) keys = [keys]
   const ws = useWS('/data-fair/')
@@ -31,7 +31,7 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
       }
 
       if (keys.includes('info')) {
-        if (event.type === 'finalize-end' || (event.type === 'draft-cancelled' && draftMode)) {
+        if (event.type === 'finalize-end' || (event.type === 'draft-cancelled' && draft)) {
           datasetFetch.refresh()
         }
       }

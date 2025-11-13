@@ -194,8 +194,9 @@
                   />
                   <d-frame
                     v-else
-                    :src="`/data-fair/embed/dataset/${$route.params.id}/table`"
+                    :src="`/data-fair/embed/dataset/${$route.params.id}/table?draft=${!!dataset.draftReason}`"
                     :height="`500px`"
+                    :reload="dataset.finalizedAt"
                     resize="no"
                     @notif="emitFrameNotif"
                   />
@@ -213,6 +214,7 @@
                     <d-frame
                       :src="`/data-fair/embed/dataset/${$route.params.id}/map`"
                       :height="`500px`"
+                      :reload="dataset.finalizedAt"
                       resize="no"
                       scrolling="no"
                       @notif="emitFrameNotif"
@@ -239,6 +241,7 @@
                     <d-frame
                       :src="`/data-fair/embed/dataset/${$route.params.id}/search-files`"
                       :height="`500px`"
+                      :reload="dataset.finalizedAt"
                       resize="no"
                       @notif="emitFrameNotif"
                     />
@@ -251,6 +254,7 @@
                     <d-frame
                       :src="`/data-fair/embed/dataset/${$route.params.id}/thumbnails`"
                       :height="`500px`"
+                      :reload="dataset.finalizedAt"
                       resize="no"
                       @notif="emitFrameNotif"
                     />

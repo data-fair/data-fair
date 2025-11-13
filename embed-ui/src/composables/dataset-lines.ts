@@ -22,7 +22,7 @@ export type ExtendedResult = {
 }
 
 export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeRefOrGetter<number>, selectedCols: MaybeRefOrGetter<string[]>, q: Ref<string>, sort: MaybeRefOrGetter<string | undefined>, extraParams: MaybeRefOrGetter<Record<string, string>>, indexedAt: MaybeRefOrGetter<string | undefined>) => {
-  const { id, dataset, draftMode } = useDatasetStore()
+  const { id, dataset, draft } = useDatasetStore()
   const { width: windowWidth } = useWindowSize()
 
   const display = useDisplay()
@@ -43,7 +43,7 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
     if (!dataset.value?.schema) return null
     if (truncate.value === null) return null
     const query: Record<string, any> = {
-      draftMode,
+      draft,
       size: toValue(pageSize),
       truncate: truncate.value,
       q: q.value || undefined,

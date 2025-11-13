@@ -5,9 +5,9 @@
 <script setup lang="ts">
 import { type WatchKey } from '~/composables/dataset-watch'
 
-const { id, draftMode, html, journal, taskProgress, watch: shouldWatch } = defineProps({
+const { id, draft, html, journal, taskProgress, watch: shouldWatch } = defineProps({
   id: { type: String, required: true },
-  draftMode: { type: Boolean, default: false },
+  draft: { type: Boolean, default: false },
   html: { type: Boolean, default: false },
   journal: { type: Boolean, default: false },
   taskProgress: { type: Boolean, default: false },
@@ -15,10 +15,10 @@ const { id, draftMode, html, journal, taskProgress, watch: shouldWatch } = defin
 })
 
 watch(() => id, () => { throw new Error('"id" should not be mutated, re-render the provide-dataset-store') })
-watch(() => draftMode, () => { throw new Error('"draftMode" should not be mutated, re-render the provide-dataset-store') })
+watch(() => draft, () => { throw new Error('"draft" should not be mutated, re-render the provide-dataset-store') })
 watch(() => shouldWatch, () => { throw new Error('"watch" should not be mutated, re-render the provide-dataset-store') })
 
-const datasetStore = provideDatasetStore(id, draftMode, html)
+const datasetStore = provideDatasetStore(id, draft, html)
 if (journal) datasetStore.journalFetch.refresh()
 if (taskProgress) datasetStore.taskProgressFetch.refresh()
 if (shouldWatch) {
