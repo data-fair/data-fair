@@ -14,6 +14,8 @@ describe('values aggs', function () {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = await workers.hook('finalize/' + res.data.id)
+    assert.deepEqual(dataset.schema.find(p => p.key === 'somedate').enum, ['2017-12-12', '2017-10-10'])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
 
     // Simple value aggregation
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id`)
@@ -113,7 +115,7 @@ describe('values aggs', function () {
     assert.equal(res.data.aggs[1].total, 0)
     assert.equal(res.data.aggs[2].total, 3)
 
-    assert.equal(res.data.aggs[0].value, '2017-10-01T00:00:00.000Z')
+    assert.equal(res.data.aggs[0].value, '2017-10-01')
     assert.equal(res.data.aggs[0].metric, 13)
 
     // Other values route for simpler list of values
@@ -133,9 +135,9 @@ describe('values aggs', function () {
     assert.equal(res.data[0], 'koumoul')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values/somedate`)
     assert.equal(res.data.length, 2)
-    assert.equal(res.data[0], '2017-10-10T00:00:00.000Z')
+    assert.equal(res.data[0], '2017-10-10')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values/somedate?q=2017-10&q_mode=complete`)
-    assert.equal(res.data[0], '2017-10-10T00:00:00.000Z')
+    assert.equal(res.data[0], '2017-10-10')
 
     // also with labels
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values-labels/id`)

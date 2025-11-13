@@ -42,5 +42,11 @@ export default async (client, dataset, fieldKey, query) => {
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
   })
-  return esResponse.aggregations.values.buckets.map(b => b.key_as_string || b.key).map(v => query.stringify === 'true' ? (v + '') : v)
+  return esResponse.aggregations.values.buckets.map(b => {
+    let value = b.key_as_string || b.key
+    if (field?.type === 'string' && field.format === 'date') {
+      value = value.slice(0, 10)
+    }
+    return value
+  }).map(v => query.stringify === 'true' ? (v + '') : v)
 }

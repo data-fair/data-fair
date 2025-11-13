@@ -200,7 +200,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
 
   const response = { total: esResponse.hits.total.value }
   if (esResponse.timed_out) response.timed_out = true
-  recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl, flatten)
+  recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl, flatten, 0, valuesFields)
 
   if (aggSizes[0] > 0 && response.aggs?.length === aggSizes[0]) {
     const lastValue = response.aggs[response.aggs.length - 1].value
@@ -213,17 +213,22 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   return response
 }
 
-const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, flatten) => {
+const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, flatten, i, valuesFields) => {
   if (aggRes.card) response.total_values = aggRes.card.value
   if (!aggRes.values) return response
   response.total_other = aggRes.values.sum_other_doc_count
   if (aggRes.values.buckets.length > 10000) {
     throw httpError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
   }
+  const valuesField = dataset.schema.find(p => p.key === valuesFields[i])
   response.aggs = aggRes.values.buckets.map(b => {
+    let value = b.key_as_string || b.key
+    if (valuesField?.type === 'string' && valuesField.format === 'date') {
+      value = value.slice(0, 10)
+    }
     const aggItem = {
       total: b.doc_count,
-      value: b.key_as_string || b.key,
+      value,
       results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl)) : []
     }
     if (b.metric) {
@@ -235,7 +240,7 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, fla
       }
     }
     if (b.values) {
-      recurseAggResponse(aggItem, b, dataset, query, publicBaseUrl, flatten)
+      recurseAggResponse(aggItem, b, dataset, query, publicBaseUrl, flatten, i + 1, valuesFields)
     }
     if (b.centroid) {
       aggItem.centroid = b.centroid.location
