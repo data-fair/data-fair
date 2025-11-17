@@ -159,7 +159,14 @@ export default {
       const keysParam = webhooks.map(w => 'data-fair:' + w.const).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       const urlTemplate = this.env.publicUrl + '/dataset/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
+      const searchParams = new URLSearchParams({
+        key: keysParam,
+        title: titlesParam,
+        'url-template': urlTemplate,
+        register: 'false',
+        header: 'no'
+      }).toString()
+      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
     },
     appsSubscribeUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
@@ -167,7 +174,14 @@ export default {
       const keysParam = webhooks.map(w => 'data-fair:' + w.const).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       const urlTemplate = this.env.publicUrl + '/application/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
+      const searchParams = new URLSearchParams({
+        key: keysParam,
+        title: titlesParam,
+        'url-template': urlTemplate,
+        register: 'false',
+        header: 'no'
+      }).toString()
+      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
     },
     publicationSites () {
       if (!this.settingsPublicationSites || !this.topics) return []
@@ -182,7 +196,15 @@ export default {
         // we used to direct to the publication site, but it is better that a notif coming from the back-office directs to the back-office
         // and this prevents problem when subscribing before the publication of the site on a domain
         const urlTemplate = this.env.publicUrl + '/dataset/{id}'
-        const subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(p))}`
+        const searchParams = new URLSearchParams({
+          key: keys.join(','),
+          title: titles.join(','),
+          'url-template': urlTemplate,
+          register: 'false',
+          header: 'no',
+          sender: this.siteSender(p)
+        }).toString()
+        const subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
         return {
           ...p,
           subscribeUrl
@@ -195,7 +217,15 @@ export default {
       const key = `data-fair:dataset-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('datasetPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/dataset/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
+      const searchParams = new URLSearchParams({
+        key,
+        title,
+        'url-template': urlTemplate,
+        register: 'false',
+        header: 'no',
+        sender: this.siteSender(this.selectedSite)
+      }).toString()
+      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
     },
     requestedApplicationPublicationSiteUrl () {
       if (!this.selectedSite) return null
@@ -203,7 +233,15 @@ export default {
       const key = `data-fair:application-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('applicationPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/application/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
+      const searchParams = new URLSearchParams({
+        key,
+        title,
+        'url-template': urlTemplate,
+        register: 'false',
+        header: 'no',
+        sender: this.siteSender(this.selectedSite)
+      }).toString()
+      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
     },
     userCreationPublicationSiteUrl () {
       if (!this.selectedSite) return null
@@ -211,7 +249,14 @@ export default {
       if (this.accountRole !== 'admin') return
       const key = `simple-directory:user-created:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('userCreated', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite, 'admin'))}`
+      const searchParams = new URLSearchParams({
+        key,
+        title,
+        register: 'false',
+        header: 'no',
+        sender: this.siteSender(this.selectedSite, 'admin')
+      }).toString()
+      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
     }
   },
   async mounted () {
