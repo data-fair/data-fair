@@ -5,81 +5,88 @@
   >
     <p
       v-if="!publicationSitesFetch.data.value.length"
-      v-t="'noPublicationSite'"
-    />
+      class="mb-2"
+    >
+      {{ t('noPublicationSite') }}
+    </p>
     <template v-else>
-      <p v-t="'publishThisDataset'" />
-      <v-row class="px-2">
-        <v-card
-          tile
-          border
-          style="min-width: 400px;"
+      <p class="mb-2">
+        {{ t('publishThisDataset') }}
+      </p>
+
+      <v-card
+        tile
+        border
+        style="min-width: 400px;"
+      >
+        <v-list
+          class="py-0"
+          lines="three"
         >
-          <v-list
-            class="py-0"
-            lines="three"
+          <v-list-item
+            v-for="(site,i) in publicationSitesFetch.data.value"
+            :key="i"
           >
-            <v-list-item
-              v-for="(site,i) in publicationSitesFetch.data.value"
-              :key="i"
+            <v-list-item-title>
+              <a
+                class="simple-link"
+                :href="site.url"
+              >{{ site.title || site.url || site.id }}</a>
+            </v-list-item-title>
+            <v-list-item-subtitle
+              v-if="dataset.owner.department"
+              class="mb-2"
             >
-              <v-list-item-title>
-                <a :href="site.url">{{ site.title || site.url || site.id }}</a>
-              </v-list-item-title>
-              <v-list-item-subtitle
-                v-if="dataset.owner.department"
-                class="mb-2"
-              >
-                <span>{{ dataset.owner.name }}</span>
-                <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
-              </v-list-item-subtitle>
-              <v-list-item-subtitle
-                v-if="site.datasetUrlTemplate && dataset.publicationSites?.includes(`${site.type}:${site.id}`)"
-                class="mb-2"
-              >
-                <a :href="site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug ?? dataset.id)">
-                  {{ site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug ?? dataset.id) }}
-                </a>
-              </v-list-item-subtitle>
-              <v-list-item-subtitle
-                v-if="hasWarning(site)"
-                class="text-warning"
-              >
-                {{ $t('hasWarning') }}{{ sitesWarnings[`${site.type}:${site.id}`].map(w => $t('warning.' + w)).join(', ') }}
-              </v-list-item-subtitle>
-              <v-list-item-subtitle
-                v-if="sitesContribPermissionsRisk[`${site.type}:${site.id}`]"
-                class="text-warning"
-              >
-                {{ $t('contribPermission') }}
-              </v-list-item-subtitle>
-              <v-list-item-subtitle>
-                <v-row class="my-0">
-                  <v-switch
-                    hide-details
-                    density="compact"
-                    :model-value="dataset.publicationSites?.includes(`${site.type}:${site.id}`)"
-                    :disabled="((hasWarning(site) || sitesContribPermissionsRisk[`${site.type}:${site.id}`]) && !dataset.publicationSites?.includes(`${site.type}:${site.id}`)) || (!canPublish(site) && !(site.settings && site.settings.staging)) || !can('writeDescription')"
-                    :label="$t('published')"
-                    class="mt-0 ml-6"
-                    @update:model-value="togglePublicationSites(site)"
-                  />
-                  <v-switch
-                    v-if="dataset.owner.type === 'organization' && !(site.settings && site.settings.staging) && !dataset.publicationSites?.includes(`${site.type}:${site.id}`)"
-                    hide-details
-                    density="compact"
-                    :model-value="dataset.requestedPublicationSites?.includes(`${site.type}:${site.id}`)"
-                    :disabled="(hasWarning(site) && !dataset.requestedPublicationSites?.includes(`${site.type}:${site.id}`)) || dataset.publicationSites?.includes(`${site.type}:${site.id}`) || canPublish(site) || !can('writeDescription')"
-                    :label="$t('publicationRequested')"
-                    class="mt-0 ml-6"
-                    @update:model-value="toggleRequestedPublicationSites(site)"
-                  />
-                </v-row>
-              </v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-        </v-card>
-      </v-row>
+              <span>{{ dataset.owner.name }}</span>
+              <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
+              v-if="site.datasetUrlTemplate && dataset.publicationSites?.includes(`${site.type}:${site.id}`)"
+              class="mb-2"
+            >
+              <a :href="site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug ?? dataset.id)">
+                {{ site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug ?? dataset.id) }}
+              </a>
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
+              v-if="hasWarning(site)"
+              class="text-warning"
+            >
+              {{ t('hasWarning') }}{{ sitesWarnings[`${site.type}:${site.id}`].map(w => t('warning.' + w)).join(', ') }}
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
+              v-if="sitesContribPermissionsRisk[`${site.type}:${site.id}`]"
+              class="text-warning"
+            >
+              {{ t('contribPermission') }}
+            </v-list-item-subtitle>
+            <v-list-item-subtitle>
+              <v-row class="my-0">
+                <v-switch
+                  hide-details
+                  density="compact"
+                  :model-value="dataset.publicationSites?.includes(`${site.type}:${site.id}`)"
+                  :disabled="((hasWarning(site) || sitesContribPermissionsRisk[`${site.type}:${site.id}`]) && !dataset.publicationSites?.includes(`${site.type}:${site.id}`)) || (!canPublish(site) && !(site.settings && site.settings.staging)) || !can('writeDescription')"
+                  :label="t('published')"
+                  class="mt-0 ml-6"
+                  color="primary"
+                  @update:model-value="togglePublicationSites(site)"
+                />
+                <v-switch
+                  v-if="dataset.owner.type === 'organization' && !(site.settings && site.settings.staging) && !dataset.publicationSites?.includes(`${site.type}:${site.id}`)"
+                  hide-details
+                  density="compact"
+                  :model-value="dataset.requestedPublicationSites?.includes(`${site.type}:${site.id}`)"
+                  :disabled="(hasWarning(site) && !dataset.requestedPublicationSites?.includes(`${site.type}:${site.id}`)) || dataset.publicationSites?.includes(`${site.type}:${site.id}`) || canPublish(site) || !can('writeDescription')"
+                  :label="t('publicationRequested')"
+                  class="mt-0 ml-6"
+                  @update:model-value="toggleRequestedPublicationSites(site)"
+                />
+              </v-row>
+            </v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
+      </v-card>
     </template>
   </v-container>
 </template>
@@ -131,9 +138,13 @@ import permissionsUtils from '~/utils/permissions'
 
 const { id, dataset, patchDataset, can } = useDatasetStore()
 const { account } = useSessionAuthenticated()
+const { t } = useI18n()
 
 const permissionsFetch = useFetch<Permission[]>($apiPath + `/datasets/${id}/permissions`, { watch: false })
-const publicationSitesFetch = useFetch<PublicationSite[]>(() => $apiPath + `/settings/${dataset.value?.owner.type}/${dataset.value?.owner.id}/publication-sites`, { immediate: false, watch: false })
+const settingsPath = computed(() => {
+  return `${dataset.value?.owner.type}/${dataset.value?.owner.id}${encodeURIComponent(':*')}`
+})
+const publicationSitesFetch = useFetch<PublicationSite[]>(() => $apiPath + `/settings/${settingsPath.value}/publication-sites`, { immediate: false, watch: false })
 watch(dataset, () => {
   if (dataset.value) publicationSitesFetch.refresh()
 })

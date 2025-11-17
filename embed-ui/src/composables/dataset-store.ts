@@ -41,7 +41,7 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
   }
 
   const patchDataset = useAsyncAction(async (patch: PatchDatasetReq['body']) => {
-    const patchedDataset = await $fetch<ExtendedDataset>(`datasets/${id}`, { body: patch })
+    const patchedDataset = await $fetch<ExtendedDataset>(`datasets/${id}`, { method: 'PATCH', body: patch })
     dataset.value = patchedDataset
   })
 
