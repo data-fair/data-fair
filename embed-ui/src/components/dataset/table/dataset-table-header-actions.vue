@@ -104,7 +104,7 @@
             variant="flat"
             :loading="saveLinesPatch.loading.value"
             :disabled="!editSelectedLinesValid"
-            @click="saveLinesPatch"
+            @click="saveLinesPatch.execute()"
           >
             {{ t('save') }}
           </v-btn>
@@ -196,7 +196,7 @@
     unselectAllLines: Désélectionner toutes les lignes
     deleteAllLines: Supprimer les {nbLines} lignes sélectionnées
     deleteAllLinesWarning: Attention, la donnée de ces lignes sera perdue définitivement.
-    editAllLines: Éditer les lignes {nbLines} sélectionnées
+    editAllLines: Éditer les {nbLines} lignes sélectionnées
   en:
     cancel: Cancel
     delete: Delete

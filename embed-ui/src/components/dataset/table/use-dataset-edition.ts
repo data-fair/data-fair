@@ -15,7 +15,7 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
   const bulkLines = async (body: any) => {
     saving.value = true
     try {
-      const res = await $fetch(`${$apiPath}/datasets/${id}/_bulk_lines`, { method: 'POST', body })
+      const res = await $fetch(`datasets/${id}/_bulk_lines`, { method: 'POST', body })
       if (res.indexedAt) indexedAt.value = res.indexedAt
     } finally {
       saving.value = false
@@ -40,7 +40,7 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
         body._action = 'create'
       }
       formData.append('_body', JSON.stringify(body))
-      const res = await $fetch(`/datasets/${id}/lines`, { method: 'POST', body: formData })
+      const res = await $fetch(`datasets/${id}/lines`, { method: 'POST', body: formData })
       indexedAt.value = res._updatedAt
     } finally {
       saving.value = false

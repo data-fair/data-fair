@@ -1,6 +1,7 @@
 import { provide, inject } from 'vue'
 import type { Event, Dataset } from '#api/types'
 import { isRestDataset } from '#shared/types-utils'
+import type { PatchDatasetReq } from '#api-doc/datasets/patch-req/index.js'
 
 type ExtendedDataset = Dataset & { userPermissions: string[], draftReason?: string }
 export type TaskProgress = { task: string, progress: number, error?: string }
@@ -39,6 +40,11 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
     return canCache[operation]
   }
 
+  const patchDataset = useAsyncAction(async (patch: PatchDatasetReq['body']) => {
+    const patchedDataset = await $fetch<ExtendedDataset>(`datasets/${id}`, { body: patch })
+    dataset.value = patchedDataset
+  })
+
   return {
     id,
     draft,
@@ -56,7 +62,8 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
     descriptionField,
     digitalDocumentField,
     webPageField,
-    can
+    can,
+    patchDataset
   }
 }
 

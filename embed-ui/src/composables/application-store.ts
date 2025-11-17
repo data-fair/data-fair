@@ -48,7 +48,7 @@ const createApplicationStore = (id: string) => {
   watch(configDraftFetch.data, () => { configDraft.value = configDraftFetch.data.value })
   const writeConfigDraft = async (newConfigDraft: AppConfig) => {
     debug('writeConfigDraft', newConfigDraft)
-    await $fetch<AppConfig>('/applications/' + id + '/configuration-draft', {
+    await $fetch<AppConfig>('applications/' + id + '/configuration-draft', {
       method: 'PUT',
       body: newConfigDraft,
       headers: {
@@ -62,7 +62,7 @@ const createApplicationStore = (id: string) => {
     }
   }
   const cancelConfigDraft = async () => {
-    await $fetch('/applications/' + id + '/configuration-draft', { method: 'DELETE' })
+    await $fetch('applications/' + id + '/configuration-draft', { method: 'DELETE' })
     configDraft.value = config.value
     if (application.value) application.value.status = 'configured'
   }

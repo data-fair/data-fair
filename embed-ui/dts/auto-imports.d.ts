@@ -73,6 +73,7 @@ declare global {
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const operators: typeof import('../src/composables/dataset-filters')['operators']
+  const permissions: typeof import('../src/utils/permissions')['default']
   const propTypeIcon: typeof import('../src/utils/dataset')['propTypeIcon']
   const propTypeTitle: typeof import('../src/utils/dataset')['propTypeTitle']
   const provide: typeof import('vue')['provide']
@@ -217,6 +218,7 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly operators: UnwrapRef<typeof import('../src/composables/dataset-filters')['operators']>
+    readonly permissions: UnwrapRef<typeof import('../src/utils/permissions')['default']>
     readonly propTypeIcon: UnwrapRef<typeof import('../src/utils/dataset')['propTypeIcon']>
     readonly propTypeTitle: UnwrapRef<typeof import('../src/utils/dataset')['propTypeTitle']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>

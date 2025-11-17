@@ -122,7 +122,7 @@ const saveLine = useAsyncAction(async () => {
   if (ownLinesMode.value) {
     const body = { ...line.value }
     if (existingLine.value) body._id = existingLine.value._id
-    await $fetch(`/datasets/${route.params.id}/own/${session.account.value?.type}:${session.account.value?.id}/lines`, { method: 'POST', body })
+    await $fetch(`datasets/${route.params.id}/own/${session.account.value?.type}:${session.account.value?.id}/lines`, { method: 'POST', body })
   } else {
     const formData = new FormData()
     if (file.value) formData.append('attachment', file.value)
@@ -135,7 +135,7 @@ const saveLine = useAsyncAction(async () => {
     } else {
       formData.append('_action', 'create')
     }
-    await $fetch(`/datasets/${route.params.id}/lines`, { method: 'POST', body: formData })
+    await $fetch(`datasets/${route.params.id}/lines`, { method: 'POST', body: formData })
   }
   if (!Object.keys(queryContext.value.data).length) {
     // crowd-sourcing add mode where we don't want the user to spam
