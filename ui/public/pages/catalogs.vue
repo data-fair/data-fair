@@ -12,11 +12,13 @@
       :adapter.prop="stateChangeAdapter"
       @message="message => onMessage(message.detail)"
       @iframe-message="message => onMessage(message.detail)"
+      @notif="emitFrameNotif"
     />
   </div>
 </template>
 
 <script>
+import { mapActions } from 'vuex'
 import '@data-fair/frame/lib/d-frame.js'
 import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
 
@@ -27,6 +29,7 @@ export default {
     }
   },
   methods: {
+    ...mapActions('emitFrameNotif'),
     onMessage (message) {
       // the iframe requests that we display a breadcrumb
       // we mirror its internal paths by using them as a "to" query param for our own current page

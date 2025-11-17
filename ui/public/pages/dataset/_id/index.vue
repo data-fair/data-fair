@@ -362,6 +362,11 @@
                     :permissions="permissions"
                     :publication-sites="publicationSites"
                   />
+                  <d-frame
+                    :src="`/data-fair/embed/dataset/${$route.params.id}/publication-sites`"
+                    resize="YES"
+                    @notif="emitFrameNotif"
+                  />
                 </v-tab-item>
 
                 <v-tab-item value="share-publications">
