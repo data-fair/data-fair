@@ -358,13 +358,9 @@
                     class="mx-2"
                     :text="$t('tutorialShare')"
                   />
-                  <dataset-publication-sites
-                    :permissions="permissions"
-                    :publication-sites="publicationSites"
-                  />
                   <d-frame
                     :src="`/data-fair/embed/dataset/${$route.params.id}/publication-sites`"
-                    resize="YES"
+                    resize="yes"
                     @notif="emitFrameNotif"
                   />
                 </v-tab-item>
