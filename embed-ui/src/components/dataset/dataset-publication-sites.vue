@@ -135,7 +135,6 @@ import { mdiAlert } from '@mdi/js'
 import permissionsUtils from '~/utils/permissions'
 
 const { id, dataset, patchDataset, can } = useDatasetStore()
-const { account } = useSessionAuthenticated()
 const { t } = useI18n()
 
 const permissionsFetch = useFetch<Permission[]>($apiPath + `/datasets/${id}/permissions`)
@@ -230,13 +229,8 @@ const toggleRequestedPublicationSites = (site: PublicationSite) => {
   patchDataset.execute({ requestedPublicationSites })
 }
 
-const canPublish = (site: PublicationSite) => {
-  const warnings = sitesWarnings.value[`${site.type}:${site.id}`]
-  return warnings && warnings.length === 0 && can('writePublicationSites') && (!account.value.department || account.value.department === site.department)
-}
-
 const togglePublicationSitesStatus = (site: PublicationSite) => {
-  const canToggle = (canPublish(site) || site.settings?.staging) && can('writeDescription')
+  const canToggle = (can('writePublicationSites') || site.settings?.staging) && can('writeDescription')
   if (dataset.value?.publicationSites?.includes(`${site.type}:${site.id}`)) {
     if (!canToggle) return 'disabled'
     return 'visible'
@@ -250,7 +244,7 @@ const togglePublicationSitesStatus = (site: PublicationSite) => {
 const toggleRequestedPublicationSitesStatus = (site: PublicationSite) => {
   if (dataset.value?.publicationSites?.includes(`${site.type}:${site.id}`)) return 'hidden'
 
-  const canTogglePs = (canPublish(site) || site.settings?.staging) && can('writeDescription')
+  const canTogglePs = (can('writePublicationSites') || site.settings?.staging) && can('writeDescription')
 
   if (dataset.value?.requestedPublicationSites?.includes(`${site.type}:${site.id}`)) {
     if (canTogglePs) return 'disabled'
