@@ -29,7 +29,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions('emitFrameNotif'),
+    ...mapActions(['emitFrameNotif']),
     onMessage (message) {
       // the iframe requests that we display a breadcrumb
       // we mirror its internal paths by using them as a "to" query param for our own current page
