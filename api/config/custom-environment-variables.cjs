@@ -236,7 +236,8 @@ module.exports = {
     __format: 'json'
   },
   disablePublicationSites: {
-    __name: 'DISABLE_PUBLICATION_SITES'
+    __name: 'DISABLE_PUBLICATION_SITES',
+    __format: 'json'
   },
   info: {
     termsOfService: 'INFO_TOS',
