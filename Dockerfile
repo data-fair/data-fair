@@ -1,4 +1,4 @@
-FROM node:24.9.0-alpine3.22 AS base
+FROM node:24.11.1-alpine3.22 AS base
 
 # RUN npm install -g npm@11.1.0
 
