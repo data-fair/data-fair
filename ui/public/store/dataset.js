@@ -272,6 +272,7 @@ export default () => ({
         delete patch.silent
         const patched = await this.$axios.patch(getters.resourceUrl, patch, { params: { draft: state.draftMode } })
         if (!silent) eventBus.$emit('notification', 'Le jeu de données a été mis à jour.')
+        commit('patch', { updatedAt: patched.data.updatedAt })
         return patched.data
       } catch (error) {
         if (error.status === 409) {
