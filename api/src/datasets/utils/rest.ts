@@ -648,13 +648,13 @@ class TransactionStream extends Writable {
     for (const operation of operations) {
       if (operation._error || operation._status === 500) {
         this.options.summary.nbErrors += 1
-        if (this.options.summary.errors.length < 10) {
+        if (this.options.summary.errors.length < 50) {
           this.options.summary.errors.push({ line: this.i, error: operation._error ?? '', status: operation._status ?? 500 })
         }
       } else {
         if (operation._warning) {
           this.options.summary.nbWarnings += 1
-          if (this.options.summary.warnings.length < 10) {
+          if (this.options.summary.warnings.length < 50) {
             this.options.summary.warnings.push({ line: this.i, warning: operation._warning })
           }
         }
