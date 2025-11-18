@@ -27,6 +27,7 @@
               <a
                 class="simple-link"
                 :href="site.datasetUrlTemplate && dataset.publicationSites?.includes(`${site.type}:${site.id}`) ? site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug ?? dataset.id) : site.url"
+                target="_blank"
               >{{ site.title || site.url || site.id }}</a>
               <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
               <span
