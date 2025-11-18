@@ -231,12 +231,11 @@ const toggleRequestedPublicationSites = (site: PublicationSite) => {
 }
 
 const canPublish = (site: PublicationSite) => {
-  const warnings = sitesWarnings.value[`${site.type}:${site.id}`]
-  return warnings && warnings.length === 0 && can('writePublicationSites') && (!account.value.department || account.value.department === site.department)
+  return can('writeDescription') && (can('writePublicationSites') || site.settings?.staging) && (!account.value.department || account.value.department === site.department)
 }
 
 const togglePublicationSitesStatus = (site: PublicationSite) => {
-  const canToggle = (canPublish(site) || site.settings?.staging) && can('writeDescription')
+  const canToggle = canPublish(site)
   if (dataset.value?.publicationSites?.includes(`${site.type}:${site.id}`)) {
     if (!canToggle) return 'disabled'
     return 'visible'
@@ -250,7 +249,7 @@ const togglePublicationSitesStatus = (site: PublicationSite) => {
 const toggleRequestedPublicationSitesStatus = (site: PublicationSite) => {
   if (dataset.value?.publicationSites?.includes(`${site.type}:${site.id}`)) return 'hidden'
 
-  const canTogglePs = (canPublish(site) || site.settings?.staging) && can('writeDescription')
+  const canTogglePs = canPublish(site)
 
   if (dataset.value?.requestedPublicationSites?.includes(`${site.type}:${site.id}`)) {
     if (canTogglePs) return 'disabled'
