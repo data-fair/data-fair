@@ -247,7 +247,7 @@ const showEditSelectedResultsDialog = useAsyncAction(async () => {
     params: {
       arrays: true,
       _id_in: selectedResults.value.map(r => r._id).join(','),
-      limit: 10000
+      size: 10000
     }
   }).then(r => r.results)
   editSelectedResultsDialog.value = true
