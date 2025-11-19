@@ -439,6 +439,25 @@ export default [
     }
   },
   {
+    id: 'id-rnb',
+    title: {
+      fr: 'ID-RNB',
+      en: ''
+    },
+    description: {
+      fr: 'Identifiant unique et pérenne attribué à un bâtiment dans le Référentiel National des Bâtiments.',
+      en: ''
+    },
+    identifiers: [
+      'https://rnb.gouv.fr/#ID-RNB'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Référentiels administratifs français',
+      en: 'French administrative master-data'
+    }
+  },
+  {
     id: 'latitude',
     title: {
       fr: 'Latitude',
