@@ -119,7 +119,9 @@ RUN mkdir -p /app/shared/node_modules
 
 ##########################
 FROM base AS parquet-writer-builder
-RUN apk add --no-cache cargo
+RUN apk add --no-cache curl build-base gcc
+RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y
+ENV PATH=/root/.cargo/bin:$PATH
 RUN npm i -g @napi-rs/cli@3.2.0
 ADD /parquet-writer parquet-writer
 WORKDIR /app/parquet-writer
