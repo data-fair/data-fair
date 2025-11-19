@@ -45,6 +45,7 @@
     "@types/node": "^22.12.0",
     "@types/streamsaver": "^2.0.5",
     "@types/unzipper": "^0.10.10",
+    "ajv": "^8.17.1",
     "eslint-plugin-mocha": "^11.2.0",
     "eslint-plugin-vue": "^9.32.0",
     "husky": "^9.1.7",

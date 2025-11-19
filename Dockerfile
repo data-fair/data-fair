@@ -72,7 +72,7 @@ ADD embed-ui/package.json embed-ui/package.json
 ADD patches patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
-RUN npm ci --omit=peer --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
 ADD /api/types api/types
 ADD /api/doc api/doc
@@ -109,8 +109,9 @@ FROM installer AS api-installer
 
 RUN cp -rf node_modules/@img/sharp-linuxmusl-x64 /tmp/sharp-linuxmusl-x64 && \
     cp -rf node_modules/@img/sharp-libvips-linuxmusl-x64 /tmp/sharp-libvips-linuxmusl-x64 && \
-    npm ci -w api --prefer-offline --omit=dev --omit=optional --omit=peer --no-audit --no-fund && \
+    npm ci -w api --prefer-offline --omit=dev --omit=optional --no-audit --no-fund && \
     npx clean-modules --yes "!exceljs/lib/doc/" "!**/*.mustache" && \
+    mkdir -p node_modules/@img && \
     cp -rf /tmp/sharp-linuxmusl-x64 node_modules/@img/sharp-linuxmusl-x64 && \
     cp -rf /tmp/sharp-libvips-linuxmusl-x64 node_modules/@img/sharp-libvips-linuxmusl-x64
 RUN mkdir -p /app/api/node_modules
