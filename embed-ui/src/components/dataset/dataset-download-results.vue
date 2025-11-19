@@ -228,7 +228,6 @@ const downloadLargeCSV = useAsyncAction(async () => {
         await new Promise(resolve => setTimeout(resolve, 10000))
         res = await $fetch.raw(nextUrl)
       }
-      console.log('RES', res)
       const { _data, headers } = res
       const link = headers.get('link')
       if (link) {
