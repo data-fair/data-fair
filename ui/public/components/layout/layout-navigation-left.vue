@@ -303,6 +303,17 @@
           <v-list-item-title v-t="'accountsManagement'" />
         </v-list-item>
 
+        <v-list-item
+          v-if="env.catalogsIntegration"
+          :nuxt="true"
+          :to="`/admin/catalogs-plugins`"
+        >
+          <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <template v-if="env.extraAdminNavigationItems">
           <v-list-item
             v-for="extra in env.extraAdminNavigationItems"
@@ -352,6 +363,7 @@ fr:
   params: Paramètres
   paramsSub: Licences, thématiques ...
   catalogs: Catalogues distants
+  catalogsPlugins: Plugins - Catalogues
   storage: Stockage
   subscription: Abonnement
   doc: Documentation
@@ -375,6 +387,7 @@ en:
   params: Parameters
   paramsSub: Licenses, topics ...
   catalogs: Remote catalogs
+  catalogsPlugins: Plugins - Catalogs
   storage: Storage
   subscription: Subscription
   doc: Documentation
