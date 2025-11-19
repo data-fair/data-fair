@@ -170,7 +170,6 @@ export default () => {
     },
     actions: {
       emitFrameNotif (context, notif) {
-        console.log('d-frame notif', notif)
         eventBus.$emit('notification', { ...notif.detail, msg: notif.detail.title || notif.detail.detail })
       },
       async fetchLimits ({ getters, commit }) {

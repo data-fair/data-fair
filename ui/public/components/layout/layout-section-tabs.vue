@@ -68,6 +68,7 @@
 <script>
 export default {
   props: {
+    value: { type: String, default: null },
     minHeight: { type: Number, default: null },
     defaultTab: { type: String, default: null },
     texture: { type: String, default: null },
@@ -111,6 +112,11 @@ export default {
         style += 'height: 94px;left: 12px;top:8px;'
       }
       return style
+    }
+  },
+  watch: {
+    tab () {
+      this.$emit('input', this.tab)
     }
   },
   created () {

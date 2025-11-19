@@ -19,6 +19,11 @@ export default (admin = false) => ({
         description: 'Cet identifiant doit être unique pour la même valeur de "Type de site".',
         'x-display': admin ? null : 'hidden'
       },
+      department: {
+        type: 'string',
+        title: 'Département',
+        'x-display': admin ? null : 'hidden'
+      },
       title: {
         type: 'string',
         title: 'Titre',

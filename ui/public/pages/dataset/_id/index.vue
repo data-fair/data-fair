@@ -284,7 +284,9 @@
                 </v-tab-item>
               </template>
             </layout-section-tabs>
+
             <layout-section-tabs
+              v-model="shareTab"
               :section="sections.find(s => s.id === 'share')"
               :svg="shareSvg"
               svg-no-margin
@@ -358,9 +360,12 @@
                     class="mx-2"
                     :text="$t('tutorialShare')"
                   />
-                  <dataset-publication-sites
-                    :permissions="permissions"
-                    :publication-sites="publicationSites"
+                  <d-frame
+                    v-if="shareTab === 'share-publication-sites'"
+                    :src="`/data-fair/embed/dataset/${$route.params.id}/publication-sites`"
+                    resize="yes"
+                    :reload="dataset.updatedAt"
+                    @notif="emitFrameNotif"
                   />
                 </v-tab-item>
 
@@ -538,7 +543,8 @@ export default {
     shareSvg: require('~/assets/svg/Share_Two Color.svg?raw'),
     checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
     buildingSvg: require('~/assets/svg/Team building _Two Color.svg?raw'),
-    permissions: null
+    permissions: null,
+    shareTab: null
   }),
   async fetch ({ store, route }) {
     store.dispatch('dataset/clear')

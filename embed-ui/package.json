@@ -14,6 +14,7 @@
   },
   "imports": {
     "#api/types": "../api/types/index.ts",
+    "#api-doc/*": "../api/doc/*",
     "#shared/*": "../shared/*"
   },
   "devDependencies": {

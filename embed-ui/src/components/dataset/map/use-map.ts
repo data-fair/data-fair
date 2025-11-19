@@ -86,7 +86,7 @@ export const useMap = (
           .join(',')
         const params: Record<string, string> = { qs, size: '1', select }
         if (dataset.value.draftReason) params.draft = 'true'
-        const item = (await $fetch(`${$apiPath}/datasets/${id}/lines`, { params })).results[0]
+        const item = (await $fetch(`datasets/${id}/lines`, { params })).results[0]
         if (!item) return console.error('item not found with filter', qs)
 
         const htmlList = dataset.value.schema
