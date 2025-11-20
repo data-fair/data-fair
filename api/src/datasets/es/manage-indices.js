@@ -124,22 +124,40 @@ export const deleteIndex = async (dataset) => {
 // replace the index referenced by a dataset's alias
 export const switchAlias = async (dataset, tempId) => {
   const name = aliasName(dataset)
+
+  let existingAlias
+  try {
+    existingAlias = await es.client.indices.getAlias({ name })
+  } catch (err) {
+    if (err.statusCode !== 404) throw err
+  }
+
+  const actions = []
+  // we used to simple remove with index=* but it seems that it can create strange behaviors when other indices
+  // have some operations
+  if (existingAlias) {
+    console.log('ex', Object.keys(existingAlias)[0])
+    actions.push({ remove: { alias: name, index: Object.keys(existingAlias)[0] } })
+  }
+  actions.push({ add: { alias: name, index: tempId } })
+
   debug(`switch dataset index alias ${name} -> ${tempId}`)
   const res = await es.client.indices.updateAliases({
-    body: {
-      actions: [
-        { remove: { alias: name, index: '*' } },
-        { add: { alias: name, index: tempId } }
-      ]
-    },
+    body: { actions },
     timeout: '60s'
   })
   if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating aliases ' + name)
 
+  await clearAliases(dataset)
+}
+
+const clearAliases = async (dataset) => {
   // Delete indices of this dataset that are not referenced by either the draft or prod aliases
   const { prodAlias, draftAlias } = await getAliases(dataset)
   if (dataset.draftReason && !draftAlias) throw new Error('missing draft elasticsearch alias right after it should have been created')
   if (!dataset.draftReason && !prodAlias) throw new Error('missing production elasticsearch alias right after it should have been created')
+  if (draftAlias && Object.keys(draftAlias).length !== 1) throw new Error('draft elasticsearch alias should reference exactly 1 index')
+  if (prodAlias && Object.keys(prodAlias).length !== 1) throw new Error('production elasticsearch alias should reference exactly 1 index')
   debug('full aliases after update', prodAlias, draftAlias)
   const indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
   for (const index in indices) {

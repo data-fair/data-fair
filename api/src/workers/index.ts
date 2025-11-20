@@ -283,8 +283,8 @@ export const loop = async () => {
   ping.listen(async (type, id) => {
     if (stopped) return
     const resourceTask = await queryNextResourceTask(type, id)
-    debug('fetch resourceTask from ping', type, id, resourceTask?.task.name)
     if (resourceTask) {
+      debug('fetch resourceTask from ping', type, id, resourceTask.task.name)
       processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
         internalError('worker-task', err)
       }).then(() => {
