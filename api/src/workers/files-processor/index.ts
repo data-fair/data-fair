@@ -1,11 +1,13 @@
 import mongo from '#mongo'
 import type { FileDataset } from '#types'
 import config from '#config'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 
 export const analyzeCsv = async function (dataset: FileDataset) {
   await mongo.connect(true)
   await wsEmitter.init(mongo.db)
+  await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const analyzeCsv = await import('./analyze-csv.ts')
   await analyzeCsv.default(dataset)
 }
