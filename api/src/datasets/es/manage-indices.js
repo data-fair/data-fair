@@ -136,16 +136,21 @@ export const switchAlias = async (dataset, tempId) => {
   // we used to simple remove with index=* but it seems that it can create strange behaviors when other indices
   // have some operations
   if (existingAlias) {
-    console.log('ex', Object.keys(existingAlias)[0])
     actions.push({ remove: { alias: name, index: Object.keys(existingAlias)[0] } })
   }
   actions.push({ add: { alias: name, index: tempId } })
 
   debug(`switch dataset index alias ${name} -> ${tempId}`)
-  const res = await es.client.indices.updateAliases({
-    body: { actions },
-    timeout: '60s'
-  })
+  let res
+  try {
+    res = await es.client.indices.updateAliases({
+      body: { actions },
+      timeout: '60s'
+    })
+  } catch (err) {
+    console.error(`failed to replace index alias ${name} -> ${tempId}`, err)
+    throw new Error('failed to replace index alias')
+  }
   if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating aliases ' + name)
 
   await clearAliases(dataset)
