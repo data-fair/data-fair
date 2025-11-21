@@ -124,9 +124,10 @@ export const previews = (dataset, publicUrl = config.publicUrl) => {
   if (!dataset.schema) return []
   const datasetRef = publicUrl === config.publicUrl ? dataset.id : dataset.slug
   const previews = [{ id: 'table', title: 'Tableau', href: `${publicUrl}/embed/dataset/${datasetRef}/table` }]
+  /* calendar preview was not ported to new ui
   if (!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))) {
     previews.push({ id: 'calendar', title: 'Calendrier', href: `${publicUrl}/embed/dataset/${datasetRef}/calendar` })
-  }
+  } */
   if (dataset.bbox) {
     previews.push({ id: 'map', title: 'Carte', href: `${publicUrl}/embed/dataset/${datasetRef}/map` })
     previews.push({ id: 'map-bounds', title: 'Enveloppe géographique', href: `${publicUrl}/embed/dataset/${datasetRef}/map-bounds` })
