@@ -756,12 +756,12 @@ other
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].key, 'id')
-    assert.equal(dataset.schema[0]['x-originalName'], 'Id')
+    assert.equal(dataset.schema[0]['x-originalName'], 'id')
     assert.equal(dataset.file.schema[0].key, 'id')
     assert.equal(dataset.file.schema[0]['x-originalName'], 'id')
     lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
     assert.equal(lines[1].id, 'bidule')
     csv = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines?format=csv')).data
-    assert.ok(csv.startsWith('"Id","Adr"'))
+    assert.ok(csv.startsWith('"id","adr"'))
   })
 })

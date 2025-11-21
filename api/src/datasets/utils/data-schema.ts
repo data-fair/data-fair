@@ -70,7 +70,7 @@ export const mergeFileSchema = (dataset: FileDataset) => {
   dataset.schema = dataset.schema || []
   const fileFields = dataset.file.schema
     .map(field => {
-      // preserve existing fields customization
+      // preserve existing fields, cleanSchema will adapt stuff if necessary
       const existingField = dataset.schema.find(f => f.key === field.key && !f['x-extension'])
       if (existingField) return existingField
       const { dateFormat, dateTimeFormat, ...f } = field
@@ -112,6 +112,11 @@ export const cleanSchema = (dataset) => {
       f.type = f['x-transform'].type
       if (f['x-transform'].format) f.format = f['x-transform'].format
       else delete f.format
+    }
+
+    // update x-originalName
+    if (fileField?.['x-originalName'] && fileField['x-originalName'] !== f['x-originalName']) {
+      f['x-originalName'] = fileField['x-originalName']
     }
 
     // apply type from concepts to the actual field (for example SIRET might be parsed a interger, but should be returned a string)
