@@ -133,8 +133,7 @@ export const switchAlias = async (dataset, tempId) => {
   }
 
   const actions = []
-  // we used to simple remove with index=* but it seems that it can create strange behaviors when other indices
-  // have some operations
+  // removing with index=* seems to create strange behaviors when other indices have some operations
   if (existingAlias) {
     actions.push({ remove: { alias: name, index: Object.keys(existingAlias)[0] } })
   }
@@ -183,7 +182,8 @@ export const validateDraftAlias = async (dataset) => {
   debug('delete previous alias', name)
   const res = await es.client.indices.deleteAlias({
     name,
-    index: '_all',
+    // removing with index=* seems to create strange behaviors when other indices have some operations
+    index: Object.keys(draftAlias)[0],
     timeout: '60s'
   })
   if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after deleting previous aliases ' + name)
