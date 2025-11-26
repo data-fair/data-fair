@@ -34,15 +34,25 @@ router.post('/:type/:id', async (req, res) => {
     }
 
     // permissions
-    const cursor = collection.find({ permissions: { $elemMatch: { type: identity.type, id: identity.id } } })
-    while (await cursor.hasNext()) {
-      const doc = await cursor.next()
+    const cursor1 = collection.find({ permissions: { $elemMatch: { type: identity.type, id: identity.id } } })
+    for await (const doc of cursor1) {
       for (const permission of doc.permissions) {
         if (permission.type === identity.type && permission.id === identity.id) {
           permission.name = identity.name
         }
       }
       await collection.updateOne({ id: doc.id }, { $set: { permissions: doc.permissions } })
+    }
+
+    // privateAccess
+    const cursor2 = collection.find({ privateAccess: { $elemMatch: { type: identity.type, id: identity.id } } })
+    for await (const doc of cursor2) {
+      for (const privateAccess of doc.privateAccess) {
+        if (privateAccess.type === identity.type && privateAccess.id === identity.id) {
+          privateAccess.name = identity.name
+        }
+      }
+      await collection.updateOne({ id: doc.id }, { $set: { privateAccess: doc.privateAccess } })
     }
 
     // created/updated events
@@ -55,6 +65,19 @@ router.post('/:type/:id', async (req, res) => {
   // settings and limits
   await mongo.db.collection('settings').updateOne({ type: identity.type, id: identity.id, department: { $exists: false } }, { $set: { name: identity.name } }, { upsert: true })
   await mongo.db.collection('limits').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
+
+  // dataset.masterData.shareOrgs
+  if (identity.type === 'organization') {
+    const cursor = mongo.datasets.find({ 'masterData.shareOrgs': { $elemMatch: { id: identity.id } } })
+    for await (const dataset of cursor) {
+      for (const shareOrg of dataset.masterData?.shareOrgs ?? []) {
+        if (shareOrg.id === identity.id) {
+          shareOrg.name = identity.name
+        }
+      }
+      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { masterData: dataset.masterData } })
+    }
+  }
 
   res.send()
 })
