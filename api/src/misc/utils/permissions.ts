@@ -225,6 +225,7 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
     } else {
       // public permissions apply to anyone
       or.push({ permissions: { $elemMatch: { $or: operationFilter, type: null, id: null } } })
+      or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: '*' } } })
       // individual user permissions are applied no matter the current active account
       // user is owner
       or.push({ 'owner.type': 'user', 'owner.id': sessionState.user.id })
