@@ -219,11 +219,12 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
   const or = []
 
   if (sessionState.user) {
-    or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: '*' } } })
     // user is in super admin mode, show all
     if (sessionState.user.adminMode) {
       or.push({ 'owner.type': { $exists: true } })
     } else {
+      // public permissions apply to anyone
+      or.push({ permissions: { $elemMatch: { $or: operationFilter, type: null, id: null } } })
       // individual user permissions are applied no matter the current active account
       // user is owner
       or.push({ 'owner.type': 'user', 'owner.id': sessionState.user.id })
