@@ -1,4 +1,6 @@
-export default async ({ store, app, env, $vuetify, route, i18n }) => {
+import { contrastColor } from '../store/style.js'
+
+export default async ({ store, app, env, $vuetify, route, i18n, error }) => {
   let publicUrl = window.location.origin + env.basePath
   if (publicUrl.endsWith('/')) publicUrl = publicUrl.substr(0, publicUrl.length - 1)
 
@@ -42,6 +44,12 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   if (route.query.dark) $vuetify.theme.dark = route.query.dark === 'true'
   $vuetify.theme.themes.light.admin = env.theme.colors.admin
   $vuetify.theme.themes.dark.admin = env.theme.darkColors.admin || env.theme.colors.admin
+
+  if (!store.state.siteInfo.main) {
+    const primary = contrastColor(store.state.siteInfo.theme.colors.primary)
+    $vuetify.theme.themes.light.primary = primary
+    $vuetify.theme.themes.dark.primary = primary
+  }
 
   if (!route.path.startsWith('/embed/')) {
     // use mostly to detect if the user has a subscription with explicit limits or is using the service default limits

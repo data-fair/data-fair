@@ -154,8 +154,10 @@ const nuxtConfig = {
       { hid: 'description', name: 'description', content: config.brand.description },
       { hid: 'robots', name: 'robots', content: 'noindex' }
     ],
-    link: [],
-    style: []
+    style: [],
+    script: [
+      { src: '/simple-directory/api/sites/_public.js' }
+    ]
   },
   css: [
     '@mdi/font/css/materialdesignicons.min.css'
