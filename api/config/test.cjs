@@ -1,6 +1,5 @@
 module.exports = {
   port: 5599,
-  serveUi: false,
   publicUrl: 'http://localhost:5600/data-fair',
   wsPublicUrl: 'ws://localhost:5600/data-fair',
   directoryUrl: 'http://localhost:5600/simple-directory',
