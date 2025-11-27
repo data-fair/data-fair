@@ -4,6 +4,8 @@ import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { AccountKeys } from '@data-fair/lib-express'
 import type { Dataset, VirtualDataset } from '#types'
+import { getPseudoSessionState } from '../../misc/utils/users.ts'
+import { filterCan } from '../../misc/utils/permissions.ts'
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
@@ -132,10 +134,14 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
 
 // Only non virtual descendants on which to perform the actual ES queries
 export const descendants = async (dataset: VirtualDataset, tolerateStale = false, extraProperties: string[] | null = null, throwEmpty = true) => {
+  const pseudoSessionState = getPseudoSessionState(dataset.owner, 'virtual-dataset', '_virtual-dataset', 'admin')
+  const permissionsFilter = filterCan(pseudoSessionState, 'datasets', 'read')
+
   const project: Record<string, 1> = {
     'descendants.id': 1,
     'descendants.isVirtual': 1,
-    'descendants.virtual': 1
+    'descendants.virtual': 1,
+    'allDescendants.id': 1
   }
   const options = tolerateStale ? { readPreference: 'nearest' as const } : undefined
   if (extraProperties) {
@@ -146,6 +152,17 @@ export const descendants = async (dataset: VirtualDataset, tolerateStale = false
       id: dataset.id
     }
   }, {
+    // fetch all descendants without considering permissions filter
+    $graphLookup: {
+      from: 'datasets',
+      startWith: '$virtual.children',
+      connectFromField: 'virtual.children',
+      connectToField: 'id',
+      as: 'allDescendants',
+      maxDepth: 20
+    }
+  }, {
+    // fetch only the descendants for which we have full read permission
     $graphLookup: {
       from: 'datasets',
       startWith: '$virtual.children',
@@ -153,20 +170,15 @@ export const descendants = async (dataset: VirtualDataset, tolerateStale = false
       connectToField: 'id',
       as: 'descendants',
       maxDepth: 20,
-      restrictSearchWithMatch: {
-        $or: [
-          // the virtual dataset can have children that are either from the same owner
-          // or completely public for the "read" opeations classes
-          // we could try to manage intermediate cases, but it would be complicated
-          { 'owner.id': dataset.owner.id, 'owner.type': dataset.owner.type },
-          { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } }
-        ]
-      }
+      restrictSearchWithMatch: { $or: permissionsFilter }
     }
   }, {
     $project: project
   }], options).toArray()
   if (!res[0]) return []
+  if (res[0].descendants.length !== res[0].allDescendants.length) {
+    throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il utilise un jeu de données pour lequel ce compte n\'a pas de permission de lecture.')
+  }
   const virtualDescendantsWithFilters = res[0].descendants
     .filter((d: Dataset) => d.isVirtual && (d.virtual?.filters?.length || d.virtual?.filterActiveAccount))
   if (virtualDescendantsWithFilters.length) {

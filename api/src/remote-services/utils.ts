@@ -77,7 +77,8 @@ export const syncDataset = async (dataset: Dataset) => {
       virtualDatasets: {
         parent: {
           id: dataset.id,
-          title: dataset.title
+          title: dataset.title,
+          owner: dataset.owner
         },
         active: !!(dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active),
         storageRatio: 0
@@ -90,9 +91,12 @@ export const syncDataset = async (dataset: Dataset) => {
         active: !!(dataset.masterData.standardSchema && dataset.masterData.standardSchema.active)
       }
     })
+    if (dataset.masterData.shareOrgs?.length) {
+      service.privateAccess = [...service.privateAccess, ...dataset.masterData.shareOrgs.map(p => ({ ...p, type: 'organization' }))]
+    }
     if (existingService) {
       service.public = !!existingService.public
-      service.privateAccess = existingService.privateAccess || []
+      // service.privateAccess = existingService.privateAccess || []
       if (existingService.virtualDatasets) {
         service.virtualDatasets.storageRatio = existingService.virtualDatasets.storageRatio || 0
       }

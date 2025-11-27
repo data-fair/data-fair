@@ -10,6 +10,15 @@
         :schema="schema"
         :options="{context, locale: 'fr', disableAll: userOwnerRole(dataset.owner) !== 'admin'}"
       >
+        <template #shareOrgs-before>
+          <tutorial-alert
+            id="masterData-shareOrgs"
+            persistent
+          >
+            Le partage à des partenaires affecte simplement la visibilité des actions liées à ces données de référence.
+            Il est sans effet sur les permissions que vous devez définir séparément.
+          </tutorial-alert>
+        </template>
         <template #singleSearchs-before>
           <tutorial-alert
             id="masterData-singleSearchs"
@@ -76,6 +85,7 @@ export default {
     }
   },
   computed: {
+    ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters(['userOwnerRole']),
     schema () {
@@ -84,6 +94,8 @@ export default {
     context () {
       return {
         dataset: this.dataset,
+        directoryUrl: this.env.directoryUrl,
+        ownerOrg: this.dataset.owner.type === 'organization',
         stringProperties: this.dataset.schema
           .filter(p => p.type === 'string')
           .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),

@@ -219,11 +219,13 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
   const or = []
 
   if (sessionState.user) {
-    or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: '*' } } })
     // user is in super admin mode, show all
     if (sessionState.user.adminMode) {
       or.push({ 'owner.type': { $exists: true } })
     } else {
+      // public permissions apply to anyone
+      or.push({ permissions: { $elemMatch: { $or: operationFilter, type: null, id: null } } })
+      or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: '*' } } })
       // individual user permissions are applied no matter the current active account
       // user is owner
       or.push({ 'owner.type': 'user', 'owner.id': sessionState.user.id })
@@ -236,7 +238,7 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
         if (resourceType && apiDocsUtil.contribOperationsClasses[resourceType] && apiDocsUtil.contribOperationsClasses[resourceType].includes('list')) {
           listRoles.push('contrib')
         }
-        // user is privileged admin of owner organization with or without department
+        // user is privileged admin or owner of organization with or without department
         if (listRoles.includes(sessionState.organization.role)) {
           if (sessionState.organization.department && !ignoreDepartment) or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id, 'owner.department': sessionState.organization.department })
           else or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id })
