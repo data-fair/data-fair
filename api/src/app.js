@@ -23,6 +23,7 @@ import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { isMainThread } from 'node:worker_threads'
 import { reqSiteUrl } from '@data-fair/lib-express/site.js'
+import { getSiteHashes } from './misc/utils/site.ts'
 
 const debugDomain = debug('domain')
 
@@ -233,7 +234,8 @@ export const run = async () => {
             directives['frame-ancestors'] = "'self' http: https:"
             return directives
           }
-        }
+        },
+        getSiteExtraParams: getSiteHashes
       }))
     }
     app.use('/next-ui', (req, res) => {
