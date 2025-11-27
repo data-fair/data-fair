@@ -23,6 +23,7 @@
         :dense="true"
         :show-topics="true"
         :no-link="true"
+        :show-owner="item.owner.type !== _owner.type || item.owner.id !== _owner.id || (item.owner.department || null) !== (_owner.department || null)"
       />
     </template>
   </v-autocomplete>
@@ -60,7 +61,10 @@ export default {
     datasets: []
   }),
   computed: {
-    ...mapGetters('session', ['activeAccount'])
+    ...mapGetters('session', ['activeAccount']),
+    _owner () {
+      return this.owner || this.activeAccount
+    }
   },
   watch: {
     search () {
@@ -76,7 +80,8 @@ export default {
   methods: {
     async searchDatasets () {
       this.loadingDatasets = true
-      const owner = this.owner || this.activeAccount
+      const owner = this._owner
+      const select = 'id,owner,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,-userPermissions,-links'
 
       let items = []
       if (this.value) items.push(this.value)
@@ -84,7 +89,12 @@ export default {
         const remoteServicesRes = await this.$axios.$get('api/v1/remote-services', {
           params: { q: this.search, size: 1000, select: 'id,title,' + this.masterData, privateAccess: `${owner.type}:${owner.id}`, [this.masterData]: true }
         })
-        const refDatasets = remoteServicesRes.results.map(r => r[this.masterData].parent || r[this.masterData].dataset)
+        const refDatasetsRefs = remoteServicesRes.results.map(r => r[this.masterData].parent || r[this.masterData].dataset)
+        // TODO: remove remote-service intermediary
+        const refDatasetsRes = await this.$axios.$get('api/v1/datasets', {
+          params: { q: this.search, size: 20, select, id: refDatasetsRefs.map(r => r.id).join(','), queryable: true }
+        })
+        const refDatasets = refDatasetsRes.results
         if (refDatasets.length) {
           items.push({ header: this.$t('masterData') })
           items = items.concat(refDatasets)
@@ -98,7 +108,7 @@ export default {
         params: {
           q: this.search,
           size: 20,
-          select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
+          select,
           owner: ownerFilter,
           ...this.extraParams
         }

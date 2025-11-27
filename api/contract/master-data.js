@@ -29,6 +29,22 @@ export const schema = {
   type: 'object',
   title: 'Données de référence',
   properties: {
+    shareOrgs: {
+      type: 'array',
+      title: 'Partagez cette donnée de référence avec vos partenaires',
+      'x-if': 'context.ownerOrg',
+      'x-fromUrl': '{context.directoryUrl}/api/{context.dataset.owner.type}s/{context.dataset.owner.id}',
+      'x-itemsProp': 'partners',
+      'x-itemTitle': 'name',
+      'x-itemKey': 'id',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' }
+        }
+      }
+    },
     bulkSearchs: {
       type: 'array',
       title: 'Récupération de lignes en masse',
