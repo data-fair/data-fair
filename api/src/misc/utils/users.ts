@@ -35,7 +35,15 @@ export const getPseudoSessionState = (owner: Account, name: string, defaultId: s
       accountRole: 'admin'
     }
   } else {
-    const userOrg = { ...owner, type: undefined, role: defaultRole }
+    const account = { ...owner }
+    if (department) {
+      if (department === '-') {
+        delete account.department
+      } else {
+        account.department = department
+      }
+    }
+    const userOrg = { ...account, type: undefined, role: defaultRole }
     const sessionState: SessionStateAuthenticated & { isPseudoSession: true } = {
       isPseudoSession: true,
       lang: 'fr',
@@ -45,15 +53,9 @@ export const getPseudoSessionState = (owner: Account, name: string, defaultId: s
         email: '',
         organizations: [userOrg]
       },
-      account: { ...owner },
-      accountRole: defaultRole
-    }
-    if (department) {
-      if (department === '-') {
-        delete sessionState.account.department
-      } else {
-        sessionState.account.department = department
-      }
+      account,
+      accountRole: defaultRole,
+      organization: userOrg
     }
     return sessionState
   }

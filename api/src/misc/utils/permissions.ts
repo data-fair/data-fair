@@ -238,7 +238,7 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
         if (resourceType && apiDocsUtil.contribOperationsClasses[resourceType] && apiDocsUtil.contribOperationsClasses[resourceType].includes('list')) {
           listRoles.push('contrib')
         }
-        // user is privileged admin of owner organization with or without department
+        // user is privileged admin or owner of organization with or without department
         if (listRoles.includes(sessionState.organization.role)) {
           if (sessionState.organization.department && !ignoreDepartment) or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id, 'owner.department': sessionState.organization.department })
           else or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id })

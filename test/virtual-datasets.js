@@ -505,7 +505,7 @@ describe('virtual datasets', function () {
     await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 
-  it('A virtual dataset can have a child from another owner with specific permissions', async function () {
+  it('A user\'s virtual dataset can have a child from another owner with specific permissions', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
@@ -522,6 +522,25 @@ describe('virtual datasets', function () {
     const virtualDataset = await workers.hook('finalize/' + res.data.id)
 
     await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+  })
+
+  it('An org\'s virtual dataset can have a child from another owner with specific permissions', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { classes: ['read'], type: 'organization', id: 'KWqAGZ4mG' }
+    ])
+
+    const res = await global.ax.hlalonde3Org.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id]
+      }
+    })
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
+
+    await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 
   it('A virtual dataset has the most restrictive capabilities of its children', async function () {
