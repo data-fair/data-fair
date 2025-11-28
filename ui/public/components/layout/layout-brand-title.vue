@@ -15,7 +15,10 @@
       >
     </v-list-item-avatar>
     <v-list-item-title v-if="!$vuetify.breakpoint.mobile">
-      <h1 class="text-h5 font-weight-bold">
+      <h1
+        class="text-h5 font-weight-bold"
+        style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;"
+      >
         {{ title }}
       </h1>
     </v-list-item-title>

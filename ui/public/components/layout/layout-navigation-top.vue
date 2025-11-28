@@ -41,7 +41,7 @@
         :notify-url="env.notifyUrl"
       />
     </v-toolbar-items>
-    <personal-menu>
+    <layout-personal-menu>
       <template #actions-before="{}">
         <v-list-item
           :to="'/me'"
@@ -63,7 +63,7 @@
         </template>
         <v-divider />
       </template>
-    </personal-menu>
+    </layout-personal-menu>
     <lang-switcher />
   </v-app-bar>
 </template>
@@ -87,11 +87,10 @@ en:
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
-import PersonalMenu from '@data-fair/sd-vue/src/vuetify/personal-menu.vue'
 import LangSwitcher from '@data-fair/sd-vue/src/vuetify/lang-switcher.vue'
 
 export default {
-  components: { PersonalMenu, LangSwitcher },
+  components: { LangSwitcher },
   props: ['navContext'],
   computed: {
     ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),
