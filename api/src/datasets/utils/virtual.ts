@@ -6,6 +6,7 @@ import type { AccountKeys } from '@data-fair/lib-express'
 import type { Dataset, VirtualDataset } from '#types'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
+import { type FindOptions } from 'mongodb'
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
@@ -132,61 +133,54 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
   return schema.filter((f: any) => !!f)
 }
 
-// Only non virtual descendants on which to perform the actual ES queries
-export const descendants = async (dataset: VirtualDataset, tolerateStale = false, extraProperties: string[] | null = null, throwEmpty = true) => {
+const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDataset, 'id' | 'owner' | 'virtual'>, mongoOptions: any) => {
   const pseudoSessionState = getPseudoSessionState(dataset.owner, 'virtual-dataset', '_virtual-dataset', 'admin')
   const permissionsFilter = filterCan(pseudoSessionState, 'datasets', 'read')
+  const children = await mongo.datasets.find({
+    id: { $in: dataset.virtual.children },
+    $or: permissionsFilter
+  }, mongoOptions).toArray()
 
-  const project: Record<string, 1> = {
-    'descendants.id': 1,
-    'descendants.isVirtual': 1,
-    'descendants.virtual': 1,
-    'allDescendants.id': 1
+  if (children.length !== dataset.virtual.children.length) {
+    throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il utilise un jeu de données pour lequel ce compte n\'a pas de permission de lecture ou qui n\'existe plus.')
   }
-  const options = tolerateStale ? { readPreference: 'nearest' as const } : undefined
+  for (const child of children) {
+    if (child.isVirtual && (child.virtual?.filters?.length || child.virtual?.filterActiveAccount)) {
+      throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il utilise un autre jeu de données virtuel avec des filtres ce qui n\'est pas supporté.')
+    }
+    if (child.isVirtual) {
+      await recurseDescendants(descendants, child as VirtualDataset, mongoOptions)
+    } else {
+      descendants.push(child)
+    }
+  }
+}
+
+// Only non virtual descendants on which to perform the actual ES queries
+export const descendants = async (dataset: VirtualDataset, tolerateStale = false, extraProperties: string[] | null = null, throwEmpty = true) => {
+  const mongoOptions: FindOptions = {
+    projection: {
+      id: 1,
+      isVirtual: 1,
+      virtual: 1,
+      owner: 1,
+      permissions: 1
+    }
+  }
+  if (tolerateStale) mongoOptions.readPreference = 'nearest'
   if (extraProperties) {
-    for (const p of extraProperties) project['descendants.' + p] = 1
+    for (const p of extraProperties) mongoOptions.projection![p] = 1
   }
-  const res = await mongo.datasets.aggregate([{
-    $match: {
-      id: dataset.id
-    }
-  }, {
-    // fetch all descendants without considering permissions filter
-    $graphLookup: {
-      from: 'datasets',
-      startWith: '$virtual.children',
-      connectFromField: 'virtual.children',
-      connectToField: 'id',
-      as: 'allDescendants',
-      maxDepth: 20
-    }
-  }, {
-    // fetch only the descendants for which we have full read permission
-    $graphLookup: {
-      from: 'datasets',
-      startWith: '$virtual.children',
-      connectFromField: 'virtual.children',
-      connectToField: 'id',
-      as: 'descendants',
-      maxDepth: 20,
-      restrictSearchWithMatch: { $or: permissionsFilter }
-    }
-  }, {
-    $project: project
-  }], options).toArray()
-  if (!res[0]) return []
-  if (res[0].descendants.length !== res[0].allDescendants.length) {
-    throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il utilise un jeu de données pour lequel ce compte n\'a pas de permission de lecture.')
-  }
-  const virtualDescendantsWithFilters = res[0].descendants
-    .filter((d: Dataset) => d.isVirtual && (d.virtual?.filters?.length || d.virtual?.filterActiveAccount))
-  if (virtualDescendantsWithFilters.length) {
-    throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il utilise un autre jeu de données virtuel avec des filtres ce qui n\'est pas supporté.')
-  }
-  const physicalDescendants = res[0].descendants.filter((d: Dataset) => !d.isVirtual)
-  if (physicalDescendants.length === 0 && throwEmpty) {
+  const descendants: any[] = []
+  await recurseDescendants(descendants, dataset, mongoOptions)
+  if (descendants.length === 0 && throwEmpty) {
     throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
   }
-  return extraProperties ? physicalDescendants : physicalDescendants.map((d: Dataset) => d.id)
+  if (extraProperties) {
+    for (const descendant of descendants) {
+      if (!extraProperties.includes('owner')) delete descendant.owner
+      if (!extraProperties.includes('permissions')) delete descendant.permissions
+    }
+  }
+  return extraProperties ? descendants : descendants.map((d: Dataset) => d.id)
 }
