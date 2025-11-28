@@ -524,6 +524,34 @@ describe('virtual datasets', function () {
     await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 
+  it('A user\'s virtual dataset can have a private child from another owner if an intermediate virtual dataset provides permissions', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const res1 = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id]
+      }
+    })
+    const virtualDataset1 = await workers.hook('finalize/' + res1.data.id)
+    await ax.put('/api/v1/datasets/' + virtualDataset1.id + '/permissions', [
+      { classes: ['read'], type: 'user', id: 'cdurning2' }
+    ])
+
+    const res2 = await global.ax.cdurning2.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [virtualDataset1.id]
+      }
+    })
+    const virtualDataset2 = await workers.hook('finalize/' + res2.data.id)
+
+    await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset2.id}/lines`)
+  })
+
   it('An org\'s virtual dataset can have a child from another owner with specific permissions', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
