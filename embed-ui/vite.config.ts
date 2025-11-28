@@ -10,6 +10,7 @@ import { unheadVueComposablesImports } from '@unhead/vue'
 import Vuetify from 'vite-plugin-vuetify'
 import microTemplate from '@data-fair/lib-utils/micro-template.js'
 import { autoImports, settingsPath } from '@data-fair/lib-vuetify/vite.js'
+import { ClosePlugin } from '@data-fair/lib-vue/vite.js'
 import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 
 // https://vitejs.dev/config/
@@ -32,6 +33,7 @@ export default defineConfig({
     cspNonce: '{CSP_NONCE}'
   },
   plugins: [
+    ClosePlugin(),
     VueRouter({
       dts: './dts/typed-router.d.ts',
       // exclude: process.env.NODE_ENV === 'development' ? [] : ['src/pages/dev.vue']
