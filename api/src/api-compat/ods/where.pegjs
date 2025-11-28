@@ -108,7 +108,7 @@ InRangeFilter
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'range')
-    return { range: { [key]: { [startOperator]: start.value, [endOperator]: end.value } } }
+    return { range: { [key]: { [startOperator]: start.value, [endOperator]: end.value, time_zone: options.timezone } } }
   }
 
 RangeStart
