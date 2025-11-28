@@ -154,6 +154,7 @@ const nuxtConfig = {
       { hid: 'description', name: 'description', content: config.brand.description },
       { hid: 'robots', name: 'robots', content: 'noindex' }
     ],
+    link: [],
     style: [],
     script: [
       { src: '/simple-directory/api/sites/_public.js' }
