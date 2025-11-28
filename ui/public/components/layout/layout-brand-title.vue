@@ -1,6 +1,6 @@
 <template>
   <v-list-item
-    :href="env.brand.url"
+    :href="url"
     :nuxt="true"
     class="pr-0"
   >
@@ -38,6 +38,10 @@ export default {
     title () {
       if (!this.siteInfo.main) return this.siteInfo.title
       return this.env.brand.title || 'DataFair'
+    },
+    url () {
+      if (!this.siteInfo.main) return '/'
+      return this.env.brand.url ?? '/'
     }
   }
 }

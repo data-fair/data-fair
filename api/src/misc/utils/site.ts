@@ -4,7 +4,7 @@ import axios from '@data-fair/lib-node/axios.js'
 
 export const getSiteHashes = memoize(async (siteUrl: string) => {
   return axios.get<{ publicInfo: string, themeCss: string }>(config.privateDirectoryUrl + '/api/sites/_hashes')
-    .then(r => ({ THEME_CSS_HASH: r.data.publicInfo, PUBLIC_SITE_INFO_HASH: r.data.themeCss }))
+    .then(r => ({ THEME_CSS_HASH: r.data.publicInfo + '/', PUBLIC_SITE_INFO_HASH: r.data.themeCss + '/' }))
 }, {
   profileName: 'getSiteHashes',
   promise: true,

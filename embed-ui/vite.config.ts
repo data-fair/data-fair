@@ -10,7 +10,6 @@ import { unheadVueComposablesImports } from '@unhead/vue'
 import Vuetify from 'vite-plugin-vuetify'
 import microTemplate from '@data-fair/lib-utils/micro-template.js'
 import { autoImports, settingsPath } from '@data-fair/lib-vuetify/vite.js'
-import { ClosePlugin } from '@data-fair/lib-vue/vite.js'
 import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 
 // https://vitejs.dev/config/
@@ -33,7 +32,6 @@ export default defineConfig({
     cspNonce: '{CSP_NONCE}'
   },
   plugins: [
-    ClosePlugin(),
     VueRouter({
       dts: './dts/typed-router.d.ts',
       // exclude: process.env.NODE_ENV === 'development' ? [] : ['src/pages/dev.vue']
@@ -64,7 +62,7 @@ export default defineConfig({
         if (process.env.NODE_ENV !== 'development') return html
         const { prepareUiConfig } = await import('@data-fair/lib-express')
         const { uiConfig } = await import('../api/src/ui-config.ts')
-        const siteHashes = await (await import('../api/src/misc/utils/site.ts')).getSiteHashes('http://localhost:5600')
+        const siteHashes = { THEME_CSS_HASH: '', PUBLIC_SITE_INFO_HASH: '' }
         const { uiConfigPath } = prepareUiConfig(uiConfig)
         return microTemplate(html, {
           SITE_PATH: '',
