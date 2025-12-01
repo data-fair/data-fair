@@ -170,7 +170,7 @@
 
         <template v-if="env.extraNavigationItems && user">
           <v-list-item
-            v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin) || (extra.can === 'contribDep' && canContribDep) || (extra.can === 'adminDep' && canAdminDep))"
+            v-for="extra in extraNavigationItems"
             :key="extra.id"
             :nuxt="!!extra.iframe"
             :to="extra.iframe && `/extra/${extra.id}`"
@@ -411,6 +411,12 @@ export default {
     style () {
       if (!this.siteInfo.main) return ''
       return `background: linear-gradient(${this.$vuetify.theme.dark ? '90' : '270'}deg,  ${this.lightPrimary10} 0%, ${this.darkPrimary10} 100%);`
+    },
+    extraNavigationItems () {
+      return this.env.extraNavigationItems.filter(extra => {
+        if (extra.mainOnly && !this.siteInfo.main) return false
+        return !extra.can || (extra.can === 'contrib' && this.canContrib) || (extra.can === 'admin' && this.canAdmin) || (extra.can === 'contribDep' && this.canContribDep) || (extra.can === 'adminDep' && this.canAdminDep)
+      })
     }
   }
 }
