@@ -52,26 +52,26 @@ describe('compatibility layer for ods api', function () {
     )
     assert.deepEqual(
       whereParser.parse('nb > 12', { dataset: { schema: [{ key: 'nb' }] } }),
-      { range: { nb: { gt: 12 } } }
+      { range: { nb: { gt: 12, time_zone: undefined } } }
     )
     assert.deepEqual(
       whereParser.parse('nb > 12 AND nb < 30', { dataset: { schema: [{ key: 'nb' }] } }),
-      { bool: { must: [{ range: { nb: { gt: 12 } } }, { range: { nb: { lt: 30 } } }] } }
+      { bool: { must: [{ range: { nb: { gt: 12, time_zone: undefined } } }, { range: { nb: { lt: 30, time_zone: undefined } } }] } }
     )
     assert.deepEqual(
       whereParser.parse('nb > 12 OR id: "koumoul"', { dataset: { schema: [{ key: 'nb' }, { key: 'id' }] } }),
-      { bool: { should: [{ range: { nb: { gt: 12 } } }, { term: { id: 'koumoul' } }] } }
+      { bool: { should: [{ range: { nb: { gt: 12, time_zone: undefined } } }, { term: { id: 'koumoul' } }] } }
     )
     assert.deepEqual(
       whereParser.parse('nb > 12 OR id: "koumoul" AND nb <= 12', { dataset: { schema: [{ key: 'nb' }, { key: 'id' }] } }),
-      { bool: { should: [{ range: { nb: { gt: 12 } } }, { bool: { must: [{ term: { id: 'koumoul' } }, { range: { nb: { lte: 12 } } }] } }] } }
+      { bool: { should: [{ range: { nb: { gt: 12, time_zone: undefined } } }, { bool: { must: [{ term: { id: 'koumoul' } }, { range: { nb: { lte: 12, time_zone: undefined } } }] } }] } }
     )
     assert.deepEqual(
       whereParser.parse('(nb > 12 OR nb < 10) AND id = "koumoul"', { dataset: { schema: [{ key: 'nb' }, { key: 'id' }] } }),
       {
         bool: {
           must: [
-            { bool: { should: [{ range: { nb: { gt: 12 } } }, { range: { nb: { lt: 10 } } }] } },
+            { bool: { should: [{ range: { nb: { gt: 12, time_zone: undefined } } }, { range: { nb: { lt: 10, time_zone: undefined } } }] } },
             { term: { id: 'koumoul' } }
           ]
         }

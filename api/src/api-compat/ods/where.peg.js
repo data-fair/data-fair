@@ -416,7 +416,7 @@ function peg$parse(input, options) {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'equal')
-    return { range: { [key]: { gte: value.value + "||/y",  lte: value.value + "||/y", format: "yyyy" } } }
+    return { range: { [key]: { gte: value.value + "||/y",  lte: value.value + "||/y", format: "yyyy", time_zone: options.timezone } } }
   };
   var peg$f3 = function(key, values) {
     const prop = options.dataset.schema.find(p => p.key === key)
@@ -451,14 +451,14 @@ function peg$parse(input, options) {
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
-    return { range: { [key]: { [esOperator]: value.value } } }
+    return { range: { [key]: { [esOperator]: value.value, time_zone: options.timezone } } }
   };
   var peg$f13 = function(key, operator, value) {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
-    return { range: { [key]: { [esOperator]: value.value + "||/y", format: 'yyyy' } } }
+    return { range: { [key]: { [esOperator]: value.value + "||/y", format: 'yyyy', time_zone: options.timezone } } }
   };
   var peg$f14 = function(key, value) {
     const fields = [
