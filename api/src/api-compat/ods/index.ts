@@ -284,7 +284,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
   }
 
   if (query.order_by) {
-    const orderBy = parseOrderBy(query.order_by, { dataset, aliases })
+    const orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
     esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
     esQuery.sort = sort = orderBy.sort
   } else {

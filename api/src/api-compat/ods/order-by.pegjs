@@ -17,7 +17,12 @@ OrderBy
       const sort = []
       const aggregations = {}
       for (const part of parts) {
-        sort.push({ [part.key]: part.direction ?? 'asc' })
+        const order = part.direction ?? 'asc'
+        if (part.insensitive && !options.grouped) {
+          sort.push({ [part.key + '.keyword_insensitive']: order })  
+        } else {
+          sort.push({ [part.key]: order })
+        }
         if (part.aggregation) {
           aggregations[part.key] = part.aggregation
         }
@@ -50,10 +55,20 @@ OrderByExpressionWithoutDirection
 
 OrderByFieldName
   = key:FieldName {
-    const prop = options.dataset.schema.find(p => p.key === key)
     const aliasOf = Object.keys(options.aliases ?? {}).find(a => options.aliases[a].some( a => a.name === key))
+    const propKey = aliasOf ?? key
+    const prop = options.dataset.schema.find(p => p.key === propKey)
     if (!prop && !aliasOf) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-    return { key: aliasOf ?? key }
+    if (prop) {
+      const capabilities = prop['x-capabilities'] || {}
+      if (capabilities.values === false && capabilities.insensitive === false) {
+        throw httpError(400, `Impossible de trier sur le champ ${prop.key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ.`)
+      }
+      if (capabilities.insensitive !== false && prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
+        return { key: prop.key, insensitive: true }
+      }
+    }
+    return { key: propKey }
   }
 
 OrderByRandom

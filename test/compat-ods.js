@@ -278,6 +278,11 @@ describe('compatibility layer for ods api', function () {
         aggregations: { ___order_by_avg_test1: { avg: { field: 'test1' } } }
       }
     )
+
+    assert.deepEqual(
+      orderByParser.parse('test1, test2 DESC', { dataset: { schema: [{ key: 'test1' }, { key: 'test2', type: 'string', capabilities: { insensitive: true } }] } }),
+      { sort: [{ test1: 'asc' }, { 'test2.keyword_insensitive': 'desc' }], aggregations: {} }
+    )
   })
 
   it('contains a parser for the group-by syntax', function () {
@@ -637,6 +642,7 @@ describe('compatibility layer for ods api', function () {
 koumoul;19 rue de la voie lactée saint avé;2017-12-12;47.687375,-2.748526;0;11
 bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
 `)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?sort=-id`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`, { params: { group_by: 'id', select: 'id,count(*) as Count,avg(nb) as Avg', order_by: 'id desc' } })
     assert.equal(res.data, `id;Count;Avg
 koumoul;1;11
@@ -792,6 +798,35 @@ bidule;1;22.2
       }
       i++
     }
+  })
+
+  it('manage case-sensitive sort', async function () {
+    const ax = global.ax.dmeadusOrg
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    let res = await ax.post('/api/v1/datasets/rest-insensitive', {
+      isRest: true,
+      title: 'rest-insensitive',
+      schema: [{ key: 'str1', type: 'string' }]
+    })
+    res = await ax.post('/api/v1/datasets/rest-insensitive/_bulk_lines', [
+      { str1: 'test3' },
+      { str1: 'test2' },
+      { str1: 'test1' },
+      { str1: 'Test2' }
+    ])
+    await workers.hook('finalize/rest-insensitive')
+    res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
+    assert.deepEqual(res.data.results.map(result => result.str1), ['test1', 'Test2', 'test2', 'test3'])
+    res = await ax.get('/api/v1/datasets/rest-insensitive/compat-ods/records', { params: { order_by: 'str1' } })
+    assert.deepEqual(res.data.results.map(result => result.str1), ['test1', 'Test2', 'test2', 'test3'])
+
+    await ax.patch('/api/v1/datasets/rest-insensitive', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }] })
+    await workers.hook('finalize/rest-insensitive')
+    res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
+    assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
+    res = await ax.get('/api/v1/datasets/rest-insensitive/compat-ods/records', { params: { order_by: 'str1' } })
+    assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
   })
 
   it.skip('manages geo data', async function () {
