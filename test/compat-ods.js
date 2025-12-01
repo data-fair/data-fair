@@ -89,19 +89,19 @@ describe('compatibility layer for ods api', function () {
 
     assert.deepEqual(
       whereParser.parse('nb IN [1 TO 10]', { dataset: { schema: [{ key: 'nb' }] } }),
-      { range: { nb: { gte: 1, lte: 10 } } }
+      { range: { nb: { gte: 1, lte: 10, time_zone: undefined } } }
     )
     assert.deepEqual(
       whereParser.parse('nb IN [1..10]', { dataset: { schema: [{ key: 'nb' }] } }),
-      { range: { nb: { gte: 1, lte: 10 } } }
+      { range: { nb: { gte: 1, lte: 10, time_zone: undefined } } }
     )
     assert.deepEqual(
       whereParser.parse('nb IN [1 TO 10]', { dataset: { schema: [{ key: 'nb' }] } }),
-      { range: { nb: { gte: 1, lte: 10 } } }
+      { range: { nb: { gte: 1, lte: 10, time_zone: undefined } } }
     )
     assert.deepEqual(
       whereParser.parse('nb IN ]1..10[', { dataset: { schema: [{ key: 'nb' }] } }),
-      { range: { nb: { gt: 1, lt: 10 } } }
+      { range: { nb: { gt: 1, lt: 10, time_zone: undefined } } }
     )
 
     assert.deepEqual(
