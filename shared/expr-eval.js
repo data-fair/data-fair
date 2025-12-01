@@ -169,6 +169,7 @@ export default (defaultTimezone) => {
 
   parser.functions.TRANSFORM_DATE = function (arg, inputFormat = '', outputFormat = '', inputTimeZone = '', outputTimeZone = '') {
     if (!['string', 'number'].includes(typeof arg)) return arg
+    if (arg === '') return arg
     if (typeof inputFormat !== 'string') return arg
     if (typeof outputFormat !== 'string') return arg
 
@@ -176,10 +177,14 @@ export default (defaultTimezone) => {
     outputTimeZone = outputTimeZone || defaultTimezone
 
     let date
-    if (inputFormat === 'X') date = dayjs.unix(arg)
-    else if (inputFormat === 'x') date = dayjs(arg)
-    else if (inputFormat) date = dayjs.tz(arg, inputFormat, inputTimeZone)
-    else date = dayjs(arg)
+    try {
+      if (inputFormat === 'X') date = dayjs.unix(arg)
+      else if (inputFormat === 'x') date = dayjs(arg)
+      else if (inputFormat) date = dayjs.tz(arg, inputFormat, inputTimeZone)
+      else date = dayjs(arg)
+    } catch (err) {
+      throw new Error(err.message + ` ("${arg}")`)
+    }
 
     if (outputFormat === 'X') return date.unix()
     if (outputFormat === 'x') return date.valueOf()

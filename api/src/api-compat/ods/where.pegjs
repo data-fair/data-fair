@@ -72,7 +72,7 @@ YearEqualityFilter
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'equal')
-    return { range: { [key]: { gte: value.value + "||/y",  lte: value.value + "||/y", format: "yyyy" } } }
+    return { range: { [key]: { gte: value.value + "||/y",  lte: value.value + "||/y", format: "yyyy", time_zone: options.timezone } } }
   }
 
 EqualOperator
@@ -139,7 +139,7 @@ ComparisonFilter
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
-    return { range: { [key]: { [esOperator]: value.value } } }
+    return { range: { [key]: { [esOperator]: value.value, time_zone: options.timezone } } }
   }
 
 YearComparisonFilter
@@ -148,7 +148,7 @@ YearComparisonFilter
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
-    return { range: { [key]: { [esOperator]: value.value + "||/y", format: 'yyyy' } } }
+    return { range: { [key]: { [esOperator]: value.value + "||/y", format: 'yyyy', time_zone: options.timezone } } }
   }
 
 ComparisonOperator
