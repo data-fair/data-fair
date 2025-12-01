@@ -83,7 +83,7 @@
         </template>
 
         <!-- global account switching (personal account and organizations) -->
-        <template v-if="siteInfo.main && user.organizations.length > 1 || (user.organizations.length === 1 && (!user.ipa || activeAccount.type === 'user'))">
+        <template v-if="siteInfo.main && (user.organizations.length > 1 || (user.organizations.length === 1 && (!user.ipa || activeAccount.type === 'user')))">
           <v-subheader
             v-t="'switchAccount'"
             style="height: 24px"
