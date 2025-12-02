@@ -554,7 +554,7 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   const settings = await mongo.db.collection('settings')
     .findOne({ type: req.application.owner.type, id: req.application.owner.id }, { projection: { info: 1 } })
-  res.send(applicationAPIDocs(req.application, (settings && settings.info) || {}), req.publicBaseUrl)
+  res.send(applicationAPIDocs(req.application, (settings && settings.info) || {}, req.publicBaseUrl))
 })
 
 router.get('/:applicationId/status', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.noCache, (req, res) => {
