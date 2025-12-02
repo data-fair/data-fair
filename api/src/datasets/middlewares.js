@@ -76,16 +76,16 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   const publicationSite = req.publicationSite
   // @ts-ignore
   const mainPublicationSite = req.mainPublicationSite
-  const tolerateStale = !!publicationSite && !acceptedStatuses && !noCache
+  const tolerateStale = !acceptedStatuses && !noCache
   const useDraft = req.query.draft === 'true' || alwaysDraft
 
   let { dataset, datasetFull } = tolerateStale
-    ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
-    : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
+    ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
+    : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
 
   // bypass the memory cache if it is contradicted by the finalizedAt parameter
   if (dataset && tolerateStale && req.query.finalizedAt && req.query.finalizedAt > dataset.finalizedAt) {
-    const result = await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
+    const result = await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
     dataset = result.dataset
     datasetFull = result.datasetFull
   }

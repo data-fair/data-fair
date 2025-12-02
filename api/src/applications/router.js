@@ -177,8 +177,7 @@ const readApplication = async (req, res, next) => {
   // @ts-ignore
   const mainPublicationSite = req.mainPublicationSite
 
-  const tolerateStale = !!publicationSite
-  const application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
+  const application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', null)
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
 
   // @ts-ignore

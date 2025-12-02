@@ -95,7 +95,7 @@ router.get('', apiKeyMiddlewareRead, cacheHeaders.listBased, async (req, res) =>
   res.json(response)
 })
 
-router.use('/:datasetId/permissions', readDataset(), apiKeyMiddlewareAdmin, permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
+router.use('/:datasetId/permissions', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
   // this callback function is called when the resource becomes public
   await publicationSites.onPublic(patchedDataset, 'datasets', reqSessionAuthenticated(req))
 }))
@@ -223,7 +223,7 @@ router.patch('/:datasetId',
   })
 
 // Change ownership of a dataset
-router.put('/:datasetId/owner', readDataset(), apiKeyMiddlewareAdmin, permissions.middleware('changeOwner', 'admin'), async (req, res) => {
+router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddlewareAdmin, permissions.middleware('changeOwner', 'admin'), async (req, res) => {
   // @ts-ignore
   const dataset = req.dataset
 
@@ -1457,7 +1457,7 @@ router.post('/:datasetId/_simulate-extension', readDataset(), apiKeyMiddlewareWr
 })
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
-router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptInitialDraft: true }), cacheHeaders.noCache, async (req, res) => {
+router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptInitialDraft: true, noCache: true }), cacheHeaders.noCache, async (req, res) => {
   reqAdminMode(req)
   const esInfos = await datasetInfos(req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
@@ -1469,21 +1469,21 @@ router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptI
 })
 
 // Special admin route to force reindexing a dataset
-router.post('/:datasetId/_reindex', readDataset(), async (req, res) => {
+router.post('/:datasetId/_reindex', readDataset({ noCache: true }), async (req, res) => {
   reqAdminMode(req)
   const patchedDataset = await datasetUtils.reindex(mongo.db, req.dataset)
   res.status(200).send(patchedDataset)
 })
 
 // Special admin route to force refinalizing a dataset
-router.post('/:datasetId/_refinalize', readDataset(), async (req, res) => {
+router.post('/:datasetId/_refinalize', readDataset({ noCache: true }), async (req, res) => {
   reqAdminMode(req)
   const patchedDataset = await datasetUtils.refinalize(mongo.db, req.dataset)
   res.status(200).send(patchedDataset)
 })
 
 // Special admin route to clear all locks on a dataset
-router.delete('/:datasetId/_lock', readDataset(), async (req, res) => {
+router.delete('/:datasetId/_lock', readDataset({ noCache: true }), async (req, res) => {
   reqAdminMode(req)
   const db = mongo.db
   await db.collection('locks').deleteOne({ _id: `datasets:${req.dataset.id}` })

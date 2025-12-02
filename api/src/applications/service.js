@@ -33,11 +33,6 @@ const fieldsMap = {
  * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
 export const findApplications = async (locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
-  const tolerateStale = !!publicationSite
-
-  /** @type {import('mongodb').FindOptions} */
-  const options = tolerateStale ? { readPreference: 'nearest' } : {}
-
   if (reqQuery.dataset &&
       !reqQuery.dataset.startsWith('http://') &&
       !reqQuery.dataset.startsWith('https://')) {
@@ -72,9 +67,9 @@ export const findApplications = async (locale, publicationSite, publicBaseUrl, r
   const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft'], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
-  const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query, options)
-  const resultsPromise = size > 0 && mongo.applications.find(query, options).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields), options).toArray()
+  const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query)
+  const resultsPromise = size > 0 && mongo.applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
+  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields)).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   /** @type {any} */
   const response = {}

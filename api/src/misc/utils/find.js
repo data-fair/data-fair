@@ -503,14 +503,12 @@ export const sumsQuery = (reqQuery, sessionState, resourceType, sumFields = {}, 
  * @param {Record<string, string>} reqParams
  * @param {string} resourceType
  * @param {string | null} resourceId
- * @param {boolean | undefined} tolerateStale
  */
-export const getByUniqueRef = async (publicationSite, mainPublicationSite, reqParams, resourceType, resourceId, tolerateStale) => {
+export const getByUniqueRef = async (publicationSite, mainPublicationSite, reqParams, resourceType, resourceId) => {
   const paramId = resourceId ?? reqParams[resourceType + 'Id']
 
   /** @type {any} */
   let filter = { id: paramId }
-  const options = tolerateStale ? { readPreference: 'nearest' } : {}
   if (publicationSite) {
     filter = { _uniqueRefs: paramId, 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id }
   } else if (mainPublicationSite) {
@@ -522,7 +520,7 @@ export const getByUniqueRef = async (publicationSite, mainPublicationSite, reqPa
     }
   }
   // @ts-ignore
-  const resources = await mongo.db.collection(resourceType + 's').find(filter, options).project({ _id: 0 }).toArray()
+  const resources = await mongo.db.collection(resourceType + 's').find(filter).project({ _id: 0 }).toArray()
   // req[resourceType] = req.resource =
   return resources.find(d => d.id === paramId) || resources.find(d => d.slug === paramId)
 }

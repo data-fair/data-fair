@@ -32,7 +32,7 @@ export default async function (_dataset: DatasetInternal) {
   const result: Partial<Nullable<DatasetInternal>> = { status: 'finalized', schema: dataset.schema }
 
   if (isVirtualDataset(dataset)) {
-    queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset, false)
+    queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)
     queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
   }
 
@@ -138,7 +138,7 @@ export default async function (_dataset: DatasetInternal) {
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (isVirtualDataset(dataset)) {
-    const descendants: DatasetInternal[] = await virtualDatasetsUtils.descendants(dataset, false, ['dataUpdatedAt', 'dataUpdatedBy'])
+    const descendants: DatasetInternal[] = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy'])
     dataset.descendants = descendants.map(d => d.id)
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt! > d2.dataUpdatedAt! ? 1 : -1).pop()
     if (lastDataUpdate) {

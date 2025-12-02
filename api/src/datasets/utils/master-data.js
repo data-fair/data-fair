@@ -27,7 +27,7 @@ export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, sele
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
-  if (dataset.isVirtual) dataset.descendants = await virtualDatasetsUtils.descendants(dataset, true)
+  if (dataset.isVirtual) dataset.descendants = await virtualDatasetsUtils.descendants(dataset)
   const _source = (select && select !== '*') ? select.split(',') : dataset.schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
   const unknownField = _source.find(s => !dataset.schema.find(p => p.key === s))
   if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
