@@ -317,7 +317,7 @@
 
         <template v-if="env.extraAdminNavigationItems">
           <v-list-item
-            v-for="extra in env.extraAdminNavigationItems"
+            v-for="extra in env.extraAdminNavigationItems.filter(extra => siteInfo.main || !extra.mainOnly)"
             :key="extra.id"
             :nuxt="!!extra.iframe"
             :to="extra.iframe && `/admin-extra/${extra.id}`"
