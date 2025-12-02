@@ -26,7 +26,6 @@ export default {
   layout: 'embed',
   mounted () {
     window.vIframeOptions = { router: this.$router }
-    console.log('extra1')
     parent.postMessage({
       breadcrumbs: [{
         text: 'Extra page'

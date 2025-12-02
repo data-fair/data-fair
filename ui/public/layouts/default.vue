@@ -50,7 +50,6 @@ export default {
         return 'Le back-office n\'est pas accessible depuis ce domaine.'
       }
       if (!this.siteInfo.main) {
-        console.log(this.activeAccount, this.siteInfo.owner)
         if (this.activeAccount && (this.activeAccount.type !== this.siteInfo.owner.type || this.activeAccount.id !== this.siteInfo.owner.id)) {
           return `Le back-office est accessible uniquement aux membres de ${this.siteInfo.owner.name} (${this.siteInfo.owner.id}).`
         }

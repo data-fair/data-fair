@@ -15,7 +15,6 @@
 export default {
   layout: 'embed',
   mounted () {
-    console.log('extra2')
     parent.postMessage({
       breadcrumbs: [{
         text: 'Extra page ',
