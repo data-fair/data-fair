@@ -12,9 +12,6 @@ module.exports = {
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
   privateCatalogsUrl: null,
-  notifyUrl: null, // DEPRECATED
-  privateNotifyUrl: null, // DEPRECATED
-  notifyWSUrl: null, // DEPRECATED
   privateEventsUrl: null,
   privatePortalsManagerUrl: null,
   subscriptionUrl: null,

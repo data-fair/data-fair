@@ -4,6 +4,7 @@ export default async ({ store, app, env, $vuetify, route, i18n, error }) => {
   let publicUrl = window.location.origin + env.basePath
   if (publicUrl.endsWith('/')) publicUrl = publicUrl.substr(0, publicUrl.length - 1)
   const directoryUrl = window.location.origin + '/simple-directory'
+  const eventsUrl = window.location.origin + '/events'
 
   env.extraNavigationItems = env.extraNavigationItems ?? []
   env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
@@ -13,7 +14,8 @@ export default async ({ store, app, env, $vuetify, route, i18n, error }) => {
       ...env,
       // reconstruct this env var that we used to have but lost when implementing multi-domain exposition
       publicUrl,
-      directoryUrl
+      directoryUrl,
+      eventsUrl
     }
   })
   store.dispatch('session/init', {

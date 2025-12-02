@@ -117,8 +117,6 @@ const nuxtConfig = {
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,
-    notifyUrl: config.privateEventsUrl ? (config.origin + '/events') : config.notifyUrl, // DEPRECATED
-    notifyWSUrl: config.notifyWSUrl, // DEPRECATED
     catalogsIntegration: config.catalogsIntegration,
     eventsIntegration: config.eventsIntegration,
     portalsIntegration: config.portalsIntegration,

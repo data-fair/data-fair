@@ -37,8 +37,8 @@
     <v-spacer />
     <v-toolbar-items>
       <notifications-queue
-        v-if="user && env.notifyUrl"
-        :notify-url="env.notifyUrl"
+        v-if="user && env.eventsUrl"
+        :events-url="env.eventsUrl"
       />
     </v-toolbar-items>
     <layout-personal-menu>
@@ -53,7 +53,7 @@
 
         <template v-if="!missingSubscription">
           <v-list-item
-            v-if="env.notifyUrl"
+            v-if="env.eventsUrl"
             :nuxt="true"
             :to="`/notifications`"
           >

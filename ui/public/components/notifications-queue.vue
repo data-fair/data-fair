@@ -90,7 +90,7 @@ import eventBus from '~/event-bus'
 // const sound = new Audio(require('@/assets/sounds/when-604.ogg'))
 
 export default {
-  props: ['notifyUrl'],
+  props: ['eventsUrl'],
   data: () => ({
     menu: false,
     countNew: null,
@@ -114,17 +114,17 @@ export default {
   },
   mounted () {
     this.countNotifications()
-    // always subscribe to notifications from notify
+    // always subscribe to notifications from events
     if (this.user) {
       const channel = `user:${this.user.id}:notifications`
-      eventBus.$emit('subscribe-notify', channel)
+      eventBus.$emit('subscribe-events', channel)
       eventBus.$on(channel, notification => {
         // sound.play()
         if (this.notifications) {
           notification.new = true
           this.notifications.unshift(notification)
           // TODO: replace this with a endpoint simply to reset pointer
-          this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: 1, count: false } })
+          this.$axios.$get(`${this.eventsUrl}/api/v1/notifications`, { params: { size: 1, count: false } })
         }
 
         if (this.countNew !== null) {
@@ -135,12 +135,12 @@ export default {
   },
   methods: {
     async countNotifications () {
-      const res = await this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: 0, count: false } })
+      const res = await this.$axios.$get(`${this.eventsUrl}/api/v1/notifications`, { params: { size: 0, count: false } })
       this.countNew = res.countNew
     },
     async fetchNotifications () {
       this.loading = true
-      const res = await this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: this.size, count: false } })
+      const res = await this.$axios.$get(`${this.eventsUrl}/api/v1/notifications`, { params: { size: this.size, count: false } })
       this.countNew = res.countNew
       this.notifications = res.results
       this.loading = false
