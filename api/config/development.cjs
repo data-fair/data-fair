@@ -10,7 +10,6 @@ module.exports = {
   wsPublicUrl: `ws://${host}:5600/data-fair`,
   directoryUrl: `http://${host}:5600/simple-directory`,
   privateDirectoryUrl: 'http://localhost:5600/simple-directory',
-  openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
   captureUrl: `http://${host}:5600/capture`,
   privateCaptureUrl: 'http://localhost:8087',
   privateCatalogsUrl: `http://${host}:5600/catalogs`,
@@ -100,6 +99,5 @@ module.exports = {
     description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
     server: 'https://staging-koumoul.com/tileserver'
   }],
-  compatODS: true,
-  openapiViewerV2: true
+  compatODS: true
 }

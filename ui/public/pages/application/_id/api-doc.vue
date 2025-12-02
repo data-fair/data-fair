@@ -4,11 +4,6 @@
     class="pa-0"
   >
     <open-api
-      v-if="resourceUrl && !env.openapiViewerV2"
-      :url="resourceUrl + '/api-docs.json'"
-    />
-    <open-api
-      v-else
       :id="application.id"
       type="application"
     />

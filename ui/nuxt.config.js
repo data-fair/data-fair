@@ -114,8 +114,6 @@ const nuxtConfig = {
     contribRole: config.contribRole,
     map: config.map,
     brand: config.brand,
-    openapiViewerUrl: config.openapiViewerUrl,
-    openapiViewerV2: config.openapiViewerV2,
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,

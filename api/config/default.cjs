@@ -9,7 +9,6 @@ module.exports = {
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: null,
-  openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
   privateCatalogsUrl: null,
@@ -289,6 +288,5 @@ module.exports = {
   remoteAttachmentCacheDuration: 1000 * 5,
   extensionUpdateDelay: 600,
   compatODS: false,
-  openapiViewerV2: false,
   apiKeysMaxDuration: 2 * 365 // in days
 }

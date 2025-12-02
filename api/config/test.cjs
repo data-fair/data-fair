@@ -4,7 +4,6 @@ module.exports = {
   wsPublicUrl: 'ws://localhost:5600/data-fair',
   directoryUrl: 'http://localhost:5600/simple-directory',
   privateDirectoryUrl: 'http://localhost:5600/simple-directory',
-  openapiViewerUrl: 'http://localhost:5600/openapi-viewer/',
   captureUrl: 'http://localhost:5600/capture',
   privateCaptureUrl: 'http://localhost:8087',
   dataDir: '../data/test',
