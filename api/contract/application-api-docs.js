@@ -12,7 +12,7 @@ import pJson from './p-json.js'
  * @param {any} info
  * @returns any
  */
-export default (application, info) => {
+export default (application, info, publicUrl = config.publicUrl) => {
   const api = {
     openapi: '3.1.0',
     info: {
@@ -35,9 +35,9 @@ export default (application, info) => {
     security: [{ apiKey: [] }, { sdCookie: [] }],
     servers: [{
       // @ts-ignore
-      url: `${config.publicUrl}/api/v1/applications/${application.id}`,
+      url: `${publicUrl}/api/v1/applications/${application.id}`,
       // @ts-ignore
-      description: `Application Data Fair - ${new URL(config.publicUrl).hostname} - ${application.title}`
+      description: `Application Data Fair - ${new URL(publicUrl).hostname} - ${application.title}`
     }],
     paths: {
       '/': {
