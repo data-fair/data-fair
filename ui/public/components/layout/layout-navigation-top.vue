@@ -72,15 +72,11 @@
 fr:
   login: Se connecter / S'inscrire
   logout: Se déconnecter
-  personalAccount: Compte personnel
-  switchAccount: Changer de compte
   notifications: Notifications
   myAccount: Informations personnelles
 en:
   login: Login / Sign up
   logout: Logout
-  personalAccount: Personal account
-  switchAccount: Switch account
   notifications: Notifications
   myAccount: Personal info
 </i18n>

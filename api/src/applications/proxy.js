@@ -37,15 +37,14 @@ const setResource = async (req, res, next) => {
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
 
-  const tolerateStale = !!publicationSite
   // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
-  let application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
+  let application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', null)
   let applicationKeyId = req.query.key
   if (!application && !applicationKeyId) {
     const keys = req.params.applicationId.split(':')
     applicationKeyId = keys[0]
     const applicationIdCandidate = req.params.applicationId.replace(keys[0] + ':', '')
-    application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', applicationIdCandidate, tolerateStale)
+    application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', applicationIdCandidate)
   }
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
   const ownerFilter = {
