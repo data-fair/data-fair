@@ -264,7 +264,8 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
           name: datasetFile.originalname,
           size: datasetFile.size,
           mimetype: datasetFile.mimetype,
-          explicitEncoding: datasetFile.explicitEncoding
+          explicitEncoding: datasetFile.explicitEncoding,
+          normalizeOptions: datasetFile.normalizeOptions
         },
         attachments: !!attachmentsFile
       }

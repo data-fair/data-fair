@@ -200,6 +200,10 @@ const datasetProperties = {
         type: 'string',
         description: 'Encoding of the file explicitly defined when loading it'
       },
+      normalizeOptions: {
+        type: 'object',
+        description: 'Normalize options specific to the original file format'
+      },
       mimetype: {
         type: 'string',
         description: 'Mime type of the file'

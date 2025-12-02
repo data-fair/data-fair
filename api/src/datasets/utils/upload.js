@@ -97,6 +97,10 @@ export const getFiles = async (req, res) => {
       file.explicitEncoding = req.body?.[file.fieldname + '_encoding']
       delete req.body[file.fieldname + '_encoding']
     }
+    if (req.body?.[file.fieldname + '_normalizeOptions']) {
+      file.normalizeOptions = req.body?.[file.fieldname + '_normalizeOptions']
+      delete req.body[file.fieldname + '_normalizeOptions']
+    }
     await fsyncFile(file.path)
   }
   return files
