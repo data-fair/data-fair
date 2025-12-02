@@ -110,7 +110,6 @@ const nuxtConfig = {
   env: {
     mainPublicUrl: config.publicUrl,
     basePath: config.basePath,
-    directoryUrl: config.directoryUrl,
     adminRole: config.adminRole,
     contribRole: config.contribRole,
     map: config.map,

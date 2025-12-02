@@ -3,6 +3,7 @@ import { contrastColor } from '../store/style.js'
 export default async ({ store, app, env, $vuetify, route, i18n, error }) => {
   let publicUrl = window.location.origin + env.basePath
   if (publicUrl.endsWith('/')) publicUrl = publicUrl.substr(0, publicUrl.length - 1)
+  const directoryUrl = window.location.origin + '/simple-directory'
 
   env.extraNavigationItems = env.extraNavigationItems ?? []
   env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
@@ -11,12 +12,13 @@ export default async ({ store, app, env, $vuetify, route, i18n, error }) => {
     env: {
       ...env,
       // reconstruct this env var that we used to have but lost when implementing multi-domain exposition
-      publicUrl
+      publicUrl,
+      directoryUrl
     }
   })
   store.dispatch('session/init', {
     cookies: app.$cookies,
-    directoryUrl: '/simple-directory',
+    directoryUrl,
     logoutRedirectUrl: '/'
   })
 
