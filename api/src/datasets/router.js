@@ -1160,7 +1160,7 @@ router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescenda
   if (req.dataset.isVirtual) {
     const childDatasetId = req.params.attachmentPath[0]
     if (!req.dataset.descendants?.find(c => c === childDatasetId)) return res.status(404).send('Child dataset not found')
-    const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, req.publicationSite, req.mainPublicationSite, false, false, false, mongo.db, true, undefined, undefined)
+    const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, req.publicationSite, req.mainPublicationSite, false, false, false, mongo.db, undefined, undefined)
     const documentProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
     const childDocumentProp = childDataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
     if (!documentProp || documentProp.key !== childDocumentProp.key) return res.status(404).send('No attachment column found')
@@ -1424,7 +1424,7 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset({ fillDescendants: 
     if (req.dataset.isVirtual) {
       const childDatasetId = url.split('/')[2]
       if (!req.dataset.descendants?.find(c => c === childDatasetId)) return res.status(404).send('Child dataset not found')
-      const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, req.publicationSite, req.mainPublicationSite, false, false, false, mongo.db, true, undefined, undefined)
+      const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, req.publicationSite, req.mainPublicationSite, false, false, false, mongo.db, undefined, undefined)
       const documentProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
       const childDocumentProp = childDataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
       if (!documentProp || documentProp.key !== childDocumentProp.key) return res.status(404).send('No attachment column found')
