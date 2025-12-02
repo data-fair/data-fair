@@ -76,7 +76,8 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   const publicationSite = req.publicationSite
   // @ts-ignore
   const mainPublicationSite = req.mainPublicationSite
-  const tolerateStale = !acceptedStatuses && !noCache
+  // TODO: excluding tests from using memoize cache is not great for test coverage
+  const tolerateStale = !acceptedStatuses && !noCache && process.env.NODE_ENV !== 'test'
   const useDraft = req.query.draft === 'true' || alwaysDraft
 
   let { dataset, datasetFull } = tolerateStale
