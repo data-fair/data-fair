@@ -103,7 +103,7 @@ export default async function (dataset: DatasetInternal) {
     debug('Run validator stream')
     const progress = taskProgress(dataset.id, eventsPrefix, 100)
     await progress.inc(0)
-    const readStreams = await getReadStreams(dataset, false, false, false, progress)
+    const readStreams = await getReadStreams(dataset, false, false, true, progress)
     const validateStream = new ValidateStream({ dataset })
     await pump(...readStreams, validateStream)
     debug('Validator stream ok')
