@@ -54,7 +54,8 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
         name: datasetFile.originalname,
         size: datasetFile.size,
         mimetype: datasetFile.mimetype,
-        explicitEncoding: datasetFile.explicitEncoding
+        explicitEncoding: datasetFile.explicitEncoding,
+        normalizeOptions: datasetFile.normalizeOptions
       }
     }
   }

@@ -1,6 +1,9 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as xlsx from '../api/src/misc/utils/xlsx.ts'
+import fs from 'fs-extra'
+import * as workers from '../api/src/workers/index.ts'
+import FormData from 'form-data'
 
 describe('Spreadsheets conversions', function () {
   const checkDateDataset = async (ext) => {
@@ -83,5 +86,45 @@ describe('Spreadsheets conversions', function () {
     assert.equal(res.data.results[0].col2, 2)
     assert.equal(res.data.results[0].col3, 'https://koumoul.com/')
     assert.equal(res.data.results[0].col4, 3)
+  })
+
+  it('should manage a ODS file with normalization options', async function () {
+    const ax = global.ax.dmeadus
+    const datasetFd = fs.readFileSync('resources/datasets/header.ods')
+    const form = new FormData()
+    form.append('file', datasetFd, 'header.ods')
+    form.append('file_normalizeOptions', JSON.stringify({
+      spreadsheetWorksheetIndex: 2,
+      spreadsheetHeaderLine: 3,
+      spreadsheetStartCol: 2
+    }))
+
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = await workers.hook(`finalize/${res.data.id}`)
+    assert.equal(dataset.schema.filter(p => !p['x-calculated']).length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].col1, 'val1')
+  })
+
+  it('should manage a XLSX file with normalization options', async function () {
+    const ax = global.ax.dmeadus
+    const datasetFd = fs.readFileSync('resources/datasets/header.xlsx')
+    const form = new FormData()
+    form.append('file', datasetFd, 'header.ods')
+    form.append('file_normalizeOptions', JSON.stringify({
+      spreadsheetWorksheetIndex: 2,
+      spreadsheetHeaderLine: 3,
+      spreadsheetStartCol: 2
+    }))
+
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = await workers.hook(`finalize/${res.data.id}`)
+    assert.equal(dataset.schema.filter(p => !p['x-calculated']).length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].col1, 'val1')
   })
 })

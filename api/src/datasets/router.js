@@ -883,6 +883,7 @@ const readLines = async (req, res) => {
     geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...query })).bbox
     observe.reqStep(req, 'bboxAgg')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.geojson'))
+    res.type('geojson')
     return res.status(200).send(geojson)
   }
 
@@ -890,6 +891,7 @@ const readLines = async (req, res) => {
     const wkt = geo.result2wkt(esResponse)
     observe.reqStep(req, 'result2wkt')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.wkt'))
+    res.type('text/plain')
     return res.status(200).send(wkt)
   }
 
@@ -926,21 +928,23 @@ const readLines = async (req, res) => {
     const csv = await outputs.results2csv(req, result.results)
     observe.reqStep(req, 'results2csv')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.csv'))
+    res.type('csv')
     return res.status(200).send(csv)
   }
 
   if (query.format === 'xlsx') {
-    JSON.stringify(result.results)
     observe.reqStep(req, 'stringify')
     const sheet = await outputs.results2sheet(req, result.results)
     observe.reqStep(req, 'results2xlsx')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.xlsx'))
+    res.type('xlsx')
     return res.status(200).send(sheet)
   }
   if (query.format === 'ods') {
     const sheet = await outputs.results2sheet(req, result.results, 'ods')
     observe.reqStep(req, 'results2ods')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.ods'))
+    res.type('ods')
     return res.status(200).send(sheet)
   }
 

@@ -642,6 +642,7 @@ describe('compatibility layer for ods api', function () {
 koumoul;19 rue de la voie lactée saint avé;2017-12-12;47.687375,-2.748526;0;11
 bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
 `)
+    assert.equal(res.headers['content-type'], 'text/csv; charset=utf-8')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?sort=-id`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`, { params: { group_by: 'id', select: 'id,count(*) as Count,avg(nb) as Avg', order_by: 'id desc' } })
     assert.equal(res.data, `id;Count;Avg
@@ -651,6 +652,7 @@ bidule;1;22.2
 
     // xlsx export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/xlsx`, { responseType: 'arraybuffer' })
+    assert.equal(res.headers['content-type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     assert.equal(typeof res.data, 'object')
     const workbook = new Excel.Workbook()
     await workbook.xlsx.load(res.data)
@@ -661,6 +663,7 @@ bidule;1;22.2
 
     // parquet export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/parquet`, { responseType: 'arraybuffer' })
+    assert.equal(res.headers['content-type'], 'application/vnd.apache.parquet')
     assert.equal(typeof res.data, 'object')
     const reader = await parquetjs.ParquetReader.openBuffer(res.data)
     const cursor = reader.getCursor()
@@ -682,8 +685,16 @@ bidule;1;22.2
 
     // json export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/json`)
+    assert.equal(res.headers['content-type'], 'application/json; charset=utf-8')
     assert.equal(res.data.length, 2)
     assert.equal(res.data[0].id, 'koumoul')
+
+    // jsonl export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/jsonl`)
+    assert.equal(res.headers['content-type'], 'application/jsonl; charset=utf-8')
+    const data = res.data.split('\n').filter(Boolean).map(JSON.parse)
+    assert.equal(data.length, 2)
+    assert.equal(data[0].id, 'koumoul')
 
     // geojson export
     const locProp = dataset.schema.find(p => p.key === 'loc')
@@ -691,6 +702,7 @@ bidule;1;22.2
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     await workers.hook('finalize/' + dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/geojson`)
+    assert.equal(res.headers['content-type'], 'application/geo+json')
     assert.equal(res.data.type, 'FeatureCollection')
     assert.equal(res.data.features.length, 2)
     assert.equal(res.data.features[0].properties.id, 'koumoul')

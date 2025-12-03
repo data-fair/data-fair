@@ -92,7 +92,6 @@ module.exports = {
     identities: 'SECRET_IDENTITIES',
     limits: 'SECRET_LIMITS',
     catalogs: 'SECRET_CATALOGS',
-    notifications: 'SECRET_NOTIFICATIONS',
     events: 'SECRET_EVENTS',
     ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
   },

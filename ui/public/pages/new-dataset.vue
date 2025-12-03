@@ -351,6 +351,10 @@
                 :items="commonEncodings"
                 style="max-width: 500px"
               />
+              <dataset-normalize-options
+                v-if="isTabularFile"
+                v-model="normalizeOptions"
+              />
             </template>
           </v-form>
           <v-btn
@@ -796,6 +800,7 @@ export default {
       }
     },
     fileEncoding: null,
+    normalizeOptions: {},
     restDataset: {
       title: '',
       isRest: true,
@@ -878,6 +883,10 @@ export default {
     isTextFile () {
       if (!this.file || !this.fileDataset) return false
       return this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt')
+    },
+    isTabularFile () {
+      if (!this.file || !this.fileDataset) return false
+      return this.file.name.endsWith('.xls') || this.file.name.endsWith('.xlsx') || this.file.name.endsWith('.ods') || this.file.name.endsWith('.fods')
     }
   },
   watch: {
@@ -920,6 +929,9 @@ export default {
       }
       if (this.isTextFile && this.fileEncoding) {
         formData.append('dataset_encoding', this.fileEncoding)
+      }
+      if (this.isTabularFile && Object.keys(this.normalizeOptions).length) {
+        formData.append('dataset_normalizeOptions', JSON.stringify(this.normalizeOptions))
       }
       const body = { ...this.fileDataset }
       if (!body.analysis.escapeKeyAlgorithm) {
