@@ -71,7 +71,7 @@ export default {
   },
   created () {
     if (this.activeAccount) {
-      this.fetchPublicationSites(this.activeAccount)
+      this.fetchPublicationSites({ ...this.activeAccount, department: '*' })
     }
   },
   methods: {
