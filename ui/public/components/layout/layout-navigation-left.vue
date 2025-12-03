@@ -6,6 +6,7 @@
     dark
     app
     clipped
+    color="primary"
   >
     <!--<v-list class="pa-0">
       <brand-title />
@@ -169,7 +170,7 @@
 
         <template v-if="env.extraNavigationItems && user">
           <v-list-item
-            v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin) || (extra.can === 'contribDep' && canContribDep) || (extra.can === 'adminDep' && canAdminDep))"
+            v-for="extra in extraNavigationItems"
             :key="extra.id"
             :nuxt="!!extra.iframe"
             :to="extra.iframe && `/extra/${extra.id}`"
@@ -316,7 +317,7 @@
 
         <template v-if="env.extraAdminNavigationItems">
           <v-list-item
-            v-for="extra in env.extraAdminNavigationItems"
+            v-for="extra in env.extraAdminNavigationItems.filter(extra => siteInfo.main || !extra.mainOnly)"
             :key="extra.id"
             :nuxt="!!extra.iframe"
             :to="extra.iframe && `/admin-extra/${extra.id}`"
@@ -400,7 +401,7 @@ import { mapState, mapGetters } from 'vuex'
 export default {
   props: ['navContext'],
   computed: {
-    ...mapState(['env']),
+    ...mapState(['env', 'siteInfo']),
     ...mapState('session', ['user']),
     ...mapGetters(['canAdmin', 'canContrib', 'canAdminDep', 'canContribDep', 'missingSubscription', 'lightPrimary10', 'darkPrimary10']),
     ...mapGetters('session', ['activeAccount']),
@@ -408,7 +409,14 @@ export default {
       return this.$route && this.$route.name && this.$route.name.split('-')[0]
     },
     style () {
+      if (!this.siteInfo.main) return ''
       return `background: linear-gradient(${this.$vuetify.theme.dark ? '90' : '270'}deg,  ${this.lightPrimary10} 0%, ${this.darkPrimary10} 100%);`
+    },
+    extraNavigationItems () {
+      return this.env.extraNavigationItems.filter(extra => {
+        if (extra.mainOnly && !this.siteInfo.main) return false
+        return !extra.can || (extra.can === 'contrib' && this.canContrib) || (extra.can === 'admin' && this.canAdmin) || (extra.can === 'contribDep' && this.canContribDep) || (extra.can === 'adminDep' && this.canAdminDep)
+      })
     }
   }
 }

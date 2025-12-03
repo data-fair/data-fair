@@ -157,7 +157,6 @@ export default {
         const warnings = sitesWarnings[`${site.type}:${site.id}`] = []
         const siteSettings = this.settingsPublicationSites.find(s => s.type === site.type && s.id === site.id)
         const requiredMetadata = (siteSettings && siteSettings.settings && siteSettings.settings.datasetsRequiredMetadata) || []
-        console.log('requiredMetadata', requiredMetadata)
         for (const m of requiredMetadata) {
           if (m === 'temporal') {
             if (!(this.dataset.temporal && this.dataset.temporal.start)) warnings.push(m)
@@ -172,7 +171,6 @@ export default {
           } else if (m === 'description') {
             if (!(this.dataset.description && this.dataset.description.length > 10)) warnings.push(m)
           } else {
-            console.log('check extra meta', m, this.dataset[m], !this.dataset[m])
             if (!this.dataset[m]) warnings.push(m)
           }
         }

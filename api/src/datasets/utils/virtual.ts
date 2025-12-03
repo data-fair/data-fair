@@ -157,7 +157,7 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
 }
 
 // Only non virtual descendants on which to perform the actual ES queries
-export const descendants = async (dataset: VirtualDataset, tolerateStale = false, extraProperties: string[] | null = null, throwEmpty = true) => {
+export const descendants = async (dataset: VirtualDataset, extraProperties: string[] | null = null, throwEmpty = true) => {
   const mongoOptions: FindOptions = {
     projection: {
       id: 1,
@@ -167,7 +167,6 @@ export const descendants = async (dataset: VirtualDataset, tolerateStale = false
       permissions: 1
     }
   }
-  if (tolerateStale) mongoOptions.readPreference = 'nearest'
   if (extraProperties) {
     for (const p of extraProperties) mongoOptions.projection![p] = 1
   }

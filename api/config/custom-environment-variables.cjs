@@ -7,13 +7,9 @@ module.exports = {
   sessionDomain: 'SESSION_DOMAIN',
   directoryUrl: 'DIRECTORY_URL',
   privateDirectoryUrl: 'PRIVATE_DIRECTORY_URL',
-  openapiViewerUrl: 'OPENAPI_VIEWER_URL',
   captureUrl: 'CAPTURE_URL',
   privateCaptureUrl: 'PRIVATE_CAPTURE_URL',
   privateCatalogsUrl: 'PRIVATE_CATALOGS_URL',
-  notifyUrl: 'NOTIFY_URL',
-  privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
-  notifyWSUrl: 'NOTIFY_WS_URL',
   privateEventsUrl: 'PRIVATE_EVENTS_URL',
   privatePortalsManagerUrl: 'PRIVATE_PORTALS_MANAGER_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
@@ -311,10 +307,6 @@ module.exports = {
   },
   compatODS: {
     __name: 'COMPAT_ODS',
-    __format: 'json'
-  },
-  openapiViewerV2: {
-    __name: 'OPENAPI_VIEWER_V2',
     __format: 'json'
   }
 }

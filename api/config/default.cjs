@@ -1,7 +1,6 @@
 module.exports = {
   mode: 'server_worker', // can be server_worker, server or worker
   port: 8080,
-  serveUi: true,
   listenWhenReady: false,
   publicUrl: 'http://localhost:8080',
   oldPublicUrl: '', // special case when changing path of data-fair
@@ -10,13 +9,9 @@ module.exports = {
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: null,
-  openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
   privateCatalogsUrl: null,
-  notifyUrl: null, // DEPRECATED
-  privateNotifyUrl: null, // DEPRECATED
-  notifyWSUrl: null, // DEPRECATED
   privateEventsUrl: null,
   privatePortalsManagerUrl: null,
   subscriptionUrl: null,
@@ -290,6 +285,5 @@ module.exports = {
   remoteAttachmentCacheDuration: 1000 * 5,
   extensionUpdateDelay: 600,
   compatODS: false,
-  openapiViewerV2: false,
   apiKeysMaxDuration: 2 * 365 // in days
 }

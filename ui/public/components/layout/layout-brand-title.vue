@@ -1,13 +1,13 @@
 <template>
   <v-list-item
-    :href="env.brand.url"
+    :href="url"
     :nuxt="true"
     class="pr-0"
   >
     <v-list-item-avatar class="brand-logo">
       <img
-        v-if="env.brand.logo"
-        :src="env.brand.logo"
+        v-if="logo"
+        :src="logo"
       >
       <img
         v-else
@@ -15,8 +15,11 @@
       >
     </v-list-item-avatar>
     <v-list-item-title v-if="!$vuetify.breakpoint.mobile">
-      <h1 class="text-h5 font-weight-bold">
-        {{ env.brand.title || 'DataFair' }}
+      <h1
+        class="text-h5 font-weight-bold"
+        style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;"
+      >
+        {{ title }}
       </h1>
     </v-list-item-title>
   </v-list-item>
@@ -26,7 +29,20 @@
 import { mapState } from 'vuex'
 export default {
   computed: {
-    ...mapState(['env'])
+    ...mapState(['env', 'siteInfo']),
+    logo () {
+      if (!this.siteInfo.main) return this.siteInfo.theme.logo
+      if (this.env.logo) return this.env.logo
+      return null
+    },
+    title () {
+      if (!this.siteInfo.main) return this.siteInfo.title
+      return this.env.brand.title || 'DataFair'
+    },
+    url () {
+      if (!this.siteInfo.main) return '/'
+      return this.env.brand.url ?? '/'
+    }
   }
 }
 </script>
@@ -38,6 +54,6 @@ export default {
 }
 .brand-logo.v-avatar img {
   width: 40px !important;
-  height: auto !important;
+  height: 40px !important;
 }
 </style>

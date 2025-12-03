@@ -37,11 +37,11 @@
     <v-spacer />
     <v-toolbar-items>
       <notifications-queue
-        v-if="user && env.notifyUrl"
-        :notify-url="env.notifyUrl"
+        v-if="user && env.eventsUrl"
+        :events-url="env.eventsUrl"
       />
     </v-toolbar-items>
-    <personal-menu>
+    <layout-personal-menu>
       <template #actions-before="{}">
         <v-list-item
           :to="'/me'"
@@ -53,7 +53,7 @@
 
         <template v-if="!missingSubscription">
           <v-list-item
-            v-if="env.notifyUrl"
+            v-if="env.eventsUrl"
             :nuxt="true"
             :to="`/notifications`"
           >
@@ -63,7 +63,7 @@
         </template>
         <v-divider />
       </template>
-    </personal-menu>
+    </layout-personal-menu>
     <lang-switcher />
   </v-app-bar>
 </template>
@@ -72,26 +72,21 @@
 fr:
   login: Se connecter / S'inscrire
   logout: Se déconnecter
-  personalAccount: Compte personnel
-  switchAccount: Changer de compte
   notifications: Notifications
   myAccount: Informations personnelles
 en:
   login: Login / Sign up
   logout: Logout
-  personalAccount: Personal account
-  switchAccount: Switch account
   notifications: Notifications
   myAccount: Personal info
 </i18n>
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
-import PersonalMenu from '@data-fair/sd-vue/src/vuetify/personal-menu.vue'
 import LangSwitcher from '@data-fair/sd-vue/src/vuetify/lang-switcher.vue'
 
 export default {
-  components: { PersonalMenu, LangSwitcher },
+  components: { LangSwitcher },
   props: ['navContext'],
   computed: {
     ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),
