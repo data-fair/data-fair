@@ -72,11 +72,6 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   const explain = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
-  const tolerateStale = !!publicationSite
-
-  /** @type {import('mongodb').AggregateOptions} */
-  const options = tolerateStale ? { readPreference: 'nearest' } : {}
-
   const extraFilters = []
   if (reqQuery.bbox === 'true') {
     extraFilters.push({ bbox: { $ne: null } })
@@ -109,20 +104,20 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const t0 = Date.now()
-  const countPromise = reqQuery.count !== 'false' && datasets.countDocuments(query, options).then(res => {
+  const countPromise = reqQuery.count !== 'false' && datasets.countDocuments(query).then(res => {
     if (explain) explain.countMS = Date.now() - t0
     return res
   })
-  const resultsPromise = size > 0 && datasets.find(query, options).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray().then(res => {
+  const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray().then(res => {
     if (explain) explain.resultsMS = Date.now() - t0
     return res
   })
-  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters), options).toArray().then(res => {
+  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters)).toArray().then(res => {
     if (explain) explain.facetsMS = Date.now() - t0
     return res
   })
   const sumsPromise = reqQuery.sums && datasets
-    .aggregate(findUtils.sumsQuery(reqQuery, sessionState, 'datasets', sumsFields, filterFields, extraFilters), options).toArray()
+    .aggregate(findUtils.sumsQuery(reqQuery, sessionState, 'datasets', sumsFields, filterFields, extraFilters)).toArray()
     .then(sumsResponse => {
       const res = sumsResponse[0] || {}
       for (const field of reqQuery.sums.split(',')) {
@@ -155,15 +150,14 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
  * @param {boolean | undefined} fillDescendants
  * @param {boolean | undefined} acceptInitialDraft
  * @param {import('mongodb').Db} db
- * @param {boolean | undefined} [tolerateStale]
  * @param {string[] | ((body: any, dataset: any) => string[] | null)} [_acceptedStatuses]
  * @param {any} [reqBody]
  * @returns {Promise<{dataset?: any, datasetFull?: any}>}
  */
-export const getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
+export const getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody) => {
   let dataset, datasetFull
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    dataset = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, {}, 'dataset', datasetId, tolerateStale)
+    dataset = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, {}, 'dataset', datasetId)
     if (!dataset) return { }
     datasetFull = { ...dataset }
 
@@ -183,7 +177,7 @@ export const getDataset = async (datasetId, publicationSite, mainPublicationSite
 
     if (isStatusOk) {
       if (fillDescendants && dataset.isVirtual) {
-        dataset.descendants = await virtualDatasetsUtils.descendants(dataset, tolerateStale)
+        dataset.descendants = await virtualDatasetsUtils.descendants(dataset)
       }
       if (dataset.schema) {
         for (const prop of dataset.schema) {
@@ -205,7 +199,7 @@ export const memoizedGetDataset = memoize(getDataset, {
   promise: true,
   primitive: true,
   max: 10000,
-  maxAge: 1000 * 60, // 1 minute
+  maxAge: 1000 * 30, // 30s
   length: 6 // in memoized mode ignore db, acceptedStatuses and reqBody
 })
 

@@ -23,6 +23,7 @@ import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { isMainThread } from 'node:worker_threads'
 import { reqSiteUrl } from '@data-fair/lib-express/site.js'
+import { getSiteHashes } from './misc/utils/site.ts'
 
 const debugDomain = debug('domain')
 
@@ -203,39 +204,39 @@ export const run = async () => {
     app.use('/streamsaver/mitm.html', express.static(join(streamsaverPath, 'mitm.html')))
     app.use('/streamsaver/sw.js', express.static(join(streamsaverPath, 'sw.js')))
 
-    if (config.serveUi) {
-      const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
+    const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
 
-      const unsafePaths = [
-        '/dataset/:id/table-edit',
-        '/dataset/:id/form',
-        '/application/:id/config',
-        '/workflow/update-dataset',
-        '/settings/:type/:id/licenses',
-        '/settings/:type/:id/topics',
-        '/settings/:type/:id/webhooks',
-      ].map(p => pathToRegexp.match(p))
-      app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../embed-ui/dist'), uiConfig, {
-        ignoreSitePath: true,
-        csp: {
-          nonce: true,
-          header: (req) => {
-            const urlPath = parseUrlPath(req.url).pathname
-            const directives = { ...defaultNonceCSPDirectives }
-            for (const p of unsafePaths) {
-              if (p(urlPath)) {
-                // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
-                directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
-                directives['connect-src'] = "'self' https:"
-              }
+    const unsafePaths = [
+      '/dataset/:id/table-edit',
+      '/dataset/:id/form',
+      '/application/:id/config',
+      '/workflow/update-dataset',
+      '/settings/:type/:id/licenses',
+      '/settings/:type/:id/topics',
+      '/settings/:type/:id/webhooks',
+    ].map(p => pathToRegexp.match(p))
+    app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../embed-ui/dist'), uiConfig, {
+      ignoreSitePath: true,
+      csp: {
+        nonce: true,
+        header: (req) => {
+          const urlPath = parseUrlPath(req.url).pathname
+          const directives = { ...defaultNonceCSPDirectives }
+          for (const p of unsafePaths) {
+            if (p(urlPath)) {
+              // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
+              directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+              directives['connect-src'] = "'self' https:"
             }
-            // all embed pages allow cross domain iframe integration
-            directives['frame-ancestors'] = "'self' http: https:"
-            return directives
           }
+          // all embed pages allow cross domain iframe integration
+          directives['frame-ancestors'] = "'self' http: https:"
+          return directives
         }
-      }))
-    }
+      },
+      getSiteExtraParams: getSiteHashes
+    }))
+
     app.use('/next-ui', (req, res) => {
       // next-ui urls were a temporary alternate UI we redirect
       // them in case some are still in use somewhere

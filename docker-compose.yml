@@ -66,6 +66,7 @@ services:
       - ANONYMOUS_ACTION_NOT_BEFORE=1s
       - MANAGE_DEPARTMENTS=true
       - MANAGE_PARTNERS=true
+      - MANAGE_SITES=true
       - LIST_USERS_MODE=admin
       - LIST_ORGANIZATIONS_MODE=authenticated
       - OBSERVER_ACTIVE=false

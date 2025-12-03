@@ -517,7 +517,7 @@ export default {
     },
     async fetchOwnerDetails () {
       this.ownerDetails = {
-        ...await this.$axios.$get(`${process.env.directoryUrl}/api/${this.resource.owner.type}s/${this.resource.owner.id}`),
+        ...await this.$axios.$get(`${this.env.directoryUrl}/api/${this.resource.owner.type}s/${this.resource.owner.id}`),
         type: this.resource.owner.type
       }
     }

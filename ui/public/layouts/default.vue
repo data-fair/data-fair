@@ -1,18 +1,33 @@
 <template>
   <v-app
     :dark="$vuetify.theme.dark"
-    class="data-fair"
+    :class="`data-fair ${siteInfo.main ? 'main-site' : 'secondary-site'}`"
   >
-    <layout-navigation-left :nav-context="navContext" />
-    <layout-navigation-top :nav-context="navContext" />
-    <v-main>
-      <nuxt />
-      <layout-notifications />
+    <v-main v-if="error">
+      <v-container>
+        <v-alert
+          type="error"
+          outlined
+          dense
+        >
+          {{ error }}
+        </v-alert>
+      </v-container>
     </v-main>
+    <template v-else>
+      <layout-navigation-left :nav-context="navContext" />
+      <layout-navigation-top :nav-context="navContext" />
+      <v-main>
+        <nuxt />
+        <layout-notifications />
+      </v-main>
+    </template>
   </v-app>
 </template>
 
 <script>
+import { mapState, mapGetters } from 'vuex'
+
 export default {
   data: () => ({
     navContext: {
@@ -25,6 +40,21 @@ export default {
       htmlAttrs: { lang: this.$i18n.locale }, // TODO: this should be set by nuxt-i18n but it isn't for some reason
       style: [{ vmid: 'dynamic-style', cssText: this.$store.getters.style(scrollMode), type: 'text/css' }],
       __dangerouslyDisableSanitizers: ['style']
+    }
+  },
+  computed: {
+    ...mapState(['siteInfo']),
+    ...mapGetters('session', ['activeAccount']),
+    error () {
+      if (!this.siteInfo.main && !this.siteInfo.isAccountMain) {
+        return 'Le back-office n\'est pas accessible depuis ce domaine.'
+      }
+      if (!this.siteInfo.main) {
+        if (this.activeAccount && (this.activeAccount.type !== this.siteInfo.owner.type || this.activeAccount.id !== this.siteInfo.owner.id)) {
+          return `Le back-office est accessible uniquement aux membres de ${this.siteInfo.owner.name} (${this.siteInfo.owner.id}).`
+        }
+      }
+      return null
     }
   },
   mounted () {

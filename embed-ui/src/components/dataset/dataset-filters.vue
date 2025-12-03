@@ -22,11 +22,11 @@
         @click:close="removeFilter(filter)"
         @click="toggle"
       >
-        <div style="overflow: hidden;">
+        <div :style="`max-width: ${maxWidth - 56}px;`">
           <span style="display:inline-block;white-space:nowrap;">{{ (filter.property.title || filter.property['x-originalName'] || filter.property.key) }}</span>
           <br>
           <span
-            style="display:inline-block"
+            style="display:inline-block;max-width:100%;overflow:hidden;text-overflow: ellipsis;"
             v-html="t(filter.operator) + ' ' + filter.formattedValue"
           />
         </div>

@@ -9,7 +9,7 @@ import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch
 import * as utils from './utils.js'
 import pJson from './p-json.js'
 
-export default () => {
+export default (publicUrl = config.publicUrl) => {
   const doc = {
     openapi: '3.1.0',
     info: Object.assign({
@@ -29,9 +29,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     }, config.info),
     servers: [{
       // @ts-ignore
-      url: `${config.publicUrl}/api/v1`,
+      url: `${publicUrl}/api/v1`,
       // @ts-ignore
-      description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`
+      description: `Instance DataFair - ${new URL(publicUrl).hostname}`
     }],
     components: {
       schemas: {

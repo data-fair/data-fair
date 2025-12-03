@@ -568,7 +568,7 @@ export default {
       const urlTemplate = `${this.env.publicUrl}/dataset/{id}`
       let sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
       if (this.dataset.owner.department) sender += ':' + this.dataset.owner.department
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&sender=${encodeURIComponent(sender)}&register=false`
+      return `${this.env.eventsUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&sender=${encodeURIComponent(sender)}&register=false`
     },
     webhooksUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
@@ -578,7 +578,7 @@ export default {
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       let sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
       if (this.dataset.owner.department) sender += ':' + this.dataset.owner.department
-      return `${this.env.notifyUrl}/embed/subscribe-webhooks?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&sender=${encodeURIComponent(sender)}`
+      return `${this.env.eventsUrl}/embed/subscribe-webhooks?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&sender=${encodeURIComponent(sender)}`
     },
     isTextFile () {
       if (!this.file) return false

@@ -51,7 +51,6 @@ export default () => ({
     },
     patch (state, patch) {
       for (const key in patch) {
-        console.log('commit patch', key, patch[key])
         Vue.set(state.application, key, patch[key])
       }
     },

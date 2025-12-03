@@ -105,7 +105,6 @@ export default {
       const labels = this.editLabels
         .filter(item => !!item.value)
         .reduce((a, item) => { a[item.value] = item.label || ''; return a }, {})
-      console.log('labels', labels)
       if (Object.keys(labels).length) this.$set(this.property, 'x-labels', labels)
       else this.$delete(this.property, 'x-labels')
     }

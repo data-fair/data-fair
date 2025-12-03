@@ -536,7 +536,7 @@ export default {
     },
     async fetchAccountDetails () {
       this.accountDetails = {
-        ...await this.$axios.$get(`${process.env.directoryUrl}/api/${this.activeAccount.type}s/${this.activeAccount.id}`),
+        ...await this.$axios.$get(`${this.env.directoryUrl}/api/${this.activeAccount.type}s/${this.activeAccount.id}`),
         type: this.activeAccount.type
       }
     }

@@ -1,5 +1,5 @@
 {
-  "name": "@sd/embed-ui",
+  "name": "@data-fair/embed-ui",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -40,7 +40,6 @@
     "sass-embedded": "^1.79.4",
     "ufo": "^1.5.4",
     "unplugin-auto-import": "^0.18.3",
-    "unplugin-fonts": "^1.1.1",
     "unplugin-vue-components": "^0.27.4",
     "unplugin-vue-router": "^0.10.8",
     "vite": "^6.3.5",

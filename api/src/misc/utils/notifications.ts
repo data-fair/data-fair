@@ -60,7 +60,6 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
 }
 
 export const send = async (event: PushEvent, sessionState?: SessionState) => {
-  const notifyUrl = config.privateNotifyUrl || config.notifyUrl
   if (process.env.NODE_ENV === 'test') {
     // @ts-ignore
     if (isMainThread) global.events.emit('notification', event)
@@ -73,18 +72,6 @@ export const send = async (event: PushEvent, sessionState?: SessionState) => {
       }
       debug('send event to events queue', event)
       eventsQueue.pushEvent(event, sessionState)
-    } else if (notifyUrl) {
-      const notif = event as any
-      delete notif.resource
-      let subscribedOnly = false
-      if (notif.subscribedRecipient) {
-        subscribedOnly = true
-        notif.recipient = notif.subscribedRecipient
-        delete notif.subscribedRecipient
-      }
-      debug('send notification to old notifications endpoint', event)
-      await axios.post(`${notifyUrl}/api/v1/notifications`, event, { params: { key: config.secretKeys.notifications, subscribedOnly } })
-        .catch(err => { internalError('notif-push', err) })
     }
   }
 }
@@ -96,8 +83,6 @@ export const subscribe = async (req, subscription) => {
     ...subscription
   }
   debug('send subscription', subscription)
-  const notifyUrl = config.privateNotifyUrl || config.notifyUrl
-  if (!notifyUrl) return
-  await axios.post(`${notifyUrl}/api/v1/subscriptions`, subscription, { headers: { cookie: req.headers.cookie } })
+  await axios.post(`${config.privateEventsUrl}/api/v1/subscriptions`, subscription, { headers: { cookie: req.headers.cookie } })
     .catch(err => { internalError('subscribe-push', err) })
 }

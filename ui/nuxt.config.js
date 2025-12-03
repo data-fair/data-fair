@@ -110,18 +110,13 @@ const nuxtConfig = {
   env: {
     mainPublicUrl: config.publicUrl,
     basePath: config.basePath,
-    directoryUrl: config.directoryUrl,
     adminRole: config.adminRole,
     contribRole: config.contribRole,
     map: config.map,
     brand: config.brand,
-    openapiViewerUrl: config.openapiViewerUrl,
-    openapiViewerV2: config.openapiViewerV2,
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,
-    notifyUrl: config.privateEventsUrl ? (config.origin + '/events') : config.notifyUrl, // DEPRECATED
-    notifyWSUrl: config.notifyWSUrl, // DEPRECATED
     catalogsIntegration: config.catalogsIntegration,
     eventsIntegration: config.eventsIntegration,
     portalsIntegration: config.portalsIntegration,
@@ -155,7 +150,10 @@ const nuxtConfig = {
       { hid: 'robots', name: 'robots', content: 'noindex' }
     ],
     link: [],
-    style: []
+    style: [],
+    script: [
+      { src: '/simple-directory/api/sites/_public.js' }
+    ]
   },
   css: [
     '@mdi/font/css/materialdesignicons.min.css'

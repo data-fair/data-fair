@@ -300,7 +300,7 @@ export default {
   }),
   computed: {
     ...mapState('session', ['user', 'initialized']),
-    ...mapState(['env']),
+    ...mapState(['env', 'siteInfo']),
     ...mapGetters(['missingSubscription', 'canContribDep', 'canAdminDep', 'ownerPublicationSites']),
     ...mapGetters('session', ['activeAccount']),
     sections () {

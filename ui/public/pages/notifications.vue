@@ -5,7 +5,7 @@
       class="mt-8 mb-2 text-h5"
     />
     <d-frame
-      :src="`${env.notifyUrl}/embed/devices`"
+      :src="`${env.eventsUrl}/embed/devices`"
       resize
       @notif="emitFrameNotif"
     >
@@ -166,7 +166,7 @@ export default {
         register: 'false',
         header: 'no'
       }).toString()
-      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
+      return `${this.env.eventsUrl}/embed/subscribe?${searchParams}`
     },
     appsSubscribeUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
@@ -181,7 +181,7 @@ export default {
         register: 'false',
         header: 'no'
       }).toString()
-      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
+      return `${this.env.eventsUrl}/embed/subscribe?${searchParams}`
     },
     publicationSites () {
       if (!this.settingsPublicationSites || !this.topics) return []
@@ -204,7 +204,7 @@ export default {
           header: 'no',
           sender: this.siteSender(p)
         }).toString()
-        const subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
+        const subscribeUrl = `${this.env.eventsUrl}/embed/subscribe?${searchParams}`
         return {
           ...p,
           subscribeUrl
@@ -225,7 +225,7 @@ export default {
         header: 'no',
         sender: this.siteSender(this.selectedSite)
       }).toString()
-      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
+      return `${this.env.eventsUrl}/embed/subscribe?${searchParams}`
     },
     requestedApplicationPublicationSiteUrl () {
       if (!this.selectedSite) return null
@@ -241,7 +241,7 @@ export default {
         header: 'no',
         sender: this.siteSender(this.selectedSite)
       }).toString()
-      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
+      return `${this.env.eventsUrl}/embed/subscribe?${searchParams}`
     },
     userCreationPublicationSiteUrl () {
       if (!this.selectedSite) return null
@@ -256,7 +256,7 @@ export default {
         header: 'no',
         sender: this.siteSender(this.selectedSite, 'admin')
       }).toString()
-      return `${this.env.notifyUrl}/embed/subscribe?${searchParams}`
+      return `${this.env.eventsUrl}/embed/subscribe?${searchParams}`
     }
   },
   async mounted () {

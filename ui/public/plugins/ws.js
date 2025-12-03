@@ -47,10 +47,7 @@ export default ({ store, env }) => {
   // reconstruct this env var that we used to have but lost when implementing multi-domain exposition
   configureWS(wsBaseUrl + env.basePath)
 
-  // only configure notify websocket in main back-office mode, not multi-domain embeds
   if (env.eventsIntegration) {
-    configureWS(wsBaseUrl + '/events/', '-notify')
-  } else if (env.notifyWSUrl && new URL(env.notifyWSUrl).hostname === window.location.hostname) {
-    configureWS(env.notifyWSUrl, '-notify')
+    configureWS(wsBaseUrl + '/events/', '-events')
   }
 }

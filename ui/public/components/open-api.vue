@@ -31,8 +31,7 @@ export default {
   computed: {
     ...mapState(['env']),
     src () {
-      if (this.env.openapiViewerV2) return this.env.openapiViewerUrl + `?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
-      else return this.env.openapiViewerUrl + '?hide-toolbar=true&drawerLocation=right' + '&url=' + this.url
+      return `/openapi-viewer?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
     }
   },
   methods: {

@@ -63,7 +63,7 @@ export const storage = async (dataset: Dataset) => {
   for (const df of storage.dataFiles) delete df.url
 
   if (isVirtualDataset(dataset)) {
-    const descendants = await virtualDatasetsUtils.descendants(dataset, false, ['storage', 'owner', 'masterData', 'count'], false)
+    const descendants = await virtualDatasetsUtils.descendants(dataset, ['storage', 'owner', 'masterData', 'count'], false)
     let masterDataSize = 0
     const masterDataCount = 0
     for (const descendant of descendants) {

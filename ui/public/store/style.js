@@ -5,7 +5,7 @@ const isDark = (color) => tinycolor(color).getLuminance() < 0.4
 // calculate a variant of a color with guaranteed readability
 // default background is #FAFAFA the light grey background
 const contrastColorCache = {}
-const contrastColor = (color1, color2 = '#FAFAFA', color3) => {
+export const contrastColor = (color1, color2 = '#FAFAFA', color3) => {
   if (!color1) return
   const cacheKey = JSON.stringify([color1, color2, color3])
   if (contrastColorCache[cacheKey]) return contrastColorCache[cacheKey]
@@ -111,23 +111,23 @@ export default () => ({
           html {
           overflow-y: ${htmlOverflow} !important;
           }
-          .v-btn.primary.theme--light, .theme--light .primary-gradient {
+          .v-application.main-site .v-btn.primary.theme--light, .theme--light .primary-gradient {
           background: linear-gradient(90deg, ${getters.primary} 0%, ${getters.darkPrimary10} 100%);
           }
-          .v-btn.primary.theme--dark, .theme--dark .primary-gradient {
+          .v-application.main-site .v-btn.primary.theme--dark, .theme--dark .primary-gradient {
           background: linear-gradient(90deg, ${getters.darkPrimary10} 0%, ${getters.primary} 100%);
           }
-          .v-application.theme--light .v-btn.primary.v-btn--has-bg, .theme--light .primary-gradient {
+          .v-application.main-site.theme--light .v-btn.primary.v-btn--has-bg, .theme--light .primary-gradient {
           border: 1px solid ${getters.darkPrimary10} !important;
           }
-          .v-application.theme--dark .v-btn.primary.v-btn--has-bg, .theme--dark .primary-gradient {
+          .v-application.main-site.theme--dark .v-btn.primary.v-btn--has-bg, .theme--dark .primary-gradient {
           border: 1px solid ${getters.primary} !important;
           }
-          .v-application.theme--light .navigation-left {
+          .v-application.main-site.theme--light .navigation-left {
           border-top: 2px solid ${getters.darkPrimary10} !important;
           border-right: 2px solid ${getters.darkPrimary10} !important;
           }
-          .v-application.theme--dark .navigation-left {
+          .v-application.main-site.theme--dark .navigation-left {
           border-top: 2px solid ${getters.primary} !important;
           border-right: 2px solid ${getters.primary} !important;
           }

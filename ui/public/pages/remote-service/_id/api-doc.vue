@@ -4,11 +4,6 @@
     class="pa-0"
   >
     <open-api
-      v-if="resourceUrl && !env.openapiViewerV2"
-      :url="resourceUrl"
-    />
-    <open-api
-      v-else
       :id="remoteService.id"
       type="remoteService"
     />

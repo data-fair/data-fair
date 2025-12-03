@@ -65,7 +65,8 @@ export default () => {
         '.geojson.gz',
         '.csv.gz',
         '.tsv.gz'
-      ]
+      ],
+      siteInfo: window.__PUBLIC_SITE_INFO
     },
     getters: {
       ownerLicenses: (state) => (owner) => {

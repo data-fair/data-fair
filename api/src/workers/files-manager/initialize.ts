@@ -125,7 +125,7 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.initFrom.parts.includes('data')) {
       const flatten = getFlattenNoCache(parentDataset)
       if (isVirtualDataset(parentDataset)) {
-        parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(parentDataset, false, ['owner'])
+        parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
         parentDataset.descendants = parentDataset.descendantsFull!.map(d => d.id)
       }
       if (isRestDataset(dataset)) {
@@ -228,7 +228,7 @@ export default async function (dataset: DatasetInternal) {
         let relPath = attachment
         let copyPath = attachmentPath(parentDataset, attachment)
         if (isVirtualDataset(parentDataset)) {
-          parentDataset.descendantsFull = parentDataset.descendantsFull ?? await virtualDatasetsUtils.descendants(parentDataset, false, ['owner'])
+          parentDataset.descendantsFull = parentDataset.descendantsFull ?? await virtualDatasetsUtils.descendants(parentDataset, ['owner'])
           parentDataset.descendants = parentDataset.descendantsFull!.map(d => d.id)
           const pathParts = new URL(attachment).pathname.split('/')
           const descendant = parentDataset.descendantsFull!.find(d => d.id === pathParts[5])

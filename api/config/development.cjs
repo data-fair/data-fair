@@ -5,19 +5,14 @@ const host = 'localhost'
 
 module.exports = {
   port: 5599,
-  serveUi: false, // if true, comment the /data-fair/embed block in nginx.conf
   dataDir: '../data/development',
   publicUrl: `http://${host}:5600/data-fair`,
   wsPublicUrl: `ws://${host}:5600/data-fair`,
   directoryUrl: `http://${host}:5600/simple-directory`,
   privateDirectoryUrl: 'http://localhost:5600/simple-directory',
-  openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
   captureUrl: `http://${host}:5600/capture`,
   privateCaptureUrl: 'http://localhost:8087',
   privateCatalogsUrl: `http://${host}:5600/catalogs`,
-  // notifyUrl: `http://${host}:5600/notify`,
-  // privateNotifyUrl: 'http://localhost:8088',
-  // notifyWSUrl: 'ws://localhost:8088',
   privateEventsUrl: 'http://localhost:8088',
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
@@ -101,6 +96,5 @@ module.exports = {
     description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
     server: 'https://staging-koumoul.com/tileserver'
   }],
-  compatODS: true,
-  openapiViewerV2: true
+  compatODS: true
 }
