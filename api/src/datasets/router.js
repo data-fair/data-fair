@@ -1191,7 +1191,7 @@ router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescenda
 })
 
 // Direct access to data files
-router.get('/:datasetId/data-files', readDataset(), apiKeyMiddlewareRead, permissions.middleware('listDataFiles', 'read'), cacheHeaders.noCache, async (req, res, next) => {
+router.get('/:datasetId/data-files', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('listDataFiles', 'read'), cacheHeaders.noCache, async (req, res, next) => {
   res.send(await datasetUtils.dataFiles(req.dataset, req.publicBaseUrl))
 })
 router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddlewareRead, permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
@@ -1200,13 +1200,13 @@ router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddlewareRe
 })
 
 // Special attachments referenced in dataset metadatas
-router.post('/:datasetId/metadata-attachments', readDataset(), apiKeyMiddlewareWrite, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
+router.post('/:datasetId/metadata-attachments', readDataset({ noCache: true }), apiKeyMiddlewareWrite, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await updateStorage(req.dataset)
   res.status(200).send(req.body)
 })
-router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddlewareRead, permissions.middleware('downloadMetadataAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
+router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadMetadataAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   // res.set('content-disposition', `inline; filename="${req.params.attachmentPath}"`)
   const relFilePath = path.join(...req.params.attachmentPath)
@@ -1296,7 +1296,7 @@ router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(),
 })
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), apiKeyMiddlewareRead, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
+router.get('/:datasetId/raw', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   const sessionState = reqSession(req)
   // a special case for superadmins.. handy but quite dangerous for the db load
   if (req.dataset.isRest && sessionState.user?.adminMode) {
@@ -1317,7 +1317,7 @@ router.get('/:datasetId/raw', readDataset(), apiKeyMiddlewareRead, permissions.m
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset(), apiKeyMiddlewareRead, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
 
   // the transform stream option was patched into "send" module using patch-package
@@ -1326,7 +1326,7 @@ router.get('/:datasetId/convert', readDataset(), apiKeyMiddlewareRead, permissio
 
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
-router.get('/:datasetId/full', readDataset(), apiKeyMiddlewareRead, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
+router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
     res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
@@ -1335,13 +1335,13 @@ router.get('/:datasetId/full', readDataset(), apiKeyMiddlewareRead, permissions.
   }
 })
 
-router.get('/:datasetId/api-docs.json', readDataset(), apiKeyMiddlewareRead, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
+router.get('/:datasetId/api-docs.json', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   const settings = await mongo.db.collection('settings')
     .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
   res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl, settings, req.publicationSite).api)
 })
 
-router.get('/:datasetId/private-api-docs.json', readDataset(), apiKeyMiddlewareRead, permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
+router.get('/:datasetId/private-api-docs.json', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
   const settings = await mongo.db.collection('settings')
     .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
   res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, reqSessionAuthenticated(req), settings))
@@ -1447,7 +1447,7 @@ router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('ge
   res.send(req.dataset._readApiKey)
 })
 
-router.post('/:datasetId/_simulate-extension', readDataset(), apiKeyMiddlewareWrite, permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
+router.post('/:datasetId/_simulate-extension', readDataset({ noCache: true }), apiKeyMiddlewareWrite, permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
   const line = req.body
   const dataset = clone(req.dataset)
   if (!dataset.extensions?.length) throw httpError(400, 'no extension to simulate')

@@ -199,7 +199,7 @@ export const memoizedGetDataset = memoize(getDataset, {
   promise: true,
   primitive: true,
   max: 10000,
-  maxAge: 1000 * 60, // 1 minute
+  maxAge: 1000 * 30, // 30s
   length: 6 // in memoized mode ignore db, acceptedStatuses and reqBody
 })
 
