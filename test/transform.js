@@ -123,4 +123,66 @@ describe('file datasets with transformation rules', function () {
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, message)
   })
+
+  it('reload file with transform_date expression', async function () {
+    const form = new FormData()
+    form.append('file', 'horodate\n2025-11-10 22:30', 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook('finalize/' + dataset.id)
+
+    assert.equal(dataset.schema[0].type, 'string')
+    assert.equal(dataset.schema[0].format, undefined)
+    dataset.schema[0]['x-transform'] = {
+      expr: 'TRANSFORM_DATE(value, "YYYY-MM-DD HH:mm", "YYYY-MM-DDTHH:mm:ssZ", "UTC", "Europe/Paris")',
+      type: 'string',
+      format: 'date-time'
+    }
+    dataset = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })).data
+    assert.equal(dataset.status, 'analyzed')
+    dataset = await workers.hook('finalize/' + dataset.id)
+    assert.equal(dataset.schema[0].type, 'string')
+    assert.equal(dataset.schema[0].format, 'date-time')
+    let lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
+    assert.equal(lines[0].horodate, '2025-11-10T23:30:00+01:00')
+
+    const form2 = new FormData()
+    form2.append('file', 'horodate\n2025-11-10 22:35', 'dataset1.csv')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })).data
+    assert.equal(dataset.status, 'loaded')
+    await workers.hook('finalize/' + dataset.id)
+    lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
+    assert.equal(lines[0].horodate, '2025-11-10T23:35:00+01:00')
+
+    const extensions = [{
+      active: true,
+      type: 'exprEval',
+      expr: "EXTRACT(horodate, '', '-')",
+      property: {
+        key: 'annee',
+        'x-originalName': 'annee',
+        type: 'string',
+        'x-capabilities': {
+          textAgg: false
+        },
+        maxLength: 200
+      }
+    }]
+    dataset = (await ax.patch('/api/v1/datasets/' + dataset.id, { extensions })).data
+    await workers.hook('finalize/' + dataset.id)
+    lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
+    assert.equal(lines[0].horodate, '2025-11-10T23:35:00+01:00')
+    let full = (await ax.get('/api/v1/datasets/' + dataset.id + '/full')).data
+    assert.equal(full, 'horodate,annee\n2025-11-10T23:35:00+01:00,2025\n')
+
+    const form3 = new FormData()
+    form3.append('file', 'horodate\n2025-11-10 22:40', 'dataset1.csv')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })).data
+    assert.equal(dataset.status, 'loaded')
+    await workers.hook('finalize/' + dataset.id)
+    lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
+    assert.equal(lines[0].horodate, '2025-11-10T23:40:00+01:00')
+    full = (await ax.get('/api/v1/datasets/' + dataset.id + '/full')).data
+    assert.equal(full, 'horodate,annee\n2025-11-10T23:40:00+01:00,2025\n')
+  })
 })

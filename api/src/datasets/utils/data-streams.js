@@ -35,8 +35,11 @@ export const formatLine = (item, schema) => {
 }
 
 // used both by readStream and bulk transactions in rest datasets
-export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false, applyTransform = false) => {
+export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false, applyTransform = false, ignoreDraftLimit = false) => {
   const streams = []
+
+  // manage interruption in case of draft mode
+  let interrupted = false
 
   // file is gzipped
   if (mimeType.endsWith('+gzip')) {
@@ -52,6 +55,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     streams.push(new Transform({
       objectMode: true,
       transform (item, encoding, callback) {
+        if (interrupted) return callback()
         formatLine(item, schema)
         callback(null, item)
       }
@@ -70,6 +74,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     streams.push(new Transform({
       objectMode: true,
       transform (item, encoding, callback) {
+        if (interrupted) return callback()
         const hasContent = Object.keys(item).reduce((a, b) => a || ![undefined, '\n', '\r', '\r\n', ''].includes(item[b]), false)
         this.i = (this.i || 0) + 1
         item._i = this.i
@@ -157,6 +162,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     streams.push(new Transform({
       objectMode: true,
       transform (feature, encoding, callback) {
+        if (interrupted) return callback()
         const item = flatten({ ...feature.properties })
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
@@ -178,6 +184,25 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     }))
   } else {
     throw httpError(400, 'mime-type is not supported ' + mimeType)
+  }
+
+  const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
+  if (limit !== -1) {
+    streams.push(new Transform({
+      objectMode: true,
+      transform (item, encoding, callback) {
+        this.i = (this.i || 0) + 1
+        if (this.i > limit) return callback()
+        callback(null, item)
+
+        // interrupt source stream if we are done
+        if (this.i === limit) {
+          interrupted = true
+          streams[0].unpipe()
+          streams[1].end()
+        }
+      }
+    }))
   }
 
   if (!raw) {
@@ -235,6 +260,7 @@ export const readStreams = async (dataset, raw = false, full = false, ignoreDraf
   }
 
   let streams = [fs.createReadStream(p)]
+
   if (progress) {
     const { size } = await fs.stat(p)
     streams.push(new Transform({
@@ -244,26 +270,8 @@ export const readStreams = async (dataset, raw = false, full = false, ignoreDraf
       }
     }))
   }
-  streams = streams.concat(transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset, false, !full))
 
-  // manage interruption in case of draft mode
-  const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
-  if (limit !== -1) {
-    streams.push(new Transform({
-      objectMode: true,
-      transform (item, encoding, callback) {
-        this.i = (this.i || 0) + 1
-        if (this.i > limit) return callback()
-        callback(null, item)
-
-        // interrupt source stream if we are done
-        if (this.i === limit) {
-          streams[0].unpipe()
-          streams[1].end()
-        }
-      }
-    }))
-  }
+  streams = streams.concat(transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset, false, !full, ignoreDraftLimit))
 
   return streams
 }
