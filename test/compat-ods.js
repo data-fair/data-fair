@@ -638,7 +638,7 @@ describe('compatibility layer for ods api', function () {
 
     // csv export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
-    assert.equal(res.data, `id;adr;some date;loc;bool;nb
+    assert.equal(res.data, `id;adr;some_date;loc;bool;nb
 koumoul;19 rue de la voie lactée saint avé;2017-12-12;47.687375,-2.748526;0;11
 bidule;adresse inconnue;2017-10-10;45.5,2.6;1;22.2
 `)
