@@ -447,7 +447,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   const columns = selectFinalKeys.map(key => {
     const field = dataset.schema?.find(p => p.key === key)
-    if (field) return { key: field.key, header: (useLabels ? field.title : field['x-originalName']) || field['x-originalName'] || field.key }
+    if (field) return { key: field.key, header: (useLabels ? field.title : field.key) || field.key }
     else return { key, header: key }
   })
 
