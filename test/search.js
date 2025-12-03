@@ -141,6 +141,7 @@ describe('search', function () {
 
     // CSV export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv`)
+    assert.equal(res.headers['content-type'], 'text/csv; charset=utf-8')
     let lines = res.data.split('\n')
     assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool","nb"')
     assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0,11')
@@ -157,9 +158,11 @@ describe('search', function () {
     // Sheets exports
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=xlsx`)
     assert.equal(res.headers['content-disposition'], 'attachment; filename="dataset1.xlsx"')
+    assert.equal(res.headers['content-type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     assert.ok(Number(res.headers['content-length']) > 5000)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=ods`)
     assert.equal(res.headers['content-disposition'], 'attachment; filename="dataset1.ods"')
+    assert.equal(res.headers['content-type'], 'application/vnd.oasis.opendocument.spreadsheet')
     assert.ok(Number(res.headers['content-length']) > 5000)
   })
 

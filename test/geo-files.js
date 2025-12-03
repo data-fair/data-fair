@@ -293,8 +293,9 @@ describe('geo files support', function () {
     assert.equal(geojson.type, 'FeatureCollection')
     assert.equal(geojson.total, 1)
 
-    const wkt = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'wkt' } })).data
-    assert.ok(wkt.startsWith('GEOMETRYCOLLECTION'))
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'wkt' } })
+    assert.equal(res.headers['content-type'], 'text/plain; charset=utf-8')
+    assert.ok(res.data.startsWith('GEOMETRYCOLLECTION'))
   })
 
   it('Process uploaded GPX dataset', async function () {

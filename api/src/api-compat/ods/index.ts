@@ -453,7 +453,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   if (req.params.format === 'csv') {
     // https://help.opendatasoft.com/apis/ods-explore-v2/#tag/Dataset/operation/exportRecordsCSV
-    // res.setHeader('content-type', 'text/csv')
+    res.type('csv')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
     const options: CsvOptions = {
       columns,
@@ -473,6 +473,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     transformStreams = [csvStrStream(options)]
   } else if (req.params.format === 'xlsx') {
     // res.setHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.type('xlsx')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
     const { default: Excel } = await import('exceljs')
     const workbookWriter = new Excel.stream.xlsx.WorkbookWriter({
@@ -514,6 +515,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       new XLSXTransformStream()] */
   } else if (req.params.format === 'parquet') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.parquet'))
+    res.type(('application/vnd.apache.parquet'))
     // const parquet = await import('@dsnp/parquetjs')
     // TODO: should we flatten or nest multi-valued values ?
     // const schema = jsonSchema(dataset.schema, req.publicBaseUrl, false)
@@ -528,21 +530,24 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     transformStreams = [new ParquetWriterStream(basicSchema)]
   } else if (req.params.format === 'json') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.json'))
+    res.type('json')
     // TODO: should we flatten or nest multi-valued values ?
     transformStreams = [JSONStream.stringify('[', ',', ']')]
   } else if (req.params.format === 'jsonl') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.jsonl'))
+    res.type('application/jsonl; charset=utf-8')
     // TODO: should we flatten or nest multi-valued values ?
     transformStreams = [
       new Transform({
         objectMode: true,
         transform (item, encoding, callback) {
-          callback(null, JSON.stringify(encoding) + '\n')
+          callback(null, JSON.stringify(item) + '\n')
         }
       })
     ]
   } else if (req.params.format === 'geojson') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.geojson'))
+    res.type('geojson')
     transformStreams = [
       new Transform({
         objectMode: true,
