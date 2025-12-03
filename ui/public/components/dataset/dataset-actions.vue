@@ -362,6 +362,10 @@
             :items="commonEncodings"
             style="max-width: 500px"
           />
+          <dataset-normalize-options
+            v-if="isTabularFile"
+            v-model="normalizeOptions"
+          />
           <v-progress-linear
             v-if="uploading"
             v-model="uploadProgress"
@@ -530,6 +534,7 @@ export default {
     file: null,
     attachmentsFile: null,
     fileEncoding: null,
+    normalizeOptions: {},
     uploading: false,
     uploadProgress: 0,
     newOwner: null,
@@ -578,6 +583,10 @@ export default {
     isTextFile () {
       if (!this.file) return false
       return this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt')
+    },
+    isTabularFile () {
+      if (!this.file) return false
+      return this.file.name.endsWith('.xls') || this.file.name.endsWith('.xlsx') || this.file.name.endsWith('.ods') || this.file.name.endsWith('.fods')
     }
   },
   created () {
@@ -612,7 +621,10 @@ export default {
       const formData = new FormData()
       if (this.file) {
         formData.append('file', this.file)
-        if (this.fileEncoding) formData.append('file_encoding', this.fileEncoding)
+        if (this.isTextFile && this.fileEncoding) formData.append('file_encoding', this.fileEncoding)
+        if (this.isTabularFile && Object.keys(this.normalizeOptions).length) {
+          formData.append('file_normalizeOptions', JSON.stringify(this.normalizeOptions))
+        }
       }
       if (this.attachmentsFile) formData.append('attachments', this.attachmentsFile)
 
