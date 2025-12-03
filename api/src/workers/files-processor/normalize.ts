@@ -141,7 +141,7 @@ export default async function (dataset: FileDataset) {
       }
       const xlsx = await import('../../misc/utils/xlsx.ts')
       const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
-      await pipeline(xlsx.iterCSV(originalFilePath), fs.createWriteStream(filePath))
+      await pipeline(xlsx.iterCSV(originalFilePath, dataset.originalFile.normalizeOptions), fs.createWriteStream(filePath))
       dataset.file = {
         name: path.parse(dataset.originalFile.name).name + '.csv',
         size: (await fs.stat(filePath)).size,

@@ -200,10 +200,7 @@ const datasetProperties = {
         type: 'string',
         description: 'Encoding of the file explicitly defined when loading it'
       },
-      normalizeOptions: {
-        type: 'object',
-        description: 'Normalize options specific to the original file format'
-      },
+      normalizeOptions: { $ref: '#/$defs/normalizeOptions' },
       mimetype: {
         type: 'string',
         description: 'Mime type of the file'
@@ -914,6 +911,22 @@ const dataset = {
     }
   },
   $defs: {
+    normalizeOptions: {
+      type: 'object',
+      description: 'Normalize options specific to the original file format',
+      additionalProperties: false,
+      properties: {
+        spreadsheetWorksheetIndex: {
+          type: 'number'
+        },
+        spreadsheetIgnoredStartingRows: {
+          type: 'number'
+        },
+        spreadsheetIgnoredStartingCols: {
+          type: 'number'
+        }
+      }
+    },
     schemaProperty: {
       type: 'object',
       required: ['key'],

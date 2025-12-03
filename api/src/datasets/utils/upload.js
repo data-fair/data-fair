@@ -98,7 +98,7 @@ export const getFiles = async (req, res) => {
       delete req.body[file.fieldname + '_encoding']
     }
     if (req.body?.[file.fieldname + '_normalizeOptions']) {
-      file.normalizeOptions = req.body?.[file.fieldname + '_normalizeOptions']
+      file.normalizeOptions = JSON.parse(req.body?.[file.fieldname + '_normalizeOptions'])
       delete req.body[file.fieldname + '_normalizeOptions']
     }
     await fsyncFile(file.path)
