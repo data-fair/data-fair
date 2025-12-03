@@ -7,8 +7,8 @@ dayjs.extend(utc)
 
 type NormalizeOptions = {
   spreadsheetWorksheetIndex?: number;
-  spreadsheetIgnoredStartingRows?: number;
-  spreadsheetIgnoredStartingCols?: number;
+  spreadsheetHeaderLine?: number;
+  spreadsheetStartCol?: number;
 }
 
 // The following is an attempt at using ExcelJS streaming parser,
@@ -160,9 +160,9 @@ const iterCsv = async function * (worksheet: WorkSheet, normalizeOptions: Normal
 
   // loop on dates to check if there is a need for date-time format or if date is enough
   const hasSimpleDate: Record<number, boolean> = {}
-  let ignoredStartingRows = normalizeOptions.spreadsheetIgnoredStartingRows ?? 0
+  let ignoredStartingRows = normalizeOptions.spreadsheetHeaderLine ? normalizeOptions.spreadsheetHeaderLine : 0
 
-  if (normalizeOptions.spreadsheetIgnoredStartingRows === undefined) {
+  if (normalizeOptions.spreadsheetHeaderLine === undefined) {
     for (let lineNb = 0; lineNb < Math.min(json.length, 10000); lineNb++) {
       const row = json[lineNb]
       if (!row) {
@@ -174,14 +174,14 @@ const iterCsv = async function * (worksheet: WorkSheet, normalizeOptions: Normal
     }
   }
 
-  let ignoredStartingCols = normalizeOptions.spreadsheetIgnoredStartingCols ?? 0
+  let ignoredStartingCols = normalizeOptions.spreadsheetStartCol ?? 0
   for (let lineNb = 0; lineNb < Math.min(json.length, 10000); lineNb++) {
     // ignore empty lines
     if (lineNb < ignoredStartingRows) continue
     const row = json[lineNb]
     // check empty first cols on first data line
     if (lineNb === ignoredStartingRows) {
-      if (normalizeOptions.spreadsheetIgnoredStartingCols === undefined) {
+      if (normalizeOptions.spreadsheetStartCol === undefined) {
         for (let colNb = 0; colNb < row.length; colNb++) {
           if (row[colNb] === undefined && colNb === ignoredStartingCols) ignoredStartingCols++
         }
@@ -199,6 +199,7 @@ const iterCsv = async function * (worksheet: WorkSheet, normalizeOptions: Normal
   }
 
   json.splice(0, ignoredStartingRows)
+
   let rowsBuffer = []
   for (let lineNb = 0; lineNb < json.length; lineNb++) {
     const row = json[lineNb]
@@ -224,7 +225,7 @@ const iterCsv = async function * (worksheet: WorkSheet, normalizeOptions: Normal
   if (rowsBuffer.length) yield csvStr(rowsBuffer)
 }
 
-const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const alphabet = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 // previous implementation using xlsx module.. kept around as a fallback and for ODS format
 const iterCsvOld = async function * (filePath: string, normalizeOptions: NormalizeOptions) {
@@ -238,10 +239,10 @@ const iterCsvOld = async function * (filePath: string, normalizeOptions: Normali
   const workbook = XLSX.readFile(filePath, { cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[worksheetIndex - 1]]
   let range = worksheet['!ref']
-  if (normalizeOptions.spreadsheetIgnoredStartingRows !== undefined || normalizeOptions.spreadsheetIgnoredStartingCols !== undefined) {
+  if (normalizeOptions.spreadsheetHeaderLine !== undefined || normalizeOptions.spreadsheetStartCol !== undefined) {
     const [, end] = range.split(':')
-    const startCol = normalizeOptions.spreadsheetIgnoredStartingCols ? alphabet[normalizeOptions.spreadsheetIgnoredStartingCols] : 'A'
-    const startRow = (normalizeOptions.spreadsheetIgnoredStartingRows ?? 0) + 1
+    const startCol = normalizeOptions.spreadsheetStartCol ? alphabet[normalizeOptions.spreadsheetStartCol] : 'A'
+    const startRow = normalizeOptions.spreadsheetHeaderLine ?? 1
     range = `${startCol}${startRow}:${end}`
   }
   const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, range })

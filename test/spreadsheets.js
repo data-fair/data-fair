@@ -95,8 +95,8 @@ describe('Spreadsheets conversions', function () {
     form.append('file', datasetFd, 'header.ods')
     form.append('file_normalizeOptions', JSON.stringify({
       spreadsheetWorksheetIndex: 2,
-      spreadsheetIgnoredStartingRows: 2,
-      spreadsheetIgnoredStartingCols: 1
+      spreadsheetHeaderLine: 3,
+      spreadsheetStartCol: 2
     }))
 
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -115,8 +115,8 @@ describe('Spreadsheets conversions', function () {
     form.append('file', datasetFd, 'header.ods')
     form.append('file_normalizeOptions', JSON.stringify({
       spreadsheetWorksheetIndex: 2,
-      spreadsheetIgnoredStartingRows: 2,
-      spreadsheetIgnoredStartingCols: 1
+      spreadsheetHeaderLine: 3,
+      spreadsheetStartCol: 2
     }))
 
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })

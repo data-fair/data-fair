@@ -13,26 +13,26 @@
       style="max-width: 500px"
     />
     <v-text-field
-      v-model.number="value.spreadsheetIgnoredStartingRows"
-      name="spreadsheetIgnoredStartingRows"
-      label="nombre de lignes à ignorer en haut de la feuille"
+      v-model.number="value.spreadsheetHeaderLine"
+      name="spreadsheetHeaderLine"
+      label="numéro de ligne de l'entête"
       outlined
       dense
       clearable
       persistent-hint
-      placeholder="0"
+      placeholder="1"
       type="number"
       style="max-width: 500px"
     />
     <v-text-field
-      v-model.number="value.spreadsheetIgnoredStartingCols"
-      name="spreadsheetIgnoredStartingCols"
-      label="nombre de colonnes à ignorer à gauche de la feuille"
+      v-model.number="value.spreadsheetStartCol"
+      name="spreadsheetStartCol"
+      label="numéro de la 1ère colonne de données"
       outlined
       dense
       clearable
       persistent-hint
-      placeholder="0"
+      placeholder="1"
       type="number"
       style="max-width: 500px"
     />

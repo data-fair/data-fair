@@ -919,10 +919,10 @@ const dataset = {
         spreadsheetWorksheetIndex: {
           type: 'number'
         },
-        spreadsheetIgnoredStartingRows: {
+        spreadsheetHeaderLine: {
           type: 'number'
         },
-        spreadsheetIgnoredStartingCols: {
+        spreadsheetStartCol: {
           type: 'number'
         }
       }
