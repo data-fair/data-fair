@@ -97,8 +97,8 @@
         v-model="facetsValues.publicationSites"
         multiple
         :label="$t('publicationSites')"
-        :items="facets.publicationSites.filter(item => !item.value || (activeAccountPublicationSitesById && activeAccountPublicationSitesById[item.value]))"
-        :item-value="item => item.value || 'null'"
+        :items="publicationSitesFacets"
+        :item-value="item => item.value"
         :item-text="item => publicationSiteText(item)"
         outlined
         dense
@@ -113,7 +113,7 @@
         v-model="facetsValues.requestedPublicationSites"
         multiple
         :label="$t('requestedPublicationSites')"
-        :items="facets.requestedPublicationSites.filter(item => !item.value || (activeAccountPublicationSitesById && activeAccountPublicationSitesById[item.value]))"
+        :items="requestedPublicationSitesFacets"
         :item-value="item => item.value || 'null'"
         :item-text="item => publicationSiteText(item)"
         outlined
@@ -222,6 +222,12 @@ export default {
         }
       }
       return missing
+    },
+    requestedPublicationSitesFacets () {
+      return this.getPublicationSitesFacets(this.facets.requestedPublicationSites)
+    },
+    publicationSitesFacets () {
+      return this.getPublicationSitesFacets(this.facets.publicationSites)
     }
   },
   methods: {
@@ -244,6 +250,17 @@ export default {
         return owner.departmentName || owner.department
       }
       return `${owner.name}/${owner.departmentName || owner.department}`
+    },
+    getPublicationSitesFacets (publicationSitesFacets) {
+      if (!this.activeAccountPublicationSitesById) return []
+      return publicationSitesFacets.filter(item => {
+        if (!item.value) return false
+        if (!this.activeAccountPublicationSitesById[item.value]) {
+          console.log('publication in facet not matched in settings', item.value, this.activeAccountPublicationSitesById)
+          return false
+        }
+        return true
+      })
     }
   }
 }
