@@ -86,7 +86,7 @@ export default () => {
       activeAccountPublicationSitesById: (state, getters) => {
         const activeAccount = getters['session/activeAccount']
         if (!activeAccount) return {}
-        const publicationSites = state.publicationSites[activeAccount.type + '/' + activeAccount.id]
+        const publicationSites = state.publicationSites[activeAccount.type + '/' + activeAccount.id + '/*']
         if (!publicationSites) return {}
         return publicationSites.reduce((a, ps) => { a[ps.type + ':' + ps.id] = ps; return a }, {})
       },
