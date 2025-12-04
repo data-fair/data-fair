@@ -21,14 +21,14 @@ config.processingsIntegration = !!config.privateProcessingsUrl
 if (!config.processingsIntegration && config.extraNavigationItems.some(e => e.iframe?.startsWith('/processings/'))) {
   console.warn('integrating /processings through extraNavigationItems is deprecated, use PRIVATE_PROCESSINGS_URL')
   config.processingsIntegration = true
-  config.extraNavigationItems = config.extraNavigationItems.filter(e => e => !e.iframe?.startsWith('/processings/'))
-  config.extraAdminNavigationItems = config.extraAdminNavigationItems.filter(e => e => !e.iframe?.startsWith('/processings/'))
+  config.extraNavigationItems = config.extraNavigationItems.filter(e => !e.iframe?.startsWith('/processings/'))
+  config.extraAdminNavigationItems = config.extraAdminNavigationItems.filter(e => !e.iframe?.startsWith('/processings/'))
 }
 config.metricsIntegration = !!config.privateMetricsUrl
 if (!config.metricsIntegration && config.extraNavigationItems.some(e => e.iframe?.startsWith('/metrics/'))) {
   console.warn('integrating /metrics through extraNavigationItems is deprecated, use PRIVATE_METRICS_URL')
   config.metricsIntegration = true
-  config.extraNavigationItems = config.extraNavigationItems.filter(e => e => !e.iframe?.startsWith('/metrics/'))
+  config.extraNavigationItems = config.extraNavigationItems.filter(e => !e.iframe?.startsWith('/metrics/'))
 }
 
 console.log('completed config for UI', config)

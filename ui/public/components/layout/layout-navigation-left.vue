@@ -12,10 +12,7 @@
       <brand-title />
       <v-divider />
     </v-list>-->
-    <v-list
-      nav
-      class="px-1 pt-1 pb-0"
-    >
+    <v-list>
       <v-list-item
         v-if="missingSubscription && canAdmin && env.subscriptionUrl"
         :nuxt="true"
@@ -28,37 +25,41 @@
       <template v-if="!missingSubscription">
         <template v-for="(item, i) of navigation">
           <template v-if="item.group">
-            <v-list-group
-              v-if="item.items.length"
-              :key="item.group"
-              color="white"
-              :style="item.style"
-              :value="activeGroup === item.group"
-            >
-              <template #activator>
-                <v-list-item-title>{{ item.title }}</v-list-item-title>
-              </template>
-
-              <v-list-item
-                v-for="(child,j) of item.items"
-                :key="j"
-                :nuxt="true"
-                :to="child.to"
-                class="ml-3"
+            <template v-if="item.items.length">
+              <v-divider :key="item.group + '-divider'" />
+              <v-list-group
+                :key="item.group"
+                color="white"
+                :style="item.style"
+                :value="activeGroup === item.group"
               >
-                <v-list-item-action><v-icon>{{ child.icon }}</v-icon></v-list-item-action>
-                <v-list-item-content>
-                  <v-list-item-title>{{ child.title }}</v-list-item-title>
-                  <v-list-item-subtitle v-if="child.subtitle">{{ child.subtitle }}</v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list-group>
+                <template #activator>
+                  <v-list-item-title>{{ item.title }}</v-list-item-title>
+                </template>
+
+                <v-list-item
+                  v-for="(child,j) of item.items"
+                  :key="j"
+                  :nuxt="!!child.to"
+                  :to="child.to"
+                  :href="child.href"
+                  :class="(child.class || '')"
+                >
+                  <v-list-item-action><v-icon>{{ child.icon }}</v-icon></v-list-item-action>
+                  <v-list-item-content>
+                    <v-list-item-title>{{ child.title }}</v-list-item-title>
+                    <v-list-item-subtitle v-if="child.subtitle">{{ child.subtitle }}</v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list-group>
+            </template>
           </template>
           <v-list-item
             v-else
             :key="i"
-            :nuxt="true"
+            :nuxt="!!item.to"
             :to="item.to"
+            :href="item.href"
           >
             <v-list-item-action><v-icon>{{ item.icon }}</v-icon></v-list-item-action>
             <v-list-item-content>
@@ -101,7 +102,6 @@ fr:
   params: Paramètres
   paramsSub: Licences, thématiques ...
   catalogs: Catalogues distants
-  catalogsPlugins: Plugins - Catalogues
   storage: Stockage
   subscription: Abonnement
   doc: Documentation
@@ -131,7 +131,6 @@ en:
   params: Parameters
   paramsSub: Licenses, topics ...
   catalogs: Remote catalogs
-  catalogsPlugins: Plugins - Catalogs
   storage: Storage
   subscription: Subscription
   doc: Documentation
@@ -261,10 +260,10 @@ export default {
         }
         adminGroup.items.push({ href: this.env.directoryUrl + '/admin/users', icon: 'mdi-account-supervisor', title: this.$t('accountsManagement') })
         if (this.env.catalogsIntegration) {
-          adminGroup.items.push({ to: '/admin/catalogs-plugins', icon: 'mdi-transit-connection', title: this.$t('catalogsPlugins') })
+          adminGroup.items.push({ to: '/admin/catalogs-plugins', icon: 'mdi-transit-connection', title: this.$t('catalogs'), subtitle: 'Plugins' })
         }
         if (this.env.processingsIntegration) {
-          adminGroup.items.push({ to: '/admin/processings-plugins', icon: 'mdi-cog-transfer-outline', title: 'Plugins - Traitements périodiques' })
+          adminGroup.items.push({ to: '/admin/processings-plugins', icon: 'mdi-cog-transfer-outline', title: 'Traitements périodiques', subtitle: 'Plugins' })
         }
         for (const extraNavItem of this.env.extraAdminNavigationItems) {
           if (extraNavItem.iframe) {
@@ -299,8 +298,5 @@ export default {
 <style>
 .navigation-left .v-list-item__action {
   margin-right: 16px !important;
-}
-.navigation-left .v-list-item {
-  margin-bottom: 4px !important;
 }
 </style>
