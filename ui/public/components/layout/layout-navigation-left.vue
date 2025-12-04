@@ -202,6 +202,9 @@ export default {
       if (this.canAdminDep && this.env.catalogsIntegration) {
         connectGroup.items.push({ to: '/catalogs', icon: 'mdi-transit-connection', title: this.$t('catalogs') })
       }
+      if (this.canAdminDep && this.env.processingsIntegration) {
+        connectGroup.items.push({ to: '/processings', icon: 'mdi-cog-transfer-outline', title: 'Traitements périodiques' })
+      }
       items.push(connectGroup)
 
       const monitorGroup = { group: 'monitor', icon: '', title: this.$t('group.monitor'), items: [] }
@@ -210,6 +213,9 @@ export default {
       }
       if (this.canContrib) {
         monitorGroup.items.push({ to: '/storage', icon: 'mdi-harddisk', title: this.$t('storage') })
+      }
+      if (this.env.metricsIntegration) {
+        monitorGroup.items.push({ to: '/metrics', icon: 'mdi-chart-bar', title: 'Audience', subtitle: 'Téléchargements, API' })
       }
       if (this.canAdmin && this.env.eventsIntegration) {
         monitorGroup.items.push({ to: '/events', icon: 'mdi-clipboard-text-clock', title: 'Traçabilité (bêta)' })
@@ -256,6 +262,9 @@ export default {
         adminGroup.items.push({ href: this.env.directoryUrl + '/admin/users', icon: 'mdi-account-supervisor', title: this.$t('accountsManagement') })
         if (this.env.catalogsIntegration) {
           adminGroup.items.push({ to: '/admin/catalogs-plugins', icon: 'mdi-transit-connection', title: this.$t('catalogsPlugins') })
+        }
+        if (this.env.processingsIntegration) {
+          adminGroup.items.push({ to: '/admin/processings-plugins', icon: 'mdi-cog-transfer-outline', title: 'Plugins - Traitements périodiques' })
         }
         for (const extraNavItem of this.env.extraAdminNavigationItems) {
           if (extraNavItem.iframe) {

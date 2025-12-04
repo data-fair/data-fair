@@ -27,7 +27,7 @@ if (!config.processingsIntegration && config.extraNavigationItems.some(e => e.if
 config.metricsIntegration = !!config.privateMetricsUrl
 if (!config.metricsIntegration && config.extraNavigationItems.some(e => e.iframe?.startsWith('/metrics/'))) {
   console.warn('integrating /metrics through extraNavigationItems is deprecated, use PRIVATE_METRICS_URL')
-  config.processingsIntegration = true
+  config.metricsIntegration = true
   config.extraNavigationItems = config.extraNavigationItems.filter(e => e => !e.iframe?.startsWith('/metrics/'))
 }
 
