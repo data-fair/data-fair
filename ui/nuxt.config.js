@@ -31,6 +31,8 @@ if (!config.metricsIntegration && config.extraNavigationItems.some(e => e.iframe
   config.extraNavigationItems = config.extraNavigationItems.filter(e => e => !e.iframe?.startsWith('/metrics/'))
 }
 
+console.log('completed config for UI', config)
+
 const isBuilding = process.argv[2] === 'build'
 
 if (process.env.NODE_ENV === 'production') {
