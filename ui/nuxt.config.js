@@ -15,6 +15,21 @@ config.basePath = publicUrl.pathname
 config.catalogsIntegration = !!config.privateCatalogsUrl
 config.eventsIntegration = !!config.privateEventsUrl
 config.portalsIntegration = !!config.privatePortalsManagerUrl
+config.processingsIntegration = !!config.privateProcessingsUrl
+// manage deprecated extraNavigationItems
+// we prefer explicit modules integration instead of these generic links
+if (!config.processingsIntegration && config.extraNavigationItems.some(e => e.iframe?.startsWith('/processings/'))) {
+  console.warn('integrating /processings through extraNavigationItems is deprecated, use PRIVATE_PROCESSINGS_URL')
+  config.processingsIntegration = true
+  config.extraNavigationItems = config.extraNavigationItems.filter(e => e => !e.iframe?.startsWith('/processings/'))
+  config.extraAdminNavigationItems = config.extraAdminNavigationItems.filter(e => e => !e.iframe?.startsWith('/processings/'))
+}
+config.metricsIntegration = !!config.privateMetricsUrl
+if (!config.metricsIntegration && config.extraNavigationItems.some(e => e.iframe?.startsWith('/metrics/'))) {
+  console.warn('integrating /metrics through extraNavigationItems is deprecated, use PRIVATE_METRICS_URL')
+  config.processingsIntegration = true
+  config.extraNavigationItems = config.extraNavigationItems.filter(e => e => !e.iframe?.startsWith('/metrics/'))
+}
 
 const isBuilding = process.argv[2] === 'build'
 

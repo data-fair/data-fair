@@ -26,310 +26,48 @@
       </v-list-item>
 
       <template v-if="!missingSubscription">
-        <v-list-item
-          :nuxt="true"
-          :to="`/`"
-        >
-          <v-list-item-action><v-icon>mdi-home</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'dashboard'" />
-        </v-list-item>
+        <template v-for="(item, i) of navigation">
+          <template v-if="item.group">
+            <v-list-group
+              v-if="item.items.length"
+              :key="item.group"
+              color="white"
+              :style="item.style"
+              :value="activeGroup === item.group"
+            >
+              <template #activator>
+                <v-list-item-title>{{ item.title }}</v-list-item-title>
+              </template>
 
-        <v-list-item
-          :nuxt="true"
-          :to="`/datasets`"
-          :class="routePrefix === 'dataset' ? 'v-list-item--active' : ''"
-        >
-          <v-list-item-action><v-icon>mdi-database</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'datasets'" />
-        </v-list-item>
-
-        <v-list-item
-          v-if="!env.disableApplications"
-          :nuxt="true"
-          :to="`/applications`"
-          :class="routePrefix === 'application' ? 'v-list-item--active' : ''"
-        >
-          <v-list-item-action><v-icon>mdi-image-multiple</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title v-t="'applications'" />
-            <v-list-item-subtitle v-t="'applicationsSubtitle'" />
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-divider class="pb-1" />
-
-        <v-list-item
-          v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin' && !user.organization.department"
-          :nuxt="true"
-          dense
-          :to="`/organization`"
-        >
-          <v-list-item-action><v-icon>mdi-account-group</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title v-t="'org'" />
-            <v-list-item-subtitle>{{ activeAccount.name }}</v-list-item-subtitle>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
-          v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin' && user.organization.department"
-          :nuxt="true"
-          dense
-          :to="`/department`"
-        >
-          <v-list-item-action><v-icon>mdi-account-group</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title v-t="'dep'" />
-            <v-list-item-subtitle>{{ activeAccount.name }} / {{ user.organization.departmentName || user.organization.department }}</v-list-item-subtitle>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
-          v-if="canAdmin && env.subscriptionUrl"
-          :nuxt="true"
-          :to="`/subscription`"
-        >
-          <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'subscription'" />
-        </v-list-item>
-
-        <v-list-item
-          v-if="canAdminDep"
-          :nuxt="true"
-          dense
-          to="/settings"
-        >
-          <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>{{ $t('params') }}</v-list-item-title>
-            <v-list-item-subtitle v-if="!activeAccount.department">
-              {{ $t('paramsSub') }}
-            </v-list-item-subtitle>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
-          v-if="canContrib"
-          :nuxt="true"
-          dense
-          to="/storage"
-        >
-          <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'storage'" />
-        </v-list-item>
-
-        <v-list-item
-          v-if="canAdminDep && env.catalogsIntegration"
-          :nuxt="true"
-          dense
-          :to="`/catalogs`"
-        >
-          <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
-          v-if="canAdmin && env.eventsIntegration"
-          :nuxt="true"
-          dense
-          :to="`/events`"
-        >
-          <v-list-item-action><v-icon>mdi-clipboard-text-clock</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>Traçabilité (bêta)</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
-          v-if="canAdminDep && env.portalsIntegration"
-          :nuxt="true"
-          dense
-          :to="`/portals`"
-        >
-          <v-list-item-action><v-icon>mdi-clipboard-text-clock</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>Portails (bêta)</v-list-item-title>
-            <v-list-item-subtitle>Nouvelle version</v-list-item-subtitle>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
-          v-if="canAdminDep && env.portalsIntegration"
-          :nuxt="true"
-          dense
-          :to="`/pages`"
-        >
-          <v-list-item-action><v-icon>mdi-text-box-edit-outline</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>Pages de portails (bêta)</v-list-item-title>
-            <v-list-item-subtitle>Nouvelle version</v-list-item-subtitle>
-          </v-list-item-content>
-        </v-list-item>
-
-        <template v-if="env.extraNavigationItems && user">
+              <v-list-item
+                v-for="(child,j) of item.items"
+                :key="j"
+                :nuxt="true"
+                :to="child.to"
+                class="ml-3"
+              >
+                <v-list-item-action><v-icon>{{ child.icon }}</v-icon></v-list-item-action>
+                <v-list-item-content>
+                  <v-list-item-title>{{ child.title }}</v-list-item-title>
+                  <v-list-item-subtitle v-if="child.subtitle">{{ child.subtitle }}</v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list-group>
+          </template>
           <v-list-item
-            v-for="extra in extraNavigationItems"
-            :key="extra.id"
-            :nuxt="!!extra.iframe"
-            :to="extra.iframe && `/extra/${extra.id}`"
-            dense
-            :href="extra.href"
+            v-else
+            :key="i"
+            :nuxt="true"
+            :to="item.to"
           >
-            <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
+            <v-list-item-action><v-icon>{{ item.icon }}</v-icon></v-list-item-action>
             <v-list-item-content>
-              <v-list-item-title>
-                {{ typeof extra.title === 'string' ? extra.title : (extra.title[$i18n.locale] || extra.title[$i18n.defaultLocale]) }}
-              </v-list-item-title>
-              <v-list-item-subtitle v-if="extra.subtitle">
-                {{ typeof extra.subtitle === 'string' ? extra.subtitle : (extra.subtitle[$i18n.locale] || extra.subtitle[$i18n.defaultLocale]) }}
-              </v-list-item-subtitle>
+              <v-list-item-title>{{ item.title }}</v-list-item-title>
+              <v-list-item-subtitle v-if="item.subtitle">{{ item.subtitle }}</v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
         </template>
       </template>
-    </v-list>
-
-    <v-list
-      v-if="!missingSubscription"
-      nav
-      class="px-1 pt-0 pb-1"
-      dense
-    >
-      <v-list-group
-        v-if="canContribDep"
-        color="white"
-        :value="$route.path === '/api-doc'"
-      >
-        <template #activator>
-          <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'doc'" />
-        </template>
-        <v-list-item
-          :nuxt="true"
-          dense
-          to="/api-doc"
-        >
-          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'apiDoc'" />
-        </v-list-item>
-        <!--<v-list-item
-          :nuxt="true"
-          dense
-          href="https://data-fair.github.io/4/user-guide-backoffice"
-          target="blank"
-        >
-          <v-list-item-action><v-icon>mdi-book-open-variant</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'userDoc'" />
-        </v-list-item>-->
-        <v-list-item
-          v-for="(docLink, i) of env.extraDocLinks"
-          :key="i"
-          :nuxt="true"
-          dense
-          :href="docLink.href"
-          target="blank"
-        >
-          <v-list-item-action><v-icon>{{ docLink.icon }}</v-icon></v-list-item-action>
-          <v-list-item-title>{{ docLink.title }}</v-list-item-title>
-        </v-list-item>
-      </v-list-group>
-    </v-list>
-
-    <v-list
-      v-if="user && user.adminMode"
-      nav
-      class="px-1 pt-0 pb-1"
-      dense
-    >
-      <v-divider class="pb-1" />
-      <v-list-group
-        :style="`background-color:${$vuetify.theme.themes.light.admin}`"
-        color="white"
-        :value="$route.path.startsWith('/admin') || $route.path.startsWith('/remote-services')"
-      >
-        <template #activator>
-          <v-list-item-action><v-icon>mdi-shield-star</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'admin'" />
-        </template>
-
-        <v-list-item
-          :nuxt="true"
-          :to="`/admin/info`"
-        >
-          <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'serviceInfo'" />
-        </v-list-item>
-
-        <v-list-item
-          :nuxt="true"
-          :to="`/remote-services`"
-          :class="routePrefix === 'remote' ? 'v-list-item--active' : ''"
-        >
-          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'services'" />
-        </v-list-item>
-
-        <v-list-item
-          :nuxt="true"
-          :to="`/admin/owners`"
-        >
-          <v-list-item-action><v-icon>mdi-briefcase</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'owners'" />
-        </v-list-item>
-
-        <v-list-item
-          :nuxt="true"
-          :to="`/admin/errors`"
-        >
-          <v-list-item-action><v-icon>mdi-alert</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'errors'" />
-        </v-list-item>
-
-        <v-list-item
-          v-if="!env.disableApplications"
-          :nuxt="true"
-          :to="`/admin/base-apps`"
-        >
-          <v-list-item-action><v-icon>mdi-apps</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'baseApplications'" />
-        </v-list-item>
-
-        <v-list-item
-          :nuxt="true"
-          :href="env.directoryUrl + '/admin/users'"
-        >
-          <v-list-item-action><v-icon>mdi-account-supervisor</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'accountsManagement'" />
-        </v-list-item>
-
-        <v-list-item
-          v-if="env.catalogsIntegration"
-          :nuxt="true"
-          :to="`/admin/catalogs-plugins`"
-        >
-          <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>{{ $t('catalogsPlugins') }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-
-        <template v-if="env.extraAdminNavigationItems">
-          <v-list-item
-            v-for="extra in env.extraAdminNavigationItems.filter(extra => siteInfo.main || !extra.mainOnly)"
-            :key="extra.id"
-            :nuxt="!!extra.iframe"
-            :to="extra.iframe && `/admin-extra/${extra.id}`"
-            :href="extra.href"
-          >
-            <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
-            <v-list-item-title>
-              {{ typeof extra.title === 'string' ? extra.title : (extra.title[$i18n.locale] || extra.title[$i18n.defaultLocale]) }}
-            </v-list-item-title>
-          </v-list-item>
-        </template>
-      </v-list-group>
     </v-list>
 
     <v-footer
@@ -347,7 +85,6 @@
 
 <i18n lang="yaml">
 fr:
-  admin: Administration
   services: Services
   serviceInfo: Informations du service
   owners: Propriétaires
@@ -356,7 +93,7 @@ fr:
   applications: Applications
   applicationsSubtitle: Visualisations, formulaires ...
   accountsManagement: Gestion des comptes
-  dashboard: Accueil
+  home: Accueil
   datasets: Jeux de données
   vizs: Applications
   org: Gestion de l'organisation
@@ -370,8 +107,14 @@ fr:
   doc: Documentation
   apiDoc: Utiliser l'API
   userDoc: Manuel utilisateur
+  group:
+    content: Contenus
+    management: Gestion
+    connect: Connecteurs
+    monitor: Suivi
+    support: Support
+    admin: Administration
 en:
-  admin: Administration
   services: Services
   serviceInfo: Service informations
   owners: Owners
@@ -380,7 +123,7 @@ en:
   applications: Applications
   applicationsSubtitle: Visualizations, forms ...
   accountsManagement: Gestion des comptes
-  dashboard: Dashboard
+  home: Home
   datasets: Datasets
   vizs: Applications
   org: Manage organization
@@ -394,6 +137,13 @@ en:
   doc: Documentation
   apiDoc: Use the API
   userDoc: User manual
+  group:
+    content: Contents
+    management: Management
+    connect: Connectors
+    monitor: Monitoring
+    support: Support
+    admin: Administration
 </i18n>
 
 <script>
@@ -417,6 +167,121 @@ export default {
         if (extra.mainOnly && !this.siteInfo.main) return false
         return !extra.can || (extra.can === 'contrib' && this.canContrib) || (extra.can === 'admin' && this.canAdmin) || (extra.can === 'contribDep' && this.canContribDep) || (extra.can === 'adminDep' && this.canAdminDep)
       })
+    },
+    navigation () {
+      const items = [{ to: '/', icon: 'mdi-home', title: this.$t('home') }]
+
+      const contentGroup = { group: 'content', icon: '', title: this.$t('group.content'), items: [] }
+      contentGroup.items.push({ to: '/datasets', icon: 'mdi-database', title: this.$t('datasets'), class: this.routePrefix === 'dataset' ? 'v-list-item--active' : '' })
+      if (!this.env.disableApplications) {
+        contentGroup.items.push({ to: '/applications', icon: 'mdi-image-multiple', title: this.$t('applications'), subtitle: this.$t('applicationsSubtitle'), class: this.routePrefix === 'application' ? 'v-list-item--active' : '' })
+      }
+      if (this.canAdminDep && this.env.portalsIntegration) {
+        contentGroup.items.push({ to: '/pages', icon: 'mdi-text-box-edit-outline', title: 'Pages de portails (bêta)', subtitle: 'Nouvelle version' })
+        contentGroup.items.push({ to: '/reuses', icon: 'mdi-text-box-edit-outline', title: 'Réutilisations (bêta)', subtitle: 'Nouvelle version' })
+      }
+      items.push(contentGroup)
+
+      const managementGroup = { group: 'management', icon: '', title: this.$t('group.management'), items: [] }
+      if (this.activeAccount?.type === 'organization' && this.user.organization.role === 'admin' && !this.user.organization.department) {
+        managementGroup.items.push({ to: '/organization', icon: 'mdi-account-group', title: this.$t('org'), subtitle: this.activeAccount.name })
+      }
+      if (this.activeAccount?.type === 'organization' && this.user.organization.role === 'admin' && this.user.organization.department) {
+        managementGroup.items.push({ to: '/department', icon: 'mdi-account-group', title: this.$t('dep'), subtitle: `${this.activeAccount.name} / ${this.user.organization.departmentName || this.user.organization.department}` })
+      }
+      if (this.canAdminDep) {
+        managementGroup.items.push({ to: '/settings', icon: 'mdi-cog', title: this.$t('params'), subtitle: this.activeAccount.department ? this.$t('paramsSub') : '' })
+      }
+      if (this.canAdminDep && this.env.portalsIntegration) {
+        managementGroup.items.push({ to: '/portals', icon: 'mdi-clipboard-text-clock', title: 'Portails (bêta)', subtitle: 'Nouvelle version' })
+      }
+
+      items.push(managementGroup)
+
+      const connectGroup = { group: 'connect', icon: '', title: this.$t('group.connect'), items: [] }
+      if (this.canAdminDep && this.env.catalogsIntegration) {
+        connectGroup.items.push({ to: '/catalogs', icon: 'mdi-transit-connection', title: this.$t('catalogs') })
+      }
+      items.push(connectGroup)
+
+      const monitorGroup = { group: 'monitor', icon: '', title: this.$t('group.monitor'), items: [] }
+      if (this.canAdmin && this.env.subscriptionUrl) {
+        monitorGroup.items.push({ to: '/subscription', icon: 'mdi-card-account-details', title: this.$t('subscription') })
+      }
+      if (this.canContrib) {
+        monitorGroup.items.push({ to: '/storage', icon: 'mdi-harddisk', title: this.$t('storage') })
+      }
+      if (this.canAdmin && this.env.eventsIntegration) {
+        monitorGroup.items.push({ to: '/events', icon: 'mdi-clipboard-text-clock', title: 'Traçabilité (bêta)' })
+      }
+      items.push(monitorGroup)
+
+      const supportGroup = { group: 'support', icon: '', title: this.$t('group.support'), items: [] }
+      if (this.canContribDep) {
+        supportGroup.items.push({ to: '/api-doc', icon: 'mdi-cloud', title: this.$t('apiDoc') })
+      }
+      for (const extraDocLink of this.env.extraDocLinks) {
+        supportGroup.items.push(extraDocLink)
+      }
+      items.push(supportGroup)
+
+      if (this.user) {
+        for (const extraNavItem of this.extraNavigationItems) {
+          if (extraNavItem.iframe) {
+            extraNavItem.to = '/extra/' + extraNavItem.id
+          }
+          if (typeof extraNavItem.title === 'object') {
+            extraNavItem.title = extraNavItem.title[this.$i18n.locale] || extraNavItem.title[this.$i18n.defaultLocale]
+          }
+          if (extraNavItem.group) {
+            const group = items.find(item => item.group === extraNavItem.group)
+            if (group) {
+              group.items.push(extraNavItem)
+              continue
+            }
+          }
+          items.push(extraNavItem)
+        }
+      }
+
+      if (this.user.adminMode) {
+        const adminGroup = { group: 'admin', icon: 'mdi-shield-star', title: this.$t('group.admin'), items: [], style: `background-color:${this.$vuetify.theme.themes.light.admin}` }
+        adminGroup.items.push({ to: '/admin/info', icon: 'mdi-information', title: this.$t('serviceInfo') })
+        adminGroup.items.push({ to: '/remote-services', icon: 'mdi-cloud', title: this.$t('services') })
+        adminGroup.items.push({ to: '/admin/owners', icon: 'mdi-briefcase', title: this.$t('owners') })
+        adminGroup.items.push({ to: '/admin/errors', icon: 'mdi-alert', title: this.$t('errors') })
+        if (!this.env.disableApplications) {
+          adminGroup.items.push({ to: '/admin/base-apps', icon: 'mdi-apps', title: this.$t('baseApplications') })
+        }
+        adminGroup.items.push({ href: this.env.directoryUrl + '/admin/users', icon: 'mdi-account-supervisor', title: this.$t('accountsManagement') })
+        if (this.env.catalogsIntegration) {
+          adminGroup.items.push({ to: '/admin/catalogs-plugins', icon: 'mdi-transit-connection', title: this.$t('catalogsPlugins') })
+        }
+        for (const extraNavItem of this.env.extraAdminNavigationItems) {
+          if (extraNavItem.iframe) {
+            extraNavItem.to = '/admin-extra/' + extraNavItem.id
+          }
+          if (typeof extraNavItem.title === 'object') {
+            extraNavItem.title = extraNavItem.title[this.$i18n.locale] || extraNavItem.title[this.$i18n.defaultLocale]
+          }
+          adminGroup.items.push(extraNavItem)
+        }
+        items.push(adminGroup)
+      }
+
+      return items
+    },
+    activeGroup () {
+      for (const item of this.navigation) {
+        if (item.group) {
+          for (const child of item.items) {
+            if (child.to && this.$route.path.startsWith(child.to)) {
+              return item.group
+            }
+          }
+        }
+      }
+      return 'content'
     }
   }
 }

@@ -14,6 +14,8 @@ module.exports = {
   privateCatalogsUrl: null,
   privateEventsUrl: null,
   privatePortalsManagerUrl: null,
+  privateProcessingsUrl: null,
+  privateMetricsUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
   mongo: {
