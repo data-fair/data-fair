@@ -254,7 +254,7 @@ export default {
     getPublicationSitesFacets (publicationSitesFacets) {
       if (!this.activeAccountPublicationSitesById) return []
       return publicationSitesFacets.filter(item => {
-        if (!item.value) return false
+        if (!item.value) return true
         if (!this.activeAccountPublicationSitesById[item.value]) {
           console.log('publication in facet not matched in settings', item.value, this.activeAccountPublicationSitesById)
           return false
