@@ -137,6 +137,8 @@ const nuxtConfig = {
     catalogsIntegration: config.catalogsIntegration,
     eventsIntegration: config.eventsIntegration,
     portalsIntegration: config.portalsIntegration,
+    processingsIntegration: config.processingsIntegration,
+    metricsIntegration: config.metricsIntegration,
     subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,
