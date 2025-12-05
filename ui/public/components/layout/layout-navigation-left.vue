@@ -257,6 +257,7 @@ export default {
               group.items.push(extraNavItem)
               continue
             }
+            console.warn('unknown navigation item group', extraNavItem.group)
             delete extraNavItem.group
           }
           items.push(extraNavItem)
