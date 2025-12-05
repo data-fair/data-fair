@@ -8,68 +8,69 @@
     clipped
     color="primary"
   >
-    <!--<v-list class="pa-0">
-      <brand-title />
-      <v-divider />
-    </v-list>-->
-    <v-list>
+    <div style="height:8px;" />
+    <v-list v-if="missingSubscription && canAdmin && env.subscriptionUrl">
       <v-list-item
-        v-if="missingSubscription && canAdmin && env.subscriptionUrl"
         :nuxt="true"
         :to="`/subscription`"
       >
         <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
         <v-list-item-title v-t="'subscription'" />
       </v-list-item>
-
-      <template v-if="!missingSubscription">
-        <template v-for="(item, i) of navigation">
-          <template v-if="item.group">
-            <template v-if="item.items.length">
-              <v-divider :key="item.group + '-divider'" />
-              <v-list-group
-                :key="item.group"
-                color="white"
-                :style="item.style"
-                :value="activeGroup === item.group"
-              >
-                <template #activator>
-                  <v-list-item-title>{{ item.title }}</v-list-item-title>
-                </template>
-
-                <v-list-item
-                  v-for="(child,j) of item.items"
-                  :key="j"
-                  :nuxt="!!child.to"
-                  :to="child.to"
-                  :href="child.href"
-                  :class="(child.class || '')"
-                >
-                  <v-list-item-action><v-icon>{{ child.icon }}</v-icon></v-list-item-action>
-                  <v-list-item-content>
-                    <v-list-item-title>{{ child.title }}</v-list-item-title>
-                    <v-list-item-subtitle v-if="child.subtitle">{{ child.subtitle }}</v-list-item-subtitle>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list-group>
-            </template>
-          </template>
-          <v-list-item
-            v-else
-            :key="i"
-            :nuxt="!!item.to"
-            :to="item.to"
-            :href="item.href"
-          >
-            <v-list-item-action><v-icon>{{ item.icon }}</v-icon></v-list-item-action>
-            <v-list-item-content>
-              <v-list-item-title>{{ item.title }}</v-list-item-title>
-              <v-list-item-subtitle v-if="item.subtitle">{{ item.subtitle }}</v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
-        </template>
-      </template>
     </v-list>
+
+    <template v-if="!missingSubscription">
+      <v-list
+        v-for="(item, i) of navigation"
+        :key="i"
+        class="py-0"
+      >
+        <template v-if="item.group && item.items.length">
+          <v-divider />
+          <v-list-group
+            :key="item.group"
+            :value="openedGroups[item.group]"
+            color="white"
+            :style="item.style"
+            append-icon=" "
+          >
+            <template #activator>
+              <v-subheader>{{ item.title }}</v-subheader>
+            </template>
+
+            <v-list-item
+              v-for="(child,j) of item.items"
+              :key="j"
+              :nuxt="!!child.to"
+              :to="child.to"
+              :href="child.href"
+              :class="(child.class || '')"
+              :target="child.href ? '_blank' : ''"
+            >
+              <v-list-item-action><v-icon>{{ child.icon }}</v-icon></v-list-item-action>
+              <v-list-item-content>
+                <v-list-item-title>{{ child.title }}</v-list-item-title>
+                <v-list-item-subtitle v-if="child.subtitle">{{ child.subtitle }}</v-list-item-subtitle>
+              </v-list-item-content>
+            </v-list-item>
+            <div style="height:8px;" />
+          </v-list-group>
+        </template>
+
+        <v-list-item
+          v-if="!item.group"
+          :nuxt="!!item.to"
+          :to="item.to"
+          :href="item.href"
+        >
+          <v-list-item-action><v-icon>{{ item.icon }}</v-icon></v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>{{ item.title }}</v-list-item-title>
+            <v-list-item-subtitle v-if="item.subtitle">{{ item.subtitle }}</v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+    </template>
 
     <v-footer
       absolute
@@ -149,6 +150,18 @@ en:
 import { mapState, mapGetters } from 'vuex'
 export default {
   props: ['navContext'],
+  data () {
+    return {
+      openedGroups: {
+        content: true,
+        management: false,
+        connect: false,
+        monitor: false,
+        support: false,
+        admin: false
+      }
+    }
+  },
   computed: {
     ...mapState(['env', 'siteInfo']),
     ...mapState('session', ['user']),
@@ -249,7 +262,7 @@ export default {
         }
       }
 
-      if (this.user.adminMode) {
+      if (this.user?.adminMode) {
         const adminGroup = { group: 'admin', icon: 'mdi-shield-star', title: this.$t('group.admin'), items: [], style: `background-color:${this.$vuetify.theme.themes.light.admin}` }
         adminGroup.items.push({ to: '/admin/info', icon: 'mdi-information', title: this.$t('serviceInfo') })
         adminGroup.items.push({ to: '/remote-services', icon: 'mdi-cloud', title: this.$t('services') })
@@ -291,11 +304,22 @@ export default {
       }
       return 'content'
     }
+  },
+  watch: {
+    activeGroup: {
+      handler () {
+        this.openedGroups[this.activeGroup] = true
+      },
+      immediate: true
+    }
   }
 }
 </script>
 
 <style>
+.navigation-left.v-navigation-drawer {
+  padding-bottom: 32px;
+}
 .navigation-left .v-list-item__action {
   margin-right: 16px !important;
 }
