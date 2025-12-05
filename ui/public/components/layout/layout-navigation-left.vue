@@ -257,6 +257,7 @@ export default {
               group.items.push(extraNavItem)
               continue
             }
+            delete extraNavItem.group
           }
           items.push(extraNavItem)
         }

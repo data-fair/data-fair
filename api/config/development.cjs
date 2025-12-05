@@ -57,7 +57,7 @@ module.exports = {
       iframe: `http://${host}:5600/data-fair/_dev/extra`,
       basePath: '/data-fair',
       icon: 'mdi-link',
-      group: 'support'
+      group: 'help'
     }
   ],
   extraAdminNavigationItems: [
