@@ -113,7 +113,7 @@ fr:
     management: Gestion
     connect: Connecteurs
     monitor: Suivi
-    support: Support
+    help: Aide
     admin: Administration
 en:
   services: Services
@@ -142,7 +142,7 @@ en:
     management: Management
     connect: Connectors
     monitor: Monitoring
-    support: Support
+    help: Help
     admin: Administration
 </i18n>
 
@@ -157,7 +157,7 @@ export default {
         management: false,
         connect: false,
         monitor: false,
-        support: false,
+        help: false,
         admin: false
       }
     }
@@ -234,14 +234,14 @@ export default {
       }
       items.push(monitorGroup)
 
-      const supportGroup = { group: 'support', icon: '', title: this.$t('group.support'), items: [] }
+      const helpGroup = { group: 'help', icon: '', title: this.$t('group.help'), items: [] }
       if (this.canContribDep) {
-        supportGroup.items.push({ to: '/api-doc', icon: 'mdi-cloud', title: this.$t('apiDoc') })
+        helpGroup.items.push({ to: '/api-doc', icon: 'mdi-cloud', title: this.$t('apiDoc') })
       }
       for (const extraDocLink of this.env.extraDocLinks) {
-        supportGroup.items.push(extraDocLink)
+        helpGroup.items.push(extraDocLink)
       }
-      items.push(supportGroup)
+      items.push(helpGroup)
 
       if (this.user) {
         for (const extraNavItem of this.extraNavigationItems) {
