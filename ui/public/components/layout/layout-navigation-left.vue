@@ -24,6 +24,8 @@
         v-for="(item, i) of navigation"
         :key="i"
         class="py-0"
+        style="width:100%"
+        :dense="!!item.group"
       >
         <template v-if="item.group && item.items.length">
           <v-divider />
@@ -32,10 +34,11 @@
             :value="openedGroups[item.group]"
             color="white"
             :style="item.style"
-            append-icon=" "
           >
             <template #activator>
-              <v-subheader>{{ item.title }}</v-subheader>
+              <v-list-item-title>
+                <v-subheader>{{ item.title }}</v-subheader>
+              </v-list-item-title>
             </template>
 
             <v-list-item
