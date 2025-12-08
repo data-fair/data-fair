@@ -6,9 +6,6 @@ export default async ({ store, app, env, $vuetify, route, i18n, error }) => {
   const directoryUrl = window.location.origin + '/simple-directory'
   const eventsUrl = window.location.origin + '/events'
 
-  env.extraNavigationItems = env.extraNavigationItems ?? []
-  env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
-
   store.commit('setAny', {
     env: {
       ...env,

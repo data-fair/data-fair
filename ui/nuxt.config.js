@@ -15,6 +15,23 @@ config.basePath = publicUrl.pathname
 config.catalogsIntegration = !!config.privateCatalogsUrl
 config.eventsIntegration = !!config.privateEventsUrl
 config.portalsIntegration = !!config.privatePortalsManagerUrl
+config.processingsIntegration = !!config.privateProcessingsUrl
+// manage deprecated extraNavigationItems
+// we prefer explicit modules integration instead of these generic links
+if (!config.processingsIntegration && config.extraNavigationItems.some(e => e.iframe?.startsWith('/processings/'))) {
+  console.warn('integrating /processings through extraNavigationItems is deprecated, use PRIVATE_PROCESSINGS_URL')
+  config.processingsIntegration = true
+  config.extraNavigationItems = config.extraNavigationItems.filter(e => !e.iframe?.startsWith('/processings/'))
+  config.extraAdminNavigationItems = config.extraAdminNavigationItems.filter(e => !e.iframe?.startsWith('/processings/'))
+}
+config.metricsIntegration = !!config.privateMetricsUrl
+if (!config.metricsIntegration && config.extraNavigationItems.some(e => e.iframe?.startsWith('/metrics/'))) {
+  console.warn('integrating /metrics through extraNavigationItems is deprecated, use PRIVATE_METRICS_URL')
+  config.metricsIntegration = true
+  config.extraNavigationItems = config.extraNavigationItems.filter(e => !e.iframe?.startsWith('/metrics/'))
+}
+
+console.log('completed config for UI', config)
 
 const isBuilding = process.argv[2] === 'build'
 
@@ -120,6 +137,8 @@ const nuxtConfig = {
     catalogsIntegration: config.catalogsIntegration,
     eventsIntegration: config.eventsIntegration,
     portalsIntegration: config.portalsIntegration,
+    processingsIntegration: config.processingsIntegration,
+    metricsIntegration: config.metricsIntegration,
     subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,
