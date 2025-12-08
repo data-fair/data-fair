@@ -155,6 +155,7 @@ export const sort = (sortStr) => {
       }
     } else {
       sort[toks[0]] = Number(toks[1])
+      if (sort[toks[0]] !== 1 && sort[toks[0]] !== -1) throw httpError(400, `bad sort order "${s}"`)
     }
   }
   return sort
