@@ -135,7 +135,9 @@ export const switchAlias = async (dataset, tempId) => {
   const actions = []
   // removing with index=* seems to create strange behaviors when other indices have some operations
   if (existingAlias) {
-    actions.push({ remove: { alias: name, index: Object.keys(existingAlias)[0] } })
+    for (const index of Object.keys(existingAlias)) {
+      actions.push({ remove: { alias: name, index } })
+    }
   }
   actions.push({ add: { alias: name, index: tempId } })
 
