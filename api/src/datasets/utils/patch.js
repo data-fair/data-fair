@@ -49,6 +49,7 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
   const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
   if (datasetFile) {
+    if (!dataset.file) throw httpError(400, 'this dataset is not file based')
     patch.loaded = {
       dataset: {
         name: datasetFile.originalname,

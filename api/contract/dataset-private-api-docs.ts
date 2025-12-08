@@ -90,7 +90,21 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         }
       }
     },
-    post: {
+    delete: {
+      summary: 'Supprimer le jeu de données',
+      operationId: 'delete',
+      'x-permissionClass': 'admin',
+      tags: ['Métadonnées'],
+      responses: {
+        204: {
+          description: 'Suppression effectuée.'
+        }
+      }
+    }
+  })
+
+  if (dataset.file) {
+    api.paths['/'].post = {
       summary: 'Mettre à jour les données',
       description: 'Mettre à jour les données du jeu de données.',
       operationId: 'writeData',
@@ -115,19 +129,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           }
         }
       }
-    },
-    delete: {
-      summary: 'Supprimer le jeu de données',
-      operationId: 'delete',
-      'x-permissionClass': 'admin',
-      tags: ['Métadonnées'],
-      responses: {
-        204: {
-          description: 'Suppression effectuée.'
-        }
-      }
     }
-  })
+  }
 
   api.paths['/metadata-attachments'] = {
     post: {

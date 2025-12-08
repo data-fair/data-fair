@@ -1131,6 +1131,15 @@ line3;test1;test1;oui;2015-03-18T00:58:59
 line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/csv' }, params: { sep: ';' } })
     dataset = await workers.hook('finalize/restcsv')
     assert.equal(dataset.count, 4)
+
+    // type casting number -> string
+    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_action,_id,attr1,attr2
+patch,line1,33`, { headers: { 'content-type': 'text/csv' } })
+    dataset = await workers.hook('finalize/restcsv')
+    assert.equal(dataset.count, 4)
+    lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '-_i' } })).data.results
+    assert.equal(lines[0]._id, 'line1')
+    assert.equal(lines[0].attr1, '33')
   })
 
   it('Send bulk actions as a CSV body with automatic adjustment of keys', async function () {

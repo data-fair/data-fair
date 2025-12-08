@@ -840,4 +840,23 @@ describe('virtual datasets', function () {
     res = await ax.get(res.data.results[0]._thumbnail)
     assert.equal(res.status, 200)
   })
+
+  it('fails to upload file on virtual data', async function () {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'child',
+      schema: [{ key: 'attr1', type: 'integer' },]
+    })
+    const child = res.data
+    res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [child.id] },
+      title: 'a virtual dataset'
+    })
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
+    const form = new FormData()
+    form.append('file', 'test', 'dataset.csv')
+    await assert.rejects(ax.post('/api/v1/datasets/' + virtualDataset.id, form, { headers: testUtils.formHeaders(form) }), err => err.status === 400)
+  })
 })
