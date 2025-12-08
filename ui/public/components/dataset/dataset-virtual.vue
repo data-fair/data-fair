@@ -196,10 +196,21 @@
             <v-list-item-content>
               <v-list-item-title>{{ filterLabel(filter) }}</v-list-item-title>
               <v-list-item-subtitle>
+                <v-select
+                  :value="filter.operator ?? 'in'"
+                  :label="$t('filterType')"
+                  :items="[{value: 'in', text: $t('filterTypes.in')}, {value: 'nin', text: $t('filterTypes.nin')}]"
+                  outlined
+                  hide-details
+                  dense
+                  class="mt-4"
+                  style="max-width: 300px"
+                  @input="v => $set(filter, 'operator', v)"
+                />
                 <v-combobox
                   v-model="filter.values"
                   :items="valuesByKey[filter.key]"
-                  :label="$t('restrictValues')"
+                  :label="$t('filterValues')"
                   outlined
                   chips
                   clearable
@@ -207,7 +218,7 @@
                   small-chips
                   hide-details
                   dense
-                  class="mt-1"
+                  class="mt-4"
                 >
                   <template #selection="data">
                     <v-chip
@@ -294,7 +305,11 @@ fr:
   noColumn: Aucune colonne sélectionnée.
   addColumn: ajouter une colonne
   reorder: Réordonner
-  restrictValues: Restreindre à des valeurs
+  filterType: Type de filtre
+  filterValues: Valeurs
+  filterTypes:
+    in: Restreindre à des valeurs
+    nin: Exclure des valeurs
   deleteTitle: Suppression du jeu de données enfant
   deleteWarning: Attention ! Supprimer ce jeu de données de la liste peut modifier le schéma du jeu de données virtuel et les applications qui l'utilisent.
   deleteConfirm: Voulez vous vraiment supprimer le jeu de données "{name}" de la liste ?
@@ -314,7 +329,11 @@ en:
   noColumn: No column inherited.
   addColumn: add a column
   reorder: Reorder
-  restrictValues: Restrict to some values
+  filterType: Filter type
+  filterValues: Values
+  filterTypes:
+    in: Restrict to some values
+    nin: Exclude some values
   deleteTitle: Delete child dataset
   deleteWarning: Warning ! Delete this dataset from the list can alter the schema of the virtual dataset and the applications that use it.
   deleteConfirm: Do you really want to delete the dataset {name} from the list ?

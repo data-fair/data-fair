@@ -364,8 +364,13 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (dataset.virtual && dataset.virtual.filters) {
     for (const f of dataset.virtual.filters) {
       if (f.values && f.values.length) {
-        if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-        else filter.push({ terms: { [f.key]: f.values } })
+        if (f.operator === 'nin') {
+          if (f.values.length === 1) filter.push({ bool: { must_not: { term: { [f.key]: f.values[0] } } } })
+          else filter.push({ bool: { must_not: { terms: { [f.key]: f.values } } } })
+        } else {
+          if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
+          else filter.push({ terms: { [f.key]: f.values } })
+        }
       }
     }
   }

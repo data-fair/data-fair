@@ -703,6 +703,11 @@ const datasetProperties = {
               type: 'string',
               description: 'Key of the field in the schema'
             },
+            operator: {
+              type: 'string',
+              enum: ['in', 'nin'],
+              default: 'in'
+            },
             values: {
               type: 'array',
               items: {
