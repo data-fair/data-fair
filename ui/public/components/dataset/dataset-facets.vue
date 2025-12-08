@@ -98,7 +98,7 @@
         multiple
         :label="$t('publicationSites')"
         :items="publicationSitesFacets"
-        :item-value="item => item.value"
+        :item-value="item => item.value === null ? 'null' : item.value"
         :item-text="item => publicationSiteText(item)"
         outlined
         dense
