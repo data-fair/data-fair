@@ -17,7 +17,10 @@ const createWorkers = () => {
       idleTimeout: 60 * 1000,
       maxThreads: 1,
       concurrentTasksPerWorker: config.worker.baseConcurrency * 4,
-      closeTimeout: config.worker.closeTimeout
+      closeTimeout: config.worker.closeTimeout,
+      resourceLimits: {
+        maxOldGenerationSizeMb: 512
+      }
     }),
     // mostly IO bound worker for anything that is mostly about moving files, downloading files, etc
     filesManager: new Piscina({
@@ -26,7 +29,10 @@ const createWorkers = () => {
       idleTimeout: 60 * 1000,
       maxThreads: 1,
       concurrentTasksPerWorker: config.worker.baseConcurrency * 2,
-      closeTimeout: config.worker.closeTimeout
+      closeTimeout: config.worker.closeTimeout,
+      resourceLimits: {
+        maxOldGenerationSizeMb: 512
+      }
     }),
     // files analysis and normalization can be quite memory and cpu hungry, better to use thread segregation and a small concurrency
     filesProcessor: new Piscina({
@@ -35,7 +41,10 @@ const createWorkers = () => {
       idleTimeout: 60 * 1000,
       maxThreads: config.worker.baseConcurrency,
       concurrentTasksPerWorker: 1,
-      closeTimeout: config.worker.closeTimeout
+      closeTimeout: config.worker.closeTimeout,
+      resourceLimits: {
+        maxOldGenerationSizeMb: 1024
+      }
     }),
     // a worker that works on large batches of data, mostly IO and sometimes CPU intensive but streamed so memory should be ok
     batchProcessor: new Piscina({
@@ -44,7 +53,10 @@ const createWorkers = () => {
       idleTimeout: 60 * 1000,
       maxThreads: 1,
       concurrentTasksPerWorker: config.worker.baseConcurrency * 2,
-      closeTimeout: config.worker.closeTimeout
+      closeTimeout: config.worker.closeTimeout,
+      resourceLimits: {
+        maxOldGenerationSizeMb: 512
+      }
     })
   }
   if (process.env.NODE_ENV === 'test') {
@@ -61,6 +73,11 @@ const createWorkers = () => {
 
 export const workers = createWorkers()
 piscinaGauge(workers)
+
+console.log(`
+Workers are configured with a base concurrency of ${config.worker.baseConcurrency}.
+You should allocate about ${2 * config.worker.baseConcurrency}GB of memory.
+`)
 
 type PendingTask = {
   type: ResourceType,
