@@ -487,11 +487,10 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)
     for await (const items of iter) {
       for (const item of items) {
-        worksheet.addRow(item)
+        worksheet.addRow(item).commit()
       }
-      // Commit all pending changes
-      worksheet.commit()
     }
+    worksheet.commit()
     await workbookWriter.commit()
 
     /* let i = 0
