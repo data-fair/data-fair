@@ -61,4 +61,28 @@ describe('json files support', function () {
 "val2",2
 `)
   })
+
+  it('Fails when root is not an array', async function () {
+    const form = new FormData()
+    form.append('file', JSON.stringify({ col1: 'val1' }), 'example.json')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    const dataset = res.data
+
+    // ES indexation and finalization
+    await assert.rejects(workers.hook('finalize/' + dataset.id), (err) => err.message.includes('expect an array'))
+  })
+
+  it('Fails when json is invalid', async function () {
+    const form = new FormData()
+    form.append('file', "{ col1: 'val1' }", 'example.json')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    const dataset = res.data
+
+    // ES indexation and finalization
+    await assert.rejects(workers.hook('finalize/' + dataset.id), (err) => err.message.includes('Unexpected'))
+  })
 })
