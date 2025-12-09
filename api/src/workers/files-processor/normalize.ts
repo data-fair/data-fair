@@ -18,8 +18,23 @@ import config from '#config'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetInternal, FileDataset } from '#types'
+import mimeTypeStream from 'mime-type-stream'
 
 export const eventsPrefix = 'normalize'
+
+const csvStringifyOptions = {
+  bom: true,
+  header: true,
+  // quoted_string to prevent bugs with strings containing \r or other edge cases
+  quoted_string: true,
+  cast: {
+    boolean: (value) => {
+      if (value) return '1'
+      if (value === false) return '0'
+      return ''
+    }
+  }
+}
 
 export default async function (dataset: FileDataset) {
   const debug = debugLib(`worker:file-normalizer:${dataset.id}`)
@@ -111,7 +126,23 @@ export default async function (dataset: FileDataset) {
       }
     }
 
-    if (datasetUtils.calendarTypes.has(dataset.originalFile.mimetype)) {
+    if (datasetUtils.jsonTypes.has(dataset.originalFile.mimetype)) {
+      const { stringify: csvStrStream } = await import('csv-stringify')
+      const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
+      await pump(
+        fs.createReadStream(originalFilePath),
+        mimeTypeStream(dataset.originalFile.mimetype).parser(),
+        csvStrStream(csvStringifyOptions),
+        fs.createWriteStream(filePath)
+      )
+      dataset.file = {
+        name: baseName + '.csv',
+        size: (await fs.stat(filePath)).size,
+        mimetype: 'text/csv',
+        encoding: 'utf-8',
+        schema: []
+      }
+    } else if (datasetUtils.calendarTypes.has(dataset.originalFile.mimetype)) {
       // TODO : store these file size limits in config file ?
       if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
         throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
@@ -123,7 +154,7 @@ export default async function (dataset: FileDataset) {
       const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
       await pump(
         eventsStream,
-        csvStrStream({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
+        csvStrStream({ ...csvStringifyOptions, columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'] }),
         fs.createWriteStream(filePath)
       )
       dataset.file = {
