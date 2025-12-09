@@ -2,6 +2,7 @@
   "name": "@data-fair/data-fair-shared",
   "type": "module",
   "dependencies": {
+    "@data-fair/lib-utils": "^1.8.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "ajv-i18n": "^4.2.0",

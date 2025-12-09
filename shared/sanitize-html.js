@@ -1,11 +1,6 @@
 import sanitizeHtml from 'sanitize-html'
+import { getSanitizeOpts } from '@data-fair/lib-utils/sanitize-html.js'
 
-const opts = {
-  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
-  allowedAttributes: {
-    ...sanitizeHtml.defaults.allowedAttributes,
-    img: ['title', 'alt', 'src', 'srcset', 'height', 'width', 'sizes', 'loading']
-  }
-}
+const sanitizeOpts = getSanitizeOpts(sanitizeHtml.defaults)
 
-export default (html) => sanitizeHtml(html, opts)
+export default (html) => sanitizeHtml(html, sanitizeOpts)
