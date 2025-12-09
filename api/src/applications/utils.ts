@@ -26,7 +26,7 @@ export const clean = (application: Application, publicUrl: string, publicationSi
     if (!select.includes('-visibility')) application.visibility = visibilityUtils.visibility(application)
     if (!query.select || select.includes('description')) {
       application.description = application.description || ''
-      application.description = prepareMarkdownContent(application.description, query.html === 'true', query.truncate, 'application:' + application.id, application.updatedAt)
+      application.description = prepareMarkdownContent(application.description, query.html, query.truncate, 'application:' + application.id, application.updatedAt)
     }
     if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl, publicationSite && publicationSite.applicationUrlTemplate)
   }

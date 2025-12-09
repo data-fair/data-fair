@@ -6,7 +6,6 @@ import queryParser from 'lucene-query-parser'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import truncateMiddle from 'truncate-middle'
 import truncateHTML from 'truncate-html'
-import { marked } from 'marked'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
@@ -17,6 +16,7 @@ import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
 import memoize from 'memoizee'
+import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.js'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -688,10 +688,11 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
   // format markdown and sanitize it for XSS prevention
   // either using x-display=markdown info or implicitly for description
   const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')?.key
-  if (query.html === 'true') {
+  if (query.html === 'true' || query.html === 'vuetify') {
     for (const field of dataset.schema) {
       if ((field['x-display'] === 'markdown' || field.key === descriptionField) && res[field.key]) {
-        res[field.key] = marked.parse(res[field.key]).trim()
+        if (query.html === 'vuetify') res[field.key] = vuetifyMarked.parse(res[field.key]).trim()
+        else res[field.key] = defaultMarked.parse(res[field.key]).trim()
         res[field.key] = sanitizeHtml(res[field.key])
       }
     }
