@@ -106,7 +106,7 @@ router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased(), (req,
   // TODO: allow based on privateAccess ?
   const sessionState = reqAdminMode(req)
 
-  res.status(200).send(clean(req.remoteService, sessionState, req.query.html === 'true'))
+  res.status(200).send(clean(req.remoteService, sessionState, req.query.html))
 })
 
 // PUT used to create or update as super admin

@@ -181,7 +181,7 @@ export const computeActions = (apiDoc) => {
   return actions
 }
 
-export const clean = (remoteService: RemoteService, sessionState: SessionState, html = false) => {
+export const clean = (remoteService: RemoteService, sessionState: SessionState, html) => {
   delete remoteService._id
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
   if (!sessionState.user || !sessionState.user.adminMode) delete remoteService.privateAccess

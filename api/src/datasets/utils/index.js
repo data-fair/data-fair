@@ -163,20 +163,20 @@ export const clean = (req, dataset, draft = false) => {
     if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
     if (!query.select || select.includes('description')) {
       dataset.description = dataset.description || ''
-      dataset.description = prepareMarkdownContent(dataset.description, query.html === 'true', query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
+      dataset.description = prepareMarkdownContent(dataset.description, query.html, query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
     }
 
     if (dataset.schema) {
       for (const field of dataset.schema) {
         field.description = field.description || ''
-        field.description = prepareMarkdownContent(field.description, query.html === 'true', null, `dataset:${dataset.id}:${field.key}`, dataset.updatedAt)
+        field.description = prepareMarkdownContent(field.description, query.html, null, `dataset:${dataset.id}:${field.key}`, dataset.updatedAt)
       }
     }
     if (dataset.attachments) {
       for (let i = 0; i < dataset.attachments.length; i++) {
         const attachment = dataset.attachments[i]
         attachment.description = attachment.description || ''
-        attachment.description = prepareMarkdownContent(attachment.description, query.html === 'true', null, `dataset:${dataset.id}:attachment-${i}`, dataset.updatedAt)
+        attachment.description = prepareMarkdownContent(attachment.description, query.html, null, `dataset:${dataset.id}:attachment-${i}`, dataset.updatedAt)
         if (attachment.type === 'file' || attachment.type === 'remoteFile') {
           attachment.url = `${publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`
         }

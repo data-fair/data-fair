@@ -43,7 +43,7 @@ export const findRemoteServices = async (locale: Locale, publicationSite: any, p
   let [results, count, facets] = await Promise.all(mongoQueries)
   // @ts-ignore
   for (const r of results) {
-    clean(r, sessionState, reqQuery.html === 'true')
+    clean(r, sessionState, reqQuery.html)
   }
   facets = findUtils.parseFacets(facets)
   // @ts-ignore
