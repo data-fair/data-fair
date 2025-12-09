@@ -8,14 +8,16 @@ import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as datasetUtils from './index.js'
 import { tmpDir, fsyncFile } from './files.ts'
 import promisifyMiddleware from '../../misc/utils/promisify-middleware.js'
-import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } from './types.js'
+import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes, jsonTypes } from './types.js'
 import debugLib from 'debug'
 
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
   fods: 'application/vnd.oasis.opendocument.spreadsheet',
-  gpkg: 'application/geopackage+sqlite3'
+  gpkg: 'application/geopackage+sqlite3',
+  jsonl: 'application/x-ndjson',
+  ndjson: 'application/x-ndjson',
 }
 const debug = debugLib('files')
 
@@ -53,7 +55,7 @@ const storage = multer.diskStorage({
   }
 })
 
-export const allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
+export const allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes, ...jsonTypes])
 
 const middleware = multer({
   limits: {

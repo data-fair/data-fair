@@ -23,6 +23,10 @@ export const csvTypes = [
   'text/plain', // txt often contains csv or tsv content
   'text/tab-separated-values' // tsv processed in the same way as csv
 ]
+export const jsonTypes = new Set([
+  'application/json',
+  'application/x-ndjson'
+])
 export const basicTypes = [
   ...csvTypes,
   'application/geo+json'

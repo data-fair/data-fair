@@ -32,6 +32,7 @@ fr:
   OpenDocument: Format de fichier ouvert pour les applications bureautique de type tableur
   XLSX: Format de fichier tableur Office Open XML
   XLS: Format de fichier tableur Excel
+  JSON: Données tabulaires au format JSON
   GeoJSON: Format de données géospatiales simples utilisant la norme JSON
   KMLKMZ: Format de données géospatiales basé sur le formalisme XML
   GPX: Format de fichier permettant l'échange de coordonnées GPS
@@ -44,6 +45,7 @@ en:
   OpenDocument: Open file format for spreadsheet type office applications
   XLSX: Spreadsheet file format Office Open XML
   XLS: Excel spreadsheet file format
+  JSON: Tabular data in JSON format
   GeoJSON: Format for simple geospatial data using the JSON standard
   KMLKMZ: Format for geospatial data using the XML standard
   GPX: File format for exchanging GPS coordinates
@@ -87,6 +89,9 @@ const formats = [
     //   description: `Format de fichier texte de données ASCII`,
     //   format: '.dif',
     //   formatsInArchive: ''
+  }, {
+    type: 'JSON',
+    format: '.json, .ndjson'
   }, {
     type: 'GeoJSON',
     format: '.geojson',
