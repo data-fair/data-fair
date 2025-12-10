@@ -214,6 +214,7 @@ export const run = async () => {
       '/settings/:type/:id/licenses',
       '/settings/:type/:id/topics',
       '/settings/:type/:id/webhooks',
+      '/settings/:type/:id/datasets-metadata',
     ].map(p => pathToRegexp.match(p))
     app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../embed-ui/dist'), uiConfig, {
       ignoreSitePath: true,
