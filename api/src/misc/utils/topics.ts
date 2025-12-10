@@ -7,6 +7,7 @@ export const updateTopics = async (owner: AccountKeys, oldTopics: Topics, newTop
   for (const topic of newTopics) {
     const filter = { 'owner.type': owner.type, 'owner.id': owner.id, 'topics.id': topic.id }
     const topicReference = JSON.parse(JSON.stringify(topic))
+    if (topicReference.icon) topicReference.icon = { name: topicReference.icon.name, svgPath: topicReference.icon.svgPath }
     const patch = { $set: { 'topics.$': topicReference } }
     await mongo.datasets.updateMany(filter, patch)
     await mongo.applications.updateMany(filter, patch)

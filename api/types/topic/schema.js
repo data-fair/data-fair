@@ -53,6 +53,12 @@ export default {
           itemKey: 'item.name'
         },
         cols: 6
+      },
+      required: ['name', 'svg', 'svgPath'],
+      properties: {
+        name: { type: 'string' },
+        svg: { type: 'string' },
+        svgPath: { type: 'string' }
       }
     }
   }

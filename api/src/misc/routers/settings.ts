@@ -289,7 +289,11 @@ router.get('/:type/:id/topics', isOwnerMember, async (req, res) => {
   assertSettingsRequest(req)
   const settings = mongo.settings
   const result = await settings.findOne(req.ownerFilter)
-  res.status(200).send(result && isMainSettings(result) && result.topics ? result.topics : [])
+  const topics = result && isMainSettings(result) && result.topics ? result.topics : []
+  for (const topic of topics) {
+    if (topic.icon) topic.icon = { name: topic.icon.name, svgPath: topic.icon.svgPath }
+  }
+  res.status(200).send(topics)
 })
 
 // Get licenses list as anyone
