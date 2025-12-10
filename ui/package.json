@@ -16,7 +16,7 @@
   "devDependencies": {
     "@data-fair/data-fair-api": "*",
     "@data-fair/frame": "^0.14.0",
-    "@data-fair/sd-vue": "^3.0.1",
+    "@data-fair/sd-vue": "^4.0.0",
     "@koumoul/v-iframe": "^1.4.1",
     "@koumoul/vjsf": "^2.23.3",
     "@koumoul/vue-multianalytics": "^1.11.4",

@@ -39,7 +39,7 @@ export default async ({ store, app, env, $vuetify, route, i18n, error }) => {
   }
   // no need to maintain keepalive / readcookie loops in every embedded view
   if (!route.path.startsWith('/embed/')) {
-    store.dispatch('session/loop', app.$cookies)
+    await store.dispatch('session/loop', app.$cookies)
   }
   if (app.$cookies.get('theme_dark') !== undefined) $vuetify.theme.dark = app.$cookies.get('theme_dark')
   if (route.query.dark) $vuetify.theme.dark = route.query.dark === 'true'
