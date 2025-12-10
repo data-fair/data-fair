@@ -46,13 +46,19 @@ export default {
       'x-itemsProp': 'results',
       layout: {
         getItems: {
-          url: 'https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}&select=name,svg&size=25',
+          url: 'https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}&select=name,svg,svgPath&size=25',
           itemsResults: 'data.results',
           itemTitle: 'item.name',
           itemIcon: 'item.svg',
           itemKey: 'item.name'
         },
         cols: 6
+      },
+      required: ['name', 'svg', 'svgPath'],
+      properties: {
+        name: { type: 'string' },
+        svg: { type: 'string' },
+        svgPath: { type: 'string' }
       }
     }
   }
