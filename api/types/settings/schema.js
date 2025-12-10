@@ -286,13 +286,11 @@ export default {
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
         spatial: {
           type: 'object',
-          'x-cols': 6,
           properties: {
             active: {
               title: 'couverture géographique',
               type: 'boolean',
               default: false,
-              'x-cols': 12
             }
           }
         },
@@ -304,7 +302,6 @@ export default {
               title: 'couverture temporelle',
               type: 'boolean',
               default: false
-
             }
           }
         },
@@ -346,6 +343,24 @@ export default {
               title: 'mots clés',
               type: 'boolean',
               default: false
+            }
+          }
+        },
+        custom: {
+          type: 'array',
+          title: 'Métadonnées spécifiques',
+          items: {
+            type: 'object',
+            properties: {
+              key: {
+                title: 'clé',
+                type: 'string',
+                readOnly: true
+              },
+              title: {
+                title: 'libellé',
+                type: 'string',
+              }
             }
           }
         }

@@ -182,9 +182,10 @@
                             cols="12"
                             md="6"
                           >
-                            <settings-datasets-metadata
-                              v-model="settings.datasetsMetadata"
-                              @input="patch({datasetsMetadata: settings.datasetsMetadata})"
+                            <d-frame
+                              :src="`/data-fair/embed/settings/${settingsPath}/datasets-metadata`"
+                              resize="yes"
+                              @notif="emitFrameNotif"
                             />
                           </v-col>
                         </v-row>
