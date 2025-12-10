@@ -238,6 +238,9 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
   }
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
+  const ownerSettings = await mongo.db.collection('settings')
+    .findOne({ type: owner.type, id: owner.id }, { projection: { datasetsMetadata: 1 } })
+  dataset.customMetadata = ownerSettings?.datasetsMetadata?.custom ?? []
 
   if (dataset.initFrom) {
     dataset.initFrom.role = permissions.getOwnerRole(dataset.owner, sessionState)

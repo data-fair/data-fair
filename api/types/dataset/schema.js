@@ -807,6 +807,18 @@ const datasetProperties = {
     type: 'object',
     description: 'An object for extra content from client services of data-fair'
   },
+  customMetadata: {
+    type: 'array',
+    items: {
+      type: 'object',
+      required: ['key', 'title'],
+      properties: {
+        key: { type: 'string' },
+        title: { type: 'string' },
+        value: { type: 'string' }
+      }
+    }
+  },
   analysis: {
     type: 'object',
     additionalProperties: false,
@@ -911,7 +923,8 @@ const dataset = {
         spatial: datasetProperties.spatial,
         temporal: datasetProperties.temporal,
         keywords: datasetProperties.keywords,
-        frequency: datasetProperties.frequency
+        frequency: datasetProperties.frequency,
+        customMetadata: datasetProperties.customMetadata
       }
     }
   },

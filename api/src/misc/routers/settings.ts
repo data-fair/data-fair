@@ -10,6 +10,7 @@ import { type DepartmentSettings, assertValid as validateDepartmentSettings } fr
 import * as permissions from '../utils/permissions.ts'
 import * as cacheHeaders from '../utils/cache-headers.js'
 import * as topicsUtils from '../utils/topics.ts'
+import * as customMedataUtils from '../utils/custom-metadata.ts'
 import * as notifications from '../utils/notifications.ts'
 import config from '#config'
 import mongo from '#mongo'
@@ -256,10 +257,20 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
       if (!topic.id) topic.id = nanoid()
     }
   }
+
+  if (isMainSettings(settings) && settings.datasetsMetadata?.custom) {
+    for (const customMedata of settings.datasetsMetadata?.custom) {
+      if (!customMedata.key) customMedata.key = slug.default(customMedata.title, { lower: true, strict: true })
+    }
+  }
   const oldSettings = (await mongo.settings.findOneAndReplace(req.ownerFilter, settings, { upsert: true }))
 
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
     await topicsUtils.updateTopics(req.owner, oldSettings.topics || [], settings.topics)
+  }
+
+  if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.datasetsMetadata?.custom) {
+    await customMedataUtils.updateCustomMetata(req.owner, oldSettings.datasetsMetadata?.custom || [], settings.datasetsMetadata?.custom)
   }
 
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })

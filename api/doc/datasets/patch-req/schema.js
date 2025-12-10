@@ -1,8 +1,14 @@
 import jsonSchema from '@data-fair/lib-utils/json-schema.js'
 import datasetSchema from '#types/dataset/schema.js'
 
-export const patchKeys = ['schema', 'title', 'summary', 'description', 'slug', 'license', 'origin', 'image', 'extensions', 'publications', 'publicationSites', 'requestedPublicationSites', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments', 'topics', 'thumbnails', 'masterData', 'primaryKey', 'exports', 'spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords', 'analysis', 'remoteFile', 'readApiKey', 'nonBlockingValidation']
-
+export const patchKeys = [
+  'schema', 'title', 'summary', 'description', 'slug', 'license', 'origin',
+  'image', 'extensions', 'publications', 'publicationSites', 'requestedPublicationSites',
+  'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments',
+  'topics', 'thumbnails', 'masterData', 'primaryKey', 'exports', 'spatial',
+  'temporal', 'frequency', 'creator', 'modified', 'keywords', 'analysis',
+  'remoteFile', 'readApiKey', 'nonBlockingValidation', 'customMetadata'
+]
 const body = jsonSchema(datasetSchema)
   .makePatchSchema(patchKeys)
   .schema

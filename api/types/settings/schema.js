@@ -282,6 +282,9 @@ export default {
     datasetsMetadata: {
       type: 'object',
       title: 'Options des métadonnées de jeux de données',
+      layout: {
+        title: null
+      },
       properties: {
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
         spatial: {
@@ -349,17 +352,30 @@ export default {
         custom: {
           type: 'array',
           title: 'Métadonnées spécifiques',
+          layout: {
+            messages: {
+              addItem: 'Add a custom metadata',
+              'x-i18n-addItem': {
+                fr: 'Ajouter une nouvelle métadonnée'
+              }
+            }
+          },
           items: {
             type: 'object',
+            required: ['title'],
             properties: {
               key: {
                 title: 'clé',
                 type: 'string',
-                readOnly: true
+                readOnly: true,
+                layout: {
+                  if: 'summary'
+                }
               },
               title: {
                 title: 'libellé',
                 type: 'string',
+                minLength: 3
               }
             }
           }

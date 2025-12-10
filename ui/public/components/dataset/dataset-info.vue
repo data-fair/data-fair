@@ -365,6 +365,21 @@
         dense
         @change="patch({attachmentsAsImage: dataset.attachmentsAsImage || null})"
       />
+      <template v-if="dataset.customMetadata?.length">
+        <v-text-field
+          v-for="customMetadata of dataset.customMetadata"
+          :key="customMetadata.key"
+          v-model="customMetadata.value"
+          :disabled="!can('writeDescription')"
+          :label="customMetadata.title"
+          hide-details
+          class="mb-3"
+          clearable
+          :required="required.includes('custom.' + customMetadata.key)"
+          :rules="required.includes('custom.' + customMetadata.key) ? [(val) => !!val]: []"
+          @change="patch({customMetadata: dataset.customMetadata})"
+        />
+      </template>
     </v-col>
     <v-col
       cols="12"
