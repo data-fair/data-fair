@@ -33,7 +33,7 @@ const debug = debugModule('df:main');
   })
   if (vuetify.defaults.value) {
     vuetify.defaults.value.VjsfTabs = { VWindowsItem: { eager: true } }
-    vuetify.defaults.value.VColorPicker = { mode: 'hex' }
+    vuetify.defaults.value.VColorPicker = { mode: 'hex', modes: ['hex', 'rgb', 'hsl'] }
   }
   const i18n = createI18n({ locale: session.state.lang })
   const head = createHead()
