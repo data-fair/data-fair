@@ -808,14 +808,10 @@ const datasetProperties = {
     description: 'An object for extra content from client services of data-fair'
   },
   customMetadata: {
-    type: 'array',
-    items: {
-      type: 'object',
-      required: ['key', 'title'],
-      properties: {
-        key: { type: 'string' },
-        title: { type: 'string' },
-        value: { type: 'string' }
+    type: 'object',
+    patternProperties: {
+      '^(.*)$': {
+        type: 'string'
       }
     }
   },

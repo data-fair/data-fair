@@ -365,11 +365,11 @@
         dense
         @change="patch({attachmentsAsImage: dataset.attachmentsAsImage || null})"
       />
-      <template v-if="dataset.customMetadata?.length">
+      <template v-if="datasetsMetadata?.custom?.length">
         <v-text-field
-          v-for="customMetadata of dataset.customMetadata"
+          v-for="customMetadata of datasetsMetadata?.custom"
           :key="customMetadata.key"
-          v-model="customMetadata.value"
+          :value="dataset.customMetadata?.[customMetadata.key]"
           :disabled="!can('writeDescription')"
           :label="customMetadata.title"
           hide-details
@@ -377,7 +377,8 @@
           clearable
           :required="required.includes('custom.' + customMetadata.key)"
           :rules="required.includes('custom.' + customMetadata.key) ? [(val) => !!val]: []"
-          @change="patch({customMetadata: dataset.customMetadata})"
+          @input="v => setCustomMetadata(customMetadata.key, v)"
+          @change="patch({customMetadata: dataset.customMetadata ?? null})"
         />
       </template>
     </v-col>
@@ -711,6 +712,21 @@ export default {
       let str = this.$moment(temporal.start).format('LL')
       if (temporal.end) str += ' - ' + this.$moment(temporal.end).format('LL')
       return str
+    },
+    setCustomMetadata (key, value) {
+      if (!value && this.dataset.customMetadata) {
+        this.$delete(this.dataset.customMetadata, key)
+        if (Object.keys(this.dataset.customMetadata).length === 0) {
+          this.$delete(this.dataset, 'customMetadata')
+        }
+      }
+      if (value) {
+        if (this.dataset.customMetadata) {
+          this.$set(this.dataset.customMetadata, key, value)
+        } else {
+          this.$set(this.dataset, 'customMetadata', { [key]: value })
+        }
+      }
     }
   }
 }
