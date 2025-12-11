@@ -294,6 +294,16 @@ export default {
               title: 'couverture géographique',
               type: 'boolean',
               default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Couverture géographique' }
+              }
             }
           }
         },
@@ -304,7 +314,17 @@ export default {
             active: {
               title: 'couverture temporelle',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
+              }
             }
           }
         },
@@ -313,9 +333,19 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'fréquence de mise à jour',
+              title: 'fréquence des mises à jour',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour' }
+              }
             }
           }
         },
@@ -325,7 +355,17 @@ export default {
             active: {
               title: 'personne ou organisme créateur',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur' }
+              }
             }
           }
         },
@@ -335,7 +375,17 @@ export default {
             active: {
               title: 'date de dernière modification de la source',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source' }
+              }
             }
           }
         },
@@ -345,7 +395,17 @@ export default {
             active: {
               title: 'mots clés',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Mots clés' }
+              }
             }
           }
         },
