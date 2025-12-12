@@ -5,7 +5,7 @@ import slug from 'slugify'
 import dayjs from 'dayjs'
 import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type Settings, assertValid as validateSettings } from '#types/settings/index.js'
+import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid as validateSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
 import * as permissions from '../utils/permissions.ts'
 import * as cacheHeaders from '../utils/cache-headers.js'
@@ -256,13 +256,52 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
       if (!topic.id) topic.id = nanoid()
     }
   }
+
+  if (isMainSettings(settings) && settings.datasetsMetadata) {
+    cleanDatasetsMetadata(settings.datasetsMetadata)
+  }
   const oldSettings = (await mongo.settings.findOneAndReplace(req.ownerFilter, settings, { upsert: true }))
 
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
     await topicsUtils.updateTopics(req.owner, oldSettings.topics || [], settings.topics)
   }
 
+  if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.datasetsMetadata) {
+    await updateDatasetsMetadata(req.owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
+  }
+
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
+}
+
+const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
+  for (const key of Object.keys(datasetsMetadata)) {
+    if (key !== 'custom') {
+      if (!datasetsMetadata[key as 'spatial']?.active) delete datasetsMetadata[key]
+      else if (!datasetsMetadata[key as 'spatial']?.title) delete datasetsMetadata[key as 'spatial']?.title
+    }
+  }
+  if (datasetsMetadata.custom && !datasetsMetadata.custom?.length) {
+    delete datasetsMetadata.custom
+  }
+  if (datasetsMetadata.custom) {
+    for (const customMedata of datasetsMetadata.custom) {
+      if (!customMedata.key) customMedata.key = slug.default(customMedata.title, { lower: true, strict: true })
+    }
+  }
+}
+
+const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees, newDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
+  if (equal(oldDatasetsMetadata, newDatasetsMetadata)) return
+  for (const oldMeta of oldDatasetsMetadata.custom ?? []) {
+    if (newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key)) {
+      await mongo.datasets.updateMany(
+        { 'owner.type': owner.type, 'owner.id': owner.id, [`customMetadata.${oldMeta.key}`]: { $exists: true } },
+        { $unset: { [`customMetadata.${oldMeta}`]: 1 } })
+      await mongo.datasets.updateMany(
+        { 'owner.type': owner.type, 'owner.id': owner.id, [`draft.customMetadata.${oldMeta.key}`]: { $exists: true } },
+        { $unset: { [`draft.customMetadata.${oldMeta}`]: 1 } })
+    }
+  }
 }
 
 // update settings as owner

@@ -31,10 +31,10 @@ const debug = debugModule('df:main');
     ...vuetifySessionOptions(session, $cspNonce),
     icons: { defaultSet: 'mdi', aliases, sets: { mdi, } }
   })
-  if (vuetify.defaults.value) {
-    vuetify.defaults.value.VjsfTabs = { VWindowsItem: { eager: true } }
-    vuetify.defaults.value.VColorPicker = { mode: 'hex' }
-  }
+  Object.assign(vuetify.defaults.value!, {
+    VjsfTabs: { VWindowsItem: { eager: true } },
+    VColorPicker: { mode: 'hex', modes: ['hex', 'rgb', 'hsl'] }
+  })
   const i18n = createI18n({ locale: session.state.lang })
   const head = createHead()
 

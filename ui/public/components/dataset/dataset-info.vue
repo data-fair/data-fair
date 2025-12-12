@@ -231,11 +231,11 @@
         @change="patch({image: dataset.image})"
       />
       <v-combobox
-        v-if="datasetsMetadata && datasetsMetadata.keywords && datasetsMetadata.keywords.active"
+        v-if="datasetsMetadata?.keywords?.active"
         v-model="dataset.keywords"
         :items="keywordsFacets && keywordsFacets.map(f => f.value)"
         :disabled="!can('writeDescription')"
-        :label="$t('keywords')"
+        :label="datasetsMetadata.keywords.title || $t('keywords')"
         hide-details
         multiple
         chips
@@ -248,11 +248,11 @@
         @change="patch({keywords: dataset.keywords})"
       />
       <v-combobox
-        v-if="datasetsMetadata && datasetsMetadata.spatial && datasetsMetadata.spatial.active"
+        v-if="datasetsMetadata?.spatial?.active"
         v-model="dataset.spatial"
         :items="spatialFacets && spatialFacets.map(f => f.value)"
         :disabled="!can('writeDescription')"
-        :label="$t('spatial')"
+        :label="datasetsMetadata.spatial.title || $t('spatial')"
         hide-details
         class="mb-3"
         :loading="loadingSpatialFacets"
@@ -263,10 +263,10 @@
         @change="patch({spatial: dataset.spatial})"
       />
       <v-text-field
-        v-if="datasetsMetadata && datasetsMetadata.temporal && datasetsMetadata.temporal.active"
+        v-if="datasetsMetadata?.temporal?.active"
         :value="formatTemporal(dataset.temporal)"
         readonly
-        :label="$t('temporal')"
+        :label="datasetsMetadata.temporal.title || $t('temporal')"
         hide-details
         class="mb-3"
         clearable
@@ -298,11 +298,11 @@
         </template>
       </v-text-field>
       <v-select
-        v-if="datasetsMetadata && datasetsMetadata.frequency && datasetsMetadata.frequency.active"
+        v-if="datasetsMetadata?.frequency?.active"
         v-model="dataset.frequency"
         :items="frequencies"
         :disabled="!can('writeDescription')"
-        :label="$t('frequency')"
+        :label="datasetsMetadata.frequency.title || $t('frequency')"
         hide-details
         clearable
         class="mb-3"
@@ -311,10 +311,10 @@
         @change="patch({frequency: dataset.frequency || ''})"
       />
       <v-text-field
-        v-if="datasetsMetadata && datasetsMetadata.creator && datasetsMetadata.creator.active"
+        v-if="datasetsMetadata?.creator?.active"
         v-model="dataset.creator"
         :disabled="!can('writeDescription')"
-        :label="$t('creator')"
+        :label="datasetsMetadata.creator.title || $t('creator')"
         hide-details
         class="mb-3"
         clearable
@@ -323,10 +323,10 @@
         @change="patch({creator: dataset.creator})"
       />
       <v-text-field
-        v-if="datasetsMetadata && datasetsMetadata.modified && datasetsMetadata.modified.active"
+        v-if="datasetsMetadata?.modified?.active"
         :value="dataset.modified && $moment(dataset.modified).format('LL')"
         readonly
-        :label="$t('modified')"
+        :label="datasetsMetadata.modified.title || $t('modified')"
         hide-details
         class="mb-3"
         clearable
@@ -365,6 +365,22 @@
         dense
         @change="patch({attachmentsAsImage: dataset.attachmentsAsImage || null})"
       />
+      <template v-if="datasetsMetadata?.custom?.length">
+        <v-text-field
+          v-for="customMetadata of datasetsMetadata?.custom"
+          :key="customMetadata.key"
+          :value="dataset.customMetadata?.[customMetadata.key]"
+          :disabled="!can('writeDescription')"
+          :label="customMetadata.title"
+          hide-details
+          class="mb-3"
+          clearable
+          :required="required.includes('custom.' + customMetadata.key)"
+          :rules="required.includes('custom.' + customMetadata.key) ? [(val) => !!val]: []"
+          @input="v => setCustomMetadata(customMetadata.key, v)"
+          @change="patch({customMetadata: dataset.customMetadata ?? null})"
+        />
+      </template>
     </v-col>
     <v-col
       cols="12"
@@ -696,6 +712,21 @@ export default {
       let str = this.$moment(temporal.start).format('LL')
       if (temporal.end) str += ' - ' + this.$moment(temporal.end).format('LL')
       return str
+    },
+    setCustomMetadata (key, value) {
+      if (!value && this.dataset.customMetadata) {
+        this.$delete(this.dataset.customMetadata, key)
+        if (Object.keys(this.dataset.customMetadata).length === 0) {
+          this.$delete(this.dataset, 'customMetadata')
+        }
+      }
+      if (value) {
+        if (this.dataset.customMetadata) {
+          this.$set(this.dataset.customMetadata, key, value)
+        } else {
+          this.$set(this.dataset, 'customMetadata', { [key]: value })
+        }
+      }
     }
   }
 }

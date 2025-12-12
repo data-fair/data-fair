@@ -282,17 +282,28 @@ export default {
     datasetsMetadata: {
       type: 'object',
       title: 'Options des métadonnées de jeux de données',
+      layout: {
+        title: null
+      },
       properties: {
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
         spatial: {
           type: 'object',
-          'x-cols': 6,
           properties: {
             active: {
               title: 'couverture géographique',
               type: 'boolean',
               default: false,
-              'x-cols': 12
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Couverture géographique' }
+              }
             }
           }
         },
@@ -303,8 +314,17 @@ export default {
             active: {
               title: 'couverture temporelle',
               type: 'boolean',
-              default: false
-
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
+              }
             }
           }
         },
@@ -313,9 +333,19 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'fréquence de mise à jour',
+              title: 'fréquence des mises à jour',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour' }
+              }
             }
           }
         },
@@ -325,7 +355,17 @@ export default {
             active: {
               title: 'personne ou organisme créateur',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur' }
+              }
             }
           }
         },
@@ -335,7 +375,17 @@ export default {
             active: {
               title: 'date de dernière modification de la source',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source' }
+              }
             }
           }
         },
@@ -345,7 +395,48 @@ export default {
             active: {
               title: 'mots clés',
               type: 'boolean',
-              default: false
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Mots clés' }
+              }
+            }
+          }
+        },
+        custom: {
+          type: 'array',
+          title: 'Métadonnées spécifiques',
+          layout: {
+            messages: {
+              addItem: 'Add a custom metadata',
+              'x-i18n-addItem': {
+                fr: 'Ajouter une nouvelle métadonnée'
+              }
+            }
+          },
+          items: {
+            type: 'object',
+            required: ['title'],
+            properties: {
+              key: {
+                title: 'clé',
+                type: 'string',
+                readOnly: true,
+                layout: {
+                  if: 'summary'
+                }
+              },
+              title: {
+                title: 'libellé',
+                type: 'string',
+                minLength: 3
+              }
             }
           }
         }
