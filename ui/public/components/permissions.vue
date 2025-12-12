@@ -405,7 +405,7 @@ export default {
       set (contribProfile) {
         this.permissions = this.permissions
           .filter(p => !this.isContribWriteAllPermission(p) && !this.isContribWriteDataPermission(p) && !this.isContribWriteNoBreakingPermission(p))
-        const writeDataOperations = this.resource.isRest ? ['writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines'] : ['writeData', 'cancelDraft']
+        const writeDataOperations = this.resource.isRest ? ['createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines'] : ['writeData', 'cancelDraft']
         if (contribProfile === 'adminOnly') {
           // nothing to do
         } else if (contribProfile === 'contribWriteData') {
@@ -425,8 +425,10 @@ export default {
       const items = [
         { value: 'adminOnly', text: this.$t('contribProfile.adminOnly', { org: this.resource.owner.name || this.resource.owner.id }) }
       ]
-      if (this.permissionClasses.write.find(c => c.id === 'writeData')) {
+      if (this.resource.isRest || this.resource.file) {
         items.push({ value: 'contribWriteData', text: this.$t('contribProfile.contribWriteData', { org: this.resource.owner.name || this.resource.owner.id }) })
+      }
+      if (this.resource.isRest || this.resource.isVirtual || this.resource.file) {
         items.push({ value: 'contribWriteNoBreaking', text: this.$t('contribProfile.contribWriteNoBreaking', { org: this.resource.owner.name || this.resource.owner.id }) })
       }
       items.push({ value: 'contribWriteAll', text: this.$t('contribProfile.contribWriteAll', { org: this.resource.owner.name || this.resource.owner.id }) })
