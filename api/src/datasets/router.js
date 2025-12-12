@@ -1339,6 +1339,14 @@ router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareR
   }
 })
 
+router.get('/:datasetId/metadata-settings', readDataset(), apiKeyMiddlewareRead, permissions.middleware('readDescription', 'read'), async (req, res, next) => {
+  // @ts-ignore
+  const dataset = req.dataset
+  const settings = await mongo.db.collection('settings')
+    .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { datasetsMetadata: 1 } })
+  return res.send(settings?.datasetsMetadata ?? {})
+})
+
 router.get('/:datasetId/api-docs.json', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   const settings = await mongo.db.collection('settings')
     .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
