@@ -391,13 +391,24 @@ export const facetsQuery = (reqQuery, sessionState, resourceType, facetFields = 
         })
         facet.push({
           $group: {
-            _id: { [f]: '$topics.id' },
+            _id: { topics: '$topics.id' },
             topics: { $first: '$topics' },
             count: { $sum: 1 }
           }
         })
         facet.push({ $sort: { count: -1 } })
         facet.push({ $project: { _id: '$topics', count: 1 } })
+      } else if (f === 'owner') {
+        facet.push({
+          $group: {
+            _id: { ownerType: '$owner.type', ownerId: '$owner.id', ownerDepartment: '$owner.department' },
+            owner: { $first: '$owner' },
+            count: { $sum: 1 }
+          }
+        })
+        facet.push({ $sort: { count: -1 } })
+        facet.push({ $project: { _id: '$owner', count: 1 } })
+        facet.push({ $project: { 'owner.role': 0 } })
       } else {
         facet.push({
           $unwind: {
@@ -405,7 +416,6 @@ export const facetsQuery = (reqQuery, sessionState, resourceType, facetFields = 
             preserveNullAndEmptyArrays: nullFacetFields.includes(f)
           }
         })
-        if (f === 'owner') facet.push({ $project: { 'owner.role': 0 } })
         facet.push({ $group: { _id: { [f]: '$' + (facetFields[f] || f), id: '$id' } } })
         facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
         facet.push({ $sortByCount: '$' + f })
