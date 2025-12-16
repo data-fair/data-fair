@@ -362,7 +362,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     })
   } catch (err) {
     const { message, status } = esUtils.extractError(err)
-    logCompatODSError(message, '', 'records', 'es-error')
+    logCompatODSError(message, req.url, 'records', 'es-error')
     throw httpError(status, message)
   }
 
@@ -606,7 +606,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     )
   } catch (err) {
     const { message, status } = esUtils.extractError(err)
-    logCompatODSError(err, '', 'exports', 'stream-error')
+    logCompatODSError(err, req.url, 'exports', 'stream-error')
     throw httpError(status, message)
   }
 }
