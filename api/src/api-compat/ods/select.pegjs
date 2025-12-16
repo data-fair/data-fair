@@ -69,6 +69,7 @@ SelectItem
   / SelectPercentile
   / SelectMedian
   / SelectDatePart
+  / SelectDateFormat
   / SelectFieldName
 
 As = "as"i

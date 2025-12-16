@@ -42,12 +42,7 @@ const offsetRegexp = /^[zZ]|[+-]([01][0-9]|2[0-3]):?([0-5][0-?9])$/
 
 const formatValue = (prop, value, timezone) => {
   if (prop.type === 'string' && prop.format === 'date-time') {
-    console.log('format', value)
-    if (value.match(offsetRegexp)) {
-      console.log('with offset', dayjs(value).toISOString())
-      return dayjs(value).toISOString()
-    }
-    console.log('without offset', dayjs.tz(value, timezone).toISOString())
+    if (value.match(offsetRegexp)) return dayjs(value).toISOString()
     return dayjs.tz(value, timezone).toISOString()
   }
   return value

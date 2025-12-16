@@ -767,6 +767,17 @@ bidule;1;22.2
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`, { params: { where: 'date1 > \'2025-09-10 11:00:00\'' } })
     assert.equal(res.data.results.length, 1)
 
+    // date formatting
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?select=date_format(date1, 'yyyy/MM/dd') as date`)
+    assert.equal(res.data.results[0].date, '2025/09/10')
+
+    // group by formatted date
+    /*
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=date_format(date1, 'yyyy/MM/dd')`)
+    console.log('res', res)
+    assert.equal(res.data.results[0].date, '2025/09/10')
+    */
+
     // refine a date facet
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025/09/11`)
     assert.equal(res.data.results.length, 1)

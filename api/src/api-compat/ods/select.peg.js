@@ -837,7 +837,10 @@ function peg$parse(input, options) {
                       if (s0 === peg$FAILED) {
                         s0 = peg$parseSelectDatePart();
                         if (s0 === peg$FAILED) {
-                          s0 = peg$parseSelectFieldName();
+                          s0 = peg$parseSelectDateFormat();
+                          if (s0 === peg$FAILED) {
+                            s0 = peg$parseSelectFieldName();
+                          }
                         }
                       }
                     }
