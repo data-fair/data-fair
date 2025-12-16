@@ -274,15 +274,6 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
 }
 
 const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
-  for (const key of Object.keys(datasetsMetadata)) {
-    if (key !== 'custom') {
-      if (!datasetsMetadata[key as 'spatial']?.active) delete datasetsMetadata[key]
-      else if (!datasetsMetadata[key as 'spatial']?.title) delete datasetsMetadata[key as 'spatial']?.title
-    }
-  }
-  if (datasetsMetadata.custom && !datasetsMetadata.custom?.length) {
-    delete datasetsMetadata.custom
-  }
   if (datasetsMetadata.custom) {
     for (const customMedata of datasetsMetadata.custom) {
       if (!customMedata.key) customMedata.key = slug.default(customMedata.title, { lower: true, strict: true })
