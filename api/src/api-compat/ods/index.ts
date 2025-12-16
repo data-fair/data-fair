@@ -252,7 +252,7 @@ const prepareBucketResult = (dataset, bucket, selectAggs, composite) => {
 }
 
 const logCompatODSError = (err: any, value: string, endpoint: string, status: string) => {
-  console.warn(`[compat-ods][status][${value}]`, err.message)
+  console.warn(`[compat-ods][${status}][${value}]`, err.message ?? err)
   compatReqCounter.inc({ endpoint, status })
 }
 
@@ -361,8 +361,8 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       allow_partial_search_results: false
     })
   } catch (err) {
-    logCompatODSError(err, '', 'records', 'es-error')
     const { message, status } = esUtils.extractError(err)
+    logCompatODSError(message, '', 'records', 'es-error')
     throw httpError(status, message)
   }
 
