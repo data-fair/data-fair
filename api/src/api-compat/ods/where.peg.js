@@ -7,10 +7,10 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/commons.js'
 import { wktToGeoJSON } from '@terraformer/wkt'
+import dayjs from 'dayjs'
 
 const LBRACE='{';
 const RBRACE='}';
-
 
 
 
@@ -37,6 +37,22 @@ const geoShapeQuery = (dataset, shape, relation) => {
     }
   }
 }
+
+const offsetRegexp = /^[zZ]|[+-]([01][0-9]|2[0-3]):?([0-5][0-?9])$/
+
+const formatValue = (prop, value, timezone) => {
+  if (prop.type === 'string' && prop.format === 'date-time') {
+    console.log('format', value)
+    if (value.match(offsetRegexp)) {
+      console.log('with offset', dayjs(value).toISOString())
+      return dayjs(value).toISOString()
+    }
+    console.log('without offset', dayjs.tz(value, timezone).toISOString())
+    return dayjs.tz(value, timezone).toISOString()
+  }
+  return value
+}
+
 
 function peg$subclass(child, parent) {
   function C() { this.constructor = child; }
@@ -410,7 +426,7 @@ function peg$parse(input, options) {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'equal')
-    return { term: { [key]: value.value } }
+    return { term: { [key]: formatValue(prop, value.value, options.timezone) } }
   };
   var peg$f2 = function(key, value) {
     const prop = options.dataset.schema.find(p => p.key === key)
@@ -422,7 +438,7 @@ function peg$parse(input, options) {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'IN')
-    return { terms: {[key]: values }}
+    return { terms: {[key]: values.map(v => formatValue(prop, v, options.timezone)) }}
   };
   var peg$f4 = function(head, tail) {
     return [head.value, ...tail.map(literal => literal.value)]
@@ -434,7 +450,7 @@ function peg$parse(input, options) {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'range')
-    return { range: { [key]: { [startOperator]: start.value, [endOperator]: end.value, time_zone: options.timezone } } }
+    return { range: { [key]: { [startOperator]: formatValue(prop, start.value, options.timezone), [endOperator]: formatValue(prop, end.value, options.timezone), time_zone: options.timezone } } }
   };
   var peg$f7 = function() { return "gte" };
   var peg$f8 = function() { return "gt" };
@@ -444,14 +460,14 @@ function peg$parse(input, options) {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'IN')
-    return { term: {[key]: value.value} }
+    return { term: {[key]: formatValue(prop, value.value, options.timezone)} }
   };
   var peg$f12 = function(key, operator, value) {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
-    return { range: { [key]: { [esOperator]: value.value, time_zone: options.timezone } } }
+    return { range: { [key]: { [esOperator]: formatValue(prop, value.value, options.timezone), time_zone: options.timezone } } }
   };
   var peg$f13 = function(key, operator, value) {
     const prop = options.dataset.schema.find(p => p.key === key)

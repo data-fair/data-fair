@@ -529,6 +529,8 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.results.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'year(some_date) < 2017' } })
     assert.equal(res.data.results.length, 0)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'year(some_date) < 2017' } })
+    assert.equal(res.data.results.length, 0)
 
     // facet filtering
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { refine: 'id:koumoul' } })
@@ -756,6 +758,14 @@ bidule;1;22.2
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`)
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.results[0].date1, '2025-09-10T10:00:00+02:00')
+
+    // tolerant date filters
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`, { params: { where: 'date1 > \'2025-09-10T09:00:00+00:00\'' } })
+    assert.equal(res.data.results.length, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`, { params: { where: 'date1 > \'2025-09-10 09:00:00\'' } })
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`, { params: { where: 'date1 > \'2025-09-10 11:00:00\'' } })
+    assert.equal(res.data.results.length, 1)
 
     // refine a date facet
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025/09/11`)
