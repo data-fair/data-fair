@@ -54,7 +54,7 @@ export default {
         },
         cols: 6
       },
-      required: ['name', 'svg'],
+      required: ['name'],
       properties: {
         name: { type: 'string' },
         svg: { type: 'string' },
