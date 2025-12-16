@@ -104,7 +104,6 @@ const parseFilters = (dataset, query, endpoint) => {
     try {
       must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset, timezone: query.timezone }))
     } catch (err: any) {
-      compatReqCounter.inc({ endpoint, status: 'invalid-where' })
       logCompatODSError(err, query.where, endpoint, 'invalid-where')
       throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)
     }
