@@ -295,7 +295,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, endpoint: s
   }
 
   if (query.order_by) {
-    let orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
+    let orderBy
     try {
       orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
     } catch (err: any) {

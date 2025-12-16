@@ -32,6 +32,7 @@ OrderBy
 
 OrderByExpression
   = OrderByExpressionWithDirection
+  / OrderByExpressionWithMinus
   / OrderByExpressionWithoutDirection
 
 Direction
@@ -41,6 +42,11 @@ Direction
 OrderByExpressionWithDirection
   = orderBy:OrderByExpressionWithoutDirection __ direction:Direction {
     return { ...orderBy, direction }
+  }
+
+OrderByExpressionWithMinus
+  = "-" orderBy:OrderByExpressionWithoutDirection {
+    return { ...orderBy, direction: 'desc' }
   }
 
 OrderByExpressionWithoutDirection

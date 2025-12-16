@@ -541,6 +541,9 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'id DESC,nb' } })
     assert.equal(res.data.results[0].id, 'koumoul')
 
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: '-id,nb' } })
+    assert.equal(res.data.results[0].id, 'koumoul')
+
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'random(1)' } })
     const resRand2 = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'random(1) desc' } })
     assert.equal(res.data.results[0].id, resRand2.data.results[1].id)
