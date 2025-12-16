@@ -158,14 +158,14 @@ describe('compatibility layer for ods api', function () {
 
     assert.deepEqual(
       whereParser.parse(
-        'in_bbox(geo, 10, 11, 12, 13)',
+        'in_bbox(geo, -10.11, 11, 12, 13)',
         { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }], bbox: [] } }
       ),
       {
         geo_shape: {
           _geopoint: {
             relation: 'intersects',
-            shape: { coordinates: [[10, 13], [12, 11]], type: 'envelope' }
+            shape: { coordinates: [[-10.11, 13], [12, 11]], type: 'envelope' }
           }
         }
       }
