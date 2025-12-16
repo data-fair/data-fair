@@ -105,6 +105,7 @@ const parseFilters = (dataset, query, endpoint) => {
       must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset, timezone: query.timezone }))
     } catch (err: any) {
       compatReqCounter.inc({ endpoint, status: 'invalid-where' })
+      logCompatODSError(err, query.where, endpoint, 'invalid-where')
       throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)
     }
   }
@@ -251,7 +252,12 @@ const prepareBucketResult = (dataset, bucket, selectAggs, composite) => {
   return result
 }
 
-const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
+const logCompatODSError = (err: any, value: string, endpoint: string, status: string) => {
+  console.warn(`[compat-ods][status][${value}]`, err.message)
+  compatReqCounter.inc({ endpoint, status })
+}
+
+const prepareEsQuery = (dataset: any, query: Record<string, string>, endpoint: string) => {
   const grouped = !!query.group_by
 
   const esQuery: any = {}
@@ -270,8 +276,14 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
   let selectTransforms: Record<string, string> = {}
   let sort = []
   let composite = false
-  if (query.select) {
-    const select = parseSelect(query.select, { dataset, grouped })
+  if (query.select && query.select.trim() !== '*') {
+    let select
+    try {
+      select = parseSelect(query.select, { dataset, grouped })
+    } catch (err: any) {
+      logCompatODSError(err, query.select, endpoint, 'invalid-select')
+      throw httpError(400, 'le paramètre "select" est invalide : ' + err.message)
+    }
     selectSource = esQuery._source = select.sources
     selectFinalKeys = select.finalKeys
     selectTransforms = select.transforms
@@ -284,17 +296,29 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>) => {
   }
 
   if (query.order_by) {
-    const orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
+    let orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
+    try {
+      orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
+    } catch (err: any) {
+      logCompatODSError(err, query.order_by, endpoint, 'invalid-order-by')
+      throw httpError(400, 'le paramètre "order_by" est invalide : ' + err.message)
+    }
     esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
     esQuery.sort = sort = orderBy.sort
   } else {
     esQuery.sort = []
   }
 
-  esQuery.query = parseFilters(dataset, query, 'records')
+  esQuery.query = parseFilters(dataset, query, endpoint)
 
   if (grouped) {
-    const groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, transforms: selectTransforms, timezone: query.timezone })
+    let groupBy
+    try {
+      groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, transforms: selectTransforms, timezone: query.timezone })
+    } catch (err: any) {
+      logCompatODSError(err, query.group_by, endpoint, 'invalid-group-by')
+      throw httpError(400, 'le paramètre "group_by" est invalide : ' + err.message)
+    }
     esQuery.aggs = { ___group_by: groupBy.agg }
     esQuery.size = 0
     delete esQuery.from
@@ -319,7 +343,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!config.compatODS) throw httpError(404, 'unknown API')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const { grouped, size, from, esQuery, selectAggs, selectSource, selectTransforms, aliases, sort, composite } = prepareEsQuery(dataset, query)
+  const { grouped, size, from, esQuery, selectAggs, selectSource, selectTransforms, aliases, sort, composite } = prepareEsQuery(dataset, query, 'records')
 
   if (grouped) {
     if (size > 20000) throw httpError(400, 'limit should be less than 20000')
@@ -338,7 +362,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       allow_partial_search_results: false
     })
   } catch (err) {
-    compatReqCounter.inc({ endpoint: 'records', status: 'es-error' })
+    logCompatODSError(err, '', 'records', 'es-error')
     const { message, status } = esUtils.extractError(err)
     throw httpError(status, message)
   }
@@ -427,7 +451,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   if (!dataset.schema) throw httpError(404, 'dataset without data')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, selectTransforms, aliases, composite } = prepareEsQuery(dataset, query)
+  const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, selectTransforms, aliases, composite } = prepareEsQuery(dataset, query, 'exports')
 
   if (from) throw httpError(400, 'offset parameter is not supported for exports')
 
@@ -582,9 +606,8 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       res
     )
   } catch (err) {
-    compatReqCounter.inc({ endpoint: 'exports', status: 'es-error' })
     const { message, status } = esUtils.extractError(err)
-    console.warn('Error during streamed ods compat export', status, message, err)
+    logCompatODSError(err, '', 'exports', 'stream-error')
     throw httpError(status, message)
   }
 }

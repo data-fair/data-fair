@@ -465,6 +465,8 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.total_count, 2)
 
     // simple select
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: '*' } })
+    assert.equal(Object.keys(res.data.results[0]).length, 6)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { select: 'id,nb,adr' } })
     assert.equal(Object.keys(res.data.results[0]).length, 3)
 
