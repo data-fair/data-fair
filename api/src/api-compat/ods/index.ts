@@ -34,7 +34,7 @@ type Transforms = Record<string, { type: TransformType, param?: any, ignoreTimez
 const compatReqCounter = new Counter({
   name: 'df_compat_ods_req',
   help: 'A counter of the usage of the ods compatibility layer.',
-  labelNames: ['endpoint', 'status']
+  labelNames: ['route', 'status']
 })
 
 const router = express.Router()
@@ -79,7 +79,7 @@ const completeSort = (dataset, sort, query) => {
   }
 }
 
-const parseFilters = (dataset, query, endpoint) => {
+const parseFilters = (dataset, query, route) => {
   const filter: any[] = []
   const must: any[] = []
   const mustNot: any[] = []
@@ -104,7 +104,7 @@ const parseFilters = (dataset, query, endpoint) => {
     try {
       must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset, timezone: query.timezone }))
     } catch (err: any) {
-      logCompatODSError(err, query.where, endpoint, 'invalid-where')
+      logCompatODSError(err, query.where, route, 'invalid-where')
       throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)
     }
   }
@@ -259,12 +259,12 @@ const prepareBucketResult = (dataset, bucket, selectAggs, composite) => {
   return result
 }
 
-const logCompatODSError = (err: any, value: string, endpoint: string, status: string) => {
+const logCompatODSError = (err: any, value: string, route: string, status: string) => {
   console.warn(`[compat-ods][${status}][${value}]`, err.message ?? err)
-  compatReqCounter.inc({ endpoint, status })
+  compatReqCounter.inc({ route, status })
 }
 
-const prepareEsQuery = (dataset: any, query: Record<string, string>, endpoint: string) => {
+const prepareEsQuery = (dataset: any, query: Record<string, string>, route: string) => {
   const grouped = !!query.group_by
 
   const esQuery: any = {}
@@ -288,7 +288,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, endpoint: s
     try {
       select = parseSelect(query.select, { dataset, grouped })
     } catch (err: any) {
-      logCompatODSError(err, query.select, endpoint, 'invalid-select')
+      logCompatODSError(err, query.select, route, 'invalid-select')
       throw httpError(400, 'le paramètre "select" est invalide : ' + err.message)
     }
     selectSource = esQuery._source = select.sources
@@ -307,7 +307,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, endpoint: s
     try {
       orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
     } catch (err: any) {
-      logCompatODSError(err, query.order_by, endpoint, 'invalid-order-by')
+      logCompatODSError(err, query.order_by, route, 'invalid-order-by')
       throw httpError(400, 'le paramètre "order_by" est invalide : ' + err.message)
     }
     esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
@@ -316,14 +316,14 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, endpoint: s
     esQuery.sort = []
   }
 
-  esQuery.query = parseFilters(dataset, query, endpoint)
+  esQuery.query = parseFilters(dataset, query, route)
 
   if (grouped) {
     let groupBy
     try {
       groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, transforms: selectTransforms, timezone: query.timezone })
     } catch (err: any) {
-      logCompatODSError(err, query.group_by, endpoint, 'invalid-group-by')
+      logCompatODSError(err, query.group_by, route, 'invalid-group-by')
       throw httpError(400, 'le paramètre "group_by" est invalide : ' + err.message)
     }
     esQuery.aggs = { ___group_by: groupBy.agg }
@@ -384,7 +384,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       applyAliases(result, aliases, selectTransforms, query.timezone)
       results.push(result)
     }
-    compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
+    compatReqCounter.inc({ route: 'records', status: 'ok' })
     res.send({ total_count: buckets.length, results })
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
@@ -397,7 +397,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       applyAliases(line, aliases, selectTransforms, query.timezone)
       result.results.push(line)
     }
-    compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
+    compatReqCounter.inc({ route: 'records', status: 'ok' })
     res.send(result)
   }
 }
@@ -525,7 +525,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       }
       worksheet.commit()
       await workbookWriter.commit()
-      compatReqCounter.inc({ endpoint: 'exports', status: 'ok' })
+      compatReqCounter.inc({ route: 'exports', status: 'ok' })
     } catch (err) {
       const { message, status } = esUtils.extractError(err)
       logCompatODSError(err, req.url, 'exports', 'xlsx-error')
@@ -606,7 +606,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       JSONStream.stringify('{"type":"FeatureCollection","features": [', ',', ']}')
     ]
   } else {
-    compatReqCounter.inc({ endpoint: 'exports', status: 'unsupported' })
+    compatReqCounter.inc({ route: 'exports', status: 'unsupported' })
     throw httpError(400, `le format "${req.params.format}" n'est pas supporté par l'export de données de cette couche de compatibilité pour la version d'API précédente.`)
   }
   try {
@@ -628,7 +628,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     logCompatODSError(err, req.url, 'exports', 'stream-error')
     throw httpError(status, message)
   }
-  compatReqCounter.inc({ endpoint: 'exports', status: 'ok' })
+  compatReqCounter.inc({ route: 'exports', status: 'ok' })
 }
 
 // mimic ods api pattern to capture all deprecated traffic
@@ -684,7 +684,7 @@ datasetsRouter.get(
 )
 
 router.use('/', (req, res, next) => {
-  compatReqCounter.inc({ endpoint: 'unknown', status: 'unsupported' })
+  compatReqCounter.inc({ route: 'unknown', status: 'unsupported' })
   throw httpError(410, 'Cette couche de compatibilité pour la version d\'API précédente ne supporte pas cette requête.')
 })
 
