@@ -660,6 +660,7 @@ bidule;1;22.2
     // xlsx export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/xlsx`, { responseType: 'arraybuffer' })
     assert.equal(res.headers['content-type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    assert.equal(res.status, 200)
     assert.equal(typeof res.data, 'object')
     const workbook = new Excel.Workbook()
     await workbook.xlsx.load(res.data)

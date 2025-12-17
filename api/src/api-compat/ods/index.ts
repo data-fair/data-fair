@@ -381,6 +381,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       applyAliases(result, aliases, selectTransforms, query.timezone)
       results.push(result)
     }
+    compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
     res.send({ total_count: buckets.length, results })
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
@@ -504,22 +505,32 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     res.type('xlsx')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
     const { default: Excel } = await import('exceljs')
-    const workbookWriter = new Excel.stream.xlsx.WorkbookWriter({
-      stream: res,
-      useStyles: true,
-      useSharedStrings: true
-    })
-    const worksheet = workbookWriter.addWorksheet('Feuille 1')
-    // Define columns (optional)
-    worksheet.columns = columns
-    const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)
-    for await (const items of iter) {
-      for (const item of items) {
-        worksheet.addRow(item).commit()
+    try {
+      const workbookWriter = new Excel.stream.xlsx.WorkbookWriter({
+        stream: res,
+        useStyles: true,
+        useSharedStrings: true
+      })
+      const worksheet = workbookWriter.addWorksheet('Feuille 1')
+      // Define columns (optional)
+      worksheet.columns = columns
+      const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)
+      for await (const items of iter) {
+        for (const item of items) {
+          worksheet.addRow(item).commit()
+        }
       }
+      worksheet.commit()
+      await workbookWriter.commit()
+      compatReqCounter.inc({ endpoint: 'exports', status: 'ok' })
+    } catch (err) {
+      const { message, status } = esUtils.extractError(err)
+      logCompatODSError(err, req.url, 'exports', 'xlsx-error')
+      throw httpError(status, message)
     }
-    worksheet.commit()
-    await workbookWriter.commit()
+    // return early, xlsx export is written directly ro response,
+    // it does not create a transform stream
+    return
 
     /* let i = 0
     transformStreams = [
@@ -614,6 +625,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     logCompatODSError(err, req.url, 'exports', 'stream-error')
     throw httpError(status, message)
   }
+  compatReqCounter.inc({ endpoint: 'exports', status: 'ok' })
 }
 
 // mimic ods api pattern to capture all deprecated traffic
