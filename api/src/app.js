@@ -54,9 +54,12 @@ export const run = async () => {
     session.init(config.privateDirectoryUrl || config.directoryUrl)
 
     app.set('trust proxy', 1)
-    // app.set('json spaces', 2)
 
     app.set('query parser', 'simple')
+
+    app.use((await import('cors')).default())
+
+    const bodyParser = express.json({ limit: '1000kb' })
     app.use((req, res, next) => {
       for (const key of Object.keys(req.query)) {
         if (Array.isArray(req.query[key])) {
@@ -67,10 +70,7 @@ export const run = async () => {
           }
         }
       }
-      next()
-    })
 
-    app.use((req, res, next) => {
       // We use custom "X-Private-If-Modified-Since" and "X-Private-If-None-Match" headers as
       // alternatives to "If-Modified-Since" and "If-None-Match"
       // this is because nginx does not transmit these headers when proxy cache is activated
@@ -83,23 +83,18 @@ export const run = async () => {
       if (req.headers['x-private-if-none-match'] && !req.headers['if-none-match']) {
         req.headers['if-none-match'] = req.headers['x-private-if-none-match']
       }
-      next()
-    })
 
-    app.use((await import('cors')).default())
-    app.use((req, res, next) => {
       if (!req.app.get('api-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
-      else next()
-    })
 
-    const bodyParser = express.json({ limit: '1000kb' })
-    app.use((req, res, next) => {
+      if (config.noFS) res.set('x-nofs', '1')
+
       // routes with _bulk are streamed, others are parsed as JSON
       const urlParts = req.url.split('/')
       if (urlParts[urlParts.length - 1].startsWith('_bulk')) return next()
       if (urlParts[urlParts.length - 2] === 'bulk-searchs') return next()
       bodyParser(req, res, next)
     })
+
     app.use(createSiteMiddleware('data-fair', { prefixOptional: true }))
     app.use((await import('cookie-parser')).default())
     app.use((await import('../i18n/utils.ts')).middleware)
