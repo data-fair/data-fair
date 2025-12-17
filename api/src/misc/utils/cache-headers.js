@@ -33,12 +33,14 @@ export const resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
   const cacheVisibility = req.publicOperation ? 'public' : 'private'
   debug(`dateUTC=${dateUTC}, visibility=${cacheVisibility}`)
 
-  const ifModifiedSince = req.get('if-modified-since')
-  if (ifModifiedSince && dateUTC === ifModifiedSince) {
-    debug('if-modified-since matches local date, return 304')
-    return res.status(304).send()
+  if (!req.noModifiedCache) {
+    const ifModifiedSince = req.get('if-modified-since')
+    if (ifModifiedSince && dateUTC === ifModifiedSince) {
+      debug('if-modified-since matches local date, return 304')
+      return res.status(304).send()
+    }
+    res.setHeader('Last-Modified', dateUTC)
   }
-  res.setHeader('Last-Modified', dateUTC)
 
   if (cacheVisibility === 'public') {
     // force buffering (necessary for caching) of this response in the reverse proxy
@@ -50,7 +52,7 @@ export const resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
   // finalizedAt passed as query parameter is used to timestamp the query and
   // make it compatible with a longer caching
   const queryDateStr = req.query.finalizedAt || req.query.updatedAt
-  if (queryDateStr) {
+  if (queryDateStr && !req.noModifiedCache) {
     debug('date in query parameter, use longer max age', queryDateStr)
     const queryDate = new Date(queryDateStr)
     if (queryDate > date) {

@@ -53,6 +53,59 @@ DatePart
   / "minute"i { return 'minute' }
   / "second"i { return 'second' }
 
+// https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-functions/now()
+Now
+  = NowWithoutParams
+  / NowWithParams
+
+NowWithoutParams
+  = "now()" {
+    return { type: 'Literal', value: new Date().toISOString() }
+  }
+
+NowWithParams
+  = "now("i params:NowParams ")" {
+    let now = dayjs()
+    for (const param of params) {
+      if (param.sign === '+') now = now.add(param.value, param.name)
+      else if (param.sign === '-') now = now.subtract(param.value, param.name)
+      else now = now.set(param.name === 'day' ? 'date' : param.name, param.value)
+    }
+    return { type: 'Literal', value: now.toISOString() }
+  }
+
+NowParamName
+  = "year"i { return 'year' }
+  / "years"i { return 'year' }
+  / "month"i { return 'month' }
+  / "months"i { return 'month' }
+  / "day"i { return 'day' }
+  / "days"i { return 'day' }
+  / "hour"i  { return 'hour' }
+  / "hours"i  { return 'hour' }
+  / "minute"i { return 'minute' }
+  / "minutes"i { return 'minutes' }
+  / "second"i { return 'second' }
+  / "seconds"i { return 'second' }
+
+NowParam
+  = name:NowParamName _ "=" _ sign:[+-]? value:DecimalLiteral {
+    return { name, sign, value: Number(value) }
+  }
+
+NowParamAfterListSeparator
+  = ListSeparator param:NowParam {
+    return param
+  }
+
+NowParams
+  = param1:NowParam nextParams:(NowParamAfterListSeparator)* {
+    return [param1, ...nextParams]
+  }
+
+ListSeparator
+  = _ "," _
+
 // the following is copied and adapted from parts of
 // https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs
 
@@ -130,6 +183,7 @@ Literal
   / NumericLiteral
   / StringLiteral
   / DateLiteral
+  / Now
 
 NullLiteral
   = NullToken { return { type: "Literal", value: null }; }

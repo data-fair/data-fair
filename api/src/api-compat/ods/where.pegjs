@@ -111,9 +111,6 @@ LiteralAfterListSeparator
     return value
   }
 
-ListSeparator
-  = _ "," _
-
 InRangeFilter
   = key:FieldName __ In _ startOperator:RangeStart start:Literal RangeSeparator end:Literal endOperator:RangeEnd {
     const prop = options.dataset.schema.find(p => p.key === key)

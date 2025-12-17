@@ -7,9 +7,10 @@ import * as groupByParser from '../api/src/api-compat/ods/group-by.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
+import dayjs from 'dayjs'
 
 describe('compatibility layer for ods api', function () {
-  it('contains a parser for the where syntax', function () {
+  it.only('contains a parser for the where syntax', function () {
     assert.deepEqual(
       whereParser.parse('"koumoul"', { searchFields: ['id'] }),
       {
@@ -113,10 +114,17 @@ describe('compatibility layer for ods api', function () {
       whereParser.parse('date: date\'2020/12/01\'', { dataset: { schema: [{ key: 'date' }] } }),
       { term: { date: '2020-12-01' } }
     )
-    assert.deepEqual(
-      whereParser.parse('date: date\'2020-12-01\'', { dataset: { schema: [{ key: 'date' }] } }),
-      { term: { date: '2020-12-01' } }
-    )
+    const now = dayjs()
+    const now1 = dayjs(whereParser.parse('date: now()', { dataset: { schema: [{ key: 'date' }] } }).term.date)
+    assert.equal(now.date(), now1.date())
+    assert.equal(now.month(), now1.month())
+    assert.equal(now.year(), now1.year())
+    const now2 = dayjs(whereParser.parse('date: now(year=2000)', { dataset: { schema: [{ key: 'date' }] } }).term.date)
+    assert.equal(now2.year(), 2000)
+    const now3 = dayjs(whereParser.parse('date: now(day=+1)', { dataset: { schema: [{ key: 'date' }] } }).term.date)
+    assert.equal(now3.date(), now.add(1, 'day').date())
+    const now4 = dayjs(whereParser.parse('date: now(day=-11)', { dataset: { schema: [{ key: 'date' }] } }).term.date)
+    assert.equal(now4.date(), now.subtract(11, 'day').date())
 
     assert.deepEqual(
       whereParser.parse('search(test1, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text'] }),
@@ -769,6 +777,14 @@ bidule;1;22.2
     assert.equal(res.data.results.length, 1)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`, { params: { where: "date1 >= date'2025-09-10 00:00' and date1 <= date'2025-09-10 23:59'" } })
     assert.equal(res.data.results.length, 1)
+    assert.ok(res.headers['last-modified'])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`, { params: { where: 'date1 >= now()' } })
+    assert.equal(res.data.results.length, 0)
+    assert.ok(!res.headers['last-modified']) // now() filter must not be cached based on dataset finalizedAt property
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`, { params: { where: 'date1 <= now()' } })
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris`, { params: { where: 'date1 >= now(year=-20)' } })
+    assert.equal(res.data.results.length, 2)
 
     // date formatting
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?select=date_format(date1, 'yyyy/MM/dd') as date`)
