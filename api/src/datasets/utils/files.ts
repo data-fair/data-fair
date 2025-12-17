@@ -8,6 +8,7 @@ import iconvLite from 'iconv-lite'
 import chardet from 'chardet'
 import { type Account } from '@data-fair/lib-express'
 import debugModule from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debugCleanTmp = debugModule('clean-tmp')
 debugCleanTmp.enabled = true
@@ -17,6 +18,10 @@ export const dataDir = path.resolve(config.dataDir)
 export const tmpDir = path.join(dataDir, 'tmp')
 
 export const ownerDir = (owner: Account) => {
+  if (config.noFS) {
+    internalError('no-fs', 'tried to access account data directory')
+    throw new Error('this service is configured without access to FS but this request requires it')
+  }
   return resolvePath(dataDir, path.join(owner.type, owner.id))
 }
 

@@ -1,6 +1,10 @@
 module.exports = {
   port: 'PORT',
   mode: 'MODE',
+  noFS: {
+    __name: 'NO_FS',
+    __format: 'json'
+  },
   publicUrl: 'PUBLIC_URL',
   oldPublicUrl: 'OLD_PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',

@@ -117,6 +117,10 @@ const stream2req = async (reqOpts: AxiosRequestConfig, res: Response) => {
 }
 
 export const screenshot = async (req: RequestWithResource, res: Response) => {
+  if (config.noFS) {
+    internalError('no-fs', 'tried to access captures directory')
+    throw new Error('this service is configured without access to FS but this request requires it')
+  }
   const capturePath = resolvePath(capturesDir, req.resource.id + '.png')
 
   const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt' && k !== 'app_capture-test-error').length === 0
