@@ -590,6 +590,12 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)', limit: 1, offset: 1 } })
     assert.equal(res.data.total_count, 2)
     assert.deepEqual(res.data.results, [{ id: 'bidule' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'sum(nb)' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ id: 'koumoul' }, { id: 'bidule' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'sum(nb) desc' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb) DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])

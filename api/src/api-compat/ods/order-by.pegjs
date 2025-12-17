@@ -53,6 +53,9 @@ OrderByExpressionWithoutDirection
   = OrderByAvg
   / OrderByMax
   / OrderByMin
+  / OrderBySum
+  / OrderByPercentile
+  / OrderByMedian
   / OrderByRandom
   / OrderByCountAll
   / OrderByCountField
@@ -107,6 +110,33 @@ OrderByMin
     if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     const aggName = '___order_by_min_' + key
     return { key: aggName, aggregation: { min: {field: key} } }
+  }
+
+OrderBySum
+  = "sum("i _ key:FieldName _ ")" {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de trier sur la somme du champ ${key}, il n'est pas de type numérique.`)
+    const aggName = '___order_by_sum_' + key
+    return { key: aggName, aggregation: { sum: {field: key} } }
+  }
+
+OrderByMedian
+  = "median("i _ key:FieldName _ ")" {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de trier sur la médiane du champ ${key}, il n'est pas de type numérique.`)
+    const aggName = '___order_by_median_' + key
+    return { key: aggName, aggregation: { percentiles: {field: key, percents: [50], keyed: false} } }
+  }
+
+OrderByPercentile
+  = "percentile("i _ key:FieldName _ "," _ percent:NumericLiteral _ ")" {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de trier sur un pourcentile du champ ${key}, il n'est pas de type numérique.`)
+    const aggName = '___order_by_percentile_' + key
+    return { key: aggName, aggregation: { percentiles: {field: key, percents: [percent], keyed: false} } }
   }
 
 OrderByCountAll
