@@ -3,6 +3,7 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/commons.js'
 import capabilities from '../../../contract/capabilities.js'
+import dayjs from 'dayjs'
 
 const assertGroupable = (groupByKey, dataset) => {
   const prop = dataset.schema.find(p => p.key === groupByKey)
@@ -12,7 +13,23 @@ const assertGroupable = (groupByKey, dataset) => {
   if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
     throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
   }
+  return prop
 }
+
+const d1 = dayjs('2001-01-10T12:30:40Z')
+const d2 = dayjs('2002-02-11T13:31:41Z')
+const checkDateFormatInterval = (dateFormat) => {
+  const df1 = dayjs(d1.format(dateFormat), dateFormat)
+  const df2 = dayjs(d2.format(dateFormat), dateFormat)
+  if (df1.second() !== df2.second()) return '1s'
+  if (df1.minute() !== df2.minute()) return '1m'
+  if (df1.minute() !== df2.minute()) return '1m'
+  if (df1.hour() !== df2.hour()) return '1h'
+  if (df1.date() !== df2.date()) return '1d'
+  if (df1.month() !== df2.month()) return '1M'
+  return '1y'
+}
+
 }}
 
 // https://help.opendatasoft.com/apis/ods-explore-v2/#section/Opendatasoft-Query-Language-(ODSQL)/Group-by-clause
@@ -119,6 +136,7 @@ GroupByItem
   / GroupByYear
   / GroupByNumberInterval
   / GroupByDateRanges
+  / GroupByDateFormat
   / GroupByNumberRanges
   / GroupByField
 
@@ -254,6 +272,31 @@ GroupByYear
             field,
             time_zone: options.timezone,
             calendar_interval: '1y'
+          }
+        }
+      }
+    }
+  }
+
+GroupByDateFormat
+  = "date_format("i _ field:FieldName _ "," _ format:StringLiteral _ ")" {
+    const prop = assertGroupable(field, options.dataset)
+    // pretty sure this case is implemented using a runtime mapping by ODS
+    // but using aggregations on runtime mappings is very risky in terms of performance and elasticsearch health
+    const dayjsFormat = format.value
+      ?.replace(/yy/g, 'YY')
+      .replace(/d/g, 'D')
+    const interval = checkDateFormatInterval(dayjsFormat)
+    // https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation
+    return {
+      alias: { name: text() },
+      transform: { type: 'date_transform', param: format.value, ignoreTimezone: prop.format === 'date' },
+      source: {
+        [text()]: {
+          date_histogram: {
+            field,
+            time_zone: options.timezone,
+            calendar_interval: interval
           }
         }
       }
