@@ -270,9 +270,9 @@ export default {
         size: this.size,
         page: this.page,
         select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt',
-        sort: 'createdAt:-1',
         ...fullFilters
       }
+      if (!params.q && !params.sort) params.sort = 'createdAt:-1'
       if (!append) params.facets = 'status,draftStatus,visibility,services,concepts,topics,publicationSites,requestedPublicationSites,owner'
       if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
         this.lastParams = params

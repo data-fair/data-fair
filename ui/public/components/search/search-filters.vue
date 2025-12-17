@@ -74,6 +74,7 @@
         outlined
         dense
         hide-details
+        clearable
         @change="writeParams"
       />
     </v-col>
@@ -137,7 +138,7 @@ export default {
       }
       this.$set(this.filters, 'q', query.q)
       this.$set(this.filters, 'shared', query.shared === 'true')
-      if (this.sorts) this.$set(this.filters, 'sort', query.sort || 'createdAt:-1')
+      if (this.sorts) this.$set(this.filters, 'sort', query.sort)
       this.$emit('apply')
     },
     writeParams () {
