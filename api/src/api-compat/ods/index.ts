@@ -104,7 +104,7 @@ const parseFilters = (dataset, query, route) => {
     try {
       must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset, timezone: query.timezone }))
     } catch (err: any) {
-      logCompatODSError(err, query.where, route, 'invalid-where')
+      logCompatODSError(err, query.where, route, 'invalid-where', dataset.id)
       throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)
     }
   }
@@ -259,8 +259,8 @@ const prepareBucketResult = (dataset, bucket, selectAggs, composite) => {
   return result
 }
 
-const logCompatODSError = (err: any, value: string, route: string, status: string) => {
-  console.warn(`[compat-ods][${status}][${value}]`, err.message ?? err)
+const logCompatODSError = (err: any, value: string, route: string, status: string, datasetId: string) => {
+  console.warn(`[compat-ods][${status}][${datasetId}][${value}]`, err.message ?? err)
   compatReqCounter.inc({ route, status })
 }
 
@@ -288,7 +288,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, route: stri
     try {
       select = parseSelect(query.select, { dataset, grouped })
     } catch (err: any) {
-      logCompatODSError(err, query.select, route, 'invalid-select')
+      logCompatODSError(err, query.select, route, 'invalid-select', dataset.id)
       throw httpError(400, 'le paramètre "select" est invalide : ' + err.message)
     }
     selectSource = esQuery._source = select.sources
@@ -307,7 +307,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, route: stri
     try {
       orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
     } catch (err: any) {
-      logCompatODSError(err, query.order_by, route, 'invalid-order-by')
+      logCompatODSError(err, query.order_by, route, 'invalid-order-by', dataset.id)
       throw httpError(400, 'le paramètre "order_by" est invalide : ' + err.message)
     }
     esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
@@ -323,7 +323,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, route: stri
     try {
       groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, transforms: selectTransforms, timezone: query.timezone })
     } catch (err: any) {
-      logCompatODSError(err, query.group_by, route, 'invalid-group-by')
+      logCompatODSError(err, query.group_by, route, 'invalid-group-by', dataset.id)
       throw httpError(400, 'le paramètre "group_by" est invalide : ' + err.message)
     }
     esQuery.aggs = { ___group_by: groupBy.agg }
@@ -370,7 +370,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     })
   } catch (err) {
     const { message, status } = esUtils.extractError(err)
-    logCompatODSError(message, req.url, 'records', 'es-error')
+    logCompatODSError(message, req.url, 'records', 'es-error', dataset.id)
     throw httpError(status, message)
   }
 
@@ -528,7 +528,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       compatReqCounter.inc({ route: 'exports', status: 'ok' })
     } catch (err) {
       const { message, status } = esUtils.extractError(err)
-      logCompatODSError(err, req.url, 'exports', 'xlsx-error')
+      logCompatODSError(err, req.url, 'exports', 'xlsx-error', dataset.id)
       throw httpError(status, message)
     }
     // return early, xlsx export is written directly ro response,
@@ -625,7 +625,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     )
   } catch (err) {
     const { message, status } = esUtils.extractError(err)
-    logCompatODSError(err, req.url, 'exports', 'stream-error')
+    logCompatODSError(err, req.url, 'exports', 'stream-error', dataset.id)
     throw httpError(status, message)
   }
   compatReqCounter.inc({ route: 'exports', status: 'ok' })
