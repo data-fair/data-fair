@@ -30,7 +30,7 @@ export const findRemoteServices = async (locale: Locale, publicationSite: any, p
 
   delete reqQuery.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
-  const sort = findUtils.sort(reqQuery.sort)
+  const sort = findUtils.sort(reqQuery.sort, reqQuery.q)
   const project = findUtils.project(reqQuery.select, ['apiDoc'])
   const [skip, size] = findUtils.pagination(reqQuery)
   const mongoQueries = [
@@ -58,7 +58,7 @@ export const findActions = async (locale: Locale, publicationSite: any, publicBa
 
   delete reqQuery.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
-  const sort = findUtils.sort(reqQuery.sort)
+  const sort = findUtils.sort(reqQuery.sort, reqQuery.q)
   const project = findUtils.project(reqQuery.select, ['apiDoc'])
   const [skip, size] = findUtils.pagination(reqQuery)
 

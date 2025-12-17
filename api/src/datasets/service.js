@@ -99,7 +99,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   }
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
-  const sort = findUtils.sort(reqQuery.sort)
+  const sort = findUtils.sort(reqQuery.sort, reqQuery.q)
   const project = findUtils.project(reqQuery.select, [], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 

@@ -138,14 +138,14 @@ export const ownerFilters = (reqQuery) => {
 
 /**
  *
- * @param {string} sortStr
+ * @param {string | undefined} sortStr
+ * @param {string | undefined} q
  * @returns {any}
  */
-export const sort = (sortStr) => {
+export const sort = (sortStr = '', q = '') => {
   /** @type {any} */
   const sort = {}
-  if (!sortStr) return sort
-  for (const s of sortStr.split(',')) {
+  for (const s of sortStr.split(',').filter(Boolean)) {
     const toks = s.split(':')
     if (toks.length === 1) {
       if (s.startsWith('-')) {
@@ -158,6 +158,7 @@ export const sort = (sortStr) => {
       if (sort[toks[0]] !== 1 && sort[toks[0]] !== -1) throw httpError(400, `bad sort order "${s}"`)
     }
   }
+  if (q) sort._score = { $meta: 'textScore' }
   return sort
 }
 
