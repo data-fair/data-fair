@@ -632,11 +632,16 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 }
 
 // mimic ods api pattern to capture all deprecated traffic
+const cacheNowMiddleware = (req, res, next) => {
+  if (req.url.includes('now(')) req.noModifiedCache = true
+  next()
+}
 router.get(
   '/v2.1/catalog/datasets/:datasetId/records',
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
+  cacheNowMiddleware,
   cacheHeaders.resourceBased('finalizedAt'),
   getRecords('2.1')
 )
@@ -645,6 +650,7 @@ router.get(
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
+  cacheNowMiddleware,
   cacheHeaders.resourceBased('finalizedAt'),
   getRecords('2.0')
 )
@@ -671,6 +677,7 @@ datasetsRouter.get(
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
+  cacheNowMiddleware,
   cacheHeaders.resourceBased('finalizedAt'),
   getRecords('2.1')
 )
@@ -679,6 +686,7 @@ datasetsRouter.get(
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
+  cacheNowMiddleware,
   cacheHeaders.resourceBased('finalizedAt'),
   exports('2.1')
 )
