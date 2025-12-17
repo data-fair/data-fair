@@ -774,11 +774,14 @@ bidule;1;22.2
     assert.equal(res.data.results[0].date, '2025/09/10')
 
     // group by formatted date
-    /*
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=date_format(date1, 'yyyy/MM/dd')`)
-    console.log('res', res)
-    assert.equal(res.data.results[0].date, '2025/09/10')
-    */
+    assert.deepEqual(res.data.results, [{ "date_format(date1, 'yyyy/MM/dd')": '2025/09/10' }, { "date_format(date1, 'yyyy/MM/dd')": '2025/09/11' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=date_format(date1, 'yyyy/MM/dd') as date`)
+    assert.deepEqual(res.data.results, [{ date: '2025/09/10' }, { date: '2025/09/11' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=date_format(date1, 'yyyy/MM') as date&select=count(*)`)
+    assert.deepEqual(res.data.results, [{ date: '2025/09', 'count(*)': 2 }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=date_format(date1, 'MMM yyyy') as date&select=count(*)`)
+    assert.deepEqual(res.data.results, [{ date: 'Sep 2025', 'count(*)': 2 }])
 
     // refine a date facet
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025/09/11`)

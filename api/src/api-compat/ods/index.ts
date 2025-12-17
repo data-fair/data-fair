@@ -193,7 +193,7 @@ const transforms: Record<TransformType, (value: any, timezone?: string, extra?: 
   // dayjs format does not match odsql
   // https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-functions/date_format()
   // https://day.js.org/docs/en/display/format
-  date_format: (dateStr, timezone, format) => {
+  date_transform: (dateStr, timezone, format) => {
     const dayjsFormat = format
       ?.replace(/yy/g, 'YY')
       .replace(/d/g, 'D')

@@ -164,5 +164,6 @@ SelectDatePart
 SelectDateFormat
   = "date_format("i _ key:FieldName _ "," _ format:StringLiteral ")" {
     const prop = assertDate(options.dataset, key, text())
-    return { source: key, transform: { type: 'date_format', param: format.value, ignoreTimezone: prop.format === 'date' } }
+    // pretty sure this case is implemented using a runtime mapping by ODS, but we prefer to ban runtime mappings for fear of performance issues
+    return { source: key, transform: { type: 'date_transform', param: format.value, ignoreTimezone: prop.format === 'date' } }
   }
