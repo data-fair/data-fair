@@ -47,6 +47,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
     if (props[i]['x-capabilities'] && props[i]['x-capabilities'].values === false) {
       throw httpError(400, `Impossible de grouper sur le champ ${props[i].key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
     }
+
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
     aggTypes[i] = 'terms'
     if (intervals[i] !== 'value') {
@@ -108,27 +109,36 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
       delete currentAggLevel.values[aggTypes[i]].size
     }
 
-    if (aggTypes[i] === 'terms' && missings[i]) {
+    if (aggTypes[i] === 'terms') {
       const valuesField = dataset.schema.find(p => p.key === valuesFields[i])
-      let missing = missings[i]
-      if (valuesField?.type === 'number' || valuesField?.type === 'integer') {
-        missing = Number(missing)
-        if (isNaN(missing)) throw httpError(400, 'missing should be a number')
-      }
-      if (valuesField?.type === 'boolean') {
-        if (!['true', 'false'].includes(missing)) throw httpError(400, 'missing should be a boolean')
-        missing = missing === 'true'
-      }
-      currentAggLevel.values[aggTypes[i]].missing = missing
-    }
-
-    // cardinality is meaningful only on the strict values aggregation
-    if (aggTypes[i] === 'terms' && precisionThreshold !== 0) {
-      currentAggLevel.card = {
-        cardinality: {
-          field: valuesFields[i],
-          precision_threshold: precisionThreshold
+      if (missings[i]) {
+        let missing = missings[i]
+        if (valuesField?.type === 'number' || valuesField?.type === 'integer') {
+          missing = Number(missing)
+          if (isNaN(missing)) throw httpError(400, 'missing should be a number')
         }
+        if (valuesField?.type === 'boolean') {
+          if (!['true', 'false'].includes(missing)) throw httpError(400, 'missing should be a boolean')
+          missing = missing === 'true'
+        }
+        currentAggLevel.values[aggTypes[i]].missing = missing
+      }
+
+      // cardinality is meaningful only on the strict values aggregation
+      if (precisionThreshold !== 0) {
+        currentAggLevel.card = {
+          cardinality: {
+            field: valuesFields[i],
+            precision_threshold: precisionThreshold
+          }
+        }
+      }
+
+      // add a special top_hit aggregation to fetch date-time from _source
+      // it contains timezone offset while the value in agg does not
+      if (currentAggLevel.values && valuesField.type === 'string' && valuesField.format === 'date-time') {
+        currentAggLevel.values.aggs = currentAggLevel.values.aggs ?? {}
+        currentAggLevel.values.aggs.rawValueTopHits = { top_hits: { size: 1, _source: [valuesField.key] } }
       }
     }
 
@@ -225,6 +235,9 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, fla
     let value = b.key_as_string || b.key
     if (valuesField?.type === 'string' && valuesField.format === 'date') {
       value = value.slice(0, 10)
+    }
+    if (b.rawValueTopHits) {
+      value = b.rawValueTopHits.hits.hits[0]?._source[valuesFields[i]] ?? value
     }
     const aggItem = {
       total: b.doc_count,

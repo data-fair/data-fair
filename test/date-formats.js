@@ -83,6 +83,9 @@ describe('Date formats', function () {
 
     const results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(results[0].datetime, '2021-02-23T10:27:50+01:00')
+
+    const valuesAgg = (await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=datetime`)).data
+    assert.equal(valuesAgg.aggs[0].value, '2021-02-23T10:27:50+01:00')
   })
 
   it('Accept date detected as ISO by JS but not by elasticsearch', async function () {
