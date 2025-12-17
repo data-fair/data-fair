@@ -27,7 +27,7 @@ DateLiteral
 DateYear = DecimalDigit DecimalDigit DecimalDigit DecimalDigit { return text() }
 DateMonth = DecimalDigit DecimalDigit { return text() }
 DateDay = DecimalDigit DecimalDigit { return text() }
-DatePartialIso = (DecimalDigit / "-" / "T" / "Z" / ":")* { return text() }
+DatePartialIso = (DecimalDigit / "-" / "T" / "Z" / ":" / " " / "+")* { return text() }
 
 Geom = 'geom'i
 
@@ -140,13 +140,17 @@ BooleanLiteral
 
 // Simplified numbers as the more complete ones created conflicts with some odsql syntax
 NumericLiteral "number"
-  = DecimalIntegerLiteral {
-      return { type: "Literal", value: parseFloat(text()) };
-    }
-  / DecimalIntegerLiteral "." DecimalDigit+ {
-      return { type: "Literal", value: parseFloat(text()) };
-    }
+  = [+-]? literal:DecimalLiteral {
+    return { type: "Literal", value: parseFloat(text()) };
+  }
 
+DecimalLiteral
+  = DecimalIntegerLiteral "." DecimalDigit+ {
+      return text();
+    }
+  / DecimalIntegerLiteral {
+      return text();
+    }
 
 // The "!(IdentifierStart / DecimalDigit)" predicate is not part of the official
 // grammar, it comes from text in section 7.8.3.
@@ -168,7 +172,9 @@ DecimalLiteral
   / DecimalIntegerLiteral ExponentPart? {
       return { type: "Literal", value: parseFloat(text()) };
     }
+
 */
+
 DecimalIntegerLiteral
   = "0"
   / NonZeroDigit DecimalDigit*

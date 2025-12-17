@@ -28,7 +28,7 @@ dayjs.extend(timezone)
 dayjs.extend(utc)
 
 type Aliases = Record<string, { name: string, numberInterval?: number, dateInterval?: { value: number, unit: string }, numberRanges?: boolean }[]>
-type TransformType = 'date_part'
+type TransformType = 'date_part' | 'date_transform'
 type Transforms = Record<string, { type: TransformType, param?: any, ignoreTimezone?: boolean }>
 
 const compatReqCounter = new Counter({
@@ -189,11 +189,16 @@ const transforms: Record<TransformType, (value: any, timezone?: string, extra?: 
         return date.second()
     }
     return dateStr
+  },
+  // dayjs format does not match odsql
+  // https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-functions/date_format()
+  // https://day.js.org/docs/en/display/format
+  date_transform: (dateStr, timezone, format) => {
+    const dayjsFormat = format
+      ?.replace(/yy/g, 'YY')
+      .replace(/d/g, 'D')
+    return dayjs(dateStr).tz(timezone ?? 'utc').format(dayjsFormat)
   }
-  /* dayjs format does not match odsql https://day.js.org/docs/en/display/format#list-of-all-available-formats
-  date_format: (dateStr, timezone, format) => {
-    return dayjs(dateStr).tz(timezone ?? 'utc').format(format?.replace(/yy/g, 'YY'))
-  } */
 }
 
 const applyAliases = (result: any, aliases: Aliases, selectTransforms: Transforms, timezone?: string) => {
