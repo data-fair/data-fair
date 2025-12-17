@@ -817,6 +817,7 @@ bidule;1;22.2
       { 'date-time1': '2025-09-11T08:00:00.000Z', date1: '2025-09-11', str1: 'String 1 - 2', int1: 22 },
       { 'date-time1': '2025-09-12T08:00:00.000Z', date1: '2025-09-12', str1: 'String 1 - 3', str2: 'String 2 - 3', int1: 33, nb1: 3.3 },
     ])
+    await workers.hook('finalize/' + dataset.id)
 
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/parquet?order_by=int1`, { responseType: 'arraybuffer' })
     assert.equal(typeof res.data, 'object')
