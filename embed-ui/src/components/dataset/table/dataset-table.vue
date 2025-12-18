@@ -68,6 +68,7 @@
           >
             <th
               :id="`header-${header.cssKey ?? header.key}`"
+              :title="header.title"
               class="text-left"
               :class="{
                 'sticky': header.sticky,
@@ -77,7 +78,7 @@
                 'pl-2': displayMode === 'table-dense'
               }"
               :style="{
-                'min-width': header.property ? (colsWidths[i] ?? 50) + 'px' : '',
+                'min-width': header.property ? (colsWidths[i] ?? minColWidth) + 'px' : '',
                 cursor: header.property && !noInteraction ? 'pointer' : 'default',
               }"
               @mouseenter="hoveredHeader = noInteraction ? undefined : header"
@@ -181,7 +182,11 @@
     </v-table>
 
     <!--list mode body -->
-    <template v-if="displayMode === 'list' && headers">
+    <div
+      v-if="displayMode === 'list' && headers"
+      :style="`height: ${height - (noInteraction ? 0 : 48)}px; overflow-y: scroll;overflow-x: hidden;`"
+      class="dataset-table-list-wrapper"
+    >
       <div style="height:2px;width:100%;">
         <v-progress-linear
           v-if="fetchResults.loading.value"
@@ -232,8 +237,8 @@
       >
         &nbsp;
       </v-row>
-      <layout-scroll-to-top />
-    </template>
+      <layout-scroll-to-top selector=".dataset-table-list-wrapper" />
+    </div>
   </v-sheet>
 
   <v-dialog
@@ -444,9 +449,12 @@ const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetch
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
 const thead = ref<HTMLElement>()
+const minColWidth = computed(() => {
+  return displayMode.value === 'table-dense' ? 80 : 120
+})
 const incColsWidth = async () => {
   thead.value?.querySelectorAll('table thead th').forEach((h, i) => {
-    colsWidths.value[i] = Math.max(colsWidths.value[i] ?? 50, Math.round(h.clientWidth))
+    colsWidths.value[i] = Math.max(colsWidths.value[i] ?? minColWidth.value, Math.round(h.clientWidth))
   })
 }
 watch(displayMode, () => { colsWidths.value = [] })
