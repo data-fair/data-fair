@@ -95,6 +95,7 @@
         :headers="[{text: 'Portée', sortable: false}, {text: 'Actions', sortable: false}, { text: '', sortable: false }]"
         :items="permissions"
         hide-default-footer
+        disable-pagination
         class="elevation-1 mt-3"
       >
         <template #item="{item, index}">
@@ -106,7 +107,7 @@
               />
               <div
                 v-if="item.type === 'user'"
-                v-t="{path: 'userName', args: {name: item.name || item.id}}"
+                v-t="{path: 'userName', args: {name: item.name || item.id || item.email}}"
               />
               <div
                 v-if="item.type === 'organization' && !item.department"
