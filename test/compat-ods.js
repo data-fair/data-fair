@@ -10,7 +10,7 @@ import Excel from 'exceljs'
 import dayjs from 'dayjs'
 
 describe('compatibility layer for ods api', function () {
-  it.only('contains a parser for the where syntax', function () {
+  it('contains a parser for the where syntax', function () {
     assert.deepEqual(
       whereParser.parse('"koumoul"', { searchFields: ['id'] }),
       {
