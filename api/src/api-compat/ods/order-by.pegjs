@@ -64,10 +64,12 @@ OrderByExpressionWithoutDirection
 
 OrderByFieldName
   = key:FieldName {
-    const aliasOf = Object.keys(options.aliases ?? {}).find(a => options.aliases[a].some( a => a.name === key))
+    const aliasOf = options.simpleAliases[key]
     const propKey = aliasOf ?? key
     const prop = options.dataset.schema.find(p => p.key === propKey)
-    if (!prop && !aliasOf) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop && !aliasOf) {
+      throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    }
     if (prop) {
       const capabilities = prop['x-capabilities'] || {}
       if (capabilities.values === false && capabilities.insensitive === false) {

@@ -4,12 +4,22 @@ import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
 import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
 import * as orderByParser from '../api/src/api-compat/ods/order-by.peg.js'
 import * as groupByParser from '../api/src/api-compat/ods/group-by.peg.js'
+import * as aliasesParser from '../api/src/api-compat/ods/aliases.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 import dayjs from 'dayjs'
 
-describe('compatibility layer for ods api', function () {
+describe.only('compatibility layer for ods api', function () {
+  it('contains a parser to extract aliases from expressions', function () {
+    assert.deepEqual(aliasesParser.parse('test'), {})
+    assert.deepEqual(aliasesParser.parse('test as al'), { al: 'test' })
+    assert.deepEqual(aliasesParser.parse('now() AS al'), { al: 'now()' })
+    assert.deepEqual(aliasesParser.parse('avg(test, "test") AS al'), { al: 'avg(test, "test")' })
+    assert.deepEqual(aliasesParser.parse('range(some_date, 1 day) as day'), { day: 'range(some_date, 1 day)' })
+    assert.deepEqual(aliasesParser.parse('range(some_date, *, date\'2017-10-10\', date\'2017-11-11\', *) as day'), { day: 'range(some_date, *, date\'2017-10-10\', date\'2017-11-11\', *)' })
+  })
+
   it('contains a parser for the where syntax', function () {
     assert.deepEqual(
       whereParser.parse('"koumoul"', { searchFields: ['id'] }),
@@ -260,27 +270,34 @@ describe('compatibility layer for ods api', function () {
 
   it('contains a parser for the order-by syntax', function () {
     assert.deepEqual(
-      orderByParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      orderByParser.parse('test1', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] }, simpleAliases: {} }),
       { sort: [{ test1: 'asc' }], aggregations: {} }
     )
 
     assert.throws(
-      () => orderByParser.parse('testko', { dataset: { schema: [{ key: 'test1' }] } }),
+      () => orderByParser.parse('testko', { dataset: { schema: [{ key: 'test1' }] }, simpleAliases: {} }),
       { message: 'Impossible de trier sur le champ testko, il n\'existe pas dans le jeu de données.' }
     )
 
     assert.deepEqual(
-      orderByParser.parse('test1, test2 DESC', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      orderByParser.parse('test1, test2 DESC', { dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] }, simpleAliases: {} }),
       { sort: [{ test1: 'asc' }, { test2: 'desc' }], aggregations: {} }
     )
 
     assert.deepEqual(
-      orderByParser.parse('test1, avg_test2 DESC', { aliases: { 'avg(test2)': [{ name: 'avg_test2' }] }, dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] } }),
+      orderByParser.parse('test1, avg_test2 DESC', {
+        aliases: { 'avg(test2)': [{ name: 'avg_test2' }] },
+        simpleAliases: { avg_test2: 'avg(test2)' },
+        dataset: { schema: [{ key: 'test1' }, { key: 'test2' }] }
+      }),
       { sort: [{ test1: 'asc' }, { 'avg(test2)': 'desc' }], aggregations: {} }
     )
 
     assert.deepEqual(
-      orderByParser.parse('avg(test1) DESC, test2', { dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] } }),
+      orderByParser.parse('avg(test1) DESC, test2', {
+        dataset: { schema: [{ key: 'test1', type: 'number' }, { key: 'test2' }] },
+        simpleAliases: {}
+      }),
       {
         sort: [{ ___order_by_avg_test1: 'desc' }, { test2: 'asc' }],
         aggregations: { ___order_by_avg_test1: { avg: { field: 'test1' } } }
@@ -288,7 +305,10 @@ describe('compatibility layer for ods api', function () {
     )
 
     assert.deepEqual(
-      orderByParser.parse('test1, test2 DESC', { dataset: { schema: [{ key: 'test1' }, { key: 'test2', type: 'string', capabilities: { insensitive: true } }] } }),
+      orderByParser.parse('test1, test2 DESC', {
+        dataset: { schema: [{ key: 'test1' }, { key: 'test2', type: 'string', capabilities: { insensitive: true } }] },
+        simpleAliases: {}
+      }),
       { sort: [{ test1: 'asc' }, { 'test2.keyword_insensitive': 'desc' }], aggregations: {} }
     )
   })
@@ -584,6 +604,12 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)' } })
     assert.equal(res.data.total_count, 2)
     assert.deepEqual(res.data.results, [{ id: 'koumoul' }, { id: 'bidule' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'id desc' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ id: 'koumoul' }, { id: 'bidule' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id as identifiant', order_by: 'identifiant desc' } })
+    assert.equal(res.data.total_count, 2)
+    assert.deepEqual(res.data.results, [{ identifiant: 'koumoul' }, { identifiant: 'bidule' }])
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb)', limit: 1 } })
     assert.equal(res.data.total_count, 2)
     assert.deepEqual(res.data.results, [{ id: 'koumoul' }])
@@ -596,16 +622,12 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'sum(nb) desc' } })
     assert.equal(res.data.total_count, 2)
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
-
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'avg(nb) DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
-
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', select: 'avg(nb) as avg_nb', order_by: 'avg_nb DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule', avg_nb: 22.2 }, { id: 'koumoul', avg_nb: 11 }])
-
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'count(*) DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
-
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id', order_by: 'count(id) DESC' } })
     assert.deepEqual(res.data.results, [{ id: 'bidule' }, { id: 'koumoul' }])
 
@@ -805,6 +827,10 @@ bidule;1;22.2
     assert.deepEqual(res.data.results, [{ date: '2025/09', 'count(*)': 2 }])
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=date_format(date1, 'MMM yyyy') as date&select=count(*)`)
     assert.deepEqual(res.data.results, [{ date: 'Sep 2025', 'count(*)': 2 }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=date_format(date1, 'yyyy/MM/dd') as date&order_by=date`)
+    assert.deepEqual(res.data.results, [{ date: '2025/09/10' }, { date: '2025/09/11' }])
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?group_by=date_format(date1, 'yyyy/MM/dd') as date&order_by=date desc`)
+    assert.deepEqual(res.data.results, [{ date: '2025/09/11' }, { date: '2025/09/10' }])
 
     // refine a date facet
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2025/09/11`)

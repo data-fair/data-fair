@@ -13,6 +13,7 @@ import { parse as parseWhere } from './where.peg.js'
 import { parse as parseSelect } from './select.peg.js'
 import { parse as parseOrderBy } from './order-by.peg.js'
 import { parse as parseGroupBy } from './group-by.peg.js'
+import { parse as parseAliases } from './aliases.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
@@ -276,6 +277,9 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, route: stri
 
   const fields = dataset.schema.map(f => f.key)
 
+  const aliasesSources = [query.select, query.group_by].filter(Boolean).filter(p => p.trim() !== '*')
+  const simpleAliases: Aliases = aliasesSources.length ? parseAliases(aliasesSources.join(',')) : {}
+
   let aliases: Aliases = {}
   let selectAggs = {}
   let selectSource = []
@@ -305,7 +309,7 @@ const prepareEsQuery = (dataset: any, query: Record<string, string>, route: stri
   if (query.order_by) {
     let orderBy
     try {
-      orderBy = parseOrderBy(query.order_by, { dataset, aliases, grouped })
+      orderBy = parseOrderBy(query.order_by, { dataset, aliases, simpleAliases, grouped })
     } catch (err: any) {
       logCompatODSError(err, query.order_by, route, 'invalid-order-by', dataset.id)
       throw httpError(400, 'le paramètre "order_by" est invalide : ' + err.message)
