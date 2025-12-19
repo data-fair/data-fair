@@ -10,7 +10,7 @@ import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 import dayjs from 'dayjs'
 
-describe.only('compatibility layer for ods api', function () {
+describe('compatibility layer for ods api', function () {
   it('contains a parser to extract aliases from expressions', function () {
     assert.deepEqual(aliasesParser.parse('test'), {})
     assert.deepEqual(aliasesParser.parse('test as al'), { al: 'test' })
