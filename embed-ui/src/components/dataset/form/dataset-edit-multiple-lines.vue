@@ -105,6 +105,12 @@ const editSchema = computed(() => {
     if (restDataset.value?.primaryKey?.includes(key)) {
       schema.properties[key].readOnly = true
     }
+    if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument' && schema.properties[key].layout?.comp !== 'text-field') {
+      delete schema.properties[key]
+    }
+    if (schema.properties[key]['x-extension']) {
+      delete schema.properties[key]
+    }
     if (!homogeneity.value?.homogenousProperties.includes(key)) {
       schema.properties[key].layout = schema.properties[key].layout || {}
       schema.properties[key].layout.slots = { before: { name: `${key}-before` } }
@@ -114,9 +120,6 @@ const editSchema = computed(() => {
       } else {
         // schema.properties[key].readOnly = true
       }
-    }
-    if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument' && schema.properties[key].layout.comp !== 'text-field') {
-      delete schema.properties[key]
     }
   })
   return schema
