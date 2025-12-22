@@ -165,7 +165,7 @@ const iterCsv = async function * (worksheet: WorkSheet, normalizeOptions: Normal
   if (normalizeOptions.spreadsheetHeaderLine === undefined) {
     for (let lineNb = 0; lineNb < Math.min(json.length, 10000); lineNb++) {
       const row = json[lineNb]
-      if (!row) {
+      if (!row || !row.length) {
         ignoredStartingRows++
         continue
       } else {
@@ -188,6 +188,7 @@ const iterCsv = async function * (worksheet: WorkSheet, normalizeOptions: Normal
       }
       continue
     }
+    if (!row || !row.length) continue
     // some type checking
     for (let colNb = 0; colNb < row.length; colNb++) {
       if (hasSimpleDate[colNb] === false) continue
@@ -203,7 +204,7 @@ const iterCsv = async function * (worksheet: WorkSheet, normalizeOptions: Normal
   let rowsBuffer = []
   for (let lineNb = 0; lineNb < json.length; lineNb++) {
     const row = json[lineNb]
-    if (!row) continue
+    if (!row || !row.length) continue
     if (lineNb > 0) {
       for (let colNb = 0; colNb < row.length; colNb++) {
         row[colNb] = mapCellValue(row[colNb])
