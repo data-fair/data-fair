@@ -16,7 +16,7 @@ const splitRetroCompat = (str) => {
 
 const parseOrder = (sortStr, fields, dataset, valuesField, hasMetric) => {
   const sort = parseSort(sortStr, fields, dataset)
-  const knownKeys = ['_count', '_key', '_time', valuesField]
+  const knownKeys = ['_count', '_key', valuesField]
   if (hasMetric) knownKeys.push('metric')
   return sort.map(s => {
     const key = Object.keys(s)[0]
@@ -70,10 +70,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
     if (sorts[i] === '-key') sorts[i] = '-_key'
     if (sorts[i] === 'count') sorts[i] = '_count'
     if (sorts[i] === '-count') sorts[i] = '-_count'
-    if (aggTypes[i] === 'date_histogram') {
-      sorts[i] = sorts[i] || '_time'
-      sorts[i] = sorts[i].replace('_key', '_time')
-    }
+    if (aggTypes[i] === 'date_histogram') sorts[i] = sorts[i] || '_key'
     // TODO: also accept ranges expressed in the interval parameter to use range aggregations instead of histogram
   }
   // number after which we accept that cardinality is approximative
@@ -105,7 +102,12 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
       }
     }
     if (intervals[i] !== 'value') {
-      currentAggLevel.values[aggTypes[i]].interval = intervals[i]
+      if (aggTypes[i] === 'date_histogram') {
+        currentAggLevel.values[aggTypes[i]].calendar_interval = intervals[i]
+      } else {
+        currentAggLevel.values[aggTypes[i]].interval = intervals[i]
+      }
+
       delete currentAggLevel.values[aggTypes[i]].size
     }
 

@@ -26,7 +26,7 @@ export const indexDefinition = async (dataset) => {
       properties['_vt_prepared'] = {
         properties: {
           xyz: { type: 'keyword', index: true, doc_values: false },
-          pbf: { type: 'binary', index: false, doc_values: false }
+          pbf: { type: 'binary', store: false, doc_values: false }
         }
       }
     }

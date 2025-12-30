@@ -29,10 +29,17 @@ export class DfEs {
     try {
       await client.ping()
     } catch (err) {
-    // 1 retry after 2s
-    // solve the quite common case in docker compose of the service starting at the same time as the elasticsearh node
+      // 1 retry after 2s
+      // solve the quite common case in docker compose of the service starting at the same time as the elasticsearh node
       await new Promise(resolve => setTimeout(resolve, 2000))
       await client.ping()
+    }
+    const clusterSettings = await client.cluster.getSettings({ flat_settings: true })
+    if (!clusterSettings.persistent['indices.id_field_data.enabled'] || clusterSettings.persistent['action.destructive_requires_name'] !== 'false') {
+      console.log('patch some ES cluster settings', clusterSettings)
+      clusterSettings.persistent['indices.id_field_data.enabled'] = 'true'
+      clusterSettings.persistent['action.destructive_requires_name'] = 'false'
+      await client.cluster.putSettings(clusterSettings)
     }
     this._client = client
   }

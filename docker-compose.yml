@@ -12,7 +12,7 @@ services:
     profiles:
       - dev
       - test
-    image: ghcr.io/data-fair/elasticsearch:7.x
+    image: ghcr.io/data-fair/elasticsearch:8.19.9
     ports:
       - 9200:9200
       - 9300:9300
@@ -33,11 +33,11 @@ services:
     profiles:
       - dev
       - test
-    image: mongo:4.4
+    image: mongo:8.0.17
     ports:
       - 27017:27017
     volumes:
-      - mongo-data:/data/db
+      - mongo8-data:/data/db
 
   sd:
     profiles:
@@ -186,7 +186,7 @@ services:
 
 volumes:
   elasticsearch-data:
-  mongo-data:
+  mongo8-data:
   udata-fs:
   redis-data:
   clamav-data:

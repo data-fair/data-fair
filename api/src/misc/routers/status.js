@@ -20,8 +20,10 @@ async function esStatus (req) {
   } else {
     throw new Error('Health status is ' + healthStatus)
   }
+  /* since v8 ingest-attachment is no longer a plugin, it is pre-packaged
   const ingestAttachment = (await es.cat.plugins({ format: 'json' })).find(p => p.component === 'ingest-attachment')
   if (!ingestAttachment) throw new Error('Ingest attachment plugin is not installed.')
+  */
 }
 
 async function jwksStatus (req) {

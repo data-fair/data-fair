@@ -57,7 +57,7 @@ export const esProperty = prop => {
       // support wildcard filters
       // TODO: depending on the cardinality of the field the wildcard inner field might not be relevant
       // https://www.elastic.co/fr/blog/find-strings-within-strings-faster-with-the-new-elasticsearch-wildcard-field
-      innerFields.wildcard = { type: 'wildcard', doc_values: false }
+      innerFields.wildcard = { type: 'wildcard' }
     }
     esProp = { type: 'keyword', ignore_above: 200, fields: innerFields, index, doc_values: values }
   }
