@@ -75,18 +75,18 @@ NowWithParams
   }
 
 NowParamName
-  = "year"i { return 'year' }
-  / "years"i { return 'year' }
-  / "month"i { return 'month' }
+  = "years"i { return 'year' }
+  / "year"i { return 'year' }
   / "months"i { return 'month' }
-  / "day"i { return 'day' }
+  / "month"i { return 'month' }
   / "days"i { return 'day' }
-  / "hour"i  { return 'hour' }
+  / "day"i { return 'day' }
   / "hours"i  { return 'hour' }
-  / "minute"i { return 'minute' }
-  / "minutes"i { return 'minutes' }
-  / "second"i { return 'second' }
+  / "hour"i  { return 'hour' }
+  / "minutes"i { return 'minute' }
+  / "minute"i { return 'minutes' }
   / "seconds"i { return 'second' }
+  / "second"i { return 'second' }
 
 NowParam
   = name:NowParamName _ "=" _ sign:[+-]? value:DecimalLiteral {

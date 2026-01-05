@@ -198,6 +198,8 @@ describe('compatibility layer for ods api', function () {
     assert.equal(now3.date(), now.add(1, 'day').date())
     const now4 = dayjs(whereParser.parse('date: now(day=-11)', { dataset: { schema: [{ key: 'date' }] } }).term.date)
     assert.equal(now4.date(), now.subtract(11, 'day').date())
+    const now5 = dayjs(whereParser.parse('date: now(hours=-9)', { dataset: { schema: [{ key: 'date' }] } }).term.date)
+    assert.equal(now5.date(), now.subtract(9, 'hour').date())
 
     assert.deepEqual(
       whereParser.parse('search(test1, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text'] }),
