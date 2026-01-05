@@ -22,7 +22,7 @@ services:
       - ingest.geoip.downloader.enabled=false
       - ES_JAVA_OPTS=-Xms2g -Xmx2g
     volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
+      - elasticsearch-data7:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD", "nc", "-z", "-v", "localhost", "9200"]
       start_period: 10s
@@ -185,7 +185,7 @@ services:
       - ./test/resources/udata.cfg:/udata/udata.cfg
 
 volumes:
-  elasticsearch-data:
+  elasticsearch-data7:
   mongo-data:
   udata-fs:
   redis-data:
