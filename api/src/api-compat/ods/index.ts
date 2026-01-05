@@ -393,7 +393,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       applyAliases(result, aliases, selectTransforms, query.timezone)
       results.push(result)
     }
-    compatReqCounter.inc({ route: 'records', status: 'ok' })
+    // compatReqCounter.inc({ route: 'records', status: 'ok' })
     res.send({ total_count: buckets.length, results })
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
@@ -406,7 +406,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       applyAliases(line, aliases, selectTransforms, query.timezone)
       result.results.push(line)
     }
-    compatReqCounter.inc({ route: 'records', status: 'ok' })
+    // compatReqCounter.inc({ route: 'records', status: 'ok' })
     res.send(result)
   }
 }
@@ -534,7 +534,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       }
       worksheet.commit()
       await workbookWriter.commit()
-      compatReqCounter.inc({ route: 'exports', status: 'ok' })
+      // compatReqCounter.inc({ route: 'exports', status: 'ok' })
     } catch (err) {
       const { message, status } = esUtils.extractError(err)
       logCompatODSError(err, req.url, 'exports', 'xlsx-error', dataset.id)
@@ -637,7 +637,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     logCompatODSError(err, req.url, 'exports', 'stream-error', dataset.id)
     throw httpError(status, message)
   }
-  compatReqCounter.inc({ route: 'exports', status: 'ok' })
+  // compatReqCounter.inc({ route: 'exports', status: 'ok' })
 }
 
 // mimic ods api pattern to capture all deprecated traffic
