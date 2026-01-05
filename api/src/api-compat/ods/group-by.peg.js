@@ -665,8 +665,8 @@ function peg$parse(input, options) {
     return { value: date }
   };
   var peg$f47 = function() { return text() };
-  var peg$f48 = function() { return text() };
-  var peg$f49 = function() { return text() };
+  var peg$f48 = function() { return text().padStart(2, '0') };
+  var peg$f49 = function() { return text().padStart(2, '0') };
   var peg$f50 = function() { return text() };
   var peg$f51 = function(chars) {
     const str = chars.join('')
@@ -2264,13 +2264,11 @@ function peg$parse(input, options) {
     s1 = peg$parseDecimalDigit();
     if (s1 !== peg$FAILED) {
       s2 = peg$parseDecimalDigit();
-      if (s2 !== peg$FAILED) {
-        peg$savedPos = s0;
-        s0 = peg$f48();
-      } else {
-        peg$currPos = s0;
-        s0 = peg$FAILED;
+      if (s2 === peg$FAILED) {
+        s2 = null;
       }
+      peg$savedPos = s0;
+      s0 = peg$f48();
     } else {
       peg$currPos = s0;
       s0 = peg$FAILED;
@@ -2286,13 +2284,11 @@ function peg$parse(input, options) {
     s1 = peg$parseDecimalDigit();
     if (s1 !== peg$FAILED) {
       s2 = peg$parseDecimalDigit();
-      if (s2 !== peg$FAILED) {
-        peg$savedPos = s0;
-        s0 = peg$f49();
-      } else {
-        peg$currPos = s0;
-        s0 = peg$FAILED;
+      if (s2 === peg$FAILED) {
+        s2 = null;
       }
+      peg$savedPos = s0;
+      s0 = peg$f49();
     } else {
       peg$currPos = s0;
       s0 = peg$FAILED;

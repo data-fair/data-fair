@@ -25,8 +25,8 @@ DateLiteral
   }
 
 DateYear = DecimalDigit DecimalDigit DecimalDigit DecimalDigit { return text() }
-DateMonth = DecimalDigit DecimalDigit { return text() }
-DateDay = DecimalDigit DecimalDigit { return text() }
+DateMonth = DecimalDigit DecimalDigit? { return text().padStart(2, '0') }
+DateDay = DecimalDigit DecimalDigit? { return text().padStart(2, '0') }
 DatePartialIso = (DecimalDigit / "-" / "T" / "Z" / ":" / " " / "+")* { return text() }
 
 Geom = 'geom'i

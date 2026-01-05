@@ -14,6 +14,7 @@ import { parse as parseSelect } from './select.peg.js'
 import { parse as parseOrderBy } from './order-by.peg.js'
 import { parse as parseGroupBy } from './group-by.peg.js'
 import { parse as parseAliases } from './aliases.peg.js'
+import { parse as parseRefine } from './refine.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
@@ -114,37 +115,9 @@ const parseFilters = (dataset, query, route) => {
     try {
       const refineArray = Array.isArray(query.refine) ? query.refine : [query.refine]
       for (const refine of refineArray) {
-        const sep = refine.includes(':') ? ':' : '.'
-        const [key, ...valueParts] = refine.split(sep)
-        const prop = dataset.schema.find(p => p.key === key)
-        if (!prop) throw httpError(400, `Impossible d'appliquer un filtre refine sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-        const value = valueParts.join(':')
-        if (prop.type === 'string' && (prop.format === 'date' || prop.format === 'date-time')) {
-          let startDate, endDate
-          if (value.length === 10) {
-            let date = dayjs.tz(value, 'YYYY-MM-DD', query.timezone ?? 'UTC')
-            if (!date.isValid()) date = dayjs.tz(value, 'YYYY/MM/DD', query.timezone ?? 'UTC')
-            if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
-            startDate = date.toISOString()
-            endDate = date.endOf('day').toISOString()
-          }
-          if (value.length === 7) {
-            let date = dayjs.tz(value, 'YYYY-MM', query.timezone ?? 'UTC')
-            if (!date.isValid()) date = dayjs.tz(value, 'YYYY/MM', query.timezone ?? 'UTC')
-            if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
-            startDate = date.toISOString()
-            endDate = date.endOf('month').toISOString()
-          }
-          if (value.length === 4) {
-            let date = dayjs.tz(value, 'YYYY', query.timezone ?? 'UTC')
-            if (!date.isValid()) date = dayjs.tz(value, 'YYYY', query.timezone ?? 'UTC')
-            if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
-            startDate = date.toISOString()
-            endDate = date.endOf('year').toISOString()
-          }
-          filter.push({ range: { [key]: { gte: startDate, lte: endDate } } })
-        } else {
-          filter.push({ term: { [key]: value } })
+        const refineFilters = parseRefine(refine, { dataset, timezone: query.timezone })
+        for (const f of refineFilters) {
+          filter.push(f)
         }
       }
     } catch (err: any) {
