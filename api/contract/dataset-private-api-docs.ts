@@ -178,6 +178,28 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   }
 
   api.paths['/metadata-attachments/{attachmentId}'] = {
+    get: {
+      summary: 'Télécharger une pièce jointe',
+      description: 'Télécharger Supprimer une pièce jointe des métadonnées.',
+      operationId: 'downloadMetadataAttachment',
+      'x-permissionClass': 'read',
+      tags: ['Métadonnées'],
+      parameters: [{
+        in: 'path',
+        name: 'attachmentId',
+        description: 'Identifiant de la pièce jointe.',
+        required: true,
+        schema: {
+          title: 'Identifiant de la pièce jointe.',
+          type: 'string'
+        }
+      }],
+      responses: {
+        200: {
+          description: 'Le fichier de la pièce jointe.'
+        }
+      }
+    },
     delete: {
       summary: 'Supprimer une pièce jointe',
       description: 'Supprimer une pièce jointe des métadonnées.\n**Attention, il faut ensuite supprimer la pièce jointe des informations du jeu de données via la route <code>operationId: writeDescription</code> pour qu\'elle ne soit plus répertoriée.**',
