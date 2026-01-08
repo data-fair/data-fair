@@ -143,7 +143,7 @@ services:
       - ./data/catalogs:/data
 
   clamav:
-    image: clamav/clamav:1.1
+    image: clamav/clamav:1.5.1
     profiles:
       - dev
     healthcheck:
