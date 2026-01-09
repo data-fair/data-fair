@@ -154,7 +154,13 @@ export const switchAlias = async (dataset, tempId) => {
   }
   if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating aliases ' + name)
 
-  await clearAliases(dataset)
+  try {
+    await clearAliases(dataset)
+  } catch (err) {
+    internalError('es-clear-aliases', err)
+    await new Promise(resolve => setTimeout(resolve, 4000))
+    await clearAliases(dataset)
+  }
 }
 
 const clearAliases = async (dataset) => {
