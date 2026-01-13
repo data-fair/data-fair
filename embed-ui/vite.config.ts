@@ -61,7 +61,12 @@ export default defineConfig({
         // in production this injection will be performed by an express middleware
         if (process.env.NODE_ENV !== 'development') return html
         const { uiConfigPath } = (await import('@data-fair/lib-express')).prepareUiConfig((await import('../api/src/ui-config.ts')).uiConfig)
-        return microTemplate(html, { SITE_PATH: '', UI_CONFIG_PATH: uiConfigPath, THEME_CSS_HASH: '', PUBLIC_SITE_INFO_HASH: '' })
+        return microTemplate(html, {
+          SITE_PATH: '',
+          UI_CONFIG_PATH: uiConfigPath,
+          THEME_CSS_HASH: '',
+          PUBLIC_SITE_INFO_HASH: ''
+        })
       }
     }
   ],

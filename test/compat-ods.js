@@ -5,6 +5,7 @@ import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
 import * as orderByParser from '../api/src/api-compat/ods/order-by.peg.js'
 import * as groupByParser from '../api/src/api-compat/ods/group-by.peg.js'
 import * as aliasesParser from '../api/src/api-compat/ods/aliases.peg.js'
+import * as refineParser from '../api/src/api-compat/ods/refine.peg.js'
 import * as workers from '../api/src/workers/index.ts'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
@@ -18,6 +19,68 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(aliasesParser.parse('avg(test, "test") AS al'), { al: 'avg(test, "test")' })
     assert.deepEqual(aliasesParser.parse('range(some_date, 1 day) as day'), { day: 'range(some_date, 1 day)' })
     assert.deepEqual(aliasesParser.parse('range(some_date, *, date\'2017-10-10\', date\'2017-11-11\', *) as day'), { day: 'range(some_date, *, date\'2017-10-10\', date\'2017-11-11\', *)' })
+  })
+
+  it('contains a parser for the refine syntax', function () {
+    assert.deepEqual(refineParser.parse('id:value', { dataset: { schema: [{ key: 'id' }] } }), [{ term: { id: 'value' } }])
+    assert.deepEqual(refineParser.parse('id:"value"', { dataset: { schema: [{ key: 'id' }] } }), [{ term: { id: 'value' } }])
+    assert.deepEqual(refineParser.parse('id:12345', { dataset: { schema: [{ key: 'id' }] } }), [{ term: { id: 12345 } }])
+    assert.deepEqual(refineParser.parse('date:2025', { dataset: { schema: [{ key: 'date', type: 'string', format: 'date-time' }] } }), [{
+      range: {
+        date: {
+          gte: '2025-01-01T00:00:00.000Z',
+          lte: '2025-12-31T23:59:59.999Z'
+        }
+      }
+    }])
+    assert.deepEqual(refineParser.parse('date:2025', { dataset: { schema: [{ key: 'date', type: 'string', format: 'date-time' }] }, timezone: 'Europe/Paris' }), [{
+      range: {
+        date: {
+          gte: '2024-12-31T23:00:00.000Z',
+          lte: '2025-12-31T22:59:59.999Z'
+        }
+      }
+    }])
+    assert.deepEqual(refineParser.parse('date:"2025"', { dataset: { schema: [{ key: 'date', type: 'string', format: 'date-time' }] } }), [{
+      range: {
+        date: {
+          gte: '2025-01-01T00:00:00.000Z',
+          lte: '2025-12-31T23:59:59.999Z'
+        }
+      }
+    }])
+    assert.deepEqual(refineParser.parse('date:"2025/01/10"', { dataset: { schema: [{ key: 'date', type: 'string', format: 'date-time' }] } }), [{
+      range: {
+        date: {
+          gte: '2025-01-10T00:00:00.000Z',
+          lte: '2025-01-10T23:59:59.999Z'
+        }
+      }
+    }])
+    assert.deepEqual(refineParser.parse('date:"2025/1/10"', { dataset: { schema: [{ key: 'date', type: 'string', format: 'date-time' }] } }), [{
+      range: {
+        date: {
+          gte: '2025-01-10T00:00:00.000Z',
+          lte: '2025-01-10T23:59:59.999Z'
+        }
+      }
+    }])
+    assert.deepEqual(refineParser.parse('date:"2025/1"', { dataset: { schema: [{ key: 'date', type: 'string', format: 'date-time' }] } }), [{
+      range: {
+        date: {
+          gte: '2025-01-01T00:00:00.000Z',
+          lte: '2025-01-31T23:59:59.999Z'
+        }
+      }
+    }])
+    assert.deepEqual(refineParser.parse('id:test,date:"2025/1/10"', { dataset: { schema: [{ key: 'id' }, { key: 'date', type: 'string', format: 'date-time' }] } }), [{ term: { id: 'test' } }, {
+      range: {
+        date: {
+          gte: '2025-01-10T00:00:00.000Z',
+          lte: '2025-01-10T23:59:59.999Z'
+        }
+      }
+    }])
   })
 
   it('contains a parser for the where syntax', function () {
@@ -135,6 +198,8 @@ describe('compatibility layer for ods api', function () {
     assert.equal(now3.date(), now.add(1, 'day').date())
     const now4 = dayjs(whereParser.parse('date: now(day=-11)', { dataset: { schema: [{ key: 'date' }] } }).term.date)
     assert.equal(now4.date(), now.subtract(11, 'day').date())
+    const now5 = dayjs(whereParser.parse('date: now(hours=-9)', { dataset: { schema: [{ key: 'date' }] } }).term.date)
+    assert.equal(now5.date(), now.subtract(9, 'hour').date())
 
     assert.deepEqual(
       whereParser.parse('search(test1, "bok of secret")', { dataset: { schema: [{ key: 'str1' }] }, searchFields: ['test1.text', 'test2.text'] }),
@@ -842,6 +907,12 @@ bidule;1;22.2
     assert.equal(res.data.results.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:2026`)
     assert.equal(res.data.results.length, 0)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:"2025/09/11"`)
+    assert.equal(res.data.results.length, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:"2025/9/11"`)
+    assert.equal(res.data.results.length, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records?timezone=Europe/Paris&refine=date1:"2025/9"`)
+    assert.equal(res.data.results.length, 2)
   })
 
   it('should manage corner cases of parquet export', async function () {

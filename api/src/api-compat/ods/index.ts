@@ -14,6 +14,7 @@ import { parse as parseSelect } from './select.peg.js'
 import { parse as parseOrderBy } from './order-by.peg.js'
 import { parse as parseGroupBy } from './group-by.peg.js'
 import { parse as parseAliases } from './aliases.peg.js'
+import { parse as parseRefine } from './refine.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
@@ -111,40 +112,17 @@ const parseFilters = (dataset, query, route) => {
   }
 
   if (query.refine) {
-    const refineArray = Array.isArray(query.refine) ? query.refine : [query.refine]
-    for (const refine of refineArray) {
-      const sep = refine.includes(':') ? ':' : '.'
-      const [key, ...valueParts] = refine.split(sep)
-      const prop = dataset.schema.find(p => p.key === key)
-      if (!prop) throw httpError(400, `Impossible d'appliquer un filtre refine sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-      const value = valueParts.join(':')
-      if (prop.type === 'string' && (prop.format === 'date' || prop.format === 'date-time')) {
-        let startDate, endDate
-        if (value.length === 10) {
-          let date = dayjs.tz(value, 'YYYY-MM-DD', query.timezone ?? 'UTC')
-          if (!date.isValid()) date = dayjs.tz(value, 'YYYY/MM/DD', query.timezone ?? 'UTC')
-          if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
-          startDate = date.toISOString()
-          endDate = date.endOf('day').toISOString()
+    try {
+      const refineArray = Array.isArray(query.refine) ? query.refine : [query.refine]
+      for (const refine of refineArray) {
+        const refineFilters = parseRefine(refine, { dataset, timezone: query.timezone })
+        for (const f of refineFilters) {
+          filter.push(f)
         }
-        if (value.length === 7) {
-          let date = dayjs.tz(value, 'YYYY-MM', query.timezone ?? 'UTC')
-          if (!date.isValid()) date = dayjs.tz(value, 'YYYY/MM', query.timezone ?? 'UTC')
-          if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
-          startDate = date.toISOString()
-          endDate = date.endOf('month').toISOString()
-        }
-        if (value.length === 4) {
-          let date = dayjs.tz(value, 'YYYY', query.timezone ?? 'UTC')
-          if (!date.isValid()) date = dayjs.tz(value, 'YYYY', query.timezone ?? 'UTC')
-          if (!date.isValid()) throw httpError(400, `Impossible d'appliquer le filtre refine sur le champ ${key}, date non valide ${value}.`)
-          startDate = date.toISOString()
-          endDate = date.endOf('year').toISOString()
-        }
-        filter.push({ range: { [key]: { gte: startDate, lte: endDate } } })
-      } else {
-        filter.push({ term: { [key]: value } })
       }
+    } catch (err: any) {
+      logCompatODSError(err, query.refine, route, 'invalid-refine', dataset.id)
+      throw httpError(400, 'le paramètre "refine" est invalide : ' + err.message)
     }
   }
 
@@ -388,7 +366,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       applyAliases(result, aliases, selectTransforms, query.timezone)
       results.push(result)
     }
-    compatReqCounter.inc({ route: 'records', status: 'ok' })
+    // compatReqCounter.inc({ route: 'records', status: 'ok' })
     res.send({ total_count: buckets.length, results })
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
@@ -401,7 +379,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       applyAliases(line, aliases, selectTransforms, query.timezone)
       result.results.push(line)
     }
-    compatReqCounter.inc({ route: 'records', status: 'ok' })
+    // compatReqCounter.inc({ route: 'records', status: 'ok' })
     res.send(result)
   }
 }
@@ -529,7 +507,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       }
       worksheet.commit()
       await workbookWriter.commit()
-      compatReqCounter.inc({ route: 'exports', status: 'ok' })
+      // compatReqCounter.inc({ route: 'exports', status: 'ok' })
     } catch (err) {
       const { message, status } = esUtils.extractError(err)
       logCompatODSError(err, req.url, 'exports', 'xlsx-error', dataset.id)
@@ -632,7 +610,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     logCompatODSError(err, req.url, 'exports', 'stream-error', dataset.id)
     throw httpError(status, message)
   }
-  compatReqCounter.inc({ route: 'exports', status: 'ok' })
+  // compatReqCounter.inc({ route: 'exports', status: 'ok' })
 }
 
 // mimic ods api pattern to capture all deprecated traffic
