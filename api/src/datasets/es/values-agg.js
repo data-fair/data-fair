@@ -91,19 +91,27 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   esQuery.size = 0
   let currentAggLevel = esQuery.aggs = {}
   for (let i = 0; i < valuesFields.length; i++) {
-    const valuesField = valuesFields[i]
+    const valuesField = dataset.schema.find(p => p.key === valuesFields[i])
     const hasMetric = query.metric && query.metric_field
     if (aggSizes[i] !== 0) {
       currentAggLevel.values = {
         [aggTypes[i]]: {
-          field: valuesField,
+          field: valuesField.key,
           size: aggSizes[i]
         }
       }
     }
     if (intervals[i] !== 'value') {
       if (aggTypes[i] === 'date_histogram') {
-        currentAggLevel.values[aggTypes[i]].calendar_interval = intervals[i]
+        currentAggLevel.values[aggTypes[i]].time_zone = valuesField.timeZone || config.defaultTimeZone
+        const interval = intervals[i].trim()
+        // cf https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-aggregations-bucket-datehistogram-aggregation.html#calendar_intervals
+        // we prefer calendar intervals when interval param is compatible and fallback to fixed_interval for others
+        if (['minute', '1m', 'hour', '1h', 'day', '1d', 'week', '1w', 'month', '1M', 'quarter', '1q', 'year', '1y'].includes(interval)) {
+          currentAggLevel.values[aggTypes[i]].calendar_interval = interval
+        } else {
+          currentAggLevel.values[aggTypes[i]].fixed_interval = interval
+        }
       } else {
         currentAggLevel.values[aggTypes[i]].interval = intervals[i]
       }
@@ -112,7 +120,6 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
     }
 
     if (aggTypes[i] === 'terms') {
-      const valuesField = dataset.schema.find(p => p.key === valuesFields[i])
       if (missings[i]) {
         let missing = missings[i]
         if (valuesField?.type === 'number' || valuesField?.type === 'integer') {
@@ -145,7 +152,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
     }
 
     if (currentAggLevel.values) {
-      currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset, valuesField, hasMetric)
+      currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset, valuesField.key, hasMetric)
       if (hasMetric) {
         const metricField = dataset.schema.find(p => p.key === query.metric_field)
         if (!metricField) {

@@ -114,9 +114,13 @@ describe('values aggs', function () {
     assert.equal(res.data.aggs[0].total, 2)
     assert.equal(res.data.aggs[1].total, 0)
     assert.equal(res.data.aggs[2].total, 3)
-
     assert.equal(res.data.aggs[0].value, '2017-10-01')
     assert.equal(res.data.aggs[0].metric, 13)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=somedate&interval=30m&metric_field=employees&metric=sum`)
+    assert.equal(res.data.aggs[0].total, 2)
+    assert.equal(res.data.aggs[1].total, 0)
+    assert.equal(res.data.aggs[res.data.aggs.length - 1].total, 3)
 
     // Other values route for simpler list of values
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values/id`)
