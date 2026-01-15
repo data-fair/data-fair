@@ -60,6 +60,8 @@ import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
 import { can } from '../misc/utils/permissions.ts'
 import { emit as workerPing } from '../workers/ping.ts'
+import { downloadFileFromStorage } from '../files-storage/utils.ts'
+import resolvePath from 'resolve-path'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
@@ -1170,27 +1172,15 @@ router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescenda
     if (!documentProp || documentProp.key !== childDocumentProp.key) return res.status(404).send('No attachment column found')
 
     const relFilePath = path.join(...req.params.attachmentPath.slice(1))
-    await new Promise((resolve, reject) => res.sendFile(
-      relFilePath,
-      {
-        transformStream: res.throttle('static'),
-        root: attachmentsDir(childDataset),
-        headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
-      },
-      (err) => err ? reject(err) : resolve(true)
-    ))
+    await downloadFileFromStorage(
+      resolvePath(attachmentsDir(childDataset), relFilePath),
+      req, res, { dispositionType: 'inline' })
   } else {
     // the transform stream option was patched into "send" module using patch-package
     const relFilePath = path.join(...req.params.attachmentPath)
-    await new Promise((resolve, reject) => res.sendFile(
-      relFilePath,
-      {
-        transformStream: res.throttle('static'),
-        root: attachmentsDir(req.dataset),
-        headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
-      },
-      (err) => err ? reject(err) : resolve(true)
-    ))
+    await downloadFileFromStorage(
+      resolvePath(attachmentsDir(req.dataset), relFilePath),
+      req, res, { dispositionType: 'inline' })
   }
 })
 
@@ -1199,8 +1189,9 @@ router.get('/:datasetId/data-files', readDataset({ noCache: true }), apiKeyMiddl
   res.send(await datasetUtils.dataFiles(req.dataset, req.publicBaseUrl))
 })
 router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddlewareRead, permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  // the transform stream option was patched into "send" module using patch-package
-  res.download(path.join(...req.params.filePath), null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
+  const relFilePath = path.join(...req.params.filePath)
+  await downloadFileFromStorage(
+    resolvePath(dataFilesDir(req.dataset), relFilePath), req, res)
 })
 
 // Special attachments referenced in dataset metadatas
@@ -1279,18 +1270,12 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noC
       res.throttle('static'),
       res
     )
+    return
   }
 
-  await new Promise((resolve, reject) => res.sendFile(
-    relFilePath,
-    {
-      transformStream: res.throttle('static'),
-      root: datasetUtils.metadataAttachmentsDir(req.dataset),
-      headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
-    },
-    (err) => err ? reject(err) : resolve(true)
-  ))
-  // res.sendFile(req.params.attachmentPath)
+  await downloadFileFromStorage(
+    resolvePath(datasetUtils.metadataAttachmentsDir(req.dataset), relFilePath),
+    req, res, { dispositionType: 'inline' })
 })
 
 router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddlewareWrite, permissions.middleware('deleteMetadataAttachment', 'write'), async (req, res, next) => {
@@ -1316,26 +1301,22 @@ router.get('/:datasetId/raw', readDataset({ noCache: true }), apiKeyMiddlewareRe
     return
   }
   if (!req.dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-  // the transform stream option was patched into "send" module using patch-package
-  res.download(req.dataset.originalFile.name, null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
+  await downloadFileFromStorage(datasetUtils.originalFilePath(req.dataset), req, res)
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-
-  // the transform stream option was patched into "send" module using patch-package
-  res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
+  await downloadFileFromStorage(datasetUtils.filePath(req.dataset), req, res)
 })
 
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
 router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  // the transform stream option was patched into "send" module using patch-package
   if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
-    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
+    await downloadFileFromStorage(datasetUtils.fullFilePath(req.dataset), req, res)
   } else {
-    res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
+    await downloadFileFromStorage(datasetUtils.filePath(req.dataset), req, res)
   }
 })
 

@@ -9,7 +9,6 @@ import util from 'util'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import { nanoid } from 'nanoid'
-import contentDisposition from 'content-disposition'
 import applicationAPIDocs from '../../contract/application-api-docs.js'
 import * as ajv from '../misc/utils/ajv.ts'
 import applicationKeys from '../../contract/application-keys.js'
@@ -35,6 +34,8 @@ import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, session } fr
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import { downloadFileFromStorage } from '../files-storage/utils.ts'
+import resolvePath from 'resolve-path'
 
 const unlink = util.promisify(fs.unlink)
 const validateKeys = ajv.compile(applicationKeys)
@@ -661,17 +662,11 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
       // res.throttle('static'),
       res
     )
+    return
   }
-
-  await new Promise((resolve, reject) => res.sendFile(
-    relFilePath,
-    {
-      // transformStream: res.throttle('static'),
-      root: attachmentsDir(req.application),
-      headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
-    },
-    (err) => err ? reject(err) : resolve(true)
-  ))
+  await downloadFileFromStorage(
+    resolvePath(attachmentsDir(req.application), relFilePath),
+    req, res, { dispositionType: 'inline' })
 })
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {

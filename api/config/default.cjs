@@ -6,6 +6,16 @@ module.exports = {
   oldPublicUrl: '', // special case when changing path of data-fair
   wsPublicUrl: 'ws://localhost:8080',
   dataDir: '/data',
+  filesStorage: 'fs', // fs or s3
+  s3: {
+    region: '',
+    credentials: {
+      accessKeyId: '',
+      secretAccessKey: '',
+    },
+    forcePathStyle: true,
+    bucket: ''
+  },
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: null,
