@@ -1,5 +1,6 @@
 import config from '#config'
 import mongo from '#mongo'
+import filesStorage from '#files-storage'
 import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
@@ -721,8 +722,8 @@ async function checkMatchingAttachment (req: { body: any }, lineId: string, dir:
   if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {
     const fileName = req.body[pathField.key].replace(lineId + '/', '')
     try {
-      const fileNames = await fs.readdir(dir)
-      if (fileNames.includes(fileName)) return true
+      const files = await filesStorage.ls(dir)
+      if (files.some(f => f.name === fileName)) return true
     } catch (err) {
       // missing directory, nothing to do
     }

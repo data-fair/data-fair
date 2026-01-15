@@ -8,6 +8,7 @@ import iconvLite from 'iconv-lite'
 import chardet from 'chardet'
 import { type Account } from '@data-fair/lib-express'
 import debugModule from 'debug'
+import filesStorage from '#files-storage'
 
 const debugCleanTmp = debugModule('clean-tmp')
 debugCleanTmp.enabled = true
@@ -118,46 +119,52 @@ export const lsFiles = async (dataset: any) => {
 export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) => {
   if (dataset.isVirtual || dataset.isMetaOnly) return []
   const d = dataFilesDir(dataset)
-  if (!await fs.pathExists(d)) {
-    return []
-  }
-  const files = await fs.readdir(d)
+  const files = (await filesStorage.ls(d)).filter(f => !f.isDirectory)
   const results: any[] = []
   if (dataset.originalFile) {
-    if (!files.includes(dataset.originalFile.name)) {
+    const originalFile = files.find(f => f.name === dataset.originalFile.name)
+    if (!originalFile) {
       console.warn('Original data file not found', d, dataset.originalFile.name)
     } else {
       results.push({
         name: dataset.originalFile.name,
         key: 'original',
         title: 'Fichier d\'origine',
-        mimetype: dataset.originalFile.mimetype
+        mimetype: dataset.originalFile.mimetype,
+        size: originalFile.size,
+        updatedAt: originalFile.lastModified
       })
     }
     if (dataset.file) {
       if (dataset.file.name !== dataset.originalFile.name) {
-        if (!files.includes(dataset.file.name)) {
+        const file = files.find(f => f.name === dataset.file.name)
+        if (!file) {
           console.warn('Normalized data file not found', d, dataset.file.name)
         } else {
           results.push({
             name: dataset.file.name,
             key: 'normalized',
             title: `Export ${dataset.file.mimetype.split('/').pop().replace('+', '').toUpperCase()}`,
-            mimetype: dataset.file.mimetype
+            mimetype: dataset.file.mimetype,
+            size: file.size,
+            updatedAt: file.lastModified
           })
         }
       }
       const parsed = path.parse(dataset.file.name)
       if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
         const name = `${parsed.name}-full${parsed.ext}`
-        if (!files.includes(name)) {
+        const fullFile = files.find(f => f.name === name)
+        if (!fullFile) {
           console.warn('Full data file not found', d, name)
         } else {
           results.push({
             name,
             key: 'full',
             title: `Fichier enrichi ${dataset.file.mimetype.split('/').pop().replace('+', '').toUpperCase()}`,
-            mimetype: dataset.file.mimetype
+            mimetype: dataset.file.mimetype,
+            size: fullFile.size,
+            updatedAt: fullFile.lastModified
           })
         }
       }
@@ -165,9 +172,6 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
   }
 
   for (const result of results) {
-    const stats = await fs.stat(resolvePath(dataFilesDir(dataset), result.name))
-    result.size = stats.size
-    result.updatedAt = stats.mtime
     let url = `${publicBaseUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
     if (dataset.draftReason) {
       url += '?draft=true'

@@ -5,6 +5,7 @@ import { httpError } from '@data-fair/lib-express'
 
 export class FsBackend implements FileBackend {
   async ls (path: string): Promise<FileStats[]> {
+    if (!await fs.pathExists(path)) return []
     const files = await fs.readdir(path, { withFileTypes: true })
     return Promise.all(
       files.map(async (file) => {
