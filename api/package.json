@@ -17,7 +17,7 @@
     "@data-fair/data-fair-shared": "*",
     "@data-fair/data-fair-ui": "*",
     "@data-fair/lib-express": "^1.20.5",
-    "@data-fair/lib-node": "^2.8.2",
+    "@data-fair/lib-node": "^2.11.0",
     "@data-fair/lib-utils": "^1.6.1",
     "@data-fair/lib-validation": "^1.0.2",
     "@dsnp/parquetjs": "^1.8.7",

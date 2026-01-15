@@ -31,16 +31,20 @@ export const loadingDir = (dataset: any) => {
   return resolvePath(dir(dataset), 'loading')
 }
 
+export const dataFilesDir = (dataset: any) => {
+  return resolvePath(dir(dataset), 'data-files')
+}
+
 export const loadedFilePath = (dataset: any) => {
   return resolvePath(loadingDir(dataset), dataset.loaded?.dataset?.name)
 }
 
 export const filePath = (dataset: any) => {
-  return resolvePath(dir(dataset), dataset.file.name)
+  return resolvePath(dataFilesDir(dataset), dataset.file.name)
 }
 
 export const originalFilePath = (dataset: any) => {
-  return resolvePath(dir(dataset), dataset.originalFile.name)
+  return resolvePath(dataFilesDir(dataset), dataset.originalFile.name)
 }
 
 export const fullFileName = (dataset: any) => {
@@ -49,7 +53,7 @@ export const fullFileName = (dataset: any) => {
 }
 
 export const fullFilePath = (dataset: any) => {
-  return resolvePath(dir(dataset), fullFileName(dataset))
+  return resolvePath(dataFilesDir(dataset), fullFileName(dataset))
 }
 
 export const loadedAttachmentsFilePath = (dataset: any) => {
@@ -113,7 +117,7 @@ export const lsFiles = async (dataset: any) => {
 
 export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) => {
   if (dataset.isVirtual || dataset.isMetaOnly) return []
-  const d = dir(dataset)
+  const d = dataFilesDir(dataset)
   if (!await fs.pathExists(d)) {
     return []
   }
@@ -161,7 +165,7 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
   }
 
   for (const result of results) {
-    const stats = await fs.stat(resolvePath(dir(dataset), result.name))
+    const stats = await fs.stat(resolvePath(dataFilesDir(dataset), result.name))
     result.size = stats.size
     result.updatedAt = stats.mtime
     let url = `${publicBaseUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`

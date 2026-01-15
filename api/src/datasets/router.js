@@ -46,7 +46,7 @@ import * as apiKeyUtils from '../misc/utils/api-key.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.ts'
-import { dir, attachmentsDir } from './utils/files.ts'
+import { dir, dataFilesDir, attachmentsDir } from './utils/files.ts'
 import { preparePatch } from './utils/patch.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
@@ -1200,7 +1200,7 @@ router.get('/:datasetId/data-files', readDataset({ noCache: true }), apiKeyMiddl
 })
 router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddlewareRead, permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(path.join(...req.params.filePath), null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+  res.download(path.join(...req.params.filePath), null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
 })
 
 // Special attachments referenced in dataset metadatas
@@ -1317,7 +1317,7 @@ router.get('/:datasetId/raw', readDataset({ noCache: true }), apiKeyMiddlewareRe
   }
   if (!req.dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.dataset.originalFile.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+  res.download(req.dataset.originalFile.name, null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
 })
 
 // Download the dataset in various formats
@@ -1325,7 +1325,7 @@ router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewa
   if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
 
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+  res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
 })
 
 // Download the full dataset with extensions
@@ -1333,9 +1333,9 @@ router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewa
 router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
-    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
   } else {
-    res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+    res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dataFilesDir(req.dataset) })
   }
 })
 

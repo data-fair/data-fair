@@ -72,7 +72,7 @@ export default async function (dataset: FileDataset) {
         mapinfo = resolvePath(tmpDir, mapinfoFile.path)
       } else if (filePaths.length === 1 && datasetUtils.basicTypes.includes(mime.lookup(filePaths[0].parsed.base) as string)) {
         // case of a single data file in an archive
-        const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].parsed.base)
+        const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), filePaths[0].parsed.base)
         await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
         dataset.file = {
           name: filePaths[0].parsed.base,
@@ -86,7 +86,7 @@ export default async function (dataset: FileDataset) {
           throw httpError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
         }
         await fs.move(tmpDir, datasetUtils.attachmentsDir(dataset))
-        const csvFilePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
+        const csvFilePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
         // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
         const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
         await fs.writeFile(csvFilePath, csvContent)
@@ -115,7 +115,7 @@ export default async function (dataset: FileDataset) {
       const zlib = await import('node:zlib')
 
       const basicTypeFileName = dataset.originalFile.name.slice(0, dataset.originalFile.name.length - 3)
-      const filePath = resolvePath(datasetUtils.dir(dataset), basicTypeFileName)
+      const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), basicTypeFileName)
       await pump(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
       dataset.file = {
         name: basicTypeFileName,
@@ -128,7 +128,7 @@ export default async function (dataset: FileDataset) {
 
     if (datasetUtils.jsonTypes.has(dataset.originalFile.mimetype)) {
       const { stringify: csvStrStream } = await import('csv-stringify')
-      const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
+      const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
       await pump(
         fs.createReadStream(originalFilePath),
         mimeTypeStream(dataset.originalFile.mimetype).parser(),
@@ -151,7 +151,7 @@ export default async function (dataset: FileDataset) {
       const { stringify: csvStrStream } = await import('csv-stringify')
 
       const { eventsStream, infos } = await icalendar.parse(originalFilePath)
-      const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
+      const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
       await pump(
         eventsStream,
         csvStrStream({ ...csvStringifyOptions, columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'] }),
@@ -171,7 +171,7 @@ export default async function (dataset: FileDataset) {
         throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
       }
       const xlsx = await import('../../misc/utils/xlsx.ts')
-      const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
+      const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
       await pipeline(xlsx.iterCSV(originalFilePath, dataset.originalFile.normalizeOptions), fs.createWriteStream(filePath))
       dataset.file = {
         name: path.parse(dataset.originalFile.name).name + '.csv',
@@ -199,7 +199,7 @@ export default async function (dataset: FileDataset) {
         ogrOptions.push('routes')
       }
 
-      const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.geojson')
+      const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.geojson')
       // using the .shp file instead of the zip seems to help support more shapefiles for some reason
       await ogr2ogr(shapefile ?? mapinfo ?? originalFilePath, {
         format: 'GeoJSON',

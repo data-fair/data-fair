@@ -266,7 +266,7 @@ export const run = async () => {
   await locks.start(db)
   if (config.mode.includes('worker')) {
     await cleanTmp()
-    await upgradeScripts(db, locks, resolve(import.meta.dirname, '../..'))
+    await upgradeScripts(db, locks, resolve(import.meta.dirname, '..'))
   }
 
   await es.init()

@@ -147,7 +147,6 @@ ADD ui/nuxt.config.js ui/nuxt.config.js
 ADD ui/public/static ui/public/static
 ADD /api api
 ADD /shared shared
-ADD /upgrade upgrade
 
 ADD package.json README.md LICENSE BUILD.json* ./
 
