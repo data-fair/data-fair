@@ -243,7 +243,7 @@ describe('Applications', function () {
     assert.equal(res.data.slug, 'test-slug-2')
   })
 
-  it.only('Upload a simple attachment on an application', async function () {
+  it('Upload a simple attachment on an application', async function () {
     const ax = global.ax.dmeadus
     let { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
 

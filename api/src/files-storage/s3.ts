@@ -1,4 +1,5 @@
 import config from '#config'
+import { relative as relativePath } from 'node:path'
 import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2 } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
@@ -26,7 +27,7 @@ export class S3Backend implements FileBackend {
     const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: bucketPath(targetPath) })
     const response = await this.client.send(command)
     return (response.Contents || []).map((obj) => ({
-      path: obj.Key!.replace(targetPath, ''),
+      path: relativePath(targetPath, obj.Key!),
       size: obj.Size!,
       isDirectory: obj.Key!.endsWith('/'),
       lastModified: obj.LastModified!,
@@ -66,15 +67,22 @@ export class S3Backend implements FileBackend {
   }
 
   async readStream (path: string, ifModifiedSince?: string, range?: string) {
+    const ifModifiedSinceDate = ifModifiedSince ? new Date(ifModifiedSince) : undefined
     const command = new GetObjectCommand({
       Bucket: config.s3.bucket,
       Key: bucketPath(path),
-      IfModifiedSince: ifModifiedSince ? new Date(ifModifiedSince) : undefined,
+      IfModifiedSince: ifModifiedSinceDate,
       Range: range
     })
 
     try {
       const response = await this.client.send(command)
+
+      // this shouldn't happen except if the s3 provider does not support conditional header
+      if (ifModifiedSinceDate && response.LastModified!.getDate() <= ifModifiedSinceDate.getDate()) {
+        throw httpError(304)
+      }
+
       return {
         lastModified: response.LastModified!,
         size: response.ContentLength!,

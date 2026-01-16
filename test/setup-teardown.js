@@ -15,6 +15,7 @@ import * as app from '../api/src/app.js'
 import * as rateLimiting from '../api/src/misc/utils/rate-limiting.ts'
 
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
+import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 
 const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/geocoder-api.json'), 'utf8'))
 const sireneApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/sirene-api.json'), 'utf8'))
@@ -188,6 +189,7 @@ before('scratch all', async function () {
   debug('scratch all')
   await global.db.dropDatabase()
   await fs.remove('../data/test')
+  await filesStorage.removeDir('/')
   await global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) })
   debug('scratch all ok')
 })
@@ -224,9 +226,9 @@ beforeEach('scratch data', async function () {
       global.db.collection('extensions-cache').deleteMany({}),
       global.db.collection('remote-services').deleteMany({ id: /dataset:(.*)/ }),
       global.db.collection('journals').deleteMany({}),
-      fs.emptyDir('../data/test')
+      fs.remove('../data/test'),
+      filesStorage.removeDir('/')
     ])
-    await fs.ensureDir('../data/test/captures')
     global.memoizedGetPublicationSiteSettings.clear()
     rateLimiting.clear()
   } catch (err) {
@@ -236,9 +238,15 @@ beforeEach('scratch data', async function () {
   debug('scratch data ok')
 })
 
-afterEach('check pending tasks', function () {
+afterEach('check pending tasks', async function () {
   for (const pending of Object.values(pendingTasks)) {
     if (Object.keys(pending).length > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
+  }
+
+  if (config.filesStorage === 's3') {
+    if (await fs.pathExists(config.dataDir)) {
+      throw new Error(`the test "${this.currentTest?.title}" created some files in dataDir, that should not happen when using S3`)
+    }
   }
 })
 
