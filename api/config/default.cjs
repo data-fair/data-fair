@@ -10,12 +10,13 @@ module.exports = {
   filesStorage: 'fs', // fs or s3
   s3: {
     region: '',
+    endpoint: '',
+    bucket: '',
     credentials: {
       accessKeyId: '',
       secretAccessKey: '',
     },
-    forcePathStyle: true,
-    bucket: ''
+    forcePathStyle: true
   },
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',

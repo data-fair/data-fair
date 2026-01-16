@@ -110,4 +110,18 @@ export class FsBackend implements FileBackend {
   async zipDirectory (path: string) {
     return unzipper.Open.file(path)
   }
+
+  async fileSample (path: string) {
+    return fsFileSample(path)
+  }
+}
+
+export const fsFileSample = async (path: string): Promise<Buffer> => {
+  const st = await fs.stat(path)
+  const fd = await fs.open(path, 'r')
+  const size = Math.min(st.size, 1024 * 1024)
+  const buffer = Buffer.alloc(size)
+  await fs.read(fd, buffer, 0, size, 0)
+  fs.close(fd)
+  return buffer
 }

@@ -3,7 +3,6 @@ import * as datasetUtils from '../../datasets/utils/index.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.js'
 import { replaceAllAttachments } from '../../datasets/utils/attachments.ts'
-import datasetFileSample from '../../datasets/utils/file-sample.js'
 import chardet from 'chardet'
 import md5File from 'md5-file'
 import JSONStream from 'JSONStream'
@@ -16,6 +15,7 @@ import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import { fsyncFile } from '../../datasets/utils/files.ts'
 import filesStorage from '#files-storage'
+import { fsFileSample } from '../../files-storage/fs.ts'
 
 export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:file-storer:${dataset.id}`)
@@ -85,7 +85,7 @@ export default async function (dataset: DatasetInternal) {
       debug(`Explicit encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
       datasetFile.encoding = datasetFile.explicitEncoding
     } else {
-      const fileSample = await datasetFileSample(loadedFilePath)
+      const fileSample = await fsFileSample(loadedFilePath)
       debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
       const encoding = chardet.detect(fileSample)
       if (encoding) datasetFile.encoding = encoding

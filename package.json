@@ -6,6 +6,7 @@
   "scripts": {
     "build-types": "df-build-types ./api/",
     "test": "npm -w test run test",
+    "test-s3": "FILES_STORAGE=s3 npm -w test run test",
     "test-deps": "docker compose --profile test up -d --wait",
     "report": "nyc report --reporter=html",
     "lint": "eslint . && npm -w ui run lint && npm -w test run lint && npm -w embed-ui run lint",

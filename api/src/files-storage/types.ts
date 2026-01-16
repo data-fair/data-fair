@@ -21,4 +21,5 @@ export type FileBackend = {
   moveDir(srcPath: string, dstPath: string): Promise<void>
   pathExists(path: string): Promise<boolean>
   zipDirectory(path: string): Promise<CentralDirectory>
+  fileSample(path: string): Promise<Buffer>
 }

@@ -6,6 +6,17 @@ const host = 'localhost'
 module.exports = {
   port: 5599,
   dataDir: '../data/development',
+  filesStorage: 'fs',
+  s3: {
+    region: 'us-east-1',
+    endpoint: 'http://localhost:9097',
+    bucket: 'bucketdev',
+    credentials: {
+      accessKeyId: '',
+      secretAccessKey: '',
+    },
+    forcePathStyle: true
+  },
   publicUrl: `http://${host}:5600/data-fair`,
   wsPublicUrl: `ws://${host}:5600/data-fair`,
   directoryUrl: `http://${host}:5600/simple-directory`,

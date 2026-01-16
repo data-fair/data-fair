@@ -161,4 +161,14 @@ export class S3Backend implements FileBackend {
   async zipDirectory (path: string) {
     return unzipper.Open.s3(this.client, { Bucket: config.s3.bucket, Key: bucketPath(path) })
   }
+
+  async fileSample (path: string) {
+    const command = new GetObjectCommand({
+      Bucket: config.s3.bucket,
+      Key: path,
+      Range: 'bytes=0-' + (1024 * 1024)
+    })
+    const response = await this.client.send(command)
+    return Buffer.from(await response.Body!.transformToByteArray())
+  }
 }

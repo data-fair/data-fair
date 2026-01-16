@@ -39,6 +39,19 @@ services:
     volumes:
       - mongo8-data:/data/db
 
+  s3mock:
+    profiles:
+      - dev
+      - test
+    image: adobe/s3mock:latest
+    environment:
+      - COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=buckettest,buckerdev
+      - COM_ADOBE_TESTING_S3MOCK_STORE_ROOT=s3root
+    ports:
+      - 9097:9090
+    volumes:
+      - s3mock-data:/s3root
+
   sd:
     profiles:
       - dev
@@ -190,3 +203,4 @@ volumes:
   udata-fs:
   redis-data:
   clamav-data:
+  s3mock-data:

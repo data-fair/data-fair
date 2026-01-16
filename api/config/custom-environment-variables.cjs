@@ -9,11 +9,12 @@ module.exports = {
   filesStorage: 'FILES_STORAGE',
   s3: {
     region: 'S3_REGION',
+    endpoint: 'S3_ENDPOINT',
+    bucket: 'S3_BUCKET',
     credentials: {
       accessKeyId: 'S3_ACCESS_KEY_ID',
       secretAccessKey: 'S3_SECRET_ACCESS_KEY',
-    },
-    bucket: 'S3_BUCKET'
+    }
   },
   sessionDomain: 'SESSION_DOMAIN',
   directoryUrl: 'DIRECTORY_URL',
