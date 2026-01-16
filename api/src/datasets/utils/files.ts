@@ -1,7 +1,6 @@
 import config from '#config'
 import fs from 'fs-extra'
 import path from 'path'
-import nodeDir from 'node-dir'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { type Account } from '@data-fair/lib-express'
 import debugModule from 'debug'
@@ -75,19 +74,12 @@ export const metadataAttachmentPath = (dataset: any, name: string) => {
 }
 
 export const lsAttachments = async (dataset: any) => {
-  const dirName = attachmentsDir(dataset)
-  if (!await fs.pathExists(dirName)) return []
-  const files = (await nodeDir.promiseFiles(dirName))
-    .map(f => path.relative(dirName, f))
+  const files = await filesStorage.lsr(attachmentsDir(dataset))
   return files.filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
 }
 
 export const lsMetadataAttachments = async (dataset: any) => {
-  const dirName = metadataAttachmentsDir(dataset)
-  if (!await fs.pathExists(dirName)) return []
-  const files = (await nodeDir.promiseFiles(dirName))
-    .map(f => path.relative(dirName, f))
-  return files
+  return await filesStorage.lsr(metadataAttachmentsDir(dataset))
 }
 
 export const lsFiles = async (dataset: any) => {

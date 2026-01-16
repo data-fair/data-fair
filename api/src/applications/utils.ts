@@ -2,7 +2,6 @@ import config from '#config'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import path from 'path'
-import fs from 'fs-extra'
 import * as visibilityUtils from '../misc/utils/visibility.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import { prepareMarkdownContent } from '../misc/utils/markdown.js'
@@ -14,10 +13,10 @@ import { getPseudoSessionState } from '../misc/utils/users.ts'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { ownerDir } from '../datasets/utils/files.ts'
 import { updateTotalStorage } from '../datasets/utils/storage.ts'
-import nodeDir from 'node-dir'
 import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
 import { reqSession } from '@data-fair/lib-express'
 import type { Application, PublicationSite, Request } from '#types'
+import filesStorage from '#files-storage'
 
 export const clean = (application: Application, publicUrl: string, publicationSite: PublicationSite, query: Record<string, string> = {}) => {
   const select = query.select ? query.select.split(',') : []
@@ -134,11 +133,7 @@ export const attachmentPath = (application: Application, name: string) => {
 }
 
 export const lsAttachments = async (application: Application) => {
-  const dirName = attachmentsDir(application)
-  if (!await fs.pathExists(dirName)) return []
-  const files = (await nodeDir.promiseFiles(dirName))
-    .map(f => path.relative(dirName, f))
-  return files
+  return filesStorage.lsr(attachmentsDir(application))
 }
 
 const storage = async (application: Application) => {
@@ -147,9 +142,9 @@ const storage = async (application: Application) => {
     size: 0
   }
 
-  const attachments = await lsAttachments(application)
+  const attachments = await filesStorage.lsrWithStats(attachmentsDir(application))
   for (const attachment of attachments) {
-    storage.attachments.size += (await fs.promises.stat(attachmentPath(application, attachment))).size
+    storage.attachments.size += attachment.size
     storage.attachments.count++
   }
   storage.size += storage.attachments.size
