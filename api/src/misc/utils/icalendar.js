@@ -1,11 +1,12 @@
 import config from '#config'
-import fs from 'fs-extra'
 import { Readable } from 'stream'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import icalendar from '@koumoul/icalendar'
 import moment from 'moment'
 import 'moment-timezone'
 import rrule from 'rrule'
+import { arrayBuffer } from 'stream/consumers'
+import filesStorage from '#files-storage'
 
 const localeTimeZone = moment.tz.guess()
 
@@ -18,7 +19,8 @@ function parseDate (prop, calendarTimeZone) {
 }
 
 export const parse = async (filePath) => {
-  let content = (await fs.readFile(filePath, 'utf8')).trim()
+  const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
+  let content = Buffer.from(buf).toString('utf8').trim()
   // fix badly closed openagenda exports
   if (content.endsWith('END:VEVENT')) {
     content += '\nEND:VCALENDAR'

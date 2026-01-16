@@ -3,10 +3,10 @@
 
 import express from 'express'
 import config from '#config'
-import fs from 'fs-extra'
 import * as datasetsService from '../../datasets/service.js'
 import { ownerDir } from '../../datasets/utils/files.ts'
 import mongo from '#mongo'
+import filesStorage from '#files-storage'
 
 const router = express.Router()
 export default router
@@ -115,7 +115,7 @@ router.delete('/:type/:id', async (req, res) => {
   await mongo.db.collection('limits').deleteOne({ type: identity.type, id: identity.id })
 
   // whole data directory
-  await fs.remove(ownerDir(identity))
+  await filesStorage.removeDir(ownerDir(identity))
 
   res.send()
 })
