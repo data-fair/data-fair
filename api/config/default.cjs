@@ -5,7 +5,8 @@ module.exports = {
   publicUrl: 'http://localhost:8080',
   oldPublicUrl: '', // special case when changing path of data-fair
   wsPublicUrl: 'ws://localhost:8080',
-  dataDir: '/data',
+  dataDir: '/data', // on a volume shared accross all nodes if data-fair is scaled
+  // tmpDir: '/data/tmp' // a local work directory for each node, defaults to dataDir + '/tmp
   filesStorage: 'fs', // fs or s3
   s3: {
     region: '',

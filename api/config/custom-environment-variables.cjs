@@ -5,6 +5,7 @@ module.exports = {
   oldPublicUrl: 'OLD_PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',
   dataDir: 'DATA_DIR',
+  tmpDir: 'TMP_DIR',
   filesStorage: 'FILES_STORAGE',
   s3: {
     region: 'S3_REGION',

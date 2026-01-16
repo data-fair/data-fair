@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs'
 import fs from 'fs-extra'
 import type { FileStats, FileBackend } from './types.ts'
 import { httpError } from '@data-fair/lib-express'
+import { fsyncFile } from '../datasets/utils/files.ts'
 
 export class FsBackend implements FileBackend {
   async ls (path: string): Promise<FileStats[]> {
@@ -42,7 +43,25 @@ export class FsBackend implements FileBackend {
     }
   }
 
-  async moveTmpFile (tmpPath: string, path: string): Promise<void> {
-    await fs.rename(tmpPath, path)
+  async moveFromFs (tmpPath: string, path: string): Promise<void> {
+    // in 2 operations for atomicity in case we are on 2 separate volumes
+    await fs.move(tmpPath, path + '.tmp')
+    await fs.move(path + '.tmp', path)
+    await fsyncFile(path)
+  }
+
+  async copyFile (srcPath: string, dstPath: string) {
+    // in 2 operations for atomicity in case we are on 2 separate volumes
+    await fs.copy(srcPath, dstPath + '.tmp')
+    await fs.move(dstPath + '.tmp', dstPath)
+    await fsyncFile(dstPath)
+  }
+
+  async copyDir (srcPath: string, dstPath: string) {
+    await fs.copy(srcPath, dstPath)
+  }
+
+  async pathExists (path: string) {
+    return fs.pathExists(path)
   }
 }

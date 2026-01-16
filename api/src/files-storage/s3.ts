@@ -1,5 +1,5 @@
 import config from '#config'
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2 } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
 import { unlink } from 'node:fs/promises'
@@ -53,7 +53,7 @@ export class S3Backend implements FileBackend {
     }
   }
 
-  async moveTmpFile (tmpPath: string, path: string): Promise<void> {
+  async moveFromFs (tmpPath: string, path: string): Promise<void> {
     const upload = new Upload({
       client: this.client,
       params: {
@@ -64,5 +64,56 @@ export class S3Backend implements FileBackend {
     })
     await upload.done()
     await unlink(tmpPath)
+  }
+
+  async copyFile (srcPath: string, dstPath: string) {
+    const params = {
+      Bucket: config.s3.bucket,
+      CopySource: `${config.s3.bucket}/${srcPath}`,
+      Key: dstPath,
+    }
+
+    await this.client.send(new CopyObjectCommand(params))
+  }
+
+  async copyDir (srcPath: string, dstPath: string) {
+    // the page size cannot be too large as it is also the number of parallel copies
+    const pages = paginateListObjectsV2(
+      { client: this.client, pageSize: 100 },
+      { Bucket: config.s3.bucket, Prefix: srcPath }
+    )
+
+    for await (const page of pages) {
+      if (!page.Contents) continue
+
+      // Map each object in the current page to a Copy promise
+      const copyPromises = page.Contents.map((obj) => {
+        const sourceKey = obj.Key
+        // Replace the old prefix with the new prefix for the destination
+        const copyParams = {
+          Bucket: config.s3.bucket,
+          CopySource: `${config.s3.bucket}/${sourceKey}`,
+          Key: sourceKey!.replace(srcPath, dstPath),
+        }
+
+        return this.client.send(new CopyObjectCommand(copyParams))
+      })
+
+      // Execute the batch of copies for this page
+      await Promise.all(copyPromises)
+      console.log(`Copied ${copyPromises.length} objects...`)
+    }
+
+    console.log('All matching objects copied.')
+  }
+
+  async pathExists (path: string) {
+    const params = {
+      Bucket: config.s3.bucket,
+      Prefix: path,
+      MaxKeys: 1, // We only need to know if at least one exists
+    }
+    const response = await this.client.send(new ListObjectsV2Command(params))
+    return !!(response.Contents && response.Contents.length > 0)
   }
 }

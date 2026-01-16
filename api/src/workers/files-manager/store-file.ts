@@ -15,6 +15,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import { fsyncFile } from '../../datasets/utils/files.ts'
+import filesStorage from '#files-storage'
 
 export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:file-storer:${dataset.id}`)
@@ -96,32 +97,31 @@ export default async function (dataset: DatasetInternal) {
       patch.file = { ...patch.originalFile, schema: [] }
     }
 
-    const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
     await fsyncFile(loadedFilePath)
-    await fs.move(loadedFilePath, newFilePath, { overwrite: true })
-    await fsyncFile(newFilePath)
+    const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+    await filesStorage.moveFromFs(loadedFilePath, newFilePath)
+
     if (dataset.originalFile) {
       const oldFilePath = datasetUtils.originalFilePath(dataset)
       if (oldFilePath !== newFilePath) {
-        await fs.remove(oldFilePath)
+        await filesStorage.rm(oldFilePath)
       }
     }
   } else if (draft && !await fs.pathExists(datasetUtils.originalFilePath(dataset))) {
     // this happens if we upload only the attachments, not the data file itself
     // in this case copy the one from prod
-    await fs.copy(datasetUtils.originalFilePath(datasetFull), datasetUtils.originalFilePath(dataset))
-    await fsyncFile(datasetUtils.originalFilePath(dataset))
+    await filesStorage.copyFile(datasetUtils.originalFilePath(datasetFull), datasetUtils.originalFilePath(dataset))
   }
 
   if (dataset.loaded?.attachments) {
     await replaceAllAttachments(dataset, datasetUtils.loadedAttachmentsFilePath(dataset))
-  } else if (draft && await fs.pathExists(datasetUtils.attachmentsDir(datasetFull)) && !await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
+  } else if (draft && await filesStorage.pathExists(datasetUtils.attachmentsDir(datasetFull)) && !await filesStorage.pathExists(datasetUtils.attachmentsDir(dataset))) {
     // this happens if we upload only the main data file and not the attachments
     // in this case copy the attachments directory from prod
-    await fs.copy(datasetUtils.attachmentsDir(datasetFull), datasetUtils.attachmentsDir(dataset))
+    await filesStorage.copyDir(datasetUtils.attachmentsDir(datasetFull), datasetUtils.attachmentsDir(dataset))
   }
 
-  await fs.remove(loadingDir)
+  await filesStorage.rm(loadingDir)
 
   await datasetsService.applyPatch(dataset, patch)
   if (!dataset.draftReason) await updateStorage(dataset)
