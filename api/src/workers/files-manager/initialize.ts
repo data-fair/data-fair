@@ -19,6 +19,7 @@ import mongo from '#mongo'
 import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
 import type { DatasetInternal, DatasetLineAction } from '#types'
 import { isRestDataset, isVirtualDataset } from '#types/dataset/index.ts'
+import filesStorage from '#files-storage'
 
 export const eventsPrefix = 'initialize'
 
@@ -115,8 +116,7 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.initFrom.parts.includes('metadataAttachments')) {
       for (const metadataAttachment of metadataAttachments) {
         const newPath = metadataAttachmentPath(dataset, metadataAttachment)
-        await fs.ensureDir(path.dirname(newPath))
-        await fs.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
+        await filesStorage.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
         await progress.inc()
       }
       patch.attachments = parentDataset.attachments
@@ -150,9 +150,9 @@ export default async function (dataset: DatasetInternal) {
         patch.file = parentDataset.file
         patch.originalFile = parentDataset.originalFile
         patch.status = 'analyzed'
-        await fs.copy(datasetUtils.originalFilePath(parentDataset), datasetUtils.originalFilePath({ ...dataset, ...patch }))
+        await filesStorage.copyFile(datasetUtils.originalFilePath(parentDataset), datasetUtils.originalFilePath({ ...dataset, ...patch }))
         if (datasetUtils.originalFilePath(parentDataset) !== datasetUtils.filePath(parentDataset)) {
-          await fs.copy(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
+          await filesStorage.copyFile(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
         }
         await progress.inc(parentDataset.count)
       } else {
@@ -237,8 +237,7 @@ export default async function (dataset: DatasetInternal) {
           copyPath = attachmentPath(descendant, relPath)
         }
         const newPath = attachmentPath(dataset, relPath)
-        await fs.ensureDir(path.dirname(newPath))
-        await fs.copyFile(copyPath, newPath)
+        await filesStorage.copyFile(copyPath, newPath)
         await progress.inc()
       }
     }

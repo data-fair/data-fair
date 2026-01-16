@@ -90,13 +90,12 @@ const printRequestOpts = (req: RequestWithResource): AxiosRequestConfig => {
 }
 
 const stream2file = async (reqOpts: AxiosRequestConfig, capturePath: string) => {
-  let captureRes
   try {
     const captureReq = await axios({ ...reqOpts, responseType: 'stream' })
     await pump(captureReq.data, fs.createWriteStream(capturePath))
-  } catch (err) {
+  } catch (err: any) {
     const data = await fs.readFile(capturePath, 'utf8')
-    throw new Error(`failure in capture - ${captureRes.statusCode} - ${data}`)
+    throw new Error(`failure in capture - ${err.status} - ${data}`)
   }
 }
 
@@ -109,7 +108,7 @@ const stream2req = async (reqOpts: AxiosRequestConfig, res: Response) => {
       res.setHeader(header, value)
     }
     await pump(captureReq.data, res)
-  } catch (err) {
+  } catch (err: any) {
     res.set('Cache-Control', 'no-cache')
     res.set('Expires', '-1')
     res.sendStatus(err.status || 500)
