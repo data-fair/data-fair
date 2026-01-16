@@ -26,7 +26,7 @@ import { updateStorage, updateTotalStorage } from './utils/storage.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import * as findUtils from '../misc/utils/find.js'
 import clone from '@data-fair/lib-utils/clone.js'
-import * as attachments from '../misc/utils/metadata-attachments.js'
+import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as geo from './utils/geo.js'
 import * as tiles from './utils/tiles.ts'
 import * as cache from '../misc/utils/cache.js'
@@ -1196,7 +1196,7 @@ router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddlewareRe
 
 // Special attachments referenced in dataset metadatas
 router.post('/:datasetId/metadata-attachments', readDataset({ noCache: true }), apiKeyMiddlewareWrite, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
-  req.body.size = (await fs.promises.stat(req.file.path)).size
+  req.body.size = req.file.size
   req.body.updatedAt = moment().toISOString()
   await updateStorage(req.dataset)
   res.status(200).send(req.body)

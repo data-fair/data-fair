@@ -1,5 +1,5 @@
 import config from '#config'
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2 } from '@aws-sdk/client-s3'
+import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2 } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
 import { unlink } from 'node:fs/promises'
@@ -31,6 +31,12 @@ export class S3Backend implements FileBackend {
       isDirectory: obj.Key!.endsWith('/'),
       lastModified: obj.LastModified!,
     }))
+  }
+
+  async fileStats (path: string) {
+    const command = new HeadObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path) })
+    const response = await this.client.send(command)
+    return { size: response.ContentLength!, lastModified: response.LastModified! }
   }
 
   async removeFile (path: string): Promise<void> {
@@ -78,6 +84,9 @@ export class S3Backend implements FileBackend {
     } catch (err: any) {
       if (err.$metadata?.httpStatusCode === 304) {
         throw httpError(304)
+      }
+      if (err.$metadata?.httpStatusCode === 404) {
+        throw httpError(404, 'file not found')
       }
       throw err
     }

@@ -1,5 +1,5 @@
 import { type ReadStream } from 'node:fs'
-import { parse as parsePath, join as joinPath, relative as relativePath } from 'path'
+import { join as joinPath, relative as relativePath } from 'path'
 import fs from 'fs-extra'
 import type { FileStats, FileBackend } from './types.ts'
 import { httpError } from '@data-fair/lib-express'
@@ -28,6 +28,11 @@ export class FsBackend implements FileBackend {
       })
     }
     return results
+  }
+
+  async fileStats (path: string) {
+    const stats = await fs.stat(path)
+    return { size: stats.size, lastModified: stats.mtime }
   }
 
   async removeFile (path: string): Promise<void> {
@@ -68,17 +73,19 @@ export class FsBackend implements FileBackend {
     }
   }
 
-  async moveFromFs (tmpPath: string, path: string): Promise<void> {
+  async moveFromFs (tmpPath: string, path: string) {
     // in 2 operations for atomicity in case we are on 2 separate volumes
     await fs.move(tmpPath, path + '.tmp')
     await fs.move(path + '.tmp', path, { overwrite: true })
     await fsyncFile(path)
   }
 
-  async writeStream (readStream: ReadStream, path: string): Promise<void> {
-    await fs.ensureDir(parsePath(path).dir)
+  async writeStream (readStream: ReadStream, path: string) {
+    // creating empty file before streaming seems to fix some weird bugs with NFS
+    await fs.ensureFile(path)
     const writeStream = fs.createWriteStream(path)
     await pipeline(readStream, writeStream)
+    await fsyncFile(path)
   }
 
   async copyFile (srcPath: string, dstPath: string) {

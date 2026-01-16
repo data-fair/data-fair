@@ -24,7 +24,7 @@ import { syncApplications } from '../datasets/service.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { checkStorage } from '../datasets/middlewares.js'
-import * as attachments from '../misc/utils/metadata-attachments.js'
+import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
@@ -35,6 +35,7 @@ import eventsLog from '@data-fair/lib-express/events-log.js'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
+import filesStorage from '#files-storage'
 
 const unlink = util.promisify(fs.unlink)
 const validateKeys = ajv.compile(applicationKeys)
@@ -634,16 +635,13 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
 
 // attachment files
 router.post('/:applicationId/attachments', readApplication, permissions.middleware('postAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
-  req.body.size = (await fs.promises.stat(req.file.path)).size
+  req.body.size = req.file.size
   req.body.updatedAt = moment().toISOString()
   await updateStorage(req.application)
   res.status(200).send(req.body)
 })
 
 router.get('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('downloadAttachment', 'read'), cacheHeaders.noCache, async (req, res, next) => {
-  // the transform stream option was patched into "send" module using patch-package
-  // res.set('content-disposition', `inline; filename="${req.params.attachmentPath}"`)
-
   const relFilePath = path.join(...req.params.attachmentPath)
   await downloadFileFromStorage(
     resolvePath(attachmentsDir(req.application), relFilePath),
@@ -651,7 +649,7 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
 })
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {
-  await fs.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
+  await filesStorage.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
   await updateStorage(req.application)
   res.status(204).send()
 })

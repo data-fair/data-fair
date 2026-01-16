@@ -10,6 +10,7 @@ export type FileStats = {
 export type FileBackend = {
   lsr(path: string): Promise<string[]>
   lsrWithStats(path: string): Promise<FileStats[]>
+  fileStats (path: string): Promise<{ size: number, lastModified: Date }>
   removeFile(path: string): Promise<void>
   removeDir(path: string): Promise<void>
   readStream(path: string, ifModifiedSince?: string, range?: string): Promise<{ body: Readable, size: number, lastModified: Date, range?: string }>
