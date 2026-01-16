@@ -14,9 +14,10 @@ import pump from '../../misc/utils/pipe.ts'
 import * as limits from '../../misc/utils/limits.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import * as datasetService from '../../datasets/service.js'
-import { fsyncFile, tmpDir } from '../../datasets/utils/files.ts'
+import { tmpDir } from '../../datasets/utils/files.ts'
 import debugLib from 'debug'
 import type { Dataset, DatasetInternal } from '#types'
+import filesStorage from '#files-storage'
 
 export default async function (dataset: Dataset) {
   const debug = debugLib(`worker:downloader:${dataset.id}`)
@@ -112,11 +113,11 @@ export default async function (dataset: Dataset) {
       delete patch.remoteFile!.lastModified
     }
 
-    await fs.move(tmpFile.path, filePath, { overwrite: true })
-    await fsyncFile(filePath)
+    await filesStorage.moveFromFs(tmpFile.path, filePath)
+    const stats = await filesStorage.fileStats(filePath)
 
     patch.loaded!.dataset!.md5 = md5
-    patch.loaded!.dataset!.size = (await fs.promises.stat(filePath)).size
+    patch.loaded!.dataset!.size = stats.size
     patch.status = 'loaded'
     patch.dataUpdatedAt = now
   }

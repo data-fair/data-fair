@@ -23,4 +23,5 @@ export type FileBackend = {
   pathExists(path: string): Promise<boolean>
   zipDirectory(path: string): Promise<CentralDirectory>
   fileSample(path: string): Promise<Buffer>
+  checkAccess(): Promise<void>
 }

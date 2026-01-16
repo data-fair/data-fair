@@ -415,7 +415,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(attachments.length, 1)
     assert.equal(attachments[0], res.data.results[0].attachmentPath)
 
-    assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
+    assert.equal((await fs.readdir('../data/test-tmp')).length, 0)
 
     await ax.delete('/api/v1/datasets/rest5/lines/' + line._id)
     await workers.hook('finalize/rest5')
@@ -673,7 +673,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
       assert.equal(err.data.nbOk, 0)
       return true
     })
-    assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
+    assert.equal((await fs.readdir('../data/test-tmp')).length, 0)
   })
 
   it('The size of the mongodb collection is part of storage consumption', async function () {

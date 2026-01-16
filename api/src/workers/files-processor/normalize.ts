@@ -1,10 +1,10 @@
 // convert from tabular data to csv or geographical data to geojson
 
-import { pipeline } from 'node:stream/promises'
 import path from 'path'
 import fs from 'fs-extra'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import pump from '../../misc/utils/pipe.ts'
+import { Readable, compose } from 'node:stream'
 import tmp from 'tmp-promise'
 import mime from 'mime-types'
 import resolvePath from 'resolve-path'
@@ -12,7 +12,7 @@ import { displayBytes } from '../../misc/utils/bytes.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import * as datasetService from '../../datasets/service.js'
-import { tmpDir as mainTmpDir } from '../../datasets/utils/files.ts'
+import { fsyncFile, tmpDir as mainTmpDir } from '../../datasets/utils/files.ts'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import config from '#config'
 import debugLib from 'debug'
@@ -75,7 +75,7 @@ export default async function (dataset: FileDataset) {
       } else if (filePaths.length === 1 && datasetUtils.basicTypes.includes(mime.lookup(filePaths[0].parsed.base) as string)) {
         // case of a single data file in an archive
         const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), filePaths[0].parsed.base)
-        await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
+        await filesStorage.moveFromFs(resolvePath(tmpDir, files[0]), filePath)
         dataset.file = {
           name: filePaths[0].parsed.base,
           size: (await fs.stat(filePath)).size,
@@ -84,7 +84,7 @@ export default async function (dataset: FileDataset) {
           schema: []
         }
       } else {
-        if (await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
+        if (await filesStorage.pathExists(datasetUtils.attachmentsDir(dataset))) {
           throw httpError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
         }
         await fs.move(tmpDir, datasetUtils.attachmentsDir(dataset))
@@ -118,10 +118,12 @@ export default async function (dataset: FileDataset) {
 
       const basicTypeFileName = dataset.originalFile.name.slice(0, dataset.originalFile.name.length - 3)
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), basicTypeFileName)
-      await pump((await filesStorage.readStream(originalFilePath)).body, zlib.createGunzip(), fs.createWriteStream(filePath))
+      const readStream = compose((await filesStorage.readStream(originalFilePath)).body, zlib.createGunzip())
+      await filesStorage.writeStream(readStream, filePath)
+      const stats = await filesStorage.fileStats(filePath)
       dataset.file = {
         name: basicTypeFileName,
-        size: (await fs.stat(filePath)).size,
+        size: stats.size,
         mimetype: mime.lookup(basicTypeFileName) as string,
         encoding: 'utf-8',
         schema: []
@@ -131,15 +133,17 @@ export default async function (dataset: FileDataset) {
     if (datasetUtils.jsonTypes.has(dataset.originalFile.mimetype)) {
       const { stringify: csvStrStream } = await import('csv-stringify')
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
-      await pump(
-        fs.createReadStream(originalFilePath),
+      const readStream = compose(
+        (await filesStorage.readStream(originalFilePath)).body,
         mimeTypeStream(dataset.originalFile.mimetype).parser(),
-        csvStrStream(csvStringifyOptions),
-        fs.createWriteStream(filePath)
+        csvStrStream(csvStringifyOptions)
       )
+
+      await filesStorage.writeStream(readStream, filePath)
+      const stats = await filesStorage.fileStats(filePath)
       dataset.file = {
         name: baseName + '.csv',
-        size: (await fs.stat(filePath)).size,
+        size: stats.size,
         mimetype: 'text/csv',
         encoding: 'utf-8',
         schema: []
@@ -154,14 +158,13 @@ export default async function (dataset: FileDataset) {
 
       const { eventsStream, infos } = await icalendar.parse(originalFilePath)
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
-      await pump(
-        eventsStream,
-        csvStrStream({ ...csvStringifyOptions, columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'] }),
-        fs.createWriteStream(filePath)
-      )
+      const columns = ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL']
+      const readStream = compose(eventsStream, csvStrStream({ ...csvStringifyOptions, columns }))
+      await filesStorage.writeStream(readStream, filePath)
+      const stats = await filesStorage.fileStats(filePath)
       dataset.file = {
-        name: path.parse(dataset.originalFile.name).name + '.csv',
-        size: (await fs.stat(filePath)).size,
+        name: baseName + '.csv',
+        size: stats.size,
         mimetype: 'text/csv',
         encoding: 'utf-8',
         schema: []
@@ -173,15 +176,24 @@ export default async function (dataset: FileDataset) {
         throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
       }
       const xlsx = await import('../../misc/utils/xlsx.ts')
+      const tmpFile = await tmp.file()
+      await fs.ensureFile(tmpFile.path)
+      await pump((await filesStorage.readStream(originalFilePath)).body, fs.createWriteStream(tmpFile.path))
+      await fsyncFile(tmpFile.path)
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
-      await pipeline(xlsx.iterCSV(originalFilePath, dataset.originalFile.normalizeOptions), fs.createWriteStream(filePath))
+      await filesStorage.writeStream(
+        Readable.from(xlsx.iterCSV(tmpFile.path, dataset.originalFile.normalizeOptions)),
+        filePath
+      )
+      const stats = await filesStorage.fileStats(filePath)
       dataset.file = {
         name: path.parse(dataset.originalFile.name).name + '.csv',
-        size: (await fs.stat(filePath)).size,
+        size: stats.size,
         mimetype: 'text/csv',
         encoding: 'utf-8',
         schema: []
       }
+      await tmpFile.cleanup()
     } else if (shapefile || mapinfo || datasetUtils.geographicalTypes.has(dataset.originalFile.mimetype)) {
       if (config.ogr2ogr.skip) {
         throw httpError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
@@ -201,19 +213,20 @@ export default async function (dataset: FileDataset) {
         ogrOptions.push('routes')
       }
 
+      const tmpFile = await tmp.tmpName()
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.geojson')
       // using the .shp file instead of the zip seems to help support more shapefiles for some reason
       await ogr2ogr(shapefile ?? mapinfo ?? originalFilePath, {
         format: 'GeoJSON',
         options: ogrOptions,
         timeout: config.ogr2ogr.timeout,
-        destination: filePath
+        destination: tmpFile
       })
-
-      // await pump(geoJsonStream, fs.createWriteStream(filePath))
+      await filesStorage.moveFromFs(tmpFile, filePath)
+      const stats = await filesStorage.fileStats(filePath)
       dataset.file = {
         name: path.parse(dataset.originalFile.name).name + '.geojson',
-        size: (await fs.stat(filePath)).size,
+        size: stats.size,
         mimetype: 'application/geo+json',
         encoding: 'utf-8',
         schema: []

@@ -4,7 +4,6 @@ import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.js'
 import { replaceAllAttachments } from '../../datasets/utils/attachments.ts'
 import chardet from 'chardet'
-import md5File from 'md5-file'
 import JSONStream from 'JSONStream'
 import { Transform } from 'node:stream'
 import split2 from 'split2'
@@ -13,9 +12,8 @@ import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
-import { fsyncFile } from '../../datasets/utils/files.ts'
 import filesStorage from '#files-storage'
-import { fsFileSample } from '../../files-storage/fs.ts'
+import tmp from 'tmp-promise'
 
 export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:file-storer:${dataset.id}`)
@@ -30,7 +28,7 @@ export default async function (dataset: DatasetInternal) {
   if (datasetFile) {
     const loadedFilePath = datasetUtils.loadedFilePath(dataset)
 
-    if (!await fs.pathExists(loadedFilePath)) {
+    if (!await filesStorage.pathExists(loadedFilePath)) {
       // we should not have to do this
       // this is a weird thing, maybe an unsolved race condition ?
       // let's wait a bit and try again to mask this problem temporarily
@@ -42,12 +40,12 @@ export default async function (dataset: DatasetInternal) {
     // some ESRI files have invalid geojson with stuff like this:
     // "GLOBALID": {7E1C9E26-9767-4AE4-9CBB-F353B15B3BFE},
     if (dataset.extras?.fixGeojsonGlobalId || dataset.extras?.fixGeojsonESRI) {
-      const fixedFilePath = loadedFilePath + '.fixed'
+      const fixedFile = await tmp.file()
       // creating empty file before streaming seems to fix some weird bugs with NFS
-      await fs.ensureFile(fixedFilePath)
+      await fs.ensureFile(fixedFile.path)
       const globalIdRegexp = /"GLOBALID": \{(.*)\}/g
       await pump(
-        fs.createReadStream(loadedFilePath),
+        (await filesStorage.readStream(loadedFilePath)).body,
         split2(),
         new Transform({
           objectMode: true,
@@ -75,17 +73,16 @@ export default async function (dataset: DatasetInternal) {
  "type": "FeatureCollection",
  "features": [`, ',\n  ', ` ]
 }`),
-        fs.createWriteStream(fixedFilePath)
+        fs.createWriteStream(fixedFile.path)
       )
-      await fs.move(fixedFilePath, loadedFilePath, { overwrite: true })
+      await filesStorage.moveFromFs(fixedFile.path, loadedFilePath)
     }
 
-    datasetFile.md5 = await md5File(loadedFilePath)
     if (datasetFile.explicitEncoding) {
       debug(`Explicit encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
       datasetFile.encoding = datasetFile.explicitEncoding
     } else {
-      const fileSample = await fsFileSample(loadedFilePath)
+      const fileSample = await filesStorage.fileSample(loadedFilePath)
       debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
       const encoding = chardet.detect(fileSample)
       if (encoding) datasetFile.encoding = encoding
@@ -97,9 +94,8 @@ export default async function (dataset: DatasetInternal) {
       patch.file = { ...patch.originalFile, schema: [] }
     }
 
-    await fsyncFile(loadedFilePath)
     const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
-    await filesStorage.moveFromFs(loadedFilePath, newFilePath)
+    await filesStorage.moveFile(loadedFilePath, newFilePath)
 
     if (dataset.originalFile) {
       const oldFilePath = datasetUtils.originalFilePath(dataset)
@@ -107,7 +103,7 @@ export default async function (dataset: DatasetInternal) {
         await filesStorage.removeFile(oldFilePath)
       }
     }
-  } else if (draft && !await fs.pathExists(datasetUtils.originalFilePath(dataset))) {
+  } else if (draft && !await filesStorage.pathExists(datasetUtils.originalFilePath(dataset))) {
     // this happens if we upload only the attachments, not the data file itself
     // in this case copy the one from prod
     await filesStorage.copyFile(datasetUtils.originalFilePath(datasetFull), datasetUtils.originalFilePath(dataset))

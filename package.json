@@ -44,7 +44,7 @@
     "@types/content-disposition": "^0.5.8",
     "@types/mime-types": "^3.0.0",
     "@types/multer": "^1.4.12",
-    "@types/node": "^22.12.0",
+    "@types/node": "^24.10.9",
     "@types/sanitize-html": "^2.16.0",
     "@types/streamsaver": "^2.0.5",
     "@types/unzipper": "^0.10.10",

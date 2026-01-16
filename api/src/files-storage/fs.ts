@@ -8,8 +8,13 @@ import parseRange from 'range-parser'
 import { pipeline } from 'node:stream/promises'
 import nodeDir from 'node-dir'
 import unzipper from 'unzipper'
+import config from '#config'
 
 export class FsBackend implements FileBackend {
+  async checkAccess () {
+    await fs.writeFile(`${config.dataDir}/check-access.txt`, 'ok')
+  }
+
   async lsr (path: string): Promise<string[]> {
     if (!await fs.pathExists(path)) return []
     return (await nodeDir.promiseFiles(path))
@@ -119,16 +124,12 @@ export class FsBackend implements FileBackend {
   }
 
   async fileSample (path: string) {
-    return fsFileSample(path)
+    const st = await fs.stat(path)
+    const fd = await fs.open(path, 'r')
+    const size = Math.min(st.size, 1024 * 1024)
+    const buffer = Buffer.alloc(size)
+    await fs.read(fd, buffer, 0, size, 0)
+    fs.close(fd)
+    return buffer
   }
-}
-
-export const fsFileSample = async (path: string): Promise<Buffer> => {
-  const st = await fs.stat(path)
-  const fd = await fs.open(path, 'r')
-  const size = Math.min(st.size, 1024 * 1024)
-  const buffer = Buffer.alloc(size)
-  await fs.read(fd, buffer, 0, size, 0)
-  fs.close(fd)
-  return buffer
 }

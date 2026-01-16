@@ -1,6 +1,6 @@
 import config from '#config'
 import { relative as relativePath } from 'node:path'
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2 } from '@aws-sdk/client-s3'
+import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2, PutObjectCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
 import { unlink } from 'node:fs/promises'
@@ -16,6 +16,11 @@ export class S3Backend implements FileBackend {
 
   constructor () {
     this.client = new S3Client(config.s3)
+  }
+
+  async checkAccess () {
+    const command = new PutObjectCommand({ Bucket: config.s3.bucket, Key: 'check-access.txt', Body: 'ok' })
+    await this.client.send(command)
   }
 
   async lsr (targetPath: string): Promise<string[]> {
