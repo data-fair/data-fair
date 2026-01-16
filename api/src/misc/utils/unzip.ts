@@ -1,7 +1,6 @@
 import path from 'node:path'
 import fs from 'fs-extra'
 import filesStorage from '#files-storage'
-import unzipper from 'unzipper'
 import type { CentralDirectory } from 'unzipper'
 import iconvLite from 'iconv-lite'
 import chardet from 'chardet'
@@ -36,6 +35,5 @@ export const unzipFromStorage = async (zipFile: string, targetDir: string) => {
 }
 
 export const unzipIntoStorage = async (zipFile: string, targetDir: string) => {
-  const directory = await unzipper.Open.file(zipFile)
-  return await unzip(directory, targetDir, (readStream, p) => filesStorage.writeStream(readStream, p))
+  return await unzip(await filesStorage.zipDirectory(zipFile), targetDir, (readStream, p) => filesStorage.writeStream(readStream, p))
 }

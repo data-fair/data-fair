@@ -16,6 +16,7 @@ export type FileBackend = {
   readStream(path: string, ifModifiedSince?: string, range?: string): Promise<{ body: Readable, size: number, lastModified: Date, range?: string }>
   moveFromFs(tmpPath: string, path: string): Promise<void>
   writeStream(readStream: Readable, path: string): Promise<void>
+  writeString(path: string, content: string): Promise<void>
   copyFile(srcPath: string, dstPath: string): Promise<void>
   moveFile(srcPath: string, dstPath: string): Promise<void>
   copyDir(srcPath: string, dstPath: string): Promise<void>

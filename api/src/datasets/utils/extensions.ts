@@ -3,7 +3,6 @@ import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import pump from '../../misc/utils/pipe.ts'
-import fs from 'fs-extra'
 import { Transform, Writable } from 'stream'
 import stringify from 'json-stable-stringify'
 import { flatten } from 'flat'
@@ -30,6 +29,7 @@ import type { Dataset, DatasetLine } from '#types'
 import type { Document, Filter, WithId } from 'mongodb'
 import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
+import { arrayBuffer } from 'stream/consumers'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -178,7 +178,7 @@ export const extend = async (
       moved = true
     }
   } finally {
-    if (filePath && !moved) await fs.remove(filePath)
+    if (filePath && !moved) await filesStorage.removeFile(filePath)
   }
 
   debug('Extension is over')
@@ -557,19 +557,21 @@ export const applyCalculations = async (dataset: Dataset, item: any) => {
   // Add base64 content of attachments
   const attachmentField = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (attachmentField && flatItem[attachmentField.key]) {
+    console.log('LOOK attachment')
     const attachmentValue = flatItem[attachmentField.key]
     const isURL = !!parseURL(attachmentValue).host
     if (!isURL) {
       item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${attachmentValue}`
       const filePath = attachmentPath(dataset, attachmentValue)
-      if (await fs.pathExists(filePath)) {
-        const stats = await fs.stat(filePath)
+      if (await filesStorage.pathExists(filePath)) {
+        const stats = await filesStorage.fileStats(filePath)
 
         if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
           if (stats.size > config.defaultLimits.attachmentIndexed) {
             warning = 'Pièce jointe trop volumineuse pour être analysée'
           } else {
-            item._file_raw = (await fs.readFile(filePath)).toString('base64')
+            const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
+            item._file_raw = Buffer.from(buf).toString('base64')
           }
         }
       }

@@ -45,7 +45,7 @@ export default async function (dataset: FileDataset) {
   const tmpDir = (await tmp.dir({ tmpdir: mainTmpDir, unsafeCleanup: true, prefix: 'normalizer-' })).path
 
   try {
-    if (!await fs.pathExists(originalFilePath)) {
+    if (!await filesStorage.pathExists(originalFilePath)) {
       // we should not have to do this
       // this is a weird thing, maybe an unsolved race condition ?
       // let's wait a bit and try again to mask this problem temporarily
@@ -78,7 +78,7 @@ export default async function (dataset: FileDataset) {
         await filesStorage.moveFromFs(resolvePath(tmpDir, files[0]), filePath)
         dataset.file = {
           name: filePaths[0].parsed.base,
-          size: (await fs.stat(filePath)).size,
+          size: (await filesStorage.fileStats(filePath)).size,
           mimetype: mime.lookup(filePaths[0].parsed.base) as string,
           encoding: 'utf-8',
           schema: []
@@ -87,20 +87,21 @@ export default async function (dataset: FileDataset) {
         if (await filesStorage.pathExists(datasetUtils.attachmentsDir(dataset))) {
           throw httpError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
         }
-        await fs.move(tmpDir, datasetUtils.attachmentsDir(dataset))
+        await filesStorage.moveDir(tmpDir, datasetUtils.attachmentsDir(dataset))
         const csvFilePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
         // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
         const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
-        await fs.writeFile(csvFilePath, csvContent)
+        await filesStorage.writeString(csvFilePath, csvContent)
         dataset.file = {
           name: path.parse(dataset.originalFile.name).name + '.csv',
-          size: (await fs.stat(csvFilePath)).size,
+          size: (await filesStorage.fileStats(csvFilePath)).size,
           mimetype: 'text/csv',
           encoding: 'utf-8',
           schema: []
         }
         if (!dataset.schema.find(f => f.key === 'file')) {
           const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['http://schema.org/DigitalDocument']
+          console.log('add attachment')
           dataset.schema.push({
             key: 'attachment',
             'x-originalName': 'attachment',

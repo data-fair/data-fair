@@ -1,6 +1,5 @@
 import { join } from 'path'
 import * as journals from '../../misc/utils/journals.ts'
-import fs from 'fs-extra'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Writable } from 'stream'
 import pump from '../../misc/utils/pipe.ts'
@@ -21,6 +20,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
+import filesStorage from '#files-storage'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 
@@ -80,9 +80,9 @@ export default async function (dataset: DatasetInternal) {
   const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
-    if (dataset.file && await fs.pathExists(datasetUtils.fullFilePath(dataset))) {
+    if (dataset.file && await filesStorage.pathExists(datasetUtils.fullFilePath(dataset))) {
       debug('Delete previously extended file')
-      await fs.remove(datasetUtils.fullFilePath(dataset))
+      await filesStorage.removeFile(datasetUtils.fullFilePath(dataset))
       if (!dataset.draftReason) await updateStorage(dataset, false, true)
     }
   }
@@ -99,7 +99,7 @@ export default async function (dataset: DatasetInternal) {
     writeStream = restDatasetsUtils.markIndexedStream(dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.some(e => e.active)
-    if (!extended) await fs.remove(datasetUtils.fullFilePath(dataset))
+    if (!extended) await filesStorage.removeFile(datasetUtils.fullFilePath(dataset))
     readStreams = await getReadStreams(dataset, false, extended, dataset.validateDraft, progress)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }

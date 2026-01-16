@@ -243,7 +243,7 @@ afterEach('check pending tasks', async function () {
   }
 
   if (config.filesStorage === 's3') {
-    if (await fs.pathExists(config.dataDir)) {
+    if ((await fs.readdir(config.dataDir)).length) {
       throw new Error(`the test "${this.currentTest?.title}" created some files in dataDir, that should not happen when using S3`)
     }
   }

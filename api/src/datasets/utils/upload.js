@@ -21,6 +21,8 @@ const fallbackMimeTypes = {
 }
 const debug = debugLib('files')
 
+// TODO: custom storage using filesStorage
+
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
     try {

@@ -84,7 +84,7 @@ export class S3Backend implements FileBackend {
       const response = await this.client.send(command)
 
       // this shouldn't happen except if the s3 provider does not support conditional header
-      if (ifModifiedSinceDate && response.LastModified!.getDate() <= ifModifiedSinceDate.getDate()) {
+      if (ifModifiedSinceDate && Math.floor(response.LastModified!.getTime() / 1000) <= Math.floor(ifModifiedSinceDate.getTime() / 1000)) {
         throw httpError(304)
       }
 
@@ -120,6 +120,11 @@ export class S3Backend implements FileBackend {
       }
     })
     await upload.done()
+  }
+
+  async writeString (path: string, content: string) {
+    const command = new PutObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path), Body: content })
+    await this.client.send(command)
   }
 
   async copyFile (srcPath: string, dstPath: string) {
@@ -181,7 +186,7 @@ export class S3Backend implements FileBackend {
   }
 
   async zipDirectory (path: string) {
-    return unzipper.Open.s3(this.client, { Bucket: config.s3.bucket, Key: bucketPath(path) })
+    return unzipper.Open.s3_v3(this.client, { Bucket: config.s3.bucket, Key: bucketPath(path) })
   }
 
   async fileSample (path: string) {

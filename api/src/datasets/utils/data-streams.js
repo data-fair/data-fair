@@ -283,6 +283,7 @@ export const writeExtendedStreams = async (dataset, extensions) => {
   const flatten = getFlattenNoCache(dataset)
   const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir, prefix: 'full-' })
   // creating empty file before streaming seems to fix some weird bugs with NFS
+  // TODO: write directly into filesStorage and remove tmp file use
   await fs.ensureFile(tmpFullFile)
 
   const writeStream = fs.createWriteStream(tmpFullFile)

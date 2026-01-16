@@ -62,6 +62,7 @@ import { can } from '../misc/utils/permissions.ts'
 import { emit as workerPing } from '../workers/ping.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
+import filesStorage from '#files-storage'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
@@ -294,7 +295,7 @@ router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddleware
   // Move all files
   if (dir(req.dataset) !== dir(patchedDataset)) {
     try {
-      await fs.move(dir(req.dataset), dir(patchedDataset))
+      await filesStorage.moveDir(dir(req.dataset), dir(patchedDataset))
     } catch (err) {
       console.warn('Error while moving dataset directory', err)
     }
@@ -1241,11 +1242,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noC
         res.set('x-remote-status', 'DOWNLOAD')
         const attachmentPath = datasetUtils.metadataAttachmentPath(req.dataset, relFilePath)
         // creating empty file before streaming seems to fix some weird bugs with NFS
-        await fs.ensureFile(attachmentPath)
-        await pump(
-          response.data,
-          fs.createWriteStream(attachmentPath)
-        )
+        await filesStorage.writeStream(response.data, attachmentPath)
         attachmentTarget.etag = response.headers.etag
         attachmentTarget.lastModified = response.headers['last-modified']
         attachmentTarget.fetchedAt = new Date()
@@ -1260,7 +1257,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noC
 })
 
 router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddlewareWrite, permissions.middleware('deleteMetadataAttachment', 'write'), async (req, res, next) => {
-  await fs.remove(datasetUtils.metadataAttachmentPath(req.dataset, path.join(...req.params.attachmentPath)))
+  await filesStorage.removeFile(datasetUtils.metadataAttachmentPath(req.dataset, path.join(...req.params.attachmentPath)))
   await updateStorage(req.dataset)
   res.status(204).send()
 })
@@ -1294,7 +1291,7 @@ router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewa
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
 router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
+  if (await filesStorage.pathExists(datasetUtils.fullFilePath(req.dataset))) {
     await downloadFileFromStorage(datasetUtils.fullFilePath(req.dataset), req, res)
   } else {
     await downloadFileFromStorage(datasetUtils.filePath(req.dataset), req, res)
@@ -1434,7 +1431,7 @@ router.post('/:datasetId/_simulate-extension', readDataset({ noCache: true }), a
 router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptInitialDraft: true, noCache: true }), cacheHeaders.noCache, async (req, res) => {
   reqAdminMode(req)
   const esInfos = await datasetInfos(req.dataset)
-  const filesInfos = await datasetUtils.lsFiles(req.dataset)
+  const filesInfos = await filesStorage.lsrWithStats(datasetUtils.dir(req.dataset))
   const locks = [
     await mongo.db.collection('locks').findOne({ _id: `datasets:${req.dataset.id}` }),
     await mongo.db.collection('locks').findOne({ _id: `datasets:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })

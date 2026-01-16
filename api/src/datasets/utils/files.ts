@@ -82,29 +82,6 @@ export const lsMetadataAttachments = async (dataset: any) => {
   return await filesStorage.lsr(metadataAttachmentsDir(dataset))
 }
 
-export const lsFiles = async (dataset: any) => {
-  const infos: any = {}
-  if (dataset.file) {
-    const fp = filePath(dataset)
-    infos.file = { filePath: fp, size: (await fs.promises.stat(fp)).size }
-  }
-  if (dataset.originalFile) {
-    const filePath = originalFilePath(dataset)
-    infos.originalFile = { filePath, size: (await fs.promises.stat(filePath)).size }
-  }
-  if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    const dirPath = attachmentsDir(dataset)
-    const paths = await lsAttachments(dataset)
-    const files = []
-    for (const p of paths) {
-      const filePath = path.join(dirPath, p)
-      files.push({ filePath, size: (await fs.promises.stat(filePath)).size })
-    }
-    infos.extractedFiles = { nb: files.length, files }
-  }
-  return infos
-}
-
 export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) => {
   if (dataset.isVirtual || dataset.isMetaOnly) return []
   const d = dataFilesDir(dataset)

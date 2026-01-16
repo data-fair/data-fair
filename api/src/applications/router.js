@@ -4,8 +4,6 @@ import slug from 'slugify'
 import moment from 'moment'
 import config from '#config'
 import mongo from '#mongo'
-import fs from 'fs-extra'
-import util from 'util'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import { nanoid } from 'nanoid'
@@ -37,7 +35,6 @@ import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
 import filesStorage from '#files-storage'
 
-const unlink = util.promisify(fs.unlink)
 const validateKeys = ajv.compile(applicationKeys)
 
 const router = express.Router()
@@ -134,8 +131,7 @@ router.post('', async (req, res) => {
     if (parentApplication.attachments?.length) {
       for (const attachment of parentApplication.attachments) {
         const newPath = attachmentPath(application, attachment.name)
-        await fs.ensureDir(path.dirname(newPath))
-        await fs.copyFile(attachmentPath(parentApplication, attachment.name), newPath)
+        await filesStorage.copyFile(attachmentPath(parentApplication, attachment.name), newPath)
       }
       application.attachments = parentApplication.attachments
     }
@@ -423,12 +419,12 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
   await db.collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
   await db.collection('applications-keys').deleteOne({ _id: application.id })
   try {
-    await unlink(await capture.path(application))
+    await filesStorage.removeFile(await capture.path(application))
   } catch (err) {
     console.warn('Failure to remove capture file')
   }
   try {
-    await fs.remove(dir(application))
+    await filesStorage.removeDir(dir(application))
   } catch (err) {
     console.warn('Failure to remove application directory')
   }

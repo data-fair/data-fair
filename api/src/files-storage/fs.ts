@@ -56,7 +56,7 @@ export class FsBackend implements FileBackend {
       if (err.code === 'ENOENT') throw httpError(404, 'file not found')
       throw err
     }
-    if (ifModifiedSince && new Date(ifModifiedSince).getDate() === stats.mtime.getDate()) {
+    if (ifModifiedSince && Math.floor(new Date(ifModifiedSince).getTime() / 1000) === Math.floor(stats.mtime.getTime() / 1000)) {
       throw httpError(304)
     }
     if (range) {
@@ -90,6 +90,11 @@ export class FsBackend implements FileBackend {
     await fs.ensureFile(path)
     const writeStream = fs.createWriteStream(path)
     await pipeline(readStream, writeStream)
+    await fsyncFile(path)
+  }
+
+  async writeString (path: string, content: string) {
+    await fs.writeFile(path, content)
     await fsyncFile(path)
   }
 

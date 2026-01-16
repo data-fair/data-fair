@@ -91,6 +91,7 @@ const stream2file = async (reqOpts: AxiosRequestConfig, capturePath: string) => 
     const captureReq = await axios({ ...reqOpts, responseType: 'stream' })
     await filesStorage.writeStream(captureReq.data, capturePath)
   } catch (err: any) {
+    internalError('capture', err)
     throw new Error(`failure in capture - ${err.status}`)
   }
 }
@@ -121,9 +122,9 @@ export const screenshot = async (req: RequestWithResource, res: Response) => {
   if (isDefaultThumbnail) {
     if (await filesStorage.pathExists(capturePath)) {
       const stats = await filesStorage.fileStats(capturePath)
-      if (req.resource.updatedAt && stats.lastModified.toISOString() > req.resource.updatedAt) {
+      if (req.resource.updatedAt && Math.floor(stats.lastModified.getTime() / 1000) >= Math.floor(new Date(req.resource.updatedAt).getTime() / 1000)) {
         res.set('x-capture-cache-status', 'HIT')
-        await downloadFileFromStorage(capturePath, req, res)
+        return await downloadFileFromStorage(capturePath, req, res)
       } else {
         res.set('x-capture-cache-status', 'EXPIRED')
       }
@@ -139,10 +140,7 @@ export const screenshot = async (req: RequestWithResource, res: Response) => {
         await new Promise(resolve => setTimeout(resolve, 4000))
         await stream2file(reqOpts, capturePath)
       }
-      return await new Promise((resolve, reject) => res.sendFile(
-        capturePath,
-        (err) => err ? reject(err) : resolve(true)
-      ))
+      return await downloadFileFromStorage(capturePath, req, res)
     } catch (err) {
       // catch err locally as this method is called without waiting for result
 

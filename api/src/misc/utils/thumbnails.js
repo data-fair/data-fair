@@ -10,6 +10,7 @@ import axios from './axios.js'
 import { setNoCache } from './cache-headers.js'
 import { tmpDir } from '../../datasets/utils/files.ts'
 import debugLib from 'debug'
+import filesStorage from '#files-storage'
 
 const debug = debugLib('thumbnails')
 
@@ -19,21 +20,22 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
 
   const entry = await db.collection('thumbnails-cache').findOne(cacheFilter)
   const newEntry = { ...cacheFilter, lastUpdated: new Date() }
-  let tmpFile
+  const tmpFile = await tmp.tmpName({ prefix: 'cache-entry-', tmpdir: tmpDir })
   if (filePath) {
-    newEntry.lastModified = (await fs.stat(filePath)).mtime.toUTCString()
+    newEntry.lastModified = (await filesStorage.fileStats(filePath)).lastModified.toUTCString()
     if (entry && entry.lastModified === newEntry.lastModified) {
       debug('found fresh cache entry for filePath based on lastModified', entry.lastModified)
       return { entry, status: 'HIT' }
     }
+    await fs.ensureFile(tmpFile)
+    await pump((await filesStorage.readStream(filePath)).body, fs.createWriteStream(tmpFile))
   } else {
     if (entry && dayjs().diff(entry.lastUpdated, 'hour', true) < 1) {
       debug('found fresh cache entry for url based on lastUpdate', entry.lastUpdated)
       return { entry, status: 'HIT' }
     }
-    tmpFile = filePath = await tmp.tmpName({ prefix: 'cache-entry-', tmpdir: tmpDir })
     // creating empty file before streaming seems to fix some weird bugs with NFS
-    await fs.ensureFile(filePath)
+    await fs.ensureFile(tmpFile)
     try {
       const headers = {}
       if (entry) {
@@ -43,7 +45,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
       }
       debug('download image into tmp file')
       const response = await axios({ url, responseType: 'stream', headers })
-      await pump(response.data, fs.createWriteStream(filePath))
+      await pump(response.data, fs.createWriteStream(tmpFile))
       debug('fetch of image is ok', response.headers)
       newEntry.lastModified = response.headers['last-modified']
       newEntry.etag = response.headers.etag
@@ -71,7 +73,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   }
   debug('resize using sharp', fullSharpOptions)
   try {
-    const sharpImage = sharp(filePath, { animated: true })
+    const sharpImage = sharp(tmpFile, { animated: true })
     const metadata = await sharpImage.metadata()
     if (metadata.pages) {
       newEntry.data = new Binary(await sharpImage
@@ -91,7 +93,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
     console.warn('Sharp error while processing thumbnail for image ' + url, err)
     newEntry.sharpError = err.message
   }
-  if (tmpFile) await fs.remove(tmpFile)
+  await fs.remove(tmpFile)
   await db.collection('thumbnails-cache').replaceOne(cacheFilter, newEntry, { upsert: true })
   return { entry: newEntry, status: 'MISS' }
 }
