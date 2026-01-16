@@ -14,6 +14,7 @@ import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import filesStorage from '#files-storage'
 import tmp from 'tmp-promise'
+import { tmpDir } from '../../datasets/utils/files.ts'
 
 export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:file-storer:${dataset.id}`)
@@ -40,7 +41,7 @@ export default async function (dataset: DatasetInternal) {
     // some ESRI files have invalid geojson with stuff like this:
     // "GLOBALID": {7E1C9E26-9767-4AE4-9CBB-F353B15B3BFE},
     if (dataset.extras?.fixGeojsonGlobalId || dataset.extras?.fixGeojsonESRI) {
-      const fixedFile = await tmp.file()
+      const fixedFile = await tmp.file({ tmpdir: tmpDir })
       // creating empty file before streaming seems to fix some weird bugs with NFS
       await fs.ensureFile(fixedFile.path)
       const globalIdRegexp = /"GLOBALID": \{(.*)\}/g

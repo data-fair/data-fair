@@ -177,7 +177,7 @@ export default async function (dataset: FileDataset) {
         throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
       }
       const xlsx = await import('../../misc/utils/xlsx.ts')
-      const tmpFile = await tmp.file()
+      const tmpFile = await tmp.file({ tmpdir: tmpDir })
       await fs.ensureFile(tmpFile.path)
       await pump((await filesStorage.readStream(originalFilePath)).body, fs.createWriteStream(tmpFile.path))
       await fsyncFile(tmpFile.path)
@@ -214,7 +214,7 @@ export default async function (dataset: FileDataset) {
         ogrOptions.push('routes')
       }
 
-      const tmpFile = await tmp.tmpName()
+      const tmpFile = await tmp.tmpName({ tmpdir: tmpDir })
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.geojson')
       // using the .shp file instead of the zip seems to help support more shapefiles for some reason
       await ogr2ogr(shapefile ?? mapinfo ?? originalFilePath, {

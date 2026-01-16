@@ -1,15 +1,17 @@
 import fs from 'fs-extra'
+import path from 'node:path'
 import multer from 'multer'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { nanoid } from 'nanoid'
 import mime from 'mime-types'
-import resolvePath from 'resolve-path'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as datasetUtils from './index.js'
 import { tmpDir, fsyncFile } from './files.ts'
 import promisifyMiddleware from '../../misc/utils/promisify-middleware.js'
 import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes, jsonTypes } from './types.js'
 import debugLib from 'debug'
+import filesStorage from '#files-storage'
+import tmp from 'tmp-promise'
+import { pipeline } from 'node:stream/promises'
 
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
@@ -21,41 +23,55 @@ const fallbackMimeTypes = {
 }
 const debug = debugLib('files')
 
-// TODO: custom storage using filesStorage
-
-const storage = multer.diskStorage({
-  destination: async function (req, file, cb) {
+// inspired by https://github.com/expressjs/multer/blob/main/storage/disk.js
+// but uses our files storage abstraction
+const storage = {
+  async _handleFile (req: any, file: any, cb: (err?: any, file?: any) => void) {
     try {
+      const filename = file.fieldname === 'attachments' ? 'attachments.zip' : file.originalname
       if (req.dataset) {
-        req.uploadDir = datasetUtils.loadingDir({ ...req.dataset, draftReason: req.query.draft === 'true' || req._draft })
+        const destination = datasetUtils.loadingDir({ ...req.dataset, draftReason: req.query.draft === 'true' || req._draft })
+        const finalPath = path.join(destination, filename)
+        await filesStorage.writeStream(file.stream, finalPath)
+        const stats = await filesStorage.fileStats(finalPath)
+        cb(null, {
+          destination,
+          filename,
+          path: finalPath,
+          size: stats.size
+        })
       } else {
-        // a tmp dir in case of new dataset, it will be moved into the actual dataset directory
-        // after upload completion and final id atttribution
-        req.uploadDir = resolvePath(tmpDir, nanoid())
+        const destination = await tmp.tmpName({ tmpdir: tmpDir })
+        const finalPath = path.join(destination, filename)
+        await fs.ensureFile(finalPath)
+        await pipeline(file.stream, fs.createWriteStream(finalPath))
+        await fsyncFile(finalPath)
+        const stats = await fs.stat(finalPath)
+        cb(null, {
+          destination,
+          filename,
+          path: finalPath,
+          size: stats.size
+        })
       }
-      debug('Create destination directory', req.uploadDir)
-      await fs.ensureDir(req.uploadDir)
-      cb(null, req.uploadDir)
     } catch (err) {
       cb(err)
     }
   },
-  filename: async function (req, file, cb) {
-    try {
-      if (file.fieldname === 'attachments') {
-        // creating empty file before streaming seems to fix some weird bugs with NFS
-        await fs.ensureFile(resolvePath(req.uploadDir, 'attachments.zip'))
-        return cb(null, 'attachments.zip')
-      }
 
-      // creating empty file before streaming seems to fix some weird bugs with NFS
-      await fs.ensureFile(resolvePath(req.uploadDir, file.originalname))
-      cb(null, file.originalname)
+  async _removeFile  (req: any, file: any, cb: (err?: any) => void) {
+    try {
+      const path = file.path
+      delete file.destination
+      delete file.filename
+      delete file.path
+      await filesStorage.removeFile(path)
+      cb()
     } catch (err) {
       cb(err)
     }
   }
-})
+}
 
 export const allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes, ...jsonTypes])
 

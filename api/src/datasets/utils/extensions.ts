@@ -557,7 +557,6 @@ export const applyCalculations = async (dataset: Dataset, item: any) => {
   // Add base64 content of attachments
   const attachmentField = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (attachmentField && flatItem[attachmentField.key]) {
-    console.log('LOOK attachment')
     const attachmentValue = flatItem[attachmentField.key]
     const isURL = !!parseURL(attachmentValue).host
     if (!isURL) {
