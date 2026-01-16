@@ -9,7 +9,7 @@ import stringify from 'json-stable-stringify'
 import { flatten } from 'flat'
 import equal from 'deep-equal'
 import axios from '../../misc/utils/axios.js'
-import { fullFilePath, fsyncFile, attachmentPath } from './files.ts'
+import { fullFilePath, attachmentPath } from './files.ts'
 import { readStreams, writeExtendedStreams } from './data-streams.js'
 import * as restDatasetsUtils from './rest.ts'
 import * as geoUtils from './geo.js'
@@ -29,6 +29,7 @@ import { getFlatten } from './flatten.ts'
 import type { Dataset, DatasetLine } from '#types'
 import type { Document, Filter, WithId } from 'mongodb'
 import { isRestDataset } from '#types/dataset/index.ts'
+import filesStorage from '#files-storage'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -173,9 +174,8 @@ export const extend = async (
       ...writeStreams
     )
     if (filePath) {
-      await fs.move(filePath, fullFilePath(dataset), { overwrite: true })
+      await filesStorage.moveFromFs(filePath, fullFilePath(dataset))
       moved = true
-      await fsyncFile(fullFilePath(dataset))
     }
   } finally {
     if (filePath && !moved) await fs.remove(filePath)

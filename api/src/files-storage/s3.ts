@@ -3,7 +3,8 @@ import { S3Client, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand, 
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
 import { unlink } from 'node:fs/promises'
-import { createReadStream, type ReadStream } from 'node:fs'
+import { createReadStream } from 'node:fs'
+import { type Readable } from 'node:stream'
 import { httpError } from '@data-fair/lib-express'
 import unzipper from 'unzipper'
 
@@ -32,9 +33,30 @@ export class S3Backend implements FileBackend {
     }))
   }
 
-  async rm (path: string): Promise<void> {
+  async removeFile (path: string): Promise<void> {
     const command = new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path) })
     await this.client.send(command)
+  }
+
+  async removeDir (path: string): Promise<void> {
+    // the page size cannot be too large as it is also the number of parallel copies
+    const pages = paginateListObjectsV2(
+      { client: this.client, pageSize: 100 },
+      { Bucket: config.s3.bucket, Prefix: bucketPath(path) }
+    )
+
+    for await (const page of pages) {
+      if (!page.Contents) continue
+
+      // Map each object in the current page to a Copy promise
+      const deletePromises = page.Contents.map((obj) => {
+        const deleteParams = { Bucket: config.s3.bucket, Key: obj.Key, }
+        return this.client.send(new DeleteObjectCommand(deleteParams))
+      })
+
+      // Execute the batch of copies for this page
+      await Promise.all(deletePromises)
+    }
   }
 
   async readStream (path: string, ifModifiedSince?: string, range?: string) {
@@ -48,9 +70,9 @@ export class S3Backend implements FileBackend {
     try {
       const response = await this.client.send(command)
       return {
-        lastModified: response.LastModified,
-        size: response.ContentLength,
-        body: response.Body as NodeJS.ReadableStream,
+        lastModified: response.LastModified!,
+        size: response.ContentLength!,
+        body: response.Body as Readable,
         range: response.ContentRange
       }
     } catch (err: any) {
@@ -66,7 +88,7 @@ export class S3Backend implements FileBackend {
     await unlink(tmpPath)
   }
 
-  async writeStream (readStream: ReadStream, path: string): Promise<void> {
+  async writeStream (readStream: Readable, path: string): Promise<void> {
     const upload = new Upload({
       client: this.client,
       params: {
@@ -86,6 +108,11 @@ export class S3Backend implements FileBackend {
     }
 
     await this.client.send(new CopyObjectCommand(params))
+  }
+
+  async moveFile (srcPath: string, dstPath: string) {
+    await this.copyFile(srcPath, dstPath)
+    await this.removeFile(srcPath)
   }
 
   async copyDir (srcPath: string, dstPath: string) {
@@ -113,10 +140,12 @@ export class S3Backend implements FileBackend {
 
       // Execute the batch of copies for this page
       await Promise.all(copyPromises)
-      console.log(`Copied ${copyPromises.length} objects...`)
     }
+  }
 
-    console.log('All matching objects copied.')
+  async moveDir (srcPath: string, dstPath: string) {
+    await this.copyDir(srcPath, dstPath)
+    await this.removeDir(srcPath)
   }
 
   async pathExists (path: string) {

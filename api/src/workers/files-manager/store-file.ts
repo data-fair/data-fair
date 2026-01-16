@@ -104,7 +104,7 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.originalFile) {
       const oldFilePath = datasetUtils.originalFilePath(dataset)
       if (oldFilePath !== newFilePath) {
-        await filesStorage.rm(oldFilePath)
+        await filesStorage.removeFile(oldFilePath)
       }
     }
   } else if (draft && !await fs.pathExists(datasetUtils.originalFilePath(dataset))) {
@@ -121,7 +121,7 @@ export default async function (dataset: DatasetInternal) {
     await filesStorage.copyDir(datasetUtils.attachmentsDir(datasetFull), datasetUtils.attachmentsDir(dataset))
   }
 
-  await filesStorage.rm(loadingDir)
+  await filesStorage.removeDir(loadingDir)
 
   await datasetsService.applyPatch(dataset, patch)
   if (!dataset.draftReason) await updateStorage(dataset)

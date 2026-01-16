@@ -17,12 +17,12 @@ export const replaceAllAttachments = async (dataset: Dataset, loadedAttachmentsZ
   const files = await unzipIntoStorage(loadedAttachmentsZipPath, dir)
   for (const a of existingAttachments) {
     if (!files.includes(a)) {
-      await filesStorage.rm(joinPath(dir, a))
+      await filesStorage.removeFile(joinPath(dir, a))
     }
   }
   return files
 }
 
 export const removeAll = async (dataset: Dataset) => {
-  await filesStorage.rm(attachmentsDir(dataset))
+  await filesStorage.removeDir(attachmentsDir(dataset))
 }

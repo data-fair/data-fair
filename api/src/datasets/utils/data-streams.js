@@ -17,6 +17,7 @@ import pump from '../../misc/utils/pipe.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { compileExpression } from './extensions.ts'
 import { getFlattenNoCache } from './flatten.ts'
+import filesStorage from '#files-storage'
 
 export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
@@ -251,7 +252,7 @@ export const readStreams = async (dataset, raw = false, full = false, ignoreDraf
   if (dataset.isRest) return restDatasetsUtils.readStreams(dataset)
   const p = full ? fullFilePath(dataset) : filePath(dataset)
 
-  if (!await fs.pathExists(p)) {
+  if (!await filesStorage.pathExists(p)) {
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily
@@ -259,10 +260,10 @@ export const readStreams = async (dataset, raw = false, full = false, ignoreDraf
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 
-  let streams = [fs.createReadStream(p)]
+  const { body, size } = await filesStorage.readStream(p)
+  let streams = [body]
 
   if (progress) {
-    const { size } = await fs.stat(p)
     streams.push(new Transform({
       transform (chunk, encoding, callback) {
         progress.inc((chunk.length / size) * 100)

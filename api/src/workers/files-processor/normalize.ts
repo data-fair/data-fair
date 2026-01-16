@@ -20,6 +20,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetInternal, FileDataset } from '#types'
 import mimeTypeStream from 'mime-type-stream'
 import { unzipFromStorage } from '../../misc/utils/unzip.ts'
+import filesStorage from '#files-storage'
 
 export const eventsPrefix = 'normalize'
 
@@ -117,7 +118,7 @@ export default async function (dataset: FileDataset) {
 
       const basicTypeFileName = dataset.originalFile.name.slice(0, dataset.originalFile.name.length - 3)
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), basicTypeFileName)
-      await pump(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
+      await pump((await filesStorage.readStream(originalFilePath)).body, zlib.createGunzip(), fs.createWriteStream(filePath))
       dataset.file = {
         name: basicTypeFileName,
         size: (await fs.stat(filePath)).size,

@@ -10,12 +10,15 @@ export type FileStats = {
 export type FileBackend = {
   lsr(path: string): Promise<string[]>
   lsrWithStats(path: string): Promise<FileStats[]>
-  rm(path: string): Promise<void>
-  readStream(path: string, ifModifiedSince?: string, range?: string): Promise<{ body: NodeJS.ReadableStream, size?: number, lastModified?: Date }>
+  removeFile(path: string): Promise<void>
+  removeDir(path: string): Promise<void>
+  readStream(path: string, ifModifiedSince?: string, range?: string): Promise<{ body: Readable, size: number, lastModified: Date, range?: string }>
   moveFromFs(tmpPath: string, path: string): Promise<void>
   writeStream(readStream: Readable, path: string): Promise<void>
   copyFile(srcPath: string, dstPath: string): Promise<void>
+  moveFile(srcPath: string, dstPath: string): Promise<void>
   copyDir(srcPath: string, dstPath: string): Promise<void>
+  moveDir(srcPath: string, dstPath: string): Promise<void>
   pathExists(path: string): Promise<boolean>
   zipDirectory(path: string): Promise<CentralDirectory>
 }

@@ -30,7 +30,11 @@ export class FsBackend implements FileBackend {
     return results
   }
 
-  async rm (path: string): Promise<void> {
+  async removeFile (path: string): Promise<void> {
+    await fs.rm(path, { recursive: true, force: true })
+  }
+
+  async removeDir (path: string): Promise<void> {
     await fs.rm(path, { recursive: true, force: true })
   }
 
@@ -67,7 +71,7 @@ export class FsBackend implements FileBackend {
   async moveFromFs (tmpPath: string, path: string): Promise<void> {
     // in 2 operations for atomicity in case we are on 2 separate volumes
     await fs.move(tmpPath, path + '.tmp')
-    await fs.move(path + '.tmp', path)
+    await fs.move(path + '.tmp', path, { overwrite: true })
     await fsyncFile(path)
   }
 
@@ -80,12 +84,23 @@ export class FsBackend implements FileBackend {
   async copyFile (srcPath: string, dstPath: string) {
     // in 2 operations for atomicity in case we are on 2 separate volumes
     await fs.copy(srcPath, dstPath + '.tmp')
-    await fs.move(dstPath + '.tmp', dstPath)
+    await fs.move(dstPath + '.tmp', dstPath, { overwrite: true })
+    await fsyncFile(dstPath)
+  }
+
+  async moveFile (srcPath: string, dstPath: string) {
+    // in 2 operations for atomicity in case we are on 2 separate volumes
+    await fs.move(srcPath, dstPath + '.tmp')
+    await fs.move(dstPath + '.tmp', dstPath, { overwrite: true })
     await fsyncFile(dstPath)
   }
 
   async copyDir (srcPath: string, dstPath: string) {
     await fs.copy(srcPath, dstPath)
+  }
+
+  async moveDir (srcPath: string, dstPath: string) {
+    await fs.move(srcPath, dstPath)
   }
 
   async pathExists (path: string) {

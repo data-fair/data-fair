@@ -22,6 +22,7 @@ import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
+import filesStorage from '#files-storage'
 
 const debugMasterData = debugLib('master-data')
 
@@ -350,7 +351,7 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
 export const deleteDataset = async (app, dataset) => {
   const db = mongo.db
   try {
-    await fs.remove(dir(dataset))
+    await filesStorage.removeDir(dir(dataset))
   } catch (err) {
     console.warn('Error while deleting dataset draft directory', err)
   }
@@ -545,16 +546,14 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
     }
   }
 
-  await fs.ensureDir(dir(patchedDataset))
-
-  if (await fs.pathExists(attachmentsDir(datasetDraft))) {
-    await fs.remove(attachmentsDir(patchedDataset))
-    await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
+  if (await filesStorage.pathExists(attachmentsDir(datasetDraft))) {
+    await filesStorage.removeDir(attachmentsDir(patchedDataset))
+    await filesStorage.moveDir(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
   }
 
-  if (await fs.pathExists(metadataAttachmentsDir(datasetDraft))) {
-    await fs.remove(metadataAttachmentsDir(patchedDataset))
-    await fs.move(metadataAttachmentsDir(datasetDraft), metadataAttachmentsDir(patchedDataset))
+  if (await filesStorage.pathExists(metadataAttachmentsDir(datasetDraft))) {
+    await filesStorage.removeDir(metadataAttachmentsDir(patchedDataset))
+    await filesStorage.moveDir(metadataAttachmentsDir(datasetDraft), metadataAttachmentsDir(patchedDataset))
   }
 
   // replace originalFile
@@ -562,41 +561,38 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
   const newOriginalFilePath = originalFilePath(patchedDataset)
   const oldOriginalFilePath = datasetFull.originalFile && originalFilePath(datasetFull)
   if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
-    await fs.move(draftOriginalFilePath, newOriginalFilePath, { overwrite: true })
-    await fsyncFile(newOriginalFilePath)
+    await filesStorage.moveFile(draftOriginalFilePath, newOriginalFilePath)
   }
   if (oldOriginalFilePath && datasetFull.originalFile.name !== datasetFull.file?.name && newOriginalFilePath !== oldOriginalFilePath) {
-    await fs.remove(oldOriginalFilePath)
+    await filesStorage.removeFile(oldOriginalFilePath)
   }
 
   // replace extended file
   const draftFullFilePath = fullFilePath(datasetDraft)
   const newFullFilePath = fullFilePath(patchedDataset)
   const oldFullFilePath = datasetFull.file && fullFilePath(datasetFull)
-  const hasFullFile = await fs.exists(draftFullFilePath)
+  const hasFullFile = await filesStorage.pathExists(draftFullFilePath)
   if (hasFullFile) {
-    await fs.move(draftFullFilePath, newFullFilePath, { overwrite: true })
-    await fsyncFile(newFullFilePath)
+    await filesStorage.moveFile(draftFullFilePath, newFullFilePath)
   }
   if (oldFullFilePath && (!hasFullFile || newFullFilePath !== oldFullFilePath)) {
-    await fs.remove(oldFullFilePath)
+    await filesStorage.removeFile(oldFullFilePath)
   }
 
   // replace file
   const draftFilePath = filePath(datasetDraft)
   const newFilePath = filePath(patchedDataset)
   const oldFilePath = datasetFull.file && filePath(datasetFull)
-  await fs.move(draftFilePath, newFilePath, { overwrite: true })
-  await fsyncFile(newFilePath)
+  await filesStorage.moveFile(draftFilePath, newFilePath)
   if (oldFilePath && newFilePath !== oldFilePath) {
-    await fs.remove(oldFilePath)
+    await filesStorage.removeFile(oldFilePath)
   }
 
   await validateDraftAlias(dataset)
-  await fs.remove(dir(datasetDraft))
+  await filesStorage.removeDir(dir(datasetDraft))
 }
 
 export const cancelDraft = async (dataset) => {
-  await fs.remove(dir(dataset))
+  await filesStorage.removeDir(dir(dataset))
   await deleteIndex(dataset)
 }
