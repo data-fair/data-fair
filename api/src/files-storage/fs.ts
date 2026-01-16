@@ -7,6 +7,7 @@ import { fsyncFile } from '../datasets/utils/files.ts'
 import parseRange from 'range-parser'
 import { pipeline } from 'node:stream/promises'
 import nodeDir from 'node-dir'
+import unzipper from 'unzipper'
 
 export class FsBackend implements FileBackend {
   async lsr (path: string): Promise<string[]> {
@@ -89,5 +90,9 @@ export class FsBackend implements FileBackend {
 
   async pathExists (path: string) {
     return fs.pathExists(path)
+  }
+
+  async zipDirectory (path: string) {
+    return unzipper.Open.file(path)
   }
 }

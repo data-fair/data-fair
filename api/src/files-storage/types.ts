@@ -1,4 +1,5 @@
 import { type Readable } from 'node:stream'
+import type { CentralDirectory } from 'unzipper'
 
 export type FileStats = {
   path: string
@@ -16,4 +17,5 @@ export type FileBackend = {
   copyFile(srcPath: string, dstPath: string): Promise<void>
   copyDir(srcPath: string, dstPath: string): Promise<void>
   pathExists(path: string): Promise<boolean>
+  zipDirectory(path: string): Promise<CentralDirectory>
 }

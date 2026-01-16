@@ -5,6 +5,7 @@ import type { FileStats, FileBackend } from './types.ts'
 import { unlink } from 'node:fs/promises'
 import { createReadStream, type ReadStream } from 'node:fs'
 import { httpError } from '@data-fair/lib-express'
+import unzipper from 'unzipper'
 
 const bucketPath = (path: string) => path.replace(config.dataDir, '')
 
@@ -91,7 +92,7 @@ export class S3Backend implements FileBackend {
     // the page size cannot be too large as it is also the number of parallel copies
     const pages = paginateListObjectsV2(
       { client: this.client, pageSize: 100 },
-      { Bucket: config.s3.bucket, Prefix: srcPath }
+      { Bucket: config.s3.bucket, Prefix: bucketPath(srcPath) }
     )
 
     for await (const page of pages) {
@@ -104,7 +105,7 @@ export class S3Backend implements FileBackend {
         const copyParams = {
           Bucket: config.s3.bucket,
           CopySource: `${config.s3.bucket}/${sourceKey}`,
-          Key: sourceKey!.replace(srcPath, dstPath),
+          Key: sourceKey!.replace(bucketPath(srcPath), bucketPath(dstPath)),
         }
 
         return this.client.send(new CopyObjectCommand(copyParams))
@@ -121,10 +122,14 @@ export class S3Backend implements FileBackend {
   async pathExists (path: string) {
     const params = {
       Bucket: config.s3.bucket,
-      Prefix: path,
+      Prefix: bucketPath(path),
       MaxKeys: 1, // We only need to know if at least one exists
     }
     const response = await this.client.send(new ListObjectsV2Command(params))
     return !!(response.Contents && response.Contents.length > 0)
+  }
+
+  async zipDirectory (path: string) {
+    return unzipper.Open.s3(this.client, { Bucket: config.s3.bucket, Key: bucketPath(path) })
   }
 }
