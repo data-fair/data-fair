@@ -525,6 +525,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbOk, 1)
     await workers.hook('finalize/rest6')
     const ls3 = await lsAttachments(dataset)
+    console.log(ls3)
     assert.equal(ls3.length, 1)
 
     res = await ax.get('/api/v1/datasets/rest6/lines')

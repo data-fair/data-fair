@@ -3,9 +3,6 @@ import fs from 'fs-extra'
 import path from 'path'
 import nodeDir from 'node-dir'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
-import unzipper from 'unzipper'
-import iconvLite from 'iconv-lite'
-import chardet from 'chardet'
 import { type Account } from '@data-fair/lib-express'
 import debugModule from 'debug'
 import filesStorage from '#files-storage'
@@ -119,10 +116,10 @@ export const lsFiles = async (dataset: any) => {
 export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) => {
   if (dataset.isVirtual || dataset.isMetaOnly) return []
   const d = dataFilesDir(dataset)
-  const files = (await filesStorage.ls(d)).filter(f => !f.isDirectory)
+  const files = await filesStorage.lsrWithStats(d)
   const results: any[] = []
   if (dataset.originalFile) {
-    const originalFile = files.find(f => f.name === dataset.originalFile.name)
+    const originalFile = files.find(f => f.path === dataset.originalFile.name)
     if (!originalFile) {
       console.warn('Original data file not found', d, dataset.originalFile.name)
     } else {
@@ -137,7 +134,7 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
     }
     if (dataset.file) {
       if (dataset.file.name !== dataset.originalFile.name) {
-        const file = files.find(f => f.name === dataset.file.name)
+        const file = files.find(f => f.path === dataset.file.name)
         if (!file) {
           console.warn('Normalized data file not found', d, dataset.file.name)
         } else {
@@ -154,7 +151,7 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
       const parsed = path.parse(dataset.file.name)
       if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
         const name = `${parsed.name}-full${parsed.ext}`
-        const fullFile = files.find(f => f.name === name)
+        const fullFile = files.find(f => f.path === name)
         if (!fullFile) {
           console.warn('Full data file not found', d, name)
         } else {
@@ -208,31 +205,4 @@ export const cleanTmp = async () => {
       }
     }
   }
-}
-
-export const unzip = async (zipFile: string, targetDir: string) => {
-  // we used to use the unzip command line tool but this patch (https://sourceforge.net/p/infozip/patches/29/)
-  // was missing in the version in our alpine docker image
-  // so we use unzipper with chardet + iconv-lite to manage encoded file names
-  const directory = await unzipper.Open.file(zipFile)
-  const fileNames = Buffer.concat(directory.files.map(f => f.pathBuffer))
-  const encoding = chardet.detect(fileNames)
-  const files: string[] = []
-  for (const file of directory.files) {
-    if (file.type === 'Directory') continue
-    const filePath = (!file.isUnicode && encoding && encoding !== 'ASCII' && encoding !== 'UTF-8')
-      ? iconvLite.decode(file.pathBuffer, 'CP437')
-      : file.path
-    files.push(filePath)
-    const fullPath = path.join(targetDir, filePath)
-    await fs.ensureDir(path.dirname(fullPath))
-    await new Promise<void>((resolve, reject) => {
-      file
-        .stream()
-        .pipe(fs.createWriteStream(fullPath))
-        .on('error', reject)
-        .on('finish', resolve)
-    })
-  }
-  return files
 }

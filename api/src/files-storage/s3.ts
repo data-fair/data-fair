@@ -3,7 +3,7 @@ import { S3Client, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand, 
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
 import { unlink } from 'node:fs/promises'
-import { createReadStream } from 'node:fs'
+import { createReadStream, type ReadStream } from 'node:fs'
 import { httpError } from '@data-fair/lib-express'
 
 const bucketPath = (path: string) => path.replace(config.dataDir, '')
@@ -15,11 +15,16 @@ export class S3Backend implements FileBackend {
     this.client = new S3Client(config.s3)
   }
 
-  async ls (prefix: string = ''): Promise<FileStats[]> {
-    const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: prefix })
+  async lsr (targetPath: string): Promise<string[]> {
+    const files = await this.lsrWithStats(targetPath)
+    return files.map(f => f.path)
+  }
+
+  async lsrWithStats (targetPath: string): Promise<FileStats[]> {
+    const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: bucketPath(targetPath) })
     const response = await this.client.send(command)
     return (response.Contents || []).map((obj) => ({
-      name: obj.Key!,
+      path: obj.Key!.replace(targetPath, ''),
       size: obj.Size!,
       isDirectory: obj.Key!.endsWith('/'),
       lastModified: obj.LastModified!,
@@ -56,16 +61,20 @@ export class S3Backend implements FileBackend {
   }
 
   async moveFromFs (tmpPath: string, path: string): Promise<void> {
+    await this.writeStream(createReadStream(tmpPath), path)
+    await unlink(tmpPath)
+  }
+
+  async writeStream (readStream: ReadStream, path: string): Promise<void> {
     const upload = new Upload({
       client: this.client,
       params: {
         Bucket: config.s3.bucket,
         Key: path,
-        Body: createReadStream(tmpPath)
+        Body: readStream
       }
     })
     await upload.done()
-    await unlink(tmpPath)
   }
 
   async copyFile (srcPath: string, dstPath: string) {

@@ -12,13 +12,14 @@ import { displayBytes } from '../../misc/utils/bytes.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import * as datasetService from '../../datasets/service.js'
-import { tmpDir as mainTmpDir, unzip } from '../../datasets/utils/files.ts'
+import { tmpDir as mainTmpDir } from '../../datasets/utils/files.ts'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import config from '#config'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetInternal, FileDataset } from '#types'
 import mimeTypeStream from 'mime-type-stream'
+import { unzipIntoFs } from '../../misc/utils/unzip.ts'
 
 export const eventsPrefix = 'normalize'
 
@@ -55,7 +56,7 @@ export default async function (dataset: FileDataset) {
     let mapinfo: string | undefined
     if (dataset.originalFile.mimetype === 'application/zip') {
       debug('decompress', dataset.originalFile.mimetype, originalFilePath, tmpDir)
-      const files = (await unzip(originalFilePath, tmpDir)).filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
+      const files = (await unzipIntoFs(originalFilePath, tmpDir)).filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
       const filePaths = files.map(f => ({ path: f, parsed: path.parse(f) }))
 
       // Check if this archive is actually a shapefile or a mapingosource

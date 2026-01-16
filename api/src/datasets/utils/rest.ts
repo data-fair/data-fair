@@ -722,8 +722,8 @@ async function checkMatchingAttachment (req: { body: any }, lineId: string, dir:
   if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {
     const fileName = req.body[pathField.key].replace(lineId + '/', '')
     try {
-      const files = await filesStorage.ls(dir)
-      if (files.some(f => f.name === fileName)) return true
+      const files = await filesStorage.lsr(dir)
+      if (files.some(f => f === fileName)) return true
     } catch (err) {
       // missing directory, nothing to do
     }

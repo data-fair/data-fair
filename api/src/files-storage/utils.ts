@@ -1,4 +1,4 @@
-import { parse } from 'node:path'
+import path from 'node:path'
 import mime from 'mime-types'
 import { type Request, type Response } from 'express'
 import { pipeline } from 'node:stream/promises'
@@ -18,7 +18,7 @@ export const downloadFileFromStorage = async (filePath: string, req: Request, re
     res.set('Content-Range', range)
     res.status(206)
   } else {
-    const { base, ext } = parse(filePath)
+    const { base, ext } = path.parse(filePath)
     const mimeType = mime.lookup(ext)
     if (mimeType) res.set('Content-Type', mimeType)
     res.set('Content-Disposition', contentDisposition(base, { type: opts.dispositionType }))

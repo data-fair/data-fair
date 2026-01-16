@@ -106,6 +106,7 @@
     "range-parser": "^1.2.1",
     "rdflib": "^2.2.35",
     "rdfxml-streaming-parser": "^3.0.1",
+    "recursive-readdir": "^2.2.3",
     "request-ip": "^3.3.0",
     "resolve-path": "^1.4.0",
     "rrule": "^2.8.1",

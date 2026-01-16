@@ -1,25 +1,32 @@
-import { createReadStream } from 'node:fs'
+import { type ReadStream } from 'node:fs'
+import { parse as parsePath, join as joinPath, relative as relativePath } from 'path'
 import fs from 'fs-extra'
 import type { FileStats, FileBackend } from './types.ts'
 import { httpError } from '@data-fair/lib-express'
 import { fsyncFile } from '../datasets/utils/files.ts'
 import parseRange from 'range-parser'
+import { pipeline } from 'node:stream/promises'
+import nodeDir from 'node-dir'
 
 export class FsBackend implements FileBackend {
-  async ls (path: string): Promise<FileStats[]> {
+  async lsr (path: string): Promise<string[]> {
     if (!await fs.pathExists(path)) return []
-    const files = await fs.readdir(path, { withFileTypes: true })
-    return Promise.all(
-      files.map(async (file) => {
-        const stat = await fs.stat(`${path}/${file.name}`)
-        return {
-          name: file.name,
-          size: stat.size,
-          isDirectory: file.isDirectory(),
-          lastModified: stat.mtime,
-        }
+    return (await nodeDir.promiseFiles(path))
+      .map(f => relativePath(path, f))
+  }
+
+  async lsrWithStats (path: string): Promise<FileStats[]> {
+    const paths = await this.lsr(path)
+    const results = []
+    for (const p of paths) {
+      const stat = await fs.stat(joinPath(path, p))
+      results.push({
+        path: p,
+        size: stat.size,
+        lastModified: stat.mtime,
       })
-    )
+    }
+    return results
   }
 
   async rm (path: string): Promise<void> {
@@ -42,7 +49,7 @@ export class FsBackend implements FileBackend {
       if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
         const range = ranges[0]
         return {
-          body: createReadStream(path, { start: range.start, end: range.end }),
+          body: fs.createReadStream(path, { start: range.start, end: range.end }),
           size: (range.end - range.start) + 1,
           lastModified: stats.mtime,
           range: `bytes ${range.start}-${range.end}/${stats.size}`
@@ -50,7 +57,7 @@ export class FsBackend implements FileBackend {
       }
     }
     return {
-      body: createReadStream(path),
+      body: fs.createReadStream(path),
       size: stats.size,
       lastModified: stats.mtime
     }
@@ -61,6 +68,12 @@ export class FsBackend implements FileBackend {
     await fs.move(tmpPath, path + '.tmp')
     await fs.move(path + '.tmp', path)
     await fsyncFile(path)
+  }
+
+  async writeStream (readStream: ReadStream, path: string): Promise<void> {
+    await fs.ensureDir(parsePath(path).dir)
+    const writeStream = fs.createWriteStream(path)
+    await pipeline(readStream, writeStream)
   }
 
   async copyFile (srcPath: string, dstPath: string) {
