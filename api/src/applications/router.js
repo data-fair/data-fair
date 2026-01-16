@@ -27,7 +27,6 @@ import { checkStorage } from '../datasets/middlewares.js'
 import * as attachments from '../misc/utils/attachments.js'
 import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
-import pump from '../misc/utils/pipe.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, session } from '@data-fair/lib-express'
@@ -646,24 +645,6 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
   // res.set('content-disposition', `inline; filename="${req.params.attachmentPath}"`)
 
   const relFilePath = path.join(...req.params.attachmentPath)
-  const ranges = req.range(1000000)
-  if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
-    const range = ranges[0]
-    const filePath = attachmentPath(req.application, relFilePath)
-    if (!await fs.pathExists(filePath)) return res.status(404).send()
-    const stats = await fs.stat(filePath)
-
-    res.setHeader('content-type', 'application/octet-stream')
-    res.setHeader('content-range', `bytes ${range.start}-${range.end}/${stats.size}`)
-    res.setHeader('content-length', (range.end - range.start) + 1)
-    res.status(206)
-    await pump(
-      fs.createReadStream(filePath, { start: range.start, end: range.end }),
-      // res.throttle('static'),
-      res
-    )
-    return
-  }
   await downloadFileFromStorage(
     resolvePath(attachmentsDir(req.application), relFilePath),
     req, res, { dispositionType: 'inline' })

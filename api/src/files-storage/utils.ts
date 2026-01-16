@@ -10,13 +10,19 @@ type DlFileOpts = {
 }
 
 export const downloadFileFromStorage = async (filePath: string, req: Request, res: Response, opts: DlFileOpts = {}) => {
-  const { body, size, lastModified } = await filesStorage.readStream(filePath, req.get('If-Modified-Since'))
+  const { body, size, lastModified, range } = await filesStorage.readStream(filePath, req.get('If-Modified-Since'), req.get('Range'))
   if (lastModified) res.set('Last-Modified', lastModified.toUTCString())
   if (size !== undefined) res.set('Content-Length', size + '')
-  const { base, ext } = parse(filePath)
-  const mimeType = mime.lookup(ext)
-  if (mimeType) res.set('Content-Type', mimeType)
-  res.set('Content-Disposition', contentDisposition(base, { type: opts.dispositionType }))
+  if (range) {
+    res.set('Content-Type', 'application/octet-stream')
+    res.set('Content-Range', range)
+    res.status(206)
+  } else {
+    const { base, ext } = parse(filePath)
+    const mimeType = mime.lookup(ext)
+    if (mimeType) res.set('Content-Type', mimeType)
+    res.set('Content-Disposition', contentDisposition(base, { type: opts.dispositionType }))
+  }
 
   try {
     // @ts-ignore

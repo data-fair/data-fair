@@ -3,6 +3,7 @@ import fs from 'fs-extra'
 import type { FileStats, FileBackend } from './types.ts'
 import { httpError } from '@data-fair/lib-express'
 import { fsyncFile } from '../datasets/utils/files.ts'
+import parseRange from 'range-parser'
 
 export class FsBackend implements FileBackend {
   async ls (path: string): Promise<FileStats[]> {
@@ -25,7 +26,7 @@ export class FsBackend implements FileBackend {
     await fs.rm(path, { recursive: true, force: true })
   }
 
-  async readStream (path: string, ifModifiedSince?: string) {
+  async readStream (path: string, ifModifiedSince?: string, range?: string) {
     let stats
     try {
       stats = await fs.stat(path)
@@ -35,6 +36,18 @@ export class FsBackend implements FileBackend {
     }
     if (ifModifiedSince && new Date(ifModifiedSince).getDate() === stats.mtime.getDate()) {
       throw httpError(304)
+    }
+    if (range) {
+      const ranges = parseRange(1000000, range)
+      if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
+        const range = ranges[0]
+        return {
+          body: createReadStream(path, { start: range.start, end: range.end }),
+          size: (range.end - range.start) + 1,
+          lastModified: stats.mtime,
+          range: `bytes ${range.start}-${range.end}/${stats.size}`
+        }
+      }
     }
     return {
       body: createReadStream(path),

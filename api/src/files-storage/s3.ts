@@ -31,11 +31,12 @@ export class S3Backend implements FileBackend {
     await this.client.send(command)
   }
 
-  async readStream (path: string, ifModifiedSince?: string) {
+  async readStream (path: string, ifModifiedSince?: string, range?: string) {
     const command = new GetObjectCommand({
       Bucket: config.s3.bucket,
       Key: bucketPath(path),
-      IfModifiedSince: ifModifiedSince ? new Date(ifModifiedSince) : undefined
+      IfModifiedSince: ifModifiedSince ? new Date(ifModifiedSince) : undefined,
+      Range: range
     })
 
     try {
@@ -43,7 +44,8 @@ export class S3Backend implements FileBackend {
       return {
         lastModified: response.LastModified,
         size: response.ContentLength,
-        body: response.Body as NodeJS.ReadableStream
+        body: response.Body as NodeJS.ReadableStream,
+        range: response.ContentRange
       }
     } catch (err: any) {
       if (err.$metadata?.httpStatusCode === 304) {
