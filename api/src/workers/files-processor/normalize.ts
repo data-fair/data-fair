@@ -1,7 +1,7 @@
 // convert from tabular data to csv or geographical data to geojson
 
 import path from 'path'
-import fs from 'fs-extra'
+import fs, { ensureFile } from 'fs-extra'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import pump from '../../misc/utils/pipe.ts'
 import { Readable, compose } from 'node:stream'
@@ -21,6 +21,7 @@ import type { DatasetInternal, FileDataset } from '#types'
 import mimeTypeStream from 'mime-type-stream'
 import { unzipFromStorage, unzipIntoStorage } from '../../misc/utils/unzip.ts'
 import filesStorage from '#files-storage'
+import { createWriteStream } from 'node:fs'
 
 export const eventsPrefix = 'normalize'
 
@@ -215,14 +216,21 @@ export default async function (dataset: FileDataset) {
       }
 
       const tmpFile = await tmp.tmpName({ tmpdir: tmpDir })
-      const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.geojson')
+      let srcFile = shapefile ?? mapinfo
+      if (!srcFile) {
+        srcFile = await tmp.tmpName({ tmpdir: tmpDir })
+        await ensureFile(srcFile)
+        await pump((await filesStorage.readStream(originalFilePath)).body, createWriteStream(srcFile))
+        await fsyncFile(srcFile)
+      }
       // using the .shp file instead of the zip seems to help support more shapefiles for some reason
-      await ogr2ogr(shapefile ?? mapinfo ?? originalFilePath, {
+      await ogr2ogr(srcFile, {
         format: 'GeoJSON',
         options: ogrOptions,
         timeout: config.ogr2ogr.timeout,
         destination: tmpFile
       })
+      const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.geojson')
       await filesStorage.moveFromFs(tmpFile, filePath)
       const stats = await filesStorage.fileStats(filePath)
       dataset.file = {

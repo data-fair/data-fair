@@ -9,6 +9,8 @@ import config from 'config'
 import * as workers from '../api/src/workers/index.ts'
 import * as esUtils from '../api/src/datasets/es/index.ts'
 import { indexPrefix } from '../api/src/datasets/es/manage-indices.js'
+import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
+import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()
@@ -82,14 +84,14 @@ describe('datasets in draft mode', function () {
     assert.equal(res.data.results[1].id, 'bidule')
 
     // validate the draft
-    assert.ok(await fs.pathExists(`../data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    assert.ok(await filesStorage.pathExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.ok(!dataset.draftReason)
     assert.equal(dataset.count, 2)
     assert.ok(dataset.bbox)
-    assert.ok(!await fs.pathExists(`../data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    assert.ok(!await filesStorage.pathExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
 
     // querying lines is now possible
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -112,9 +114,9 @@ describe('datasets in draft mode', function () {
     const indices = await global.es.indices.get({ index: `${indexPrefix(dataset)}-*` })
     assert.equal(Object.keys(indices).length, 1)
 
-    assert.ok(await fs.pathExists(`../data/test/user/dmeadus0/datasets/${dataset.id}`))
+    assert.ok(await filesStorage.pathExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
-    assert.ok(!await fs.pathExists(`../data/test/user/dmeadus0/datasets/${dataset.id}`))
+    assert.ok(!await filesStorage.pathExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
   })
 
   it('create a draft when updating the data file', async function () {
@@ -731,10 +733,10 @@ other
     assert.equal(res.status, 201)
     const dataset = await workers.hook('finalize/' + res.data.id)
 
-    assert.ok(await fs.pathExists('../data/test/user/dmeadus0/datasets-drafts/' + dataset.id))
-    assert.ok(!await fs.pathExists('../data/test/user/dmeadus0/datasets/' + dataset.id))
+    assert.ok(await filesStorage.pathExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    assert.ok(!await filesStorage.pathExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
-    assert.ok(!await fs.pathExists('../data/test/user/dmeadus0/datasets-drafts/' + dataset.id))
+    assert.ok(!await fs.pathExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 404)
   })
 

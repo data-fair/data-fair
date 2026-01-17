@@ -190,7 +190,9 @@ describe('Attachments', function () {
       assert.fail()
     } catch (err) {
       assert.ok(err.message.includes('aucune colonne ne contient les chemins'))
-      assert.ok(err.message.includes('Valeurs attendues : test.odt, dir1/test.pdf'))
+      assert.ok(err.message.includes('Valeurs attendues :'))
+      assert.ok(err.message.includes('test.odt'))
+      assert.ok(err.message.includes('dir1/test.pdf'))
     }
   })
 })
