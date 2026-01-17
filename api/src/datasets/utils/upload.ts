@@ -65,7 +65,11 @@ const storage = {
       delete file.destination
       delete file.filename
       delete file.path
-      await filesStorage.removeFile(path)
+      if (req.dataset) {
+        await filesStorage.removeFile(path)
+      } else {
+        await fs.remove(path)
+      }
       cb()
     } catch (err) {
       cb(err)
@@ -121,7 +125,6 @@ export const getFiles = async (req, res) => {
       file.normalizeOptions = JSON.parse(req.body?.[file.fieldname + '_normalizeOptions'])
       delete req.body[file.fieldname + '_normalizeOptions']
     }
-    await fsyncFile(file.path)
   }
   return files
 }
