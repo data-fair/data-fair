@@ -1,13 +1,12 @@
 import { join as joinPath } from 'path'
 import type { Dataset } from '#types'
-import fs from 'fs-extra'
 import filesStorage from '#files-storage'
 import { attachmentsDir } from './files.ts'
 import { unzipIntoStorage } from '../../misc/utils/unzip.ts'
 
 export const addAttachments = async (dataset: Dataset, loadedAttachmentsZipPath: string) => {
   const files = await unzipIntoStorage(loadedAttachmentsZipPath, attachmentsDir(dataset))
-  await fs.remove(loadedAttachmentsZipPath)
+  await filesStorage.removeFile(loadedAttachmentsZipPath)
   return files
 }
 

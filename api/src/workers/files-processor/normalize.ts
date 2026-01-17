@@ -19,7 +19,7 @@ import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetInternal, FileDataset } from '#types'
 import mimeTypeStream from 'mime-type-stream'
-import { unzipFromStorage } from '../../misc/utils/unzip.ts'
+import { unzipFromStorage, unzipIntoStorage } from '../../misc/utils/unzip.ts'
 import filesStorage from '#files-storage'
 
 export const eventsPrefix = 'normalize'
@@ -87,7 +87,8 @@ export default async function (dataset: FileDataset) {
         if (await filesStorage.pathExists(datasetUtils.attachmentsDir(dataset))) {
           throw httpError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
         }
-        await filesStorage.moveDir(tmpDir, datasetUtils.attachmentsDir(dataset))
+        // await filesStorage.moveDirFromFs(tmpDir, datasetUtils.attachmentsDir(dataset))
+        await unzipIntoStorage(originalFilePath, datasetUtils.attachmentsDir(dataset))
         const csvFilePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
         // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
         const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
@@ -101,7 +102,6 @@ export default async function (dataset: FileDataset) {
         }
         if (!dataset.schema.find(f => f.key === 'file')) {
           const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['http://schema.org/DigitalDocument']
-          console.log('add attachment')
           dataset.schema.push({
             key: 'attachment',
             'x-originalName': 'attachment',

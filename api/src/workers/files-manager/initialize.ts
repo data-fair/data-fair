@@ -1,5 +1,5 @@
 import path from 'path'
-import { Readable, Transform } from 'stream'
+import { Readable, Transform, compose } from 'node:stream'
 import * as restUtils from '../../datasets/utils/rest.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
