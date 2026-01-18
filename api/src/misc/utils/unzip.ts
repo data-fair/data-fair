@@ -6,6 +6,8 @@ import iconvLite from 'iconv-lite'
 import chardet from 'chardet'
 import { type Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
+import { dataDir } from '../../datasets/utils/files.ts'
+import unzipper from 'unzipper'
 
 const unzip = async (zipDirectory: CentralDirectory, targetDir: string, writeStream: (readStream: Readable, path: string) => Promise<void>) => {
   // we used to use the unzip command line tool but this patch (https://sourceforge.net/p/infozip/patches/29/)
@@ -27,7 +29,7 @@ const unzip = async (zipDirectory: CentralDirectory, targetDir: string, writeStr
 }
 
 export const unzipFromStorage = async (zipFile: string, targetDir: string) => {
-  return await unzip(await filesStorage.zipDirectory(zipFile), targetDir, async (readStream, p) => {
+  return unzip(await filesStorage.zipDirectory(zipFile), targetDir, async (readStream, p) => {
     await fs.ensureDir(path.parse(p).dir)
     const writeStream = fs.createWriteStream(p)
     await pipeline(readStream, writeStream)
@@ -35,5 +37,6 @@ export const unzipFromStorage = async (zipFile: string, targetDir: string) => {
 }
 
 export const unzipIntoStorage = async (zipFile: string, targetDir: string) => {
-  return await unzip(await filesStorage.zipDirectory(zipFile), targetDir, (readStream, p) => filesStorage.writeStream(readStream, p))
+  const zipDirectory = zipFile.startsWith(dataDir) ? await filesStorage.zipDirectory(zipFile) : await unzipper.Open.file(zipFile)
+  return unzip(zipDirectory, targetDir, (readStream, p) => filesStorage.writeStream(readStream, p))
 }

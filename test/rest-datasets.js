@@ -13,6 +13,7 @@ import { promisify } from 'util'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.ts'
 import pumpOg from 'pump'
+import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 
 const pump = promisify(pumpOg)
 
@@ -605,7 +606,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     dataset = await workers.hook('finalize/restsync')
 
     // remove a file a resync, we sould have 1 line
-    await fs.remove(path.join(attachmentsDir(dataset), 'test.odt'))
+    await filesStorage.removeFile(path.join(attachmentsDir(dataset), 'test.odt'))
     res = await ax.post('/api/v1/datasets/restsync/_sync_attachments_lines', null, { params: { lock: 'true' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbCreated, 0)
