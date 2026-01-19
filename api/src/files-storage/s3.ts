@@ -84,6 +84,7 @@ export class S3Backend implements FileBackend {
   }
 
   async readStream (path: string, ifModifiedSince?: string, range?: string) {
+    debug('readStream', path)
     const ifModifiedSinceDate = ifModifiedSince ? new Date(ifModifiedSince) : undefined
     const command = new GetObjectCommand({
       Bucket: config.s3.bucket,
@@ -106,7 +107,9 @@ export class S3Backend implements FileBackend {
         body: response.Body as Readable,
         range: response.ContentRange
       }
+      debug('readStream ok', response)
     } catch (err: any) {
+      debug('readStream error', err)
       if (err.$metadata?.httpStatusCode === 304) {
         throw httpError(304)
       }
