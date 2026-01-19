@@ -1,4 +1,4 @@
-import path from 'path'
+import fs from 'node:fs'
 import { Socket } from 'node:net'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { PromiseSocket } from 'promise-socket'
@@ -7,6 +7,9 @@ import debugLib from 'debug'
 import config from '#config'
 import { type Request, type NextFunction } from 'express'
 import { reqUserAuthenticated, type User } from '@data-fair/lib-express'
+import { dataDir } from '../../datasets/utils/files.ts'
+import filesStorage from '#files-storage'
+import { Readable } from 'node:stream'
 
 const debug = debugLib('clamav')
 
@@ -26,6 +29,29 @@ const runCommand = async (command: string) => {
   const result = (await socket.readAll())?.toString().trim()
   await socket.destroy()
   debug(`response -> "${result}"`)
+  return result
+}
+
+const zTerminator = Buffer.alloc(4, 0)
+const formatChunk = (buffer: Buffer) => {
+  const length = Buffer.alloc(4)
+  length.writeUInt32BE(buffer.length, 0)
+  return Buffer.concat([length, buffer])
+}
+const scanStream = async (s3Stream: Readable, name: string) => {
+  debug('forward stream ' + name)
+  const rawSocket = new Socket()
+  const socket = new PromiseSocket(rawSocket)
+
+  await socket.connect(config.clamav.port, config.clamav.host)
+
+  await socket.write('zINSTREAM\0')
+  for await (const chunk of s3Stream) { await socket.write(formatChunk(chunk as Buffer)) }
+  await socket.write(zTerminator)
+  let result = (await socket.readAll())!.toString().replace(/\0/g, '').trim()
+  if (result.startsWith('stream: ')) result = result.replace('stream: ', '')
+  await socket.end()
+  debug(`ClamAV response -> "${result}"`)
   return result
 }
 
@@ -53,9 +79,9 @@ export const middleware = async (req: Request, res: Response, next: NextFunction
 export const checkFiles = async (files: Express.Multer.File[], user: User) => {
   if (!config.clamav.active) return true
   for (const file of files) {
-    const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))
-    const result = await runCommand(`SCAN ${remotePath}`)
-    if (!result) throw new Error('expected clamav result: ' + remotePath)
+    const stream = file.path.startsWith(dataDir + '/') ? (await filesStorage.readStream(file.path)).body : fs.createReadStream(file.path)
+    const result = await scanStream(stream, file.path)
+    if (!result) throw new Error('expected clamav result: ' + file.path)
     if (result.endsWith('OK')) continue
     if (result.endsWith('ERROR')) throw new Error('failure while applying antivirus ' + result.slice(0, -6))
     if (result.endsWith('FOUND')) {
@@ -63,7 +89,7 @@ export const checkFiles = async (files: Express.Multer.File[], user: User) => {
       console.warn('[infected-file] a user attempted to upload an infected file', result, user, file)
       throw httpError(400, 'malicious file detected')
     }
-    throw new Error('Unexpected result from antivirus ' + result)
+    throw new Error('Unexpected result from antivirus: ' + result)
   }
   return true
 }

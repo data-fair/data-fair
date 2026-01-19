@@ -110,7 +110,7 @@ module.exports = {
     publicMaxAge: 1
   },
   clamav: {
-    active: false,
+    active: true,
     dataDir: '/data/data-fair/test'
   },
   assertImmutable: true,
