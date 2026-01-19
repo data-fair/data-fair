@@ -28,7 +28,7 @@
     "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc",
-    "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm run test && npm audit --omit=dev --audit-level=critical"
+    "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm run test-s3 && npm audit --omit=dev --audit-level=critical"
   },
   "engines": {
     "node": "v24"

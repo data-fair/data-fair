@@ -156,9 +156,7 @@ WORKDIR /app/api
 ENV NODE_ENV=production
 ENV DEBUG db,upgrade*
 
-# the following line would be a good practice
-# unfortunately it is a problem to activate now that the service was already deployed
-# with volumes belonging to root
+# TODO: activate this line on next major release
 #USER node
 VOLUME /data
 EXPOSE 8080
