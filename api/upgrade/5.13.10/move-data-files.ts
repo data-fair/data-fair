@@ -9,6 +9,10 @@ const upgradeScript: UpgradeScript = {
   description: 'Move data files from the root of datasets directories to a sub folder',
   async exec (db, debug) {
     for (const ownerType of ['user', 'organization']) {
+      if (await fs.pathExists(path.join(dataDir, ownerType))) {
+        console.log('no directory', ownerType)
+        continue
+      }
       for (const ownerId of await fs.readdir(path.join(dataDir, ownerType))) {
         for (const subdir of await fs.readdir(path.join(dataDir, ownerType, ownerId))) {
           if (subdir !== 'datasets' && subdir !== 'datasets-drafts') continue
