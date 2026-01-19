@@ -1,5 +1,5 @@
 import config from '#config'
-import { relative as relativePath } from 'node:path'
+import { relative as relativePath, resolve as resolvePath, join as joinPath } from 'node:path'
 import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2, PutObjectCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
@@ -12,7 +12,9 @@ import debugModule from 'debug'
 
 const debug = debugModule('s3')
 
-const bucketPath = (path: string) => path.replace(config.dataDir + '/', '')
+export const dataDir = resolvePath(config.dataDir)
+
+const bucketPath = (path: string) => path.replace(dataDir + '/', '')
 
 export class S3Backend implements FileBackend {
   private client: S3Client
@@ -41,7 +43,7 @@ export class S3Backend implements FileBackend {
     const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: bucketPath(targetPath) })
     const response = await this.client.send(command)
     const filesStats = (response.Contents || []).map((obj) => ({
-      path: relativePath(targetPath, obj.Key!),
+      path: relativePath(targetPath, joinPath(dataDir, obj.Key!)),
       size: obj.Size!,
       lastModified: obj.LastModified!,
     }))
