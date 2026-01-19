@@ -6,8 +6,8 @@ import iconvLite from 'iconv-lite'
 import chardet from 'chardet'
 import { type Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import { dataDir } from '../../datasets/utils/files.ts'
 import unzipper from 'unzipper'
+import { isInFilesStorage } from '../../files-storage/utils.ts'
 
 const unzip = async (zipDirectory: CentralDirectory, targetDir: string, writeStream: (readStream: Readable, path: string) => Promise<void>) => {
   // we used to use the unzip command line tool but this patch (https://sourceforge.net/p/infozip/patches/29/)
@@ -37,6 +37,6 @@ export const unzipFromStorage = async (zipFile: string, targetDir: string) => {
 }
 
 export const unzipIntoStorage = async (zipFile: string, targetDir: string) => {
-  const zipDirectory = zipFile.startsWith(dataDir) ? await filesStorage.zipDirectory(zipFile) : await unzipper.Open.file(zipFile)
+  const zipDirectory = isInFilesStorage(zipFile) ? await filesStorage.zipDirectory(zipFile) : await unzipper.Open.file(zipFile)
   return unzip(zipDirectory, targetDir, (readStream, p) => filesStorage.writeStream(readStream, p))
 }

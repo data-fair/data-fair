@@ -4,6 +4,7 @@ import { type Request, type Response } from 'express'
 import { pipeline } from 'node:stream/promises'
 import filesStorage from './index.ts'
 import contentDisposition from 'content-disposition'
+import { dataDir, tmpDir } from '../datasets/utils/files.ts'
 
 type DlFileOpts = {
   dispositionType?: 'inline' | 'attachment'
@@ -34,4 +35,10 @@ export const downloadFileFromStorage = async (filePath: string, req: Request, re
       res.status(500).send('Internal Server Error')
     }
   }
+}
+
+export const isInFilesStorage = (filePath: string) => {
+  if (filePath.startsWith(tmpDir)) return false
+  if (filePath.startsWith(dataDir)) return true
+  return false
 }

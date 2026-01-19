@@ -7,9 +7,9 @@ import debugLib from 'debug'
 import config from '#config'
 import { type Request, type NextFunction } from 'express'
 import { reqUserAuthenticated, type User } from '@data-fair/lib-express'
-import { dataDir } from '../../datasets/utils/files.ts'
 import filesStorage from '#files-storage'
 import { Readable } from 'node:stream'
+import { isInFilesStorage } from '../../files-storage/utils.ts'
 
 const debug = debugLib('clamav')
 
@@ -79,7 +79,7 @@ export const middleware = async (req: Request, res: Response, next: NextFunction
 export const checkFiles = async (files: Express.Multer.File[], user: User) => {
   if (!config.clamav.active) return true
   for (const file of files) {
-    const stream = file.path.startsWith(dataDir + '/') ? (await filesStorage.readStream(file.path)).body : fs.createReadStream(file.path)
+    const stream = isInFilesStorage(file.path) ? (await filesStorage.readStream(file.path)).body : fs.createReadStream(file.path)
     const result = await scanStream(stream, file.path)
     if (!result) throw new Error('expected clamav result: ' + file.path)
     if (result.endsWith('OK')) continue
