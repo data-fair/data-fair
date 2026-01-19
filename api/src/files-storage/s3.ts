@@ -127,7 +127,7 @@ export class S3Backend implements FileBackend {
       client: this.client,
       params: {
         Bucket: config.s3.bucket,
-        Key: path,
+        Key: bucketPath(path),
         Body: readStream
       }
     })
@@ -142,8 +142,8 @@ export class S3Backend implements FileBackend {
   async copyFile (srcPath: string, dstPath: string) {
     const params = {
       Bucket: config.s3.bucket,
-      CopySource: `${config.s3.bucket}/${srcPath}`,
-      Key: dstPath,
+      CopySource: `${config.s3.bucket}/${bucketPath(srcPath)}`,
+      Key: bucketPath(dstPath),
     }
 
     await this.client.send(new CopyObjectCommand(params))
@@ -204,7 +204,7 @@ export class S3Backend implements FileBackend {
   async fileSample (path: string) {
     const command = new GetObjectCommand({
       Bucket: config.s3.bucket,
-      Key: path,
+      Key: bucketPath(path),
       Range: 'bytes=0-' + (1024 * 1024)
     })
     const response = await this.client.send(command)
