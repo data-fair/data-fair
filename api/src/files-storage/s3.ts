@@ -12,7 +12,7 @@ import debugModule from 'debug'
 
 const debug = debugModule('s3')
 
-const bucketPath = (path: string) => path.replace(config.dataDir, '')
+const bucketPath = (path: string) => path.replace(config.dataDir + '/', '')
 
 export class S3Backend implements FileBackend {
   private client: S3Client
@@ -23,24 +23,24 @@ export class S3Backend implements FileBackend {
   }
 
   async checkAccess () {
-    console.log('check access')
+    debug('check access')
     const command = new PutObjectCommand({ Bucket: config.s3.bucket, Key: 'check-access.txt', Body: 'ok' })
-    console.log('access ok')
+    debug('access ok')
     await this.client.send(command)
   }
 
   async lsr (targetPath: string): Promise<string[]> {
-    console.log('lrs', targetPath)
+    debug('lrs', targetPath)
     const files = await this.lsrWithStats(targetPath)
-    console.log(' -> ', files)
+    debug(' -> ', files)
     return files.map(f => f.path)
   }
 
   async lsrWithStats (targetPath: string): Promise<FileStats[]> {
-    console.log('lrsWithStats', targetPath, bucketPath(targetPath))
+    debug('lrsWithStats', targetPath, bucketPath(targetPath))
     const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: bucketPath(targetPath) })
     const response = await this.client.send(command)
-    console.log(' -> ', response.Contents)
+    debug(' -> ', response.Contents)
     return (response.Contents || []).map((obj) => ({
       path: relativePath(targetPath, obj.Key!),
       size: obj.Size!,
