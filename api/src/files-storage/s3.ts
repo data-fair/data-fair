@@ -40,13 +40,13 @@ export class S3Backend implements FileBackend {
     debug('lrsWithStats', targetPath, bucketPath(targetPath))
     const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: bucketPath(targetPath) })
     const response = await this.client.send(command)
-    debug(' -> ', response.Contents)
-    return (response.Contents || []).map((obj) => ({
+    const filesStats = (response.Contents || []).map((obj) => ({
       path: relativePath(targetPath, obj.Key!),
       size: obj.Size!,
-      isDirectory: obj.Key!.endsWith('/'),
       lastModified: obj.LastModified!,
     }))
+    debug(' -> ', filesStats)
+    return filesStats
   }
 
   async fileStats (path: string) {
