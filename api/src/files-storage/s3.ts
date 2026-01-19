@@ -8,6 +8,9 @@ import { createReadStream } from 'node:fs'
 import { type Readable } from 'node:stream'
 import { httpError } from '@data-fair/lib-express'
 import unzipper from 'unzipper'
+import debugModule from 'debug'
+
+const debug = debugModule('s3')
 
 const bucketPath = (path: string) => path.replace(config.dataDir, '')
 
@@ -15,22 +18,29 @@ export class S3Backend implements FileBackend {
   private client: S3Client
 
   constructor () {
+    debug('create client', config.s3)
     this.client = new S3Client(config.s3)
   }
 
   async checkAccess () {
+    console.log('check access')
     const command = new PutObjectCommand({ Bucket: config.s3.bucket, Key: 'check-access.txt', Body: 'ok' })
+    console.log('access ok')
     await this.client.send(command)
   }
 
   async lsr (targetPath: string): Promise<string[]> {
+    console.log('lrs', targetPath)
     const files = await this.lsrWithStats(targetPath)
+    console.log(' -> ', files)
     return files.map(f => f.path)
   }
 
   async lsrWithStats (targetPath: string): Promise<FileStats[]> {
+    console.log('lrsWithStats', targetPath, bucketPath(targetPath))
     const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: bucketPath(targetPath) })
     const response = await this.client.send(command)
+    console.log(' -> ', response.Contents)
     return (response.Contents || []).map((obj) => ({
       path: relativePath(targetPath, obj.Key!),
       size: obj.Size!,
