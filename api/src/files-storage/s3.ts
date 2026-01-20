@@ -14,7 +14,10 @@ const debug = debugModule('s3')
 
 export const dataDir = resolvePath(config.dataDir)
 
-const bucketPath = (path: string) => path.replace(dataDir + '/', '')
+const bucketPath = (path: string) => {
+  if (path === dataDir) return ''
+  return path.replace(dataDir + '/', '')
+}
 
 export class S3Backend implements FileBackend {
   private client: S3Client
