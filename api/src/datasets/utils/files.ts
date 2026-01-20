@@ -11,7 +11,7 @@ debugCleanTmp.enabled = true
 
 export const dataDir = path.resolve(config.dataDir)
 
-export const tmpDir = config.tmpDir || path.join(dataDir, 'tmp')
+export const tmpDir = config.tmpDir ? path.resolve(config.tmpDir) : path.join(dataDir, 'tmp')
 
 export const ownerDir = (owner: Account) => {
   return resolvePath(dataDir, path.join(owner.type, owner.id))
