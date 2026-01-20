@@ -10,6 +10,8 @@ import { reqUserAuthenticated, type User } from '@data-fair/lib-express'
 import filesStorage from '#files-storage'
 import { Readable } from 'node:stream'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
+import unzipper from 'unzipper'
+import eventsLog from '@data-fair/lib-express/events-log.js'
 
 const debug = debugLib('clamav')
 
@@ -38,7 +40,7 @@ const formatChunk = (buffer: Buffer) => {
   length.writeUInt32BE(buffer.length, 0)
   return Buffer.concat([length, buffer])
 }
-const scanStream = async (s3Stream: Readable, name: string) => {
+const scanStream = async (stream: Readable, name: string, user: User) => {
   debug('forward stream ' + name)
   const rawSocket = new Socket()
   const socket = new PromiseSocket(rawSocket)
@@ -46,13 +48,56 @@ const scanStream = async (s3Stream: Readable, name: string) => {
   await socket.connect(config.clamav.port, config.clamav.host)
 
   await socket.write('zINSTREAM\0')
-  for await (const chunk of s3Stream) { await socket.write(formatChunk(chunk as Buffer)) }
-  await socket.write(zTerminator)
-  let result = (await socket.readAll())!.toString().replace(/\0/g, '').trim()
-  if (result.startsWith('stream: ')) result = result.replace('stream: ', '')
+  let size = 0
+  // default clamav StreamMaxLength is 100Mo
+  const maxSize = 99 * 1024 * 1024
+  for await (const chunk of stream) {
+    try {
+      size += (chunk as Buffer).length
+      if (size >= maxSize) {
+        debug('break on large file ' + name)
+        break
+      }
+      // formatChunk prepends the 4-byte Big Endian length
+      await socket.write(formatChunk(chunk as Buffer))
+    } catch (err: any) {
+      if (err.code === 'EPIPE' || err.code === 'ECONNRESET') {
+        // ClamAV likely closed the connection because the file was too big
+        // Break the loop and try to read the error message from the socket
+        break
+      }
+      throw err
+    }
+  }
+  // Send the 4-byte null terminator to signal end of stream
+  try {
+    await socket.write(zTerminator)
+  } catch (e) {
+    // Ignore failure to write terminator if socket already closed
+  }
+  let result = ''
+  try {
+    result = (await socket.readAll())!.toString().replace(/\0/g, '').trim()
+  } catch (err) {
+    console.warn('clamav failure', err)
+    throw httpError(400, 'failed to apply antivirus on a file')
+  }
+  if (result.startsWith('stream: ')) result = result.slice(8)
   await socket.end()
   debug(`ClamAV response -> "${result}"`)
-  return result
+
+  if (!result) throw new Error('expected clamav result: ' + name)
+  if (result.endsWith('OK')) {
+    // nothing to do
+  } else {
+    if (result.endsWith('ERROR')) throw new Error('failure while applying antivirus ' + result.slice(0, -6))
+    if (result.endsWith('FOUND')) {
+      infectedFilesCounter.inc()
+      eventsLog.warn('df.infected-file', `a user attempted to upload an infected file ${name}`, { user })
+      throw httpError(400, 'malicious file detected')
+    }
+    throw new Error('Unexpected result from antivirus: ' + result)
+  }
 }
 
 export const ping = async () => {
@@ -80,16 +125,15 @@ export const checkFiles = async (files: Express.Multer.File[], user: User) => {
   if (!config.clamav.active) return true
   for (const file of files) {
     const stream = isInFilesStorage(file.path) ? (await filesStorage.readStream(file.path)).body : fs.createReadStream(file.path)
-    const result = await scanStream(stream, file.path)
-    if (!result) throw new Error('expected clamav result: ' + file.path)
-    if (result.endsWith('OK')) continue
-    if (result.endsWith('ERROR')) throw new Error('failure while applying antivirus ' + result.slice(0, -6))
-    if (result.endsWith('FOUND')) {
-      infectedFilesCounter.inc()
-      console.warn('[infected-file] a user attempted to upload an infected file', result, user, file)
-      throw httpError(400, 'malicious file detected')
+    if (file.path.endsWith('.zip')) {
+      const zipDirectory = isInFilesStorage(file.path) ? await filesStorage.zipDirectory(file.path) : await unzipper.Open.file(file.path)
+      for (const zipFile of zipDirectory.files) {
+        if (zipFile.type === 'Directory') continue
+        await scanStream(zipFile.stream(), file.path + '/' + zipFile.path, user)
+      }
+    } else {
+      await scanStream(stream, file.path, user)
     }
-    throw new Error('Unexpected result from antivirus: ' + result)
   }
   return true
 }

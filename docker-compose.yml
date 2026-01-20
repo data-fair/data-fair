@@ -163,8 +163,8 @@ services:
     healthcheck:
         test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
     volumes:
-      - ./data:/data/data-fair
       - clamav-data:/var/lib/clamav
+      - clamav-tmp:/tmp
     environment:
       - CLAMAV_NO_FRESHCLAMD=true
       - CLAMAV_NO_MILTERD=true
@@ -204,4 +204,5 @@ volumes:
   udata-fs:
   redis-data:
   clamav-data:
+  clamav-tmp:
   s3mock-data:
