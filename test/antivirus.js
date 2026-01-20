@@ -10,5 +10,11 @@ describe('anti virus integration', function () {
       assert.equal(err.status, 400)
       return true
     })
+
+    await assert.rejects(testUtils.sendDataset('antivirus/eicar.com.zip', ax), (err) => {
+      assert.ok(err.data.includes('malicious file detected'))
+      assert.equal(err.status, 400)
+      return true
+    })
   })
 })
