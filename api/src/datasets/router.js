@@ -70,7 +70,6 @@ const router = express.Router()
 
 const clean = datasetUtils.clean
 
-const debugFiles = debugModule('files')
 const debugLimits = debugModule('limits')
 
 export const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
@@ -354,6 +353,8 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
   res.sendStatus(204)
 })
 
+const debugCreateDataset = debugModule('create-dataset')
+
 // Create a dataset
 const createDatasetRoute = async (req, res) => {
   const db = mongo.db
@@ -362,13 +363,15 @@ const createDatasetRoute = async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
   const draft = req.query.draft === 'true'
 
+  debugCreateDataset('upload files')
   /** @type {undefined | any[]} */
   const files = await uploadUtils.getFiles(req, res)
+  debugCreateDataset('uploaded files', files)
 
   try {
     if (files) {
       await clamav.checkFiles(files, sessionState.user)
-      debugFiles('POST datasets uploaded some files', files)
+      debugCreateDataset('clamav check ok')
     }
 
     req.body = uploadUtils.getFormBody(req.body)
@@ -399,9 +402,11 @@ const createDatasetRoute = async (req, res) => {
     const onClose = (callback) => res.on('close', callback)
     res.setMaxListeners(100)
 
+    debugCreateDataset('call createDataset')
     const dataset = await createDataset(db, es, locale, sessionState, owner, body, files, draft, onClose)
 
     if (dataset.isRest && dataset.status === 'finalized') {
+      debugCreateDataset('init rest dataset')
       // case where we simply initialize the empty dataset
       // being empty this is not costly and can be performed by the API
       await restDatasetsUtils.initDataset(dataset)
@@ -423,6 +428,7 @@ const createDatasetRoute = async (req, res) => {
 
     eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
+    debugCreateDataset('final steps')
     await journals.log('datasets', dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id })
     await notifications.sendResourceEvent('datasets', dataset, sessionState, 'dataset-created')
     await syncRemoteService(dataset)
