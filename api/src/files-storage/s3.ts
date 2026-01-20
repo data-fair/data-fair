@@ -145,7 +145,7 @@ export class S3Backend implements FileBackend {
   async copyFile (srcPath: string, dstPath: string) {
     const params = {
       Bucket: config.s3.bucket,
-      CopySource: `${config.s3.bucket}/${bucketPath(srcPath)}`,
+      CopySource: `${config.s3.bucket}/${encodeURI(bucketPath(srcPath))}`,
       Key: bucketPath(dstPath),
     }
 
@@ -169,12 +169,12 @@ export class S3Backend implements FileBackend {
 
       // Map each object in the current page to a Copy promise
       const copyPromises = page.Contents.map((obj) => {
-        const sourceKey = obj.Key
+        const sourceKey = obj.Key!
         // Replace the old prefix with the new prefix for the destination
         const copyParams = {
           Bucket: config.s3.bucket,
-          CopySource: `${config.s3.bucket}/${sourceKey}`,
-          Key: sourceKey!.replace(bucketPath(srcPath), bucketPath(dstPath)),
+          CopySource: `${config.s3.bucket}/${encodeURI(sourceKey)}`,
+          Key: sourceKey.replace(bucketPath(srcPath), bucketPath(dstPath)),
         }
 
         return this.client.send(new CopyObjectCommand(copyParams))
