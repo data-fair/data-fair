@@ -159,6 +159,7 @@ services:
     image: clamav/clamav:1.5.1
     profiles:
       - dev
+      - test
     healthcheck:
         test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
     volumes:
