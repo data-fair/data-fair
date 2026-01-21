@@ -5,6 +5,7 @@ import { pipeline } from 'node:stream/promises'
 import filesStorage from './index.ts'
 import contentDisposition from 'content-disposition'
 import { dataDir, tmpDir } from '../datasets/utils/files.ts'
+import slug from 'slugify'
 
 type DlFileOpts = {
   dispositionType?: 'inline' | 'attachment'
@@ -19,10 +20,19 @@ export const downloadFileFromStorage = async (filePath: string, req: Request, re
     res.set('Content-Range', range)
     res.status(206)
   } else {
-    const { base, ext } = path.parse(filePath)
+    const { base, name, ext } = path.parse(filePath)
     const mimeType = mime.lookup(ext)
     if (mimeType) res.set('Content-Type', mimeType)
-    res.set('Content-Disposition', contentDisposition(base, { type: opts.dispositionType }))
+
+    // we have some cases where the content-disposition module doesn't apply a fallback while it probably should
+    // or the problem lies in express, or somewhere else, anyway we have to force the fallback to also have a correct UTF-8 variant
+    const cdOpts: contentDisposition.Options = { type: opts.dispositionType }
+    let cd = contentDisposition(base, cdOpts)
+    if (base !== encodeURIComponent(base) && !cd.includes('filename*=UTF-8\'')) {
+      cdOpts.fallback = slug(name, { strict: true, replacement: ' ' }) + ext
+      cd = contentDisposition(base, cdOpts)
+    }
+    res.set('Content-Disposition', cd)
   }
 
   try {
