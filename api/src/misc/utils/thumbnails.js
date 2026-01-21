@@ -11,6 +11,7 @@ import { setNoCache } from './cache-headers.js'
 import { tmpDir } from '../../datasets/utils/files.ts'
 import debugLib from 'debug'
 import filesStorage from '#files-storage'
+import { httpError } from '@data-fair/lib-express'
 
 const debug = debugLib('thumbnails')
 
@@ -61,7 +62,9 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
           console.warn(`failed to fetch image for thumbnail "${url}", use stale cache entry`, err)
           return { entry, status: 'STALE' }
         } else {
-          throw err
+          console.warn(`failed to fetch image for thumbnail "${url}"`, err)
+          if (err.status === 404) throw httpError(404, `image not found ${url}`)
+          throw httpError(502, `failed to fetch image ${url}`)
         }
       }
     }
