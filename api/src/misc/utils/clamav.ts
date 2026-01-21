@@ -50,7 +50,8 @@ const scanStream = async (stream: Readable, name: string, user: User) => {
   await socket.write('zINSTREAM\0')
   let size = 0
   // default clamav StreamMaxLength is 100Mo
-  const maxSize = 99 * 1024 * 1024
+  // but we limit even more at 25Mo
+  const maxSize = 25 * 1024 * 1024
   for await (const chunk of stream) {
     try {
       size += (chunk as Buffer).length

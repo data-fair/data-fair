@@ -112,10 +112,11 @@ export class S3Backend implements FileBackend {
       }
       debug('readStream ok', response)
     } catch (err: any) {
-      debug('readStream error', err)
       if (err.$metadata?.httpStatusCode === 304) {
+        debug('readStream no change 304')
         throw httpError(304)
       }
+      debug('readStream error', err)
       if (err.$metadata?.httpStatusCode === 404) {
         throw httpError(404, 'file not found')
       }
