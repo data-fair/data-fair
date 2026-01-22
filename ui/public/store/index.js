@@ -238,7 +238,10 @@ export default () => {
       },
       breadcrumbs ({ commit, state }, pageBreadcrumbItems) {
         const breadcrumbItems = [...pageBreadcrumbItems]
-        if (state.siteInfo.title) breadcrumbItems.unshift({ text: state.siteInfo.title, href: '/' })
+        if (state.siteInfo.title) {
+          breadcrumbItems.unshift({ text: 'Data Fair', to: '/' })
+          breadcrumbItems.unshift({ text: state.siteInfo.title, href: '/' })
+        }
         commit('setAny', { breadcrumbItems, breadcrumbsRouteName: this.$router.currentRoute.name })
       }
     }
