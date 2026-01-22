@@ -523,6 +523,9 @@ export default {
         ...await this.$axios.$get(`${this.env.directoryUrl}/api/${this.resource.owner.type}s/${this.resource.owner.id}`),
         type: this.resource.owner.type
       }
+      if (this.ownerDetails.departments) {
+        this.ownerDetails.departments.sort((d1, d2) => d1.department.name.localeCompare(d2.department.name))
+      }
     }
   }
 }
