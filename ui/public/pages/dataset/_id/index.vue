@@ -324,6 +324,12 @@
                 >
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                 </v-tab>
+
+                <v-tab
+                  href="#share-see-also"
+                >
+                  <v-icon>mdi-eye-arrow-right</v-icon>&nbsp;&nbsp;{{ $t('seeAlso') }}
+                </v-tab>
               </template>
               <template #tabs-items>
                 <v-tab-item value="share-permissions">
@@ -373,6 +379,18 @@
                   <d-frame
                     :src="publicationUrl"
                     sync-params
+                    @notif="emitFrameNotif"
+                  />
+                </v-tab-item>
+
+                <v-tab-item value="share-see-also">
+                  <tutorial-alert
+                    id="dataset-see-also"
+                    class="mx-2"
+                    :text="$t('seeAlsoDescription')"
+                  />
+                  <d-frame
+                    :src="`/data-fair/embed/dataset/${$route.params.id}/related-datasets`"
                     @notif="emitFrameNotif"
                   />
                 </v-tab-item>
@@ -475,6 +493,8 @@ fr:
   uses: Utilisations
   datasets: jeux de données
   readApiKey: Accès par clé d'API
+  seeAlso: Voir aussi
+  seeAlsoDescription: Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.
   tasks:
     initialize: initialisation
     store: chargement
@@ -518,6 +538,8 @@ en:
   uses: Uses
   datasets: datasets
   readApiKey: Access using API key
+  seeAlso: See also
+  seeAlsoDescription: Select other related datasets (same topic, similar structure, or other criteria) to suggest to portal users.
   tasks:
     initialize: initialization
     store: loading

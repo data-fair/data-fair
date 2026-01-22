@@ -792,6 +792,19 @@ const datasetProperties = {
       $ref: 'https://github.com/data-fair/data-fair/topic'
     }
   },
+  relatedDatasets: {
+    type: 'array',
+    title: 'Autres jeux de données à recommender',
+    items: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['id', 'title'],
+      properties: {
+        id: { type: 'string' },
+        title: { type: 'string' }
+      }
+    }
+  },
   thumbnails: {
     type: 'object',
     properties: {

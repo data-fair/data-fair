@@ -25,6 +25,7 @@ declare module 'vue-router/auto-routes' {
     '/dataset/[id]/map': RouteRecordInfo<'/dataset/[id]/map', '/dataset/:id/map', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/map-bounds': RouteRecordInfo<'/dataset/[id]/map-bounds', '/dataset/:id/map-bounds', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/publication-sites': RouteRecordInfo<'/dataset/[id]/publication-sites', '/dataset/:id/publication-sites', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/dataset/[id]/related-datasets': RouteRecordInfo<'/dataset/[id]/related-datasets', '/dataset/:id/related-datasets', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/search-files': RouteRecordInfo<'/dataset/[id]/search-files', '/dataset/:id/search-files', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/table': RouteRecordInfo<'/dataset/[id]/table', '/dataset/:id/table', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/dataset/[id]/table-edit': RouteRecordInfo<'/dataset/[id]/table-edit', '/dataset/:id/table-edit', { id: ParamValue<true> }, { id: ParamValue<false> }>,
