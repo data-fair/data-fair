@@ -98,7 +98,8 @@ fr:
   applications: Applications
   applicationsSubtitle: Visualisations, formulaires ...
   accountsManagement: Gestion des comptes
-  home: Accueil
+  home: Tableau de bord
+  homePortal: Accueil du portail
   datasets: Jeux de données
   vizs: Applications
   org: Gestion de l'organisation
@@ -127,7 +128,8 @@ en:
   applications: Applications
   applicationsSubtitle: Visualizations, forms ...
   accountsManagement: Gestion des comptes
-  home: Home
+  home: Dashboard
+  homePortal: Portal home
   datasets: Datasets
   vizs: Applications
   org: Manage organization
@@ -184,7 +186,11 @@ export default {
       })
     },
     navigation () {
-      const items = [{ to: '/', icon: 'mdi-home', title: this.$t('home') }]
+      const items = []
+      if (this.siteInfo.title) {
+        items.push({ href: '/', icon: 'mdi-home', title: this.$t('homePortal'), subtitle: this.siteInfo.title })
+      }
+      items.push({ to: '/', icon: 'mdi-monitor-dashboard', title: this.$t('home') })
 
       const contentGroup = { group: 'content', icon: '', title: this.$t('group.content'), items: [] }
       contentGroup.items.push({ to: '/datasets', icon: 'mdi-database', title: this.$t('datasets'), class: this.routePrefix === 'dataset' ? 'v-list-item--active' : '' })

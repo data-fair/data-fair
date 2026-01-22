@@ -541,7 +541,7 @@ export default {
         type: this.activeAccount.type
       }
       if (this.accountDetails.departments) {
-        this.accountDetails.departments.sort((d1, d2) => d1.department.name.localeCompare(d2.department.name))
+        this.accountDetails.departments.sort((d1, d2) => d1.name.localeCompare(d2.name))
       }
     }
   }
