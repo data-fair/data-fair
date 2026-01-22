@@ -81,7 +81,7 @@ const datasetsUrl = computed(() => {
   return withQuery(`${$apiPath}/datasets`, query)
 })
 
-const datasetsFetch = useFetch<{ results: ListedDataset[] }>(datasetsUrl)
+const datasetsFetch = useFetch<{ results: { id: string, title: string }[] }>(datasetsUrl)
 
 const completedDatasetsUrl = computed(() => {
   const query = { ...datasetsQueryParams.value }
