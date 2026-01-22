@@ -1,13 +1,13 @@
 <template>
   <v-list-item
-    :href="url"
+    :href="env.brand.url"
     :nuxt="true"
     class="pr-0"
   >
     <v-list-item-avatar class="brand-logo">
       <img
-        v-if="logo"
-        :src="logo"
+        v-if="env.logo"
+        :src="env.logo"
       >
       <img
         v-else
@@ -19,7 +19,7 @@
         class="text-h5 font-weight-bold"
         style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;"
       >
-        {{ title }}
+        {{ env.brand.title || 'Data Fair' }}
       </h1>
     </v-list-item-title>
   </v-list-item>
@@ -29,20 +29,7 @@
 import { mapState } from 'vuex'
 export default {
   computed: {
-    ...mapState(['env', 'siteInfo']),
-    logo () {
-      if (!this.siteInfo.main) return this.siteInfo.theme.logo
-      if (this.env.logo) return this.env.logo
-      return null
-    },
-    title () {
-      if (!this.siteInfo.main) return this.siteInfo.title
-      return this.env.brand.title || 'DataFair'
-    },
-    url () {
-      if (!this.siteInfo.main) return '/'
-      return this.env.brand.url ?? '/'
-    }
+    ...mapState(['env'])
   }
 }
 </script>

@@ -236,7 +236,9 @@ export default () => {
         const publicationSites = await this.$axios.$get(url)
         commit('ownerPublicationSites', { owner, publicationSites })
       },
-      breadcrumbs ({ commit }, breadcrumbItems) {
+      breadcrumbs ({ commit, state }, pageBreadcrumbItems) {
+        const breadcrumbItems = [...pageBreadcrumbItems]
+        if (state.siteInfo.title) breadcrumbItems.unshift({ text: state.siteInfo.title, href: '/' })
         commit('setAny', { breadcrumbItems, breadcrumbsRouteName: this.$router.currentRoute.name })
       }
     }
