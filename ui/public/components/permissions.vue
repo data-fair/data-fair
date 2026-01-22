@@ -524,7 +524,7 @@ export default {
         type: this.resource.owner.type
       }
       if (this.ownerDetails.departments) {
-        this.ownerDetails.departments.sort((d1, d2) => d1.department.name.localeCompare(d2.department.name))
+        this.ownerDetails.departments.sort((d1, d2) => d1.name.localeCompare(d2.name))
       }
     }
   }
