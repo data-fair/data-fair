@@ -171,28 +171,28 @@ export default async function (_dataset: DatasetInternal) {
     await attachmentsUtils.removeAll(dataset)
   }
 
-  if (!dataset.draftReason) await updateStorage(dataset)
-
-  // parent virtual datasets have to be re-finalized too
   if (!dataset.draftReason) {
+    await updateStorage(dataset)
+
+    // parent virtual datasets have to be re-finalized too
     for await (const virtualDataset of mongo.datasets.find({ 'virtual.children': dataset.id })) {
       await mongo.datasets.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
     }
-  }
 
-  // trigger auto updates if this dataset is used as a source of extensions
-  if (dataset.masterData?.bulkSearchs?.length) {
-    const nextUpdate = dayjs().add(config.extensionUpdateDelay, 'seconds').toISOString()
-    const cursor = db.collection('datasets').find({
-      extensions: { $elemMatch: { active: true, autoUpdate: true, remoteService: 'dataset:' + dataset.id } }
-    })
-    for await (const extendedDataset of cursor) {
-      for (const extension of extendedDataset.extensions) {
-        if (extension.active && extension.autoUpdate && extension.remoteService === 'dataset:' + dataset.id) {
-          extension.nextUpdate = nextUpdate
+    // trigger auto updates if this dataset is used as a source of extensions
+    if (dataset.masterData?.bulkSearchs?.length) {
+      const nextUpdate = dayjs().add(config.extensionUpdateDelay, 'seconds').toISOString()
+      const cursor = db.collection('datasets').find({
+        extensions: { $elemMatch: { active: true, autoUpdate: true, remoteService: 'dataset:' + dataset.id } }
+      })
+      for await (const extendedDataset of cursor) {
+        for (const extension of extendedDataset.extensions) {
+          if (extension.active && extension.autoUpdate && extension.remoteService === 'dataset:' + dataset.id) {
+            extension.nextUpdate = nextUpdate
+          }
         }
+        await db.collection('datasets').updateOne({ id: extendedDataset.id }, { $set: { extensions: extendedDataset.extensions } })
       }
-      await db.collection('datasets').updateOne({ id: extendedDataset.id }, { $set: { extensions: extendedDataset.extensions } })
     }
   }
 
