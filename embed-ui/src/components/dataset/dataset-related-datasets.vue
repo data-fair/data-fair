@@ -17,7 +17,8 @@
         density="compact"
         hide-details
         style="max-width: 600px"
-        clearable
+        chips
+        closable-chips
         @update:model-value="datasets => {value = datasets.map(d => ({ id: d.id, title: d.title }))}"
       />
     </v-col>
@@ -42,12 +43,14 @@ fr:
   error: En erreur
   masterData: Données de référence
   ownerDatasets: Vos jeux de données
+  search: Rechercher
 en:
   selectDataset: Chose a dataset
   lines: "no line | 1 line | {count} lines"
   error: Error status
   masterData: Master data
   ownerDatasets: Your datasets
+  search: Search
 </i18n>
 
 <script lang="ts" setup>
