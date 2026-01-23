@@ -46,7 +46,9 @@ export default defineConfig({
         ...(autoImports as any),
         unheadVueComposablesImports,
         {
-          '~/context': ['$uiConfig', '$sitePath', '$cspNonce', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl']
+          '~/context': ['$uiConfig', '$sitePath', '$cspNonce', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl'],
+          'truncate-middle': [['default', '$truncate']],
+          '@data-fair/lib-vue/format/bytes.js': ['formatBytes'],
         }
       ],
       dirs: [

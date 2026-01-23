@@ -540,6 +540,9 @@ export default {
         ...await this.$axios.$get(`${this.env.directoryUrl}/api/${this.activeAccount.type}s/${this.activeAccount.id}`),
         type: this.activeAccount.type
       }
+      if (this.accountDetails.departments) {
+        this.accountDetails.departments.sort((d1, d2) => d1.name.localeCompare(d2.name))
+      }
     }
   }
 }

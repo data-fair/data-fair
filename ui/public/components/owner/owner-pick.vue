@@ -64,6 +64,7 @@ export default {
         const org = await this.$axios.$get(`${this.env.directoryUrl}/api/organizations/${o.id}`)
         owners.push({ type: 'organization', id: o.id, name: o.name, label: `${this.$t('org')} ${o.name}` })
         if (!org.departments) continue
+        org.departments.sort((d1, d2) => d1.name.localeCompare(d2.name))
         for (const dep of org.departments) {
           if (!owners.find(ow => ow.type === 'organization' && ow.id === o.id && ow.department === dep.id)) {
             owners.push({ type: 'organization', id: o.id, name: o.name, department: dep.id, departmentName: dep.name, label: `${this.$t('org')} ${o.name} / ${dep.name || dep.id}` })

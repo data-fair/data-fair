@@ -25,6 +25,7 @@ declare module 'vue' {
     DatasetMapBounds: typeof import('./../src/components/dataset/map/dataset-map-bounds.vue')['default']
     DatasetNbResults: typeof import('./../src/components/dataset/dataset-nb-results.vue')['default']
     DatasetPublicationSites: typeof import('./../src/components/dataset/dataset-publication-sites.vue')['default']
+    DatasetRelatedDatasets: typeof import('./../src/components/dataset/dataset-related-datasets.vue')['default']
     DatasetRestUploadActions: typeof import('./../src/components/dataset/dataset-rest-upload-actions.vue')['default']
     DatasetSchemaView: typeof import('./../src/components/dataset/dataset-schema-view.vue')['default']
     DatasetSearchFiles: typeof import('./../src/components/dataset/dataset-search-files.vue')['default']

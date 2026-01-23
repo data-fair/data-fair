@@ -12,6 +12,7 @@ declare global {
   const $sdUrl: typeof import('~/context')['$sdUrl']
   const $sitePath: typeof import('~/context')['$sitePath']
   const $siteUrl: typeof import('~/context')['$siteUrl']
+  const $truncate: typeof import('truncate-middle')['default']
   const $uiConfig: typeof import('~/context')['$uiConfig']
   const $wsUrl: typeof import('~/context')['$wsUrl']
   const EffectScope: typeof import('vue')['EffectScope']
@@ -43,6 +44,7 @@ declare global {
   const dfUserAvatar: typeof import('@data-fair/lib-vuetify/ui-user-avatar.vue')['default']
   const effectScope: typeof import('vue')['effectScope']
   const findEqFilter: typeof import('../src/composables/dataset-filters')['findEqFilter']
+  const formatBytes: typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']
   const formatValue: typeof import('../src/composables/dataset-lines')['formatValue']
   const getActiveHead: typeof import('@unhead/vue')['getActiveHead']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
@@ -158,6 +160,7 @@ declare module 'vue' {
     readonly $sdUrl: UnwrapRef<typeof import('~/context')['$sdUrl']>
     readonly $sitePath: UnwrapRef<typeof import('~/context')['$sitePath']>
     readonly $siteUrl: UnwrapRef<typeof import('~/context')['$siteUrl']>
+    readonly $truncate: UnwrapRef<typeof import('truncate-middle')['default']>
     readonly $uiConfig: UnwrapRef<typeof import('~/context')['$uiConfig']>
     readonly $wsUrl: UnwrapRef<typeof import('~/context')['$wsUrl']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
@@ -188,6 +191,7 @@ declare module 'vue' {
     readonly dfUserAvatar: UnwrapRef<typeof import('@data-fair/lib-vuetify/ui-user-avatar.vue')['default']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly findEqFilter: UnwrapRef<typeof import('../src/composables/dataset-filters')['findEqFilter']>
+    readonly formatBytes: UnwrapRef<typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']>
     readonly formatValue: UnwrapRef<typeof import('../src/composables/dataset-lines')['formatValue']>
     readonly getActiveHead: UnwrapRef<typeof import('@unhead/vue')['getActiveHead']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
