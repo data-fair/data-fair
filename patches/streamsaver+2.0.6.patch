@@ -1,0 +1,20 @@
+diff --git a/node_modules/streamsaver/mitm.html b/node_modules/streamsaver/mitm.html
+index 04450a9..e4fade3 100644
+--- a/node_modules/streamsaver/mitm.html
++++ b/node_modules/streamsaver/mitm.html
+@@ -139,9 +139,13 @@ function onMessage (event) {
+     ? [ ports[0], data.readableStream ]
+     : [ ports[0] ]
+ 
+-  if (!(data.readableStream || data.transferringReadable)) {
++  // always perform keepalive
++  // see https://github.com/jimmywarting/StreamSaver.js/issues/366
++  keepAlive()
++  /* if (!(data.readableStream || data.transferringReadable)) {
+     keepAlive()
+-  }
++  } */
++  
+ 
+   return sw.postMessage(data, transferable)
+ }
