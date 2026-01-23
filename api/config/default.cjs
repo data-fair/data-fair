@@ -115,8 +115,7 @@ module.exports = {
         // in bytes per second, no 429, instead the stream is throttled
         bandwidth: {
           // used by routes with dynamic contents (search mostly)
-          // dynamic: 1000000, // 1 mB/s
-          dynamic: 2000000,
+          dynamic: 1000000, // 1 mB/s
           // used by routes with static files content
           static: 8000000 // 8mB/s
         }
