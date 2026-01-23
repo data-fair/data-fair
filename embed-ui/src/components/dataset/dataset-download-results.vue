@@ -60,8 +60,8 @@
         <div style="height:4px;width:100%;">
           <v-progress-linear
             v-if="largeCsvLoading"
-            :buffer-value="largeCsvBufferValue"
-            :model-value="largeCsvValue"
+            :buffer-value="largeCsvBufferProgress"
+            :model-value="largeCsvProgress"
             stream
             height="4"
             style="margin:0;"
@@ -84,24 +84,25 @@
         class="pt-0"
         density="compact"
       >
-        <v-list-item
-          v-if="total <= pageSize"
-          target="download"
-          @click="showCsvOptions = !showCsvOptions"
-        >
-          <template #prepend>
-            <v-icon :icon="mdiFileDelimitedOutline" />
-          </template>
-          <v-list-item-title>
-            {{ t('csv') }}
-          </v-list-item-title>
-        </v-list-item>
-        <dataset-download-csv-options
-          v-if="showCsvOptions"
-          v-model:csv-sep="csvSep"
-          :href="downloadUrls.csv"
-          @click="clickDownload('csv')"
-        />
+        <template v-if="total <= pageSize">
+          <v-list-item
+            target="download"
+            @click="showCsvOptions = !showCsvOptions"
+          >
+            <template #prepend>
+              <v-icon :icon="mdiFileDelimitedOutline" />
+            </template>
+            <v-list-item-title>
+              {{ t('csv') }}
+            </v-list-item-title>
+          </v-list-item>
+          <dataset-download-csv-options
+            v-if="showCsvOptions"
+            v-model:csv-sep="csvSep"
+            :href="downloadUrls.csv"
+            @click="clickDownload('csv')"
+          />
+        </template>
 
         <v-list-item
           :href="downloadUrls.xlsx"
@@ -171,6 +172,9 @@ import streamSaver from 'streamsaver'
 import LinkHeader from 'http-link-header'
 import { withQuery } from 'ufo'
 import { mdiFileDelimitedOutline, mdiFileTableOutline, mdiMicrosoftExcel, mdiMap, mdiDownload, mdiCancel } from '@mdi/js'
+import debugModule from 'debug'
+
+const debug = debugModule('download-results')
 
 const pageSize = 10000
 
@@ -185,8 +189,8 @@ const { dataset } = useDatasetStore()
 
 const menu = ref(false)
 const largeCsvLoading = ref(false)
-const largeCsvBufferValue = ref(0)
-const largeCsvValue = ref(0)
+const largeCsvBufferProgress = ref(0)
+const largeCsvProgress = ref(0)
 const largeCsvCancelled = ref(false)
 const showCsvOptions = ref(false)
 const csvSep = ref(',')
@@ -215,46 +219,63 @@ const downloadLargeCSV = useAsyncAction(async () => {
     streamSaver.mitm = `${$sitePath}/data-fair/streamsaver/mitm.html`
     fileStream = streamSaver.createWriteStream(`${dataset.value?.slug}.csv`)
     writer = fileStream.getWriter()
+
     const nbChunks = Math.ceil(total / pageSize)
     let nextUrl = downloadUrls.value.csv
-    for (let chunk = 0; chunk < nbChunks; chunk++) {
-      if (largeCsvCancelled.value) break
-      largeCsvBufferValue.value = ((chunk + 1) / nbChunks) * 100
-      let res
-      try {
-        res = await $fetch.raw(nextUrl)
-      } catch (err) {
-        // 1 retry after 10s for network resilience, short service interruption, etc
-        await new Promise(resolve => setTimeout(resolve, 10000))
-        res = await $fetch.raw(nextUrl)
-      }
+    let hasNext = true
+    let chunk = 0
+    debug(`start download, nbChunks=${nbChunks}`)
+    while (hasNext && !largeCsvCancelled.value) {
+      largeCsvBufferProgress.value = ((chunk + 1) / nbChunks) * 100
+      debug('update progress', largeCsvBufferProgress.value)
+      debug('fetch next chunk', nextUrl)
+      const res = await $fetch.raw(nextUrl, {
+        retry: 10,
+        retryDelay: 2000
+      })
       const { _data, headers } = res
-      const link = headers.get('link')
-      if (link) {
-        nextUrl = withQuery(LinkHeader.parse(link).rel('next')[0].uri, { header: 'false' })
+      const linkHeader = headers.get('link')
+      const parsedLinks = linkHeader ? LinkHeader.parse(linkHeader) : null
+      const nextLink = parsedLinks?.rel('next')[0]
+      if (nextLink) {
+      // Ensure we don't repeat headers in subsequent chunks
+        nextUrl = withQuery(nextLink.uri, { header: 'false' })
+      } else {
+        hasNext = false
       }
+
+      debug('write data to stream')
       await writer.write(new TextEncoder().encode(_data))
-      largeCsvValue.value = ((chunk + 1) / nbChunks) * 100
+      debug('data written')
+      largeCsvProgress.value = ((chunk + 1) / nbChunks) * 100
+      chunk += 1
     }
     if (!largeCsvCancelled.value) {
-      writer.close()
       clickDownload('csv')
     }
   } catch (error) {
+    debug('download loop error', error)
     if (!largeCsvCancelled.value && !!error) throw error
+  } finally {
+    if (writer && !largeCsvCancelled.value) {
+      await writer.close()
+    }
+    largeCsvLoading.value = false
+    largeCsvCancelled.value = false
+    largeCsvBufferProgress.value = 0
+    largeCsvProgress.value = 0
   }
-  largeCsvLoading.value = false
-  largeCsvCancelled.value = false
-  largeCsvBufferValue.value = 0
-  largeCsvValue.value = 0
-  fileStream = null
-  writer = null
 })
 
 const cancelLargeCsv = () => {
+  debug('cancel the download')
   largeCsvCancelled.value = true
-  if (writer) writer.releaseLock()
-  if (fileStream) fileStream.abort()
+  if (writer) {
+    try { writer.releaseLock() } catch (err) {}
+  }
+  if (fileStream) {
+    try { fileStream.abort() } catch (err) {}
+  }
 }
 
 const clickDownload = (format: string) => {
