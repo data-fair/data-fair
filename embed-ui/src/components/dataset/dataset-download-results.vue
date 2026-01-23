@@ -84,24 +84,25 @@
         class="pt-0"
         density="compact"
       >
-        <v-list-item
-          v-if="total <= pageSize"
-          target="download"
-          @click="showCsvOptions = !showCsvOptions"
-        >
-          <template #prepend>
-            <v-icon :icon="mdiFileDelimitedOutline" />
-          </template>
-          <v-list-item-title>
-            {{ t('csv') }}
-          </v-list-item-title>
-        </v-list-item>
-        <dataset-download-csv-options
-          v-if="showCsvOptions"
-          v-model:csv-sep="csvSep"
-          :href="downloadUrls.csv"
-          @click="clickDownload('csv')"
-        />
+        <template v-if="total <= pageSize">
+          <v-list-item
+            target="download"
+            @click="showCsvOptions = !showCsvOptions"
+          >
+            <template #prepend>
+              <v-icon :icon="mdiFileDelimitedOutline" />
+            </template>
+            <v-list-item-title>
+              {{ t('csv') }}
+            </v-list-item-title>
+          </v-list-item>
+          <dataset-download-csv-options
+            v-if="showCsvOptions"
+            v-model:csv-sep="csvSep"
+            :href="downloadUrls.csv"
+            @click="clickDownload('csv')"
+          />
+        </template>
 
         <v-list-item
           :href="downloadUrls.xlsx"
