@@ -198,8 +198,8 @@ export default {
         contentGroup.items.push({ to: '/applications', icon: 'mdi-image-multiple', title: this.$t('applications'), subtitle: this.$t('applicationsSubtitle'), class: this.routePrefix === 'application' ? 'v-list-item--active' : '' })
       }
       if (this.canAdminDep && this.env.portalsIntegration) {
-        contentGroup.items.push({ to: '/pages', icon: 'mdi-view-dashboard-edit', title: 'Pages de portails (bêta)', subtitle: 'Nouvelle version' })
-        contentGroup.items.push({ to: '/reuses', icon: 'mdi-page-next', title: 'Réutilisations (bêta)', subtitle: 'Nouvelle version' })
+        contentGroup.items.push({ to: '/pages', icon: 'mdi-view-dashboard-edit', title: 'Pages de portails', subtitle: 'Nouvelle version' })
+        contentGroup.items.push({ to: '/reuses', icon: 'mdi-page-next', title: 'Réutilisations', subtitle: 'Nouvelle version' })
       }
       items.push(contentGroup)
 
@@ -214,7 +214,7 @@ export default {
         managementGroup.items.push({ to: '/settings', icon: 'mdi-cog', title: this.$t('params'), subtitle: this.activeAccount.department ? this.$t('paramsSub') : '' })
       }
       if (this.canAdminDep && this.env.portalsIntegration) {
-        managementGroup.items.push({ to: '/portals', icon: 'mdi-monitor-dashboard', title: 'Portails (bêta)', subtitle: 'Nouvelle version' })
+        managementGroup.items.push({ to: '/portals', icon: 'mdi-monitor-dashboard', title: 'Portails', subtitle: 'Nouvelle version' })
       }
 
       items.push(managementGroup)
