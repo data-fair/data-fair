@@ -124,7 +124,7 @@
               </p>
               <div
                 class="mt-3 mb-3"
-                @drop.prevent="e => {file = e.dataTransfer?.files[0]; if (!suggestArchive) currentStep = 3}"
+                @drop.prevent="e => {file = e.dataTransfer?.files[0]; if (!suggestArchive) currentStep += 3}"
                 @dragover.prevent
               >
                 <v-file-input
@@ -135,7 +135,7 @@
                   hide-details
                   style="max-width: 400px;"
                   :accept="accepted.join(', ')"
-                  @change="currentStep = 3"
+                  @change="currentStep += 1"
                 />
               </div>
               <v-alert
@@ -149,7 +149,7 @@
                 class="mt-2"
                 :disabled="!file"
                 color="primary"
-                @click="currentStep = 3"
+                @click="currentStep += 1"
               >
                 {{ t('continue') }}
               </v-btn>
@@ -184,7 +184,7 @@
               </p>
               <div
                 class="mt-3 mb-3"
-                @drop.prevent="e => {attachments = e.dataTransfer?.files[0]; currentStep = 5}"
+                @drop.prevent="e => {attachments = e.dataTransfer?.files[0]; currentStep += 5}"
                 @dragover.prevent
               >
                 <v-file-input
@@ -196,13 +196,13 @@
                   accept=".zip"
                   hide-details
                   clearable
-                  @change="currentStep = 5"
+                  @change="currentStep += 1"
                 />
               </div>
               <v-btn
                 color="primary"
                 class="mt-4"
-                @click="currentStep = 5"
+                @click="currentStep += 1"
               >
                 {{ t('continue') }}
               </v-btn>
