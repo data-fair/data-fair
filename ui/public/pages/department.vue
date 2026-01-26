@@ -1,7 +1,7 @@
 <template>
   <v-iframe
     v-if="authorized"
-    :src="`${env.directoryUrl}/organization/${activeAccount.id}/department/${activeAccount.department}?embed=true&redirect=${encodeURIComponent(env.publicUrl)}`"
+    :src="`${env.directoryUrl}/organization/${activeAccount.id}/department/${activeAccount.department}?embed=true`"
   />
   <layout-not-authorized v-else />
 </template>
