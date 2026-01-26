@@ -80,7 +80,7 @@ const curateApplication = async (application) => {
 // update references to an application into the datasets it references (or used to reference before a patch)
 const syncDatasets = async (newApp, oldApp = {}) => {
   const ids = [...(newApp?.configuration?.datasets || []), ...(oldApp?.configuration?.datasets || [])]
-    .map(dataset => dataset.href.replace(config.publicUrl + '/api/v1/datasets/', ''))
+    .map(dataset => dataset.id ?? dataset.href.replace(config.publicUrl + '/api/v1/datasets/', ''))
   for (const id of [...new Set(ids)]) {
     await syncApplications(id)
   }

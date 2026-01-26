@@ -57,7 +57,7 @@ describe('Applications', function () {
   it('Manage the custom configuration part of the object', async function () {
     const ax = global.ax.dmeadus
 
-    const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
+    let dataset = await testUtils.sendDataset('datasets/split.csv', ax)
     const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
     const dataset2 = await testUtils.sendDataset('datasets/split.csv', ax)
     const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
@@ -83,6 +83,9 @@ describe('Applications', function () {
     assert.equal(res.status, 200)
     assert.equal(res.data.datasets.length, 2)
     assert.equal(res.data.datasets[0].title, 'changed title')
+
+    dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
+    assert.equal(dataset.extras.applications.length, 1)
   })
 
   it('Use an application through the application proxy', async function () {
