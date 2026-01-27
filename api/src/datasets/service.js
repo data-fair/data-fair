@@ -494,7 +494,7 @@ export const syncApplications = async (datasetId) => {
       // 'configuration.datasets.href': config.publicUrl + '/api/v1/datasets/' + datasetId
       'configuration.datasets.id': datasetId
     })
-    .project({ id: 1, slug: 1, updatedAt: 1, publicationSites: 1, _id: 0 })
+    .project({ id: 1, slug: 1, updatedAt: 1, _id: 0 })
     .toArray()
   const applicationsExtras = ((dataset.extras && dataset.extras.applications) || [])
     .map(appExtra => applications.find(app => app.id === appExtra.id))
