@@ -7,7 +7,7 @@ import config from '#config'
 const filterFields = {
   url: 'url',
   'base-application': 'url',
-  dataset: 'configuration.datasets.href',
+  dataset: 'configuration.datasets.id',
   topics: 'topics.id',
   publicationSites: 'publicationSites',
   requestedPublicationSites: 'requestedPublicationSites'
@@ -33,11 +33,6 @@ const fieldsMap = {
  * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
 export const findApplications = async (locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
-  if (reqQuery.dataset &&
-      !reqQuery.dataset.startsWith('http://') &&
-      !reqQuery.dataset.startsWith('https://')) {
-    reqQuery.dataset = config.publicUrl + '/api/v1/datasets/' + reqQuery.dataset
-  }
   if (reqQuery.service &&
       !reqQuery.service.startsWith('http://') &&
       !reqQuery.service.startsWith('https://')) {

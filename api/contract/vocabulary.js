@@ -920,6 +920,25 @@ export default [
     }
   },
   {
+    id: 'year',
+    title: {
+      fr: 'Année',
+      en: 'Year'
+    },
+    description: {
+      fr: "Permet d'organiser des données millésimées par exemple.",
+      en: 'Used to organize millennial data for example'
+    },
+    identifiers: [
+      'https://www.w3.org/TR/owl-time/#time:year'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Calendrier',
+      en: 'Calendar'
+    }
+  },
+  {
     id: 'price',
     title: {
       fr: 'Prix',

@@ -128,6 +128,47 @@ before('global mocks', async function () {
     .persist()
     .get('/index.html').query(true).reply(200, html)
     .get('/config-schema.json').query(true).reply(200, {})
+  nock('http://monapp3.com')
+    .persist()
+    .get('/index.html').query(true).reply(200, html)
+    .get('/config-schema.json').query(true).reply(200, {
+      type: 'object',
+      required: ['datasets'],
+      allOf: [
+        {
+          title: 'Source des données',
+          properties: {
+            datasets: {
+              type: 'array',
+              items: {
+                title: 'Jeu de données',
+                type: 'object',
+                properties: {
+                  href: { type: 'string' },
+                  title: { type: 'string' },
+                  id: { type: 'string' },
+                  schema: { type: 'array' }
+                }
+              },
+              layout: {
+                getItems: {
+                  // eslint-disable-next-line no-template-curly-in-string
+                  url: 'api/v1/datasets?status=finalized,indexed,updated&q={q}&select=id,title,schema&${context.datasetFilter}&size=100&sort=createdAt:-1',
+                  itemKey: 'data.href',
+                  itemTitle: 'data.title',
+                  itemsResults: 'data.results'
+                }
+              }
+            }
+          }
+        },
+        {
+          title: 'Métriques',
+        }
+      ],
+      $id: 'config-schema',
+      layout: 'tabs'
+    })
 
   debug('mocks ok')
 })

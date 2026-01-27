@@ -94,6 +94,10 @@ module.exports = {
   }, {
     title: 'App test2',
     url: 'http://monapp2.com'
+  }, {
+    title: 'App test3',
+    url: 'http://monapp3.com',
+    public: true
   }],
   remoteServices: [{
     title: 'Geocoder',

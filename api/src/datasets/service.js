@@ -490,7 +490,9 @@ export const syncApplications = async (datasetId) => {
     .find({
       'owner.type': dataset.owner.type,
       'owner.id': dataset.owner.id,
-      'configuration.datasets.href': config.publicUrl + '/api/v1/datasets/' + datasetId
+      // deprecated href based relation
+      // 'configuration.datasets.href': config.publicUrl + '/api/v1/datasets/' + datasetId
+      'configuration.datasets.id': datasetId
     })
     .project({ id: 1, slug: 1, updatedAt: 1, publicationSites: 1, _id: 0 })
     .toArray()
