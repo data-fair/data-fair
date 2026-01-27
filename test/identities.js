@@ -1,8 +1,9 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-import fs from 'fs-extra'
 import path from 'node:path'
 import config from 'config'
+import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
+import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
 
 describe('identities', function () {
   it('Check secret key', async function () {
@@ -29,8 +30,8 @@ describe('identities', function () {
     const ax = global.ax.icarlens9
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.owner.name, 'Issie Carlens')
-    const userDir = path.join(config.dataDir, 'user', 'icarlens9')
-    assert.ok(await fs.exists(userDir))
+    const userDir = path.join(dataDir, 'user', 'icarlens9')
+    assert.ok(await filesStorage.pathExists(userDir))
     const res = await ax.delete('/api/v1/identities/user/icarlens9', { params: { key: config.secretKeys.identities } })
     assert.equal(res.status, 200)
     try {
@@ -38,6 +39,6 @@ describe('identities', function () {
     } catch (err) {
       assert.equal(err.status, 404)
     }
-    assert.ok(!await fs.exists(userDir))
+    assert.ok(!await filesStorage.pathExists(userDir))
   })
 })

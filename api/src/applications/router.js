@@ -4,12 +4,9 @@ import slug from 'slugify'
 import moment from 'moment'
 import config from '#config'
 import mongo from '#mongo'
-import fs from 'fs-extra'
-import util from 'util'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import { nanoid } from 'nanoid'
-import contentDisposition from 'content-disposition'
 import applicationAPIDocs from '../../contract/application-api-docs.js'
 import * as ajv from '../misc/utils/ajv.ts'
 import applicationKeys from '../../contract/application-keys.js'
@@ -25,18 +22,19 @@ import { syncApplications } from '../datasets/service.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { checkStorage } from '../datasets/middlewares.js'
-import * as attachments from '../misc/utils/attachments.js'
+import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
-import pump from '../misc/utils/pipe.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, session } from '@data-fair/lib-express'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import { downloadFileFromStorage } from '../files-storage/utils.ts'
+import resolvePath from 'resolve-path'
+import filesStorage from '#files-storage'
 
-const unlink = util.promisify(fs.unlink)
 const validateKeys = ajv.compile(applicationKeys)
 
 const router = express.Router()
@@ -133,8 +131,7 @@ router.post('', async (req, res) => {
     if (parentApplication.attachments?.length) {
       for (const attachment of parentApplication.attachments) {
         const newPath = attachmentPath(application, attachment.name)
-        await fs.ensureDir(path.dirname(newPath))
-        await fs.copyFile(attachmentPath(parentApplication, attachment.name), newPath)
+        await filesStorage.copyFile(attachmentPath(parentApplication, attachment.name), newPath)
       }
       application.attachments = parentApplication.attachments
     }
@@ -422,12 +419,12 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
   await db.collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
   await db.collection('applications-keys').deleteOne({ _id: application.id })
   try {
-    await unlink(await capture.path(application))
+    await filesStorage.removeFile(await capture.path(application))
   } catch (err) {
     console.warn('Failure to remove capture file')
   }
   try {
-    await fs.remove(dir(application))
+    await filesStorage.removeDir(dir(application))
   } catch (err) {
     console.warn('Failure to remove application directory')
   }
@@ -634,48 +631,21 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
 
 // attachment files
 router.post('/:applicationId/attachments', readApplication, permissions.middleware('postAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
-  req.body.size = (await fs.promises.stat(req.file.path)).size
+  req.body.size = req.file.size
   req.body.updatedAt = moment().toISOString()
   await updateStorage(req.application)
   res.status(200).send(req.body)
 })
 
 router.get('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('downloadAttachment', 'read'), cacheHeaders.noCache, async (req, res, next) => {
-  // the transform stream option was patched into "send" module using patch-package
-  // res.set('content-disposition', `inline; filename="${req.params.attachmentPath}"`)
-
   const relFilePath = path.join(...req.params.attachmentPath)
-  const ranges = req.range(1000000)
-  if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
-    const range = ranges[0]
-    const filePath = attachmentPath(req.application, relFilePath)
-    if (!await fs.pathExists(filePath)) return res.status(404).send()
-    const stats = await fs.stat(filePath)
-
-    res.setHeader('content-type', 'application/octet-stream')
-    res.setHeader('content-range', `bytes ${range.start}-${range.end}/${stats.size}`)
-    res.setHeader('content-length', (range.end - range.start) + 1)
-    res.status(206)
-    await pump(
-      fs.createReadStream(filePath, { start: range.start, end: range.end }),
-      // res.throttle('static'),
-      res
-    )
-  }
-
-  await new Promise((resolve, reject) => res.sendFile(
-    relFilePath,
-    {
-      // transformStream: res.throttle('static'),
-      root: attachmentsDir(req.application),
-      headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
-    },
-    (err) => err ? reject(err) : resolve(true)
-  ))
+  await downloadFileFromStorage(
+    resolvePath(attachmentsDir(req.application), relFilePath),
+    req, res, { dispositionType: 'inline' })
 })
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {
-  await fs.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
+  await filesStorage.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
   await updateStorage(req.application)
   res.status(204).send()
 })

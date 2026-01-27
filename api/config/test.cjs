@@ -2,11 +2,22 @@ module.exports = {
   port: 5599,
   publicUrl: 'http://localhost:5600/data-fair',
   wsPublicUrl: 'ws://localhost:5600/data-fair',
+  s3: {
+    region: 'us-east-1',
+    endpoint: 'http://localhost:9097',
+    bucket: 'buckettest',
+    credentials: {
+      accessKeyId: '',
+      secretAccessKey: '',
+    },
+    forcePathStyle: true
+  },
   directoryUrl: 'http://localhost:5600/simple-directory',
   privateDirectoryUrl: 'http://localhost:5600/simple-directory',
   captureUrl: 'http://localhost:5600/capture',
   privateCaptureUrl: 'http://localhost:8087',
   dataDir: '../data/test',
+  tmpDir: '../data/test-tmp',
   brand: {
     embed: '<div>application embed</div>'
   },
@@ -103,7 +114,7 @@ module.exports = {
     publicMaxAge: 1
   },
   clamav: {
-    active: false,
+    active: true,
     dataDir: '/data/data-fair/test'
   },
   assertImmutable: true,

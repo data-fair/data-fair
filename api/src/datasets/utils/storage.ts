@@ -3,15 +3,15 @@ import * as esUtils from '../es/index.ts'
 import * as restDatasetsUtils from './rest.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
-import fs from 'fs-extra'
 import * as limits from '../../misc/utils/limits.ts'
 import config from '#config'
 import mongo from '#mongo'
 import debug from 'debug'
-import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.ts'
+import { dataFiles, metadataAttachmentsDir, attachmentsDir } from './files.ts'
 import type { Account, AccountKeys } from '@data-fair/lib-express'
 import type { Dataset, VirtualDataset } from '#types'
 import { isVirtualDataset, isRestDataset } from '#types/dataset/index.ts'
+import filesStorage from '#files-storage'
 
 const debugLimits = debug('limits')
 
@@ -136,9 +136,9 @@ export const storage = async (dataset: Dataset) => {
   // storage used by attachments
   const documentProperty = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty && !dataset.isVirtual) {
-    const attachments = await lsAttachments(dataset)
+    const attachments = await filesStorage.lsrWithStats(attachmentsDir(dataset))
     for (const attachment of attachments) {
-      storage.attachments.size += (await fs.promises.stat(attachmentPath(dataset, attachment))).size
+      storage.attachments.size += attachment.size
       storage.attachments.count++
     }
     storage.size += storage.attachments.size
@@ -150,12 +150,13 @@ export const storage = async (dataset: Dataset) => {
   }
 
   // storage used by metadata attachments
-  const metadataAttachments = await lsMetadataAttachments(dataset)
+  const metadataAttachments = await filesStorage.lsrWithStats(metadataAttachmentsDir(dataset))
   for (const metadataAttachment of metadataAttachments) {
-    storage.metadataAttachments.size += (await fs.promises.stat(metadataAttachmentPath(dataset, metadataAttachment))).size
+    storage.metadataAttachments.size += metadataAttachment.size
     storage.metadataAttachments.count++
   }
   storage.size += storage.metadataAttachments.size
+
   return storage
 }
 

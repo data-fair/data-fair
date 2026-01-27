@@ -4,6 +4,18 @@ module.exports = {
   publicUrl: 'PUBLIC_URL',
   oldPublicUrl: 'OLD_PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',
+  dataDir: 'DATA_DIR',
+  tmpDir: 'TMP_DIR',
+  filesStorage: 'FILES_STORAGE',
+  s3: {
+    region: 'S3_REGION',
+    endpoint: 'S3_ENDPOINT',
+    bucket: 'S3_BUCKET',
+    credentials: {
+      accessKeyId: 'S3_ACCESS_KEY_ID',
+      secretAccessKey: 'S3_SECRET_ACCESS_KEY',
+    }
+  },
   sessionDomain: 'SESSION_DOMAIN',
   directoryUrl: 'DIRECTORY_URL',
   privateDirectoryUrl: 'PRIVATE_DIRECTORY_URL',

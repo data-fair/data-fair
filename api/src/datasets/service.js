@@ -1,7 +1,6 @@
 import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
-import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
@@ -15,13 +14,15 @@ import * as webhooks from '../misc/utils/webhooks.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
-import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
+import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir } from './utils/files.ts'
 import { getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
+import filesStorage from '#files-storage'
+import md5File from 'md5-file'
 
 const debugMasterData = debugLib('master-data')
 
@@ -248,6 +249,7 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
 
   if (datasetFile) {
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
+    const md5 = await md5File(datasetFile.path)
     /** @type {any} */
     const filePatch = {
       status: 'created',
@@ -255,6 +257,7 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
       dataUpdatedAt: dataset.updatedAt,
       loaded: {
         dataset: {
+          md5,
           name: datasetFile.originalname,
           size: datasetFile.size,
           mimetype: datasetFile.mimetype,
@@ -333,12 +336,10 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
   if (datasetFile) {
-    await fs.emptyDir(datasetUtils.loadingDir(insertedDataset))
-    await fs.move(datasetFile.path, datasetUtils.loadedFilePath(insertedDataset))
-    await fsyncFile(datasetUtils.loadedFilePath(insertedDataset))
+    await filesStorage.removeDir(datasetUtils.loadingDir(insertedDataset))
+    await filesStorage.moveFromFs(datasetFile.path, datasetUtils.loadedFilePath(insertedDataset))
     if (attachmentsFile) {
-      await fs.move(attachmentsFile.path, datasetUtils.loadedAttachmentsFilePath(insertedDataset))
-      await fsyncFile(datasetUtils.loadedAttachmentsFilePath(insertedDataset))
+      await filesStorage.moveFromFs(attachmentsFile.path, datasetUtils.loadedAttachmentsFilePath(insertedDataset))
     }
   }
   if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${sessionState.user.name} (${sessionState.user.id})`, insertedDataset.extensions)
@@ -350,7 +351,7 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
 export const deleteDataset = async (app, dataset) => {
   const db = mongo.db
   try {
-    await fs.remove(dir(dataset))
+    await filesStorage.removeDir(dir(dataset))
   } catch (err) {
     console.warn('Error while deleting dataset draft directory', err)
   }
@@ -547,16 +548,14 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
     }
   }
 
-  await fs.ensureDir(dir(patchedDataset))
-
-  if (await fs.pathExists(attachmentsDir(datasetDraft))) {
-    await fs.remove(attachmentsDir(patchedDataset))
-    await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
+  if (await filesStorage.pathExists(attachmentsDir(datasetDraft))) {
+    await filesStorage.removeDir(attachmentsDir(patchedDataset))
+    await filesStorage.moveDir(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
   }
 
-  if (await fs.pathExists(metadataAttachmentsDir(datasetDraft))) {
-    await fs.remove(metadataAttachmentsDir(patchedDataset))
-    await fs.move(metadataAttachmentsDir(datasetDraft), metadataAttachmentsDir(patchedDataset))
+  if (await filesStorage.pathExists(metadataAttachmentsDir(datasetDraft))) {
+    await filesStorage.removeDir(metadataAttachmentsDir(patchedDataset))
+    await filesStorage.moveDir(metadataAttachmentsDir(datasetDraft), metadataAttachmentsDir(patchedDataset))
   }
 
   // replace originalFile
@@ -564,41 +563,38 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
   const newOriginalFilePath = originalFilePath(patchedDataset)
   const oldOriginalFilePath = datasetFull.originalFile && originalFilePath(datasetFull)
   if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
-    await fs.move(draftOriginalFilePath, newOriginalFilePath, { overwrite: true })
-    await fsyncFile(newOriginalFilePath)
+    await filesStorage.moveFile(draftOriginalFilePath, newOriginalFilePath)
   }
   if (oldOriginalFilePath && datasetFull.originalFile.name !== datasetFull.file?.name && newOriginalFilePath !== oldOriginalFilePath) {
-    await fs.remove(oldOriginalFilePath)
+    await filesStorage.removeFile(oldOriginalFilePath)
   }
 
   // replace extended file
   const draftFullFilePath = fullFilePath(datasetDraft)
   const newFullFilePath = fullFilePath(patchedDataset)
   const oldFullFilePath = datasetFull.file && fullFilePath(datasetFull)
-  const hasFullFile = await fs.exists(draftFullFilePath)
+  const hasFullFile = await filesStorage.pathExists(draftFullFilePath)
   if (hasFullFile) {
-    await fs.move(draftFullFilePath, newFullFilePath, { overwrite: true })
-    await fsyncFile(newFullFilePath)
+    await filesStorage.moveFile(draftFullFilePath, newFullFilePath)
   }
   if (oldFullFilePath && (!hasFullFile || newFullFilePath !== oldFullFilePath)) {
-    await fs.remove(oldFullFilePath)
+    await filesStorage.removeFile(oldFullFilePath)
   }
 
   // replace file
   const draftFilePath = filePath(datasetDraft)
   const newFilePath = filePath(patchedDataset)
   const oldFilePath = datasetFull.file && filePath(datasetFull)
-  await fs.move(draftFilePath, newFilePath, { overwrite: true })
-  await fsyncFile(newFilePath)
+  await filesStorage.moveFile(draftFilePath, newFilePath)
   if (oldFilePath && newFilePath !== oldFilePath) {
-    await fs.remove(oldFilePath)
+    await filesStorage.removeFile(oldFilePath)
   }
 
   await validateDraftAlias(dataset)
-  await fs.remove(dir(datasetDraft))
+  await filesStorage.removeDir(dir(datasetDraft))
 }
 
 export const cancelDraft = async (dataset) => {
-  await fs.remove(dir(dataset))
+  await filesStorage.removeDir(dir(dataset))
   await deleteIndex(dataset)
 }

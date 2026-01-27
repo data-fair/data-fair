@@ -147,7 +147,6 @@ ADD ui/nuxt.config.js ui/nuxt.config.js
 ADD ui/public/static ui/public/static
 ADD /api api
 ADD /shared shared
-ADD /upgrade upgrade
 
 ADD package.json README.md LICENSE BUILD.json* ./
 
@@ -157,9 +156,7 @@ WORKDIR /app/api
 ENV NODE_ENV=production
 ENV DEBUG db,upgrade*
 
-# the following line would be a good practice
-# unfortunately it is a problem to activate now that the service was already deployed
-# with volumes belonging to root
+# TODO: activate this line on next major release
 #USER node
 VOLUME /data
 EXPOSE 8080

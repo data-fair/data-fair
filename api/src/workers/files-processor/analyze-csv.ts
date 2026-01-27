@@ -1,7 +1,6 @@
 import * as journals from '../../misc/utils/journals.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import iconv from 'iconv-lite'
-import datasetFileSample from '../../datasets/utils/file-sample.js'
 import * as csvSniffer from '../../misc/utils/csv-sniffer.js'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -11,6 +10,7 @@ import { sampleValues as getSampleValues } from '../../datasets/utils/data-strea
 import outOfCharacter from 'out-of-character'
 import debugLib from 'debug'
 import type { Event, FileDataset } from '#types'
+import filesStorage from '#files-storage'
 
 // Analyze dataset data, check validity and extract a few metadata for next workers
 
@@ -18,7 +18,7 @@ export default async function (dataset: FileDataset) {
   const debug = debugLib(`worker:csv-analyzer:${dataset.id}`)
 
   debug('extract file sample')
-  const fileSample = await datasetFileSample(datasetUtils.filePath(dataset))
+  const fileSample = await filesStorage.fileSample(datasetUtils.filePath(dataset))
   if (!fileSample) throw httpError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
   try {

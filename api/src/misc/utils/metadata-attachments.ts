@@ -1,37 +1,51 @@
 import config from '#config'
+import path from 'node:path'
 import debugLib from 'debug'
-import fs from 'fs-extra'
 import multer from 'multer'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
-import { metadataAttachmentsDir as datasetAttachmentsDir, metadataAttachmentPath as datasetAttachmentPath } from '../../datasets/utils/files.ts'
-import { attachmentsDir as applicationAttachmentsDir, attachmentPath as applicationAttachmentPath } from '../../applications/utils.ts'
+import { metadataAttachmentsDir as datasetAttachmentsDir } from '../../datasets/utils/files.ts'
+import { attachmentsDir as applicationAttachmentsDir } from '../../applications/utils.ts'
 import * as limits from './limits.ts'
+import filesStorage from '#files-storage'
 
 const debug = debugLib('attachments')
 const debugLimits = debugLib('limits')
 
-const metadataStorage = multer.diskStorage({
-  destination: async function (req, file, cb) {
+// inspired by https://github.com/expressjs/multer/blob/main/storage/disk.js
+// but uses our files storage abstraction
+const metadataStorage = {
+  async _handleFile (req: any, file: any, cb: (err?: any, file?: any) => void) {
     try {
-      const dir = req.resourceType === 'applications' ? applicationAttachmentsDir(req.resource) : datasetAttachmentsDir(req.resource)
-      await fs.ensureDir(dir)
-      cb(null, dir)
+      const destination = req.resourceType === 'applications' ? applicationAttachmentsDir(req.resource) : datasetAttachmentsDir(req.resource)
+      const filename = file.originalname
+      const finalPath = path.join(destination, filename)
+      await filesStorage.writeStream(file.stream, finalPath)
+      const stats = await filesStorage.fileStats(finalPath)
+      cb(null, {
+        destination,
+        filename,
+        path: finalPath,
+        size: stats.size
+      })
     } catch (err) {
       cb(err)
     }
   },
-  filename: async function (req, file, cb) {
+
+  async _removeFile  (req: any, file: any, cb: (err?: any) => void) {
     try {
-      // creating empty file before streaming seems to fix some weird bugs with NFS
-      const p = req.resourceType === 'applications' ? applicationAttachmentPath(req.resource, file.originalname) : datasetAttachmentPath(req.resource, file.originalname)
-      await fs.ensureFile(p)
-      cb(null, file.originalname)
+      const path = file.path
+      delete file.destination
+      delete file.filename
+      delete file.path
+      await filesStorage.removeFile(path)
+      cb()
     } catch (err) {
       cb(err)
     }
   }
-})
+}
 
 const metadataUploadMulter = multer({
   storage: metadataStorage,

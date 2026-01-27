@@ -189,6 +189,7 @@ describe('Applications', function () {
     assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=604800')
 
     // after a config change file should be recreated
+    await new Promise(resolve => setTimeout(resolve, 1000))
     await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }], test: 'ok' })
     res = await ax.get('/api/v1/applications/' + app.id + '/capture')
     assert.equal(res.status, 200)

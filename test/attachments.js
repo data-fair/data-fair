@@ -37,21 +37,6 @@ describe('Attachments', function () {
     assert.equal(res.status, 200)
   })
 
-  it.skip('Process attachments with encoded filenames', async function () {
-    const datasetFd = fs.readFileSync('/home/alban/tmp/tmp.zip')
-    const form = new FormData()
-    form.append('dataset', datasetFd, 'files-encoded-name.zip')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    const dataset = await workers.hook(`finalize/${res.data.id}`)
-
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?size=1000`)
-    // console.log(res.data.results)
-    const line = res.data.results.find(line => line.file.startsWith('2021-200_'))
-    res = await ax.get(line._attachment_url)
-    assert.equal(res.headers['content-type'], 'application/pdf')
-  })
-
   it('Process newly uploaded attachments along with data file', async function () {
     const ax = global.ax.cdurning2
 
@@ -190,7 +175,9 @@ describe('Attachments', function () {
       assert.fail()
     } catch (err) {
       assert.ok(err.message.includes('aucune colonne ne contient les chemins'))
-      assert.ok(err.message.includes('Valeurs attendues : test.odt, dir1/test.pdf'))
+      assert.ok(err.message.includes('Valeurs attendues :'))
+      assert.ok(err.message.includes('test.odt'))
+      assert.ok(err.message.includes('dir1/test.pdf'))
     }
   })
 })

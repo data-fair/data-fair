@@ -13,6 +13,7 @@ import { promisify } from 'util'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.ts'
 import pumpOg from 'pump'
+import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 
 const pump = promisify(pumpOg)
 
@@ -415,7 +416,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(attachments.length, 1)
     assert.equal(attachments[0], res.data.results[0].attachmentPath)
 
-    assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
+    assert.equal((await fs.readdir('../data/test-tmp')).length, 0)
 
     await ax.delete('/api/v1/datasets/rest5/lines/' + line._id)
     await workers.hook('finalize/rest5')
@@ -551,8 +552,11 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     const line5 = res.data.results.find(l => l._id === 'line5')
     const line6 = res.data.results.find(l => l._id === 'line6')
     assert.equal(line5['_file.content'], 'This a txt file with accented filename.')
+    assert.ok(line5['_attachment_url'].endsWith('/testé.txt'))
     res = await ax.get(line5._attachment_url)
     assert.equal(res.data, 'This a txt file with accented filename.')
+    assert.equal(res.headers['content-disposition'], 'inline; filename="teste.txt"; filename*=UTF-8\'\'test%C3%A9.txt')
+
     assert.ok(!line6['_file.content'])
     await assert.rejects(ax.get(line6._attachment_url), { status: 404 })
   })
@@ -604,7 +608,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     dataset = await workers.hook('finalize/restsync')
 
     // remove a file a resync, we sould have 1 line
-    await fs.remove(path.join(attachmentsDir(dataset), 'test.odt'))
+    await filesStorage.removeFile(path.join(attachmentsDir(dataset), 'test.odt'))
     res = await ax.post('/api/v1/datasets/restsync/_sync_attachments_lines', null, { params: { lock: 'true' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbCreated, 0)
@@ -672,7 +676,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
       assert.equal(err.data.nbOk, 0)
       return true
     })
-    assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
+    assert.equal((await fs.readdir('../data/test-tmp')).length, 0)
   })
 
   it('The size of the mongodb collection is part of storage consumption', async function () {
@@ -1824,6 +1828,6 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
     res = await ax.get(res.data.results[0]._attachment_url)
-    assert.equal(res.headers['content-disposition'], "inline; filename=\"Capture d?écran du 2024-11-19 10-20-57.png\"; filename*=UTF-8''Capture%20d%E2%80%99%C3%A9cran%20du%202024-11-19%2010-20-57.png")
+    assert.equal(res.headers['content-disposition'], "inline; filename=\"Capture d?ýcran du 2024-11-19 10-20-57.png\"; filename*=UTF-8''Capture%20d%E2%80%99%C3%A9cran%20du%202024-11-19%2010-20-57.png")
   })
 })

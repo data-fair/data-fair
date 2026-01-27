@@ -1,7 +1,5 @@
-import fs from 'fs-extra'
 import path from 'path'
-import { Readable, Transform } from 'stream'
-import pump from '../../misc/utils/pipe.ts'
+import { Readable, Transform, compose } from 'node:stream'
 import * as restUtils from '../../datasets/utils/rest.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -12,13 +10,13 @@ import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmen
 import { applyTransactions } from '../../datasets/utils/rest.ts'
 import iterHits from '../../datasets/es/iter-hits.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
-import * as filesUtils from '../../datasets/utils/files.ts'
 import * as virtualDatasetsUtils from '../../datasets/utils/virtual.ts'
 import debugLib from 'debug'
 import mongo from '#mongo'
 import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
 import type { DatasetInternal, DatasetLineAction } from '#types'
 import { isRestDataset, isVirtualDataset } from '#types/dataset/index.ts'
+import filesStorage from '#files-storage'
 
 export const eventsPrefix = 'initialize'
 
@@ -115,8 +113,7 @@ export default async function (dataset: DatasetInternal) {
     if (dataset.initFrom.parts.includes('metadataAttachments')) {
       for (const metadataAttachment of metadataAttachments) {
         const newPath = metadataAttachmentPath(dataset, metadataAttachment)
-        await fs.ensureDir(path.dirname(newPath))
-        await fs.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
+        await filesStorage.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
         await progress.inc()
       }
       patch.attachments = parentDataset.attachments
@@ -150,9 +147,9 @@ export default async function (dataset: DatasetInternal) {
         patch.file = parentDataset.file
         patch.originalFile = parentDataset.originalFile
         patch.status = 'analyzed'
-        await fs.copy(datasetUtils.originalFilePath(parentDataset), datasetUtils.originalFilePath({ ...dataset, ...patch }))
+        await filesStorage.copyFile(datasetUtils.originalFilePath(parentDataset), datasetUtils.originalFilePath({ ...dataset, ...patch }))
         if (datasetUtils.originalFilePath(parentDataset) !== datasetUtils.filePath(parentDataset)) {
-          await fs.copy(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
+          await filesStorage.copyFile(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
         }
         await progress.inc(parentDataset.count)
       } else {
@@ -162,7 +159,6 @@ export default async function (dataset: DatasetInternal) {
         const filePath = path.join(datasetUtils.loadingDir(dataset), fileName)
 
         // creating empty file before streaming seems to fix some weird bugs with NFS
-        await fs.ensureFile(filePath)
 
         let inputStreams
         if (isRestDataset(parentDataset)) inputStreams = await restUtils.readStreams(parentDataset)
@@ -189,8 +185,7 @@ export default async function (dataset: DatasetInternal) {
         } else {
           throw new Error('dataset cannot be used to init data')
         }
-
-        await pump(
+        const readStream = compose(
           ...inputStreams,
           new Transform({
             objectMode: true,
@@ -204,11 +199,10 @@ export default async function (dataset: DatasetInternal) {
               }
             }
           }),
-          ...(await import('../../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }),
-          fs.createWriteStream(filePath)
+          ...(await import('../../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch })
         )
-        await filesUtils.fsyncFile(filePath)
-        const loadedFileStats = await fs.stat(filePath)
+        await filesStorage.writeStream(readStream, filePath)
+        const loadedFileStats = await filesStorage.fileStats(filePath)
 
         patch.status = 'loaded'
         patch.loaded = {
@@ -237,8 +231,7 @@ export default async function (dataset: DatasetInternal) {
           copyPath = attachmentPath(descendant, relPath)
         }
         const newPath = attachmentPath(dataset, relPath)
-        await fs.ensureDir(path.dirname(newPath))
-        await fs.copyFile(copyPath, newPath)
+        await filesStorage.copyFile(copyPath, newPath)
         await progress.inc()
       }
     }

@@ -7,6 +7,8 @@ import WebSocket from 'ws'
 import config from 'config'
 import * as workers from '../api/src/workers/index.ts'
 import { validate } from 'tableschema'
+import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
+import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
 
 const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
 
@@ -318,7 +320,8 @@ describe('datasets', function () {
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.ok(res.data.store_bytes.consumption > 150)
     assert.ok(res.data.store_bytes.consumption < 300)
-    assert.deepEqual(await fs.readdir('../data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name.csv'])
+    let dataFiles = await filesStorage.lsr(dataDir + '/user/dmeadus0/datasets/dataset-name/data-files/')
+    assert.deepEqual(dataFiles, ['dataset-name.csv'])
 
     const form2 = new FormData()
     form2.append('file', datasetFd, 'dataset-name2.csv')
@@ -331,7 +334,8 @@ describe('datasets', function () {
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.ok(res.data.store_bytes.consumption > 150)
     assert.ok(res.data.store_bytes.consumption < 300)
-    assert.deepEqual(await fs.readdir('../data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
+    dataFiles = await filesStorage.lsr(dataDir + '/user/dmeadus0/datasets/dataset-name/data-files/')
+    assert.deepEqual(dataFiles, ['dataset-name2.csv'])
   })
 
   it('Upload new dataset and detect types', async function () {

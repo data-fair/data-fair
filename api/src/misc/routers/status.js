@@ -4,6 +4,7 @@ import moment from 'moment'
 import axios from '../utils/axios.js'
 import fs from 'fs-extra'
 import * as clamav from '../utils/clamav.ts'
+import filesStorage from '#files-storage'
 
 async function mongoStatus (req) {
   await mongo.db.command({ ping: 1 })
@@ -40,8 +41,7 @@ async function nuxtStatus (req) {
 }
 
 async function dataDirStatus (req) {
-  const dir = config.dataDir
-  await fs.writeFile(`${dir}/check-access.txt`, 'ok')
+  await filesStorage.checkAccess()
 }
 
 async function singleStatus (req, fn, name) {

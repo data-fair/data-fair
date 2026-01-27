@@ -1,5 +1,6 @@
 import config from '#config'
 import mongo from '#mongo'
+import filesStorage from '#files-storage'
 import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
@@ -589,7 +590,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     for (const operation of operations) {
       if (operation._action === 'delete' && !operation._error && (!operation._status || operation._status < 300)) {
         const dir = attachmentPath(dataset, operation._id)
-        await fs.remove(dir)
+        await filesStorage.removeDir(dir)
       }
     }
   }
@@ -721,8 +722,8 @@ async function checkMatchingAttachment (req: { body: any }, lineId: string, dir:
   if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {
     const fileName = req.body[pathField.key].replace(lineId + '/', '')
     try {
-      const fileNames = await fs.readdir(dir)
-      if (fileNames.includes(fileName)) return true
+      const files = await filesStorage.lsr(dir)
+      if (files.some(f => f === fileName)) return true
     } catch (err) {
       // missing directory, nothing to do
     }
@@ -751,19 +752,17 @@ async function manageAttachment (req: RequestWithRestDataset & { body: any }, ke
 
   if (req.file) {
     // An attachment was uploaded
-    await fs.ensureDir(dir)
-    if (!req.dataset.rest?.history) await fs.emptyDir(dir)
+    if (!req.dataset.rest?.history) await filesStorage.removeDir(dir)
     const fileMd5 = await md5File(req.file.path)
-    await fs.ensureDir(path.join(dir, fileMd5))
     const relativePath = path.join(lineId, fileMd5, req.file.originalname)
-    await fs.rename(req.file.path, attachmentPath(req.dataset, relativePath))
+    await filesStorage.moveFromFs(req.file.path, attachmentPath(req.dataset, relativePath))
     if (!pathField) {
       throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
     req.body[pathField.key] = relativePath
   } else if (!keepExisting && pathField) {
     if (!checkMatchingAttachment(req, lineId, dir, pathField)) {
-      await fs.remove(dir)
+      await filesStorage.removeDir(dir)
     }
   }
 }

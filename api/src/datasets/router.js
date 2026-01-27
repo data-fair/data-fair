@@ -16,7 +16,7 @@ import * as journals from '../misc/utils/journals.ts'
 import axios from '../misc/utils/axios.js'
 import * as esUtils from './es/index.ts'
 import { initDatasetIndex, switchAlias, datasetInfos } from '../datasets/es/manage-indices.js'
-import * as uploadUtils from './utils/upload.js'
+import * as uploadUtils from './utils/upload.ts'
 import datasetAPIDocs from '../../contract/dataset-api-docs.js'
 import privateDatasetAPIDocs from '../../contract/dataset-private-api-docs.ts'
 import * as permissions from '../misc/utils/permissions.ts'
@@ -26,7 +26,7 @@ import { updateStorage, updateTotalStorage } from './utils/storage.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import * as findUtils from '../misc/utils/find.js'
 import clone from '@data-fair/lib-utils/clone.js'
-import * as attachments from '../misc/utils/attachments.js'
+import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as geo from './utils/geo.js'
 import * as tiles from './utils/tiles.ts'
 import * as cache from '../misc/utils/cache.js'
@@ -46,7 +46,7 @@ import * as apiKeyUtils from '../misc/utils/api-key.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.ts'
-import { dir, attachmentsDir } from './utils/files.ts'
+import { dir, dataFilesDir, attachmentsDir } from './utils/files.ts'
 import { preparePatch } from './utils/patch.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
@@ -60,6 +60,9 @@ import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
 import { can } from '../misc/utils/permissions.ts'
 import { emit as workerPing } from '../workers/ping.ts'
+import { downloadFileFromStorage } from '../files-storage/utils.ts'
+import resolvePath from 'resolve-path'
+import filesStorage from '#files-storage'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
@@ -67,7 +70,6 @@ const router = express.Router()
 
 const clean = datasetUtils.clean
 
-const debugFiles = debugModule('files')
 const debugLimits = debugModule('limits')
 
 export const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
@@ -292,7 +294,7 @@ router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddleware
   // Move all files
   if (dir(req.dataset) !== dir(patchedDataset)) {
     try {
-      await fs.move(dir(req.dataset), dir(patchedDataset))
+      await filesStorage.moveDir(dir(req.dataset), dir(patchedDataset))
     } catch (err) {
       console.warn('Error while moving dataset directory', err)
     }
@@ -351,6 +353,8 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
   res.sendStatus(204)
 })
 
+const debugCreateDataset = debugModule('create-dataset')
+
 // Create a dataset
 const createDatasetRoute = async (req, res) => {
   const db = mongo.db
@@ -359,13 +363,15 @@ const createDatasetRoute = async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
   const draft = req.query.draft === 'true'
 
+  debugCreateDataset('upload files')
   /** @type {undefined | any[]} */
   const files = await uploadUtils.getFiles(req, res)
+  debugCreateDataset('uploaded files', files)
 
   try {
     if (files) {
       await clamav.checkFiles(files, sessionState.user)
-      debugFiles('POST datasets uploaded some files', files)
+      debugCreateDataset('clamav check ok')
     }
 
     req.body = uploadUtils.getFormBody(req.body)
@@ -396,9 +402,11 @@ const createDatasetRoute = async (req, res) => {
     const onClose = (callback) => res.on('close', callback)
     res.setMaxListeners(100)
 
+    debugCreateDataset('call createDataset')
     const dataset = await createDataset(db, es, locale, sessionState, owner, body, files, draft, onClose)
 
     if (dataset.isRest && dataset.status === 'finalized') {
+      debugCreateDataset('init rest dataset')
       // case where we simply initialize the empty dataset
       // being empty this is not costly and can be performed by the API
       await restDatasetsUtils.initDataset(dataset)
@@ -420,6 +428,7 @@ const createDatasetRoute = async (req, res) => {
 
     eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
+    debugCreateDataset('final steps')
     await journals.log('datasets', dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id })
     await notifications.sendResourceEvent('datasets', dataset, sessionState, 'dataset-created')
     await syncRemoteService(dataset)
@@ -1170,27 +1179,15 @@ router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescenda
     if (!documentProp || documentProp.key !== childDocumentProp.key) return res.status(404).send('No attachment column found')
 
     const relFilePath = path.join(...req.params.attachmentPath.slice(1))
-    await new Promise((resolve, reject) => res.sendFile(
-      relFilePath,
-      {
-        transformStream: res.throttle('static'),
-        root: attachmentsDir(childDataset),
-        headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
-      },
-      (err) => err ? reject(err) : resolve(true)
-    ))
+    await downloadFileFromStorage(
+      resolvePath(attachmentsDir(childDataset), relFilePath),
+      req, res, { dispositionType: 'inline' })
   } else {
     // the transform stream option was patched into "send" module using patch-package
     const relFilePath = path.join(...req.params.attachmentPath)
-    await new Promise((resolve, reject) => res.sendFile(
-      relFilePath,
-      {
-        transformStream: res.throttle('static'),
-        root: attachmentsDir(req.dataset),
-        headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
-      },
-      (err) => err ? reject(err) : resolve(true)
-    ))
+    await downloadFileFromStorage(
+      resolvePath(attachmentsDir(req.dataset), relFilePath),
+      req, res, { dispositionType: 'inline' })
   }
 })
 
@@ -1199,13 +1196,14 @@ router.get('/:datasetId/data-files', readDataset({ noCache: true }), apiKeyMiddl
   res.send(await datasetUtils.dataFiles(req.dataset, req.publicBaseUrl))
 })
 router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddlewareRead, permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  // the transform stream option was patched into "send" module using patch-package
-  res.download(path.join(...req.params.filePath), null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+  const relFilePath = path.join(...req.params.filePath)
+  await downloadFileFromStorage(
+    resolvePath(dataFilesDir(req.dataset), relFilePath), req, res)
 })
 
 // Special attachments referenced in dataset metadatas
 router.post('/:datasetId/metadata-attachments', readDataset({ noCache: true }), apiKeyMiddlewareWrite, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
-  req.body.size = (await fs.promises.stat(req.file.path)).size
+  req.body.size = req.file.size
   req.body.updatedAt = moment().toISOString()
   await updateStorage(req.dataset)
   res.status(200).send(req.body)
@@ -1250,11 +1248,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noC
         res.set('x-remote-status', 'DOWNLOAD')
         const attachmentPath = datasetUtils.metadataAttachmentPath(req.dataset, relFilePath)
         // creating empty file before streaming seems to fix some weird bugs with NFS
-        await fs.ensureFile(attachmentPath)
-        await pump(
-          response.data,
-          fs.createWriteStream(attachmentPath)
-        )
+        await filesStorage.writeStream(response.data, attachmentPath)
         attachmentTarget.etag = response.headers.etag
         attachmentTarget.lastModified = response.headers['last-modified']
         attachmentTarget.fetchedAt = new Date()
@@ -1263,38 +1257,13 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noC
     }
   }
 
-  const ranges = req.range(1000000)
-  if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
-    const range = ranges[0]
-    const filePath = datasetUtils.metadataAttachmentPath(req.dataset, relFilePath)
-    if (!await fs.pathExists(filePath)) return res.status(404).send()
-    const stats = await fs.stat(filePath)
-
-    res.setHeader('content-type', 'application/octet-stream')
-    res.setHeader('content-range', `bytes ${range.start}-${range.end}/${stats.size}`)
-    res.setHeader('content-length', (range.end - range.start) + 1)
-    res.status(206)
-    await pump(
-      fs.createReadStream(filePath, { start: range.start, end: range.end }),
-      res.throttle('static'),
-      res
-    )
-  }
-
-  await new Promise((resolve, reject) => res.sendFile(
-    relFilePath,
-    {
-      transformStream: res.throttle('static'),
-      root: datasetUtils.metadataAttachmentsDir(req.dataset),
-      headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
-    },
-    (err) => err ? reject(err) : resolve(true)
-  ))
-  // res.sendFile(req.params.attachmentPath)
+  await downloadFileFromStorage(
+    resolvePath(datasetUtils.metadataAttachmentsDir(req.dataset), relFilePath),
+    req, res, { dispositionType: 'inline' })
 })
 
 router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddlewareWrite, permissions.middleware('deleteMetadataAttachment', 'write'), async (req, res, next) => {
-  await fs.remove(datasetUtils.metadataAttachmentPath(req.dataset, path.join(...req.params.attachmentPath)))
+  await filesStorage.removeFile(datasetUtils.metadataAttachmentPath(req.dataset, path.join(...req.params.attachmentPath)))
   await updateStorage(req.dataset)
   res.status(204).send()
 })
@@ -1316,26 +1285,22 @@ router.get('/:datasetId/raw', readDataset({ noCache: true }), apiKeyMiddlewareRe
     return
   }
   if (!req.dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-  // the transform stream option was patched into "send" module using patch-package
-  res.download(req.dataset.originalFile.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+  await downloadFileFromStorage(datasetUtils.originalFilePath(req.dataset), req, res)
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-
-  // the transform stream option was patched into "send" module using patch-package
-  res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+  await downloadFileFromStorage(datasetUtils.filePath(req.dataset), req, res)
 })
 
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
 router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  // the transform stream option was patched into "send" module using patch-package
-  if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
-    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+  if (await filesStorage.pathExists(datasetUtils.fullFilePath(req.dataset))) {
+    await downloadFileFromStorage(datasetUtils.fullFilePath(req.dataset), req, res)
   } else {
-    res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+    await downloadFileFromStorage(datasetUtils.filePath(req.dataset), req, res)
   }
 })
 
@@ -1472,7 +1437,7 @@ router.post('/:datasetId/_simulate-extension', readDataset({ noCache: true }), a
 router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptInitialDraft: true, noCache: true }), cacheHeaders.noCache, async (req, res) => {
   reqAdminMode(req)
   const esInfos = await datasetInfos(req.dataset)
-  const filesInfos = await datasetUtils.lsFiles(req.dataset)
+  const filesInfos = await filesStorage.lsrWithStats(datasetUtils.dir(req.dataset))
   const locks = [
     await mongo.db.collection('locks').findOne({ _id: `datasets:${req.dataset.id}` }),
     await mongo.db.collection('locks').findOne({ _id: `datasets:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })

@@ -22,7 +22,6 @@ describe('json files support', function () {
     assert.equal(lines[0].col1, 'val1')
 
     const dataFiles = (await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)).data
-    console.log(dataFiles)
     assert.equal(dataFiles.length, 2)
     assert.equal(dataFiles[0].name, 'example.json')
     assert.equal(dataFiles[1].name, 'example.csv')

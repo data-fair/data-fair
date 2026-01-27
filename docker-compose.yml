@@ -39,6 +39,19 @@ services:
     volumes:
       - mongo8-data:/data/db
 
+  s3mock:
+    profiles:
+      - dev
+      - test
+    image: adobe/s3mock:latest
+    environment:
+      - COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=buckettest,buckerdev
+      - COM_ADOBE_TESTING_S3MOCK_STORE_ROOT=s3root
+    ports:
+      - 9097:9090
+    volumes:
+      - s3mock-data:/s3root
+
   sd:
     profiles:
       - dev
@@ -146,11 +159,12 @@ services:
     image: clamav/clamav:1.5.1
     profiles:
       - dev
+      - test
     healthcheck:
         test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
     volumes:
-      - ./data:/data/data-fair
       - clamav-data:/var/lib/clamav
+      - clamav-tmp:/tmp
     environment:
       - CLAMAV_NO_FRESHCLAMD=true
       - CLAMAV_NO_MILTERD=true
@@ -190,3 +204,5 @@ volumes:
   udata-fs:
   redis-data:
   clamav-data:
+  clamav-tmp:
+  s3mock-data:
