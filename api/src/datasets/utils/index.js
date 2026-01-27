@@ -207,10 +207,8 @@ export const clean = (req, dataset, draft = false) => {
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 
-  if (publicationSite && dataset.extras?.applications?.length) {
-    const siteKey = publicationSite.type + ':' + publicationSite.id
-    dataset.extras.applications = dataset.extras.applications
-      .filter(appRef => appRef.publicationSites && appRef.publicationSites.find(p => p === siteKey))
+  // clean deprecated properties
+  if (dataset.extras?.applications?.length) {
     for (const appRef of dataset.extras.applications) delete appRef.publicationSites
   }
 
