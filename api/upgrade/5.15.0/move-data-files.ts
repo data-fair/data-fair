@@ -13,7 +13,9 @@ const upgradeScript: UpgradeScript = {
         console.log('no directory', ownerType)
         continue
       }
-      for (const ownerId of await fs.readdir(path.join(dataDir, ownerType))) {
+      for (const ownerDir of await fs.readdir(path.join(dataDir, ownerType), { withFileTypes: true })) {
+        if (!ownerDir.isDirectory()) continue
+        const ownerId = ownerDir.name
         for (const subdir of await fs.readdir(path.join(dataDir, ownerType, ownerId))) {
           if (subdir !== 'datasets' && subdir !== 'datasets-drafts') continue
           debug(`work on ${ownerType} ${ownerId} directory ${subdir}`)
