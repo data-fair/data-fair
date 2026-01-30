@@ -2,7 +2,8 @@
   <v-container
     fluid
     data-iframe-height
-    style="min-height:800px;"
+    style="min-height:500px;"
+    class="bg-surface"
   >
     <dataset-related-datasets
       v-model="relatedDatasets"

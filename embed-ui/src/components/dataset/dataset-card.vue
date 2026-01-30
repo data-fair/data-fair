@@ -1,9 +1,5 @@
 <template>
-  <v-card
-    variant="outlined"
-    hover
-    class="bg-surface"
-  >
+  <v-card v-bind="cardProps">
     <v-card-title>
       <span
         class="font-weight-bold text-primary"
@@ -133,14 +129,33 @@ import { type DatasetExt } from '#api/types'
 import { mdiAlert, mdiAllInclusive, mdiFile, mdiPictureInPictureBottomRightOutline, mdiProgressWrench, mdiViewHeadline } from '@mdi/js'
 import formatBytes from '@data-fair/lib-vue/format/bytes'
 import { Account } from '@data-fair/lib-vue/session'
+import { VCard } from 'vuetify/components'
+import type { ComponentProps } from 'vue-component-type-helpers'
+import inIframe from '@data-fair/lib-utils/in-iframe'
 
-const { showOwner } = defineProps({
+const { showOwner, dataset, link } = defineProps({
+  link: { type: Boolean, default: false },
   showOwner: { type: Boolean, default: false },
   showTopics: { type: Boolean, default: false },
   dataset: { type: Object as () => Partial<DatasetExt>, required: true }
 })
 
 const { t, locale } = useI18n()
+
+const cardProps = computed(() => {
+  const props: ComponentProps<typeof VCard> = { variant: 'outlined', hover: true, class: 'bg-surface' }
+  if (link) {
+    if (inIframe) {
+      props.href = '/data-fair/dataset/' + dataset.id
+      // @ts-ignore
+      props.target = '_top'
+    } else {
+      props.to = '/datasets/' + dataset.id
+    }
+  }
+
+  return props
+})
 </script>
 
 <style lang="css" scoped>

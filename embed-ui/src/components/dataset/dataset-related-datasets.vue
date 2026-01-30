@@ -31,7 +31,10 @@
       md="6"
       lg="4"
     >
-      <dataset-card :dataset="dataset" />
+      <dataset-card
+        :dataset="dataset"
+        link
+      />
     </v-col>
   </v-row>
 </template>
