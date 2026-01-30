@@ -25,6 +25,11 @@ describe('Date filters', function () {
     // filter on a date interval
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', _c_date_match: '2023-11-21,2023-11-22' } })
     assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
+    // _gte and _lte filter provide same result
+    res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', date1_gte: '2023-11-21', date1_lte: '2023-11-22' } })
+    assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
+    res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', date1_gt: '2023-11-20', date1_lt: '2023-11-22' } })
+    assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z']) // start of 21, betwen the 20 and 22 in our timezone
 
     // filter on a largerdate interval
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', _c_date_match: '2023-11-10,2023-11-28' } })

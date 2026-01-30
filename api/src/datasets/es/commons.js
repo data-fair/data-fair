@@ -485,22 +485,38 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       // TODO: check if this filter required a "index" capability or "values"
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-      filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
+      if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
+        filter.push({ range: { [prop.key]: { gt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
+      } else {
+        filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
+      }
     }
     if (filterSuffix === '_gte') {
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-      filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
+      if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
+        filter.push({ range: { [prop.key]: { gte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
+      } else {
+        filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
+      }
     }
     if (filterSuffix === '_lt') {
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-      filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
+      if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
+        filter.push({ range: { [prop.key]: { lt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
+      } else {
+        filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
+      }
     }
     if (filterSuffix === '_lte') {
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-      filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
+      if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
+        filter.push({ range: { [prop.key]: { lte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
+      } else {
+        filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
+      }
     }
     if (filterSuffix === '_starts') {
       requiredCapability(prop, filterSuffix)
