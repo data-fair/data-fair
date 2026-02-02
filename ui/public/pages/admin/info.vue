@@ -14,7 +14,7 @@ import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-chan
 import { mapActions } from 'vuex'
 
 export default {
-  middleware: ['auth-required'],
+  middleware: ['admin-required'],
   computed: {
     stateChangeAdapter () {
       return createStateChangeAdapter(this.$router)
