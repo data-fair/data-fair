@@ -29,7 +29,6 @@
     "@types/dot-prop": "^4.2.0",
     "compare-versions": "^6.1.1",
     "cookie-universal-nuxt": "^2.2.2",
-    "d3-hierarchy": "^3.1.2",
     "dot-prop": "^9.0.0",
     "easymde": "^2.18.0",
     "form-data": "^4.0.1",

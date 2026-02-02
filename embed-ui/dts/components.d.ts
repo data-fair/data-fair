@@ -54,6 +54,8 @@ declare module 'vue' {
     SettingsLicenses: typeof import('./../src/components/settings/settings-licenses.vue')['default']
     SettingsTopics: typeof import('./../src/components/settings/settings-topics.vue')['default']
     SettingsWebhooks: typeof import('./../src/components/settings/settings-webhooks.vue')['default']
+    StorageDetails: typeof import('./../src/components/storage/storage-details.vue')['default']
+    StorageTreemap: typeof import('./../src/components/storage/storage-treemap.vue')['default']
     TutorialAlert: typeof import('./../src/components/tutorial/tutorial-alert.vue')['default']
     WorkflowUpdateDataset: typeof import('./../src/components/workflow/workflow-update-dataset.vue')['default']
   }
