@@ -10,6 +10,10 @@ export type DatasetStore = ReturnType<typeof createDatasetStore>
 export const datasetStoreKey = Symbol('dataset-store')
 
 export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) => {
+  // manage case of application key prefixed to dataset id in embed page
+  const keys = id.split(':')
+  if (keys.length > 1) id = keys[1]
+
   const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draft, html } })
   const dataset = ref<ExtendedDataset | null>(null)
   watch(datasetFetch.data, () => { dataset.value = datasetFetch.data.value })
