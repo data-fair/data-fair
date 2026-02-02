@@ -10,6 +10,7 @@ export default {
     id: { type: 'string' },
     url: { type: 'string' },
     applicationName: { type: 'string' },
+    title: { type: 'string' },
     version: { type: 'string' },
     category: { type: 'string' },
     meta: {

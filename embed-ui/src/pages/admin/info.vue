@@ -42,10 +42,11 @@
               :href="`https://github.com/${service.name}/releases`"
               :title="serviceTitle(service)"
               class="mr-2"
+              target="_blank"
             >
             <a
               :href="`https://github.com/${service.name}/releases`"
-              target="blank"
+              target="_blank"
             >
               <img
                 alt="Dernière version disponible"

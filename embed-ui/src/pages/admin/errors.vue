@@ -19,12 +19,13 @@
                 :key="error.id"
               >
                 <v-list-item-title>
-                  <router-link
-                    :to="`/dataset/${error.id}`"
+                  <a
+                    :href="`/data-fair/dataset/${error.id}`"
+                    target="_top"
                     class="simple-link"
                   >
                     {{ error.title }} ({{ error.owner.name }})
-                  </router-link>
+                  </a>
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ error.event.data }} ({{ dayjs(error.event.date).format("lll") }})</v-list-item-subtitle>
 
@@ -36,7 +37,7 @@
                     title="reindex"
                     @click="reindex.execute(error.id)"
                   >
-                    <v-icon>mdi-play</v-icon>
+                    <v-icon :icon="mdiPlay" />
                   </v-btn>
                 </v-list-item-action>
               </v-list-item>
@@ -61,12 +62,13 @@
                 :key="error.id"
               >
                 <v-list-item-title>
-                  <router-link
-                    :to="`/dataset/${error.id}`"
+                  <a
+                    :href="`/data-fair/dataset/${error.id}`"
+                    target="_top"
                     class="simple-link"
                   >
                     {{ error.title }} ({{ error.owner.name }})
-                  </router-link>
+                  </a>
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ error.esWarning }}</v-list-item-subtitle>
 
@@ -78,7 +80,7 @@
                     title="reindex"
                     @click="reindex.execute(error.id)"
                   >
-                    <v-icon>mdi-play</v-icon>
+                    <v-icon :icon="mdiPlay" />
                   </v-btn>
                 </v-list-item-action>
               </v-list-item>
@@ -145,6 +147,7 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiPlay } from '@mdi/js'
 import { useDisplay } from 'vuetify/lib/composables/display.mjs'
 
 const display = useDisplay()

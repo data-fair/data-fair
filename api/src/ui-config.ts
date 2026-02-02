@@ -6,7 +6,8 @@ export const uiConfig = {
   eventsIntegration: !!config.privateEventsUrl,
   portalsIntegration: !!config.privatePortalsManagerUrl,
   processingsIntegration: !!config.privateProcessingsUrl,
-  catalogsIntegration: !!config.privateCatalogsUrl
+  catalogsIntegration: !!config.privateCatalogsUrl,
+  baseAppsCategories: config.baseAppsCategories
 }
 
 export type UiConfig = typeof uiConfig

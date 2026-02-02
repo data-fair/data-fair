@@ -37,19 +37,21 @@
                     <span v-if="owner.storage !== undefined">pour une limite à {{ parseFloat((owner.storage / 1000).toFixed(2)).toLocaleString() }} ko</span>
                   </v-list-item-subtitle>
                   <v-list-item-subtitle>
-                    <router-link
-                      :to="{path: '/datasets', query: {'ownerExt': `${owner.type}:${owner.id}`, shared: 'true'}}"
+                    <a
+                      :href="withQuery('/data-fair/datasets', {'ownerExt': `${owner.type}:${owner.id}`, shared: 'true'})"
+                      target="_top"
                       class="simple-link"
                     >
                       {{ owner.nbDatasets }} jeux de données
-                    </router-link>
+                    </a>
                     -
-                    <router-link
-                      :to="{path: '/applications', query: {'ownerExt': `${owner.type}:${owner.id}`, shared: 'true'}}"
+                    <a
+                      :href="withQuery('/data-fair/applications', {'ownerExt': `${owner.type}:${owner.id}`, shared: 'true'})"
+                      target="_top"
                       class="simple-link"
                     >
                       {{ owner.nbApplications }} applications
-                    </router-link>
+                    </a>
                   </v-list-item-subtitle>
                 </v-list-item>
               </v-list>
@@ -62,6 +64,7 @@
 </template>
 
 <script lang="ts" setup>
+import { withQuery } from 'ufo'
 import { useDisplay } from 'vuetify/lib/composables/display.mjs'
 
 const display = useDisplay()
