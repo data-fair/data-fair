@@ -254,7 +254,6 @@ declare module 'vue' {
     readonly useDatasetWatch: UnwrapRef<typeof import('../src/composables/dataset-watch')['useDatasetWatch']>
     readonly useFetch: UnwrapRef<typeof import('@data-fair/lib-vue/fetch.js')['useFetch']>
     readonly useFilters: UnwrapRef<typeof import('../src/composables/dataset-filters')['useFilters']>
-    readonly useFrameContent: UnwrapRef<typeof import('../src/composables/frame-content')['useFrameContent']>
     readonly useHead: UnwrapRef<typeof import('@unhead/vue')['useHead']>
     readonly useHeadSafe: UnwrapRef<typeof import('@unhead/vue')['useHeadSafe']>
     readonly useI18n: UnwrapRef<typeof import('vue-i18n')['useI18n']>
