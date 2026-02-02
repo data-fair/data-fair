@@ -338,7 +338,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async
         tagName: 'script',
         attrs: [
           { name: 'type', value: 'text/javascript' },
-          { name: 'src', value: 'https://cdn.jsdelivr.net/npm/@data-fair/frame@0.7/dist/v-iframe-compat/d-frame-content.min.js' }
+          { name: 'src', value: 'https://cdn.jsdelivr.net/npm/@data-fair/frame@0.18/dist/v-iframe-compat/d-frame-content.min.js' }
         ],
         parentNode: body
       })
