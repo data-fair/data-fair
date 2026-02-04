@@ -101,35 +101,35 @@ export class S3Backend implements FileBackend {
       }
 
       const maxS3ReadSize = slow ? (1 * 1024 * 1024) : (10 * 1024 * 1024) // 1 or 10 Mb depending on use case
-      let stream: Readable
-      const readStreamMode = (headObject.ContentLength! < maxS3ReadSize || range) ? 'simple' : 'chunked'
-      if (readStreamMode === 'simple') {
+      if (headObject.ContentLength! < maxS3ReadSize || range) {
         // simpler mono-request mode
         const response = await this.client.send(new GetObjectCommand({ ...bucketParams, Range: range }))
         debug('readStream simple mode ok', response)
-        stream = response.Body as Readable
+        const stream = response.Body as Readable
+        // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
+        stream.on('error', (err) => { console.error('s3 readStream error in simple mode', err) })
+        return {
+          lastModified: response.LastModified!,
+          size: response.ContentLength!,
+          body: stream,
+          range: response.ContentRange
+        }
       } else {
         // the chunked mode prevents long running http requests that can endup being aborted, for example during indexing of large dataset
-        stream = new S3ReadStream({
+        const stream = new S3ReadStream({
           s3: this.client,
           command: new GetObjectCommand(bucketParams),
           maxLength: headObject.ContentLength!,
           byteRange: maxS3ReadSize
         })
-        debug('readStream chunked mode')
-      }
-
-      stream.on('error', (err) => {
         // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
-        // logging it here ensures it is a s3 problem
-        console.error(`s3 readStream error in ${readStreamMode} mode`, err)
-      })
-
-      return {
-        lastModified: headObject.LastModified!,
-        size: headObject.ContentLength!,
-        body: stream,
-        range: headObject.ContentRange
+        stream.on('error', (err) => { console.error('s3 readStream error in chunked mode', err) })
+        debug('readStream chunked mode')
+        return {
+          lastModified: headObject.LastModified!,
+          size: headObject.ContentLength!,
+          body: stream
+        }
       }
     } catch (err: any) {
       if (err.$metadata?.httpStatusCode === 304) {
