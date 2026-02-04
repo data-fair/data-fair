@@ -7,7 +7,12 @@ export const uiConfig = {
   portalsIntegration: !!config.privatePortalsManagerUrl,
   processingsIntegration: !!config.privateProcessingsUrl,
   catalogsIntegration: !!config.privateCatalogsUrl,
-  baseAppsCategories: config.baseAppsCategories
+  baseAppsCategories: config.baseAppsCategories,
+  disablePublicationSites: config.disablePublicationSites,
+  disableApplications: config.disableApplications,
+  compatODS: config.compatODS,
+  adminRole: config.adminRole,
+  contribRole: config.contribRole
 }
 
 export type UiConfig = typeof uiConfig
