@@ -100,13 +100,15 @@ export class S3Backend implements FileBackend {
         throw httpError(304)
       }
 
-      if (!slow || range || headObject.ContentLength! < (1 * 1024 * 1024)) {
+      const s3ChunkSize = 1 * 1024 * 1024
+      if (!slow || range || headObject.ContentLength! < (s3ChunkSize)) {
         // simpler mono-request mode
         const response = await this.client.send(new GetObjectCommand({ ...bucketParams, Range: range }))
         debug('readStream simple mode ok', response)
         const stream = response.Body as Readable
         // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
         stream.on('error', (err) => { console.error('s3 readStream error in simple mode', err) })
+        // 1Mb chunks seems like a good compromise between memory consumption and number of requests
         return {
           lastModified: response.LastModified!,
           size: response.ContentLength!,
@@ -118,7 +120,8 @@ export class S3Backend implements FileBackend {
         const stream = new S3ReadStream({
           s3: this.client,
           command: new GetObjectCommand(bucketParams),
-          maxLength: headObject.ContentLength!
+          maxLength: headObject.ContentLength!,
+          byteRange: s3ChunkSize
         })
         // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
         stream.on('error', (err) => { console.error('s3 readStream error in chunked mode', err) })
