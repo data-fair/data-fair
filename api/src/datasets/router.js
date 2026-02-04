@@ -1224,35 +1224,40 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noC
       const headers = {}
       if (attachmentTarget.etag) headers['If-None-Match'] = attachmentTarget.etag
       if (attachmentTarget.lastModified) headers['If-Modified-Since'] = attachmentTarget.lastModified
-      const response = await axios.get(attachmentTarget.targetUrl, {
-        responseType: 'stream',
-        headers,
-        validateStatus: function (status) {
-          return status === 200 || status === 304
+      try {
+        const response = await axios.get(attachmentTarget.targetUrl, {
+          responseType: 'stream',
+          headers,
+          validateStatus: function (status) {
+            return status === 200 || status === 304
+          }
+        })
+        if (response.status === 304) {
+          // nothing to do
+          res.set('x-remote-status', 'NOTMODIFIED')
+          await stream2text(response.data)
+        } else {
+          res.set('x-remote-status', 'DOWNLOAD')
+          const attachmentPath = datasetUtils.metadataAttachmentPath(req.dataset, relFilePath)
+          // creating empty file before streaming seems to fix some weird bugs with NFS
+          await filesStorage.writeStream(response.data, attachmentPath)
+          attachmentTarget.etag = response.headers.etag
+          attachmentTarget.lastModified = response.headers['last-modified']
+          attachmentTarget.fetchedAt = new Date()
+          await mongo.db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _attachmentsTargets: attachmentsTargets } })
         }
-      })
-      if (response.status !== 200 && response.status !== 304) {
-        let message = `${response.status} - ${response.statusText}`
-        if (response.headers['content-type']?.startsWith('text/plain')) {
-          const data = await stream2text(response.data)
-          if (data) message = data
+      } catch (err) {
+        let message = err.message ?? err
+        if (err.response && err.response.status !== 200 && err.response.status !== 304) {
+          message = `${err.response.status} - ${err.response.statusText}`
+          if (err.response.headers['content-type']?.startsWith('text/plain')) {
+            const data = await stream2text(err.response.data)
+            if (data) message = data
+          }
         }
-        throw httpError(502, 'Échec de téléchargement du fichier : ' + message)
-      }
-
-      if (response.status === 304) {
-        // nothing to do
-        res.set('x-remote-status', 'NOTMODIFIED')
-        await stream2text(response.data)
-      } else {
-        res.set('x-remote-status', 'DOWNLOAD')
-        const attachmentPath = datasetUtils.metadataAttachmentPath(req.dataset, relFilePath)
-        // creating empty file before streaming seems to fix some weird bugs with NFS
-        await filesStorage.writeStream(response.data, attachmentPath)
-        attachmentTarget.etag = response.headers.etag
-        attachmentTarget.lastModified = response.headers['last-modified']
-        attachmentTarget.fetchedAt = new Date()
-        await mongo.db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _attachmentsTargets: attachmentsTargets } })
+        // we do not throw this error, we don't want to count it as an internal error
+        console.warn('failed to fetch linked attachment', attachmentTarget.targetUrl, err)
+        res.status(502).send('Échec de téléchargement du fichier : ' + message)
       }
     }
   }
