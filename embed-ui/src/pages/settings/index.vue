@@ -4,6 +4,8 @@
       <v-col>
         <!--<v-subheader>{{ t('pages.settings.description') }}</v-subheader>-->
 
+        <layout-section-tabs />
+
         <tutorial-alert
           id="settings-doc"
           text="Consultez la documentation sur les paramètres"
