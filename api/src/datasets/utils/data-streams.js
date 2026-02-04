@@ -260,7 +260,7 @@ export const readStreams = async (dataset, raw = false, full = false, ignoreDraf
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 
-  const { body, size } = await filesStorage.readStream(p)
+  const { body, size } = await filesStorage.readStream(p, undefined, undefined, true)
   let streams = [body]
 
   if (progress) {

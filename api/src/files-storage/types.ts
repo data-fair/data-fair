@@ -13,7 +13,7 @@ export type FileBackend = {
   fileStats (path: string): Promise<{ size: number, lastModified: Date }>
   removeFile(path: string): Promise<void>
   removeDir(path: string): Promise<void>
-  readStream(path: string, ifModifiedSince?: string, range?: string): Promise<{ body: Readable, size: number, lastModified: Date, range?: string }>
+  readStream(path: string, ifModifiedSince?: string, range?: string, slow?: boolean): Promise<{ body: Readable, size: number, lastModified: Date, range?: string }>
   moveFromFs(tmpPath: string, path: string): Promise<void>
   writeStream(readStream: Readable, path: string): Promise<void>
   writeString(path: string, content: string): Promise<void>
