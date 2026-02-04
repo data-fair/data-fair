@@ -1257,7 +1257,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noC
         }
         // we do not throw this error, we don't want to count it as an internal error
         console.warn('failed to fetch linked attachment', attachmentTarget.targetUrl, err)
-        res.status(502).send('Échec de téléchargement du fichier : ' + message)
+        return res.status(502).send('Échec de téléchargement du fichier : ' + message)
       }
     }
   }
