@@ -100,8 +100,7 @@ export class S3Backend implements FileBackend {
         throw httpError(304)
       }
 
-      const maxS3ReadSize = slow ? (1 * 1024 * 1024) : (10 * 1024 * 1024) // 1 or 10 Mb depending on use case
-      if (headObject.ContentLength! < maxS3ReadSize || range) {
+      if (!slow || range || headObject.ContentLength! < (1 * 1024 * 1024)) {
         // simpler mono-request mode
         const response = await this.client.send(new GetObjectCommand({ ...bucketParams, Range: range }))
         debug('readStream simple mode ok', response)
@@ -119,8 +118,7 @@ export class S3Backend implements FileBackend {
         const stream = new S3ReadStream({
           s3: this.client,
           command: new GetObjectCommand(bucketParams),
-          maxLength: headObject.ContentLength!,
-          byteRange: maxS3ReadSize
+          maxLength: headObject.ContentLength!
         })
         // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
         stream.on('error', (err) => { console.error('s3 readStream error in chunked mode', err) })
