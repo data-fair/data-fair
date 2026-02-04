@@ -9,6 +9,7 @@ import { type Readable } from 'node:stream'
 import { httpError } from '@data-fair/lib-express'
 import unzipper from 'unzipper'
 import debugModule from 'debug'
+import { S3ReadStream } from 's3-readstream'
 
 const debug = debugModule('s3')
 
@@ -86,31 +87,50 @@ export class S3Backend implements FileBackend {
     }
   }
 
-  async readStream (path: string, ifModifiedSince?: string, range?: string) {
+  async readStream (path: string, ifModifiedSince?: string, range?: string, slow?: boolean) {
     debug('readStream', path)
     const ifModifiedSinceDate = ifModifiedSince ? new Date(ifModifiedSince) : undefined
-    const command = new GetObjectCommand({
-      Bucket: config.s3.bucket,
-      Key: bucketPath(path),
-      IfModifiedSince: ifModifiedSinceDate,
-      Range: range
-    })
 
+    const bucketParams = { Bucket: config.s3.bucket, Key: bucketPath(path), IfModifiedSince: ifModifiedSinceDate, }
     try {
-      const response = await this.client.send(command)
+      const headObject = await this.client.send(new HeadObjectCommand(bucketParams))
 
       // this shouldn't happen except if the s3 provider does not support conditional header
-      if (ifModifiedSinceDate && Math.floor(response.LastModified!.getTime() / 1000) <= Math.floor(ifModifiedSinceDate.getTime() / 1000)) {
+      if (ifModifiedSinceDate && Math.floor(headObject.LastModified!.getTime() / 1000) <= Math.floor(ifModifiedSinceDate.getTime() / 1000)) {
         throw httpError(304)
       }
 
-      return {
-        lastModified: response.LastModified!,
-        size: response.ContentLength!,
-        body: response.Body as Readable,
-        range: response.ContentRange
+      const maxS3ReadSize = slow ? (1 * 1024 * 1024) : (10 * 1024 * 1024) // 1 or 10 Mb depending on use case
+      let stream: Readable
+      const readStreamMode = (headObject.ContentLength! < maxS3ReadSize || range) ? 'simple' : 'chunked'
+      if (readStreamMode === 'simple') {
+        // simpler mono-request mode
+        const response = await this.client.send(new GetObjectCommand({ ...bucketParams, Range: range }))
+        debug('readStream simple mode ok', response)
+        stream = response.Body as Readable
+      } else {
+        // the chunked mode prevents long running http requests that can endup being aborted, for example during indexing of large dataset
+        stream = new S3ReadStream({
+          s3: this.client,
+          command: new GetObjectCommand(bucketParams),
+          maxLength: headObject.ContentLength!,
+          byteRange: maxS3ReadSize
+        })
+        debug('readStream chunked mode')
       }
-      debug('readStream ok', response)
+
+      stream.on('error', (err) => {
+        // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
+        // logging it here ensures it is a s3 problem
+        console.error(`s3 readStream error in ${readStreamMode} mode`, err)
+      })
+
+      return {
+        lastModified: headObject.LastModified!,
+        size: headObject.ContentLength!,
+        body: stream,
+        range: headObject.ContentRange
+      }
     } catch (err: any) {
       if (err.$metadata?.httpStatusCode === 304) {
         debug('readStream no change 304')
