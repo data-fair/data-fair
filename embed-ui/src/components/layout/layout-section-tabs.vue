@@ -1,51 +1,68 @@
 <template>
-  <v-card>
+  <div class="mt-3 mb-10">
     <div
-      class="d-flex flex-no-wrap justify-space-between"
-      style="height: 112px"
+
+      style="padding-top: 2px; padding-left: 2px; padding-bottom: 2px;"
+      :style="`background: linear-gradient(172deg, ${theme.current.value.colors.primary} 0%, ${theme.current.value.colors.background} 55%);`"
     >
-      <layout-themed-svg
-        v-if="showSvg"
-        :source="svg"
-      />
-      <v-toolbar
-        extended
-        flat
-        :title="title"
-        color="surface"
+      <v-card
+        :border="0"
+        :rounded="0"
+        :style="`background: linear-gradient(172deg, ${theme.current.value.colors.surface} 0%, ${theme.current.value.colors.surface} 30%, ${theme.current.value.colors.background} 60%);`"
       >
-        <template #extension>
-          <slot name="extension">
-            <v-tabs
-              v-model="tab"
-              :optional="false"
-              style="margin-bottom: 1px;"
-              show-arrows
-            >
-              <slot name="tabs">
-                <v-tab
-                  v-for="tabInfo in tabs"
-                  :key="tabInfo.key"
+        <div
+          class="d-flex flex-no-wrap justify-space-between"
+          style="height: 112px"
+        >
+          <layout-themed-svg
+            v-if="showSvg"
+            :source="svg"
+            class="pa-2"
+          />
+          <v-toolbar
+            extended
+            flat
+            style="background-color: transparent;"
+            class="pl-4"
+          >
+            <v-toolbar-title>
+              {{ title }}
+            </v-toolbar-title>
+            <template #extension>
+              <slot name="extension">
+                <v-tabs
+                  v-model="tab"
+                  :optional="false"
+                  style="margin-bottom: 1px;"
+                  show-arrows
                 >
-                  <v-icon
-                    v-if="tabInfo.icon"
-                    :icon="tabInfo.icon"
-                  />&nbsp;&nbsp;{{ tabInfo.title }}
-                </v-tab>
+                  <slot name="tabs">
+                    <v-tab
+                      v-for="tabInfo in tabs"
+                      :key="tabInfo.key"
+                    >
+                      <v-icon
+                        v-if="tabInfo.icon"
+                        :icon="tabInfo.icon"
+                      />&nbsp;&nbsp;{{ tabInfo.title }}
+                    </v-tab>
+                  </slot>
+                </v-tabs>
               </slot>
-            </v-tabs>
-          </slot>
-        </template>
-      </v-toolbar>
+            </template>
+          </v-toolbar>
+        </div>
+      </v-card>
     </div>
-  </v-card>
-  <v-tabs-window v-model="tab">
-    <slot name="tabs-window-items" />
-  </v-tabs-window>
+    <v-tabs-window v-model="tab">
+      <slot name="tabs-window" />
+    </v-tabs-window>
+  </div>
 </template>
 
 <script lang="ts" setup>
 import { useDisplay } from 'vuetify/lib/composables/display.js'
+import { useTheme } from 'vuetify/lib/composables/theme.js'
 
 type TabInfo = { key: string, title: string, icon?: string }
 
@@ -53,6 +70,7 @@ const { title, tabs, svg } = defineProps<{ title: string, tabs?: TabInfo[], svg?
 const tab = defineModel({ type: String })
 
 const display = useDisplay()
+const theme = useTheme()
 
 const showSvg = computed(() => !!svg && display.mdAndUp)
 </script>

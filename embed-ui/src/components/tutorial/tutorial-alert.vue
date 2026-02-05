@@ -16,6 +16,7 @@
           v-if="href"
           :href="href"
           target="_blank"
+          class="simple-link"
         >{{ text || t('readDoc') }}</a>
         <template v-else>
           <span

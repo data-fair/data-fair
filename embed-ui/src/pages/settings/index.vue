@@ -4,8 +4,6 @@
       <v-col>
         <!--<v-subheader>{{ t('pages.settings.description') }}</v-subheader>-->
 
-        <layout-section-tabs />
-
         <tutorial-alert
           id="settings-doc"
           text="Consultez la documentation sur les paramètres"
@@ -42,14 +40,14 @@
               v-if="section.id === 'info'"
               :svg="infoSvg"
               svg-no-margin
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 <p>
                   Permettez aux utilisateurs de vos APIs et de vos applications de vous contacter en renseignant ces informations.
                 </p>
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <v-container
                   fluid
                   class="py-1"
@@ -72,14 +70,14 @@
             <layout-section-tabs
               v-if="section.id === 'licences'"
               :svg="qualitySvg"
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 <p>
                   Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.
                 </p>
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <v-container
                   fluid
                   class="py-1"
@@ -103,7 +101,7 @@
               v-if="section.id === 'topics'"
               :svg="flagsSvg"
               svg-no-margin
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 <p v-if="$uiConfig.disableApplications">
@@ -113,7 +111,7 @@
                   Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
                 </p>
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <v-container
                   fluid
                   class="py-1"
@@ -137,12 +135,12 @@
               v-if="section.id === 'datasetsMetadata'"
               :svg="flagsSvg"
               svg-no-margin
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 Configurez des métadonnées additionnelles pour vos jeux de données.
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <v-container
                   fluid
                   class="py-1"
@@ -166,7 +164,7 @@
               v-if="section.id === 'api-keys'"
               :svg="securitysSvg"
               svg-no-margin
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 <p>
@@ -174,7 +172,7 @@
                   Il s'agit d'une configuration technique pour personne avertie.
                 </p>
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <settings-api-keys
                   v-model="settings.apiKeys"
                   @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
@@ -186,7 +184,7 @@
               v-if="section.id === 'webhooks'"
               :svg="wwwSvg"
               svg-no-margin
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 <p>
@@ -194,7 +192,7 @@
                   Il s'agit d'une configuration technique pour personne avertie.
                 </p>
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <v-container
                   fluid
                   class="py-1"
@@ -218,14 +216,14 @@
               v-if="section.id === 'privateVocabulary'"
               :svg="checklistSvg"
               svg-no-margin
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 <p>
                   Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
                 </p>
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <v-container fluid>
                   <v-alert
                     type="warning"
@@ -253,7 +251,7 @@
               v-if="section.id === 'publicationSites'"
               :svg="uiSvg"
               svg-no-margin
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 <p>
@@ -261,7 +259,7 @@
                   Cette liste de sites est en partie gérée depuis l'onglet Portails mais certains paramètres relatifs à la publication des ressources sont édités ici.
                 </p>
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <v-container
                   fluid
                   class="py-1"
@@ -286,14 +284,14 @@
               v-if="section.id === 'compat'"
               svg-no-margin
               admin
-              :section="section"
+              :title="section.title"
             >
               <template #extension>
                 <p>
                   Gérez les compatibilités de votre organisation avec d'autres services. Peut-être particulièrement utile en période de transition.
                 </p>
               </template>
-              <template #tabs-items>
+              <template #tabs-window>
                 <v-container
                   fluid
                   class="py-1"
