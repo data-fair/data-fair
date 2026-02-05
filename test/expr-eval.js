@@ -28,6 +28,9 @@ describe('expression engine based on expr-eval', function () {
     assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: 'b' }), '86bfbbec238b3cb49c45ba78b02cd940')
     assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: null }), '60921ff7863149ffa56c3947807e17e6')
     assert.equal(parser.parse('JOIN(SPLIT(a, "-"), "_")').evaluate({ a: 'a-b-c' }), 'a_b_c')
+    assert.equal(parser.parse('JOIN(SPLIT(a, "-"), "\n")').evaluate({ a: 'a-b-c' }), `a
+b
+c`)
     assert.equal(parser.parse('TRANSFORM_DATE(a, "", "DD/MM/YYYY")').evaluate({ a: '2024-05-07T12:13:37+02:00' }), '07/05/2024')
     assert.equal(parser.parse('TRANSFORM_DATE(a, "DD/MM/YYYY")').evaluate({ a: '07/05/2024' }), '2024-05-07T00:00:00+02:00')
     assert.equal(parser.parse('TRANSFORM_DATE(a, "DD/MM/YYYY", "", "America/Toronto")').evaluate({ a: '07/05/2024' }), '2024-05-07T06:00:00+02:00')
@@ -40,6 +43,12 @@ describe('expression engine based on expr-eval', function () {
     assert.equal(parser.parse('join("-", filter(f(item) = item, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
     assert.equal(parser.parse('join("-", filter(TRUTHY, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
     assert.equal(parser.parse('join("-", filter(DEFINED, [a, b, c]))').evaluate({ a: true, b: null, c: false }), 'true-false')
+
+    assert.equal(parser.parse('EXTRACT(a, "<", ">")').evaluate({ a: 'Hello <world>' }), 'world')
+    assert.equal(parser.parse('EXTRACT(a, "statut: ", "\n")').evaluate({
+      a: `statut: test
+bla bla`
+    }), 'test')
 
     assert.equal(compile('a', { type: 'string' })({ a: 11 }), '11')
     assert.equal(compile('a', { type: 'number' })({ a: '11' }), 11)
