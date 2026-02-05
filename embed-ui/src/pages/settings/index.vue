@@ -59,7 +59,7 @@
                     >
                       <settings-info
                         v-model="settings.info"
-                        @input="patch.execute({info: settings.info})"
+                        @update:model-value="patch.execute({info: settings.info})"
                       />
                     </v-col>
                   </v-row>
@@ -239,7 +239,7 @@
                     >
                       <settings-private-vocabulary
                         v-model="settings.privateVocabulary"
-                        @input="patch.execute({privateVocabulary: settings.privateVocabulary})"
+                        @update:model-value="patch.execute({privateVocabulary: settings.privateVocabulary})"
                       />
                     </v-col>
                   </v-row>
@@ -272,7 +272,7 @@
                       <settings-publication-sites
                         v-model="settings.publicationSites"
                         :datasets-metadata="settings.datasetsMetadata"
-                        @input="patch.execute({publicationSites: settings.publicationSites})"
+                        @update:model-value="patch.execute({publicationSites: settings.publicationSites})"
                       />
                     </v-col>
                   </v-row>
