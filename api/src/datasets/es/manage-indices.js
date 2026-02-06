@@ -82,13 +82,13 @@ export const updateDatasetMapping = async (dataset, oldDataset) => {
 const getAliases = async (dataset) => {
   let prodAlias
   try {
-    prodAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }) })
+    prodAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }), local: false })
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
   let draftAlias
   try {
-    draftAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }) })
+    draftAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }), local: false })
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
@@ -150,9 +150,9 @@ export const switchAlias = async (dataset, tempId) => {
     })
   } catch (err) {
     console.error(`failed to replace index alias ${name} -> ${tempId}`, err)
-    throw new Error('failed to replace index alias')
+    throw new Error('[noretry] failed to replace index alias')
   }
-  if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating aliases ' + name)
+  if (!res.acknowledged) throw new Error('[noretry] failed to get cluster acknowledgement after updating aliases ' + name)
 
   try {
     await clearAliases(dataset)
@@ -183,19 +183,27 @@ const clearAliases = async (dataset) => {
 // move an index from the draft alias to the production alias
 export const validateDraftAlias = async (dataset) => {
   debug('validate draft alias of dataset', dataset.id)
-  const { draftAlias } = await getAliases(dataset)
-  debug('existing draft alias', draftAlias)
-  if (!draftAlias || Object.keys(draftAlias).length !== 1) throw new Error('no draft alias to validate')
+  let aliases = await getAliases(dataset)
+  if (!aliases.draftAlias || Object.keys(aliases.draftAlias).length !== 1) {
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    // I don't really understand why but it seems like wa have some consistency issues where draftAlias is not always immediately available
+    aliases = await getAliases(dataset)
+    if (!aliases.draftAlias || Object.keys(aliases.draftAlias).length !== 1) {
+      throw new Error('[noretry] no draft alias to validate')
+    }
+  }
+  debug('existing draft alias', aliases.draftAlias)
+
   const name = aliasName({ ...dataset, draftReason: true })
   debug('delete previous alias', name)
   const res = await es.client.indices.deleteAlias({
     name,
     // removing with index=* seems to create strange behaviors when other indices have some operations
-    index: Object.keys(draftAlias)[0],
+    index: Object.keys(aliases.draftAlias)[0],
     timeout: '60s'
   })
-  if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after deleting previous aliases ' + name)
-  await switchAlias({ ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
+  if (!res.acknowledged) throw new Error('[noretry] failed to get cluster acknowledgement after deleting previous aliases ' + name)
+  await switchAlias({ ...dataset, draftReason: null }, Object.keys(aliases.draftAlias)[0])
 }
 
 const getNbShards = (dataset) => {

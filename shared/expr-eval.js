@@ -110,7 +110,7 @@ export default (defaultTimezone) => {
     }
     let end = arg.length
     if (after) {
-      end = arg.indexOf(after, start + before.length)
+      end = arg.indexOf(after, start)
       if (end === -1) return undefined
     }
     return arg.substring(start, end)
