@@ -16,7 +16,7 @@
           v-if="href"
           :href="href"
           target="_blank"
-          class="simple-link"
+          class="text-success"
         >{{ text || t('readDoc') }}</a>
         <template v-else>
           <span
@@ -87,13 +87,6 @@ onMounted(() => {
   overflow:visible;
   min-height:20px;
 }
-.tutorial-alert .v-alert--outlined {
-  background: black !important
-}
-.tutorial-alert .v-alert .v-alert__content a {
-  color: white !important;
-  text-decoration: underline;
-}
 .tutorial-alert .v-alert .v-alert__dismissible {
   position: absolute;
   top: 8px;
@@ -106,11 +99,5 @@ onMounted(() => {
 }
 .tutorial-alert .toggle.v-btn .v-icon {
   border-radius: 30px;
-}
-.tutorial-alert .toggle.v-btn .v-icon.theme--dark {
-  background-color: black;
-}
-.tutorial-alert .toggle.v-btn .v-icon.theme--light {
-  background-color: white;
 }
 </style>

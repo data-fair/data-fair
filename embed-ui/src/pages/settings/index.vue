@@ -16,7 +16,7 @@
         <p v-if="settingsAccount.type ==='organization'">
           Vous êtes <strong>{{ session.accountRole.value }}</strong> dans cette organisation.
         </p>
-        <p v-if="settingsAccount.type ==='organization' && !settingsAccount.department && departments.length > 1">
+        <p v-if="settingsAccount.type ==='organization' && !settingsAccount.department && departments.length > 0">
           <v-select
             v-model="selectedDepartment"
             label="Département"
@@ -296,9 +296,9 @@
       </v-col>
     </v-row>
 
-    <navigation-right>
+    <df-navigation-right>
       <layout-toc :sections="sections" />
-    </navigation-right>
+    </df-navigation-right>
   </v-container>
 </template>
 
