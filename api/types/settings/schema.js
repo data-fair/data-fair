@@ -53,6 +53,7 @@ export default {
       type: 'array',
       title: 'Webhooks',
       layout: {
+        title: '',
         messages: {
           addItem: 'Add a webhook',
           'x-i18n-addItem': {
@@ -150,6 +151,7 @@ export default {
         fr: 'Licences',
       },
       layout: {
+        title: '',
         messages: {
           addItem: 'Add a license',
           'x-i18n-addItem': {
@@ -234,6 +236,7 @@ export default {
         fr: 'Thématiques'
       },
       layout: {
+        title: '',
         messages: {
           addItem: 'Add a topic',
           'x-i18n-addItem': {
@@ -252,7 +255,19 @@ export default {
     },
     privateVocabulary: {
       type: 'array',
-      title: 'Vocabulaire privé',
+      title: 'Private vocabulary',
+      'x-i18n-title': {
+        fr: 'Vocabulaire privé'
+      },
+      layout: {
+        title: '',
+        messages: {
+          addItem: 'Add a topic',
+          'x-i18n-addItem': {
+            fr: 'Ajouter un concept'
+          }
+        }
+      },
       items: {
         type: 'object',
         required: ['title'],

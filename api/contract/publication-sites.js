@@ -2,6 +2,15 @@ export default (admin = false) => ({
   type: 'array',
   title: 'Portails',
   'x-options': admin ? {} : { arrayOperations: ['update'] },
+  layout: {
+    title: '',
+    messages: {
+      addItem: 'Add a portal',
+      'x-i18n-addItem': {
+        fr: 'Ajouter un portail'
+      }
+    }
+  },
   items: {
     type: 'object',
     required: ['type', 'id', 'url'],

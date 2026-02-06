@@ -9,13 +9,13 @@
 <script lang="ts" setup>
 import { useTheme } from 'vuetify/lib/composables/theme.js'
 
-const { source } = defineProps<{ source: string }>()
+const { source, color = 'primary' } = defineProps<{ source: string, color?: string }>()
 const theme = useTheme()
 
 const themedSource = computed(() => {
   return source
-    .replace(/#6C63FF/gi, theme.current.value.colors.primary) // default undraw color
-    .replace(/#68E1FD/gi, theme.current.value.colors.primary) // default manypixels color
+    .replace(/#6C63FF/gi, theme.current.value.colors[color]) // default undraw color
+    .replace(/#68E1FD/gi, theme.current.value.colors[color]) // default manypixels color
     .replace(/#FFD200/gi, theme.current.value.colors.secondary)
 })
 </script>

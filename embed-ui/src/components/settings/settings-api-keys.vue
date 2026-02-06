@@ -4,6 +4,7 @@
       v-if="!createToggle"
       color="primary"
       class="mb-3"
+      density="comfortable"
       @click="createToggle = true"
     >
       {{ t('addApiKey') }}
@@ -18,6 +19,7 @@
               v-model="newApiKey.title"
               :rules="[v => !!v || '']"
               :label="t('title')"
+              density="comfortable"
               required
             />
             <v-checkbox
@@ -60,6 +62,7 @@
               required
               :min="new Date()"
               :max="new Date(maxDate)"
+              density="comfortable"
               @update:model-value="v => newApiKey.expireAt = dayjs(v).format('YYYY-MM-DD')"
             />
           </v-form>
@@ -67,6 +70,7 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
+            density="comfortable"
             @click="createToggle = false"
           >
             {{ t('cancel') }}
@@ -75,6 +79,7 @@
             color="primary"
             variant="elevated"
             :disabled="!newApiKeyValid"
+            density="comfortable"
             @click="addApiKey"
           >
             {{ t('add') }}

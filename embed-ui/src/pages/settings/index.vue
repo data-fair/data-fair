@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container class="py-0">
+  <v-container>
     <v-row>
       <v-col>
         <!--<v-subheader>{{ t('pages.settings.description') }}</v-subheader>-->
@@ -16,11 +16,11 @@
         <p v-if="settingsAccount.type ==='organization'">
           Vous êtes <strong>{{ session.accountRole.value }}</strong> dans cette organisation.
         </p>
-        <p v-if="settingsAccount.type ==='organization' && !settingsAccount.department && departments.length">
+        <p v-if="settingsAccount.type ==='organization' && !settingsAccount.department && departments.length > 1">
           <v-select
             v-model="selectedDepartment"
             label="Département"
-            :items="[{id: null, name: 'racine de l\'organisation'}, ...departments]"
+            :items="departments"
             item-title="name"
             item-value="id"
             style="max-width: 500px;"
@@ -39,7 +39,6 @@
             <layout-section-tabs
               v-if="section.id === 'info'"
               :svg="infoSvg"
-              svg-no-margin
               :title="section.title"
             >
               <template #extension>
@@ -48,10 +47,7 @@
                 </p>
               </template>
               <template #tabs-window>
-                <v-container
-                  fluid
-                  class="py-1"
-                >
+                <v-container fluid>
                   <v-row>
                     <v-col
                       cols="12"
@@ -78,10 +74,7 @@
                 </p>
               </template>
               <template #tabs-window>
-                <v-container
-                  fluid
-                  class="py-1"
-                >
+                <v-container fluid>
                   <v-row>
                     <v-col
                       cols="12"
@@ -112,10 +105,7 @@
                 </p>
               </template>
               <template #tabs-window>
-                <v-container
-                  fluid
-                  class="py-1"
-                >
+                <v-container fluid>
                   <v-row>
                     <v-col
                       cols="12"
@@ -141,10 +131,7 @@
                 Configurez des métadonnées additionnelles pour vos jeux de données.
               </template>
               <template #tabs-window>
-                <v-container
-                  fluid
-                  class="py-1"
-                >
+                <v-container fluid>
                   <v-row>
                     <v-col
                       cols="12"
@@ -173,10 +160,19 @@
                 </p>
               </template>
               <template #tabs-window>
-                <settings-api-keys
-                  v-model="settings.apiKeys"
-                  @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
-                />
+                <v-container fluid>
+                  <v-row>
+                    <v-col
+                      cols="12"
+                      md="6"
+                    >
+                      <settings-api-keys
+                        v-model="settings.apiKeys"
+                        @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
+                      />
+                    </v-col>
+                  </v-row>
+                </v-container>
               </template>
             </layout-section-tabs>
 
@@ -193,10 +189,7 @@
                 </p>
               </template>
               <template #tabs-window>
-                <v-container
-                  fluid
-                  class="py-1"
-                >
+                <v-container fluid>
                   <v-row>
                     <v-col
                       cols="12"
@@ -260,10 +253,7 @@
                 </p>
               </template>
               <template #tabs-window>
-                <v-container
-                  fluid
-                  class="py-1"
-                >
+                <v-container fluid>
                   <v-row>
                     <v-col
                       cols="12"
@@ -283,7 +273,7 @@
             <layout-section-tabs
               v-if="section.id === 'compat'"
               svg-no-margin
-              admin
+              color="admin"
               :title="section.title"
             >
               <template #extension>
@@ -292,10 +282,7 @@
                 </p>
               </template>
               <template #tabs-window>
-                <v-container
-                  fluid
-                  class="py-1"
-                >
+                <v-container fluid>
                   <v-row>
                     <v-col>
                       <v-checkbox
@@ -421,10 +408,11 @@ const sections = computed(() => {
 
 const accountDetailsFetch = useFetch<any>(`${$sitePath}/simple-directory/api/${settingsAccount.type}s/${settingsAccount.id}`)
 const departments = computed(() => {
+  const items = [{ id: null, name: 'racine de l\'organisation' }]
   if (accountDetailsFetch.data.value?.departments) {
-    return [...accountDetailsFetch.data.value?.departments].sort((d1, d2) => d1.name.localeCompare(d2.name))
+    items.push(...[...accountDetailsFetch.data.value?.departments].sort((d1, d2) => d1.name.localeCompare(d2.name)))
   }
-  return []
+  return items
 })
 
 </script>
