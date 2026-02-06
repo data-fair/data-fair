@@ -23,6 +23,9 @@
             :items="departments"
             item-title="name"
             item-value="id"
+            variant="outlined"
+            density="comfortable"
+            class="mt-4"
             style="max-width: 500px;"
           />
         </p>
@@ -161,17 +164,10 @@
               </template>
               <template #tabs-window>
                 <v-container fluid>
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <settings-api-keys
-                        v-model="settings.apiKeys"
-                        @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
-                      />
-                    </v-col>
-                  </v-row>
+                  <settings-api-keys
+                    v-model="settings.apiKeys"
+                    @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
+                  />
                 </v-container>
               </template>
             </layout-section-tabs>
@@ -349,11 +345,11 @@ const session = useSessionAuthenticated()
 // TODO: manage authorization
 // session.accountRole === 'admin'
 
-const selectedDepartment = useStringSearchParam('dep')
+const selectedDepartment = useStringSearchParam('dep', '__root')
 watch(selectedDepartment, () => window.location.reload())
 const settingsAccount = { ...session.account.value }
 let settingsAccountId = settingsAccount.id
-if (selectedDepartment.value) {
+if (selectedDepartment.value !== '__root') {
   settingsAccount.department = selectedDepartment.value
   settingsAccountId += encodeURIComponent(':') + selectedDepartment.value
 }
@@ -408,7 +404,7 @@ const sections = computed(() => {
 
 const accountDetailsFetch = useFetch<any>(`${$sitePath}/simple-directory/api/${settingsAccount.type}s/${settingsAccount.id}`)
 const departments = computed(() => {
-  const items = [{ id: null, name: 'racine de l\'organisation' }]
+  const items = [{ id: '__root', name: 'racine de l\'organisation' }]
   if (accountDetailsFetch.data.value?.departments) {
     items.push(...[...accountDetailsFetch.data.value?.departments].sort((d1, d2) => d1.name.localeCompare(d2.name)))
   }

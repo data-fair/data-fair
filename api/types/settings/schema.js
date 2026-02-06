@@ -59,12 +59,19 @@ export default {
           'x-i18n-addItem': {
             fr: 'Ajouter un webhook'
           }
-        }
+        },
+        itemTitle: 'item.title'
       },
       items: {
         type: 'object',
         additionalProperties: false,
         required: ['title', 'events', 'target'],
+        layout: {
+          switch: [{
+            if: 'summary',
+            children: []
+          }]
+        },
         properties: {
           title: {
             type: 'string',
@@ -157,12 +164,19 @@ export default {
           'x-i18n-addItem': {
             fr: 'Ajouter une licence'
           }
-        }
+        },
+        itemTitle: 'item.title'
       },
       items: {
         type: 'object',
         additionalProperties: false,
         required: ['title', 'href'],
+        layout: {
+          switch: [{
+            if: 'summary',
+            children: []
+          }]
+        },
         properties: {
           title: {
             type: 'string',
@@ -242,7 +256,8 @@ export default {
           'x-i18n-addItem': {
             fr: 'Ajouter une thématique'
           }
-        }
+        },
+        itemTitle: 'item.title'
       },
       items: {
         $ref: 'https://github.com/data-fair/data-fair/topic'
@@ -266,11 +281,22 @@ export default {
           'x-i18n-addItem': {
             fr: 'Ajouter un concept'
           }
-        }
+        },
+        itemTitle: 'item.title'
       },
       items: {
         type: 'object',
         required: ['title'],
+        layout: {
+          title: '',
+          messages: {
+            addItem: 'Add a license',
+            'x-i18n-addItem': {
+              fr: 'Ajouter une licence'
+            }
+          },
+          itemTitle: 'item.title'
+        },
         properties: {
           id: {
             type: 'string',

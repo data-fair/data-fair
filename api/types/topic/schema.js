@@ -5,6 +5,12 @@ export default {
   type: 'object',
   required: ['title'],
   additionalProperties: false,
+  layout: {
+    switch: [{
+      if: 'summary',
+      children: []
+    }]
+  },
   properties: {
     id: {
       type: 'string',
