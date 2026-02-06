@@ -897,9 +897,9 @@ const readLines = async (req, res) => {
       return res.status(200).send(geojson)
     }
     if (query.format === 'shp') {
-      const shpZip = await outputs.geojson2shp(geojson)
+      const shpZip = await outputs.geojson2shp(geojson, req.dataset.slug)
       observe.reqStep(req, 'geojson2shp')
-      res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.shp.zip'))
+      res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.zip'))
       res.type('zip')
       return res.status(200).send(shpZip)
     }

@@ -87,6 +87,6 @@ export const results2sheet = async (req, results, bookType) => {
   return buf
 }
 
-export const geojson2shp = async (geojson) => {
-  return await geojson2shpPiscina.run(JSON.stringify(geojson))
+export const geojson2shp = async (geojson, baseName) => {
+  return geojson2shpPiscina.run({ geojson: JSON.stringify(geojson), baseName })
 }
