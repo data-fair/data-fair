@@ -45,7 +45,6 @@ declare module 'vue' {
     LayoutScrollToTop: typeof import('./../src/components/layout/layout-scroll-to-top.vue')['default']
     LayoutSectionTabs: typeof import('./../src/components/layout/layout-section-tabs.vue')['default']
     LayoutThemedSvg: typeof import('./../src/components/layout/layout-themed-svg.vue')['default']
-    LayoutWrapSvg: typeof import('./../src/components/layout/layout-wrap-svg.vue')['default']
     OwnerDepartment: typeof import('./../src/components/owner/owner-department.vue')['default']
     OwnerShort: typeof import('./../src/components/owner/owner-short.vue')['default']
     ResourceVisibility: typeof import('./../src/components/resource-visibility.vue')['default']

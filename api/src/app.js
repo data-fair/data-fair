@@ -211,6 +211,7 @@ export const run = async () => {
       '/dataset/:id/form',
       '/application/:id/config',
       '/workflow/update-dataset',
+      '/settings',
       '/settings/:type/:id/licenses',
       '/settings/:type/:id/topics',
       '/settings/:type/:id/webhooks',
