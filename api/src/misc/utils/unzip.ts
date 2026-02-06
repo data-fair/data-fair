@@ -8,6 +8,7 @@ import { type Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import unzipper from 'unzipper'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
+import resolvePath from 'resolve-path'
 
 const unzip = async (zipDirectory: CentralDirectory, targetDir: string, writeStream: (readStream: Readable, path: string) => Promise<void>) => {
   // we used to use the unzip command line tool but this patch (https://sourceforge.net/p/infozip/patches/29/)
@@ -22,7 +23,7 @@ const unzip = async (zipDirectory: CentralDirectory, targetDir: string, writeStr
       ? iconvLite.decode(file.pathBuffer, 'CP437')
       : file.path
     files.push(filePath)
-    const fullPath = path.join(targetDir, filePath)
+    const fullPath = resolvePath(targetDir, filePath)
     await writeStream(file.stream(), fullPath)
   }
   return files
