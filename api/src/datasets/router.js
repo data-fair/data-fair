@@ -884,16 +884,25 @@ const readLines = async (req, res) => {
     res.set('Link', link.toString())
   }
 
-  if (query.format === 'geojson') {
+  if (query.format === 'geojson' || query.format === 'shp') {
     const flatten = getFlatten(req.dataset, true)
     const geojson = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
     // geojson format benefits from bbox info
     geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...query })).bbox
     observe.reqStep(req, 'bboxAgg')
-    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.geojson'))
-    res.type('geojson')
-    return res.status(200).send(geojson)
+    if (query.format === 'geojson') {
+      res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.geojson'))
+      res.type('geojson')
+      return res.status(200).send(geojson)
+    }
+    if (query.format === 'shp') {
+      const shpZip = await outputs.geojson2shp(geojson, req.dataset.slug)
+      observe.reqStep(req, 'geojson2shp')
+      res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.zip'))
+      res.type('zip')
+      return res.status(200).send(shpZip)
+    }
   }
 
   if (query.format === 'wkt') {
@@ -942,7 +951,6 @@ const readLines = async (req, res) => {
   }
 
   if (query.format === 'xlsx') {
-    observe.reqStep(req, 'stringify')
     const sheet = await outputs.results2sheet(req, result.results)
     observe.reqStep(req, 'results2xlsx')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.xlsx'))

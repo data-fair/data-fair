@@ -164,6 +164,9 @@ describe('search', function () {
     assert.equal(res.headers['content-disposition'], 'attachment; filename="dataset1.ods"')
     assert.equal(res.headers['content-type'], 'application/vnd.oasis.opendocument.spreadsheet')
     assert.ok(Number(res.headers['content-length']) > 5000)
+
+    // Shapefile export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=63,44,7&format=shp`)
   })
 
   it('Filter on line existence', async function () {

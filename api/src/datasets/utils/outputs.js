@@ -11,6 +11,13 @@ export const results2sheetPiscina = new Piscina({
   maxThreads: 1
 })
 
+export const geojson2shpPiscina = new Piscina({
+  filename: path.resolve(import.meta.dirname, '../../datasets/threads/geojson2shp.ts'),
+  minThreads: 0,
+  idleTimeout: 60 * 60 * 1000,
+  maxThreads: 1
+})
+
 export const csvStringifyOptions = (dataset, query = {}, useTitle = false) => {
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
@@ -78,4 +85,8 @@ export const results2sheet = async (req, results, bookType) => {
     labels: req.__('sheets')
   }))
   return buf
+}
+
+export const geojson2shp = async (geojson, baseName) => {
+  return geojson2shpPiscina.run({ geojson: JSON.stringify(geojson), baseName })
 }
