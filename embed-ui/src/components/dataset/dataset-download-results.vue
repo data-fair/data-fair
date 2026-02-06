@@ -141,6 +141,19 @@
             {{ t('geojson') }}
           </v-list-item-title>
         </v-list-item>
+        <v-list-item
+          v-if="dataset?.bbox"
+          :href="downloadUrls.shp"
+          target="download"
+          @click="clickDownload('shp')"
+        >
+          <template #prepend>
+            <v-icon :icon="mdiMap" />
+          </template>
+          <v-list-item-title>
+            {{ t('shp') }}
+          </v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-sheet>
   </v-menu>
@@ -155,6 +168,7 @@ fr:
   xlsx: format XLSX
   ods: format ODS
   geojson: format GeoJSON
+  shp: format Shapefile
   cancel: Annuler
 en:
   downloadTitle: Download results
@@ -164,6 +178,7 @@ en:
   xlsx: XLSX format
   ods: ODS format
   geojson: GeoJSON format
+  shp: Shapefile format
   cancel: Cancel
 </i18n>
 
@@ -204,7 +219,8 @@ const downloadUrls = computed(() => ({
   csv: withQuery(baseUrl, { ...baseParams.value, format: 'csv', sep: csvSep.value }),
   xlsx: withQuery(baseUrl, { ...baseParams.value, format: 'xlsx' }),
   ods: withQuery(baseUrl, { ...baseParams.value, format: 'ods' }),
-  geojson: withQuery(baseUrl, { ...baseParams.value, format: 'geojson' })
+  geojson: withQuery(baseUrl, { ...baseParams.value, format: 'geojson' }),
+  shp: withQuery(baseUrl, { ...baseParams.value, format: 'shp' })
 }))
 
 let fileStream: WritableStream | null = null
