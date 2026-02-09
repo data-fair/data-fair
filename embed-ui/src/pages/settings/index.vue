@@ -41,6 +41,7 @@
           >
             <layout-section-tabs
               v-if="section.id === 'info'"
+              :id="section.id"
               :svg="infoSvg"
               :title="section.title"
             >
@@ -68,6 +69,7 @@
 
             <layout-section-tabs
               v-if="section.id === 'licences'"
+              :id="section.id"
               :svg="qualitySvg"
               :title="section.title"
             >
@@ -95,6 +97,7 @@
 
             <layout-section-tabs
               v-if="section.id === 'topics'"
+              :id="section.id"
               :svg="flagsSvg"
               svg-no-margin
               :title="section.title"
@@ -126,6 +129,7 @@
 
             <layout-section-tabs
               v-if="section.id === 'datasetsMetadata'"
+              :id="section.id"
               :svg="flagsSvg"
               svg-no-margin
               :title="section.title"
@@ -152,6 +156,7 @@
 
             <layout-section-tabs
               v-if="section.id === 'api-keys'"
+              :id="section.id"
               :svg="securitysSvg"
               svg-no-margin
               :title="section.title"
@@ -174,6 +179,7 @@
 
             <layout-section-tabs
               v-if="section.id === 'webhooks'"
+              :id="section.id"
               :svg="wwwSvg"
               svg-no-margin
               :title="section.title"
@@ -203,6 +209,7 @@
 
             <layout-section-tabs
               v-if="section.id === 'privateVocabulary'"
+              :id="section.id"
               :svg="checklistSvg"
               svg-no-margin
               :title="section.title"
@@ -239,6 +246,7 @@
 
             <layout-section-tabs
               v-if="section.id === 'publicationSites'"
+              :id="section.id"
               :svg="uiSvg"
               svg-no-margin
               :title="section.title"
@@ -269,6 +277,7 @@
 
             <layout-section-tabs
               v-if="section.id === 'compat'"
+              :id="section.id"
               svg-no-margin
               color="admin"
               :title="section.title"
@@ -297,7 +306,7 @@
       </v-col>
     </v-row>
 
-    <df-navigation-right>
+    <df-navigation-right v-if="display.lgAndUp.value">
       <layout-toc :sections="sections" />
     </df-navigation-right>
   </v-container>
@@ -331,6 +340,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import qualitySvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import flagsSvg from '~/assets/svg/Crossed flags_Two Color.svg?raw'
 import securitysSvg from '~/assets/svg/Security_Two Color.svg?raw'
@@ -338,10 +348,12 @@ import wwwSvg from '~/assets/svg/World wide web_Two Color.svg?raw'
 import uiSvg from '~/assets/svg/User Interface _Two Color.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import infoSvg from '~/assets/svg/Sending emails_Monochromatic.svg?raw'
+import { useDisplay } from 'vuetify/lib/composables/display.mjs'
 
 const { t } = useI18n()
 useHead({ title: t('pageTitle') })
 const session = useSessionAuthenticated()
+const display = useDisplay()
 
 // TODO: manage authorization
 // session.accountRole === 'admin'

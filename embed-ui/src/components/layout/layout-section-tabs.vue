@@ -1,7 +1,9 @@
 <template>
-  <div class="mt-3 mb-10">
+  <div
+    :id="id"
+    class="mt-3 mb-10"
+  >
     <div
-
       style="padding-top: 2px; padding-left: 2px; padding-bottom: 2px;"
       :style="`background: linear-gradient(172deg, ${theme.current.value.colors[color]} 0%, ${theme.current.value.colors.background} 55%);`"
     >
@@ -71,6 +73,7 @@ import { useTheme } from 'vuetify/lib/composables/theme.js'
 type TabInfo = { key: string, title: string, icon?: string }
 
 const { title, tabs, svg, color = 'primary' } = defineProps<{
+  id: string,
   title: string,
   tabs?: TabInfo[],
   svg?: string,
