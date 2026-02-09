@@ -218,6 +218,7 @@
                     type="warning"
                     variant="outlined"
                     density="compact"
+                    class="mb-2"
                   >
                     Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
                   </v-alert>
