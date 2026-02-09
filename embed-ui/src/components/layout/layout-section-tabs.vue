@@ -6,10 +6,10 @@
     <div
       style="padding-top: 2px; padding-left: 2px; padding-bottom: 2px;"
       :style="`background: linear-gradient(172deg, ${theme.current.value.colors[color]} 0%, ${theme.current.value.colors.background} 55%);`"
+      class="rounded"
     >
       <v-card
         :border="0"
-        :rounded="0"
         :style="`background: linear-gradient(172deg, ${theme.current.value.colors.surface} 0%, ${theme.current.value.colors.surface} 30%, ${theme.current.value.colors.background} 60%);`"
       >
         <div

@@ -130,7 +130,7 @@
             <layout-section-tabs
               v-if="section.id === 'datasetsMetadata'"
               :id="section.id"
-              :svg="flagsSvg"
+              :svg="checklist2Svg"
               svg-no-margin
               :title="section.title"
             >
@@ -347,6 +347,7 @@ import securitysSvg from '~/assets/svg/Security_Two Color.svg?raw'
 import wwwSvg from '~/assets/svg/World wide web_Two Color.svg?raw'
 import uiSvg from '~/assets/svg/User Interface _Two Color.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
+import checklist2Svg from '~/assets/svg/Checklist_Two Color2.svg?raw'
 import infoSvg from '~/assets/svg/Sending emails_Monochromatic.svg?raw'
 import { useDisplay } from 'vuetify/lib/composables/display.mjs'
 
