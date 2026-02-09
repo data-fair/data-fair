@@ -17,6 +17,7 @@ const themedSource = computed(() => {
     .replace(/#6C63FF/gi, theme.current.value.colors[color]) // default undraw color
     .replace(/#68E1FD/gi, theme.current.value.colors[color]) // default manypixels color
     .replace(/#FFD200/gi, theme.current.value.colors.secondary)
+    .replace(/style="isolation: isolate;"/gi, 'class="isolated-svg"')
 })
 </script>
 
@@ -28,4 +29,5 @@ div.df-themed-svg svg {
   height: inherit;
   width: inherit;
 }
+.isolated-svg { isolation: isolate; }
 </style>
