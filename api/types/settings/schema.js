@@ -277,7 +277,7 @@ export default {
       layout: {
         title: '',
         messages: {
-          addItem: 'Add a topic',
+          addItem: 'Add a concept',
           'x-i18n-addItem': {
             fr: 'Ajouter un concept'
           }
@@ -288,14 +288,10 @@ export default {
         type: 'object',
         required: ['title'],
         layout: {
-          title: '',
-          messages: {
-            addItem: 'Add a license',
-            'x-i18n-addItem': {
-              fr: 'Ajouter une licence'
-            }
-          },
-          itemTitle: 'item.title'
+          switch: [{
+            if: 'summary',
+            children: []
+          }]
         },
         properties: {
           id: {
