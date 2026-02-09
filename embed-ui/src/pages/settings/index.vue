@@ -16,7 +16,7 @@
         <p v-if="settingsAccount.type ==='organization'">
           Vous êtes <strong>{{ session.accountRole.value }}</strong> dans cette organisation.
         </p>
-        <p v-if="settingsAccount.type ==='organization' && !settingsAccount.department && departments.length > 0">
+        <p v-if="settingsAccount.type ==='organization' && departments.length > 1">
           <v-select
             v-model="selectedDepartment"
             label="Département"
@@ -345,19 +345,28 @@ const session = useSessionAuthenticated()
 // TODO: manage authorization
 // session.accountRole === 'admin'
 
-const selectedDepartment = useStringSearchParam('dep', '__root')
-watch(selectedDepartment, () => window.location.reload())
-const settingsAccount = { ...session.account.value }
-let settingsAccountId = settingsAccount.id
-if (selectedDepartment.value !== '__root') {
-  settingsAccount.department = selectedDepartment.value
-  settingsAccountId += encodeURIComponent(':') + selectedDepartment.value
-}
-const { patch, settings } = useSettingsStore(settingsAccount.type, settingsAccountId)
+const settingsAccount = ref({ ...session.account.value })
+
+const selectedDepartment = ref('__root')
+watch(selectedDepartment, () => {
+  if (selectedDepartment.value === '__root') {
+    delete settingsAccount.value.department
+  } else {
+    settingsAccount.value.department = selectedDepartment.value
+  }
+})
+const settingsAccountId = computed(() => {
+  let settingsAccountId = settingsAccount.value.id
+  if (settingsAccount.value.type === 'organization' && settingsAccount.value.department) {
+    settingsAccountId += encodeURIComponent(':') + settingsAccount.value.department
+  }
+  return settingsAccountId
+})
+const { patch, settings } = useSettingsStore(settingsAccount.value.type, settingsAccountId)
 
 const sections = computed(() => {
   const sections = []
-  if (!settingsAccount.department) {
+  if (!settingsAccount.value.department) {
     sections.push({
       id: 'info',
       title: t('info')
@@ -402,8 +411,11 @@ const sections = computed(() => {
   return sections
 })
 
-const accountDetailsFetch = useFetch<any>(`${$sitePath}/simple-directory/api/${settingsAccount.type}s/${settingsAccount.id}`)
+const accountDetailsFetch = useFetch<any>(`${$sitePath}/simple-directory/api/${session.account.value.type}s/${session.account.value.id}`)
 const departments = computed(() => {
+  if (session.account.value.type !== 'organization' || session.account.value.department) {
+    return []
+  }
   const items = [{ id: '__root', name: 'racine de l\'organisation' }]
   if (accountDetailsFetch.data.value?.departments) {
     items.push(...[...accountDetailsFetch.data.value?.departments].sort((d1, d2) => d1.name.localeCompare(d2.name)))
