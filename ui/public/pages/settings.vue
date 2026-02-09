@@ -11,15 +11,15 @@
 
 <script>
 import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
-import { mapActions } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 export default {
   async beforeRouteLeave (to, from, next) {
-    await this.$store.dispatch('fetchLicenses', this.settingsAccount)
-    await this.$store.dispatch('fetchTopics', this.settingsAccount)
-    await this.$store.dispatch('fetchDatasetsMetadata', this.settingsAccount)
-    await this.$store.dispatch('fetchDatasetsMetadata', this.settingsAccount)
-    await this.$store.dispatch('fetchPublicationSites', this.settingsAccount)
+    await this.$store.dispatch('fetchLicenses', this.activeAccount)
+    await this.$store.dispatch('fetchTopics', this.activeAccount)
+    await this.$store.dispatch('fetchDatasetsMetadata', this.activeAccount)
+    await this.$store.dispatch('fetchDatasetsMetadata', this.activeAccount)
+    await this.$store.dispatch('fetchPublicationSites', this.activeAccount)
     await this.$store.dispatch('fetchVocabulary', true)
     next()
   },
@@ -27,7 +27,8 @@ export default {
   computed: {
     stateChangeAdapter () {
       return createStateChangeAdapter(this.$router)
-    }
+    },
+    ...mapGetters('session', ['activeAccount']),
   },
   methods: {
     ...mapActions(['emitFrameNotif'])
