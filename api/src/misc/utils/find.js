@@ -51,7 +51,7 @@ export const query = (reqQuery, locale, sessionState, resourceType, fieldsMap, g
       or.push({ [fieldsMap[name]]: { $exists: false } })
       or.push({ [fieldsMap[name]]: { $size: 0 } })
     }
-    query.$and.push({ $or: or })
+    if (or.length) query.$and.push({ $or: or })
   }
 
   if (globalMode) {
@@ -89,7 +89,8 @@ export const query = (reqQuery, locale, sessionState, resourceType, fieldsMap, g
       query.$and.push({ $or: permissions.filterCan(sessionState, resourceType, reqQuery.can) })
     }
 
-    if (visibility.filters(reqQuery)) {
+    const visibilityFilters = visibility.filters(reqQuery)
+    if (visibilityFilters?.length) {
       query.$and.push({ $or: visibility.filters(reqQuery) })
     }
     if (reqQuery.owner) {
@@ -342,8 +343,9 @@ export const facetsQuery = (reqQuery, sessionState, resourceType, facetFields = 
   if (reqQuery.owner && !fields.includes('owner')) {
     pipeline.push({ $match: { $and: ownerFilters(reqQuery) } })
   }
-  if (!fields.includes('visibility') && visibility.filters(reqQuery)) {
-    pipeline.push({ $match: { $or: visibility.filters(reqQuery) } })
+  if (!fields.includes('visibility')) {
+    const visibilityFilters = visibility.filters(reqQuery)
+    if (visibilityFilters?.length) pipeline.push({ $match: { $or: visibility.filters(reqQuery) } })
   }
 
   if (fields) {
@@ -360,8 +362,9 @@ export const facetsQuery = (reqQuery, sessionState, resourceType, facetFields = 
       if (reqQuery.owner && fields.includes('owner') && f !== 'owner') {
         facet.push({ $match: { $and: ownerFilters(reqQuery) } })
       }
-      if (fields.includes('visibility') && f !== 'visibility' && visibility.filters(reqQuery)) {
-        facet.push({ $match: { $or: visibility.filters(reqQuery) } })
+      if (fields.includes('visibility') && f !== 'visibility') {
+        const visibilityFilters = visibility.filters(reqQuery)
+        if (visibilityFilters?.length) facet.push({ $match: { $or: visibility.filters(reqQuery) } })
       }
 
       // visibility is a special case.. we do a match and count
@@ -513,7 +516,8 @@ export const sumsQuery = (reqQuery, sessionState, resourceType, sumFields = {}, 
   if (reqQuery.owner) {
     pipeline.push({ $match: { $and: ownerFilters(reqQuery) } })
   }
-  if (visibility.filters(reqQuery)) {
+  const visibilityFilters = visibility.filters(reqQuery)
+  if (visibilityFilters?.length) {
     pipeline.push({ $match: { $or: visibility.filters(reqQuery) } })
   }
   /** @type {any} */
