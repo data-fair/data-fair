@@ -209,7 +209,7 @@ const iterCsv = async function * (worksheet: WorkSheet, normalizeOptions: Normal
       for (let colNb = 0; colNb < row.length; colNb++) {
         row[colNb] = mapCellValue(row[colNb])
         // @ts-ignore
-        if (hasSimpleDate[colNb] && row[colNb]) row[colNb] = row[colNb].replace('T00:00:00.000Z', '')
+        if (hasSimpleDate[colNb] && typeof row[colNb] === 'string') row[colNb] = row[colNb].replace('T00:00:00.000Z', '')
       }
     }
     row.splice(0, ignoredStartingCols)

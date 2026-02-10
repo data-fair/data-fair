@@ -91,7 +91,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
       if (type === 'virtual') typeFilters.push({ isVirtual: true })
       if (type === 'metaOnly') typeFilters.push({ isMetaOnly: true })
     }
-    extraFilters.push({ $or: typeFilters })
+    if (typeFilters.length) extraFilters.push({ $or: typeFilters })
   }
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
