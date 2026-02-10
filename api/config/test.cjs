@@ -18,6 +18,7 @@ module.exports = {
   privateCaptureUrl: 'http://localhost:8087',
   dataDir: '../data/test',
   tmpDir: '../data/test-tmp',
+  workerTmpDir: '../data/test-worker-tmp',
   brand: {
     embed: '<div>application embed</div>'
   },

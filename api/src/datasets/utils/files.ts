@@ -5,13 +5,16 @@ import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { type Account } from '@data-fair/lib-express'
 import debugModule from 'debug'
 import filesStorage from '#files-storage'
+import { isMainThread } from 'node:worker_threads'
 
 const debugCleanTmp = debugModule('clean-tmp')
 debugCleanTmp.enabled = true
 
 export const dataDir = path.resolve(config.dataDir)
 
-export const tmpDir = config.tmpDir ? path.resolve(config.tmpDir) : path.join(dataDir, 'tmp')
+// this distinction is to separate tmp directories when testing to simulate a multi-process environment
+const relTmpDir = isMainThread ? config.tmpDir : (config.workerTmpDir ?? config.tmpDir)
+export const tmpDir = relTmpDir ? path.resolve(relTmpDir) : path.join(dataDir, 'tmp')
 
 export const ownerDir = (owner: Account) => {
   return resolvePath(dataDir, path.join(owner.type, owner.id))
