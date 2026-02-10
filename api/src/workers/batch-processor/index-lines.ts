@@ -48,9 +48,9 @@ export default async function (dataset: DatasetInternal) {
     for (const a of newRestAttachments) {
       let newAttachments
       if (a.startsWith('drop:')) {
-        newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, join(dataDir, 'tmp', a.replace('drop:', '')))
+        newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, join(dataDir, 'shared-tmp', a.replace('drop:', '')))
       } else {
-        newAttachments = await attachmentsUtils.addAttachments(dataset, join(dataDir, 'tmp', a))
+        newAttachments = await attachmentsUtils.addAttachments(dataset, join(dataDir, 'shared-tmp', a))
       }
       const bulkOp = restDatasetsUtils.collection(dataset).initializeUnorderedBulkOp()
       for (const a of newAttachments) {

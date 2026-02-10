@@ -14,7 +14,7 @@ export const dataDir = path.resolve(config.dataDir)
 
 // this distinction is to separate tmp directories when testing to simulate a multi-process environment
 const relTmpDir = isMainThread ? config.tmpDir : (config.workerTmpDir ?? config.tmpDir)
-export const tmpDir = relTmpDir ? path.resolve(relTmpDir) : path.join(dataDir, 'tmp')
+export const tmpDir = relTmpDir ? path.resolve(relTmpDir) : path.join(dataDir, 'shared-tmp')
 
 export const ownerDir = (owner: Account) => {
   return resolvePath(dataDir, path.join(owner.type, owner.id))
@@ -179,12 +179,12 @@ export const cleanTmp = async () => {
   }
 
   // there is also a "tmp" directory in the shared files storage
-  const files = await filesStorage.lsrWithStats(path.join(dataDir, 'tmp'))
+  const files = await filesStorage.lsrWithStats(path.join(dataDir, 'shared-tmp'))
   for (const file of files) {
     if (file.lastModified.getTime() < Date.now() - delay) {
       debugCleanTmp(`remove old file ${file.path} - ${file.lastModified.toISOString()}`)
       try {
-        await fs.remove(path.join(dataDir, 'tmp', file.path))
+        await fs.remove(path.join(dataDir, 'shared-tmp', file.path))
       } catch (e) {
         // ignore error if file has been deleted in the meantime
       }

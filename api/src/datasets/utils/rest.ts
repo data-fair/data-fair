@@ -119,7 +119,7 @@ const tmpSharedStorage = {
     try {
       // attachments are stored in the shared files storage as they will be extracted from
       if (file.fieldname === 'attachments') {
-        const destination = path.join(dataDir, 'tmp')
+        const destination = path.join(dataDir, 'shared-tmp')
         const filename = file.originalname
         const finalPath = path.join(destination, filename)
         await filesStorage.writeStream(file.stream, finalPath)
