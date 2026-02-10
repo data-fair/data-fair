@@ -107,6 +107,7 @@ declare global {
   const useCssVars: typeof import('vue')['useCssVars']
   const useDatasetStore: typeof import('../src/composables/dataset-store')['useDatasetStore']
   const useDatasetWatch: typeof import('../src/composables/dataset-watch')['useDatasetWatch']
+  const useEditFetch: typeof import('@data-fair/lib-vue/edit-fetch.js')['useEditFetch']
   const useFetch: typeof import('@data-fair/lib-vue/fetch.js')['useFetch']
   const useFilters: typeof import('../src/composables/dataset-filters')['useFilters']
   const useFrameContent: typeof import('../src/composables/frame-content')['useFrameContent']
@@ -256,6 +257,7 @@ declare module 'vue' {
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
     readonly useDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['useDatasetStore']>
     readonly useDatasetWatch: UnwrapRef<typeof import('../src/composables/dataset-watch')['useDatasetWatch']>
+    readonly useEditFetch: UnwrapRef<typeof import('@data-fair/lib-vue/edit-fetch.js')['useEditFetch']>
     readonly useFetch: UnwrapRef<typeof import('@data-fair/lib-vue/fetch.js')['useFetch']>
     readonly useFilters: UnwrapRef<typeof import('../src/composables/dataset-filters')['useFilters']>
     readonly useHead: UnwrapRef<typeof import('@unhead/vue')['useHead']>

@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@data-fair/frame": "^0.14.0",
-    "@data-fair/lib-vue": "^1.21.1",
+    "@data-fair/lib-vue": "^1.25.3",
     "@data-fair/lib-vuetify": "^1.13.1",
     "@intlify/unplugin-vue-i18n": "^6.0.5",
     "@koumoul/vjsf": "^3.17.1",

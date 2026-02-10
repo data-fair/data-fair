@@ -29,7 +29,7 @@ export default {
       type: 'string',
       description: 'Detailed description of the configuration for an remote service'
     },
-    apiDoc: { type: 'object' },
+    apiDoc: { type: 'object', tsType: 'any' },
     url: {
       type: 'string',
       description: 'The url to fetch the apiDoc. Can be used for refresh purpose'

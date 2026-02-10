@@ -22,7 +22,7 @@
                     fluid
                     class="pb-0"
                   >
-                    <remote-service-info />
+                    <remote-service-info v-model="remoteServiceFetch.data.value" />
                   </v-container>
                 </v-tabs-window-item>
 
@@ -130,6 +130,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import type { RemoteService } from '#api/types'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiInformation, mdiMerge, mdiPencil, mdiPictureInPictureBottomRightOutline, mdiSecurity } from '@mdi/js'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
@@ -139,7 +140,7 @@ import setBreadcrumbs from '~/utils/breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/remote-service/[id]/'>()
-const remoteServiceFetch = useFetch(`${$apiPath}/remote-services/${route.params.id}`)
+const remoteServiceFetch = useEditFetch<RemoteService>(`${$apiPath}/remote-services/${route.params.id}`)
 
 watch(remoteServiceFetch.data, (reuse) => {
   if (!reuse) return

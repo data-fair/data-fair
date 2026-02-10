@@ -49,6 +49,7 @@ declare module 'vue' {
     OwnerDepartment: typeof import('./../src/components/owner/owner-department.vue')['default']
     OwnerShort: typeof import('./../src/components/owner/owner-short.vue')['default']
     RemoteServiceCard: typeof import('./../src/components/remote-service/remote-service-card.vue')['default']
+    RemoteServiceInfo: typeof import('./../src/components/remote-service/remote-service-info.vue')['default']
     ResourceVisibility: typeof import('./../src/components/resource-visibility.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
