@@ -47,7 +47,8 @@
       <markdown-editor
         v-model="remoteService.description"
         :label="t('description')"
-        :easymde-config="{minHeight: '150px'}"
+        :easy-mde-options="easyMdeOptions"
+        :locale="locale"
       />
     </v-col>
   </v-row>
@@ -67,10 +68,13 @@ en:
 <script lang="ts" setup>
 import type { RemoteService } from '#api/types'
 import { mdiEmail, mdiHome, mdiInformationVariant, mdiLabel } from '@mdi/js'
+import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 
 const remoteService = defineModel<RemoteService>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+const easyMdeOptions = { minHeight: '150px' }
 </script>
 
 <style lang="css">

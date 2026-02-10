@@ -1,5 +1,5 @@
 <template>
-  <v-container v-if="remoteServiceFetch.data.value">
+  <v-container v-if="remoteServiceEditFetch.data.value">
     <v-row class="remoteService">
       <v-col>
         <template
@@ -14,6 +14,7 @@
             svg-no-margin
             :title="section.title"
             :tabs="section.tabs"
+            :color="section.color"
           >
             <template #content="{tab}">
               <v-tabs-window :model-value="tab">
@@ -22,7 +23,7 @@
                     fluid
                     class="pb-0"
                   >
-                    <remote-service-info v-model="remoteServiceFetch.data.value" />
+                    <remote-service-info v-model="remoteServiceEditFetch.data.value" />
                   </v-container>
                 </v-tabs-window-item>
 
@@ -45,6 +46,7 @@
             svg-no-margin
             :title="section.title"
             :tabs="section.tabs"
+            :color="section.color"
           >
             <template #content="{tab}">
               <v-tabs-window :model-value="tab">
@@ -68,6 +70,7 @@
             :min-height="200"
             :title="section.title"
             :tabs="section.tabs"
+            :color="section.color"
           >
             <template #content="{tab}">
               <v-container fluid>
@@ -96,6 +99,18 @@
       </v-col>
     </v-row>
     <df-navigation-right>
+      <v-list>
+        <v-list-item
+          v-if="remoteServiceEditFetch.hasDiff.value"
+        >
+          <v-btn
+            width="100%"
+            color="accent"
+          >
+            enregistrer
+          </v-btn>
+        </v-list-item>
+      </v-list>
       <remote-service-actions />
       <layout-toc :sections="sections" />
     </df-navigation-right>
@@ -115,6 +130,7 @@ fr:
   configuration: Configuration
   share: Partage
   virtualDatasets: Jeux virtuels
+  save: Enregistrer
 en:
   remoteServices: Interoperable services
   info: Informations
@@ -127,6 +143,7 @@ en:
   configuration: Configuration
   share: Share
   virtualDatasets: Virtual datasets
+  save: Save
 </i18n>
 
 <script lang="ts" setup>
@@ -140,20 +157,32 @@ import setBreadcrumbs from '~/utils/breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/remote-service/[id]/'>()
-const remoteServiceFetch = useEditFetch<RemoteService>(`${$apiPath}/remote-services/${route.params.id}`)
+const remoteServiceEditFetch = useEditFetch<RemoteService>(`${$apiPath}/remote-services/${route.params.id}`)
 
-watch(remoteServiceFetch.data, (reuse) => {
-  if (!reuse) return
+watch(remoteServiceEditFetch.data, (remoteService) => {
+  if (!remoteService) return
   setBreadcrumbs([
-    { text: t('remoteServices'), to: '/remote-services' }
+    { text: t('remoteServices'), to: '/remote-services' },
+    { text: remoteService.title, to: '/remote-services/' + remoteService.id }
   ])
 }, { immediate: true })
 
-const sections = [
-  { title: t('metadata'), id: 'metadata', tabs: [{ key: 'info', title: t('info'), icon: mdiInformation }, { key: 'extensions', title: t('extensions'), icon: mdiMerge }] },
-  { title: t('configuration'), id: 'configuration', tabs: [{ key: 'params', title: t('params'), icon: mdiPencil }] },
-  { title: t('share'), id: 'share', tabs: [{ key: 'permissions', title: t('visibility'), icon: mdiSecurity }, { key: 'virtual-datasets', title: t('virtualDatasets'), icon: mdiPictureInPictureBottomRightOutline }] }
-]
+const infoHasDiff = computed(() => remoteServiceEditFetch.data.value?.title !== remoteServiceEditFetch.serverData.value?.title || remoteServiceEditFetch.data.value?.description !== remoteServiceEditFetch.serverData.value?.description)
+
+const sections = computedDeepDiff(() => {
+  return [
+    {
+      title: t('metadata'),
+      id: 'metadata',
+      color: infoHasDiff.value ? 'accent' : undefined,
+      tabs: [
+        { key: 'info', title: t('info'), icon: mdiInformation, appendIcon: infoHasDiff.value ? mdiPencil : undefined, color: infoHasDiff.value ? 'accent' : undefined },
+        { key: 'extensions', title: t('extensions'), icon: mdiMerge }]
+    },
+    { title: t('configuration'), id: 'configuration', tabs: [{ key: 'params', title: t('params'), icon: mdiPencil }] },
+    { title: t('share'), id: 'share', tabs: [{ key: 'permissions', title: t('visibility'), icon: mdiSecurity }, { key: 'virtual-datasets', title: t('virtualDatasets'), icon: mdiPictureInPictureBottomRightOutline }] }
+  ]
+})
 
 </script>
 

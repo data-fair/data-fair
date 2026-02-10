@@ -45,6 +45,9 @@
                       v-for="tabInfo in tabs"
                       :key="tabInfo.key"
                       :value="tabInfo.key"
+                      :append-icon="tabInfo.appendIcon"
+                      :base-color="tabInfo.color"
+                      :color="tabInfo.color"
                     >
                       <v-icon
                         v-if="tabInfo.icon"
@@ -70,7 +73,7 @@
 import { useDisplay } from 'vuetify/lib/composables/display.js'
 import { useTheme } from 'vuetify/lib/composables/theme.js'
 
-type TabInfo = { key: string, title: string, icon?: string }
+type TabInfo = { key: string, title: string, icon?: string, appendIcon?: string, color?: string }
 
 const { title, tabs, svg, color = 'primary' } = defineProps<{
   id: string,

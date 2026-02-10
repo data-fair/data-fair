@@ -4,7 +4,7 @@
     v-scroll="onScroll"
     density="compact"
     color="primary"
-    class="py-0 pr-2"
+    class="py-0"
   >
     <v-list-subheader>{{ t('content') }}</v-list-subheader>
 
