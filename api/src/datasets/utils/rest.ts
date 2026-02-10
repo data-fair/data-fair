@@ -25,7 +25,7 @@ import * as extensionsUtils from './extensions.ts'
 import * as findUtils from '../../misc/utils/find.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import { transformFileStreams, formatLine } from './data-streams.js'
-import { attachmentPath, lsAttachments, tmpDir } from './files.ts'
+import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.js'
 import indexStream from '../es/index-stream.js'
@@ -40,6 +40,8 @@ import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
 import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
+import { pipeline } from 'node:stream/promises'
+import { isInFilesStorage } from '../../files-storage/utils.ts'
 
 type Operation = {
   _id: string,
@@ -111,8 +113,48 @@ export const fixFormBody: RequestHandler = (req, res, next) => {
   next()
 }
 
+// store tmp files but in the shared files storage, not tmp directory because they will be accessed by workers later on
+const tmpSharedStorage = {
+  async _handleFile (req: any, file: any, cb: (err?: any, file?: any) => void) {
+    try {
+      // attachments are stored in the shared files storage as they will be extracted from
+      if (file.fieldname === 'attachments') {
+        const destination = path.join(dataDir, 'shared-tmp')
+        const filename = file.originalname
+        const finalPath = path.join(destination, filename)
+        await filesStorage.writeStream(file.stream, finalPath)
+        const stats = await filesStorage.fileStats(finalPath)
+        cb(null, { destination, filename, path: finalPath, size: stats.size })
+      } else {
+        const destination = tmpDir
+        const filename = file.originalname
+        const finalPath = path.join(destination, filename)
+        await pipeline(file.stream, fs.createWriteStream(finalPath))
+        const stats = await fs.stat(finalPath)
+        cb(null, { destination, filename, path: finalPath, size: stats.size })
+      }
+    } catch (err) {
+      cb(err)
+    }
+  },
+
+  async _removeFile  (req: any, file: any, cb: (err?: any) => void) {
+    try {
+      const path = file.path
+      delete file.destination
+      delete file.filename
+      delete file.path
+      if (isInFilesStorage(path)) await filesStorage.removeFile(path)
+      else await fs.remove(path)
+      cb()
+    } catch (err) {
+      cb(err)
+    }
+  }
+}
+
 export const uploadBulk = multer({
-  storage: multer.diskStorage({ destination, filename })
+  storage: tmpSharedStorage
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
 export const collectionName = (dataset: RestDataset) => 'dataset-data-' + dataset.id

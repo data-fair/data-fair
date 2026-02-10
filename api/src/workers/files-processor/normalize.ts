@@ -43,6 +43,7 @@ export default async function (dataset: FileDataset) {
   const debug = debugLib(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
+  await fs.ensureDir(mainTmpDir)
   const tmpDir = (await tmp.dir({ tmpdir: mainTmpDir, unsafeCleanup: true, prefix: 'normalizer-' })).path
 
   try {
