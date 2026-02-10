@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as workers from '../api/src/workers/index.ts'
+import config from 'config'
 
 describe('search', function () {
   it('Get lines in dataset', async function () {
@@ -166,7 +167,11 @@ describe('search', function () {
     assert.ok(Number(res.headers['content-length']) > 5000)
 
     // Shapefile export
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=63,44,7&format=shp`)
+    if (config.ogr2ogr.skip) {
+      return console.log('Skip ogr2ogr test in this environment')
+    } else {
+      res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=63,44,7&format=shp`)
+    }
   })
 
   it('Filter on line existence', async function () {
