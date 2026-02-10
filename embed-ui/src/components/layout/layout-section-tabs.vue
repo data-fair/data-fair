@@ -41,17 +41,16 @@
                     show-arrows
                     :color="color"
                   >
-                    <slot name="tabs">
-                      <v-tab
-                        v-for="tabInfo in tabs"
-                        :key="tabInfo.key"
-                      >
-                        <v-icon
-                          v-if="tabInfo.icon"
-                          :icon="tabInfo.icon"
-                        />&nbsp;&nbsp;{{ tabInfo.title }}
-                      </v-tab>
-                    </slot>
+                    <v-tab
+                      v-for="tabInfo in tabs"
+                      :key="tabInfo.key"
+                      :value="tabInfo.key"
+                    >
+                      <v-icon
+                        v-if="tabInfo.icon"
+                        :icon="tabInfo.icon"
+                      />&nbsp;&nbsp;{{ tabInfo.title }}
+                    </v-tab>
                   </v-tabs>
                 </slot>
               </template>
@@ -60,9 +59,10 @@
         </div>
       </v-card>
     </div>
-    <v-tabs-window v-model="tab">
-      <slot name="tabs-window" />
-    </v-tabs-window>
+    <slot
+      name="content"
+      :tab="tab"
+    />
   </div>
 </template>
 

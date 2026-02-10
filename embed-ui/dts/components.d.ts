@@ -48,6 +48,7 @@ declare module 'vue' {
     LayoutToc: typeof import('./../src/components/layout/layout-toc.vue')['default']
     OwnerDepartment: typeof import('./../src/components/owner/owner-department.vue')['default']
     OwnerShort: typeof import('./../src/components/owner/owner-short.vue')['default']
+    RemoteServiceCard: typeof import('./../src/components/remote-service/remote-service-card.vue')['default']
     ResourceVisibility: typeof import('./../src/components/resource-visibility.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
@@ -63,6 +64,7 @@ declare module 'vue' {
     StorageDetails: typeof import('./../src/components/storage/storage-details.vue')['default']
     StorageTreemap: typeof import('./../src/components/storage/storage-treemap.vue')['default']
     TutorialAlert: typeof import('./../src/components/tutorial/tutorial-alert.vue')['default']
+    Visibility: typeof import('./../src/components/visibility.vue')['default']
     WorkflowUpdateDataset: typeof import('./../src/components/workflow/workflow-update-dataset.vue')['default']
   }
 }
