@@ -177,4 +177,17 @@ export const cleanTmp = async () => {
       }
     }
   }
+
+  // there is also a "tmp" directory in the shared files storage
+  const files = await filesStorage.lsrWithStats(path.join(dataDir, 'tmp'))
+  for (const file of files) {
+    if (file.lastModified.getTime() < Date.now() - delay) {
+      debugCleanTmp(`remove old file ${file.path} - ${file.lastModified.toISOString()}`)
+      try {
+        await fs.remove(path.join(dataDir, 'tmp', file.path))
+      } catch (e) {
+        // ignore error if file has been deleted in the meantime
+      }
+    }
+  }
 }
