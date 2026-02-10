@@ -14,7 +14,7 @@ export const dataDir = path.resolve(config.dataDir)
 
 // this distinction is to separate tmp directories when testing to simulate a multi-process environment
 const relTmpDir = isMainThread ? config.tmpDir : (config.workerTmpDir ?? config.tmpDir)
-export const tmpDir = relTmpDir ? path.resolve(relTmpDir) : path.join(dataDir, 'shared-tmp')
+export const tmpDir = relTmpDir ? path.resolve(relTmpDir) : path.join(dataDir, 'tmp')
 
 export const ownerDir = (owner: Account) => {
   return resolvePath(dataDir, path.join(owner.type, owner.id))
