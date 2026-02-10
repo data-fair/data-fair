@@ -47,17 +47,22 @@ export default async function (dataset: DatasetInternal) {
   if (isRestDataset(dataset) && attachmentsProperty && newRestAttachments?.length) {
     for (const a of newRestAttachments) {
       let newAttachments
-      if (a.startsWith('drop:')) {
-        newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, join(dataDir, 'shared-tmp', a.replace('drop:', '')))
+      const filePath = join(dataDir, 'shared-tmp', a.startsWith('drop:') ? a.replace('drop:', '') : a)
+      if (!await filesStorage.pathExists(filePath)) {
+        console.warn(`newRestAttachments of dataset ${dataset.id} references missing attachments file`, a)
       } else {
-        newAttachments = await attachmentsUtils.addAttachments(dataset, join(dataDir, 'shared-tmp', a))
-      }
-      const bulkOp = restDatasetsUtils.collection(dataset).initializeUnorderedBulkOp()
-      for (const a of newAttachments) {
-        bulkOp.find({ [attachmentsProperty.key]: a }).update({ $set: { _needsIndexing: true } })
+        if (a.startsWith('drop:')) {
+          newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, filePath)
+        } else {
+          newAttachments = await attachmentsUtils.addAttachments(dataset, filePath)
+        }
+        const bulkOp = restDatasetsUtils.collection(dataset).initializeUnorderedBulkOp()
+        for (const a of newAttachments) {
+          bulkOp.find({ [attachmentsProperty.key]: a }).update({ $set: { _needsIndexing: true } })
         // TODO: add option to remove attachments that don't match any line ?
+        }
+        await bulkOp.execute()
       }
-      await bulkOp.execute()
       await mongo.datasets.updateOne({ id: dataset.id }, { $pull: { _newRestAttachments: a } })
     }
   }
