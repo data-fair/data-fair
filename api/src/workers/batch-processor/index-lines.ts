@@ -13,7 +13,7 @@ import * as datasetsService from '../../datasets/service.js'
 import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
 import * as heapUtils from '../../misc/utils/heap.js'
 import taskProgress from '../../datasets/utils/task-progress.ts'
-import { tmpDir } from '../../datasets/utils/files.ts'
+import { dataDir } from '../../datasets/utils/files.ts'
 import * as attachmentsUtils from '../../datasets/utils/attachments.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -48,9 +48,9 @@ export default async function (dataset: DatasetInternal) {
     for (const a of newRestAttachments) {
       let newAttachments
       if (a.startsWith('drop:')) {
-        newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, join(tmpDir, a.replace('drop:', '')))
+        newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, join(dataDir, 'tmp', a.replace('drop:', '')))
       } else {
-        newAttachments = await attachmentsUtils.addAttachments(dataset, join(tmpDir, a))
+        newAttachments = await attachmentsUtils.addAttachments(dataset, join(dataDir, 'tmp', a))
       }
       const bulkOp = restDatasetsUtils.collection(dataset).initializeUnorderedBulkOp()
       for (const a of newAttachments) {
