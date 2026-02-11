@@ -29,17 +29,14 @@
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ error.event.data }} ({{ dayjs(error.event.date).format("lll") }})</v-list-item-subtitle>
 
-                <v-list-item-action>
+                <template #append>
                   <v-btn
-                    icon
+                    :icon="mdiPlay"
                     color="primary"
-                    target="blank"
                     title="reindex"
                     @click="reindex.execute(error.id)"
-                  >
-                    <v-icon :icon="mdiPlay" />
-                  </v-btn>
-                </v-list-item-action>
+                  />
+                </template>
               </v-list-item>
             </v-list>
           </v-sheet>
@@ -72,17 +69,14 @@
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ error.esWarning }}</v-list-item-subtitle>
 
-                <v-list-item-action>
+                <template #append>
                   <v-btn
-                    icon
+                    :icon="mdiPlay"
                     color="primary"
-                    target="blank"
                     title="reindex"
                     @click="reindex.execute(error.id)"
-                  >
-                    <v-icon :icon="mdiPlay" />
-                  </v-btn>
-                </v-list-item-action>
+                  />
+                </template>
               </v-list-item>
             </v-list>
           </v-sheet>
@@ -105,9 +99,13 @@
                 :key="error.id"
               >
                 <v-list-item-title>
-                  <nuxt-link :to="`/application/${error.id}`">
+                  <a
+                    :href="`/data-fair/application/${error.id}`"
+                    target="_top"
+                    class="simple-link"
+                  >
                     {{ error.title }} ({{ error.owner.name }})
-                  </nuxt-link>
+                  </a>
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ error.errorMessage }} ({{ dayjs(error.updatedAt).format("lll") }})</v-list-item-subtitle>
               </v-list-item>
@@ -132,9 +130,13 @@
                 :key="error.id"
               >
                 <v-list-item-title>
-                  <nuxt-link :to="`/application/${error.id}`">
+                  <a
+                    :href="`/data-fair/application/${error.id}`"
+                    target="_top"
+                    class="simple-link"
+                  >
                     {{ error.title }} ({{ error.owner.name }})
-                  </nuxt-link>
+                  </a>
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ error.errorMessageDraft }} ({{ dayjs(error.updatedAt).format("lll") }})</v-list-item-subtitle>
               </v-list-item>
