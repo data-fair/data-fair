@@ -3,15 +3,8 @@
     :id="id"
     class="mt-3 mb-10"
   >
-    <div
-      style="padding-top: 2px; padding-left: 2px; padding-bottom: 2px;"
-      :style="`background: linear-gradient(172deg, ${theme.current.value.colors[color]} 0%, ${theme.current.value.colors.background} 55%);`"
-      class="rounded"
-    >
-      <v-card
-        :border="0"
-        :style="`background: linear-gradient(172deg, ${theme.current.value.colors.surface} 0%, ${theme.current.value.colors.surface} 30%, ${theme.current.value.colors.background} 60%);`"
-      >
+    <layout-gradient-box gradient="linear-gradient(180deg, {primary} 0%, {surface} 120%">
+      <v-card :border="0">
         <div
           class="d-flex flex-no-wrap"
           style="height: 112px; width: 100%;"
@@ -27,7 +20,7 @@
             <v-toolbar
               extended
               flat
-              style="background-color: transparent;"
+              color="surface"
             >
               <v-toolbar-title>
                 {{ title }}
@@ -61,7 +54,7 @@
           </div>
         </div>
       </v-card>
-    </div>
+    </layout-gradient-box>
     <slot
       name="content"
       :tab="tab"
@@ -71,7 +64,6 @@
 
 <script lang="ts" setup>
 import { useDisplay } from 'vuetify/lib/composables/display.js'
-import { useTheme } from 'vuetify/lib/composables/theme.js'
 
 type TabInfo = { key: string, title: string, icon?: string, appendIcon?: string, color?: string }
 
@@ -86,5 +78,4 @@ const { title, tabs, svg, color = 'primary' } = defineProps<{
 const tab = defineModel({ type: String })
 
 const display = useDisplay()
-const theme = useTheme()
 </script>

@@ -106,6 +106,7 @@
           <v-btn
             width="100%"
             color="accent"
+            @click="remoteServiceEditFetch.save.execute()"
           >
             enregistrer
           </v-btn>
