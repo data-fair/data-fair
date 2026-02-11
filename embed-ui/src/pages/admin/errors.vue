@@ -34,6 +34,8 @@
                     :icon="mdiPlay"
                     color="primary"
                     title="reindex"
+                    variant="text"
+                    :loading="reindex.loading.value"
                     @click="reindex.execute(error.id)"
                   />
                 </template>
@@ -74,6 +76,8 @@
                     :icon="mdiPlay"
                     color="primary"
                     title="reindex"
+                    variant="text"
+                    :loading="reindex.loading.value"
                     @click="reindex.execute(error.id)"
                   />
                 </template>
