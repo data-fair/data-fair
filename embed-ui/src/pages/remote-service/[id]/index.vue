@@ -160,7 +160,7 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import setBreadcrumbs from '~/utils/breadcrumbs'
 import equal from 'fast-deep-equal'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute<'/remote-service/[id]/'>()
 const remoteServiceEditFetch = useEditFetch<RemoteService>(`${$apiPath}/remote-services/${route.params.id}`, {
   patch: true,
@@ -168,6 +168,7 @@ const remoteServiceEditFetch = useEditFetch<RemoteService>(`${$apiPath}/remote-s
     success: t('saved')
   }
 })
+useLeaveGuard(remoteServiceEditFetch.hasDiff, { locale })
 
 watch(remoteServiceEditFetch.data, (remoteService) => {
   if (!remoteService) return
