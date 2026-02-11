@@ -34,6 +34,7 @@
       @click="refresh.execute()"
     />
 
+    <!--
     <v-menu
       :close-on-content-click="false"
       max-width="500"
@@ -81,6 +82,7 @@
         </v-card>
       </template>
     </v-menu>
+    -->
   </v-list>
 </template>
 
@@ -109,17 +111,19 @@ en:
 
 <script lang="ts" setup>
 import type { RemoteService } from '#api/types'
-import { mdiCloud, mdiDelete, mdiInformation, mdiRefresh } from '@mdi/js'
+import { mdiCloud, mdiInformation, mdiRefresh } from '@mdi/js'
 
 const remoteService = defineModel<RemoteService>()
 
 const { t } = useI18n()
-const router = useRouter()
 
+/*
+const router = useRouter()
 const confirmDelete = useAsyncAction(async () => {
   await $fetch(`remote-services/${remoteService.value!.id}`, { method: 'DELETE' })
   router.push({ path: '/remote-services' })
 })
+*/
 
 const refresh = useAsyncAction(async () => {
   remoteService.value!.apiDoc = await $fetch(remoteService.value!.url!)
