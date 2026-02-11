@@ -3,7 +3,7 @@
     :id="id"
     class="mt-3 mb-10"
   >
-    <layout-gradient-box gradient="linear-gradient(180deg, {primary} 0%, {surface} 120%">
+    <layout-gradient-box :gradient="boxGradient">
       <v-card :border="0">
         <div
           class="d-flex flex-no-wrap"
@@ -34,19 +34,23 @@
                     show-arrows
                     :color="color"
                   >
-                    <v-tab
-                      v-for="tabInfo in tabs"
-                      :key="tabInfo.key"
-                      :value="tabInfo.key"
-                      :append-icon="tabInfo.appendIcon"
-                      :base-color="tabInfo.color"
-                      :color="tabInfo.color"
+                    <template
+                      v-for="(tabInfo, i) in tabs"
+                      :key="i"
                     >
-                      <v-icon
-                        v-if="tabInfo.icon"
-                        :icon="tabInfo.icon"
-                      />&nbsp;&nbsp;{{ tabInfo.title }}
-                    </v-tab>
+                      <v-tab
+                        v-if="tabInfo"
+                        :value="tabInfo.key"
+                        :append-icon="tabInfo.appendIcon"
+                        :base-color="tabInfo.color"
+                        :color="tabInfo.color"
+                      >
+                        <v-icon
+                          v-if="tabInfo.icon"
+                          :icon="tabInfo.icon"
+                        />&nbsp;&nbsp;{{ tabInfo.title }}
+                      </v-tab>
+                    </template>
                   </v-tabs>
                 </slot>
               </template>
@@ -65,7 +69,7 @@
 <script lang="ts" setup>
 import { useDisplay } from 'vuetify/lib/composables/display.js'
 
-type TabInfo = { key: string, title: string, icon?: string, appendIcon?: string, color?: string }
+type TabInfo = { key: string, title: string, icon?: string, appendIcon?: string, color?: string } | null
 
 const { title, tabs, svg, color = 'primary' } = defineProps<{
   id: string,
@@ -78,4 +82,6 @@ const { title, tabs, svg, color = 'primary' } = defineProps<{
 const tab = defineModel({ type: String })
 
 const display = useDisplay()
+
+const boxGradient = computed(() => `linear-gradient(180deg, {${color}} 0%, {surface} 120%`)
 </script>
