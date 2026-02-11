@@ -67,10 +67,10 @@ export default {
             type: 'string'
           },
           inputCollection: {
-            type: 'string'
+            type: 'boolean'
           },
           outputCollection: {
-            type: 'string'
+            type: 'boolean'
           },
           input: {
             type: 'array',

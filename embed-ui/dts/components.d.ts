@@ -68,7 +68,6 @@ declare module 'vue' {
     StorageDetails: typeof import('./../src/components/storage/storage-details.vue')['default']
     StorageTreemap: typeof import('./../src/components/storage/storage-treemap.vue')['default']
     TutorialAlert: typeof import('./../src/components/tutorial/tutorial-alert.vue')['default']
-    Visibility: typeof import('./../src/components/visibility.vue')['default']
     WorkflowUpdateDataset: typeof import('./../src/components/workflow/workflow-update-dataset.vue')['default']
   }
 }
