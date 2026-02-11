@@ -39,7 +39,7 @@
       class="mx-2"
     >
       <dataset-table-select-display
-        v-if="display.mdAndUp"
+        v-if="display.mdAndUp.value"
         v-model="displayMode"
         :edit="edit"
       />

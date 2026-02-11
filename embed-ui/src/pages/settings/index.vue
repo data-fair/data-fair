@@ -186,7 +186,7 @@
             >
               <template #extension>
                 <p>
-                  Les <i>webhooks</i> sont un moyen de lier d'autres services Web à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
+                  Les <i>webhooks</i> sont un moyen d'avertir d'autres services Web d'événements internes à Data Fair.
                   Il s'agit d'une configuration technique pour personne avertie.
                 </p>
               </template>
@@ -253,8 +253,8 @@
             >
               <template #extension>
                 <p>
-                  Les <i>portails</i> sont les sites externes à Data Fair qui peuvent exposer ses ressources (jeux de données et applications).
-                  Cette liste de sites est en partie gérée depuis l'onglet Portails mais certains paramètres relatifs à la publication des ressources sont édités ici.
+                  Les <i>portails</i> sont vos sites de publication de ressources.
+                  Cette liste est surtout gérée depuis l'onglet Portails mais certains paramètres sont édités ici.
                 </p>
               </template>
               <template #content>

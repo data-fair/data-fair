@@ -10,15 +10,13 @@
           <v-icon
             v-if="!item.inputCollection || !item.outputCollection"
             :title="$t('unitaryOp')"
-          >
-            mdi-description
-          </v-icon>
+            :icon="mdiArrowLeftRight"
+          />
           <v-icon
             v-if="item.inputCollection && item.outputCollection"
             :title="$t('bulkOp')"
-          >
-            mdi-view-list
-          </v-icon>
+            :icon="mdiViewList"
+          />
         </td>
         <td>{{ item.summary }}</td>
         <td>
@@ -38,9 +36,8 @@
           <v-icon
             size="large"
             color="primary"
-          >
-            mdi-arrow-right
-          </v-icon>
+            :icon="mdiArrowRight"
+          />
         </td>
         <td>
           <template v-for="output in item.output">
@@ -80,6 +77,7 @@ en:
 
 <script lang="ts" setup>
 import type { RemoteService } from '#api/types'
+import { mdiArrowLeftRight, mdiArrowRight, mdiViewList } from '@mdi/js'
 
 defineProps<{ remoteService: RemoteService }>()
 

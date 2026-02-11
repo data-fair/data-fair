@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <p
-      class="px-0 mb-2"
+      class="px-0 mb-4"
       style="height: auto;"
     >
       {{ t('description') }}

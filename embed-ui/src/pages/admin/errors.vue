@@ -1,162 +1,156 @@
 <template lang="html">
-  <v-row class="my-0">
-    <v-col :style="display.lgAndUp ? 'padding-right:256px;' : ''">
-      <v-container class="py-0">
-        <p v-if="datasetsErrorsFetch.data.value?.count === 0">
-          Aucun jeu de données en erreur
-        </p>
-        <template v-else-if="datasetsErrorsFetch.data.value">
-          <h3 class="text-h6">
-            Jeux de données en erreur
-          </h3>
-          <v-sheet
-            class="my-4"
-            style="max-height:800px; overflow-y: scroll;"
+  <v-container>
+    <p v-if="datasetsErrorsFetch.data.value?.count === 0">
+      Aucun jeu de données en erreur
+    </p>
+    <template v-else-if="datasetsErrorsFetch.data.value">
+      <h3 class="text-h6">
+        Jeux de données en erreur
+      </h3>
+      <v-sheet
+        class="my-4"
+        style="max-height:800px; overflow-y: scroll;"
+      >
+        <v-list lines="two">
+          <v-list-item
+            v-for="error in datasetsErrorsFetch.data.value.results"
+            :key="error.id"
           >
-            <v-list lines="two">
-              <v-list-item
-                v-for="error in datasetsErrorsFetch.data.value.results"
-                :key="error.id"
+            <v-list-item-title>
+              <a
+                :href="`/data-fair/dataset/${error.id}`"
+                target="_top"
+                class="simple-link"
               >
-                <v-list-item-title>
-                  <a
-                    :href="`/data-fair/dataset/${error.id}`"
-                    target="_top"
-                    class="simple-link"
-                  >
-                    {{ error.title }} ({{ error.owner.name }})
-                  </a>
-                </v-list-item-title>
-                <v-list-item-subtitle>{{ error.event.data }} ({{ dayjs(error.event.date).format("lll") }})</v-list-item-subtitle>
+                {{ error.title }} ({{ error.owner.name }})
+              </a>
+            </v-list-item-title>
+            <v-list-item-subtitle>{{ error.event.data }} ({{ dayjs(error.event.date).format("lll") }})</v-list-item-subtitle>
 
-                <template #append>
-                  <v-btn
-                    :icon="mdiPlay"
-                    color="primary"
-                    title="reindex"
-                    variant="text"
-                    :loading="reindex.loading.value"
-                    @click="reindex.execute(error.id)"
-                  />
-                </template>
-              </v-list-item>
-            </v-list>
-          </v-sheet>
-        </template>
+            <template #append>
+              <v-btn
+                :icon="mdiPlay"
+                color="primary"
+                title="reindex"
+                variant="text"
+                :loading="reindex.loading.value"
+                @click="reindex.execute(error.id)"
+              />
+            </template>
+          </v-list-item>
+        </v-list>
+      </v-sheet>
+    </template>
 
-        <p v-if="datasetsEsWarningsFetch.data.value?.count === 0">
-          Aucun jeu de données avec avertissements Elasticsearch
-        </p>
-        <template v-else-if="datasetsEsWarningsFetch.data.value">
-          <h3 class="text-h6">
-            Jeux de données avec avertissements Elasticsearch
-          </h3>
-          <v-sheet
-            class="my-4"
-            style="max-height:800px; overflow-y: scroll;"
+    <p v-if="datasetsEsWarningsFetch.data.value?.count === 0">
+      Aucun jeu de données avec avertissements Elasticsearch
+    </p>
+    <template v-else-if="datasetsEsWarningsFetch.data.value">
+      <h3 class="text-h6">
+        Jeux de données avec avertissements Elasticsearch
+      </h3>
+      <v-sheet
+        class="my-4"
+        style="max-height:800px; overflow-y: scroll;"
+      >
+        <v-list lines="two">
+          <v-list-item
+            v-for="error in datasetsEsWarningsFetch.data.value.results"
+            :key="error.id"
           >
-            <v-list lines="two">
-              <v-list-item
-                v-for="error in datasetsEsWarningsFetch.data.value.results"
-                :key="error.id"
+            <v-list-item-title>
+              <a
+                :href="`/data-fair/dataset/${error.id}`"
+                target="_top"
+                class="simple-link"
               >
-                <v-list-item-title>
-                  <a
-                    :href="`/data-fair/dataset/${error.id}`"
-                    target="_top"
-                    class="simple-link"
-                  >
-                    {{ error.title }} ({{ error.owner.name }})
-                  </a>
-                </v-list-item-title>
-                <v-list-item-subtitle>{{ error.esWarning }}</v-list-item-subtitle>
+                {{ error.title }} ({{ error.owner.name }})
+              </a>
+            </v-list-item-title>
+            <v-list-item-subtitle>{{ error.esWarning }}</v-list-item-subtitle>
 
-                <template #append>
-                  <v-btn
-                    :icon="mdiPlay"
-                    color="primary"
-                    title="reindex"
-                    variant="text"
-                    :loading="reindex.loading.value"
-                    @click="reindex.execute(error.id)"
-                  />
-                </template>
-              </v-list-item>
-            </v-list>
-          </v-sheet>
-        </template>
+            <template #append>
+              <v-btn
+                :icon="mdiPlay"
+                color="primary"
+                title="reindex"
+                variant="text"
+                :loading="reindex.loading.value"
+                @click="reindex.execute(error.id)"
+              />
+            </template>
+          </v-list-item>
+        </v-list>
+      </v-sheet>
+    </template>
 
-        <p v-if="applicationsErrorsFetch.data.value?.count === 0">
-          Aucune application en erreur
-        </p>
-        <template v-else-if="applicationsErrorsFetch.data.value">
-          <h3 class="text-h6">
-            Applications en erreur
-          </h3>
-          <v-sheet
-            class="my-4"
-            style="max-height:800px; overflow-y: scroll;"
+    <p v-if="applicationsErrorsFetch.data.value?.count === 0">
+      Aucune application en erreur
+    </p>
+    <template v-else-if="applicationsErrorsFetch.data.value">
+      <h3 class="text-h6">
+        Applications en erreur
+      </h3>
+      <v-sheet
+        class="my-4"
+        style="max-height:800px; overflow-y: scroll;"
+      >
+        <v-list lines="two">
+          <v-list-item
+            v-for="error in applicationsErrorsFetch.data.value.results"
+            :key="error.id"
           >
-            <v-list lines="two">
-              <v-list-item
-                v-for="error in applicationsErrorsFetch.data.value.results"
-                :key="error.id"
+            <v-list-item-title>
+              <a
+                :href="`/data-fair/application/${error.id}`"
+                target="_top"
+                class="simple-link"
               >
-                <v-list-item-title>
-                  <a
-                    :href="`/data-fair/application/${error.id}`"
-                    target="_top"
-                    class="simple-link"
-                  >
-                    {{ error.title }} ({{ error.owner.name }})
-                  </a>
-                </v-list-item-title>
-                <v-list-item-subtitle>{{ error.errorMessage }} ({{ dayjs(error.updatedAt).format("lll") }})</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-sheet>
-        </template>
+                {{ error.title }} ({{ error.owner.name }})
+              </a>
+            </v-list-item-title>
+            <v-list-item-subtitle>{{ error.errorMessage }} ({{ dayjs(error.updatedAt).format("lll") }})</v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
+      </v-sheet>
+    </template>
 
-        <p v-if="applicationsDraftErrorsFetch.data.value?.count === 0">
-          Aucune application avec brouillon en erreur
-        </p>
-        <template v-else-if="applicationsDraftErrorsFetch.data.value">
-          <h3 class="text-h6">
-            Applications avec brouillon en erreur
-          </h3>
-          <v-sheet
-            class="my-4"
-            style="max-height:800px; overflow-y: scroll;"
+    <p v-if="applicationsDraftErrorsFetch.data.value?.count === 0">
+      Aucune application avec brouillon en erreur
+    </p>
+    <template v-else-if="applicationsDraftErrorsFetch.data.value">
+      <h3 class="text-h6">
+        Applications avec brouillon en erreur
+      </h3>
+      <v-sheet
+        class="my-4"
+        style="max-height:800px; overflow-y: scroll;"
+      >
+        <v-list lines="two">
+          <v-list-item
+            v-for="error in applicationsDraftErrorsFetch.data.value.results"
+            :key="error.id"
           >
-            <v-list lines="two">
-              <v-list-item
-                v-for="error in applicationsDraftErrorsFetch.data.value.results"
-                :key="error.id"
+            <v-list-item-title>
+              <a
+                :href="`/data-fair/application/${error.id}`"
+                target="_top"
+                class="simple-link"
               >
-                <v-list-item-title>
-                  <a
-                    :href="`/data-fair/application/${error.id}`"
-                    target="_top"
-                    class="simple-link"
-                  >
-                    {{ error.title }} ({{ error.owner.name }})
-                  </a>
-                </v-list-item-title>
-                <v-list-item-subtitle>{{ error.errorMessageDraft }} ({{ dayjs(error.updatedAt).format("lll") }})</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-sheet>
-        </template>
-      </v-container>
-    </v-col>
-  </v-row>
+                {{ error.title }} ({{ error.owner.name }})
+              </a>
+            </v-list-item-title>
+            <v-list-item-subtitle>{{ error.errorMessageDraft }} ({{ dayjs(error.updatedAt).format("lll") }})</v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
+      </v-sheet>
+    </template>
+  </v-container>
 </template>
 
 <script lang="ts" setup>
 import { mdiPlay } from '@mdi/js'
-import { useDisplay } from 'vuetify/lib/composables/display.mjs'
 
-const display = useDisplay()
 const { dayjs } = useLocaleDayjs()
 
 type ResourceErrors = {

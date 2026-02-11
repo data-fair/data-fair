@@ -1,6 +1,6 @@
 <template>
   <v-menu
-    v-if="display.mdAndUp"
+    v-if="display.mdAndUp.value"
   >
     <template #activator="{ props }">
       <v-btn

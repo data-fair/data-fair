@@ -1,63 +1,56 @@
 <template lang="html">
-  <v-row
-    v-if="services && statusFetch.data.value"
-    class="my-0"
-  >
-    <v-col :style="display.lgAndUp ? 'padding-right:256px;' : ''">
-      <v-container class="py-0">
-        <v-expansion-panels>
-          <v-expansion-panel
-            expand
-            focusable
-          >
-            <v-expansion-panel-title>Statut : {{ statusFetch.data.value.status }}</v-expansion-panel-title>
-            <v-expansion-panel-text>
-              <pre>{{ JSON.stringify(statusFetch.data.value, null, 2) }}</pre>
-            </v-expansion-panel-text>
-          </v-expansion-panel>
-        </v-expansion-panels>
-        <div
-          v-for="service of services"
-          :key="service.name"
+  <v-container v-if="services && statusFetch.data.value">
+    <v-expansion-panels>
+      <v-expansion-panel
+        expand
+        focusable
+      >
+        <v-expansion-panel-title>Statut : {{ statusFetch.data.value.status }}</v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <pre>{{ JSON.stringify(statusFetch.data.value, null, 2) }}</pre>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
+    <div
+      v-for="service of services"
+      :key="service.name"
+    >
+      <h2 class="text-h6 mt-4">
+        {{ t('services.' + service.name) }}
+      </h2>
+      <v-alert
+        v-if="service.error"
+        type="error"
+      >
+        {{ service.error }}
+      </v-alert>
+      <v-progress-circular
+        v-else-if="!service.loaded"
+        indeterminate
+        size="16"
+      />
+      <p v-else>
+        <img
+          v-if="service.version"
+          :alt="`Version installée : ${service.version}`"
+          :src="`https://img.shields.io/badge/${encodeURIComponent(t('installed') + '-' + service.version.replace(/-/g, '--') + '-green')}`"
+          :href="`https://github.com/${service.name}/releases`"
+          :title="serviceTitle(service)"
+          class="mr-2"
+          target="_blank"
         >
-          <h2 class="text-h6 mt-4">
-            {{ t('services.' + service.name) }}
-          </h2>
-          <v-alert
-            v-if="service.error"
-            type="error"
+        <a
+          :href="`https://github.com/${service.name}/releases`"
+          target="_blank"
+        >
+          <img
+            alt="Dernière version disponible"
+            :src="`https://img.shields.io/github/v/tag/${service.name}?sort=semver&label=${encodeURIComponent(t('available'))}`"
           >
-            {{ service.error }}
-          </v-alert>
-          <v-progress-circular
-            v-else-if="!service.loaded"
-            indeterminate
-            size="16"
-          />
-          <p v-else>
-            <img
-              v-if="service.version"
-              :alt="`Version installée : ${service.version}`"
-              :src="`https://img.shields.io/badge/${encodeURIComponent(t('installed') + '-' + service.version.replace(/-/g, '--') + '-green')}`"
-              :href="`https://github.com/${service.name}/releases`"
-              :title="serviceTitle(service)"
-              class="mr-2"
-              target="_blank"
-            >
-            <a
-              :href="`https://github.com/${service.name}/releases`"
-              target="_blank"
-            >
-              <img
-                alt="Dernière version disponible"
-                :src="`https://img.shields.io/github/v/tag/${service.name}?sort=semver&label=${encodeURIComponent(t('available'))}`"
-              >
-            </a>
-          </p>
-        </div>
-      </v-container>
-    </v-col>
-  </v-row>
+        </a>
+      </p>
+    </div>
+  </v-container>
 </template>
 
 <i18n lang="yaml">
@@ -84,9 +77,6 @@
   </i18n>
 
 <script lang="ts" setup>
-import { useDisplay } from 'vuetify/lib/composables/display.mjs'
-
-const display = useDisplay()
 const { t } = useI18n()
 
 // TODO: make this list dynamic when we contractualize the secondary services
