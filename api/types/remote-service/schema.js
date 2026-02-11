@@ -59,7 +59,51 @@ export default {
       description: 'URL of the selected server in the apiDoc servers property'
     },
     actions: {
-      type: 'array'
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          summary: {
+            type: 'string'
+          },
+          inputCollection: {
+            type: 'string'
+          },
+          outputCollection: {
+            type: 'string'
+          },
+          input: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['name'],
+              properties: {
+                name: {
+                  type: 'string'
+                },
+                concept: {
+                  type: 'string'
+                }
+              }
+            }
+          },
+          output: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['name'],
+              properties: {
+                name: {
+                  type: 'string'
+                },
+                concept: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      }
     },
     virtualDatasets: {
       type: 'object',
