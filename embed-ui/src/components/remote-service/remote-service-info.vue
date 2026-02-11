@@ -49,6 +49,7 @@
         :label="t('description')"
         :easy-mde-options="easyMdeOptions"
         :locale="locale"
+        :csp-nonce="$cspNonce"
       />
     </v-col>
   </v-row>
