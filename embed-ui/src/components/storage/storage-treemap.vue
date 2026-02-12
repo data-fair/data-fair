@@ -12,7 +12,8 @@
       >
         <v-card
           style="width:100%;height:100%;"
-          :to="box.data.to"
+          :href="box.data.href"
+          target="_top"
           :color="box.data.color"
           dark
           flat
@@ -67,7 +68,7 @@ const refresh = () => {
           title: d.title || d.id,
           size,
           tooltip: `${d.title || d.id} - ${formatBytes(size, locale.value)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility!]}`,
-          to: `/dataset/${d.id}`,
+          href: `/data-fair/dataset/${d.id}`,
           color: visibilityColor(d.visibility!)
         }
       })
