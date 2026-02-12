@@ -164,7 +164,7 @@ import setBreadcrumbs from '~/utils/breadcrumbs'
 import equal from 'fast-deep-equal'
 
 const { t, locale } = useI18n()
-const route = useRoute<'/remote-service/[id]/'>()
+const route = useRoute<'/remote-services/[id]/'>()
 const remoteServiceEditFetch = useEditFetch<RemoteService>(`${$apiPath}/remote-services/${route.params.id}`, {
   patch: true,
   saveOptions: {

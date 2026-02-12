@@ -59,6 +59,7 @@ declare module 'vue' {
     ResourceVisibility: typeof import('./../src/components/resource-visibility.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SearchProgress: typeof import('./../src/components/search/search-progress.vue')['default']
     SettingsApiKeys: typeof import('./../src/components/settings/settings-api-keys.vue')['default']
     SettingsApiKeyUseMenu: typeof import('./../src/components/settings/settings-api-key-use-menu.vue')['default']
     SettingsDatasetsMetadata: typeof import('./../src/components/settings/settings-datasets-metadata.vue')['default']
