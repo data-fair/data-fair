@@ -339,7 +339,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Couverture géographique' }
+                props: { variant: 'outlined', placeholder: 'Couverture géographique', hideDetails: true }
               }
             }
           }
@@ -360,7 +360,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
+                props: { variant: 'outlined', placeholder: 'Couverture temporelle', hideDetails: true }
               }
             }
           }
@@ -381,7 +381,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour' }
+                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour', hideDetails: true }
               }
             }
           }
@@ -401,7 +401,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur' }
+                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur', hideDetails: true }
               }
             }
           }
@@ -421,7 +421,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source' }
+                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source', hideDetails: true }
               }
             }
           }
@@ -441,7 +441,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Mots clés' }
+                props: { variant: 'outlined', placeholder: 'Mots clés', hideDetails: true }
               }
             }
           }
@@ -455,19 +455,24 @@ export default {
               'x-i18n-addItem': {
                 fr: 'Ajouter une nouvelle métadonnée'
               }
-            }
+            },
+            itemTitle: '(item.title ?? "") + (item.key ? (" (" + item.key + ")") : "")'
           },
           items: {
             type: 'object',
             required: ['title'],
+            layout: {
+              switch: [{
+                if: 'summary',
+                children: []
+              }]
+            },
             properties: {
               key: {
                 title: 'clé',
                 type: 'string',
                 readOnly: true,
-                layout: {
-                  if: 'summary'
-                }
+                layout: 'none'
               },
               title: {
                 title: 'libellé',

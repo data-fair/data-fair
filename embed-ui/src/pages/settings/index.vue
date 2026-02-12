@@ -139,17 +139,10 @@
               </template>
               <template #content>
                 <v-container fluid>
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <settings-datasets-metadata
-                        v-model="settings.datasetsMetadata"
-                        @update:model-value="patch.execute({datasetsMetadata: settings.datasetsMetadata})"
-                      />
-                    </v-col>
-                  </v-row>
+                  <settings-datasets-metadata
+                    v-model="settings.datasetsMetadata"
+                    @update:model-value="patch.execute({datasetsMetadata: settings.datasetsMetadata})"
+                  />
                 </v-container>
               </template>
             </layout-section-tabs>
@@ -278,6 +271,7 @@
             <layout-section-tabs
               v-if="section.id === 'compat'"
               :id="section.id"
+              :svg="compatSvg"
               svg-no-margin
               color="admin"
               :title="section.title"
@@ -349,6 +343,7 @@ import uiSvg from '~/assets/svg/User Interface _Two Color.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import checklist2Svg from '~/assets/svg/Checklist_Two Color2.svg?raw'
 import infoSvg from '~/assets/svg/Sending emails_Monochromatic.svg?raw'
+import compatSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import { useDisplay } from 'vuetify/lib/composables/display.mjs'
 
 const { t } = useI18n()

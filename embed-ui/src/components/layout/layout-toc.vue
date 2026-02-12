@@ -5,6 +5,7 @@
     density="compact"
     color="primary"
     class="py-0"
+    bg-color="background"
   >
     <v-list-subheader>{{ t('content') }}</v-list-subheader>
 

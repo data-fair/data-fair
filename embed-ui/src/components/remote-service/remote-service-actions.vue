@@ -3,19 +3,20 @@
     v-if="remoteService"
     density="compact"
     class="list-actions"
+    bg-color="background"
   >
     <v-list-item
       v-if="remoteService.apiDoc?.externalDocs?.url"
       :href="remoteService.apiDoc.externalDocs.url"
       target="_blank"
       :prepend-icon="mdiInformation"
-      :title="t('externalDoc')"
-    />
+    >
+      <v-list-item-title>{{ t('externalDoc') }}</v-list-item-title>
+    </v-list-item>
 
     <v-list-item
       :href="`/data-fair/remote-service/${remoteService.id}/api-doc`"
       target="_top"
-      :title="t('useAPI')"
     >
       <template #prepend>
         <v-icon
@@ -23,6 +24,7 @@
           :icon="mdiCloud"
         />
       </template>
+      <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
     </v-list-item>
 
     <v-list-item
@@ -30,9 +32,10 @@
       color="admin"
       :disabled="refresh.loading.value"
       :prepend-icon="mdiRefresh"
-      :title="t('updateAPI')"
       @click="refresh.execute()"
-    />
+    >
+      <v-list-item-title>{{ t('updateAPI') }}</v-list-item-title>
+    </v-list-item>
 
     <!--
     <v-menu

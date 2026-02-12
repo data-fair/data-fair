@@ -101,7 +101,10 @@
       </v-col>
     </v-row>
     <df-navigation-right>
-      <v-list v-if="remoteServiceEditFetch.hasDiff.value">
+      <v-list
+        v-if="remoteServiceEditFetch.hasDiff.value"
+        bg-color="background"
+      >
         <v-list-item>
           <v-btn
             width="100%"
