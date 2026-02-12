@@ -18,5 +18,5 @@ export const useSettingsStore = (type: string, id: MaybeRefOrGetter<string>) => 
     success: 'Les paramètres ont été mis à jour'
   })
 
-  return { settings, patch }
+  return { settings, loading: settingsFetch.loading, patch }
 }

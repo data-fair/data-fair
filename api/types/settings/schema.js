@@ -303,6 +303,7 @@ export default {
           identifiers: {
             type: 'array',
             'x-display': 'hidden',
+            layout: 'none',
             items: {
               type: 'string',
               title: 'Identifiant vocabulaire extérieur',

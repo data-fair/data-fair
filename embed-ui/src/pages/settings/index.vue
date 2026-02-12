@@ -31,7 +31,7 @@
         </p>
 
         <v-progress-linear
-          v-if="!settings"
+          v-if="!settings || loading"
           indeterminate
         />
         <template v-else>
@@ -371,7 +371,7 @@ const settingsAccountId = computed(() => {
   }
   return settingsAccountId
 })
-const { patch, settings } = useSettingsStore(settingsAccount.value.type, settingsAccountId)
+const { patch, settings, loading } = useSettingsStore(settingsAccount.value.type, settingsAccountId)
 
 const sections = computed(() => {
   const sections = []
