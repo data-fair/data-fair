@@ -159,7 +159,7 @@
               name="documentation"
               label="Documentation"
             />
-            <private-access :patch="patch" />
+            <private-access v-model="patch" />
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -220,9 +220,7 @@ const applyPatch = useAsyncAction(async (baseApp: BaseApp, patch: BaseAppPatch) 
   if (actualPatch.public) actualPatch.privateAccess = []
   actualPatch.category = actualPatch.category || null
   await $fetch(`base-applications/${baseApp.id}`, { method: 'PATCH', body: actualPatch })
-  for (const key of Object.keys(actualPatch)) {
-    baseApp[key] = actualPatch[key]
-  }
+  baseAppsFetch.refresh()
 })
 
 const urlToAdd = ref('')

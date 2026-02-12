@@ -173,7 +173,7 @@ const applicationsErrorsFetch = useFetch<ResourceErrors>($apiPath + '/admin/appl
 const applicationsDraftErrorsFetch = useFetch<ResourceErrors>($apiPath + '/admin/applications-draft-errors', { query: { size: 1000 } })
 
 const reindex = useAsyncAction(async (datasetId: string) => {
-  await $fetch(`api/v1/datasets/${datasetId}/_reindex`, { method: 'POST' })
+  await $fetch(`datasets/${datasetId}/_reindex`, { method: 'POST' })
   datasetsErrorsFetch.refresh()
   datasetsEsWarningsFetch.refresh()
   applicationsErrorsFetch.refresh()

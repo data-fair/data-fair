@@ -6,7 +6,10 @@
     tile
     hover
   >
-    <v-card-title class="font-weight-bold">
+    <v-card-title
+      class="font-weight-bold"
+      :title="remoteService.title"
+    >
       {{ remoteService.title || remoteService.id }}
     </v-card-title>
     <v-card-text
