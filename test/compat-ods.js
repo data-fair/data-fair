@@ -841,6 +841,36 @@ bidule;1;22.2
     assert.equal(res.data.results[2].somedate, null)
   })
 
+  it('should manage multi-values', async function () {
+    const ax = global.ax.dmeadusOrg
+
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'multi-values',
+      schema: [
+        { key: 'str1', type: 'string' }, { key: 'str2', type: 'string', separator: ', ' },
+      ]
+    }).then(r => r.data)
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [
+      { str1: 'val 1', str2: ['val 1', 'val 2'] },
+    ])
+    await workers.hook('finalize/' + dataset.id)
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.total_count, 1)
+    // returned as array by main records api
+    assert.deepEqual(res.data.results[0], { str1: 'val 1', str2: ['val 1', 'val 2'] })
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
+    assert.equal(res.data, `str1;str2
+val 1;val 1, val 2
+`)
+  })
+
   it('should manage date times', async function () {
     const ax = global.ax.dmeadusOrg
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
