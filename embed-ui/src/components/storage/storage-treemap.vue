@@ -83,7 +83,7 @@ const refresh = () => {
       size,
       tooltip: `${title} - ${formatBytes(size, locale.value)}`,
       color: 'grey',
-      to: ''
+      href: ''
     })
   }
   // @ts-ignore
