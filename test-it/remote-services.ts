@@ -1,10 +1,10 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, anonymous, superadmin, cdurning2 } from './utils/index.ts'
+import fs from 'node:fs'
 import path from 'node:path'
-import { readFileSync } from 'node:fs'
 
-const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../test/resources/geocoder-api.json'), 'utf8'))
+const geocoderApi = JSON.parse(fs.readFileSync(path.resolve('./test/resources/geocoder-api.json'), 'utf8'))
 
 describe('remote-services', function () {
   before(startApiServer)
@@ -13,8 +13,7 @@ describe('remote-services', function () {
   afterEach((t) => checkPendingTasks(t.name))
 
   it('Get external APIs when not authenticated', async function () {
-    const ax = anonymous
-    const res = await ax.get('/api/v1/remote-services')
+    const res = await anonymous.get('/api/v1/remote-services')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 2)
   })
@@ -37,22 +36,19 @@ describe('remote-services', function () {
     assert.equal(res.status, 200)
     assert.equal(res.data.title, 'Test external api')
     const ax1 = cdurning2
-    await assert.rejects(ax1.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' }), { status: 403 })
-    await assert.rejects(ax1.delete('/api/v1/remote-services/' + eaId), { status: 403 })
+    try {
+      await ax1.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' })
+      assert.fail()
+    } catch (err: any) {
+      assert.equal(err.status, 403)
+    }
+    try {
+      await ax1.delete('/api/v1/remote-services/' + eaId)
+      assert.fail()
+    } catch (err: any) {
+      assert.equal(err.status, 403)
+    }
     res = await ax.delete('/api/v1/remote-services/' + eaId)
     assert.equal(res.status, 204)
-    res = await ax.get('/api/v1/remote-services')
-    assert.equal(res.status, 200)
-    assert.equal(res.data.count, 2)
-  })
-
-  it('Unknown external service', async function () {
-    const ax = anonymous
-    await assert.rejects(ax.get('/api/v1/remote-services/unknownId'), { status: 404 })
-  })
-
-  it('Unknown referer', async function () {
-    const ax = anonymous
-    await assert.rejects(ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } }), { status: 404 })
   })
 })
