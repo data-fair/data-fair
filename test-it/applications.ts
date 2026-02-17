@@ -188,5 +188,13 @@ describe('Applications', function () {
     assert.equal(downloadAttachmentRes.headers['x-operation'], '{"class":"read","id":"downloadAttachment"}')
     assert.equal(downloadAttachmentRes.status, 200)
     assert.equal(downloadAttachmentRes.headers['content-type'], 'image/jpeg')
+    assert.ok(downloadAttachmentRes.headers['last-modified'])
+    await assert.rejects(ax.get(`/api/v1/applications/${app.id}/attachments/avatar.jpeg`, { headers: { 'If-Modified-Since': downloadAttachmentRes.headers['last-modified'] } }), { status: 304 })
+
+    const updatedApp = (await ax.get(`/api/v1/applications/${app.id}`)).data
+    assert.equal(updatedApp.storage.size, 9755)
+
+    const limits = (await ax.get('/api/v1/limits/user/dmeadus0')).data
+    assert.equal(limits.store_bytes.consumption, 9755)
   })
 })
