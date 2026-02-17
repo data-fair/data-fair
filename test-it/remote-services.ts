@@ -50,5 +50,75 @@ describe('remote-services', function () {
     }
     res = await ax.delete('/api/v1/remote-services/' + eaId)
     assert.equal(res.status, 204)
+    res = await ax.get('/api/v1/remote-services')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.count, 2)
+  })
+
+  it('Unknown external service', async function () {
+    const ax = anonymous
+    try {
+      await ax.get('/api/v1/remote-services/unknownId')
+      assert.fail()
+    } catch (err: any) {
+      assert.equal(err.status, 404)
+    }
+  })
+
+  it('Unknown referer', async function () {
+    const ax = anonymous
+    try {
+      await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } })
+      assert.fail()
+    } catch (err: any) {
+      assert.equal(err.status, 404)
+    }
+  })
+
+  it('Handle timeout errors from proxied service', async function () {
+    const ax = superadmin
+    const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+
+    try {
+      await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl }, timeout: 1000 })
+    } catch (err: any) {
+      assert.equal(err.status, 504)
+    }
+  })
+
+  it('Prevent abusing remote service re-exposition', async function () {
+    const ax = superadmin
+    const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+
+    const res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl } })
+    assert.equal(res.data.content, 'ok')
+
+    try {
+      await ax.post('/api/v1/remote-services/geocoder-koumoul/proxy/coords', null, { headers: { referer: app.exposedUrl } })
+      assert.fail()
+    } catch (err: any) {
+      assert.equal(err.status, 405)
+    }
+  })
+
+  it('Get unpacked actions inside remote services', async function () {
+    const ax = anonymous
+    let res = await ax.get('/api/v1/remote-services-actions')
+    assert.equal(res.data.results.length, 4)
+    assert.ok(res.data.results.find((item: any) => item.id === 'geocoder-koumoul--getCoord'))
+    assert.ok(res.data.results.find((item: any) => item.id === 'geocoder-koumoul--postCoords'))
+
+    res = await ax.get('/api/v1/remote-services-actions?inputCollection=false')
+    assert.equal(res.data.results.length, 1)
+    assert.ok(res.data.results.find((item: any) => item.id === 'geocoder-koumoul--getCoord'))
+
+    res = await ax.get('/api/v1/remote-services-actions?inputCollection=false&q=geocoder')
+    assert.equal(res.data.results.length, 1)
+    assert.ok(res.data.results.find((item: any) => item.id === 'geocoder-koumoul--getCoord'))
+
+    res = await ax.get('/api/v1/remote-services-actions', { params: { 'output-concepts': 'http://www.datatourisme.fr/ontology/core/1.0#apeNaf' } })
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get('/api/v1/remote-services-actions', { params: { 'output-concepts': 'codeAPE' } })
+    assert.equal(res.data.results.length, 2)
   })
 })

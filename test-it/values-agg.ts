@@ -38,4 +38,68 @@ describe('values aggs', function () {
     assert.equal(res.data.aggs[1].employees_sum, 13)
     assert.equal(res.data.aggs[1].employees_avg, 6.5)
   })
+
+  it('Get values buckets based on number values', async function () {
+    const ax = dmeadus
+    const workers = await import('../api/src/workers/index.ts')
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest values aggs',
+      schema: [{ key: 'year', type: 'number' }, { key: 'nb', type: 'number' }]
+    })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [
+      { year: 2020, nb: 2 },
+      { year: 2020, nb: 4 },
+      { year: 2021, nb: 2 },
+      { nb: 2 },
+      { nb: 3 }
+    ])
+    await workers.hook(`finalize/${dataset.id}`)
+
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=year&metric_field=nb&metric=sum`)
+    assert.equal(res.data.aggs.length, 2)
+    assert.equal(res.data.aggs[0].value, 2020)
+    assert.equal(res.data.aggs[0].metric, 6)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=year&metric_field=nb&metric=sum&missing=-1`)
+    assert.equal(res.data.aggs.length, 3)
+    assert.equal(res.data.aggs[0].value, 2020)
+    assert.equal(res.data.aggs[0].metric, 6)
+    assert.equal(res.data.aggs[1].value, -1)
+    assert.equal(res.data.aggs[1].metric, 5)
+
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=year&metric_field=nb&metric=sum&missing=none`), { status: 400 })
+  })
+
+  it('Get values buckets based on boolean values', async function () {
+    const ax = dmeadus
+    const workers = await import('../api/src/workers/index.ts')
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest values aggs',
+      schema: [{ key: 'active', type: 'boolean' }, { key: 'nb', type: 'number' }]
+    })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [
+      { active: true, nb: 2 },
+      { active: true, nb: 4 },
+      { active: false, nb: 2 },
+      { nb: 2 },
+      { nb: 3 }
+    ])
+    await workers.hook(`finalize/${dataset.id}`)
+
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=active&metric_field=nb&metric=sum`)
+    assert.equal(res.data.aggs.length, 2)
+    assert.equal(res.data.aggs[0].value, 'true')
+    assert.equal(res.data.aggs[0].metric, 6)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=active&metric_field=nb&metric=sum&missing=false`)
+    assert.equal(res.data.aggs.length, 2)
+    assert.equal(res.data.aggs[0].value, 'false')
+    assert.equal(res.data.aggs[0].metric, 7)
+    assert.equal(res.data.aggs[1].value, 'true')
+    assert.equal(res.data.aggs[1].metric, 6)
+
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=active&metric_field=nb&metric=sum&missing=none`), { status: 400 })
+  })
 })
