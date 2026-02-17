@@ -1,0 +1,41 @@
+import { strict as assert } from 'node:assert'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus } from './utils/index.ts'
+
+describe('projections', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
+  it('Create REST dataset and apply specific projection to simple coords', async function () {
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest projection',
+      schema: [
+        { key: 'x', type: 'number', 'x-refersTo': 'http://data.ign.fr/def/geometrie#coordX' },
+        { key: 'y', type: 'number', 'x-refersTo': 'http://data.ign.fr/def/geometrie#coordY' }
+      ]
+    })
+    assert.equal(res.status, 201)
+    const dataset = res.data
+
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      projection: {
+        title: 'NTF (Paris) / Lambert zone II',
+        code: 'EPSG:27572'
+      }
+    })
+    const workers = await import('../api/src/workers/index.ts')
+    await workers.hook(`finalize/${dataset.id}`)
+
+    res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { x: 610336, y: 2132685 })
+    assert.equal(res.status, 201)
+    await workers.hook(`finalize/${dataset.id}`)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'x,y,_geopoint' } })
+    assert.ok(res.data.results[0]._geopoint)
+    assert.ok(res.data.results[0]._geopoint.startsWith('46.19'))
+  })
+})
