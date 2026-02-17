@@ -1,0 +1,24 @@
+import { strict as assert } from 'node:assert'
+import * as testUtils from './utils/test-utils.ts'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks } from './utils/index.ts'
+
+describe('Text formats', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach(function () { checkPendingTasks(this.name) })
+
+  it('Detect and parse text formats', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/text-formats.csv', ax)
+    const shortProp = dataset.schema.find(p => p.key === 'short')
+    assert.equal(shortProp.type, 'string')
+    assert.equal(shortProp['x-display'], undefined)
+    assert.ok(!shortProp['x-capabilities'])
+    const longProp = dataset.schema.find(p => p.key === 'long')
+    assert.equal(longProp.type, 'string')
+    assert.equal(longProp['x-display'], 'textarea')
+    assert.deepEqual(longProp['x-capabilities'], { index: false, values: false, insensitive: false })
+  })
+})
