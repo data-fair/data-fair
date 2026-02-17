@@ -1,7 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './utils/test-utils.ts'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, sendDataset } from './utils/index.ts'
 
 describe('Text formats', function () {
   before(startApiServer)
@@ -11,7 +10,7 @@ describe('Text formats', function () {
 
   it('Detect and parse text formats', async function () {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/text-formats.csv', ax)
+    const dataset = await sendDataset('datasets/text-formats.csv', ax)
     const shortProp = dataset.schema.find(p => p.key === 'short')
     assert.equal(shortProp.type, 'string')
     assert.equal(shortProp['x-display'], undefined)

@@ -4,15 +4,16 @@ import config from '../../api/src/config.ts'
 import mongo from '../../api/src/mongo.ts'
 import es from '../../api/src/es.ts'
 import fs from 'fs-extra'
+import FormData from 'form-data'
 import nock from 'nock'
 import { pendingTasks } from '../../api/src/workers/tasks.ts'
 import { reset as resetPing } from '@data-fair/data-fair-api/src/workers/ping.ts'
-import axios from 'axios'
+import axios, { type AxiosRequestConfig } from 'axios'
 import debugModule from 'debug'
 import * as app from '../../api/src/app.js'
 import * as rateLimiting from '../../api/src/misc/utils/rate-limiting.ts'
 
-import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
+import { axiosAuth, type AxiosAuthInstance } from '@data-fair/lib-node/axios-auth.js'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 
 const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test/resources/geocoder-api.json'), 'utf8'))
@@ -278,4 +279,25 @@ export const checkPendingTasks = (testName) => {
       throw new Error(`the test "${testName}" created some files in dataDir, that should not happen when using S3`)
     }
   }
+}
+
+export const formHeaders = (form: FormData) => {
+  const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+  return headers
+}
+
+export const sendDataset = async (fileName: string, ax: AxiosAuthInstance, opts?: AxiosRequestConfig, body?: any) => {
+  const workers = await import('../../api/src/workers/index.ts')
+  const datasetFd = fs.readFileSync(path.resolve('./test/resources/', fileName))
+  const form = new FormData()
+  form.append('file', datasetFd, fileName)
+  if (body) form.append('body', JSON.stringify(body))
+  const res = await ax.post('/api/v1/datasets', form, { ...opts, headers: formHeaders(form) })
+  return workers.hook(`finalize/${res.data.id}`)
+}
+
+export const timeout = (promise: Promise<any>, delay = 1000, message = 'time limit exceeded') => {
+  const error = new Error(message)
+  const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(error), delay))
+  return Promise.race([promise, timeoutPromise])
 }

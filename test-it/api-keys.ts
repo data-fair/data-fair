@@ -1,8 +1,7 @@
-import * as testUtils from './utils/test-utils.ts'
 import { strict as assert } from 'node:assert'
 import dayjs from 'dayjs'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, sendDataset } from './utils/index.ts'
 
 describe('API keys', function () {
   before(startApiServer)
@@ -92,7 +91,7 @@ describe('API keys', function () {
       return true
     })
     const axKey5 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key5.clearKey } })
-    await assert.rejects(testUtils.sendDataset('datasets/dataset1.csv', axKey5), { status: 403 })
+    await assert.rejects(sendDataset('datasets/dataset1.csv', axKey5), { status: 403 })
 
     // expired key
     const axKey3 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key3.clearKey } })
@@ -103,7 +102,7 @@ describe('API keys', function () {
     })
 
     // Set the correct owner
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey2)
+    const dataset = await sendDataset('datasets/dataset1.csv', axKey2)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'user')
     assert.equal(dataset.owner.id, 'dmeadus0')
@@ -111,7 +110,7 @@ describe('API keys', function () {
     await axKey5.get('/api/v1/datasets/' + dataset.id + '/lines')
 
     // API key should react to permission granted through user email
-    const orgDataset = await testUtils.sendDataset('datasets/dataset1.csv', global.ax.hlalonde3Org)
+    const orgDataset = await sendDataset('datasets/dataset1.csv', global.ax.hlalonde3Org)
     await assert.rejects(axKey2.get('/api/v1/datasets/' + orgDataset.id + '/lines'), { status: 403 })
     await global.ax.hlalonde3Org.put('/api/v1/datasets/' + orgDataset.id + '/permissions', [
       { type: 'user', email: 'dmeadus0@answers.com', classes: ['read'] }
@@ -146,13 +145,13 @@ describe('API keys', function () {
 
     // Set the correct owner
     const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1.clearKey } })
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey1)
+    const dataset = await sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
 
     // API key should react to permission granted through its pseudo email
-    const otherDataset = await testUtils.sendDataset('datasets/dataset1.csv', global.ax.hlalonde3)
+    const otherDataset = await sendDataset('datasets/dataset1.csv', global.ax.hlalonde3)
     await assert.rejects(axKey1.get('/api/v1/datasets/' + otherDataset.id + '/lines'), { status: 403 })
     await global.ax.hlalonde3.put('/api/v1/datasets/' + otherDataset.id + '/permissions', [
       { type: 'user', email: key1.email, classes: ['read'] }
@@ -181,7 +180,7 @@ describe('API keys', function () {
 
     // Set the correct owner
     const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1 } })
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey1)
+    const dataset = await sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
@@ -200,7 +199,7 @@ describe('API keys', function () {
       headers: { 'x-apiKey': key, 'x-account': JSON.stringify({ type: 'organization', id: 'KWqAGZ4mG', name: encodeURIComponent('Fivechat testé') }) }
     })
 
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey)
+    const dataset = await sendDataset('datasets/dataset1.csv', axKey)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
