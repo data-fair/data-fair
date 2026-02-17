@@ -1,6 +1,16 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, anonymous, sendDataset, alban, config } from './utils/index.ts'
+import fs from 'node:fs'
+import FormData from 'form-data'
+import path from 'node:path'
+
+const sendAttachment = async (ax: any, appId: string, attachmentName: string) => {
+  const attachmentForm = new FormData()
+  attachmentForm.append('attachment', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/' + attachmentName)), attachmentName)
+  await ax.post(`/api/v1/applications/${appId}/attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
+  await ax.patch('/api/v1/applications/' + appId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
+}
 
 describe('Applications', function () {
   before(startApiServer)
@@ -142,5 +152,41 @@ describe('Applications', function () {
     assert.equal(res.status, 200)
     assert.equal(res.data.applicationName, 'test')
     assert.equal(res.data.image, 'http://monapp1.com/thumbnail.png')
+  })
+
+  it('Sort applications by title', async function () {
+    const ax = dmeadus
+
+    await ax.post('/api/v1/applications', { title: 'aa', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: 'bb', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: 'àb', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: ' àb', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: '1a', url: 'http://monapp1.com/' })
+
+    let res = await ax.get('/api/v1/applications', { params: { select: 'title', raw: true, sort: 'title:1' } })
+    assert.deepEqual(res.data.results.map((d: any) => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])
+    res = await ax.get('/api/v1/applications', { params: { select: 'id,title', raw: true, sort: 'title:-1' } })
+    assert.deepEqual(res.data.results.map((d: any) => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
+
+    await ax.patch('/api/v1/applications/' + res.data.results[0].id, { slug: 'test-slug' })
+    await assert.rejects(ax.patch('/api/v1/applications/' + res.data.results[1].id, { slug: 'test-slug' }), (error: any) => {
+      assert.equal(error.status, 400)
+      assert.ok(error.data.includes('Ce slug est déjà utilisé'))
+      return true
+    })
+    res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', title: 'test slug 2', slug: 'test-slug' })
+    assert.equal(res.data.slug, 'test-slug-2')
+  })
+
+  it('Upload a simple attachment on an application', async function () {
+    const ax = dmeadus
+    const { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+
+    await sendAttachment(ax, app.id, 'avatar.jpeg')
+
+    const downloadAttachmentRes = await ax.get(`/api/v1/applications/${app.id}/attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.headers['x-operation'], '{"class":"read","id":"downloadAttachment"}')
+    assert.equal(downloadAttachmentRes.status, 200)
+    assert.equal(downloadAttachmentRes.headers['content-type'], 'image/jpeg')
   })
 })
