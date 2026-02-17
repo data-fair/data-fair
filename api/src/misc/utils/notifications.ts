@@ -9,6 +9,7 @@ import { type ResourceType, type Resource, type Dataset } from '#types'
 import * as permissions from './permissions.ts'
 import { type Locale } from '../../../i18n/utils.ts'
 import { isMainThread, parentPort } from 'node:worker_threads'
+import testEvents from './test-events.ts'
 
 const debug = debugLib('notifications')
 
@@ -61,8 +62,7 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
 
 export const send = async (event: PushEvent, sessionState?: SessionState) => {
   if (process.env.NODE_ENV === 'test') {
-    // @ts-ignore
-    if (isMainThread) global.events.emit('notification', event)
+    if (isMainThread) testEvents.emit('notification', event)
     // @ts-ignore
     else parentPort?.postMessage(event)
   } else {

@@ -7,6 +7,7 @@ import moment from 'moment'
 import { piscinaGauge } from '../misc/utils/metrics.ts'
 import { type ResourceType } from '#types'
 import { type AccountKeys } from '@data-fair/lib-express'
+import testEvents from '../misc/utils/test-events.ts'
 
 const createWorkers = () => {
   const workers = {
@@ -62,8 +63,7 @@ const createWorkers = () => {
   if (process.env.NODE_ENV === 'test') {
     for (const worker of Object.values(workers)) {
       worker.on('message', (message) => {
-        // @ts-ignore
-        global.events.emit('notification', message)
+        testEvents.emit('notification', message)
       })
     }
   }

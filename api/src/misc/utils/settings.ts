@@ -2,6 +2,7 @@ import mongo from '#mongo'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import * as i18nUtils from '../../../i18n/utils.ts'
 import { type Account } from '@data-fair/lib-express'
+import memoize from 'memoizee'
 
 export const getPrivateOwnerVocabulary = async (owner: Account) => {
   const settings = await mongo.db.collection('settings')
@@ -26,3 +27,26 @@ export const getFullOwnerVocabulary = async (owner?: Account, locale: i18nUtils.
     return { ...pv, private: true }
   }))
 }
+
+const getPublicationSiteSettings = async (publicationSiteUrl: string, publicationSiteQuery: string) => {
+  const elemMatch = publicationSiteQuery
+    ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
+    : { $or: [{ url: publicationSiteUrl }, { draftUrl: publicationSiteUrl }] }
+  return mongo.settings.findOne({ publicationSites: { $elemMatch: elemMatch } }, {
+    projection: {
+      type: 1,
+      id: 1,
+      department: 1,
+      name: 1,
+      publicationSites: { $elemMatch: elemMatch }
+    }
+  })
+}
+export const memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
+  profileName: 'getPublicationSiteSettings',
+  promise: true,
+  primitive: true,
+  max: 10000,
+  maxAge: 1000 * 60, // 1 minute
+  length: 2 // only use publicationSite, not db as cache key
+})

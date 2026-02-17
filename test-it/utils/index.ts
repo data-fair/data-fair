@@ -8,18 +8,55 @@ import FormData from 'form-data'
 import nock from 'nock'
 import { pendingTasks } from '../../api/src/workers/tasks.ts'
 import { reset as resetPing } from '@data-fair/data-fair-api/src/workers/ping.ts'
-import axios, { type AxiosRequestConfig } from 'axios'
+import { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import debugModule from 'debug'
 import * as app from '../../api/src/app.js'
 import * as rateLimiting from '../../api/src/misc/utils/rate-limiting.ts'
 
-import { axiosAuth, type AxiosAuthInstance } from '@data-fair/lib-node/axios-auth.js'
+import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
+import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
+import { memoizedGetPublicationSiteSettings } from '@data-fair/data-fair-api/src/misc/utils/settings.ts'
+import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 
 const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test/resources/geocoder-api.json'), 'utf8'))
 const sireneApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test/resources/sirene-api.json'), 'utf8'))
 
 const debug = debugModule('test')
+
+const axiosOpts = { baseURL: config.publicUrl }
+
+export const getAxios = (opts = {}) => axiosBuilder({ ...axiosOpts, ...opts })
+
+export const getAxiosAuth = async (email: string, password = 'passwd', org?: string, adminMode = false, opts = {}) => {
+  return axiosAuth({
+    email,
+    password,
+    directoryUrl: config.directoryUrl,
+    org,
+    axiosOpts: { ...axiosOpts, headers: { 'x-cache-bypass': '1' }, ...opts },
+    adminMode
+  })
+}
+
+export const anonymous = getAxios()
+export const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+export const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+export const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
+export const alone = await getAxiosAuth('alone@no.org', 'passwd')
+export const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+export const superadminPersonal = await getAxiosAuth('superadmin@test.com', 'superpasswd')
+export const alban = await getAxiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
+export const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
+export const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
+export const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
+export const ddecruce5 = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd')
+export const ddecruce5Org = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd', 'KWqAGZ4mG')
+export const bhazeldean7 = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd')
+export const bhazeldean7Org = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG')
+export const ngernier4Org = await getAxiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
+export const icarlens9 = await getAxiosAuth('icarlens9@independent.co.uk', 'passwd')
+export const icarlens9Org = await getAxiosAuth('icarlens9@independent.co.uk', 'passwd', 'KWqAGZ4mG')
 
 let appStarted = false
 
@@ -157,63 +194,18 @@ export const startApiServer = async () => {
 
   debug('init globals')
   await mongo.init()
-  global.db = mongo.db
-  global.mongoClient = mongo.client
   await es.init()
-  global.es = es.client
 
-  global.ax = {}
-  global.ax.builder = async (email, password, org, adminMode = false, opts = {}) => {
-    debug('prepare axios instance', email)
-    opts.baseURL = config.publicUrl
-    opts.headers = opts.headers || {}
-    opts.headers['x-cache-bypass'] = opts.headers['x-cache-bypass'] || '1'
-
-    let ax
-    if (email) {
-      ax = await axiosAuth({
-        email,
-        password,
-        directoryUrl: config.directoryUrl,
-        org,
-        axiosOpts: opts,
-        adminMode
-      })
-    } else ax = axios.create(opts)
-
-    debug('axios instance ok')
-    return ax
-  }
-  await Promise.all([
-    global.ax.builder().then(ax => { global.ax.anonymous = ax }),
-    global.ax.builder('dmeadus0@answers.com', 'passwd').then(ax => { global.ax.dmeadus = ax }),
-    global.ax.builder('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.dmeadusOrg = ax }),
-    global.ax.builder('cdurning2@desdev.cn', 'passwd').then(ax => { global.ax.cdurning2 = ax }),
-    global.ax.builder('alone@no.org', 'passwd').then(ax => { global.ax.alone = ax }),
-    global.ax.builder('superadmin@test.com', 'superpasswd', undefined, true).then(ax => { global.ax.superadmin = ax }),
-    global.ax.builder('superadmin@test.com', 'superpasswd').then(ax => { global.ax.superadminPersonal = ax }),
-    global.ax.builder('alban.mouton@koumoul.com', 'passwd', undefined, true).then(ax => { global.ax.alban = ax }),
-    global.ax.builder('hlalonde3@desdev.cn', 'passwd').then(ax => { global.ax.hlalonde3 = ax }),
-    global.ax.builder('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.hlalonde3Org = ax }),
-    global.ax.builder('ngernier4@usa.gov', 'passwd').then(ax => { global.ax.ngernier4 = ax }),
-    global.ax.builder('ddecruce5@phpbb.com', 'passwd').then(ax => { global.ax.ddecruce5 = ax }),
-    global.ax.builder('ddecruce5@phpbb.com', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.ddecruce5Org = ax }),
-    global.ax.builder('bhazeldean7@cnbc.com', 'passwd').then(ax => { global.ax.bhazeldean7 = ax }),
-    global.ax.builder('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.bhazeldean7Org = ax }),
-    global.ax.builder('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.ngernier4Org = ax }),
-    global.ax.builder('icarlens9@independent.co.uk', 'passwd').then(ax => { global.ax.icarlens9 = ax }),
-    global.ax.builder('icarlens9@independent.co.uk', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.icarlens9Org = ax })
-  ])
   debug('init globals ok')
 
   debug('scratch all')
-  await global.db.dropDatabase()
-  await global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) })
+  await mongo.db.dropDatabase()
+  await es.client.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) })
   debug('scratch all ok')
 
   debug('run app')
   try {
-    global.app = await app.run()
+    await app.run()
   } catch (err) {
     console.error('Failed to run the application', err)
     throw err
@@ -233,8 +225,8 @@ export const stopApiServer = async () => {
   debug('stop app ok')
 
   debug('cleanup globals')
-  await global.es.close()
-  await global.mongoClient.close()
+  await es.client.close()
+  await mongo.client.close()
   debug('cleanup globals ok')
 
   appStarted = false
@@ -247,29 +239,29 @@ export const scratchData = async () => {
   debug('scratch data')
   try {
     await Promise.all([
-      global.db.collection('datasets').deleteMany({}),
-      global.db.collection('applications').deleteMany({}),
-      global.db.collection('applications-keys').deleteMany({}),
-      global.db.collection('limits').deleteMany({}),
-      global.db.collection('settings').deleteMany({}),
-      global.db.collection('locks').deleteMany({}),
-      global.db.collection('extensions-cache').deleteMany({}),
-      global.db.collection('remote-services').deleteMany({ id: /dataset:(.*)/ }),
-      global.db.collection('journals').deleteMany({}),
+      mongo.datasets.deleteMany({}),
+      mongo.applications.deleteMany({}),
+      mongo.applicationsKeys.deleteMany({}),
+      mongo.limits.deleteMany({}),
+      mongo.settings.deleteMany({}),
+      mongo.db.collection('locks').deleteMany({}),
+      mongo.db.collection('extensions-cache').deleteMany({}),
+      mongo.remoteServices.deleteMany({ id: /dataset:(.*)/ }),
+      mongo.db.collection('journals').deleteMany({}),
       fs.emptyDir('../data/test-tmp'),
       filesStorage.removeDir(path.resolve('../data/test'))
     ])
     await fs.emptyDir('../data/test')
-    global.memoizedGetPublicationSiteSettings.clear()
+    memoizedGetPublicationSiteSettings.clear()
     rateLimiting.clear()
   } catch (err) {
     console.warn('error while scratching data before test', err)
   }
-  global.events.removeAllListeners()
+  testEvents.removeAllListeners()
   debug('scratch data ok')
 }
 
-export const checkPendingTasks = (testName) => {
+export const checkPendingTasks = (testName: string) => {
   for (const pending of Object.values(pendingTasks)) {
     if (Object.keys(pending).length > 0) throw new Error(`the test "${testName}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
   }
@@ -286,7 +278,7 @@ export const formHeaders = (form: FormData) => {
   return headers
 }
 
-export const sendDataset = async (fileName: string, ax: AxiosAuthInstance, opts?: AxiosRequestConfig, body?: any) => {
+export const sendDataset = async (fileName: string, ax: AxiosInstance, opts?: AxiosRequestConfig, body?: any) => {
   const workers = await import('../../api/src/workers/index.ts')
   const datasetFd = fs.readFileSync(path.resolve('./test/resources/', fileName))
   const form = new FormData()
