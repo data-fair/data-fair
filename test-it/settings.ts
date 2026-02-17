@@ -9,21 +9,11 @@ describe('settings API', function () {
   afterEach((t) => checkPendingTasks(t.name))
 
   it('should reject wrong account type', async function () {
-    try {
-      await dmeadus.get('/api/v1/settings/unknown/dmeadus0')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(dmeadus.get('/api/v1/settings/unknown/dmeadus0'), { status: 400 })
   })
 
   it('should reject anonymous request', async function () {
-    try {
-      await dmeadus.get('/api/v1/settings/user/hlalonde3')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(dmeadus.get('/api/v1/settings/user/hlalonde3'), { status: 403 })
   })
 
   it('should read user empty settings', async function () {
@@ -33,12 +23,7 @@ describe('settings API', function () {
   })
 
   it('should reject update with wrong format', async function () {
-    try {
-      await dmeadus.put('/api/v1/settings/user/dmeadus0', { forbiddenKey: 'not allowed' })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(dmeadus.put('/api/v1/settings/user/dmeadus0', { forbiddenKey: 'not allowed' }), { status: 400 })
   })
 
   it('should read settings as organization admin', async function () {
@@ -55,7 +40,7 @@ describe('settings API', function () {
   })
 
   it('should write and read settings as organization department admin', async function () {
-    await assert.rejects(hlalonde3Org.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', { topics: [{ id: 'topic1', title: 'Topic 1' }] }), (err) => err.status === 400)
+    await assert.rejects(hlalonde3Org.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', { topics: [{ id: 'topic1', title: 'Topic 1' }] }), { status: 400 })
     await dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', { apiKeys: [{ title: 'Api key 1', scopes: [] }] })
     const res = await hlalonde3Org.get('/api/v1/settings/organization/KWqAGZ4mG:dep1')
     assert.equal(res.status, 200)

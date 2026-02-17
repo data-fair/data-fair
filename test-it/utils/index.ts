@@ -18,6 +18,7 @@ import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 import { memoizedGetPublicationSiteSettings } from '@data-fair/data-fair-api/src/misc/utils/settings.ts'
 import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
+export { config }
 
 const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test/resources/geocoder-api.json'), 'utf8'))
 const sireneApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test/resources/sirene-api.json'), 'utf8'))
