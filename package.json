@@ -42,6 +42,7 @@
     "@data-fair/lib-types-builder": "^1.7.0",
     "@data-fair/lib-utils": "^1.6.1",
     "@types/content-disposition": "^0.5.8",
+    "@types/d3-hierarchy": "^3.1.7",
     "@types/mime-types": "^3.0.0",
     "@types/multer": "^1.4.12",
     "@types/node": "^24.10.9",

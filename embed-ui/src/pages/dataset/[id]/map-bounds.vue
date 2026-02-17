@@ -14,7 +14,6 @@
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset-store'
 
-useFrameContent()
 const { height: windowHeight } = useWindowSize()
 
 const route = useRoute<'/dataset/[id]/map-bounds'>()

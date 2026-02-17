@@ -125,6 +125,10 @@ const datasetProperties = {
     type: 'string',
     format: 'date'
   },
+  visibility: {
+    type: 'string',
+    enum: ['public', 'protected', 'private']
+  },
   file: {
     type: 'object',
     additionalProperties: false,

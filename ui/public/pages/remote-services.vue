@@ -1,57 +1,47 @@
-<template>
-  <v-container fluid>
-    <remote-service-list />
-    <!-- Anonymous: show jumbotron -->
-    <v-col
-      v-if="initialized && !user"
-      md="6"
-      offset="3"
-    >
-      <v-responsive>
-        <v-container class="fill-height">
-          <v-row align="center">
-            <v-col class="text-center">
-              <h3 class="text-h4 mb-3 mt-5">
-                {{ $t('title') }}
-              </h3>
-              <p class="text-h6 mt-5">
-                {{ $t('authrequired') }}
-              </p>
-              <v-btn
-                color="primary"
-                @click="login"
-              >
-                {{ $t('login') }}
-              </v-btn>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-responsive>
-    </v-col>
-  </v-container>
+<template lang="html">
+  <div>
+    <nuxt-child />
+    <d-frame
+      :src="`/data-fair/embed/remote-services/`"
+      :height="(windowHeight - 48) + 'px'"
+      resize="no"
+      emit-iframe-messages
+      sync-params
+      sync-path="/data-fair/remote-services/"
+      :adapter.prop="stateChangeAdapter"
+      @message="message => onMessage(message.detail)"
+      @iframe-message="message => onMessage(message.detail)"
+      @notif="emitFrameNotif"
+    />
+  </div>
 </template>
 
-<i18n lang="yaml">
-fr:
-  title: Services intéropérables
-  authRequired: Vous devez être authentifié pour utiliser ce service.
-  login: Se connecter / S'inscrire
-
-en:
-  title: Interoperable services
-  authRequired: You must be logged in to use this service.
-  login: Login / Sign up
-</i18n>
-
 <script>
-import { mapState, mapActions } from 'vuex'
+import { mapActions } from 'vuex'
+import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
 
 export default {
+  middleware: ['auth-required'],
   computed: {
-    ...mapState('session', ['user', 'initialized'])
+    stateChangeAdapter () {
+      return createStateChangeAdapter(this.$router)
+    }
   },
   methods: {
-    ...mapActions('session', ['login'])
+    ...mapActions(['emitFrameNotif']),
+    onMessage (message) {
+      console.log('message', message)
+      // the iframe requests that we display a breadcrumb
+      // we mirror its internal paths by using them as a "to" query param for our own current page
+      if (message.breadcrumbs) {
+        const localBreadcrumbs = message.breadcrumbs
+          .map(b => ({ ...b, exact: true, to: b.to && { path: b.to } }))
+        this.$store.dispatch('breadcrumbs', localBreadcrumbs)
+      }
+    }
   }
 }
 </script>
+
+<style lang="css">
+</style>

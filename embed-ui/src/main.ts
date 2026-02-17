@@ -12,6 +12,7 @@ import { createUiNotif } from '@data-fair/lib-vue/ui-notif.js'
 import { createI18n } from 'vue-i18n'
 import { createHead } from '@unhead/vue'
 import App from './App.vue'
+import '@koumoul/v-iframe/content-window.js'
 import dFrameContent from '@data-fair/frame/lib/vue-router/d-frame-content.js'
 import debugModule from 'debug'
 import DOMPurify from 'dompurify'
@@ -22,6 +23,9 @@ const debug = debugModule('df:main');
   debug('Starting data-fair app')
   const router = createRouter({ history: createWebHistory($sitePath + '/data-fair/embed/'), routes })
   dFrameContent(router)
+  // TODO: remove vIframe setup when old portals module is entirely deprecated
+  // @ts-ignore
+  window.vIframeOptions = { router, reactiveParams: true }
   const reactiveSearchParams = createReactiveSearchParams(router)
   const session = await createSession({ directoryUrl: $sitePath + '/simple-directory' })
   debug('Session created', session.state)

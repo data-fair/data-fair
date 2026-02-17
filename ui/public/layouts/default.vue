@@ -35,7 +35,7 @@ export default {
     }
   }),
   head () {
-    const scrollMode = this.$route.name === 'application-id-config' ? 'hidden' : 'scroll'
+    const scrollMode = this.$route.name === 'application-id-config' ? 'hidden' : 'auto'
     return {
       htmlAttrs: { lang: this.$i18n.locale }, // TODO: this should be set by nuxt-i18n but it isn't for some reason
       style: [{ vmid: 'dynamic-style', cssText: this.$store.getters.style(scrollMode), type: 'text/css' }],

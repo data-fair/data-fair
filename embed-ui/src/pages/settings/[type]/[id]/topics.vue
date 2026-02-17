@@ -12,7 +12,6 @@
 </template>
 
 <script setup lang="ts">
-useFrameContent()
 const route = useRoute<'/settings/[type]/[id]/topics'>()
 const { patch, settings } = useSettingsStore(route.params.type, route.params.id)
 

@@ -134,7 +134,7 @@ fr:
   missingValue: le paramètre "value" n'est pas utilisé par cette expression
   exprEvalHelp: "Appliquez une transformation aux données de cette colonne quand elles sont chargées.<br><br>
   Une expression (ou formule) est utilisée pour transformer chaque valeur.
-  Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.
+  Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\" target=\"_blank\">expr-eval</a>.
   La valeur à transformer est passée en paramètre avec le nom \"value\". <br><br>
   Quelques fonctions sont disponibles rappelant des fonctionnalités habituelles de tableurs :"
 en:

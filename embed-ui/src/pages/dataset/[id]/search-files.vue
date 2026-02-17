@@ -17,7 +17,6 @@ import { provideDatasetStore } from '~/composables/dataset-store'
 
 const { height: windowHeight } = useWindowSize()
 
-useFrameContent()
 const route = useRoute<'/dataset/[id]/search-files'>()
 const draft = useBooleanSearchParam('draft')
 

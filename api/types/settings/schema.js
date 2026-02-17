@@ -53,17 +53,25 @@ export default {
       type: 'array',
       title: 'Webhooks',
       layout: {
+        title: '',
         messages: {
           addItem: 'Add a webhook',
           'x-i18n-addItem': {
             fr: 'Ajouter un webhook'
           }
-        }
+        },
+        itemTitle: 'item.title'
       },
       items: {
         type: 'object',
         additionalProperties: false,
         required: ['title', 'events', 'target'],
+        layout: {
+          switch: [{
+            if: 'summary',
+            children: []
+          }]
+        },
         properties: {
           title: {
             type: 'string',
@@ -150,17 +158,25 @@ export default {
         fr: 'Licences',
       },
       layout: {
+        title: '',
         messages: {
           addItem: 'Add a license',
           'x-i18n-addItem': {
             fr: 'Ajouter une licence'
           }
-        }
+        },
+        itemTitle: 'item.title'
       },
       items: {
         type: 'object',
         additionalProperties: false,
         required: ['title', 'href'],
+        layout: {
+          switch: [{
+            if: 'summary',
+            children: []
+          }]
+        },
         properties: {
           title: {
             type: 'string',
@@ -234,12 +250,14 @@ export default {
         fr: 'Thématiques'
       },
       layout: {
+        title: '',
         messages: {
           addItem: 'Add a topic',
           'x-i18n-addItem': {
             fr: 'Ajouter une thématique'
           }
-        }
+        },
+        itemTitle: 'item.title'
       },
       items: {
         $ref: 'https://github.com/data-fair/data-fair/topic'
@@ -252,10 +270,29 @@ export default {
     },
     privateVocabulary: {
       type: 'array',
-      title: 'Vocabulaire privé',
+      title: 'Private vocabulary',
+      'x-i18n-title': {
+        fr: 'Vocabulaire privé'
+      },
+      layout: {
+        title: '',
+        messages: {
+          addItem: 'Add a concept',
+          'x-i18n-addItem': {
+            fr: 'Ajouter un concept'
+          }
+        },
+        itemTitle: 'item.title'
+      },
       items: {
         type: 'object',
         required: ['title'],
+        layout: {
+          switch: [{
+            if: 'summary',
+            children: []
+          }]
+        },
         properties: {
           id: {
             type: 'string',
@@ -266,6 +303,7 @@ export default {
           identifiers: {
             type: 'array',
             'x-display': 'hidden',
+            layout: 'none',
             items: {
               type: 'string',
               title: 'Identifiant vocabulaire extérieur',
@@ -302,7 +340,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Couverture géographique' }
+                props: { variant: 'outlined', placeholder: 'Couverture géographique', hideDetails: true }
               }
             }
           }
@@ -323,7 +361,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
+                props: { variant: 'outlined', placeholder: 'Couverture temporelle', hideDetails: true }
               }
             }
           }
@@ -344,7 +382,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour' }
+                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour', hideDetails: true }
               }
             }
           }
@@ -364,7 +402,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur' }
+                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur', hideDetails: true }
               }
             }
           }
@@ -384,7 +422,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source' }
+                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source', hideDetails: true }
               }
             }
           }
@@ -404,7 +442,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Mots clés' }
+                props: { variant: 'outlined', placeholder: 'Mots clés', hideDetails: true }
               }
             }
           }
@@ -418,19 +456,24 @@ export default {
               'x-i18n-addItem': {
                 fr: 'Ajouter une nouvelle métadonnée'
               }
-            }
+            },
+            itemTitle: '(item.title ?? "") + (item.key ? (" (" + item.key + ")") : "")'
           },
           items: {
             type: 'object',
             required: ['title'],
+            layout: {
+              switch: [{
+                if: 'summary',
+                children: []
+              }]
+            },
             properties: {
               key: {
                 title: 'clé',
                 type: 'string',
                 readOnly: true,
-                layout: {
-                  if: 'summary'
-                }
+                layout: 'none'
               },
               title: {
                 title: 'libellé',

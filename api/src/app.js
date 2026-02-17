@@ -23,7 +23,6 @@ import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import { isMainThread } from 'node:worker_threads'
 import { reqSiteUrl } from '@data-fair/lib-express/site.js'
-import { getSiteHashes } from './misc/utils/site.ts'
 
 const debugDomain = debug('domain')
 
@@ -211,6 +210,7 @@ export const run = async () => {
       '/dataset/:id/form',
       '/application/:id/config',
       '/workflow/update-dataset',
+      '/settings',
       '/settings/:type/:id/licenses',
       '/settings/:type/:id/topics',
       '/settings/:type/:id/webhooks',
@@ -235,7 +235,7 @@ export const run = async () => {
           return directives
         }
       },
-      getSiteExtraParams: getSiteHashes
+      privateDirectoryUrl: config.privateDirectoryUrl
     }))
 
     app.use('/next-ui', (req, res) => {

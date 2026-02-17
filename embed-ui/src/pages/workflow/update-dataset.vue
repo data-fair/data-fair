@@ -8,7 +8,6 @@
 </template>
 
 <script lang="ts" setup>
-useFrameContent()
 const route = useRoute<'/workflow/update-dataset'>()
 const { account } = useSessionAuthenticated()
 

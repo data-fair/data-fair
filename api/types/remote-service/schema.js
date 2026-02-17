@@ -29,7 +29,7 @@ export default {
       type: 'string',
       description: 'Detailed description of the configuration for an remote service'
     },
-    apiDoc: { type: 'object' },
+    apiDoc: { type: 'object', tsType: 'any' },
     url: {
       type: 'string',
       description: 'The url to fetch the apiDoc. Can be used for refresh purpose'
@@ -59,7 +59,51 @@ export default {
       description: 'URL of the selected server in the apiDoc servers property'
     },
     actions: {
-      type: 'array'
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          summary: {
+            type: 'string'
+          },
+          inputCollection: {
+            type: 'boolean'
+          },
+          outputCollection: {
+            type: 'boolean'
+          },
+          input: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['name'],
+              properties: {
+                name: {
+                  type: 'string'
+                },
+                concept: {
+                  type: 'string'
+                }
+              }
+            }
+          },
+          output: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['name'],
+              properties: {
+                name: {
+                  type: 'string'
+                },
+                concept: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      }
     },
     virtualDatasets: {
       type: 'object',
