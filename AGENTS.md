@@ -18,7 +18,7 @@ This is a monorepo using npm workspaces with the following packages:
 | `ui` | Nuxt.js/Vue.js frontend |
 | `shared` | Shared types, utilities, and validation logic |
 | `embed-ui` | Embeddable UI components |
-| `test` | Test suite |
+| `test-it` | Test suite (Node.js native test runner) |
 | `parquet-writer` | Rust native module for Parquet file writing |
 
 ## Tech Stack
@@ -43,9 +43,35 @@ npm run dev-zellij        # Start both with Zellij layout
 ### Testing
 
 ```bash
-npm test                  # Run all tests
+npm test                  # Run all tests (test-it/)
 npm run test-deps        # Start test dependencies (Mongo, ES, MinIO)
 ```
+
+### New Test Runner (test-it/)
+
+Tests have been migrated from Mocha (`test/`) to Node.js native test runner (`test-it/`).
+
+**Running tests:**
+```bash
+# Run all migrated tests
+npm test
+
+# Run a specific test file
+NODE_CONFIG_DIR=./api/config/ NODE_ENV=test node --test test-it/<test-name>.ts
+
+# Run a specific test
+NODE_CONFIG_DIR=./api/config/ NODE_ENV=test node --test test-it/<test-name>.ts -t "test name"
+```
+
+**Test conventions:**
+- Use `describe`, `it`, `before`, `after`, `beforeEach`, `afterEach` from `node:test`
+- Use `assert.rejects(promise, { status: XXX })` instead of try-catch blocks for error assertions
+- Import utilities from `./test-it/utils/index.ts`
+- Import workers dynamically: `const workers = await import('../api/src/workers/index.ts')`
+- Use absolute paths for resources: `path.resolve(import.meta.dirname, '../test/resources/...')`
+- Type annotations often needed for callback functions: `(err: any) => err.key`
+
+**Note:** Some tests use large datasets and may hit storage limits. The test config sets `datasetStorage: 160000` bytes.
 
 ### Linting & Type Checking
 
@@ -80,7 +106,7 @@ npm run build-parsers    # Build PEG.js parsers (where, select, order-by, etc.)
 - **Linting:** neostandard (ESLint-based)
 - **Code Style:** ESLint with auto-fix (`npm run lint-fix`)
 - **Git Hooks:** Husky for pre-commit lint and commit message validation
-- **Testing:** Test files in `test/` workspace
+- **Testing:** Test files in `test-it/` workspace using Node.js native test runner
 
 ## Key Paths
 
@@ -89,6 +115,7 @@ npm run build-parsers    # Build PEG.js parsers (where, select, order-by, etc.)
 - Frontend: `ui/`
 - Config: `api/config/`
 - Types: `api/types/`
+- Test suite: `test-it/`
 
 ## Common Development Tasks
 
