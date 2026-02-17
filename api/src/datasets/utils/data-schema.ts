@@ -218,26 +218,28 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
   schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: 'Numéro de ligne', description: 'Indice de la ligne dans le fichier d\'origine' })
   schema.push({ 'x-calculated': true, key: '_rand', type: 'integer', title: 'Nombre aléatoire', description: 'Un nombre aléatoire associé à la ligne qui permet d\'obtenir un tri aléatoire par exemple' })
 
-  // maintain coherent x-refersTo and x-concept annotations
-  if (fixConcept) {
-    let ownerVocabulary
-    const standardVocabulary = i18nUtils.vocabularyArray.fr // TODO: how to internalize this ? have a metadata locale info on the dataset ?
-    for (const field of schema) {
-      if (field['x-refersTo']) {
-        let concept = standardVocabulary.find(c => c.identifiers.includes(field['x-refersTo']))
-        if (!concept) {
-          ownerVocabulary = ownerVocabulary || await settingsUtils.getPrivateOwnerVocabulary(dataset.owner)
-          concept = ownerVocabulary.find(c => c.identifiers.includes(field['x-refersTo']))
-        }
-        if (concept) {
-          field['x-concept'] = { id: concept.id, title: concept.title, primary: true }
-        }
-      } else {
-        delete field['x-concept']
+  if (fixConcept) await fixConcepts(dataset, schema)
+  return schema
+}
+
+// maintain coherent x-refersTo and x-concept annotations
+export const fixConcepts = async (dataset: any, schema: SchemaProperty[]) => {
+  let ownerVocabulary
+  const standardVocabulary = i18nUtils.vocabularyArray.fr // TODO: how to internalize this ? have a metadata locale info on the dataset ?
+  for (const field of schema) {
+    if (field['x-refersTo']) {
+      let concept = standardVocabulary.find(c => c.identifiers.includes(field['x-refersTo']))
+      if (!concept) {
+        ownerVocabulary = ownerVocabulary || await settingsUtils.getPrivateOwnerVocabulary(dataset.owner)
+        concept = ownerVocabulary.find(c => c.identifiers.includes(field['x-refersTo']))
       }
+      if (concept) {
+        field['x-concept'] = { id: concept.id, title: concept.title, primary: true }
+      }
+    } else {
+      delete field['x-concept']
     }
   }
-  return schema
 }
 
 export const tableSchema = (schema: SchemaProperty[]) => {
