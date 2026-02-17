@@ -195,6 +195,8 @@ describe('Master data management', function () {
     assert.equal(extraProp['x-labels'].value1, 'label1')
     assert.ok(extraProp['x-capabilities'])
     assert.equal(extraProp['x-capabilities'].text, false)
+    assert.equal(extraProp['x-refersTo'], 'http://schema.org/description')
+    assert.equal(extraProp['x-concept']?.id, 'description')
     let extraMultiProp = slave.schema.find(p => p.key === '_siret.extraMulti')
     assert.ok(extraMultiProp)
     assert.equal(extraMultiProp.separator, ', ')
@@ -282,6 +284,8 @@ describe('Master data management', function () {
     assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
     extraProp = slave.schema.find(p => p.key === 'siretextra')
     assert.ok(extraProp)
+    assert.equal(extraProp['x-refersTo'], 'http://schema.org/description')
+    assert.equal(extraProp['x-concept']?.id, 'description')
     results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['siretextra'], 'Extra information 2')
     assert.equal(results[1]['siretextra'], 'Extra information 2')

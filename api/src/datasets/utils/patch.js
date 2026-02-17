@@ -110,6 +110,9 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
   } else if (patch.schema || ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage)) {
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
   }
+  if (patch.schema) {
+    await schemaUtils.fixConcepts(dataset, patch.schema)
+  }
 
   const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !patch.schema.find(f => f.key === df.key))) ?? []
   if (dataset.isRest && dataset.rest?.storeUpdatedBy && patch.rest && !patch.rest.storeUpdatedBy) {

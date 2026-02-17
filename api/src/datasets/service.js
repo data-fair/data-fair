@@ -15,7 +15,7 @@ import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir } from './utils/files.ts'
-import { getSchemaBreakingChanges } from './utils/data-schema.ts'
+import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
@@ -234,9 +234,10 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
     prepareExtensions(locale, dataset.extensions)
-    await checkExtensions(await datasetUtils.extendedSchema(db, dataset), dataset.extensions)
+    await checkExtensions(await datasetUtils.extendedSchema(db, dataset, false), dataset.extensions)
     dataset.schema = await prepareExtensionsSchema(dataset.schema, dataset.extensions)
   }
+  await fixConcepts(dataset, dataset.schema)
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
 
