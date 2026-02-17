@@ -154,6 +154,64 @@ describe('Applications', function () {
     assert.equal(res.data.image, 'http://monapp1.com/thumbnail.png')
   })
 
+  it('Read capture of application', async function () {
+    const ax = dmeadus
+    try {
+      await ax.get(config.captureUrl + '/api/v1/api-docs.json')
+    } catch (err: any) {
+      console.warn('capture is not available in this test environment')
+      assert.equal(err.status, 502)
+      return
+    }
+
+    const { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    const { data: dataset } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }] })
+    const updatedAt = (await ax.get('/api/v1/applications/' + app.id)).data.updatedAt
+    assert.ok(updatedAt)
+
+    let res = await ax.get('/api/v1/applications/' + app.id + '/capture')
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'image/png')
+    assert.equal(res.headers['x-capture-cache-status'], 'MISS')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
+
+    res = await ax.get('/api/v1/applications/' + app.id + '/capture?updatedAt=' + updatedAt)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'image/png')
+    assert.equal(res.headers['x-capture-cache-status'], 'HIT')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=604800')
+
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }], test: 'ok' })
+    res = await ax.get('/api/v1/applications/' + app.id + '/capture')
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'image/png')
+    assert.equal(res.headers['x-capture-cache-status'], 'EXPIRED')
+
+    res = await ax.get('/api/v1/applications/' + app.id + '/capture?app_test=ok')
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'image/png')
+    assert.equal(res.headers['x-capture-cache-status'], 'BYPASS')
+
+    await assert.rejects(ax.get('/api/v1/applications/' + app.id + '/capture?app_test=1&app_capture-test-error=true'), (err: any) => {
+      assert.equal(err.headers['cache-control'], 'no-cache')
+      assert.equal(err.status, 500)
+      return true
+    })
+
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }], test: 'ok2' })
+    await assert.rejects(ax.get('/api/v1/applications/' + app.id + '/capture?app_capture-test-error=true', { maxRedirects: 0 }), (err: any) => {
+      assert.equal(err.status, 302)
+      assert.ok(err.headers.location.endsWith('/no-preview.png'))
+      return true
+    })
+
+    res = await ax.get('/api/v1/applications/' + app.id + '/print?app_test=ok')
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/pdf')
+  })
+
   it('Sort applications by title', async function () {
     const ax = dmeadus
 
