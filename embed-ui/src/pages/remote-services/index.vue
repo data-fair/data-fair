@@ -51,6 +51,6 @@ const params = computed(() => ({
 const remoteServicesFetch = useFetch<{ count: number, results: RemoteService[] }>(`${$apiPath}/remote-services`, { query: params })
 
 setBreadcrumbs([
-  { text: t('remoteServices'), to: '/remote-services/' }
+  { text: t('remoteServices') }
 ])
 </script>

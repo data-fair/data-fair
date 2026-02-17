@@ -177,7 +177,7 @@ watch(remoteServiceEditFetch.data, (remoteService) => {
   if (!remoteService) return
   setBreadcrumbs([
     { text: t('remoteServices'), to: '/remote-services' },
-    { text: remoteService.title, to: '/remote-services/' + remoteService.id }
+    { text: remoteService.title }
   ])
 }, { immediate: true })
 
