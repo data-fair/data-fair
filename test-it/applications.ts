@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, anonymous } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, anonymous, sendDataset, alban, config } from './utils/index.ts'
 
 describe('Applications', function () {
   before(startApiServer)
@@ -44,5 +44,103 @@ describe('Applications', function () {
     assert.equal(res.status, 200)
     const app = res.data.results.find((a: any) => a.id === appId)
     assert.equal(app, undefined)
+  })
+
+  it('Manage the custom configuration part of the object', async function () {
+    const ax = dmeadus
+
+    let dataset = await sendDataset('datasets/split.csv', ax)
+    const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
+    const dataset2 = await sendDataset('datasets/split.csv', ax)
+    const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
+
+    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    const appId = res.data.id
+    res = await ax.put('/api/v1/applications/' + appId + '/config', {
+      datasets: [{ id: dataset.id, href: datasetRefInit.href }, { id: dataset2.id, href: datasetRefInit2.href }]
+    })
+    assert.equal(res.status, 200)
+    res = await ax.get('/api/v1/applications/' + appId + '/config')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.datasets.length, 2)
+    assert.equal(res.data.datasets[0].title, 'split')
+    assert.deepEqual(res.data.datasets[1].applicationKeyPermissions, { operations: ['readSafeSchema', 'createLine'] })
+    res = await ax.get('/api/v1/applications', { params: { dataset: 'nope' } })
+    assert.equal(res.data.count, 0)
+    res = await ax.get('/api/v1/applications', { params: { dataset: dataset.id } })
+    assert.equal(res.data.count, 1)
+
+    await ax.patch('/api/v1/datasets/' + dataset.id, { title: 'changed title' })
+    res = await ax.get('/api/v1/applications/' + appId + '/configuration-draft')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.datasets.length, 2)
+    assert.equal(res.data.datasets[0].title, 'changed title')
+
+    dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
+    assert.equal(dataset.extras.applications.length, 1)
+  })
+
+  it('Use an application through the application proxy', async function () {
+    const ax = dmeadus
+
+    const dataset = await sendDataset('datasets/split.csv', ax)
+    const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
+    const dataset2 = await sendDataset('datasets/split.csv', ax)
+    const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
+
+    let res = await ax.post('/api/v1/applications', {
+      url: 'http://monapp1.com/',
+      configuration: {
+        datasets: [
+          { id: dataset.id, href: datasetRefInit.href },
+          { id: dataset2.id, href: datasetRefInit2.href }
+        ]
+      }
+    })
+    const appId = res.data.id
+
+    res = await ax.get(`/app/${appId}/dir1/info.txt`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data, 'into txt dir1')
+    res = await ax.get(`/app/${appId}/`)
+    assert.equal(res.status, 200)
+    assert.ok(res.headers['content-type'].startsWith('text/html'))
+    assert.ok(res.data.includes('My app body'))
+    res = await ax.get('/app/' + appId)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.includes('My app body'))
+    res = await ax.get(`/app/${appId}/index.html`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.includes('My app body'))
+
+    assert.ok(res.data.includes('window.APPLICATION={'))
+    const match = />window\.APPLICATION=(.*);</.exec(res.data)
+    const application = JSON.parse(match?.[1] || '{}')
+    assert.ok(application.configuration)
+    assert.ok(!!application.configuration.datasets?.length)
+    assert.deepEqual(Object.keys(application.configuration.datasets[0]).sort(), ['finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
+    assert.deepEqual(Object.keys(application.configuration.datasets[1]).sort(), ['applicationKeyPermissions', 'finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
+
+    assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
+    assert.ok(res.data.includes('/app-sw.js'))
+    assert.ok(res.data.includes('<div>application embed</div>'))
+
+    await alban.post('/api/v1/limits/user/dmeadus0', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+    res = await ax.get('/app/' + appId)
+    assert.equal(res.data.includes('<div>application embed</div>'), false)
+  })
+
+  it('Read base app info of an application', async function () {
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    const appId = res.data.id
+    res = await ax.put('/api/v1/applications/' + appId + '/config', {
+      datasets: [{ href: config.publicUrl + '/api/v1/datasets/111' }]
+    })
+    assert.equal(res.status, 200)
+    res = await ax.get('/api/v1/applications/' + appId + '/base-application')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.applicationName, 'test')
+    assert.equal(res.data.image, 'http://monapp1.com/thumbnail.png')
   })
 })
