@@ -7,29 +7,22 @@ import config from '#config'
 import uiConfig from './ui-config.ts'
 import mongo from '#mongo'
 import es from '#es'
-import memoize from 'memoizee'
 import * as wsServer from '@data-fair/lib-express/ws-server.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as observe from './misc/utils/observe.ts'
 import catalogsPublicationQueue from './misc/utils/catalogs-publication-queue.ts'
 import debug from 'debug'
-import EventEmitter from 'node:events'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
-import { isMainThread } from 'node:worker_threads'
 import { reqSiteUrl } from '@data-fair/lib-express/site.js'
+import { memoizedGetPublicationSiteSettings } from './misc/utils/settings.ts'
 
 const debugDomain = debug('domain')
-
-// a global event emitter for testing
-if (process.env.NODE_ENV === 'test') {
-  if (isMainThread) global.events = new EventEmitter()
-}
 
 let app, server, httpTerminator
 
@@ -110,31 +103,7 @@ export const run = async () => {
     // set current baseUrl, i.e. the url of data-fair on the current user's domain
     // check for the matching publicationSite, etc
     const parsedPublicUrl = new URL(config.publicUrl)
-    const getPublicationSiteSettings = async (publicationSiteUrl, publicationSiteQuery, db) => {
-      const elemMatch = publicationSiteQuery
-        ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
-        : { $or: [{ url: publicationSiteUrl }, { draftUrl: publicationSiteUrl }] }
-      return db.collection('settings').findOne({ publicationSites: { $elemMatch: elemMatch } }, {
-        projection: {
-          type: 1,
-          id: 1,
-          department: 1,
-          name: 1,
-          publicationSites: { $elemMatch: elemMatch }
-        }
-      })
-    }
-    const memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
-      profileName: 'getPublicationSiteSettings',
-      promise: true,
-      primitive: true,
-      max: 10000,
-      maxAge: 1000 * 60, // 1 minute
-      length: 2 // only use publicationSite, not db as cache key
-    })
-    if (process.env.NODE_ENV === 'test') {
-      global.memoizedGetPublicationSiteSettings = memoizedGetPublicationSiteSettings
-    }
+
     app.use('/', async (req, res, next) => {
       const mainDomain = reqIsInternal(req) || reqHost(req) === parsedPublicUrl.host
       req.publicBaseUrl = mainDomain ? config.publicUrl : (reqSiteUrl(req) + '/data-fair')

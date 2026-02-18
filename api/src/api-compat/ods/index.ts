@@ -370,7 +370,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     res.send({ total_count: buckets.length, results })
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
-    const flatten = getFlatten(dataset, false, selectSource)
+    const flatten = getFlatten(dataset, true, selectSource)
     for (let i = 0; i < esResponse.hits.hits.length; i++) {
       // avoid blocking the event loop
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
@@ -386,8 +386,8 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
 
 const maxChunkSize = 1000
 
-async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, totalSize, grouped, composite, timezone = 'utc') {
-  const flatten = getFlatten(dataset, false, selectSource)
+async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, totalSize, grouped, composite, timezone = 'utc', preserveArrays = false) {
+  const flatten = getFlatten(dataset, preserveArrays, selectSource)
 
   let chunkSize = maxChunkSize
   if (totalSize !== -1 && totalSize < maxChunkSize) chunkSize = totalSize
@@ -455,6 +455,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 
   const useLabels = query.use_labels === 'true'
   let transformStreams: Stream[] = []
+  let preserveArrays = true
 
   // full potential list:
   // "csv" "fgb" "geojson" "gpx" "json" "jsonl" "jsonld" "kml" "n3" "ov2" "parquet" "rdfxml" "shp" "turtle" "xlsx"
@@ -485,6 +486,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     if (version === '2.0') options.bom = req.query.with_bom === 'true'
     else options.bom = req.query.with_bom !== 'false'
     transformStreams = [csvStrStream(options)]
+    preserveArrays = false
   } else if (req.params.format === 'xlsx') {
     // res.setHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.type('xlsx')
@@ -551,6 +553,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       return { key, type: 'string' }
     })
     transformStreams = [new ParquetWriterStream(basicSchema)]
+    preserveArrays = false
   } else if (req.params.format === 'json') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.json'))
     res.type('json')
@@ -593,7 +596,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)),
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone, preserveArrays)),
       new Transform({
         objectMode: true,
         transform (items, encoding, callback) {
