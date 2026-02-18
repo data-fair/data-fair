@@ -63,12 +63,10 @@ describe('rate limiting', function () {
     for (let i = 0; i < 200; i++) {
       promises.push(ax.get('/api/v1/datasets'))
     }
-    try {
-      await Promise.all(promises)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 429)
-    }
+    await assert.rejects(
+      Promise.all(promises),
+      { status: 429 }
+    )
     // after 1 s the rate limiter is emptied
     await new Promise(resolve => setTimeout(resolve, 1000))
     await ax.get('/api/v1/datasets')

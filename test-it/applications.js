@@ -27,12 +27,10 @@ describe('Applications', function () {
 
   it('Access an unknown applicationId on proxy endpoint', async function () {
     const ax = anonymous
-    try {
-      await ax.get('/app/unknownId')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 404)
-    }
+    await assert.rejects(
+      ax.get('/app/unknownId'),
+      { status: 404 }
+    )
   })
 
   it('Post an application configuration, read it, update it and delete it', async function () {

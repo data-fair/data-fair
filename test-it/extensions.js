@@ -346,12 +346,10 @@ koumoul,19 rue de la voie lactée saint avé
     // check extended file was deleted
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.ok(!res.data.find(file => file.key === 'full'))
-    try {
-      res = await ax.get(fullFile.url)
-      assert.fail()
-    } catch (err) {
-      assert.ok(err.status, 404)
-    }
+    await assert.rejects(
+      ax.get(fullFile.url),
+      { status: 404 }
+    )
   })
 
   it('Do not add already present concept', async function () {

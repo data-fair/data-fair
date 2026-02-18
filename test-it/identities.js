@@ -14,12 +14,10 @@ describe('identities', function () {
 
   it('Check secret key', async function () {
     const ax = anonymous
-    try {
-      await ax.post('/api/v1/identities/user/test', { name: 'Another Name' }, { params: { key: 'bad key' } })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(
+      ax.post('/api/v1/identities/user/test', { name: 'Another Name' }, { params: { key: 'bad key' } }),
+      { status: 403 }
+    )
   })
 
   it('Propagate name change to a dataset', async function () {
@@ -40,11 +38,10 @@ describe('identities', function () {
     assert.ok(await filesStorage.pathExists(userDir))
     const res = await ax.delete('/api/v1/identities/user/icarlens9', { params: { key: config.secretKeys.identities } })
     assert.equal(res.status, 200)
-    try {
-      await ax.get(`/api/v1/datasets/${dataset.id}`)
-    } catch (err) {
-      assert.equal(err.status, 404)
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${dataset.id}`),
+      { status: 404 }
+    )
     assert.ok(!await filesStorage.pathExists(userDir))
   })
 })

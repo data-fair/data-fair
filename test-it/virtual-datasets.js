@@ -187,50 +187,38 @@ describe('virtual datasets', function () {
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'koumoul' } })
     assert.equal(res.data.total, 0, 'cannot match on a field not from the schema')
 
-    try {
-      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'id:koumoul' } })
-      assert.fail('cannot match on a field not from the schema')
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'id:koumoul' } }),
+      { status: 400 }
+    )
 
-    try {
-      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'test AND (id:koumoul OR test)' } })
-      assert.fail('cannot match on a field not from the schema')
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'test AND (id:koumoul OR test)' } }),
+      { status: 400 }
+    )
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: '_exists_:adr' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
-    try {
-      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: '_exists_:id' } })
-      assert.fail('cannot sort on a field not from the schema')
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: '_exists_:id' } }),
+      { status: 400 }
+    )
 
-    try {
-      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { sort: 'koumoul' } })
-      assert.fail('cannot sort on a field not from the schema')
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { sort: 'koumoul' } }),
+      { status: 400 }
+    )
 
-    try {
-      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { select: 'id,adr' } })
-      assert.fail('cannot select a field not from the schema')
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { select: 'id,adr' } }),
+      { status: 400 }
+    )
 
-    try {
-      await ax.get(`/api/v1/datasets/${virtualDataset.id}/values_agg`, { params: { field: 'id' } })
-      assert.fail('cannot aggregate on a field not from the schema')
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/values_agg`, { params: { field: 'id' } }),
+      { status: 400 }
+    )
   })
 
   it('Apply static filter', async function () {
@@ -377,12 +365,10 @@ describe('virtual datasets', function () {
       return true
     })
 
-    try {
-      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
-      assert.fail('filter in child should fail')
-    } catch (err) {
-      assert.equal(err.status, 501)
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`),
+      { status: 501 }
+    )
   })
 
   it('A virtual dataset is updated after a child schema changes', async function () {

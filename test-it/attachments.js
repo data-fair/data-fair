@@ -129,12 +129,13 @@ describe('Attachments', function () {
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: formHeaders(form2) })
-    try {
-      await workers.hook(`finalize/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
-      assert.ok(err.message.includes('Valeurs invalides : dir1/test.pdf'))
-    }
+    await assert.rejects(
+      workers.hook(`finalize/${dataset.id}`),
+      (err) => {
+        assert.ok(err.message.includes('Valeurs invalides : dir1/test.pdf'))
+        return true
+      }
+    )
 
     const form3 = new FormData()
     form3.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
@@ -176,14 +177,15 @@ describe('Attachments', function () {
     const dataset = res.data
     assert.equal(res.status, 201)
 
-    try {
-      await workers.hook(`finalize/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
-      assert.ok(err.message.includes('aucune colonne ne contient les chemins'))
-      assert.ok(err.message.includes('Valeurs attendues :'))
-      assert.ok(err.message.includes('test.odt'))
-      assert.ok(err.message.includes('dir1/test.pdf'))
-    }
+    await assert.rejects(
+      workers.hook(`finalize/${dataset.id}`),
+      (err) => {
+        assert.ok(err.message.includes('aucune colonne ne contient les chemins'))
+        assert.ok(err.message.includes('Valeurs attendues :'))
+        assert.ok(err.message.includes('test.odt'))
+        assert.ok(err.message.includes('dir1/test.pdf'))
+        return true
+      }
+    )
   })
 })

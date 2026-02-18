@@ -129,12 +129,10 @@ describe('REST datasets', function () {
     assert.equal(res.data.nbDeleted, 1)
     assert.ok(res.data.indexedAt)
 
-    try {
-      await ax.get('/api/v1/datasets/rest2/lines/line2')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 404)
-    }
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest2/lines/line2'),
+      { status: 404 }
+    )
     res = await ax.get('/api/v1/datasets/rest2/lines/line3')
     assert.equal(res.data.attr1, 'test2')
     assert.equal(res.data.attr2, 'test1')

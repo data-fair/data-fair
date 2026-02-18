@@ -26,12 +26,10 @@ describe('permissions', function () {
     ])
 
     // No permissions
-    try {
-      await cdurning2.get('/api/v1/datasets/' + datasetId + '/api-docs.json')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(
+      cdurning2.get('/api/v1/datasets/' + datasetId + '/api-docs.json'),
+      { status: 403 }
+    )
 
     // User has permissions on operationId
     res = await ngernier4.get('/api/v1/datasets/' + datasetId)
@@ -88,12 +86,10 @@ describe('permissions', function () {
     res = await cdurning2.get('/api/v1/datasets/' + datasetId2)
     assert.equal(res.status, 200)
     // the owner user, but with different active account
-    try {
-      await dmeadus.get('/api/v1/datasets/' + datasetId2 + '/api-docs.json')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(
+      dmeadus.get('/api/v1/datasets/' + datasetId2 + '/api-docs.json'),
+      { status: 403 }
+    )
   })
 
   it('apply permissions to datasets in organization and departments', async function () {

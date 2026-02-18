@@ -37,12 +37,10 @@ describe('owner roles', function () {
     assert.equal(dataset.owner.name, 'Fivechat')
     await ngernier4Org.get(`/api/v1/datasets/${dataset.id}`)
     await ngernier4Org.get(`/api/v1/datasets/${dataset.id}/lines`)
-    try {
-      await ngernier4Org.get(`/api/v1/datasets/${dataset.id}/permissions`)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(
+      ngernier4Org.get(`/api/v1/datasets/${dataset.id}/permissions`),
+      { status: 403 }
+    )
 
     // can create an application and use it
     const application = (await ngernier4Org.post('/api/v1/applications', { title: 'An application', url: 'http://monapp1.com/' })).data

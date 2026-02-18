@@ -37,12 +37,10 @@ describe('root', function () {
     const res = await ax.post('/api/v1/_check-api', geocoderApi)
     assert.equal(res.status, 200)
     delete geocoderApi.openapi
-    try {
-      await ax.post('/api/v1/_check-api', geocoderApi)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(
+      ax.post('/api/v1/_check-api', geocoderApi),
+      { status: 400 }
+    )
   })
 
   it('serves streamsaver resources', async function () {

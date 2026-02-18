@@ -25,12 +25,10 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     const res = await dmeadusOrg.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
 
-    try {
-      await bhazeldean7Org.get(`/api/v1/applications/${appId}/keys`)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(
+      bhazeldean7Org.get(`/api/v1/applications/${appId}/keys`),
+      { status: 403 }
+    )
   })
 
   it('Automatically filled ids', async function () {
@@ -52,12 +50,10 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     res = await ax.get(`/app/${appId}/`, { maxRedirects: 0 })
     assert.equal(res.status, 200)
 
-    try {
-      await anonymous.get(`/app/${appId}/`, { maxRedirects: 0 })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 302)
-    }
+    await assert.rejects(
+      anonymous.get(`/app/${appId}/`, { maxRedirects: 0 }),
+      { status: 302 }
+    )
 
     res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
     const key = res.data[0].id

@@ -68,12 +68,10 @@ describe('limits', function () {
 
   it('A user cannot change limits', async function () {
     const ax = dmeadus
-    try {
-      await ax.post('/api/v1/limits/user/dmeadus0', baseLimit)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(
+      ax.post('/api/v1/limits/user/dmeadus0', baseLimit),
+      { status: 403 }
+    )
   })
 
   it('A user can read his limits', async function () {
@@ -86,12 +84,10 @@ describe('limits', function () {
 
   it('A user cannot read the list of limits', async function () {
     const ax = dmeadus
-    try {
-      await ax.get('/api/v1/limits')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(
+      ax.get('/api/v1/limits'),
+      { status: 403 }
+    )
   })
 
   it('A super admin can read the list of limits', async function () {

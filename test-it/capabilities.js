@@ -74,20 +74,22 @@ describe('Properties capabilities', function () {
     prop = dataset.schema.find(p => p.key === 'str1')
     assert.equal(prop['x-cardinality'], undefined)
     assert.ok(!prop.enum)
-    try {
-      await ax.get('/api/v1/datasets/rest-values/lines', { params: { sort: 'str1' } })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 400)
-      assert.ok(err.data.includes('Impossible de trier'))
-    }
-    try {
-      await ax.get('/api/v1/datasets/rest-values/values_agg', { params: { field: 'str1' } })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 400)
-      assert.ok(err.data.includes('Impossible de grouper'))
-    }
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-values/lines', { params: { sort: 'str1' } }),
+      (err) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('Impossible de trier'))
+        return true
+      }
+    )
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-values/values_agg', { params: { field: 'str1' } }),
+      (err) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('Impossible de grouper'))
+        return true
+      }
+    )
   })
 
   it('Enable text agg', async function () {
@@ -142,20 +144,22 @@ describe('Properties capabilities', function () {
 
     await ax.patch('/api/v1/datasets/rest-index', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { index: false } }] })
     await workers.hook('finalize/rest-index')
-    try {
-      res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { qs: 'str1:test3' } })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 400)
-      assert.ok(err.data.includes('Impossible d\'appliquer un filtre'))
-    }
-    try {
-      res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { str1_in: 'test3,test2' } })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 400)
-      assert.ok(err.data.includes('Impossible d\'appliquer un filtre'))
-    }
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-index/lines', { params: { qs: 'str1:test3' } }),
+      (err) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('Impossible d\'appliquer un filtre'))
+        return true
+      }
+    )
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-index/lines', { params: { str1_in: 'test3,test2' } }),
+      (err) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('Impossible d\'appliquer un filtre'))
+        return true
+      }
+    )
   })
 
   it('Disable text indexing', async function () {

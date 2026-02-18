@@ -21,20 +21,23 @@ describe('Elasticsearch errors management', function () {
     await ax.delete(`http://${config.elasticsearch.host}/${indexName}`)
 
     // ES error is properly returned in a simplified message
-    try {
-      await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 404)
-      assert.ok(err.data.includes('no such index'))
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${dataset.id}/lines`),
+      (err) => {
+        assert.equal(err.status, 404)
+        assert.ok(err.data.includes('no such index'))
+        return true
+      }
+    )
 
     // cache headers are not filled, we do not want to store errors
-    try {
-      await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { finalizedAt: dataset.finalizedAt } })
-    } catch (err) {
-      assert.equal(err.headers['cache-control'], 'no-cache')
-    }
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { finalizedAt: dataset.finalizedAt } }),
+      (err) => {
+        assert.equal(err.headers['cache-control'], 'no-cache')
+        return true
+      }
+    )
   })
 
   it('Extract message from another ES error', function () {

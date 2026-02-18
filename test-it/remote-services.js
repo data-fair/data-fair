@@ -39,18 +39,14 @@ describe('remote-services', function () {
     assert.equal(res.data.title, 'Test external api')
     // Permissions
     const ax1 = cdurning2
-    try {
-      await ax1.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
-    try {
-      await ax1.delete('/api/v1/remote-services/' + eaId)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(
+      ax1.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' }),
+      { status: 403 }
+    )
+    await assert.rejects(
+      ax1.delete('/api/v1/remote-services/' + eaId),
+      { status: 403 }
+    )
     // We delete the entity
     res = await ax.delete('/api/v1/remote-services/' + eaId)
     assert.equal(res.status, 204)
@@ -61,22 +57,18 @@ describe('remote-services', function () {
 
   it('Unknown external service', async function () {
     const ax = anonymous
-    try {
-      await ax.get('/api/v1/remote-services/unknownId')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 404)
-    }
+    await assert.rejects(
+      ax.get('/api/v1/remote-services/unknownId'),
+      { status: 404 }
+    )
   })
 
   it('Unknown referer', async function () {
     const ax = anonymous
-    try {
-      await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 404)
-    }
+    await assert.rejects(
+      ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } }),
+      { status: 404 }
+    )
   })
 
   it('Handle timeout errors from proxied service', async function () {
@@ -86,11 +78,10 @@ describe('remote-services', function () {
     nock('http://test.com').get('/geocoder/coord').delay(60000).reply(200, { content: 'ok' })
     const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
 
-    try {
-      await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl } })
-    } catch (err) {
-      assert.equal(err.status, 504)
-    }
+    await assert.rejects(
+      ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl } }),
+      { status: 504 }
+    )
   })
 
   it('Prevent abusing remote service re-exposition', async function () {
@@ -104,12 +95,10 @@ describe('remote-services', function () {
     assert.equal(res.data.content, 'ok')
 
     nockScope.done()
-    try {
-      await ax.post('/api/v1/remote-services/geocoder-koumoul/proxy/coords', null, { headers: { referer: app.exposedUrl } })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 405)
-    }
+    await assert.rejects(
+      ax.post('/api/v1/remote-services/geocoder-koumoul/proxy/coords', null, { headers: { referer: app.exposedUrl } }),
+      { status: 405 }
+    )
   })
 
   it('Get unpacked actions inside remote services', async function () {

@@ -217,16 +217,14 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // ES indexation and finalization
-    try {
-      await workers.hook('indexLines/' + dataset.id)
-      assert.fail()
-    } catch (err) {
-      // Check that there is an error message in the journal
-      res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-      assert.equal(res.status, 200)
-      assert.equal(res.data[0].type, 'error')
-      assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
-    }
+    await assert.rejects(
+      workers.hook('indexLines/' + dataset.id)
+    )
+    // Check that there is an error message in the journal
+    res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+    assert.equal(res.status, 200)
+    assert.equal(res.data[0].type, 'error')
+    assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   })
 
   // This test is disabled because it depends on prepair which is not available in the CI
