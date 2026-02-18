@@ -1,7 +1,13 @@
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, getAxios, hlalonde3Org, dmeadusOrg, hlalonde3, superadmin } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, sendDataset, getAxios, getAxiosAuth } from './utils/index.ts'
 import { strict as assert } from 'node:assert'
 import dayjs from 'dayjs'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
+const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
+const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
 
 describe('API keys', function () {
   before(startApiServer)
