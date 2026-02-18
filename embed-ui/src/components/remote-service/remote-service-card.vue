@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
   <v-card
-    :to="`/remote-services/${remoteService.id}`"
+    :to="`/remote-services/${encodeURIComponent(remoteService.id ?? '')}`"
     border
     tile
     hover
