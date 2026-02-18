@@ -86,7 +86,7 @@ describe('remote-services', function () {
     }
   })
 
-  it('Prevent abusing remote service re-exposition', async function () {
+  it.only('Prevent abusing remote service re-exposition', async function () {
     const ax = superadmin
     const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
 

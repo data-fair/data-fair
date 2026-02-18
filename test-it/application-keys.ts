@@ -97,9 +97,9 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     assert.ok(res.data.userPermissions.includes('readLines'))
     assert.ok(res.data.userPermissions.includes('readDescription'))
     assert.ok(!res.data.userPermissions.includes('writeDescription'))
-    res = await anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${encodeURIComponent(key + ':' + appId)}/` } })
+    res = await anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + appId)}/` } })
     assert.equal(res.status, 200)
-    res = await anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${encodeURIComponent(key + ':' + appId)}/` } })
+    res = await anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + appId)}/` } })
     assert.equal(res.status, 200)
 
     await assert.rejects(anonymous.get(`/api/v1/datasets/${dataset2.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } }), { status: 403 })

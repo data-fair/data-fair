@@ -109,4 +109,51 @@ describe('Date formats', function () {
     const results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(results[0].datetime, '1961-02-13T00:00:00+00:00')
   })
+
+  it('Accept another date-time format and configure timezone', async function () {
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/date-time.csv', ax)
+    const dateProp = dataset.file.schema.find((p: any) => p.key === 'horodatage')
+    assert.equal(dateProp.type, 'string')
+    assert.equal(dateProp.format, 'date-time')
+    assert.equal(dateProp.dateTimeFormat, 'YYYY-MM-DD HH:mm:ss')
+
+    let results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(results[0].horodatage, '2050-01-01T00:00:00+01:00')
+
+    dataset.schema.find((field: any) => field.key === 'horodatage').timeZone = 'Pacific/Honolulu'
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
+    const workers = await import('../api/src/workers/index.ts')
+    await workers.hook(`finalize/${dataset.id}`)
+
+    results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(results[0].horodatage, '2050-01-01T00:00:00-10:00')
+  })
+
+  it('Accept formatted date in geojson', async function () {
+    const ax = dmeadus
+    const form = new FormData()
+    form.append('file', JSON.stringify({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          id: 'id1',
+          geometry: {
+            type: 'LineString',
+            coordinates: [[102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]]
+          },
+          properties: {
+            date: '2018/01/01'
+          }
+        }
+      ]
+    }), 'geojson-example.geojson')
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
+    assert.equal(res.status, 201)
+    const workers = await import('../api/src/workers/index.ts')
+    const dataset = await workers.hook(`finalize/${res.data.id}`)
+    const dateProp = dataset.file.schema.find((p: any) => p.key === 'date')
+    assert.equal(dateProp.dateFormat, 'YYYY/M/D')
+  })
 })

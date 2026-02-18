@@ -58,4 +58,82 @@ describe('Spreadsheets conversions', function () {
     assert.equal(dates[1], '2050-01-01T00:00:00.000Z')
     assert.equal(dates[2], '2050-01-01T01:00:00.000Z')
   })
+
+  it('should manage a sparse XLSX file', async function () {
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/sparse.xlsx', ax)
+    assert.equal(dataset.schema.filter((p: any) => p.key.startsWith('col')).length, 4)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 4)
+    assert.equal(res.data.results[0].col1, 'a')
+    assert.equal(res.data.results[1].col1, 'd')
+    assert.equal(res.data.results[1].col2, 'e')
+    assert.equal(res.data.results[2].col1, 'f')
+    assert.equal(res.data.results[2].col3, 'g')
+    assert.equal(res.data.results[3].col1, 'h')
+    assert.equal(res.data.results[2].col5, 'i')
+  })
+
+  it('should manage a XLSX with formula and links', async function () {
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/misc.xlsx', ax)
+    assert.equal(dataset.schema.find((p: any) => p.key === 'col1').type, 'integer')
+    assert.equal(dataset.schema.find((p: any) => p.key === 'col2').type, 'integer')
+    assert.equal(dataset.schema.find((p: any) => p.key === 'col3').type, 'string')
+    assert.equal(dataset.schema.find((p: any) => p.key === 'col4').type, 'integer')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 4)
+    assert.equal(res.data.results[0].col1, 1)
+    assert.equal(res.data.results[0].col2, 2)
+    assert.equal(res.data.results[0].col3, 'https://koumoul.com/')
+    assert.equal(res.data.results[0].col4, 3)
+  })
+
+  it('should manage a ODS file with normalization options', async function () {
+    const ax = dmeadus
+    const workers = await import('../api/src/workers/index.ts')
+    const fs = await import('node:fs')
+    const FormData = (await import('form-data')).default
+    const datasetFd = fs.readFileSync('./test/resources/datasets/header.ods')
+    const form = new FormData()
+    form.append('file', datasetFd, 'header.ods')
+    form.append('file_normalizeOptions', JSON.stringify({
+      spreadsheetWorksheetIndex: 2,
+      spreadsheetHeaderLine: 3,
+      spreadsheetStartCol: 2
+    }))
+
+    let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    const dataset = await workers.hook(`finalize/${res.data.id}`)
+    assert.equal(dataset.schema.filter((p: any) => !p['x-calculated']).length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].col1, 'val1')
+  })
+
+  it('should manage a XLSX file with normalization options', async function () {
+    const ax = dmeadus
+    const workers = await import('../api/src/workers/index.ts')
+    const fs = await import('node:fs')
+    const FormData = (await import('form-data')).default
+    const datasetFd = fs.readFileSync('./test/resources/datasets/header.xlsx')
+    const form = new FormData()
+    form.append('file', datasetFd, 'header.ods')
+    form.append('file_normalizeOptions', JSON.stringify({
+      spreadsheetWorksheetIndex: 2,
+      spreadsheetHeaderLine: 3,
+      spreadsheetStartCol: 2
+    }))
+
+    let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    const dataset = await workers.hook(`finalize/${res.data.id}`)
+    assert.equal(dataset.schema.filter((p: any) => !p['x-calculated']).length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].col1, 'val1')
+  })
 })

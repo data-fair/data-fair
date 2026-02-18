@@ -625,4 +625,83 @@ describe('datasets in draft mode', function () {
     csv = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines?format=csv')).data
     assert.ok(csv.startsWith('"id","adr"'))
   })
+
+  it('create a draft when updating the data file and cancel it if there are some validation errors', async function () {
+    const ax = dmeadus
+    const workers = await import('../api/src/workers/index.ts')
+
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
+    let dataset = await workers.hook('finalize/' + res.data.id)
+
+    const schema = dataset.schema
+    schema[0].pattern = '^[a-z]+$'
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
+    dataset = await workers.hook('validateFile/' + dataset.id)
+
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1-invalid.csv'))
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset1-invalid.csv')
+    form2.append('description', 'draft description')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: 'compatibleOrCancel' } })).data
+    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.draftReason.key, 'file-updated')
+    assert.equal(dataset.draftReason.validationMode, 'compatibleOrCancel')
+    await workers.hook('validateFile/' + dataset.id)
+
+    dataset = await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`).then(r => r.data)
+    assert.ok(!dataset.draftReason)
+
+    const journal = await ax.get(`/api/v1/datasets/${dataset.id}/journal`).then(r => r.data)
+    assert.equal(journal[0].type, 'draft-cancelled')
+  })
+
+  it('create a draft at creation and update it with multiple follow-up uploads', async function () {
+    const ax = dmeadus
+    const workers = await import('../api/src/workers/index.ts')
+
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
+    let dataset = await workers.hook('finalize/' + res.data.id)
+    assert.ok(!dataset.file)
+    assert.equal(dataset.status, 'draft')
+    assert.equal(dataset.draft.draftReason.key, 'file-new')
+    assert.equal(dataset.draft.file.name, 'dataset1.csv')
+    dataset = await ax.get('/api/v1/datasets/' + dataset.id)
+    assert.equal(dataset.status, 'draft')
+
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset1-draft2.csv')
+    form2.append('description', 'draft description 2')
+    const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
+    assert.equal(datasetDraft2.status, 'created')
+    dataset = await workers.hook('finalize/' + dataset.id)
+    assert.ok(!dataset.file)
+    assert.equal(dataset.status, 'draft')
+    assert.equal(dataset.draft.draftReason.key, 'file-new')
+    assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
+
+    const datasetFd3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const form3 = new FormData()
+    form3.append('file', datasetFd3, 'dataset1-draft3.csv')
+    form3.append('description', 'draft description 3')
+    const datasetDraft3 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: formHeaders(form3), params: { draft: true } })).data
+    assert.equal(datasetDraft3.status, 'loaded')
+    dataset = await workers.hook('finalize/' + dataset.id)
+    assert.ok(!dataset.file)
+    assert.equal(dataset.status, 'draft')
+    assert.equal(dataset.draft.draftReason.key, 'file-new')
+    assert.equal(dataset.draft.file.name, 'dataset1-draft3.csv')
+
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook('finalize/' + dataset.id)
+    assert.ok(!dataset.draft)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.name, 'dataset1-draft3.csv')
+  })
 })

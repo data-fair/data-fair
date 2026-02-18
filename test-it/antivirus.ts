@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import { it, describe } from 'node:test'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 
 describe('anti virus integration', function () {

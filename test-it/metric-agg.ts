@@ -87,5 +87,49 @@ describe('metric agg', function () {
     })).data.metric
     assert.equal(percentiles.length, 7)
     assert.equal(percentiles[3].key, 50)
+    assert.equal(percentiles[3].value, 5)
+
+    const percentiles2 = (await ax.get('/api/v1/datasets/metric-agg/metric_agg', {
+      params: { field: 'numfield', metric: 'percentiles', percents: '50,75' }
+    })).data.metric
+    assert.equal(percentiles2.length, 2)
+    assert.equal(percentiles2[0].key, 50)
+    assert.equal(percentiles2[0].value, 5)
+
+    const minDate = (await ax.get('/api/v1/datasets/metric-agg/metric_agg', {
+      params: { field: 'datefield', metric: 'min' }
+    })).data.metric
+    assert.equal(minDate, '2020-12-01')
+
+    const maxDate = (await ax.get('/api/v1/datasets/metric-agg/metric_agg', {
+      params: { field: 'datefield', metric: 'max' }
+    })).data.metric
+    assert.equal(maxDate, '2020-12-11')
+  })
+
+  it('performs multiple basic calculations on a list of fields', async function () {
+    const ax = dmeadus
+    let res = (await ax.get('/api/v1/datasets/metric-agg/simple_metrics_agg')).data
+    assert.equal(res.total, 11)
+    assert.equal(res.metrics.numfield.min, 0)
+    assert.equal(res.metrics.datefield.min, '2020-12-01')
+    assert.equal(res.metrics.datetimefield.min, '2020-12-01T02:10:10+01:00')
+    assert.equal(res.metrics.textfield.cardinality, 11)
+    assert.ok(!res.metrics.textfield2)
+    res = (await ax.get('/api/v1/datasets/metric-agg/simple_metrics_agg', { params: { qs: 'numfield:>3' } })).data
+    assert.equal(res.total, 7)
+    assert.equal(res.metrics.numfield.min, 4)
+    assert.equal(res.metrics.datefield.min, '2020-12-05')
+    assert.equal(res.metrics.datetimefield.min, '2020-12-01T06:10:10+01:00')
+    assert.equal(res.metrics.textfield.cardinality, 7)
+    res = (await ax.get('/api/v1/datasets/metric-agg/simple_metrics_agg', { params: { qs: 'numfield:>3', fields: 'numfield,textfield' } })).data
+    assert.equal(res.total, 7)
+    assert.equal(res.metrics.numfield.min, 4)
+    assert.ok(!res.metrics.datefield)
+    assert.ok(!res.metrics.datetimefield)
+    res = (await ax.get('/api/v1/datasets/metric-agg/simple_metrics_agg', { params: { qs: 'numfield:>3', fields: 'numfield', metrics: 'sum,avg' } })).data
+    assert.equal(res.total, 7)
+    assert.equal(res.metrics.numfield.sum, 49)
+    assert.equal(res.metrics.numfield.avg, 7)
   })
 })
