@@ -3,7 +3,7 @@ import validateDcat from '../api/src/misc/utils/dcat/validate.js'
 import { memoizedGetPublicationSiteSettings } from '@data-fair/data-fair-api/src/misc/utils/settings.ts'
 import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth } from './utils/index.ts'
 
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')

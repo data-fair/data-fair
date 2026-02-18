@@ -8,12 +8,11 @@ import * as groupByParser from '../api/src/api-compat/ods/group-by.peg.js'
 import * as aliasesParser from '../api/src/api-compat/ods/aliases.peg.js'
 import * as refineParser from '../api/src/api-compat/ods/refine.peg.js'
 import * as workers from '../api/src/workers/index.ts'
-
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 import dayjs from 'dayjs'
+
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
 
 describe('compatibility layer for ods api', function () {
   before(startApiServer)

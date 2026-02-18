@@ -11,7 +11,7 @@
     "test-deps": "docker compose --profile test up -d --wait",
     "report": "nyc report --reporter=html",
     "lint": "eslint . && npm -w ui run lint && npm -w embed-ui run lint",
-    "lint-fix": "eslint --fix . && npm -w ui run lint-fix && && npm -w embed-ui run lint-fix",
+    "lint-fix": "eslint --fix . && npm -w ui run lint-fix && npm -w embed-ui run lint-fix",
     "dev-deps": "docker compose --profile dev up -d --wait",
     "stop-dev-deps": "docker compose --profile dev stop",
     "dev-api": "MODE=server npm -w api run dev",

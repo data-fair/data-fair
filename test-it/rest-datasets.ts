@@ -1,13 +1,20 @@
 import { strict as assert } from 'node:assert'
 
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, formHeaders } from './utils/index.ts'
 import path from 'node:path'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 import moment from 'moment'
 import zlib from 'zlib'
+import { Writable } from 'stream'
+import iconv from 'iconv-lite'
+import { promisify } from 'util'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
+import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.ts'
+import pumpOg from 'pump'
+import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
@@ -16,13 +23,6 @@ const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
 const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
 const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
 const superadminPersonal = await getAxiosAuth('superadmin@test.com', 'superpasswd')
-import { Writable } from 'stream'
-import iconv from 'iconv-lite'
-import { promisify } from 'util'
-import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
-import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.ts'
-import pumpOg from 'pump'
-import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 
 const pump = promisify(pumpOg)
 

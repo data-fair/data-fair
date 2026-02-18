@@ -8,14 +8,14 @@ import WebSocket from 'ws'
 import config from 'config'
 import * as workers from '../api/src/workers/index.ts'
 import { validate } from 'tableschema'
+import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
+import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
 
 const anonymous = getAxios()
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
 const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
 const alone = await getAxiosAuth('alone@no.org', 'passwd')
-import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
-import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
 
 const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
 

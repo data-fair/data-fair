@@ -1,6 +1,6 @@
 import { escapeKey } from '../api/src/datasets/utils/fields-sniffer.js'
 import { strict as assert } from 'node:assert'
-import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { it, describe } from 'node:test'
 
 describe('escape key algorithme', function () {
   it('should normalize column keys', function () {

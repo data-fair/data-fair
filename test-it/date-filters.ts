@@ -1,13 +1,9 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset, formHeaders, timeout } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth } from './utils/index.ts'
 
-const anonymous = getAxios()
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
-const alone = await getAxiosAuth('alone@no.org', 'passwd')
 
 describe('Date filters', function () {
   before(startApiServer)

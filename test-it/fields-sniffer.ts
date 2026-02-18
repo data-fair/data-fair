@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import * as sniffer from '../api/src/datasets/utils/fields-sniffer.js'
-import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { it, describe } from 'node:test'
 
 describe('field sniffer', function () {
   it('Work with booleans', function () {

@@ -1,10 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth } from './utils/index.ts'
 
-const anonymous = getAxios()
-const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 
 describe('Wildcard fields', function () {
