@@ -46,12 +46,12 @@ export const results2csv = async (req, results) => {
   const options = csvStringifyOptions(req.dataset, req.query)
 
   if (results.length < sliceSize) {
-    // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
+    // escape special null char (see test-it/resources/csv-cases/rge-null-chars.csv)
     csv += csvStrSync(results, options).replace(/\0/g, '')
   } else {
     let i = 0
     while (i < results.length) {
-      // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
+      // escape special null char (see test-it/resources/csv-cases/rge-null-chars.csv)
       const sliceOptions = i === 0 ? options : { ...options, header: false, bom: false }
       csv += csvStrSync(results.slice(i, i + sliceSize), sliceOptions).replace(/\0/g, '')
       i += sliceSize
@@ -68,7 +68,7 @@ export const csvStreams = (dataset, query = {}, useTitle = false) => {
     csvStrStream(csvStringifyOptions(dataset, query, useTitle)),
     new Transform({
       transform (item, encoding, callback) {
-        // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
+        // escape special null char (see test-it/resources/csv-cases/rge-null-chars.csv)
         callback(null, item.toString().replace(/\0/g, ''))
       }
     })

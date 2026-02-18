@@ -30,6 +30,7 @@ import type { Document, Filter, WithId } from 'mongodb'
 import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import { arrayBuffer } from 'stream/consumers'
+import testEvents from '../../misc/utils/test-events.ts'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -249,8 +250,7 @@ class ExtensionsStream extends Transform {
 
   async sendBuffer () {
     if (!this.buffer.length) return
-    // @ts-ignore
-    if (global.events) global.events.emit('extension-inputs', this.buffer.length)
+    testEvents.emit('extension-inputs', this.buffer.length)
 
     const changesIndexes = new Set()
 
