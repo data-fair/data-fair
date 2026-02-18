@@ -6,13 +6,11 @@
   "scripts": {
     "build-types": "df-build-types ./api/",
     "test-base": "NODE_CONFIG_DIR=./api/config/ NODE_ENV=test EVENTS_LOG_LEVEL=warn node --disable-warning=ExperimentalWarning --test-force-exit --test-concurrency=1 --test --experimental-strip-types",
-    "test": "npm run test-base test-it/*.js",
-    "test-old": "npm -w test run test",
-    "test-s3": "FILES_STORAGE=s3 npm -w test run test",
+    "test-s3": "FILES_STORAGE=s3 npm run test",
     "test-deps": "docker compose --profile test up -d --wait",
     "report": "nyc report --reporter=html",
-    "lint": "eslint . && npm -w ui run lint && npm -w test run lint && npm -w embed-ui run lint",
-    "lint-fix": "eslint --fix . && npm -w ui run lint-fix && npm -w test run lint-fix && npm -w embed-ui run lint-fix",
+    "lint": "eslint . && npm -w ui run lint && npm -w embed-ui run lint",
+    "lint-fix": "eslint --fix . && npm -w ui run lint-fix && && npm -w embed-ui run lint-fix",
     "dev-deps": "docker compose --profile dev up -d --wait",
     "stop-dev-deps": "docker compose --profile dev stop",
     "dev-api": "MODE=server npm -w api run dev",
@@ -65,7 +63,6 @@
     "ui",
     "embed-ui",
     "shared",
-    "test",
     "parquet-writer"
   ],
   "dependencies": {
