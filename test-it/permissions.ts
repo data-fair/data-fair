@@ -97,17 +97,17 @@ describe('permissions', function () {
     const res = await dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
     assert.equal((await bhazeldean7Org.get('/api/v1/datasets')).data.count, 0)
-    await assert.rejects(bhazeldean7Org.get('/api/v1/datasets/' + datasetId), err: any => err.status === 403)
+    await assert.rejects(bhazeldean7Org.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 403)
     await dmeadusOrg.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'organization', id: 'KWqAGZ4mG', department: '-', classes: ['list', 'read'] }
     ])
     assert.equal((await bhazeldean7Org.get('/api/v1/datasets')).data.count, 1)
     await bhazeldean7Org.get('/api/v1/datasets/' + datasetId)
-    await assert.rejects(bhazeldean7.get('/api/v1/datasets/' + datasetId), err: any => err.status === 403)
+    await assert.rejects(bhazeldean7.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 403)
 
     // dataset made accessible to users of a departement
     assert.equal((await ddecruce5Org.get('/api/v1/datasets')).data.count, 0)
-    await assert.rejects(ddecruce5Org.get('/api/v1/datasets/' + datasetId), err: any => err.status === 403)
+    await assert.rejects(ddecruce5Org.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 403)
     await dmeadusOrg.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'organization', id: 'KWqAGZ4mG', department: 'dep1', classes: ['list', 'read'] }
     ])
@@ -124,7 +124,7 @@ describe('permissions', function () {
     const res = await dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
     assert.equal((await bhazeldean7.get('/api/v1/datasets')).data.count, 0)
-    await assert.rejects(bhazeldean7.get('/api/v1/datasets/' + datasetId), err: any => err.status === 403)
+    await assert.rejects(bhazeldean7.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 403)
     await dmeadusOrg.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'user', id: '*', classes: ['list', 'read'] }
     ])

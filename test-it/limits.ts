@@ -31,7 +31,7 @@ describe('limits', function () {
     // Send dataset applying default limits
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err: any => err.status === 429)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 429)
 
     // define a higher limit
     res = await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
@@ -44,14 +44,14 @@ describe('limits', function () {
     assert.equal(res.status, 201)
     form = new FormData()
     form.append('file', Buffer.alloc(100004), 'dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err: any => err.status === 429)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 429)
 
     // test nb datasets size limit
     let lastDataset
     for (let i = 0; i < 8; i++) {
       lastDataset = (await ax.post('/api/v1/datasets/rest-dataset-' + (i + 1), { title: 'rest-dataset', isRest: true })).data
     }
-    await assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), err: any => err.status === 429)
+    await assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), (err: any) => err.status === 429)
 
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.status, 200)

@@ -51,21 +51,21 @@ describe('owner roles', function () {
   })
 
   it('organization user has even more limited capabilities', async function () {
-    await assert.rejects(bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), err: any => err.status === 403)
+    await assert.rejects(bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err: any) => err.status === 403)
     const dataset = (await dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
     const datasets = (await bhazeldean7Org.get('/api/v1/datasets')).data
     assert.equal(datasets.count, 0)
-    await assert.rejects(bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}`), err: any => err.status === 403)
-    await assert.rejects(bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/lines`), err: any => err.status === 403)
-    await assert.rejects(bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/permissions`), err: any => err.status === 403)
-    await assert.rejects(bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/journal`), err: any => err.status === 403)
-    await assert.rejects(bhazeldean7Org.delete(`/api/v1/datasets/${dataset.id}`), err: any => err.status === 403)
+    await assert.rejects(bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 403)
+    await assert.rejects(bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/lines`), (err: any) => err.status === 403)
+    await assert.rejects(bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/permissions`), (err: any) => err.status === 403)
+    await assert.rejects(bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/journal`), (err: any) => err.status === 403)
+    await assert.rejects(bhazeldean7Org.delete(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 403)
 
-    await assert.rejects(bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), err: any => err.status === 403)
+    await assert.rejects(bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err: any) => err.status === 403)
     const application = (await dmeadusOrg.post('/api/v1/applications', { title: 'An application', url: 'http://monapp1.com/' })).data
-    await assert.rejects(bhazeldean7Org.get(`/api/v1/applications/${application.id}`), err: any => err.status === 403)
-    await assert.rejects(bhazeldean7Org.delete(`/api/v1/applications/${application.id}`), err: any => err.status === 403)
+    await assert.rejects(bhazeldean7Org.get(`/api/v1/applications/${application.id}`), (err: any) => err.status === 403)
+    await assert.rejects(bhazeldean7Org.delete(`/api/v1/applications/${application.id}`), (err: any) => err.status === 403)
 
     // cannot patch settings
     await assert.rejects(bhazeldean7Org.put('/api/v1/settings/organization/KWqAGZ4mG', { topics: [] }), { status: 403 })
@@ -99,12 +99,12 @@ describe('owner roles', function () {
     }])
     await dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
     // outside user -> ko
-    await assert.rejects(ddecruce5.get(`/api/v1/datasets/${dataset.id}`), err: any => err.status === 403)
+    await assert.rejects(ddecruce5.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 403)
     // contrib from any department does not have owner privilege if the resource does not belong to any department
-    await assert.rejects(icarlens9Org.get(`/api/v1/datasets/${dataset.id}`), err: any => err.status === 403)
-    await assert.rejects(icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), err: any => err.status === 403)
-    await assert.rejects(ddecruce5Org.get(`/api/v1/datasets/${dataset.id}`), err: any => err.status === 403)
-    await assert.rejects(ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), err: any => err.status === 403)
+    await assert.rejects(icarlens9Org.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 403)
+    await assert.rejects(icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err: any) => err.status === 403)
+    await assert.rejects(ddecruce5Org.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 403)
+    await assert.rejects(ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err: any) => err.status === 403)
     // switch ownership to a specific department
     await dmeadusOrg.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',
@@ -137,8 +137,8 @@ describe('owner roles', function () {
     await ddecruce5Org.get(`/api/v1/datasets/${dataset.id}`)
     await ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
     // contrib from wrong department -> ko
-    await assert.rejects(icarlens9Org.get(`/api/v1/datasets/${dataset.id}`), err: any => err.status === 403)
-    await assert.rejects(icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), err: any => err.status === 403)
+    await assert.rejects(icarlens9Org.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 403)
+    await assert.rejects(icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err: any) => err.status === 403)
   })
 
   it('department restriction is automatically applied', async function () {

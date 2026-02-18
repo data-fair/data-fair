@@ -770,7 +770,7 @@ describe('Master data management', function () {
       }]
     })
     await cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }])
-    await assert.rejects(workers.hook('finalize/slave'), err: any => err.message.startsWith('Try to apply extension'))
+    await assert.rejects(workers.hook('finalize/slave'), (err: any) => err.message.startsWith('Try to apply extension'))
   })
 
   it('should prevent using master-data without permission on dataset', async function () {
@@ -803,7 +803,7 @@ describe('Master data management', function () {
       }]
     })
     await cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await assert.rejects(workers.hook('finalize/slave'), err: any => err.message.startsWith('[noretry] permission manquante'))
+    await assert.rejects(workers.hook('finalize/slave'), (err: any) => err.message.startsWith('[noretry] permission manquante'))
   })
 
   it('should support using master-data from other account if visibility is ok', async function () {

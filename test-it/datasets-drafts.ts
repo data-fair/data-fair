@@ -80,10 +80,10 @@ describe('datasets in draft mode', function () {
     const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) }), err: any => err.status === 409)
+    await assert.rejects(ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) }), (err: any) => err.status === 409)
 
     // querying for lines is not yet possible
-    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines`), err: any => err.status === 409)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines`), (err: any) => err.status === 409)
     // except in draft mode
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 2)
@@ -744,7 +744,7 @@ other
     assert.ok(!await filesStorage.pathExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
     assert.ok(!await fs.pathExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
-    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), err: any => err.status === 404)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 404)
   })
 
   it('Accepts a new file with compatible keys but different names', async function () {

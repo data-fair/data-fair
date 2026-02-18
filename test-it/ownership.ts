@@ -23,7 +23,7 @@ describe('resource ownership', function () {
         id: 'anotherorg',
         name: 'Test'
       }),
-      err: any => err.status === 403
+      (err: any) => err.status === 403
     )
     await assert.rejects(
       ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
@@ -31,7 +31,7 @@ describe('resource ownership', function () {
         id: 'anotheruser',
         name: 'Test'
       }),
-      err: any => err.status === 403
+      (err: any) => err.status === 403
     )
     await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',

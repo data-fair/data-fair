@@ -102,7 +102,7 @@ describe('datasets', function () {
     const ax = dmeadus
     const form = new FormData()
     form.append('file', Buffer.alloc(160000), 'largedataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err: any => err.status === 413)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 413)
   })
 
   it('Failure to upload multiple datasets exceeding limit', async function () {
@@ -114,7 +114,7 @@ describe('datasets', function () {
 
     form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset2.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err: any => err.status === 429)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 429)
   })
 
   it('Upload new dataset in user zone', async function () {
@@ -239,7 +239,7 @@ describe('datasets', function () {
     const form = new FormData()
     form.append('title', 'my title')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets/my dataset id', form, { headers: formHeaders(form) }), err: any => err.status === 400)
+    await assert.rejects(ax.post('/api/v1/datasets/my dataset id', form, { headers: formHeaders(form) }), (err: any) => err.status === 400)
   })
 
   it('Reject some other pre-filled attributes', async function () {
@@ -247,13 +247,13 @@ describe('datasets', function () {
     const form = new FormData()
     form.append('id', 'pre-filling id is not possible')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err: any => err.status === 400)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 400)
   })
 
   it('Fail to upload new dataset when not authenticated', async function () {
     const ax = anonymous
     const form = new FormData()
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err: any => err.status === 401)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 401)
   })
 
   it('Upload dataset - full test with webhooks', async function () {
@@ -292,8 +292,8 @@ describe('datasets', function () {
 
     assert.equal(res.data.length, 5)
     // testing permissions
-    await assert.rejects(dmeadus.get(webhook.href), err: any => err.status === 403)
-    await assert.rejects(anonymous.get(webhook.href), err: any => err.status === 403)
+    await assert.rejects(dmeadus.get(webhook.href), (err: any) => err.status === 403)
+    await assert.rejects(anonymous.get(webhook.href), (err: any) => err.status === 403)
 
     // Updating schema
     res = await ax.get(webhook.href)
@@ -314,7 +314,7 @@ describe('datasets', function () {
     // Delete the dataset
     res = await ax.delete('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 204)
-    await assert.rejects(ax.get('/api/v1/datasets/' + datasetId), err: any => err.status === 404)
+    await assert.rejects(ax.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 404)
   })
 
   it('Upload dataset and update with different file name', async function () {

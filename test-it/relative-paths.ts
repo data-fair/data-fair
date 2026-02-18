@@ -26,11 +26,11 @@ describe('safe relative paths management', function () {
     const form = new FormData()
     form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
     form.append('id', '../dataset1')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err: any => err.status === 400)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 400)
 
     const form2 = new FormData()
     form2.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
-    await assert.rejects(ax.post('/api/v1/datasets/' + encodeURIComponent('../dataset1'), form2, { headers: formHeaders(form2) }), err: any => err.status === 404)
+    await assert.rejects(ax.post('/api/v1/datasets/' + encodeURIComponent('../dataset1'), form2, { headers: formHeaders(form2) }), (err: any) => err.status === 404)
   })
 
   it('relative path in attachment name', async function () {
@@ -45,8 +45,8 @@ describe('safe relative paths management', function () {
     assert.equal(attachmentRes.status, 200)
     const attachmentHackRes1 = await ax.get(`/api/v1/datasets/${dataset.id}/attachments//test.odt`)
     assert.equal(attachmentHackRes1.headers['content-length'], attachmentRes.headers['content-length'])
-    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/attachments/~/test.odt`), err: any => err.status === 404)
-    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/attachments/${encodeURIComponent('../files.zip')}`), err: any => err.status === 404)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/attachments/~/test.odt`), (err: any) => err.status === 404)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/attachments/${encodeURIComponent('../files.zip')}`), (err: any) => err.status === 404)
   })
 
   // TODO: in attachment name read and write

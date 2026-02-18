@@ -176,7 +176,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     const key = res.data[0].id
     await assert.rejects(
       anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } }),
-      err: any => err.status === 403)
+      (err: any) => err.status === 403)
   })
 
   it('Use an application key to post lines into referenced datasets', async function () {
@@ -200,7 +200,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     const key = res.data[0].id
     assert.rejects(
       anonymous.get('/api/v1/datasets/restcrowd/lines', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } }),
-      err: any => err.status === 403)
+      (err: any) => err.status === 403)
     res = await anonymous.get('/api/v1/datasets/restcrowd', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
     assert.deepEqual(res.data.userPermissions, ['createLine', 'readSchema', 'readDescription'])
@@ -210,7 +210,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     // rejected because token is too young
     await assert.rejects(
       anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
-      err: any => err.status === 429)
+      (err: any) => err.status === 429)
     rateLimitingUtils.clear()
     await new Promise(resolve => setTimeout(resolve, 2000))
     // accepted because token is the right age
@@ -221,7 +221,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     // rejected because of simple rate limiting
     await assert.rejects(
       anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
-      err: any => err.status === 429)
+      (err: any) => err.status === 429)
   })
 
   it('Use an application key to manage own lines', async function () {
@@ -250,7 +250,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
 
     await assert.rejects(
       cdurning2.get('/api/v1/datasets/restcrowdown/lines', { headers }),
-      err: any => err.status === 403)
+      (err: any) => err.status === 403)
     res = await cdurning2.get('/api/v1/datasets/restcrowdown', { headers })
     assert.equal(res.status, 200)
     assert.deepEqual(res.data.userPermissions, ['createOwnLine', 'readOwnLines', 'readDescription'])

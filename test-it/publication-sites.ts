@@ -16,7 +16,7 @@ describe('publication sites', function () {
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
-      err: any => err.status === 404)
+      (err: any) => err.status === 404)
   })
 
   it('should fail to publish application on unknown site', async function () {
@@ -24,7 +24,7 @@ describe('publication sites', function () {
 
     const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
     await assert.rejects(ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
-      err: any => err.status === 404)
+      (err: any) => err.status === 404)
   })
 
   it('should fail to request publication of dataset on unknown site', async function () {
@@ -32,7 +32,7 @@ describe('publication sites', function () {
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] }),
-      err: any => err.status === 404)
+      (err: any) => err.status === 404)
   })
 
   it('should publish dataset on a org site', async function () {
@@ -111,7 +111,7 @@ describe('publication sites', function () {
 
     const dataset = (await hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await assert.rejects(hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
-      err: any => err.status === 403)
+      (err: any) => err.status === 403)
   })
 
   it('department admin can request publishing dataset on org site', async function () {
@@ -162,7 +162,7 @@ describe('publication sites', function () {
 
     const dataset = (await hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await assert.rejects(ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
-      err: any => err.status === 403)
+      (err: any) => err.status === 403)
   })
 
   it('department contrib can request publishing dataset on department site', async function () {
@@ -189,8 +189,8 @@ describe('publication sites', function () {
     await dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portalStaging)
 
     const dataset = (await dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await assert.rejects(ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-unknown'] }), err: any => err.status === 404)
-    await assert.rejects(ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-prod'] }), err: any => err.status === 403)
+    await assert.rejects(ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-unknown'] }), (err: any) => err.status === 404)
+    await assert.rejects(ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-prod'] }), (err: any) => err.status === 403)
     await ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-staging'] })
   })
 })

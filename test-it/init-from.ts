@@ -333,7 +333,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     })
     assert.equal(res.status, 201)
-    await assert.rejects(workers.hook('finalize/' + res.data.id), err: any => err.message.includes('permission manquante'))
+    await assert.rejects(workers.hook('finalize/' + res.data.id), (err: any) => err.message.includes('permission manquante'))
   })
 
   it('Initialize dataset in a department from dataset in orga', async function () {

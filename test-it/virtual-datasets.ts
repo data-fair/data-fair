@@ -849,6 +849,6 @@ describe('virtual datasets', function () {
     const virtualDataset = await workers.hook('finalize/' + res.data.id)
     const form = new FormData()
     form.append('file', 'test', 'dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets/' + virtualDataset.id, form, { headers: formHeaders(form) }), err: any => err.status === 400)
+    await assert.rejects(ax.post('/api/v1/datasets/' + virtualDataset.id, form, { headers: formHeaders(form) }), (err: any) => err.status === 400)
   })
 })
