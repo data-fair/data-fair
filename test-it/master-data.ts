@@ -3,10 +3,14 @@
 
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, superadmin, formHeaders, cdurning2 } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import FormData from 'form-data'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import * as workers from '../api/src/workers/index.ts'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
 
 const initMaster = async (ax, info, masterData, id = 'master') => {
   if (Array.isArray(masterData)) {

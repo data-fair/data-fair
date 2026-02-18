@@ -1,7 +1,12 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders, dmeadusOrg, cdurning2, alone } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
+const alone = await getAxiosAuth('alone@no.org', 'passwd')
 
 describe('REST datasets with owner specific lines', function () {
   before(startApiServer)

@@ -1,12 +1,14 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import fs from 'node:fs'
 import config from 'config'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 
 describe('geo files support', function () {
   before(startApiServer)

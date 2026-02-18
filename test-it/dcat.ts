@@ -4,7 +4,13 @@ import path from 'node:path'
 import normalize from '../api/src/misc/utils/dcat/normalize.js'
 import validate from '../api/src/misc/utils/dcat/validate.js'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, alone, dmeadusOrg, formHeaders, cdurning2, timeout } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset, formHeaders, timeout } from './utils/index.ts'
+
+const anonymous = getAxios()
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
+const alone = await getAxiosAuth('alone@no.org', 'passwd')
 
 const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/ods-export.rdf'), 'utf-8')
 const cioExample = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/example-cio.json'), 'utf8'))

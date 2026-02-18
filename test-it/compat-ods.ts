@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, dmeadusOrg } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset } from './utils/index.ts'
 import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
 import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
 import * as orderByParser from '../api/src/api-compat/ods/order-by.peg.js'
@@ -8,6 +8,9 @@ import * as groupByParser from '../api/src/api-compat/ods/group-by.peg.js'
 import * as aliasesParser from '../api/src/api-compat/ods/aliases.peg.js'
 import * as refineParser from '../api/src/api-compat/ods/refine.peg.js'
 import * as workers from '../api/src/workers/index.ts'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 import dayjs from 'dayjs'

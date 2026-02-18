@@ -1,6 +1,12 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, superadmin, dmeadusOrg, hlalonde3Org } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset } from './utils/index.ts'
+
+const anonymous = getAxios()
+const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
 
 describe('settings API', function () {
   before(startApiServer)

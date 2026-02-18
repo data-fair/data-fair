@@ -4,7 +4,11 @@ import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import config from 'config'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, superadmin } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset } from './utils/index.ts'
+
+const anonymous = getAxios()
+const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 
 async function receive (cli) {
   const res = await eventPromise(cli, 'message')

@@ -1,6 +1,14 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders, dmeadusOrg, bhazeldean7Org, ngernier4Org, icarlens9Org, ddecruce5Org, ddecruce5 } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const bhazeldean7Org = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG')
+const ngernier4Org = await getAxiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
+const icarlens9Org = await getAxiosAuth('icarlens9@independent.co.uk', 'passwd', 'KWqAGZ4mG')
+const ddecruce5 = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd')
+const ddecruce5Org = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd', 'KWqAGZ4mG')
 describe('owner roles', function () {
   before(startApiServer)
   beforeEach(scratchData)

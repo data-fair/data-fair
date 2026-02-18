@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, superadmin, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import nock from 'nock'
 import fs from 'fs-extra'
 import FormData from 'form-data'
@@ -8,6 +8,9 @@ import config from 'config'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import dayjs from 'dayjs'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
 import * as workers from '../api/src/workers/index.ts'
 import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 

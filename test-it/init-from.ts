@@ -1,9 +1,13 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders, dmeadusOrg, ngernier4 } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import fs from 'node:fs'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
 
 describe('Datasets with auto-initialization from another one', function () {
   before(startApiServer)

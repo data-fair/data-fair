@@ -1,10 +1,12 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import * as xlsx from '../api/src/misc/utils/xlsx.ts'
 import fs from 'fs-extra'
 import * as workers from '../api/src/workers/index.ts'
 import FormData from 'form-data'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 
 describe('Spreadsheets conversions', function () {
   before(startApiServer)

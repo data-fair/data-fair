@@ -1,10 +1,14 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, icarlens9 } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset } from './utils/index.ts'
 import path from 'node:path'
 import config from 'config'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
+
+const anonymous = getAxios()
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const icarlens9 = await getAxiosAuth('icarlens9@independent.co.uk', 'passwd')
 
 describe('identities', function () {
   before(startApiServer)

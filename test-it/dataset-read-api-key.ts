@@ -1,6 +1,9 @@
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset } from './utils/index.ts'
 import { strict as assert } from 'node:assert'
+
+const anonymous = getAxios()
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 
 describe('Dataset API keys', function () {
   before(startApiServer)

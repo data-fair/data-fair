@@ -2,7 +2,11 @@ import { strict as assert } from 'node:assert'
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, superadmin } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth } from './utils/index.ts'
+
+const anonymous = getAxios()
+const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 
 const geocoderApi = JSON.parse(readFileSync(path.join(import.meta.dirname, '/resources/geocoder-api.json'), 'utf8'))
 

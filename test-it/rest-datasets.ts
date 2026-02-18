@@ -1,13 +1,21 @@
 import { strict as assert } from 'node:assert'
 
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, getAxios, ccherryholme1, dmeadusOrg, ngernier4, formHeaders, hlalonde3, superadminPersonal, superadmin } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import path from 'node:path'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 import moment from 'moment'
 import zlib from 'zlib'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const ccherryholme1 = await getAxiosAuth('ccherryholme1@icio.us', 'passwd')
+const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
+const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const superadminPersonal = await getAxiosAuth('superadmin@test.com', 'superpasswd')
 import { Writable } from 'stream'
 import iconv from 'iconv-lite'
 import { promisify } from 'util'

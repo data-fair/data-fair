@@ -1,9 +1,13 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, hlalonde3, anonymous } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset } from './utils/index.ts'
 import config from 'config'
 import fs from 'fs-extra'
 import tmp from 'tmp-promise'
+
+const anonymous = getAxios()
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
 
 describe('rate limiting', function () {
   before(startApiServer)

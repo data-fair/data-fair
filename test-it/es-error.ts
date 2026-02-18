@@ -1,8 +1,10 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset } from './utils/index.ts'
 import config from 'config'
 import { aliasName, extractError } from '../api/src/datasets/es/commons.js'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 
 describe('Elasticsearch errors management', function () {
   before(startApiServer)

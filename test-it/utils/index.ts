@@ -40,26 +40,6 @@ export const getAxiosAuth = async (email: string, password = 'passwd', org?: str
   })
 }
 
-export const anonymous = getAxios()
-export const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-export const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-export const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
-export const alone = await getAxiosAuth('alone@no.org', 'passwd')
-export const ccherryholme1 = await getAxiosAuth('ccherryholme1@icio.us', 'passwd')
-export const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
-export const superadminPersonal = await getAxiosAuth('superadmin@test.com', 'superpasswd')
-export const alban = await getAxiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
-export const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
-export const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
-export const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
-export const ddecruce5 = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd')
-export const ddecruce5Org = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd', 'KWqAGZ4mG')
-export const bhazeldean7 = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd')
-export const bhazeldean7Org = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG')
-export const ngernier4Org = await getAxiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
-export const icarlens9 = await getAxiosAuth('icarlens9@independent.co.uk', 'passwd')
-export const icarlens9Org = await getAxiosAuth('icarlens9@independent.co.uk', 'passwd', 'KWqAGZ4mG')
-
 let appStarted = false
 
 export const startApiServer = async () => {

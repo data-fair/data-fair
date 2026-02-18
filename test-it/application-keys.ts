@@ -1,9 +1,15 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, anonymous, dmeadus, dmeadusOrg, bhazeldean7Org, sendDataset, cdurning2 } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset } from './utils/index.ts'
 import config from 'config'
 import * as workers from '../api/src/workers/index.ts'
 import * as rateLimitingUtils from '../api/src/misc/utils/rate-limiting.ts'
+
+const anonymous = getAxios()
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const bhazeldean7Org = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
 
 describe('Applications keys for unauthenticated readOnly access', function () {
   before(startApiServer)

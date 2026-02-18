@@ -1,6 +1,18 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders, ngernier4, cdurning2, alone, ngernier4Org, ddecruce5, bhazeldean7, anonymous, dmeadusOrg, bhazeldean7Org, ddecruce5Org } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
+
+const anonymous = getAxios()
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
+const alone = await getAxiosAuth('alone@no.org', 'passwd')
+const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
+const ngernier4Org = await getAxiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
+const ddecruce5 = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd')
+const ddecruce5Org = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd', 'KWqAGZ4mG')
+const bhazeldean7 = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd')
+const bhazeldean7Org = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG')
 
 describe('permissions', function () {
   before(startApiServer)

@@ -2,8 +2,14 @@ import fs from 'node:fs'
 import { strict as assert } from 'node:assert'
 import FormData from 'form-data'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, cdurning2, hlalonde3Org, ngernier4, formHeaders, hlalonde3 } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import * as workers from '../api/src/workers/index.ts'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
+const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
+const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
 
 describe('virtual datasets', function () {
   before(startApiServer)

@@ -1,9 +1,12 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, alban, sendDataset, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 import config from 'config'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const alban = await getAxiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
 
 const baseLimit = {
   indexed_bytes: { limit: 300000, consumption: 0 },

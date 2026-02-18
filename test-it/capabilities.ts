@@ -1,9 +1,13 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, cdurning2, formHeaders, superadmin } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, formHeaders } from './utils/index.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
+
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
+const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
 
 describe('Properties capabilities', function () {
   before(startApiServer)

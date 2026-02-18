@@ -1,9 +1,13 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, alban, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import config from 'config'
 import fs from 'node:fs'
 import FormData from 'form-data'
+
+const anonymous = getAxios()
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const alban = await getAxiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
 
 const sendAttachment = async (ax, appId, attachmentName) => {
   const attachmentForm = new FormData()
