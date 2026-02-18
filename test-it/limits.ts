@@ -1,12 +1,16 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, formHeaders, sendDataset, getAxios } from './utils/index.ts'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 import config from 'config'
+import fs from 'fs-extra'
+import tmp from 'tmp-promise'
 
+const anonymous = getAxios()
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 const alban = await getAxiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
 
 const baseLimit = {
   indexed_bytes: { limit: 300000, consumption: 0 },
@@ -102,5 +106,66 @@ describe('limits', function () {
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].id, 'dmeadus0')
     assert.equal(res.data.results[0].type, 'user')
+  })
+
+  it('rate limiting should throttle content download', async function () {
+    const ax = await hlalonde3
+
+    // higher storage limit first
+    await ax.post('/api/v1/limits/user/hlalonde3',
+      { store_bytes: { limit: 10000000, consumption: 0 }, lastUpdate: new Date().toISOString() },
+      { params: { key: config.secretKeys.limits } })
+
+    // a public dataset of about 100KB
+    const tmpFile = await tmp.file({ postfix: '.csv' })
+    const csvContent = await fs.readFile('./test-it/resources/datasets/dataset1.csv')
+    for (let i = 0; i < 600; i++) {
+      await fs.write(tmpFile.fd, csvContent)
+    }
+
+    const dataset = await sendDataset(tmpFile.path, ax)
+    await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { classes: ['read'] }
+    ])
+    assert.ok(dataset.file.size > 90000 && dataset.file.size < 110000, 'content should be around 100KB, got ' + dataset.file.size)
+
+    // static data access by authenticated user (400 kb/s defined in config/test.cjs)
+    let t0 = new Date().getTime()
+    await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+    await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+    let t1 = new Date().getTime()
+    assert.ok((t1 - t0 > 500) && (t1 - t0 < 1500), 'throttled download should be around 1s, got ' + (t1 - t0))
+
+    // static data access by anonymous user (200 kb/s defined in config/test.cjs)
+    t0 = new Date().getTime()
+    await anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
+    await anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
+    t1 = new Date().getTime()
+    assert.ok((t1 - t0 > 1200) && (t1 - t0 < 3000), 'throttled download should be around 2s, got ' + (t1 - t0))
+
+    // dynamic data access by authenticated user (200 kb/s defined in config/test.cjs)
+    t0 = new Date().getTime()
+    await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 500 } })
+    t1 = new Date().getTime()
+    assert.ok((t1 - t0 > 250) && (t1 - t0 < 900), 'throttled download should be around 400ms, got ' + (t1 - t0))
+  })
+
+  it('rate limiting should block requests when there are too many', async function () {
+    const ax = await dmeadus
+    const promises = []
+    for (let i = 0; i < 200; i++) {
+      promises.push(ax.get('/api/v1/datasets'))
+    }
+    await assert.rejects(
+      Promise.all(promises),
+      { status: 429 }
+    )
+    // after 1 s the rate limiter is emptied
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    await ax.get('/api/v1/datasets')
   })
 })

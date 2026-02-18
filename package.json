@@ -5,7 +5,7 @@
   "main": "server",
   "scripts": {
     "build-types": "df-build-types ./api/",
-    "test-base": "NODE_CONFIG_DIR=./api/config/ NODE_ENV=test EVENTS_LOG_LEVEL=warn node --disable-warning=ExperimentalWarning --test --test-force-exit --test-concurrency=1 --test-reporter=@reporters/bail --test-reporter-destination=stderr --test-reporter=spec --test-reporter-destination=stdout",
+    "test-base": "NODE_CONFIG_DIR=./api/config/ NODE_ENV=test EVENTS_LOG_LEVEL=warn node --disable-warning=ExperimentalWarning --test --test-force-exit --test-concurrency=1",
     "test": "npm run test-base test-it/*.ts",
     "test-s3": "FILES_STORAGE=s3 npm test",
     "test-deps": "docker compose --profile test up -d --wait",
@@ -51,6 +51,7 @@
     "@types/sanitize-html": "^2.16.0",
     "@types/streamsaver": "^2.0.5",
     "@types/unzipper": "^0.10.10",
+    "@types/ws": "^8.18.1",
     "ajv": "^8.17.1",
     "eslint-plugin-mocha": "^11.2.0",
     "eslint-plugin-vue": "^9.32.0",

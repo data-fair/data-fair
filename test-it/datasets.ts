@@ -10,12 +10,15 @@ import * as workers from '../api/src/workers/index.ts'
 import { validate } from 'tableschema'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
+import nock from 'nock'
+import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 
 const anonymous = getAxios()
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
 const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
 const alone = await getAxiosAuth('alone@no.org', 'passwd')
+const ngernier4Org = await getAxiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
 
 const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
 
@@ -127,7 +130,7 @@ describe('datasets', function () {
     const ax = dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'user')
     assert.equal(res.data.owner.id, 'dmeadus0')
@@ -140,6 +143,11 @@ describe('datasets', function () {
     const dataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(dataset.file.encoding, 'UTF-8')
     assert.equal(dataset.count, 2)
+
+    // get simple stats
+    res = await ax.get('/api/v1/stats')
+    assert.equal(res.status, 200)
+    assert.ok(res.data.limits.store_bytes.limit > 0)
   })
 
   it('Upload new dataset in user zone with title', async function () {
@@ -442,5 +450,254 @@ describe('datasets', function () {
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.file.explicitEncoding, 'ISO-8859-2')
     assert.equal(dataset.file.encoding, 'ISO-8859-2')
+  })
+
+  it('should create thumbnails for datasets with illustrations', async function () {
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets/thumbnails1', {
+      isRest: true,
+      title: 'thumbnails1',
+      attachmentsAsImage: true,
+      schema: [{ key: 'desc', type: 'string' }, { key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
+    })
+    res = await ax.post('/api/v1/datasets/thumbnails1/_bulk_lines', [
+      { imageUrl: 'http://test-thumbnail.com/image.png', desc: '1 image' },
+      { imageUrl: 'http://test-thumbnail.com/avatar.jpg', desc: '2 avatar' },
+      { imageUrl: 'http://test-thumbnail.com/wikipedia.gif', desc: '3 wikipedia animated' }
+    ])
+    await workers.hook('finalize/thumbnails1')
+    res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results[0].desc, '1 image')
+    assert.equal(res.data.results[1].desc, '2 avatar')
+    assert.equal(res.data.results[2].desc, '3 wikipedia animated')
+    assert.ok(res.data.results[0]._thumbnail.endsWith('width=300&height=200'))
+    const nockScope = nock('http://test-thumbnail.com')
+      .get('/image.png').reply(200, () => '')
+      .get('/avatar.jpg').reply(200, () => fs.readFileSync('./test-it/resources/avatar.jpeg'))
+      .get('/wikipedia.gif').reply(200, () => fs.readFileSync('./test-it/resources/wikipedia.gif'))
+      .persist()
+    await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err: any) => err.status === 302)
+    const thumbres = await ax.get(res.data.results[1]._thumbnail)
+    assert.equal(thumbres.headers['content-type'], 'image/png')
+    assert.equal(thumbres.headers['x-thumbnails-cache-status'], 'MISS')
+    assert.equal(thumbres.headers['cache-control'], 'must-revalidate, private, max-age=0')
+
+    const thumbresGif = await ax.get(res.data.results[2]._thumbnail)
+    assert.equal(thumbresGif.headers['content-type'], 'image/webp')
+    assert.equal(thumbresGif.headers['x-thumbnails-cache-status'], 'MISS')
+    assert.equal(thumbresGif.headers['cache-control'], 'must-revalidate, private, max-age=0')
+    nockScope.done()
+  })
+
+  it('should create thumbnail for the image metadata of a dataset', async function () {
+    const ax = dmeadus
+    await ax.post('/api/v1/datasets/thumbnail', {
+      isRest: true,
+      title: 'thumbnail',
+      image: 'http://test-thumbnail.com/dataset-image.jpg'
+    })
+    await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
+    let res = await ax.get('/api/v1/datasets/thumbnail')
+    assert.ok(res.data.thumbnail)
+    const nockScope = nock('http://test-thumbnail.com')
+      .get('/dataset-image.jpg').reply(200, () => fs.readFileSync('./test-it/resources/avatar.jpeg'))
+    res = await ax.get(res.data.thumbnail)
+    assert.equal(res.headers['content-type'], 'image/png')
+    assert.equal(res.headers['x-thumbnails-cache-status'], 'MISS')
+    nockScope.done()
+  })
+
+  // keep this test skipped most of the time as it depends on an outside service
+  it.skip('should provide a redirect for an unsupported image format', async function () {
+    const ax = dmeadus
+    await ax.post('/api/v1/datasets/thumbnail', {
+      isRest: true,
+      title: 'thumbnail',
+      image: 'https://geocatalogue.lannion-tregor.com/geonetwork/srv/api/records/c4576973-28cd-47d5-a082-7871f96d8f14/attachments/reseau_transport_scolaire.JPG'
+    })
+    await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
+    let res = await ax.get('/api/v1/datasets/thumbnail')
+    assert.ok(res.data.thumbnail)
+    res = await ax.get(res.data.thumbnail)
+    assert.equal(res.headers['content-type'], 'image/jpg')
+  })
+
+  it('should create thumbnails from attachments', async function () {
+    const ax = dmeadusOrg
+    const form = new FormData()
+    form.append('attachmentsAsImage', 'true')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
+    let dataset = await workers.hook('finalize/' + res.data.id)
+    assert.ok(dataset.draft.schema.some((field) => field.key === '_attachment_url' && field['x-refersTo'] === 'http://schema.org/image'))
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true } })
+    const thumbnail1 = res.data.results[0]._thumbnail
+    await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err: any) => err.status === 302)
+    await assert.rejects(anonymous.get(res.data.results[0]._thumbnail), (err: any) => err.status === 403)
+    assert.ok(thumbnail1.startsWith(`http://localhost:5600/data-fair/api/v1/datasets/${dataset.id}/thumbnail/`))
+
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }
+    await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: 'localhost:5601' } })
+    assert.equal(thumbnail1.replace('localhost:5600', 'localhost:5601'), res.data.results[0]._thumbnail)
+
+    // remove attachmentsAsImage
+    dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { attachmentsAsImage: null }, { params: { draft: true } })).data
+    assert.ok(dataset.schema.some((field) => field.key === '_attachment_url' && field['x-refersTo'] === undefined))
+  })
+
+  it('Use an api key defined on the dataset', async function () {
+    const ax = dmeadus
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
+    dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { readApiKey: { active: true, interval: 'P1W' } })).data
+    assert.ok(dataset.readApiKey?.active)
+    assert.ok(dataset.readApiKey.expiresAt)
+    assert.ok(dataset.readApiKey.renewAt)
+    await assert.rejects(anonymous.get(`/api/v1/datasets/${dataset.id}/read-api-key`), { status: 403 })
+    const apiKey = (await ax.get(`/api/v1/datasets/${dataset.id}/read-api-key`)).data
+
+    await assert.rejects(anonymous.get(`/api/v1/datasets/${dataset.id}/lines`), { status: 403 })
+    await assert.rejects(anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { 'x-apiKey': 'wrong' } }), { status: 401 })
+    const res = await anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { 'x-apiKey': apiKey.current } })
+    assert.ok(res.status === 200)
+    await assert.rejects(anonymous.patch(`/api/v1/datasets/${dataset.id}`, { title: 'Title' }, { headers: { 'x-apiKey': apiKey.current } }), { status: 403 })
+    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
+    assert.ok(!dataset._readApiKey)
+  })
+
+  // this test is skipped because it relies on a shared volume that cannot be mounted during docker build
+  it('anitivirus reject upload of infected file in dataset', async function () {
+    const ax = dmeadus
+    await assert.rejects(sendDataset('antivirus/eicar.com.csv', ax), (err: any) => {
+      assert.ok(err.data.includes('malicious file detected'))
+      assert.equal(err.status, 400)
+      return true
+    })
+
+    await assert.rejects(sendDataset('antivirus/eicar.com.zip', ax), (err: any) => {
+      assert.ok(err.data.includes('malicious file detected'))
+      assert.equal(err.status, 400)
+      return true
+    })
+  })
+
+  it('Calculate enum of values in data', async function () {
+    const ax = dmeadus
+    await ax.put('/api/v1/datasets/rest2', {
+      isRest: true,
+      title: 'rest2',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/rest2/_bulk_lines', [
+      { attr1: 'test1', attr2: 'test1', attr3: 'test1' },
+      { attr1: 'test1', attr2: 'test2', attr3: 'test1' },
+      { attr1: 'test1', attr2: 'test3' },
+      { attr1: 'test1', attr2: 'test4' },
+      { attr1: 'test2', attr2: 'test5' },
+      { attr1: 'test2', attr2: 'test6' },
+      { attr1: 'test2', attr2: 'test7' },
+      { attr1: 'test2', attr2: 'test8' },
+      { attr1: 'test2', attr2: 'test9' },
+      { attr1: 'test2', attr2: 'test9' },
+      { attr1: '', attr2: 'test10' }
+    ])
+    const dataset = await workers.hook('finalize/rest2')
+    const attr1 = dataset.schema.find(p => p.key === 'attr1')
+    assert.deepEqual(attr1.enum, ['test2', 'test1'])
+
+    // cardinality too close to line count
+    const attr2 = dataset.schema.find(p => p.key === 'attr2')
+    assert.equal(attr2.enum, undefined)
+    // too sparse
+    const attr3 = dataset.schema.find(p => p.key === 'attr3')
+    assert.equal(attr3.enum, undefined)
+  })
+
+  it('Create simple meta only datasets', async function () {
+    const ax = dmeadus
+
+    const res = await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'a meta only dataset' })
+    assert.equal(res.status, 201)
+    const dataset = res.data
+    assert.equal(dataset.slug, 'a-meta-only-dataset')
+
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { title: 'a meta only dataset 2' })
+  })
+
+  it('relative path in dataset file name', async function () {
+    const ax = dmeadus
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), '../dataset1.csv')
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
+    assert.equal(res.status, 201)
+    const dataset = await workers.hook('finalize/' + res.data.id)
+    assert.equal(dataset.file.name, 'dataset1.csv')
+  })
+
+  it('relative path in dataset id', async function () {
+    const ax = dmeadus
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form.append('id', '../dataset1')
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 400)
+
+    const form2 = new FormData()
+    form2.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    await assert.rejects(ax.post('/api/v1/datasets/' + encodeURIComponent('../dataset1'), form2, { headers: formHeaders(form2) }), (err: any) => err.status === 404)
+  })
+
+  it('relative path in attachment name', async function () {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/files.zip')
+    const form = new FormData()
+    form.append('dataset', datasetFd, 'files.zip')
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
+    const dataset = await workers.hook('finalize/' + res.data.id)
+    const attachmentRes = await ax.get(`/api/v1/datasets/${dataset.id}/attachments/test.odt`)
+    assert.equal(attachmentRes.status, 200)
+    const attachmentHackRes1 = await ax.get(`/api/v1/datasets/${dataset.id}/attachments//test.odt`)
+    assert.equal(attachmentHackRes1.headers['content-length'], attachmentRes.headers['content-length'])
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/attachments/~/test.odt`), (err: any) => err.status === 404)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/attachments/${encodeURIComponent('../files.zip')}`), (err: any) => err.status === 404)
+  })
+
+  it('send user notification', async function () {
+    const ax = dmeadusOrg
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'user notif 1',
+      schema: [{ key: 'str', type: 'string' }]
+    })).data
+
+    // listen to all notifications
+    const notifications = []
+    testEvents.on('notification', (n) => notifications.push(n))
+
+    await assert.rejects(ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { title: 'Title' }), (err: any) => err.status === 400)
+
+    await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [])
+
+    await ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
+    assert.equal(notifications.length, 1)
+    assert.equal(notifications[0].title, 'Title')
+    assert.ok(notifications[0].topic.key.endsWith(':topic1'))
+    assert.equal(notifications[0].visibility, 'private')
+
+    await assert.rejects(ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' }), (err: any) => err.status === 403)
+    await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'user', id: 'ngernier4', operations: ['sendUserNotification'] }
+    ])
+    await ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
+    await assert.rejects(ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' }), (err: any) => err.status === 403)
+
+    await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'user', id: 'ngernier4', operations: ['sendUserNotification', 'sendUserNotificationPublic'] }
+    ])
+    await ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
+    await ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' })
   })
 })

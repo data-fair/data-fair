@@ -37,6 +37,27 @@ const initMaster = async (ax, info, masterData, id = 'master') => {
   return { master, remoteService, apiDoc }
 }
 
+const initVirtualMaster = async (ax, schema, id = 'master') => {
+  await ax.put('/api/v1/datasets/' + id, {
+    isRest: true,
+    title: id,
+    schema,
+    masterData: {
+      virtualDatasets: { active: true }
+    }
+  })
+  const master = (await ax.get('/api/v1/datasets/' + id)).data
+
+  await ax.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
+
+  const apiDocUrl = master.href + '/api-docs.json'
+  const apiDoc = (await ax.get(apiDocUrl)).data
+
+  const remoteService = (await superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
+
+  return { master, remoteService, apiDoc }
+}
+
 const siretProperty = {
   key: 'siret',
   title: 'Siret',
@@ -966,7 +987,7 @@ describe('Master data management', function () {
     assert.equal(lines[0]['_country.name'], 'France')
   })
 
-  it('should listing remote services actions', async function () {
+  it('should list remote services actions', async function () {
     const ax = dmeadus
     const { remoteService } = await initMaster(
       ax,
@@ -1031,5 +1052,41 @@ describe('Master data management', function () {
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_geo.country'], 'JPN')
     assert.equal(results[0]['_country.name'], 'Japan')
+  })
+
+  it('virtual master-data management should define and use a dataset as master-data child for virtual dataset', async function () {
+    const ax = superadmin
+
+    const { remoteService } = await initVirtualMaster(
+      ax,
+      [{ key: 'str1', type: 'string' }]
+    )
+    assert.equal(remoteService.virtualDatasets.parent.id, 'master')
+
+    await superadmin.patch(`/api/v1/remote-services/${remoteService.id}`, { virtualDatasets: { ...remoteService.virtualDatasets, storageRatio: 0.5 } })
+
+    const remoteServices = (await superadmin.get('/api/v1/remote-services', { params: { showAll: true, 'virtual-datasets': true } })).data
+    assert.equal(remoteServices.count, 1)
+    assert.equal(remoteServices.results[0].virtualDatasets.parent.id, 'master')
+
+    await ax.post('/api/v1/datasets/master/_bulk_lines', [
+      { str1: 'LINE1' },
+      { str1: 'LINE2' },
+      { str1: 'LINE3' },
+      { str1: 'LINE4' }
+    ])
+    const master = await workers.hook('finalize/master')
+
+    const res = await dmeadus.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: {
+        children: ['master']
+      },
+      title: 'a virtual dataset'
+    })
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
+    assert.equal(virtualDataset.storage.size, 0)
+    assert.ok(virtualDataset.storage.indexed.size > 0)
+    assert.equal(virtualDataset.storage.indexed.size, Math.round(master.storage.indexed.size / 2))
   })
 })

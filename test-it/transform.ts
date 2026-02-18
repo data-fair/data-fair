@@ -1,17 +1,78 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, formHeaders } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, formHeaders, sendDataset } from './utils/index.ts'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
+import exprEval from '../shared/expr-eval.js'
 import fs from 'fs-extra'
 
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+
+const { parser, compile } = exprEval('Europe/Paris')
 
 describe('file datasets with transformation rules', function () {
   before(startApiServer)
   beforeEach(scratchData)
   after(stopApiServer)
   afterEach((t) => checkPendingTasks(t.name))
+
+  it('should evaluate simple expressions', function () {
+    assert.equal(parser.parse('a + b').evaluate({ a: 1, b: 2 }), 3)
+    assert.equal(parser.parse('UPPER(a)').evaluate({ a: 'a' }), 'A')
+    assert.equal(parser.parse('LOWER(a)').evaluate({ a: 'A' }), 'a')
+    assert.equal(parser.parse('REPLACE(a,"A",b)').evaluate({ a: 'aAa', b: 'B' }), 'aBa')
+    assert.equal(parser.parse('REPLACE(a,"A",b)').evaluate({ a: 'aAaAa', b: 'BA' }), 'aBAaBAa')
+    assert.equal(parser.parse('REPLACE(a,"A\\u005C","B")').evaluate({ a: 'aA\\a', b: 'B' }), 'aBa')
+    assert.equal(parser.parse('TITLE(a)').evaluate({ a: 'my title' }), 'My Title')
+    assert.equal(parser.parse('PHRASE(a)').evaluate({ a: 'my phrase' }), 'My phrase')
+    assert.equal(parser.parse('PAD_RIGHT(a, 5, "-")').evaluate({ a: 'ABC' }), 'ABC--')
+    assert.equal(parser.parse('PAD_LEFT(a, 5, "-")').evaluate({ a: 'ABC' }), '--ABC')
+    assert.equal(parser.parse('SLUG(a)').evaluate({ a: 'My title' }), 'my-title')
+    assert.equal(parser.parse('SLUG(a, "_")').evaluate({ a: 'My title' }), 'my_title')
+
+    assert.equal(parser.parse('GET(JSON_PARSE(a), "prop")').evaluate({ a: '{"prop": "My prop"}' }), 'My prop')
+    assert.equal(parser.parse('GET(JSON_PARSE(a), "prop2")').evaluate({ a: '{"prop": "My prop"}' }), undefined)
+    assert.equal(parser.parse('GET(JSON_PARSE(a), "prop2")').evaluate({ a: '' }), undefined)
+
+    assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: 'A', a: 'aAb' }), 1)
+    assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: 'A', a: null }), -1)
+    assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: true, a: 'aAb' }), -1)
+
+    assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: 'b' }), '86bfbbec238b3cb49c45ba78b02cd940')
+    assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: null }), '60921ff7863149ffa56c3947807e17e6')
+    assert.equal(parser.parse('JOIN(SPLIT(a, "-"), "_")').evaluate({ a: 'a-b-c' }), 'a_b_c')
+    assert.equal(parser.parse('JOIN(SPLIT(a, "-"), "\n")').evaluate({ a: 'a-b-c' }), `a
+b
+c`)
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "", "DD/MM/YYYY")').evaluate({ a: '2024-05-07T12:13:37+02:00' }), '07/05/2024')
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "DD/MM/YYYY")').evaluate({ a: '07/05/2024' }), '2024-05-07T00:00:00+02:00')
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "DD/MM/YYYY", "", "America/Toronto")').evaluate({ a: '07/05/2024' }), '2024-05-07T06:00:00+02:00')
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "", "X")').evaluate({ a: '2024-05-07T12:13:37+02:00' }), 1715076817)
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "", "x")').evaluate({ a: '2024-05-07T12:13:37+02:00' }), 1715076817000)
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: 1715076817 }), '2024-05-07T12:13:37+02:00')
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "x")').evaluate({ a: 1715076817000 }), '2024-05-07T12:13:37+02:00')
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: '1715076817' }), '2024-05-07T12:13:37+02:00')
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: null }), null)
+    assert.equal(parser.parse('join("-", filter(f(item) = item, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
+    assert.equal(parser.parse('join("-", filter(TRUTHY, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
+    assert.equal(parser.parse('join("-", filter(DEFINED, [a, b, c]))').evaluate({ a: true, b: null, c: false }), 'true-false')
+
+    assert.equal(parser.parse('EXTRACT(a, "<", ">")').evaluate({ a: 'Hello <world>' }), 'world')
+    assert.equal(parser.parse('EXTRACT(a, "statut: ", "\n")').evaluate({
+      a: `statut: test
+bla bla`
+    }), 'test')
+
+    assert.equal(compile('a', { type: 'string' })({ a: 11 }), '11')
+    assert.equal(compile('a', { type: 'number' })({ a: '11' }), 11)
+    assert.equal(compile('CONCAT(a,";",a)', { type: 'number', separator: ';' })({ a: '11' }), '11;11')
+    assert.equal(compile('[a,a]', { type: 'number', separator: ';' })({ a: '11' }), '11;11')
+    assert.equal(compile('[a,a]', { type: 'string', format: 'date', separator: ';' })({ a: '2024-11-11' }), '2024-11-11;2024-11-11')
+    assert.equal(compile('a', { type: 'string', format: 'date-time' })({ a: '1961-02-13 00:00:00+00:00' }), '1961-02-13T00:00:00+00:00')
+    assert.throws(() => compile('a', { key: 'e', type: 'string', format: 'date' })({ a: '11' }), { message: '/e doit correspondre au format "date" (date) (résultat : "11")' })
+    assert.equal(compile('a', { type: 'string' })({ a: null }), null)
+    assert.throws(() => compile('a', { key: 'e', type: 'string', 'x-required': true })({ a: null }), { message: 'requiert la propriété e (e) (résultat : null)' })
+  })
 
   it('create a dataset and apply a simple transformation', async function () {
     const form = new FormData()
@@ -192,5 +253,52 @@ describe('file datasets with transformation rules', function () {
     assert.equal(lines[0].horodate, '2025-11-10T23:40:00+01:00')
     full = (await ax.get('/api/v1/datasets/' + dataset.id + '/full')).data
     assert.equal(full, 'horodate,annee\n2025-11-10T23:40:00+01:00,2025\n')
+  })
+
+  it('Should add special calculated fields', async function () {
+    const ax = dmeadus
+
+    // 1 dataset in user zone
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    assert.ok(dataset.schema.find(f => f.key === '_id' && f['x-calculated'] === true))
+    assert.ok(dataset.schema.find(f => f.key === '_i' && f['x-calculated'] === true))
+    assert.ok(dataset.schema.find(f => f.key === '_rand' && f['x-calculated'] === true))
+
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: '_id,_i,_rand,id' } })
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0]._i, 1)
+    assert.equal(res.data.results[1]._i, 2)
+    assert.ok(res.data.results[0]._rand)
+    assert.ok(res.data.results[0]._id)
+  })
+
+  it('Should split by separator if specified', async function () {
+    const ax = dmeadus
+
+    // 1 dataset in user zone
+    const dataset = await sendDataset('datasets/split.csv', ax)
+    // keywords columns is not splitted, so only searchable through full text subfield
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata' } })
+    assert.equal(res.data.total, 0)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords.text:opendata' } })
+    assert.equal(res.data.total, 1)
+
+    // Update schema to specify separator for keywords col
+    const keywordsProp = dataset.schema.find(p => p.key === 'keywords')
+    keywordsProp.separator = ' ; '
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
+    await workers.hook('finalize/' + dataset.id)
+    // result is rejoined by default
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata' } })
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].keywords, 'informatique ; opendata ; sas')
+    // arrays is preserved if using ?arrays=true
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata', arrays: true } })
+    assert.equal(res.data.total, 1)
+    assert.deepEqual(res.data.results[0].keywords, ['informatique', 'opendata', 'sas'])
+
+    // agregations work with the splitted values
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=keywords`)
+    assert.equal(res.data.aggs.find(agg => agg.value === 'opendata').total, 1)
   })
 })
