@@ -3,8 +3,13 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('markdown contents management', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Get dataset description and content as HTML', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Rest dataset markdown',
@@ -44,7 +49,7 @@ describe('markdown contents management', function () {
   })
 
   it('Dataset description can also contain HTML tags', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Rest dataset markdown',
@@ -57,7 +62,7 @@ describe('markdown contents management', function () {
   })
 
   it('Get application description as HTML', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/applications', {
       title: 'app markdown',
       description: 'This is a **markdown** description.',

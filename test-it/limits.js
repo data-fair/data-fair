@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 import config from 'config'
@@ -12,20 +13,25 @@ const baseLimit = {
 }
 
 describe('limits', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Manage a user storage limit', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Just fill up a little
     let form = new FormData()
     form.append('file', Buffer.alloc(150000), 'dataset.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     await assert.rejects(workers.hook('finalize/' + res.data.id))
 
     // Send dataset applying default limits
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err => err.status === 429)
 
     // define a higher limit
     res = await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
@@ -33,12 +39,12 @@ describe('limits', function () {
     // test storage size limit
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
-    res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     await assert.rejects(workers.hook('finalize/' + res.data.id))
     assert.equal(res.status, 201)
     form = new FormData()
     form.append('file', Buffer.alloc(100004), 'dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err => err.status === 429)
 
     // test nb datasets size limit
     let lastDataset
@@ -61,7 +67,7 @@ describe('limits', function () {
   })
 
   it('A user cannot change limits', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     try {
       await ax.post('/api/v1/limits/user/dmeadus0', baseLimit)
       assert.fail()
@@ -71,7 +77,7 @@ describe('limits', function () {
   })
 
   it('A user can read his limits', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
     const res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.status, 200)
@@ -79,7 +85,7 @@ describe('limits', function () {
   })
 
   it('A user cannot read the list of limits', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     try {
       await ax.get('/api/v1/limits')
       assert.fail()
@@ -89,7 +95,7 @@ describe('limits', function () {
   })
 
   it('A super admin can read the list of limits', async function () {
-    const ax = global.ax.alban
+    const ax = alban
     await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
     const res = await ax.get('/api/v1/limits')
     assert.equal(res.status, 200)

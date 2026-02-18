@@ -21,14 +21,19 @@ const initMaster = async (ax, schema, id = 'master') => {
   const apiDocUrl = master.href + '/api-docs.json'
   const apiDoc = (await ax.get(apiDocUrl)).data
 
-  const remoteService = (await global.ax.superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
+  const remoteService = (await superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
 
   return { master, remoteService, apiDoc }
 }
 
 describe('Virtual master data management', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('should define and use a dataset as master-data child for virtual dataset', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -36,9 +41,9 @@ describe('Virtual master data management', function () {
     )
     assert.equal(remoteService.virtualDatasets.parent.id, 'master')
 
-    await global.ax.superadmin.patch(`/api/v1/remote-services/${remoteService.id}`, { virtualDatasets: { ...remoteService.virtualDatasets, storageRatio: 0.5 } })
+    await superadmin.patch(`/api/v1/remote-services/${remoteService.id}`, { virtualDatasets: { ...remoteService.virtualDatasets, storageRatio: 0.5 } })
 
-    const remoteServices = (await global.ax.superadmin.get('/api/v1/remote-services', { params: { showAll: true, 'virtual-datasets': true } })).data
+    const remoteServices = (await superadmin.get('/api/v1/remote-services', { params: { showAll: true, 'virtual-datasets': true } })).data
     assert.equal(remoteServices.count, 1)
     assert.equal(remoteServices.results[0].virtualDatasets.parent.id, 'master')
 
@@ -50,7 +55,7 @@ describe('Virtual master data management', function () {
     ])
     const master = await workers.hook('finalize/master')
 
-    const res = await global.ax.dmeadus.post('/api/v1/datasets', {
+    const res = await dmeadus.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: {
         children: ['master']

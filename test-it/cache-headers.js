@@ -3,6 +3,11 @@ import config from 'config'
 import { nanoid } from 'nanoid'
 
 describe('Cache headers', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   const createDataset = async (ax) => {
     // Set the correct owner
     let dataset = (await ax.post('/api/v1/datasets', {
@@ -15,7 +20,7 @@ describe('Cache headers', function () {
   }
 
   it('Uses private cache-control for newly created dataset', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const dataset = await createDataset(ax)
     const id = dataset.id
     assert.equal(dataset.status, 'finalized')
@@ -37,7 +42,7 @@ describe('Cache headers', function () {
   })
 
   it('Supports private cache revalidation', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const dataset = await createDataset(ax)
     const id = dataset.id
 
@@ -52,8 +57,8 @@ describe('Cache headers', function () {
   })
 
   it('Manage public cache-control header based on permissions', async function () {
-    const ax = global.ax.dmeadus
-    const axAnonymous = global.ax.anonymous
+    const ax = dmeadus
+    const axAnonymous = anonymous
     const dataset = await createDataset(ax)
     const id = dataset.id
     await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read'] }])
@@ -74,7 +79,7 @@ describe('Cache headers', function () {
   })
 
   it('Supports public cache revalidation', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const dataset = await createDataset(ax)
     const id = dataset.id
     await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read'] }])
@@ -98,7 +103,7 @@ describe('Cache headers', function () {
   })
 
   it('Supports caching of lists', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await createDataset(ax)
     const dataset = await createDataset(ax)
     const id = dataset.id

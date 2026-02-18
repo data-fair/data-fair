@@ -1,13 +1,19 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 
 describe('topics', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Search and apply facets', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // 2 datasets in organization zone
-    const dataset1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
-    const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset1 = await sendDataset('datasets/dataset1.csv', ax)
+    const dataset2 = await sendDataset('datasets/dataset1.csv', ax)
 
     let res = await ax.get('/api/v1/datasets', { params: { facets: 'topics' } })
     assert.equal(res.data.count, 2)

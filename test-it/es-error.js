@@ -1,12 +1,18 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import config from 'config'
 import { aliasName, extractError } from '../api/src/datasets/es/commons.js'
 
 describe('Elasticsearch errors management', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Extract simple message from a full ES error', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
 
     // delete the elasticsearch index to create errors

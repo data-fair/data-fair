@@ -1,16 +1,22 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import FormData from 'form-data'
 import config from 'config'
 import * as workers from '../api/src/workers/index.ts'
 
 // run this test manually with "DEBUG=workers WORKER_CONCURRENCY=4 DEFAULT_LIMITS_DATASET_STORAGE=10000000 npm test"
 
-describe('concurrency', function () {
-  it.skip('Upload datasets in parallel', async function () {
+describe.skip('concurrency', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
+  it('Upload datasets in parallel', async function () {
     this.timeout(120000)
 
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // define a higher limit
     await ax.post('/api/v1/limits/user/dmeadus0', {
@@ -25,7 +31,7 @@ describe('concurrency', function () {
       }
       const form = new FormData()
       form.append('file', csv, 'dataset.csv')
-      const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+      const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
       assert.equal(res.status, 201)
       return workers.hook(`finalize/${res.data.id}`)
     }

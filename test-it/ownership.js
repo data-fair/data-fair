@@ -1,10 +1,16 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 
 describe('resource ownership', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Upload new dataset in user zone then change ownership to organization', async function () {
-    const ax = global.ax.dmeadus
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
     // a public permission, this should be preserved
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [{ operations: ['readDescription', 'list'] }])
     // a publication on a portal, that will be lost
@@ -32,16 +38,16 @@ describe('resource ownership', function () {
       id: 'KWqAGZ4mG',
       name: 'Fivechat'
     })
-    dataset = (await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)).data
+    dataset = (await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.deepEqual(dataset.owner, { type: 'organization', id: 'KWqAGZ4mG', name: 'Fivechat' })
     assert.deepEqual(dataset.publicationSites, [])
-    const newPermissions = (await global.ax.dmeadusOrg.get('/api/v1/datasets/' + dataset.id + '/permissions')).data
+    const newPermissions = (await dmeadusOrg.get('/api/v1/datasets/' + dataset.id + '/permissions')).data
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
   })
 
   it('Upload new dataset in org zone then change ownership to department', async function () {
-    const ax = global.ax.dmeadusOrg
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadusOrg
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
     // a public permission, this should be preserved
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [{ operations: ['readDescription', 'list'] }])
     // a publication on a portal, that will be preserved too

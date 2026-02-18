@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import nock from 'nock'
 import fs from 'fs-extra'
 import FormData from 'form-data'
@@ -8,12 +9,18 @@ import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import dayjs from 'dayjs'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import * as workers from '../api/src/workers/index.ts'
+import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 
 describe('Extensions', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Extend dataset using remote service', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
+    let dataset = await sendDataset('datasets/dataset-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10 }, { name: 'setCoordsNock' })
@@ -52,7 +59,7 @@ describe('Extensions', function () {
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.schema[0].key, '_coords.lat')
     assert.equal(dataset.schema[0].title, 'Latitude')
-    await global.ax.superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
+    await superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.schema[0].key, '_coords.lat')
     assert.equal(dataset.schema[0].title, 'Latitude')
@@ -64,7 +71,7 @@ describe('Extensions', function () {
     let content = await fs.readFile('resources/datasets/dataset-extensions.csv')
     content += 'me,3 les noés la chapelle caro\n'
     form.append('file', content, 'dataset.csv')
-    res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form) })
+    res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: formHeaders(form) })
     assert.equal(res.status, 200)
     await workers.hook(`finalize/${dataset.id}`)
     // A search to check re-indexed results with preserved extensions
@@ -127,9 +134,9 @@ describe('Extensions', function () {
   })
 
   it('Extend dataset that was previouly converted', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset-extensions.xlsx', ax)
+    let dataset = await sendDataset('datasets/dataset-extensions.xlsx', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await workers.workers.batchProcessor.run({ nbInputs: 3, latLon: 10, multiply: true }, { name: 'setCoordsNock' })
@@ -159,9 +166,9 @@ describe('Extensions', function () {
   })
 
   it('Extend dataset with different csv parser opts', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset-extensions2.csv', ax)
+    let dataset = await sendDataset('datasets/dataset-extensions2.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10 }, { name: 'setCoordsNock' })
@@ -183,9 +190,9 @@ describe('Extensions', function () {
   })
 
   it('Extend dataset using another remote service', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
+    let dataset = await sendDataset('datasets/dataset-siret-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await workers.workers.batchProcessor.run({}, { name: 'setSireneNock' })
@@ -234,7 +241,7 @@ koumoul,82898347800011,47.687173,-2.748514,,,KOUMOUL`)
   })
 
   it('Manage errors during extension', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -243,7 +250,7 @@ koumoul,19 rue de la voie lactée saint avé
 other,unknown address
 `
     form.append('file', content, 'dataset2.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -276,7 +283,7 @@ other,unknown address
   })
 
   it('Manage empty queries', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -285,7 +292,7 @@ koumoul,19 rue de la voie lactée saint avé
 empty,
 `
     form.append('file', content, 'dataset3.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = await workers.hook(`finalize/${res.data.id}`)
 
@@ -300,7 +307,7 @@ empty,
   })
 
   it('Delete extended file when removing extensions', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -308,7 +315,7 @@ empty,
 koumoul,19 rue de la voie lactée saint avé
 `
     form.append('file', content, 'dataset4.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = await workers.hook(`finalize/${res.data.id}`)
 
@@ -348,9 +355,9 @@ koumoul,19 rue de la voie lactée saint avé
   })
 
   it('Do not add already present concept', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
+    let dataset = await sendDataset('datasets/dataset-siret-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await workers.workers.batchProcessor.run({}, { name: 'setSireneNock2' })
@@ -397,7 +404,7 @@ koumoul,19 rue de la voie lactée saint avé
   })
 
   it('Extend a REST dataset', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     const getExtensionNock = (result) => nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
       .post('/geocoder/coords').reply(200, (uri, requestBody) => {
@@ -420,7 +427,7 @@ koumoul,19 rue de la voie lactée saint avé
     let nockScope = getExtensionNock({ lat: 10, lon: 10 })
     let [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' }),
-      eventPromise(global.events, 'extension-inputs')
+      eventPromise(testEvents, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalize/${dataset.id}`)
@@ -438,7 +445,7 @@ koumoul,19 rue de la voie lactée saint avé
     nockScope = getExtensionNock({ lat: 11, lon: 11 });
     [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' }),
-      eventPromise(global.events, 'extension-inputs')
+      eventPromise(testEvents, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalize/${dataset.id}`)
@@ -452,7 +459,7 @@ koumoul,19 rue de la voie lactée saint avé
     nockScope = getExtensionNock({ error: 'unknown' });
     [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'unknown address' }),
-      eventPromise(global.events, 'extension-inputs')
+      eventPromise(testEvents, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalize/${dataset.id}`)
@@ -464,7 +471,7 @@ koumoul,19 rue de la voie lactée saint avé
     // add a line that uses cache
     [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' }),
-      eventPromise(global.events, 'extension-inputs')
+      eventPromise(testEvents, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalize/${dataset.id}`)
@@ -477,7 +484,7 @@ koumoul,19 rue de la voie lactée saint avé
     nockScope = getExtensionNock({ lat: 12, lon: 12 });
     [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: anotherAddress2._id, address: 'yet another address' }]),
-      eventPromise(global.events, 'extension-inputs')
+      eventPromise(testEvents, 'extension-inputs')
     ])
     // assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalize/${dataset.id}`)
@@ -496,7 +503,7 @@ koumoul,19 rue de la voie lactée saint avé
   })
 
   it('Remove extensions when input properties got removed', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -505,7 +512,7 @@ koumoul,19 rue de la voie lactée saint avé
 other,unknown address
 `
     form.append('file', content, 'dataset2.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -530,7 +537,7 @@ other,unknown address
   })
 
   it('Preserve extension when schema is overwritten at file upload ', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -539,7 +546,7 @@ koumoul,19 rue de la voie lactée saint avé
 other,unknown address
 `
     form.append('file', content, 'dataset2.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -556,7 +563,7 @@ other,unknown address
     const form2 = new FormData()
     form2.append('schema', JSON.stringify(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension'])))
     form2.append('file', content, 'dataset2.csv')
-    res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalize/${res.data.id}`)
     assert.equal(dataset.extensions.length, 1)
@@ -564,9 +571,9 @@ other,unknown address
   })
 
   it('Extend geojson dataset', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.geojson', ax)
+    let dataset = await sendDataset('datasets/dataset-siret-extensions.geojson', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await workers.workers.batchProcessor.run({}, { name: 'setSireneNock3' })
@@ -611,9 +618,9 @@ other,unknown address
   })
 
   it('Extend dataset using expression', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -630,9 +637,9 @@ other,unknown address
   })
 
   it('Extend dataset using static value expression and x-originalName', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -649,9 +656,9 @@ other,unknown address
   })
 
   it('Extend dataset using more complex expression', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -668,9 +675,9 @@ other,unknown address
   })
 
   it('Extend dataset using expression referencing column from another extension', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10, multiply: true }, { name: 'setCoordsNock' })
@@ -694,7 +701,7 @@ other,unknown address
   })
 
   it('Manage some errors in expressions', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest dataset',
@@ -740,9 +747,9 @@ other,unknown address
   })
 
   it('Fail to add extension with duplicate key', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -754,7 +761,7 @@ other,unknown address
 
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset2.csv'), 'dataset2.csv')
-    dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
+    dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: formHeaders(form), params: { draft: true } })).data
 
     await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {
       assert.equal(err.message, '[noretry] Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')
@@ -763,9 +770,9 @@ other,unknown address
   })
 
   it('Update a single extension on file dataset should trigger full reindexing', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'employees', type: 'string' } }]
@@ -782,7 +789,7 @@ other,unknown address
   })
 
   it('Update a single extension on Rest dataset should NOT trigger full reindexing', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const today = dayjs().format('DD/MM/YYYY')
     // Initial dataset with addresses
     let dataset = (await ax.post('/api/v1/datasets', {
@@ -816,9 +823,9 @@ other,unknown address
   })
 
   it('Manage cases where extension returns wrong type', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     // Initial dataset with addresses
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,

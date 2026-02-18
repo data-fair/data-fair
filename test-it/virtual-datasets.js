@@ -1,12 +1,18 @@
 import fs from 'node:fs'
 import { strict as assert } from 'node:assert'
 import FormData from 'form-data'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('virtual datasets', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Create an empty virtual dataset', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset' })
     await assert.rejects(workers.hook('finalize/' + res.data.id))
     assert.equal(res.status, 201)
@@ -14,7 +20,7 @@ describe('virtual datasets', function () {
   })
 
   it('Create a new virtual dataset with predefined id', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
     await assert.rejects(workers.hook('finalize/' + res.data.id))
     assert.equal(res.status, 201)
@@ -23,8 +29,8 @@ describe('virtual datasets', function () {
 
   it('Create a virtual dataset with a child and query', async function () {
     // Send basic dataset
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: {
@@ -40,8 +46,8 @@ describe('virtual datasets', function () {
 
   it('Create a virtual dataset with initFrom', async function () {
     // Send basic dataset
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'Description' })
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -63,12 +69,12 @@ describe('virtual datasets', function () {
   })
 
   it('Create a virtual dataset, add children and query', async function () {
-    const ax = global.ax.dmeadus
-    const dataset1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
-    const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
-    const dataset3 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset1 = await sendDataset('datasets/dataset1.csv', ax)
+    const dataset2 = await sendDataset('datasets/dataset1.csv', ax)
+    const dataset3 = await sendDataset('datasets/dataset1.csv', ax)
     // last one is not a child, it should not be used
-    await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset'
@@ -101,8 +107,8 @@ describe('virtual datasets', function () {
   })
 
   it('Check compatibility of schema with children', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -125,9 +131,9 @@ describe('virtual datasets', function () {
   })
 
   it('Compatibility is accepted for integer/number types', async function () {
-    const ax = global.ax.dmeadus
-    const datasetNum = await testUtils.sendDataset('datasets/dataset-number.csv', ax)
-    let datasetInt = await testUtils.sendDataset('datasets/dataset-integer.csv', ax)
+    const ax = dmeadus
+    const datasetNum = await sendDataset('datasets/dataset-number.csv', ax)
+    let datasetInt = await sendDataset('datasets/dataset-integer.csv', ax)
     assert.equal(datasetInt.schema.find(p => p.key === 'num').type, 'integer')
     await assert.rejects(ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -161,8 +167,8 @@ describe('virtual datasets', function () {
   })
 
   it('Check that column restriction is enforced (select, search, aggs)', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -228,8 +234,8 @@ describe('virtual datasets', function () {
   })
 
   it('Apply static filter', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -271,8 +277,8 @@ describe('virtual datasets', function () {
   })
 
   it('Add another virtual dataset as child', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -314,7 +320,7 @@ describe('virtual datasets', function () {
   })
 
   it('A virtual dataset without physical children cannot be queried', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -340,8 +346,8 @@ describe('virtual datasets', function () {
   })
 
   it('A virtual dataset cannot have a child virtual dataset with filters (no way to enforce them)', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -381,8 +387,8 @@ describe('virtual datasets', function () {
 
   it('A virtual dataset is updated after a child schema changes', async function () {
     // Send basic dataset
-    const ax = global.ax.dmeadus
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: { children: [dataset.id] },
@@ -411,8 +417,8 @@ describe('virtual datasets', function () {
   })
 
   it('A virtual dataset is updated after a child schema changes (2)', async function () {
-    const ax = global.ax.dmeadus
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: { children: [dataset.id] },
@@ -443,9 +449,9 @@ describe('virtual datasets', function () {
 
   it('A virtual dataset is in error if children become inconsistent', async function () {
     // Send basic dataset
-    const ax = global.ax.dmeadus
-    const dataset1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
-    const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset1 = await sendDataset('datasets/dataset1.csv', ax)
+    const dataset2 = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: { children: [dataset1.id, dataset2.id] },
@@ -467,10 +473,10 @@ describe('virtual datasets', function () {
   })
 
   it('A virtual dataset cannot have a private child from another owner', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    const res = await global.ax.cdurning2.post('/api/v1/datasets', {
+    const res = await cdurning2.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
@@ -479,7 +485,7 @@ describe('virtual datasets', function () {
     })
     await assert.rejects(workers.hook('finalize/' + res.data.id))
 
-    await assert.rejects(global.ax.cdurning2.get(`/api/v1/datasets/${res.data.id}/lines`), (err) => {
+    await assert.rejects(cdurning2.get(`/api/v1/datasets/${res.data.id}/lines`), (err) => {
       assert.equal(err.status, 501)
       assert.ok(err.data.includes('il utilise un jeu de données pour lequel ce compte n\'a pas de permission de lecture'))
       return true
@@ -487,13 +493,13 @@ describe('virtual datasets', function () {
   })
 
   it('A virtual dataset can have a public child from another owner', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
       { classes: ['read'] }
     ])
 
-    const res = await global.ax.cdurning2.post('/api/v1/datasets', {
+    const res = await cdurning2.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
@@ -502,17 +508,17 @@ describe('virtual datasets', function () {
     })
     const virtualDataset = await workers.hook('finalize/' + res.data.id)
 
-    await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    await cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 
   it('A user\'s virtual dataset can have a child from another owner with specific permissions', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
       { classes: ['read'], type: 'user', id: 'cdurning2' }
     ])
 
-    const res = await global.ax.cdurning2.post('/api/v1/datasets', {
+    const res = await cdurning2.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
@@ -521,12 +527,12 @@ describe('virtual datasets', function () {
     })
     const virtualDataset = await workers.hook('finalize/' + res.data.id)
 
-    await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    await cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 
   it('A user\'s virtual dataset can have a private child from another owner if an intermediate virtual dataset provides permissions', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const res1 = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -540,7 +546,7 @@ describe('virtual datasets', function () {
       { classes: ['read'], type: 'user', id: 'cdurning2' }
     ])
 
-    const res2 = await global.ax.cdurning2.post('/api/v1/datasets', {
+    const res2 = await cdurning2.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
@@ -549,17 +555,17 @@ describe('virtual datasets', function () {
     })
     const virtualDataset2 = await workers.hook('finalize/' + res2.data.id)
 
-    await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset2.id}/lines`)
+    await cdurning2.get(`/api/v1/datasets/${virtualDataset2.id}/lines`)
   })
 
   it('An org\'s virtual dataset can have a child from another owner with specific permissions', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
       { classes: ['read'], type: 'organization', id: 'KWqAGZ4mG' }
     ])
 
-    const res = await global.ax.hlalonde3Org.post('/api/v1/datasets', {
+    const res = await hlalonde3Org.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
@@ -568,16 +574,16 @@ describe('virtual datasets', function () {
     })
     const virtualDataset = await workers.hook('finalize/' + res.data.id)
 
-    await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    await hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 
   it('A virtual dataset has the most restrictive capabilities of its children', async function () {
-    const ax = global.ax.dmeadus
-    const child1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const child1 = await sendDataset('datasets/dataset1.csv', ax)
     child1.schema[0]['x-capabilities'] = { text: false, values: false }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
     await workers.hook('finalize/' + child1.id)
-    const child2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const child2 = await sendDataset('datasets/dataset1.csv', ax)
     child2.schema[0]['x-capabilities'] = { text: false, insensitive: false }
     await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
     await workers.hook('finalize/' + child2.id)
@@ -604,11 +610,11 @@ describe('virtual datasets', function () {
   })
 
   it('A virtual dataset has a merge of the labels of its children', async function () {
-    const ax = global.ax.dmeadus
-    const child1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const child1 = await sendDataset('datasets/dataset1.csv', ax)
     child1.schema[0]['x-labels'] = { koumoul: 'Koumoul' }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
-    const child2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const child2 = await sendDataset('datasets/dataset1.csv', ax)
     child2.schema[0]['x-labels'] = { bidule: 'Bidule' }
     await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
 
@@ -631,8 +637,8 @@ describe('virtual datasets', function () {
   })
 
   it('A virtual dataset of a geo parent can serve tiles', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     // Update schema to specify geo point
     const locProp = dataset.schema.find(p => p.key === 'loc')
@@ -682,7 +688,7 @@ describe('virtual datasets', function () {
   })
 
   it('Create a virtual dataset with a filter on account concept', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     const dataset = (await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
@@ -728,7 +734,7 @@ describe('virtual datasets', function () {
     assert.equal(res.data.total, 2)
 
     // user can read the lines where he is referenced
-    res = await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines?size=1`)
+    res = await cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines?size=1`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.length, 1)
@@ -737,7 +743,7 @@ describe('virtual datasets', function () {
     assert.ok(res.headers['cache-control'].includes('private'))
     assert.ok(res.data.next)
     assert.ok(res.data.next.includes('account=user%3Acdurning2'))
-    res = await global.ax.cdurning2.get(res.data.next)
+    res = await cdurning2.get(res.data.next)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.length, 1)
@@ -745,31 +751,31 @@ describe('virtual datasets', function () {
     assert.equal(res.data.results[0].account, 'user:cdurning2')
 
     // another user cannot read the lines where he is not referenced
-    res = await global.ax.ngernier4.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    res = await ngernier4.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 0)
     await assert.rejects(
-      global.ax.ngernier4.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Acdurning2`),
+      ngernier4.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Acdurning2`),
       { status: 403 }
     )
 
     // another user can read the line where is current orga is referenced and those where he is personnally reference
-    res = await global.ax.hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    res = await hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
-    res = await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    res = await hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
-    res = await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user:hlalonde3`)
+    res = await hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user:hlalonde3`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
-    res = await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=organization:KWqAGZ4mG:dep1`)
+    res = await hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=organization:KWqAGZ4mG:dep1`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
   })
 
   it('a virtual dataset of a dataset with attachments re-expose those attachments', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'childattach',
@@ -786,7 +792,7 @@ describe('virtual datasets', function () {
     const attachmentContent = fs.readFileSync('resources/avatar.jpeg')
     form.append('attachment', attachmentContent, 'dir1/avatar.jpeg')
     form.append('attr1', '10')
-    res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: testUtils.formHeaders(form) })
+    res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     const line = res.data
     assert.ok(line._id)
@@ -842,7 +848,7 @@ describe('virtual datasets', function () {
   })
 
   it('fails to upload file on virtual data', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'child',
@@ -857,6 +863,6 @@ describe('virtual datasets', function () {
     const virtualDataset = await workers.hook('finalize/' + res.data.id)
     const form = new FormData()
     form.append('file', 'test', 'dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets/' + virtualDataset.id, form, { headers: testUtils.formHeaders(form) }), err => err.status === 400)
+    await assert.rejects(ax.post('/api/v1/datasets/' + virtualDataset.id, form, { headers: formHeaders(form) }), err => err.status === 400)
   })
 })

@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'fs-extra'
 import nock from 'nock'
 import FormData from 'form-data'
@@ -42,13 +43,18 @@ const schemaWithFix = [...schema]
 schemaWithFix[0] = { ...schemaWithFix[0], 'x-transform': { expr: 'LOWER(value)' } }
 
 describe('file datasets with validation rules', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('create a valid dataset with initial validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
   })
@@ -58,8 +64,8 @@ describe('file datasets with validation rules', function () {
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     await assert.rejects(workers.hook('finalize/' + dataset.id), err => {
       assert.ok(err.message.includes('ont une erreur de validation'))
       return true
@@ -79,8 +85,8 @@ describe('file datasets with validation rules', function () {
     // Create a valid dataset
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
@@ -93,8 +99,8 @@ describe('file datasets with validation rules', function () {
     // Create a valid dataset
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
     let patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
@@ -135,8 +141,8 @@ describe('file datasets with validation rules', function () {
 koumoul,"111 ; 222","test1, test2"
 bidule,123,test3`, 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
     let lines = await ax.get(`/api/v1/datasets/${dataset.id}/lines`).then(r => r.data.results)
@@ -150,7 +156,7 @@ bidule,123,test3`, 'dataset1.csv')
 koumoul,"111 ; 222","test1, testko"
 bidule,123,test3`, 'dataset1.csv')
     form2.append('schema', JSON.stringify(schema))
-    const dataset2 = await ax.post('/api/v1/datasets', form2, { headers: testUtils.formHeaders(form2) }).then(r => r.data)
+    const dataset2 = await ax.post('/api/v1/datasets', form2, { headers: formHeaders(form2) }).then(r => r.data)
     await assert.rejects(workers.hook('finalize/' + dataset2.id), (err) => {
       assert.ok(err.message.includes('/multipattern/1 doit correspondre au format'))
       return true

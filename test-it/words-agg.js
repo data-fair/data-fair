@@ -1,11 +1,17 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('words aggs', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Get words buckets', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: [{ key: 'adr', type: 'string', 'x-capabilities': { textAgg: true } }] })
     await workers.hook(`finalize/${dataset.id}`)
 

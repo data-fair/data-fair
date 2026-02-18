@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import config from 'config'
 import fs from 'node:fs'
 import FormData from 'form-data'
@@ -7,20 +8,25 @@ import FormData from 'form-data'
 const sendAttachment = async (ax, appId, attachmentName) => {
   const attachmentForm = new FormData()
   attachmentForm.append('attachment', fs.readFileSync('./resources/' + attachmentName), attachmentName)
-  await ax.post(`/api/v1/applications/${appId}/attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+  await ax.post(`/api/v1/applications/${appId}/attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
   await ax.patch('/api/v1/applications/' + appId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 }
 
 describe('Applications', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Get applications when not authenticated', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     const res = await ax.get('/api/v1/applications')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
   })
 
   it('Access an unknown applicationId on proxy endpoint', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     try {
       await ax.get('/app/unknownId')
       assert.fail()
@@ -30,7 +36,7 @@ describe('Applications', function () {
   })
 
   it('Post an application configuration, read it, update it and delete it', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     assert.equal(res.status, 201)
 
@@ -55,11 +61,11 @@ describe('Applications', function () {
   })
 
   it('Manage the custom configuration part of the object', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
-    let dataset = await testUtils.sendDataset('datasets/split.csv', ax)
+    let dataset = await sendDataset('datasets/split.csv', ax)
     const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
-    const dataset2 = await testUtils.sendDataset('datasets/split.csv', ax)
+    const dataset2 = await sendDataset('datasets/split.csv', ax)
     const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
 
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
@@ -89,12 +95,12 @@ describe('Applications', function () {
   })
 
   it('Use an application through the application proxy', async function () {
-    const ax = global.ax.dmeadus
-    const adminAx = global.ax.alban
+    const ax = dmeadus
+    const adminAx = alban
 
-    const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
+    const dataset = await sendDataset('datasets/split.csv', ax)
     const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
-    const dataset2 = await testUtils.sendDataset('datasets/split.csv', ax)
+    const dataset2 = await sendDataset('datasets/split.csv', ax)
     const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
 
     let res = await ax.post('/api/v1/applications', {
@@ -145,7 +151,7 @@ describe('Applications', function () {
   })
 
   it('Read base app info of an application', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
@@ -159,7 +165,7 @@ describe('Applications', function () {
   })
 
   it('Read capture of application', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     try {
       await ax.get(config.captureUrl + '/api/v1/api-docs.json')
     } catch (err) {
@@ -223,7 +229,7 @@ describe('Applications', function () {
   })
 
   it('Sort applications by title', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     await ax.post('/api/v1/applications', { title: 'aa', url: 'http://monapp1.com/' })
     await ax.post('/api/v1/applications', { title: 'bb', url: 'http://monapp1.com/' })
@@ -248,7 +254,7 @@ describe('Applications', function () {
   })
 
   it('Upload a simple attachment on an application', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
 
     await sendAttachment(ax, app.id, 'avatar.jpeg')

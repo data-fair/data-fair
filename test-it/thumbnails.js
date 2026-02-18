@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'node:fs'
 import nock from 'nock'
 import FormData from 'form-data'
@@ -8,8 +9,13 @@ import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('thumbnails', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it(' should create thumbnails for datasets with illustrations', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets/thumbnails1', {
       isRest: true,
       title: 'thumbnails1',
@@ -47,7 +53,7 @@ describe('thumbnails', function () {
   })
 
   it('should create thumbnail for the image metadata of a dataset', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
       title: 'thumbnail',
@@ -66,7 +72,7 @@ describe('thumbnails', function () {
 
   // keep this test skipped most of the time as it depends on an outside service
   it.skip('should provide a redirect for an unsupported image format', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
       title: 'thumbnail',
@@ -80,18 +86,18 @@ describe('thumbnails', function () {
   })
 
   it('should create thumbnails from attachments', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     let dataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(dataset.draft.schema.some((field) => field.key === '_attachment_url' && field['x-refersTo'] === 'http://schema.org/image'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true } })
     const thumbnail1 = res.data.results[0]._thumbnail
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
-    await assert.rejects(global.ax.anonymous.get(res.data.results[0]._thumbnail), (err) => err.status === 403)
+    await assert.rejects(anonymous.get(res.data.results[0]._thumbnail), (err) => err.status === 403)
     assert.ok(thumbnail1.startsWith(`http://localhost:5600/data-fair/api/v1/datasets/${dataset.id}/thumbnail/`))
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }

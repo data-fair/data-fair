@@ -1,15 +1,21 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('json files support', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Process uploaded json dataset', async function () {
     // Send dataset
     const form = new FormData()
     form.append('file', JSON.stringify([{ col1: 'val1', col2: 1 }, { col1: 'val2', col2: 2 }]), 'example.json')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     let dataset = res.data
 
@@ -36,8 +42,8 @@ describe('json files support', function () {
     // Send dataset
     const form = new FormData()
     form.append('file', [{ col1: 'val1', col2: 1 }, { col1: 'val2', col2: 2 }].map(o => JSON.stringify(o)).join('\n'), 'example.ndjson')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     let dataset = res.data
 
@@ -64,8 +70,8 @@ describe('json files support', function () {
   it('Fails when root is not an array', async function () {
     const form = new FormData()
     form.append('file', JSON.stringify({ col1: 'val1' }), 'example.json')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = res.data
 
@@ -76,8 +82,8 @@ describe('json files support', function () {
   it('Fails when json is invalid', async function () {
     const form = new FormData()
     form.append('file', "{ col1: 'val1' }", 'example.json')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = res.data
 

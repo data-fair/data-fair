@@ -6,15 +6,20 @@ import { readFileSync } from 'node:fs'
 const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/geocoder-api.json'), 'utf8'))
 
 describe('remote-services', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Get external APIs when not authenticated', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     const res = await ax.get('/api/v1/remote-services')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 2)
   })
 
   it('Post a minimal external API, read it, update it and delete it', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
     geocoderApi.info['x-api-id'] = 'geocoder2'
     let res = await ax.post('/api/v1/remote-services', { apiDoc: geocoderApi, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
     assert.equal(res.status, 201)
@@ -31,7 +36,7 @@ describe('remote-services', function () {
     assert.equal(res.status, 200)
     assert.equal(res.data.title, 'Test external api')
     // Permissions
-    const ax1 = global.ax.cdurning2
+    const ax1 = cdurning2
     try {
       await ax1.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' })
       assert.fail()
@@ -53,7 +58,7 @@ describe('remote-services', function () {
   })
 
   it('Unknown external service', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     try {
       await ax.get('/api/v1/remote-services/unknownId')
       assert.fail()
@@ -63,7 +68,7 @@ describe('remote-services', function () {
   })
 
   it('Unknown referer', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     try {
       await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } })
       assert.fail()
@@ -73,7 +78,7 @@ describe('remote-services', function () {
   })
 
   it('Handle timeout errors from proxied service', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     // it is necessary to create an application, only applications are allowed to use remote-services' proxies
     nock('http://test.com').get('/geocoder/coord').delay(60000).reply(200, { content: 'ok' })
@@ -87,7 +92,7 @@ describe('remote-services', function () {
   })
 
   it('Prevent abusing remote service re-exposition', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     // it is necessary to create an application, only applications are allowed to use remote-services' proxies
     const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
@@ -106,7 +111,7 @@ describe('remote-services', function () {
   })
 
   it('Get unpacked actions inside remote services', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     let res = await ax.get('/api/v1/remote-services-actions')
     assert.equal(res.data.results.length, 4)
     assert.ok(res.data.results.find(item => item.id === 'geocoder-koumoul--getCoord'))

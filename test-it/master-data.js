@@ -2,7 +2,8 @@
 // by another (or the same) data-fair instance
 
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import FormData from 'form-data'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import * as workers from '../api/src/workers/index.ts'
@@ -27,7 +28,7 @@ const initMaster = async (ax, info, masterData, id = 'master') => {
 
   await ax.post('/api/v1/_check-api', apiDoc)
 
-  const remoteService = (await global.ax.superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
+  const remoteService = (await superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
 
   return { master, remoteService, apiDoc }
 }
@@ -87,8 +88,13 @@ const lonProperty = {
 }
 
 describe('Master data management', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('should define and use a dataset as master-data remote-service used for extensions', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     const { remoteService, apiDoc, master } = await initMaster(
       ax,
@@ -219,7 +225,7 @@ describe('Master data management', function () {
 82898347800012
 `
     form.append('dataset', csvSlave, 'slave.csv')
-    const slaveFile = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const slaveFile = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     await workers.hook(`finalize/${slaveFile.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
     await ax.patch(`/api/v1/datasets/${slaveFile.id}`, {
@@ -325,7 +331,7 @@ describe('Master data management', function () {
     assert.equal(results[0]['siretextextra'], 'Extra information 2')
 
     // forcing a reindex has no effect
-    await global.ax.superadmin.post('/api/v1/datasets/slave/_reindex')
+    await superadmin.post('/api/v1/datasets/slave/_reindex')
     slave = await workers.hook('finalize/slave')
     assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
     assert.equal(slave.schema.find(p => p.key === 'siretextra'), undefined)
@@ -353,7 +359,7 @@ describe('Master data management', function () {
   })
 
   it('accept an input with elasticsearch special chars', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -390,7 +396,7 @@ describe('Master data management', function () {
   })
 
   it('manage query syntax errors', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -440,7 +446,7 @@ describe('Master data management', function () {
   })
 
   it('should extend a geojson file from a master-data dataset', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -457,7 +463,7 @@ describe('Master data management', function () {
     await workers.hook('finalize/master')
 
     // create a slave from a geojson file
-    let geojsonSlave = await testUtils.sendDataset('datasets/dataset-siret-extensions.geojson', ax)
+    let geojsonSlave = await sendDataset('datasets/dataset-siret-extensions.geojson', ax)
     geojsonSlave.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${geojsonSlave.id}`, {
       schema: geojsonSlave.schema,
@@ -515,7 +521,7 @@ describe('Master data management', function () {
   })
 
   it('not return calculated properties', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -549,7 +555,7 @@ describe('Master data management', function () {
   })
 
   it('return multiple levels of extended properties', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -620,7 +626,7 @@ describe('Master data management', function () {
   })
 
   it('should handle sorting to chose ambiguous result', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
     await initMaster(
       ax,
       [siretProperty, { key: 'sortKey', type: 'integer' }, { key: 'extra', type: 'string' }],
@@ -671,7 +677,7 @@ describe('Master data management', function () {
   })
 
   it('should handle date-in-interval search type', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
     await initMaster(
       ax,
       [startProperty, endProperty, { key: 'extra', type: 'string' }],
@@ -705,7 +711,7 @@ describe('Master data management', function () {
   })
 
   it('should handle geo-distance search type', async function () {
-    const ax = global.ax.superadmin
+    const ax = superadmin
     await initMaster(
       ax,
       [latlonProperty, { key: 'extra', type: 'string' }],
@@ -740,7 +746,7 @@ describe('Master data management', function () {
 
   it('should prevent using master-data without access to remote service', async function () {
     const { remoteService } = await initMaster(
-      global.ax.dmeadus,
+      dmeadus,
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
         id: 'siret',
@@ -751,7 +757,7 @@ describe('Master data management', function () {
     )
 
     // create slave dataset
-    await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+    await cdurning2.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [siretProperty],
@@ -763,13 +769,13 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
-    await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }])
+    await cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }])
     await assert.rejects(workers.hook('finalize/slave'), err => err.message.startsWith('Try to apply extension'))
   })
 
   it('should prevent using master-data without permission on dataset', async function () {
     const { remoteService } = await initMaster(
-      global.ax.dmeadus,
+      dmeadus,
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
         id: 'siret',
@@ -780,11 +786,11 @@ describe('Master data management', function () {
     )
 
     // only super admin can open remote service to public
-    await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
-    global.ax.superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
+    await assert.rejects(dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
+    superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
 
     // create slave dataset
-    await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+    await cdurning2.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [siretProperty],
@@ -796,13 +802,13 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
-    await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    await cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     await assert.rejects(workers.hook('finalize/slave'), err => err.message.startsWith('[noretry] permission manquante'))
   })
 
   it('should support using master-data from other account if visibility is ok', async function () {
     const { remoteService, master } = await initMaster(
-      global.ax.dmeadus,
+      dmeadus,
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
         id: 'siret',
@@ -813,17 +819,17 @@ describe('Master data management', function () {
     )
     // feed some data to the master
     const items = [{ siret: '82898347800011', extra: 'Extra information' }]
-    await global.ax.dmeadus.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
+    await dmeadus.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalize/master')
 
     // only super admin can open remote service to public
-    await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
-    global.ax.superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
+    await assert.rejects(dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
+    superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
     // owner of the master-data dataset can open it to public
-    await global.ax.dmeadus.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
+    await dmeadus.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
 
     // create slave dataset
-    await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+    await cdurning2.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [siretProperty],
@@ -835,14 +841,14 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
-    await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    await cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalize/slave')
-    const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
+    const results = (await cdurning2.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
   })
 
   it('should support chaining extensions', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const { remoteService } = await initMaster(
       ax,
       [latlonProperty, countryProperty],
@@ -916,7 +922,7 @@ describe('Master data management', function () {
 -2.8,45.5
 `
     form.append('dataset', csvSlave, 'slave.csv')
-    const slaveFile = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const slaveFile = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     await workers.hook(`finalize/${slaveFile.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
     await ax.patch(`/api/v1/datasets/${slaveFile.id}`, {
@@ -949,7 +955,7 @@ describe('Master data management', function () {
 -2.7,47.6
 `
     form2.append('dataset', csvSlave2, 'slave2.csv')
-    await ax.post(`/api/v1/datasets/${slaveFile.id}`, form2, { headers: testUtils.formHeaders(form2) })
+    await ax.post(`/api/v1/datasets/${slaveFile.id}`, form2, { headers: formHeaders(form2) })
     await workers.hook(`finalize/${slaveFile.id}`)
     lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
     assert.equal(lines[0]['_geo.country'], 'FRA')
@@ -957,7 +963,7 @@ describe('Master data management', function () {
   })
 
   it('should listing remote services actions', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const { remoteService } = await initMaster(
       ax,
       [latlonProperty, countryProperty],

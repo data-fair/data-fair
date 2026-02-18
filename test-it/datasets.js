@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
@@ -15,28 +16,33 @@ const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
 let notifier
 
 describe('datasets', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   before('prepare notifier', async function () {
     notifier = (await import('./resources/app-notifier.js')).default
     await eventPromise(notifier, 'listening')
   })
 
   it('Get datasets when not authenticated', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     const res = await ax.get('/api/v1/datasets')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
   })
 
   it('Get datasets when authenticated', async function () {
-    const ax = await global.ax.alone
+    const ax = await alone
     const res = await ax.get('/api/v1/datasets')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
   })
 
   it('Search and apply some params (facets, raw, count, select, etc)', async function () {
-    const ax = global.ax.dmeadus
-    const axOrg = global.ax.dmeadusOrg
+    const ax = dmeadus
+    const axOrg = dmeadusOrg
 
     let res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
     assert.equal(res.data.count, 0)
@@ -45,10 +51,10 @@ describe('datasets', function () {
     assert.equal(res.data.facets['field-type'].length, 0)
 
     // 1 dataset in user zone
-    await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    await sendDataset('datasets/dataset1.csv', ax)
     // 2 datasets in organization zone
-    await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
-    await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
+    await sendDataset('datasets/dataset1.csv', axOrg)
+    await sendDataset('datasets/dataset1.csv', axOrg)
 
     res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
     assert.equal(res.data.count, 1)
@@ -93,29 +99,29 @@ describe('datasets', function () {
   })
 
   it('Failure to upload dataset exceeding limit', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const form = new FormData()
     form.append('file', Buffer.alloc(160000), 'largedataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 413)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err => err.status === 413)
   })
 
   it('Failure to upload multiple datasets exceeding limit', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset1.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     await assert.rejects(workers.hook('finalize/' + res.data.id))
 
     form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset2.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err => err.status === 429)
   })
 
   it('Upload new dataset in user zone', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'user')
     assert.equal(res.data.owner.id, 'dmeadus0')
@@ -131,11 +137,11 @@ describe('datasets', function () {
   })
 
   it('Upload new dataset in user zone with title', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     form.append('title', 'My title\'')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'my-title')
     assert.equal(res.data.title, 'My title\'')
@@ -143,10 +149,10 @@ describe('datasets', function () {
   })
 
   it('Upload new dataset with utf8 filename', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const form = new FormData()
     form.append('file', datasetFd, '1-Réponse N° 1.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, '1-reponse-n-1')
     assert.equal(res.data.title, '1 Réponse N° 1')
@@ -154,10 +160,10 @@ describe('datasets', function () {
   })
 
   it('Upload new dataset in organization zone', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
     assert.equal(res.data.owner.id, 'KWqAGZ4mG')
@@ -165,11 +171,11 @@ describe('datasets', function () {
   })
 
   it('Upload new dataset in organization zone with explicit department', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
     form.append('body', JSON.stringify({ owner: { type: 'organization', id: 'KWqAGZ4mG', name: 'Fivechat', department: 'dep1' } }))
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
     assert.equal(res.data.owner.id, 'KWqAGZ4mG')
@@ -178,11 +184,11 @@ describe('datasets', function () {
   })
 
   it('Uploading same file twice should increment slug', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     for (const i of [1, 2, 3]) {
       const form = new FormData()
       form.append('file', datasetFd, 'my-dataset.csv')
-      const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+      const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
       assert.equal(res.status, 201)
       assert.equal(res.data.slug, 'my-dataset' + (i === 1 ? '' : '-' + i))
       await workers.hook('finalize/' + res.data.id)
@@ -190,32 +196,32 @@ describe('datasets', function () {
   })
 
   it('Upload new dataset with pre-filled attributes', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     const form = new FormData()
     form.append('title', 'A dataset with pre-filled title')
     form.append('publications', '[{"catalog": "test", "status": "waiting"}]')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with pre-filled title')
     await workers.hook('finalize/' + res.data.id)
   })
 
   it('Upload new dataset with JSON body', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     const form = new FormData()
     form.append('body', JSON.stringify({ title: 'A dataset with both file and JSON body' }))
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with both file and JSON body')
     await workers.hook('finalize/' + res.data.id)
   })
 
   it('Upload new dataset with defined id', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let form = new FormData()
     form.append('title', 'my title')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    let res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.title, 'my title')
     assert.equal(res.data.id, 'my-dataset-id')
@@ -223,43 +229,43 @@ describe('datasets', function () {
     form = new FormData()
     form.append('title', 'my other title')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: testUtils.formHeaders(form) })
+    res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: formHeaders(form) })
     assert.equal(res.status, 200)
     await workers.hook('finalize/my-dataset-id')
   })
 
   it('Reject some not URL friendly id', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const form = new FormData()
     form.append('title', 'my title')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets/my dataset id', form, { headers: testUtils.formHeaders(form) }), err => err.status === 400)
+    await assert.rejects(ax.post('/api/v1/datasets/my dataset id', form, { headers: formHeaders(form) }), err => err.status === 400)
   })
 
   it('Reject some other pre-filled attributes', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     const form = new FormData()
     form.append('id', 'pre-filling id is not possible')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 400)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err => err.status === 400)
   })
 
   it('Fail to upload new dataset when not authenticated', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     const form = new FormData()
-    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 401)
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), err => err.status === 401)
   })
 
   it('Upload dataset - full test with webhooks', async function () {
     const wsCli = new WebSocket(config.publicUrl)
-    const ax = global.ax.cdurning2
+    const ax = cdurning2
     await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ title: 'test', events: ['dataset-finalize-end'], target: { type: 'http', params: { url: 'http://localhost:5900' } } }] })
     let form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
-    const webhook = await testUtils.timeout(eventPromise(notifier, 'webhook'), 5000, 'webhook not received')
+    const webhook = await timeout(eventPromise(notifier, 'webhook'), 5000, 'webhook not received')
     res = await ax.get(webhook.href + '/api-docs.json')
     assert.equal(res.status, 200)
     assert.equal(res.data.openapi, '3.1.0')
@@ -275,19 +281,19 @@ describe('datasets', function () {
     // Send again the data to the same dataset
     form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
-    res = await ax.post(webhook.href, form, { headers: testUtils.formHeaders(form) })
+    res = await ax.post(webhook.href, form, { headers: formHeaders(form) })
 
     assert.equal(res.status, 200)
-    const wsRes = await testUtils.timeout(eventPromise(wsCli, 'message'), 1000, 'ws message not received')
+    const wsRes = await timeout(eventPromise(wsCli, 'message'), 1000, 'ws message not received')
 
     assert.equal(JSON.parse(wsRes).channel, 'datasets/' + datasetId + '/journal')
-    await testUtils.timeout(eventPromise(notifier, 'webhook'), 2000, 'second webhook not received')
+    await timeout(eventPromise(notifier, 'webhook'), 2000, 'second webhook not received')
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
 
     assert.equal(res.data.length, 5)
     // testing permissions
-    await assert.rejects(global.ax.dmeadus.get(webhook.href), err => err.status === 403)
-    await assert.rejects(global.ax.anonymous.get(webhook.href), err => err.status === 403)
+    await assert.rejects(dmeadus.get(webhook.href), err => err.status === 403)
+    await assert.rejects(anonymous.get(webhook.href), err => err.status === 403)
 
     // Updating schema
     res = await ax.get(webhook.href)
@@ -300,7 +306,7 @@ describe('datasets', function () {
     assert.ok(res.data.dataUpdatedAt > res.data.createdAt)
     assert.ok(res.data.updatedAt > res.data.dataUpdatedAt)
 
-    await testUtils.timeout(eventPromise(notifier, 'webhook'), 4000, 'third webhook not received')
+    await timeout(eventPromise(notifier, 'webhook'), 4000, 'third webhook not received')
 
     res = await ax.get('/api/v1/datasets/' + datasetId + '/schema?mimeType=application/tableschema%2Bjson')
     const { valid } = await validate(res.data)
@@ -312,10 +318,10 @@ describe('datasets', function () {
   })
 
   it('Upload dataset and update with different file name', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
-    let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: formHeaders(form) })
     await workers.hook('finalize/dataset-name')
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.ok(res.data.store_bytes.consumption > 150)
@@ -325,7 +331,7 @@ describe('datasets', function () {
 
     const form2 = new FormData()
     form2.append('file', datasetFd, 'dataset-name2.csv')
-    res = await ax.put('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
+    res = await ax.put('/api/v1/datasets/dataset-name', form2, { headers: formHeaders(form2) })
     const dataset = await workers.hook('finalize/dataset-name')
     assert.equal(dataset.originalFile.name, 'dataset-name2.csv')
     assert.equal(dataset.file.name, 'dataset-name2.csv')
@@ -339,8 +345,8 @@ describe('datasets', function () {
   })
 
   it('Upload new dataset and detect types', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset-types.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset-types.csv', ax)
     assert.equal(dataset.schema[0].key, 'string1')
     assert.equal(dataset.schema[0].type, 'string')
 
@@ -367,10 +373,10 @@ describe('datasets', function () {
   })
 
   it('Upload dataset and update it\'s data and schema', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
-    let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: formHeaders(form) })
     await workers.hook('finalize/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
     const schema = res.data.schema.filter(f => !f['x-calculated'])
@@ -384,14 +390,14 @@ describe('datasets', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd, 'dataset-name.csv')
     form2.append('schema', JSON.stringify(schema))
-    res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
+    res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: formHeaders(form2) })
     await workers.hook('finalize/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
     assert.equal(res.data.schema.filter(f => f['x-transform']).length, 6)
   })
 
   it('Sort datasets by title', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     for (const title of ['aa', 'bb', 'àb', ' àb', '1a']) {
       await ax.post('/api/v1/datasets', { isRest: true, title })
@@ -414,11 +420,11 @@ describe('datasets', function () {
   })
 
   it('Upload new dataset and specify encoding', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     form.append('file_encoding', 'ISO-8859-1')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(dataset.file.explicitEncoding, 'ISO-8859-1')
     assert.equal(dataset.file.encoding, 'ISO-8859-1')
@@ -426,7 +432,7 @@ describe('datasets', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd, 'dataset1.csv')
     form2.append('file_encoding', 'ISO-8859-2')
-    await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.file.explicitEncoding, 'ISO-8859-2')
     assert.equal(dataset.file.encoding, 'ISO-8859-2')

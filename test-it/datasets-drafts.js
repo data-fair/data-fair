@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'fs-extra'
 import nock from 'nock'
 import FormData from 'form-data'
@@ -11,19 +12,25 @@ import * as esUtils from '../api/src/datasets/es/index.ts'
 import { indexPrefix } from '../api/src/datasets/es/manage-indices.js'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
+import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
 describe('datasets in draft mode', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('create new dataset in draft mode and validate it', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
@@ -73,7 +80,7 @@ describe('datasets in draft mode', function () {
     const datasetFd2 = fs.readFileSync('./resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
-    await assert.rejects(ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) }), err => err.status === 409)
+    await assert.rejects(ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) }), err => err.status === 409)
 
     // querying for lines is not yet possible
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines`), err => err.status === 409)
@@ -111,7 +118,7 @@ describe('datasets in draft mode', function () {
     assert.equal(journal.pop().type, 'draft-validated')
     assert.equal(journal.pop().type, 'finalize-end')
 
-    const indices = await global.es.indices.get({ index: `${indexPrefix(dataset)}-*` })
+    const indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
     assert.equal(Object.keys(indices).length, 1)
 
     assert.ok(await filesStorage.pathExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
@@ -122,14 +129,14 @@ describe('datasets in draft mode', function () {
   it('create a draft when updating the data file', async function () {
     // listen to all notifications
     const notifications = []
-    global.events.on('notification', (n) => notifications.push(n))
+    testEvents.on('notification', (n) => notifications.push(n))
 
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file with incompatible schema
@@ -137,7 +144,7 @@ describe('datasets in draft mode', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
     dataset = await workers.hook('finalize/' + dataset.id)
@@ -157,7 +164,7 @@ describe('datasets in draft mode', function () {
     // schema should preserve the old order of columns
     assert.deepEqual(dataset.draft.schema.filter(c => !c['x-calculated']).map(c => c.key), ['id', 'adr', 'somedate', 'employees'])
 
-    let indices = await global.es.indices.get({ index: `${indexPrefix(dataset)}-*` })
+    let indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
     assert.equal(Object.keys(indices).length, 2)
 
     // validate the draft
@@ -171,7 +178,7 @@ describe('datasets in draft mode', function () {
     assert.equal(res.data.total, 6)
     assert.equal(res.data.results[0].id, 'koumoul')
 
-    indices = await global.es.indices.get({ index: `${indexPrefix(dataset)}-*` })
+    indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
     assert.equal(Object.keys(indices).length, 1)
 
     // the journal kept traces of all changes (draft and not)
@@ -195,7 +202,7 @@ describe('datasets in draft mode', function () {
     assert.equal(evt.type, 'finalize-end')
     assert.equal(evt.draft, undefined)
 
-    indices = await global.es.indices.get({ index: `${indexPrefix(dataset)}-*` })
+    indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
     assert.equal(Object.keys(indices).length, 1)
 
     // the notifications contain the same thing as the journal minus not very interesting events
@@ -211,14 +218,14 @@ describe('datasets in draft mode', function () {
   it('create a draft when updating the data file and cancel it', async function () {
     // listen to all notifications
     const notifications = []
-    global.events.on('notification', (n) => notifications.push(n))
+    testEvents.on('notification', (n) => notifications.push(n))
 
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file with incompatible schema
@@ -226,14 +233,14 @@ describe('datasets in draft mode', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 6)
 
-    let indices = await global.es.indices.get({ index: `${indexPrefix(dataset)}-*` })
+    let indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
     assert.equal(Object.keys(indices).length, 2)
 
     // cancel the draft
@@ -243,7 +250,7 @@ describe('datasets in draft mode', function () {
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
     assert.equal(dataset.draftReason, undefined)
 
-    indices = await global.es.indices.get({ index: `${indexPrefix(dataset)}-*` })
+    indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
     assert.equal(Object.keys(indices).length, 1)
 
     // the journal kept traces of all changes (draft and not)
@@ -272,8 +279,8 @@ describe('datasets in draft mode', function () {
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file
@@ -281,7 +288,7 @@ describe('datasets in draft mode', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1.csv')
     form2.append('description', 'draft description')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
     dataset = await workers.hook('finalize/' + dataset.id)
@@ -319,8 +326,8 @@ describe('datasets in draft mode', function () {
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
     const schema = dataset.schema
@@ -333,7 +340,7 @@ describe('datasets in draft mode', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-invalid.csv')
     form2.append('description', 'draft description')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
     await assert.rejects(workers.hook('finalize/' + dataset.id), (err) => {
@@ -350,8 +357,8 @@ describe('datasets in draft mode', function () {
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
     const schema = dataset.schema
@@ -364,7 +371,7 @@ describe('datasets in draft mode', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-invalid.csv')
     form2.append('description', 'draft description')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: 'compatibleOrCancel' } })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: 'compatibleOrCancel' } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
     assert.equal(dataset.draftReason.validationMode, 'compatibleOrCancel')
@@ -382,8 +389,8 @@ describe('datasets in draft mode', function () {
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     let dataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')
@@ -397,7 +404,7 @@ describe('datasets in draft mode', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-draft2.csv')
     form2.append('description', 'draft description 2')
-    const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
     assert.equal(datasetDraft2.status, 'created')
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.ok(!dataset.file)
@@ -410,7 +417,7 @@ describe('datasets in draft mode', function () {
     const form3 = new FormData()
     form3.append('file', datasetFd3, 'dataset1-draft3.csv')
     form3.append('description', 'draft description 3')
-    const datasetDraft3 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })).data
+    const datasetDraft3 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: formHeaders(form3), params: { draft: true } })).data
     assert.equal(datasetDraft3.status, 'loaded')
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.ok(!dataset.file)
@@ -431,8 +438,8 @@ describe('datasets in draft mode', function () {
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file
@@ -440,7 +447,7 @@ describe('datasets in draft mode', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-draft1.csv')
     form2.append('description', 'draft description')
-    const datasetDraft1 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    const datasetDraft1 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
     assert.equal(datasetDraft1.status, 'loaded')
     assert.equal(datasetDraft1.draftReason.key, 'file-updated')
     dataset = await workers.hook('finalize/' + dataset.id)
@@ -452,7 +459,7 @@ describe('datasets in draft mode', function () {
     const form3 = new FormData()
     form3.append('file', datasetFd3, 'dataset1-draft2.csv')
     form3.append('description', 'draft description')
-    const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })).data
+    const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: formHeaders(form3), params: { draft: true } })).data
     assert.equal(datasetDraft2.status, 'loaded')
     assert.equal(datasetDraft2.draftReason.key, 'file-updated')
     dataset = await workers.hook('finalize/' + dataset.id)
@@ -473,8 +480,8 @@ describe('datasets in draft mode', function () {
     }
     const form = new FormData()
     form.append('file', content, 'dataset.csv')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     let dataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(dataset.draft.count, 100)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
@@ -489,14 +496,14 @@ describe('datasets in draft mode', function () {
   })
 
   it('Create a draft with attachments', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     let dataset = res.data
     assert.equal(res.status, 201)
 
@@ -522,19 +529,19 @@ describe('datasets in draft mode', function () {
   })
 
   it('Create a draft with attachments then data uploaded separately', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
 
     // update only the attachments
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./resources/datasets/files2.zip'), 'files2.zip')
-    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: formHeaders(form2), params: { draft: true } })
     await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {
       console.log(err.stack)
       if (!err.message.includes('Valeurs invalides : dir1/test.pdf')) {
@@ -550,7 +557,7 @@ describe('datasets in draft mode', function () {
     // then update the data
     const form3 = new FormData()
     form3.append('dataset', fs.readFileSync('./resources/datasets/attachments2.csv'), 'attachments2.csv')
-    await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: formHeaders(form3), params: { draft: true } })
     await workers.hook(`finalize/${dataset.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
     assert.equal(lines.total, 2)
@@ -565,19 +572,19 @@ describe('datasets in draft mode', function () {
   })
 
   it('Create a draft with data then attachments uploaded separately', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
 
     // update only the data (not the attachments)
     const form2 = new FormData()
     form2.append('dataset', fs.readFileSync('./resources/datasets/attachments2.csv'), 'attachments2.csv')
-    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: formHeaders(form2), params: { draft: true } })
     await workers.hook(`finalize/${dataset.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
     assert.equal(lines.total, 2)
@@ -586,7 +593,7 @@ describe('datasets in draft mode', function () {
     // the update the attachments
     const form3 = new FormData()
     form3.append('attachments', fs.readFileSync('./resources/datasets/files2.zip'), 'files2.zip')
-    await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: formHeaders(form3), params: { draft: true } })
     await workers.hook(`finalize/${dataset.id}`)
     lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
     assert.equal(lines.total, 2)
@@ -609,8 +616,8 @@ describe('datasets in draft mode', function () {
     const datasetFd = fs.readFileSync('./resources/geo/stations.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations.zip')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
 
     // dataset converted
@@ -645,7 +652,7 @@ describe('datasets in draft mode', function () {
   })
 
   it('Manage error status in draft mode', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -654,7 +661,7 @@ koumoul,19 rue de la voie lactée saint avé
 other,unknown address
 `
     form.append('file', content, 'dataset2.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -679,7 +686,7 @@ other,unknown address
   })
 
   it('Fails when draft file is missing the input properties', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -688,7 +695,7 @@ koumoul,19 rue de la voie lactée saint avé
 other,address
 `
     form.append('file', content, 'dataset2.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -714,7 +721,7 @@ koumoul
 other
 `
     form2.append('file', content2, 'dataset2-noadr.csv')
-    res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
+    res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })
     assert.equal(res.status, 200)
     await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {
       assert.ok(err.message.includes('un concept nécessaire'))
@@ -723,13 +730,13 @@ other
   })
 
   it('Delete a dataset in draft state', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
     const dataset = await workers.hook('finalize/' + res.data.id)
 
@@ -743,8 +750,8 @@ other
   it('Accepts a new file with compatible keys but different names', async function () {
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1-names.csv'), 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].key, 'id')
     assert.equal(dataset.schema[0]['x-originalName'], 'Id')
@@ -755,7 +762,7 @@ other
 
     const form2 = new FormData()
     form2.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].key, 'id')
     assert.equal(dataset.schema[0]['x-originalName'], 'id')

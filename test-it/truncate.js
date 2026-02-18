@@ -3,8 +3,13 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('truncate', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Truncate results for faster previews', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.post('/api/v1/datasets/truncate1', {
       isRest: true,
       title: 'truncate1',

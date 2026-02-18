@@ -8,6 +8,11 @@ const cioExample = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 
 const semiceuExample = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, './resources/dcat/example-semiceu.json'), 'utf8'))
 
 describe('DCAT support', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it.skip('Should preserve serialization of a valid example', async function () {
     const normalizedDcat = await normalize(cioExample)
     normalizedDcat['@context'] = cioExample['@context']

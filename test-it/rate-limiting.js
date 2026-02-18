@@ -1,12 +1,18 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import config from 'config'
 import fs from 'fs-extra'
 import tmp from 'tmp-promise'
 
 describe('rate limiting', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('should throttle content download', async function () {
-    const ax = await global.ax.hlalonde3
+    const ax = await hlalonde3
 
     // higher storage limit first
     await ax.post('/api/v1/limits/user/hlalonde3',
@@ -20,7 +26,7 @@ describe('rate limiting', function () {
       await fs.write(tmpFile.fd, csvContent)
     }
 
-    const dataset = await testUtils.sendDataset(tmpFile.path, ax)
+    const dataset = await sendDataset(tmpFile.path, ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
       { classes: ['read'] }
     ])
@@ -37,10 +43,10 @@ describe('rate limiting', function () {
 
     // static data access by anonymous user (200 kb/s defined in config/test.cjs)
     t0 = new Date().getTime()
-    await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
-    await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
-    await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
-    await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
+    await anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
+    await anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
     t1 = new Date().getTime()
     assert.ok((t1 - t0 > 1200) && (t1 - t0 < 3000), 'throttled download should be around 2s, got ' + (t1 - t0))
 
@@ -52,7 +58,7 @@ describe('rate limiting', function () {
   })
 
   it('should block requests when there are too many', async function () {
-    const ax = await global.ax.dmeadus
+    const ax = await dmeadus
     const promises = []
     for (let i = 0; i < 200; i++) {
       promises.push(ax.get('/api/v1/datasets'))

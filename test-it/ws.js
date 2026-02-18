@@ -10,6 +10,11 @@ async function receive (cli) {
 }
 
 describe('ws', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Connect to web socket server', async function () {
     const cli = new WebSocket(config.publicUrl)
     await eventPromise(cli, 'open')

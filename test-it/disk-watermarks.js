@@ -1,19 +1,25 @@
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('Elasticsearch disk watermarks', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   afterEach(function () {
     process.env.READ_ONLY_ES_INDEX = 'false'
   })
 
   it('Manage read only index error', async function () {
-    const ax = global.ax.dmeadus
-    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     // upload a new file but the index won't be writable (simulates a lock from flood watermark errors)
     await workers.workers.batchProcessor.run({ key: 'READ_ONLY_ES_INDEX', value: 'true' }, { name: 'setEnv' })
-    await global.ax.superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
+    await superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
     await assert.rejects(workers.hook(`finalize/${dataset.id}`))
 
     // 1 auto-retry

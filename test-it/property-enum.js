@@ -3,8 +3,13 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('Enum of actual values in schema', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Calculate enum of values in data', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
       title: 'rest2',

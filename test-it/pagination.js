@@ -2,8 +2,13 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('data pagination', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('get deeper into data', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     const schema = [{ key: 'attr1', type: 'integer' }, { key: 'attr2', type: 'integer' }]
 

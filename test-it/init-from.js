@@ -1,20 +1,26 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'node:fs'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('Datasets with auto-initialization from another one', function () {
-  it('Create REST dataset with copied information from file dataset', async function () {
-    const ax = global.ax.dmeadus
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
 
-    const dataset = await testUtils.sendDataset('datasets/date-formats.csv', ax)
+  it('Create REST dataset with copied information from file dataset', async function () {
+    const ax = dmeadus
+
+    const dataset = await sendDataset('datasets/date-formats.csv', ax)
     assert.equal(dataset.file.schema[2].dateFormat, 'D/M/YYYY')
     assert.equal(dataset.file.schema[3].dateTimeFormat, 'D/M/YYYY H:m')
 
     const attachmentForm = new FormData()
     attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
-    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 
@@ -59,7 +65,7 @@ describe('Datasets with auto-initialization from another one', function () {
   })
 
   it('Create REST and file datasets with copied information from virtual dataset', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     const checkDatasetAttachments = async (dataset) => {
       let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
@@ -77,7 +83,7 @@ describe('Datasets with auto-initialization from another one', function () {
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = await workers.hook('finalize/' + res.data.id)
     await checkDatasetAttachments(dataset)
 
@@ -119,12 +125,12 @@ describe('Datasets with auto-initialization from another one', function () {
   })
 
   it('Create file dataset with copied information from another file dataset', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const attachmentForm = new FormData()
     attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
-    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 
@@ -154,12 +160,12 @@ describe('Datasets with auto-initialization from another one', function () {
   })
 
   it('Create draft file dataset with copied information from another file dataset', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset-extensions.csv', ax)
 
     const attachmentForm = new FormData()
     attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
-    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
 
     await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10, query: '?select=lat,lon' }, { name: 'setCoordsNock' })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -210,8 +216,8 @@ describe('Datasets with auto-initialization from another one', function () {
   })
 
   it('Create file dataset that doesn\'t match imported schema', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset2.csv'), 'dataset2.csv')
@@ -221,7 +227,7 @@ describe('Datasets with auto-initialization from another one', function () {
         dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description']
       }
     }))
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
     const initFromDataset = await workers.hook('finalize/' + res.data.id)
 
@@ -243,8 +249,8 @@ describe('Datasets with auto-initialization from another one', function () {
   })
 
   it('Create remote file dataset that doesn\'t match imported schema', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.csv', reply: { status: 200, body: 'col\nval1\nval' } }, { name: 'setNock' })
     let initFromDataset = (await ax.post('/api/v1/datasets', {
@@ -274,7 +280,7 @@ describe('Datasets with auto-initialization from another one', function () {
   })
 
   it('Create file dataset with copied information from a rest dataset', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const dataset = (await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
       title: 'rest1',
@@ -285,7 +291,7 @@ describe('Datasets with auto-initialization from another one', function () {
 
     const attachmentForm = new FormData()
     attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
-    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 
@@ -315,9 +321,9 @@ describe('Datasets with auto-initialization from another one', function () {
   })
 
   it('Prevent initializing a dataset when missing permissions', async function () {
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', global.ax.ngernier4)
+    const dataset = await sendDataset('datasets/dataset1.csv', ngernier4)
 
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
 
     const res = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -331,9 +337,9 @@ describe('Datasets with auto-initialization from another one', function () {
   })
 
   it('Initialize dataset in a department from dataset in orga', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
 
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const res = await ax.post('/api/v1/datasets', {
       isRest: true,

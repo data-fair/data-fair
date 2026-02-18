@@ -3,8 +3,13 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('projections', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Create REST dataset and apply specific projection to simple coords', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest projection',
@@ -34,7 +39,7 @@ describe('projections', function () {
   })
 
   it('Create REST dataset and apply specific projection to geometries', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest projection',

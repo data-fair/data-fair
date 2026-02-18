@@ -2,8 +2,13 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('Date filters', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Date match special filter on date field with date-time format', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets/rest-date-match', {
       isRest: true,
       title: 'rest-date-match',
@@ -41,7 +46,7 @@ describe('Date filters', function () {
   })
 
   it('Date match special filter on startDate and endDate fields with date-time format', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.post('/api/v1/datasets/rest-date-match', {
       isRest: true,
       title: 'rest-date-match',

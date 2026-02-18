@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'node:fs'
 import config from 'config'
 import FormData from 'form-data'
@@ -8,13 +9,18 @@ import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 
 describe('geo files support', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Process uploaded geojson dataset', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/geo/geojson-example.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
@@ -115,8 +121,8 @@ describe('geo files support', function () {
     const datasetFd = fs.readFileSync('./resources/geo/geojson-geometry-collection.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-geometry-collection.geojson')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
@@ -145,8 +151,8 @@ describe('geo files support', function () {
     const datasetFd = fs.readFileSync('./resources/geo/geojson-crs.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     const dataset = await workers.hook('finalize/' + res.data.id)
@@ -172,8 +178,8 @@ describe('geo files support', function () {
       type: 'string',
       'x-refersTo': 'http://rdf.insee.fr/def/geo#codeRegion'
     }]))
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
@@ -191,8 +197,8 @@ describe('geo files support', function () {
     form.append('extras', JSON.stringify({
       fixGeojsonGlobalId: true
     }))
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
@@ -205,8 +211,8 @@ describe('geo files support', function () {
     const datasetFd = fs.readFileSync('./resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)
 
@@ -231,8 +237,8 @@ describe('geo files support', function () {
     const datasetFd = fs.readFileSync('./resources/geo/kinked-multipolygons.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)
     await workers.hook('indexLines/' + dataset.id)
@@ -247,8 +253,8 @@ describe('geo files support', function () {
     const datasetFd = fs.readFileSync('./resources/geo/stations.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations.zip')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // dataset converted
@@ -270,8 +276,8 @@ describe('geo files support', function () {
     const datasetFd = fs.readFileSync('./resources/geo/stations2.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations2.zip')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // dataset converted
@@ -282,8 +288,8 @@ describe('geo files support', function () {
   })
 
   it('Upload CSV file with WKT geometries', async function () {
-    const ax = global.ax.dmeadus
-    let dataset = await testUtils.sendDataset('geo/wkt.csv', ax)
+    const ax = dmeadus
+    let dataset = await sendDataset('geo/wkt.csv', ax)
     dataset.schema.find(p => p.key === 'geom')['x-refersTo'] = 'https://purl.org/geojson/vocab#geometry'
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
     dataset = await workers.hook('finalize/' + dataset.id)
@@ -310,8 +316,8 @@ describe('geo files support', function () {
     const datasetFd = fs.readFileSync('./resources/geo/paths.gpx')
     const form = new FormData()
     form.append('file', datasetFd, 'paths.gpx')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // dataset converted
@@ -341,8 +347,8 @@ describe('geo files support', function () {
     const datasetFd = fs.readFileSync('./resources/geo/troncon-mapinfo.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'troncon-mapinfo.zip')
-    const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // dataset converted

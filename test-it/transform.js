@@ -1,15 +1,21 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 import fs from 'fs-extra'
 
 describe('file datasets with transformation rules', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('create a dataset and apply a simple transformation', async function () {
     const form = new FormData()
     form.append('file', 'id\n Test\nTest2', 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
 
@@ -31,8 +37,8 @@ describe('file datasets with transformation rules', function () {
   it('create a dataset and overwrite the type of 2 columns and add an extension', async function () {
     const form = new FormData()
     form.append('file', 'id,col1,col2\ntest,val,2025-04-03T18:00:00+02:00\ntest2,val,\n,val,2025-04-03T19:00:00+02:00', 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].type, 'string')
     assert.equal(dataset.schema[2].type, 'string')
@@ -72,7 +78,7 @@ describe('file datasets with transformation rules', function () {
 
     const form2 = new FormData()
     form2.append('file', 'id,col1,col2\ntest,val,2025-04-03T16:00:00+02:00\ntest2,val', 'dataset1.csv')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })).data
     assert.equal(dataset.status, 'loaded')
     dataset = await workers.hook('finalize/' + dataset.id)
 
@@ -87,8 +93,8 @@ describe('file datasets with transformation rules', function () {
   it('create a XLSX dataset and apply a transformation on a column', async function () {
     const form = new FormData()
     form.append('file', fs.readFileSync('resources/datasets/date-time.xlsx'), 'dataset1.xlsx')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
 
     let lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
@@ -110,8 +116,8 @@ describe('file datasets with transformation rules', function () {
   it('create manage transform type error', async function () {
     const form = new FormData()
     form.append('file', 'id,col1,col2\ntest,val,2025-04-03T18:00:00+02:00\ntest2,val,\n,val,2025-04-03T19:00:00+02:00', 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
 
     const schema = dataset.schema
@@ -127,8 +133,8 @@ describe('file datasets with transformation rules', function () {
   it('reload file with transform_date expression', async function () {
     const form = new FormData()
     form.append('file', 'horodate\n2025-11-10 22:30', 'dataset1.csv')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
 
     assert.equal(dataset.schema[0].type, 'string')
@@ -148,7 +154,7 @@ describe('file datasets with transformation rules', function () {
 
     const form2 = new FormData()
     form2.append('file', 'horodate\n2025-11-10 22:35', 'dataset1.csv')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })).data
     assert.equal(dataset.status, 'loaded')
     await workers.hook('finalize/' + dataset.id)
     lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
@@ -177,7 +183,7 @@ describe('file datasets with transformation rules', function () {
 
     const form3 = new FormData()
     form3.append('file', 'horodate\n2025-11-10 22:40', 'dataset1.csv')
-    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })).data
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: formHeaders(form3), params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     await workers.hook('finalize/' + dataset.id)
     lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results

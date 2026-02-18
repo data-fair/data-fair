@@ -2,8 +2,13 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('datasets based on remote files', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('manage failure to fetch file', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://localhost:5600/notafile' } })
     const dataset = res.data
     await assert.rejects(workers.hook('finalize/' + dataset.id), (err) => {
@@ -16,7 +21,7 @@ describe('datasets based on remote files', function () {
   })
 
   it('manage fetching a file in unsupported format', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.ppt', reply: { status: 200, body: 'fake ppt' } }, { name: 'setNock' })
 
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://test-remote.com/data.ppt' } })
@@ -31,7 +36,7 @@ describe('datasets based on remote files', function () {
   })
 
   it('manage fetching a geojson with json mime type', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.geojson', reply: { status: 200, body: '{"type":"FeatureCollection","features": [{}]}' } }, { name: 'setNock' })
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://test-remote.com/data.geojson' } })
     let dataset = res.data
@@ -42,7 +47,7 @@ describe('datasets based on remote files', function () {
   })
 
   it('fetch a file and create a dataset', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.csv', reply: { status: 200, body: 'col\nval1\nval2' } }, { name: 'setNock' })
     const res = await ax.post('/api/v1/datasets', {
       remoteFile: { url: 'http://test-remote.com/data.csv', autoUpdate: { active: true } }
@@ -62,7 +67,7 @@ describe('datasets based on remote files', function () {
     // but md5 did not change
     const nextUpdate = new Date().toISOString()
     await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.csv', reply: { status: 200, body: 'col\nval1\nval2' } }, { name: 'setNock' })
-    await global.db.collection('datasets').updateOne(
+    await mongo.db.collection('datasets').updateOne(
       { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     dataset = await workers.hook('downloadFile/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
@@ -70,7 +75,7 @@ describe('datasets based on remote files', function () {
 
     // trigger re-downloading but etag matches did not change
     await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.csv', reply: { status: 304 } }, { name: 'setNock' })
-    await global.db.collection('datasets').updateOne(
+    await mongo.db.collection('datasets').updateOne(
       { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     dataset = await workers.hook('downloadFile/' + dataset.id)
     assert.ok(!dataset.draft)
@@ -79,7 +84,7 @@ describe('datasets based on remote files', function () {
 
     // trigger re-downloading and content changed
     await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.csv', reply: { status: 200, body: 'col\nval11\nval22' } }, { name: 'setNock' })
-    await global.db.collection('datasets').updateOne(
+    await mongo.db.collection('datasets').updateOne(
       { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')

@@ -1,18 +1,24 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'node:fs'
 import FormData from 'form-data'
 
 const sendAttachment = async (ax, datasetId, attachmentName) => {
   const attachmentForm = new FormData()
   attachmentForm.append('attachment', fs.readFileSync('./resources/' + attachmentName), attachmentName)
-  await ax.post(`/api/v1/datasets/${datasetId}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+  await ax.post(`/api/v1/datasets/${datasetId}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
   await ax.patch('/api/v1/datasets/' + datasetId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 }
 
 describe('Datasets with metadata attachments', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Upload a simple attachment', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.put('/api/v1/datasets/attachments1', { isRest: true, title: 'attachments1' })
 
     await sendAttachment(ax, 'attachments1', 'avatar.jpeg')
@@ -26,7 +32,7 @@ describe('Datasets with metadata attachments', function () {
   })
 
   it('Create an attachment with a private target URL', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.put('/api/v1/datasets/attachments2', { isRest: true, title: 'attachments2' })
 
     const patchRes = await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: 'https://koumoul.com/static/logo-square.png' }] })
@@ -62,7 +68,7 @@ describe('Datasets with metadata attachments', function () {
   })
 
   it('Attachment supports Range query (used for PMTILES support)', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.put('/api/v1/datasets/attachments1', { isMetaOnly: true, title: 'attachments1' })
 
     await sendAttachment(ax, 'attachments1', 'avatar.jpeg')

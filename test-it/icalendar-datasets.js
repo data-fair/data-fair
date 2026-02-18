@@ -1,14 +1,20 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import moment from 'moment'
 import 'moment-timezone'
 
 const localeTimeZone = moment.tz.guess()
 
 describe('icalendar dataset', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Upload dataset in iCalendar format', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('calendar/calendar.ics', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('calendar/calendar.ics', ax)
     assert.equal(dataset.count, 1)
     assert.ok(dataset.bbox)
     assert.ok(dataset.timePeriod)
@@ -23,8 +29,8 @@ describe('icalendar dataset', function () {
   })
 
   it('Upload dataset in iCalendar format with X-WR-TIMEZONE param', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('calendar/calendar-xwr-timezone.ics', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('calendar/calendar-xwr-timezone.ics', ax)
     assert.equal(dataset.count, 1)
     assert.ok(dataset.bbox)
     assert.ok(dataset.timePeriod)
@@ -38,8 +44,8 @@ describe('icalendar dataset', function () {
   })
 
   it('Upload dataset in iCalendar format with VTIMEZONE param', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('calendar/calendar-vtimezone.ics', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('calendar/calendar-vtimezone.ics', ax)
     assert.equal(dataset.count, 1)
     assert.ok(dataset.bbox)
     assert.ok(dataset.timePeriod)
@@ -53,8 +59,8 @@ describe('icalendar dataset', function () {
   })
 
   it('Upload dataset with recurring event', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('calendar/calendar-rrule.ics', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('calendar/calendar-rrule.ics', ax)
     assert.equal(dataset.count, 92)
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?sort=DTSTART`)
     assert.ok(res.data.results[0].DTSTART.startsWith('2008-'))

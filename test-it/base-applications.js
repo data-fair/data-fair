@@ -1,9 +1,15 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 
 describe('Base applications', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Get public base applications', async function () {
-    const ax = global.ax.anonymous
+    const ax = anonymous
     const res = await ax.get('/api/v1/base-applications')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 2)
@@ -11,7 +17,7 @@ describe('Base applications', function () {
 
   it('Get privately readable base app', async function () {
     // Only public at first
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 2)
@@ -28,7 +34,7 @@ describe('Base applications', function () {
     assert.deepEqual(baseApp3.datasetsFilters[0].select, ['id', 'title', 'schema'])
 
     // super admin patchs the private one
-    const adminAx = global.ax.superadmin
+    const adminAx = superadmin
     res = await adminAx.get('/api/v1/admin/base-applications')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)
@@ -46,10 +52,10 @@ describe('Base applications', function () {
   })
 
   it('Get base apps completed with contextual dataset', async function () {
-    const ax = global.ax.dmeadus
-    const adminAx = global.ax.superadmin
+    const ax = dmeadus
+    const adminAx = superadmin
     await adminAx.patch('/api/v1/base-applications/http:monapp2.com', { privateAccess: [{ type: 'user', id: 'dmeadus0' }] })
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     const res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0&dataset=' + dataset.id)
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)

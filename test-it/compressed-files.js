@@ -1,14 +1,20 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'fs-extra'
 import path from 'node:path'
 import * as workers from '../api/src/workers/index.ts'
 import FormData from 'form-data'
 
 describe('Archive conversions', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('should extract a zipped csv file', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.zip', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.zip', ax)
     assert.equal(dataset.originalFile.name, 'dataset1.zip')
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.title, 'dataset1')
@@ -16,8 +22,8 @@ describe('Archive conversions', function () {
   })
 
   it('should extract a zipped geojson file', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('geo/geojson-example.zip', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('geo/geojson-example.zip', ax)
     assert.equal(dataset.originalFile.name, 'geojson-example.zip')
     assert.equal(dataset.title, 'geojson example')
     assert.equal(dataset.file.name, 'geojson-example.geojson')
@@ -25,8 +31,8 @@ describe('Archive conversions', function () {
   })
 
   it('should extract a gzipped csv file', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv.gz', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv.gz', ax)
     assert.equal(dataset.originalFile.name, 'dataset1.csv.gz')
     assert.equal(dataset.title, 'dataset1')
     assert.equal(dataset.file.name, 'dataset1.csv')
@@ -34,11 +40,11 @@ describe('Archive conversions', function () {
   })
 
   it('should extract a gzipped file on PUT and replace it', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const gzippedContent = fs.readFileSync(path.resolve('./resources/datasets/dataset1.csv.gz'))
     const form = new FormData()
     form.append('file', gzippedContent, 'dataset1.csv.gz')
-    await ax.put('/api/v1/datasets/dataset-compressed', form, { headers: testUtils.formHeaders(form) })
+    await ax.put('/api/v1/datasets/dataset-compressed', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/dataset-compressed')
     assert.ok(dataset.schema.find(p => p.key === 'id'))
     assert.ok(dataset.schema.find(p => p.key === '_id'))
@@ -50,7 +56,7 @@ describe('Archive conversions', function () {
     const form2 = new FormData()
     form2.append('file', csvContent, 'dataset1.csv')
     form2.append('schema', JSON.stringify(schema))
-    await ax.put('/api/v1/datasets/dataset-compressed', form2, { headers: testUtils.formHeaders(form2) })
+    await ax.put('/api/v1/datasets/dataset-compressed', form2, { headers: formHeaders(form2) })
     dataset = await workers.hook('finalize/dataset-compressed')
     assert.ok(dataset.schema.find(p => p.key === 'id'))
     assert.ok(dataset.schema.find(p => p.key === '_id'))
@@ -58,8 +64,8 @@ describe('Archive conversions', function () {
   })
 
   it('should extract a gzipped geojson file', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('geo/geojson-example.geojson.gz', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('geo/geojson-example.geojson.gz', ax)
     assert.equal(dataset.originalFile.name, 'geojson-example.geojson.gz')
     assert.equal(dataset.title, 'geojson example')
     assert.equal(dataset.file.name, 'geojson-example.geojson')

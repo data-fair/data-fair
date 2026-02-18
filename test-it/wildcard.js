@@ -3,6 +3,11 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('Wildcard fields', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   const items = {
     t1: 'prefix',
     t2: 'prefixsuite',
@@ -14,7 +19,7 @@ describe('Wildcard fields', function () {
 
   it('Search in dataset using a contains query on a wildcard field', async function () {
     // Load a few lines
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.put('/api/v1/datasets/wildcards', {
       isRest: true,
       title: 'wildcards',
@@ -47,7 +52,7 @@ describe('Wildcard fields', function () {
 
   it('Wildcards can be activated after first indexation', async function () {
     // Load a few lines
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.put('/api/v1/datasets/wildcards2', {
       isRest: true,
       title: 'wildcards2',

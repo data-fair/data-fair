@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'node:fs'
 import FormData from 'form-data'
 import config from 'config'
@@ -7,13 +8,18 @@ import * as workers from '../api/src/workers/index.ts'
 import * as esUtils from '../api/src/datasets/es/index.ts'
 
 describe('workers', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Process newly uploaded CSV dataset', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
@@ -32,7 +38,7 @@ describe('workers', function () {
     assert.equal(dataset.count, 2)
     const idProp = dataset.schema.find(p => p.key === 'id')
     assert.equal(idProp['x-cardinality'], 2)
-    const esIndices = await global.es.indices.get({ index: esUtils.aliasName(dataset) })
+    const esIndices = await es.client.indices.get({ index: esUtils.aliasName(dataset) })
     const esIndex = Object.values(esIndices)[0]
     const mapping = esIndex.mappings
     assert.equal(mapping.properties.id.type, 'keyword')
@@ -50,7 +56,7 @@ describe('workers', function () {
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
-    const esIndices2 = await global.es.indices.get({ index: esUtils.aliasName(dataset) })
+    const esIndices2 = await es.client.indices.get({ index: esUtils.aliasName(dataset) })
     const esIndex2 = Object.values(esIndices2)[0]
     const mapping2 = esIndex2.mappings
     assert.equal(mapping2.properties.id.type, 'keyword')
@@ -63,7 +69,7 @@ describe('workers', function () {
     const datasetFd2 = fs.readFileSync('./resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
-    await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
     await assert.rejects(workers.hook('indexLines'), () => true)
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
@@ -78,12 +84,12 @@ describe('workers', function () {
     }
 
     this.timeout = 60000
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const datasets = await Promise.all([
-      testUtils.sendDataset('geo/stations.zip', ax),
-      testUtils.sendDataset('geo/stations.zip', ax),
-      testUtils.sendDataset('geo/stations.zip', ax),
-      testUtils.sendDataset('geo/stations.zip', ax)
+      sendDataset('geo/stations.zip', ax),
+      sendDataset('geo/stations.zip', ax),
+      sendDataset('geo/stations.zip', ax),
+      sendDataset('geo/stations.zip', ax)
     ])
     assert.ok(datasets.find(d => d.slug === 'stations'))
     assert.ok(datasets.find(d => d.slug === 'stations-2'))
@@ -95,8 +101,8 @@ describe('workers', function () {
     const datasetFd = fs.readFileSync('./resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken2.geojson')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = res.data
     await assert.rejects(workers.hook(`indexLines/${dataset.id}`), () => true)
@@ -108,7 +114,7 @@ describe('workers', function () {
   })
 
   it('Manage bad input in children processes', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error 400', schema: [{ key: 'test', type: 'string' }] })).data
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines?async=true`, [{ test: 'test' }])
     await assert.rejects(workers.hook('indexLines/' + dataset.id), 'This is a test 400 error')
@@ -124,8 +130,8 @@ describe('workers', function () {
     const form = new FormData()
     form.append('title', 'trigger test error')
     form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset.csv')
-    const ax = global.ax.dmeadus
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    const ax = dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
 
     await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
     let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -150,8 +156,8 @@ describe('workers', function () {
   })
 
   it('Update dataset schema and apply only required worker tasks', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.status, 'finalized')
     const schema = dataset.schema
     const idProp = schema.find(p => p.key === 'id')

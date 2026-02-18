@@ -1,12 +1,18 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import * as workers from '../api/src/workers/index.ts'
 import config from 'config'
 
 describe('search', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Get lines in dataset', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
     // Update schema to specify geo point
     const locProp = dataset.schema.find(p => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
@@ -175,8 +181,8 @@ describe('search', function () {
   })
 
   it('Filter on line existence', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset2.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dataset2.csv', ax)
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 6)
@@ -192,8 +198,8 @@ describe('search', function () {
   })
 
   it('search lines and collapse on field', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/collapsable.csv', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/collapsable.csv', ax)
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 10)

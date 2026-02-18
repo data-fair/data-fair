@@ -3,9 +3,14 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('query modes', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Search in dataset using all supported query modes', async function () {
     // Load a few lines
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let dataset = (await ax.put('/api/v1/datasets/qmodes', {
       isRest: true,
       title: 'qmodes',

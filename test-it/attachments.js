@@ -1,18 +1,24 @@
 import { strict as assert } from 'node:assert'
 
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import fs from 'node:fs'
 import * as workers from '../api/src/workers/index.ts'
 import FormData from 'form-data'
 
 describe('Attachments', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('Process newly uploaded attachments alone', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/files.zip')
     const form = new FormData()
     form.append('dataset', datasetFd, 'files.zip')
-    const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const ax = dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)
     assert.equal(dataset.status, 'created')
@@ -38,13 +44,13 @@ describe('Attachments', function () {
   })
 
   it('Process newly uploaded attachments along with data file', async function () {
-    const ax = global.ax.cdurning2
+    const ax = cdurning2
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)
 
@@ -65,19 +71,19 @@ describe('Attachments', function () {
   })
 
   it('Keep attachments when updating data', async function () {
-    const ax = global.ax.cdurning2
+    const ax = cdurning2
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
     const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
     form2.append('dataset', fs.readFileSync('./resources/datasets/attachments2.csv'), 'attachments2.csv')
-    await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.storage.attachments.size, attachmentsSize)
 
@@ -87,20 +93,20 @@ describe('Attachments', function () {
   })
 
   it('Update attachments with data', async function () {
-    const ax = global.ax.cdurning2
+    const ax = cdurning2
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
     const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
     form2.append('dataset', fs.readFileSync('./resources/datasets/attachments2.csv'), 'attachments2.csv')
     form2.append('attachments', fs.readFileSync('./resources/datasets/files2.zip'), 'files2.zip')
-    await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.ok(dataset.storage.attachments.size < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
 
@@ -110,19 +116,19 @@ describe('Attachments', function () {
   })
 
   it('Update attachments only then data only', async function () {
-    const ax = global.ax.cdurning2
+    const ax = cdurning2
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
     const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./resources/datasets/files2.zip'), 'files2.zip')
-    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2) })
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: formHeaders(form2) })
     try {
       await workers.hook(`finalize/${dataset.id}`)
       assert.fail()
@@ -132,7 +138,7 @@ describe('Attachments', function () {
 
     const form3 = new FormData()
     form3.append('dataset', fs.readFileSync('./resources/datasets/attachments2.csv'), 'attachments2.csv')
-    await ax.put('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3) })
+    await ax.put('/api/v1/datasets/' + dataset.id, form3, { headers: formHeaders(form3) })
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.ok(dataset.storage.attachments.size < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
 
@@ -142,13 +148,13 @@ describe('Attachments', function () {
   })
 
   it('Detect wrong attachment path', async function () {
-    const ax = global.ax.cdurning2
+    const ax = cdurning2
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments-wrong-paths.csv'), 'attachments-wrong-paths.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)
 
@@ -160,13 +166,13 @@ describe('Attachments', function () {
   })
 
   it('Detect missing attachment paths', async function () {
-    const ax = global.ax.cdurning2
+    const ax = cdurning2
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)
 

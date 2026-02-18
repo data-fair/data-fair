@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import * as whereParser from '../api/src/api-compat/ods/where.peg.js'
 import * as selectParser from '../api/src/api-compat/ods/select.peg.js'
 import * as orderByParser from '../api/src/api-compat/ods/order-by.peg.js'
@@ -12,6 +13,11 @@ import Excel from 'exceljs'
 import dayjs from 'dayjs'
 
 describe('compatibility layer for ods api', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   it('contains a parser to extract aliases from expressions', function () {
     assert.deepEqual(aliasesParser.parse('test'), {})
     assert.deepEqual(aliasesParser.parse('test as al'), { al: 'test' })
@@ -538,11 +544,11 @@ describe('compatibility layer for ods api', function () {
   })
 
   it('exposes records and exports api on 2 urls', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
 
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     let res = await ax.get(`/api/v1/compat-ods/v2.1/catalog/datasets/${dataset.id}/records`)
     assert.equal(res.status, 200)
@@ -819,11 +825,11 @@ bidule;1;22.2
   })
 
   it('should manage some other record list cases', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
 
-    const dataset = await testUtils.sendDataset('datasets/dataset2.csv', ax)
+    const dataset = await sendDataset('datasets/dataset2.csv', ax)
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
     assert.equal(res.status, 200)
@@ -842,7 +848,7 @@ bidule;1;22.2
   })
 
   it('should manage multi-values', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
 
@@ -872,7 +878,7 @@ val 1;val 1, val 2
   })
 
   it('should manage date times', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
@@ -946,7 +952,7 @@ val 1;val 1, val 2
   })
 
   it('should manage corner cases of parquet export', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
@@ -995,7 +1001,7 @@ val 1;val 1, val 2
   })
 
   it('manage case-sensitive sort', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
 
     let res = await ax.post('/api/v1/datasets/rest-insensitive', {
@@ -1024,11 +1030,11 @@ val 1;val 1, val 2
   })
 
   it.skip('manages geo data', async function () {
-    const ax = global.ax.dmeadusOrg
+    const ax = dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
 
-    const dataset = await testUtils.sendDataset('geo/geojson-example.geojson', ax)
+    const dataset = await sendDataset('geo/geojson-example.geojson', ax)
 
     const res = await ax.get(`/api/v1/compat-ods/v2.1/catalog/datasets/${dataset.id}/records`)
     assert.equal(res.status, 200)

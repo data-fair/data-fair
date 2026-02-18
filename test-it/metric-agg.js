@@ -3,9 +3,14 @@ import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('metric agg', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   beforeEach(async function () {
     // Load a few lines
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await ax.put('/api/v1/datasets/metric-agg', {
       isRest: true,
       title: 'metric-agg',
@@ -35,7 +40,7 @@ describe('metric agg', function () {
   })
 
   it('performs calculations on a field', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     await assert.rejects(ax.get('/api/v1/datasets/metric-agg/metric_agg', {
       params: { field: 'numfield', metric: 'scripted_metric' }
     }), (err) => err.status === 400)
@@ -106,7 +111,7 @@ describe('metric agg', function () {
   })
 
   it('performs multiple basic calculations on a list of fields', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     let res = (await ax.get('/api/v1/datasets/metric-agg/simple_metrics_agg')).data
     assert.equal(res.total, 11)
     assert.equal(res.metrics.numfield.min, 0)

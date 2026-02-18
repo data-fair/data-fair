@@ -1,14 +1,20 @@
 import { strict as assert } from 'node:assert'
-import * as testUtils from './resources/test-utils.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
 import * as xlsx from '../api/src/misc/utils/xlsx.ts'
 import fs from 'fs-extra'
 import * as workers from '../api/src/workers/index.ts'
 import FormData from 'form-data'
 
 describe('Spreadsheets conversions', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
   const checkDateDataset = async (ext) => {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dates.' + ext, ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/dates.' + ext, ax)
     assert.ok(dataset.schema.find(p => p.key === 'colstr'))
     const coldate = dataset.schema.find(p => p.key === 'coldate')
     assert.ok(coldate)
@@ -57,8 +63,8 @@ describe('Spreadsheets conversions', function () {
   })
 
   it('should manage a sparse XLSX file', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/sparse.xlsx', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/sparse.xlsx', ax)
     assert.equal(dataset.schema.filter(p => p.key.startsWith('col')).length, 4)
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.status, 200)
@@ -73,8 +79,8 @@ describe('Spreadsheets conversions', function () {
   })
 
   it('should manage a XLSX with formula and links', async function () {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/misc.xlsx', ax)
+    const ax = dmeadus
+    const dataset = await sendDataset('datasets/misc.xlsx', ax)
     assert.equal(dataset.schema.find(p => p.key === 'col1').type, 'integer')
     assert.equal(dataset.schema.find(p => p.key === 'col2').type, 'integer')
     assert.equal(dataset.schema.find(p => p.key === 'col3').type, 'string')
@@ -89,7 +95,7 @@ describe('Spreadsheets conversions', function () {
   })
 
   it('should manage a ODS file with normalization options', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const datasetFd = fs.readFileSync('resources/datasets/header.ods')
     const form = new FormData()
     form.append('file', datasetFd, 'header.ods')
@@ -99,7 +105,7 @@ describe('Spreadsheets conversions', function () {
       spreadsheetStartCol: 2
     }))
 
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = await workers.hook(`finalize/${res.data.id}`)
     assert.equal(dataset.schema.filter(p => !p['x-calculated']).length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -109,7 +115,7 @@ describe('Spreadsheets conversions', function () {
   })
 
   it('should manage a XLSX file with normalization options', async function () {
-    const ax = global.ax.dmeadus
+    const ax = dmeadus
     const datasetFd = fs.readFileSync('resources/datasets/header.xlsx')
     const form = new FormData()
     form.append('file', datasetFd, 'header.ods')
@@ -119,7 +125,7 @@ describe('Spreadsheets conversions', function () {
       spreadsheetStartCol: 2
     }))
 
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = await workers.hook(`finalize/${res.data.id}`)
     assert.equal(dataset.schema.filter(p => !p['x-calculated']).length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
