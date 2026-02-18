@@ -1,0 +1,177 @@
+import { strict as assert } from 'node:assert'
+import * as workers from '../api/src/workers/index.ts'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders, dmeadusOrg, cdurning2, alone } from './utils/index.ts'
+
+describe('REST datasets with owner specific lines', function () {
+  before(startApiServer)
+  beforeEach(scratchData)
+  after(stopApiServer)
+  afterEach((t) => checkPendingTasks(t.name))
+
+  it('Create empty REST dataset with activated line ownership', async function () {
+    // the dataset is created in an organization
+    let res = await dmeadusOrg.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a rest dataset',
+      rest: { lineOwnership: true, history: true },
+      schema: [{ key: 'col1', type: 'string' }]
+    })
+    assert.equal(res.status, 201)
+    assert.equal(res.data.slug, 'a-rest-dataset')
+    let dataset = res.data
+    assert.ok(dataset.schema.find(p => p.key === '_owner'))
+    assert.ok(dataset.schema.find(p => p.key === '_ownerName'))
+    assert.equal(dataset.schema.length, 7)
+
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 0)
+
+    // owner's admin can use routes to manage his own lines
+    await dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { _id: 'dmeadusline', col1: 'value 1' })
+    dataset = await workers.hook('finalize/' + dataset.id)
+    assert.equal(dataset.schema.length, 7)
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    assert.equal(res.data.total, 1)
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]._id, 'dmeadusline')
+
+    // even owner's admin cannot use routes dedicated for other uses
+    await assert.rejects(dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`), (err: any) => err.status === 403)
+
+    // external user cannot do anything yet
+    await assert.rejects(cdurning2.get(`/api/v1/datasets/${dataset.id}/lines`), (err: any) => err.status === 403)
+    await assert.rejects(cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`), (err: any) => err.status === 403)
+
+    // give permission to external users to manage his own lines in the dataset
+    await dmeadusOrg.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: 'cdurning2', classes: ['manageOwnLines'], operations: ['readSafeSchema'] },
+      { type: 'user', id: 'alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+    ])
+
+    // external user cannot read all lines, but he can read his own lines
+    await assert.rejects(cdurning2.get(`/api/v1/datasets/${dataset.id}/lines`), (err: any) => err.status === 403)
+    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
+    assert.equal(res.data.total, 0)
+    await cdurning2.post(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`, { _id: 'cdurningline', col1: 'value 1' })
+    await workers.hook('finalize/' + dataset.id)
+    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]._id, 'cdurningline')
+
+    // other external user can also manage his lines
+    await alone.post(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`, { _id: 'aloneline', col1: 'value 1' })
+    await workers.hook('finalize/' + dataset.id)
+    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]._id, 'aloneline')
+    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`)
+    assert.equal(res.data._id, 'aloneline')
+    // he cannot see line of another user
+    assert.rejects(alone.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`), (err: any) => err.status === 403)
+    assert.rejects(alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/cdurningline`), (err: any) => err.status === 404)
+    // he can patch his lines but cannot change ownership
+    await alone.patch(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`, { col1: 'value 2' })
+    await workers.hook('finalize/' + dataset.id)
+    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`)
+    assert.equal(res.data.col1, 'value 2')
+    await alone.patch(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`, { _owner: 'user:cdurning2', col1: 'value 3' })
+    await workers.hook('finalize/' + dataset.id)
+    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`)
+    assert.equal(res.data.col1, 'value 3')
+    assert.equal(res.data._owner, 'user:alone')
+
+    // owner's admin can see all lines
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 3)
+
+    // owner's admin can change line ownership
+    await dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}/lines/aloneline`, { _owner: 'user:cdurning2', col1: 'value 4' })
+    await workers.hook('finalize/' + dataset.id)
+    assert.rejects(alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`), (err: any) => err.status === 404)
+    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines/aloneline`)
+    assert.equal(res.data.col1, 'value 4')
+    assert.equal(res.data._owner, 'user:cdurning2')
+
+    // the revisions are also filtered on owner
+    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines/aloneline/revisions`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]._owner, 'user:cdurning2')
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines/aloneline/revisions`)
+    assert.equal(res.data.total, 4)
+    assert.equal(res.data.results[0]._owner, 'user:cdurning2')
+    assert.equal(res.data.results[1]._owner, 'user:alone')
+
+    // give permission to ALL external users to manage their own lines in the dataset
+    await dmeadusOrg.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: '*', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+    ])
+    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
+
+    // safe schema for external users is purged of indices about the data
+    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/safe-schema`)
+    assert.equal(res.data.find(p => p.key === 'col1')['x-cardinality'], undefined)
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/schema`)
+    assert.equal(res.data.find(p => p.key === 'col1')['x-cardinality'], 2)
+    await assert.rejects(cdurning2.get(`/api/v1/datasets/${dataset.id}/schema`), (err: any) => err.status === 403)
+  })
+
+  it('Handle a dataset with line ownership and a primary key that includes _owner', async function () {
+    // the dataset is created in an organization
+    let res = await dmeadusOrg.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'a rest dataset',
+      rest: { lineOwnership: true, history: true },
+      schema: [{ key: 'col1', type: 'string' }, { key: 'col2', type: 'string' }],
+      primaryKey: ['col1', '_owner']
+    })
+    assert.equal(res.status, 201)
+    assert.equal(res.data.slug, 'a-rest-dataset')
+    let dataset = res.data
+    assert.ok(dataset.schema.find(p => p.key === '_owner'))
+    assert.ok(dataset.schema.find(p => p.key === '_ownerName'))
+    assert.equal(dataset.schema.length, 8)
+
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 0)
+
+    // owner's admin can use routes to post the same line multiple times
+    await dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { col1: 'value 1', col2: 'Label 1' })
+    dataset = await workers.hook('finalize/' + dataset.id)
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    assert.equal(res.data.total, 1)
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.ok(res.data.results[0]._id)
+    await dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { col1: 'value 1', col2: 'Label 2' })
+    await workers.hook('finalize/' + dataset.id)
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].col1, 'value 1')
+    assert.equal(res.data.results[0].col2, 'Label 2')
+    await dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { col1: 'value 2', col2: 'Label 3' })
+    await workers.hook('finalize/' + dataset.id)
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[1].col1, 'value 1')
+    assert.equal(res.data.results[1].col2, 'Label 2')
+    assert.equal(res.data.results[0].col1, 'value 2')
+    assert.equal(res.data.results[0].col2, 'Label 3')
+
+    // give permission to external users to manage his own lines in the dataset
+    await dmeadusOrg.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: 'alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+    ])
+
+    await alone.post(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`, { col1: 'value 1', col2: 'Label 4' })
+    await workers.hook('finalize/' + dataset.id)
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    assert.equal(res.data.total, 2)
+    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`)
+    assert.equal(res.data.total, 1)
+
+    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 3)
+  })
+})
