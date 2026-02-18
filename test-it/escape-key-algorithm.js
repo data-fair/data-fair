@@ -1,12 +1,8 @@
 import { escapeKey } from '../api/src/datasets/utils/fields-sniffer.js'
 import { strict as assert } from 'node:assert'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 
 describe('escape key algorithme', function () {
-  before(startApiServer)
-  beforeEach(scratchData)
-  after(stopApiServer)
-  afterEach((t) => checkPendingTasks(t.name))
-
   it('should normalize column keys', function () {
     assert.equal(escapeKey('TEST'), 'test')
     assert.equal(escapeKey('test 1'), 'test_1')

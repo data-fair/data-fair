@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders } from './utils/index.ts'
 import fs from 'fs-extra'
 import nock from 'nock'
 import FormData from 'form-data'
@@ -51,7 +51,7 @@ describe('file datasets with validation rules', function () {
   it('create a valid dataset with initial validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
-    form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
     const ax = dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
@@ -62,7 +62,7 @@ describe('file datasets with validation rules', function () {
   it('create an invalid dataset with initial validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
-    form.append('file', fs.readFileSync('./resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
     const ax = dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
@@ -84,7 +84,7 @@ describe('file datasets with validation rules', function () {
   it('create a valid dataset then patch compatible validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
-    form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
     const ax = dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
@@ -98,7 +98,7 @@ describe('file datasets with validation rules', function () {
   it('create a valid dataset then patch incompatible validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
-    form.append('file', fs.readFileSync('./resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
     const ax = dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)

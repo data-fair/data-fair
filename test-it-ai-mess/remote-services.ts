@@ -4,7 +4,7 @@ import { startApiServer, stopApiServer, scratchData, checkPendingTasks, anonymou
 import fs from 'node:fs'
 import path from 'node:path'
 
-const geocoderApi = JSON.parse(fs.readFileSync(path.resolve('./test/resources/geocoder-api.json'), 'utf8'))
+const geocoderApi = JSON.parse(fs.readFileSync(path.resolve('./test-it/resources/geocoder-api.json'), 'utf8'))
 
 describe('remote-services', function () {
   before(startApiServer)

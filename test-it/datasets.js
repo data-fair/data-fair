@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, alone, dmeadusOrg, formHeaders, cdurning2, timeout } from './utils/index.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
@@ -11,7 +11,7 @@ import { validate } from 'tableschema'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
 
-const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
+const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
 
 let notifier
 
@@ -21,7 +21,7 @@ describe('datasets', function () {
   after(stopApiServer)
   afterEach((t) => checkPendingTasks(t.name))
 
-  before('prepare notifier', async function () {
+  before(async function () {
     notifier = (await import('./resources/app-notifier.js')).default
     await eventPromise(notifier, 'listening')
   })
@@ -261,7 +261,7 @@ describe('datasets', function () {
     const ax = cdurning2
     await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ title: 'test', events: ['dataset-finalize-end'], target: { type: 'http', params: { url: 'http://localhost:5900' } } }] })
     let form = new FormData()
-    form.append('file', fs.readFileSync('./resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
 
@@ -280,7 +280,7 @@ describe('datasets', function () {
 
     // Send again the data to the same dataset
     form = new FormData()
-    form.append('file', fs.readFileSync('./resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
     res = await ax.post(webhook.href, form, { headers: formHeaders(form) })
 
     assert.equal(res.status, 200)

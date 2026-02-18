@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders, dmeadusOrg, ngernier4 } from './utils/index.ts'
 import fs from 'node:fs'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
@@ -19,7 +19,7 @@ describe('Datasets with auto-initialization from another one', function () {
     assert.equal(dataset.file.schema[3].dateTimeFormat, 'D/M/YYYY H:m')
 
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
+    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
@@ -81,8 +81,8 @@ describe('Datasets with auto-initialization from another one', function () {
     }
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = await workers.hook('finalize/' + res.data.id)
     await checkDatasetAttachments(dataset)
@@ -129,7 +129,7 @@ describe('Datasets with auto-initialization from another one', function () {
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
+    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
@@ -164,7 +164,7 @@ describe('Datasets with auto-initialization from another one', function () {
     const dataset = await sendDataset('datasets/dataset-extensions.csv', ax)
 
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
+    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
 
     await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10, query: '?select=lat,lon' }, { name: 'setCoordsNock' })
@@ -220,7 +220,7 @@ describe('Datasets with auto-initialization from another one', function () {
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const form = new FormData()
-    form.append('file', fs.readFileSync('./resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset2.csv'), 'dataset2.csv')
     form.append('body', JSON.stringify({
       title: 'init from schema',
       initFrom: {
@@ -290,7 +290,7 @@ describe('Datasets with auto-initialization from another one', function () {
     await workers.hook('finalize/rest1')
 
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
+    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })

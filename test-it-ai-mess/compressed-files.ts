@@ -41,7 +41,7 @@ describe('Archive conversions', function () {
   it('should extract a gzipped file on PUT and replace it', async function () {
     const ax = dmeadus
     const workers = await import('../api/src/workers/index.ts')
-    const gzippedContent = fs.readFileSync(path.resolve('./test/resources/datasets/dataset1.csv.gz'))
+    const gzippedContent = fs.readFileSync(path.resolve('./test-it/resources/datasets/dataset1.csv.gz'))
     const form = new FormData()
     form.append('file', gzippedContent, 'dataset1.csv.gz')
     await ax.put('/api/v1/datasets/dataset-compressed', form, { headers: formHeaders(form) })
@@ -52,7 +52,7 @@ describe('Archive conversions', function () {
     const schema = dataset.schema.filter((p: any) => !p['x-calculated'])
     const locProp = schema.find((p: any) => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
-    const csvContent = fs.readFileSync(path.resolve('./test/resources/datasets/dataset1.csv'))
+    const csvContent = fs.readFileSync(path.resolve('./test-it/resources/datasets/dataset1.csv'))
     const form2 = new FormData()
     form2.append('file', csvContent, 'dataset1.csv')
     form2.append('schema', JSON.stringify(schema))

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, anonymous, superadmin, dmeadus } from './utils/index.ts'
 
-const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../test/resources/geocoder-api.json'), 'utf8'))
+const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/geocoder-api.json'), 'utf8'))
 
 describe('root', function () {
   before(startApiServer)

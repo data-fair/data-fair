@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders } from './utils/index.ts'
 import fs from 'node:fs'
 import FormData from 'form-data'
 
@@ -13,7 +13,7 @@ describe('values aggs', function () {
   afterEach((t) => checkPendingTasks(t.name))
 
   it('Get values buckets', async function () {
-    const datasetData = fs.readFileSync('./resources/datasets/dataset2.csv')
+    const datasetData = fs.readFileSync('./test-it/resources/datasets/dataset2.csv')
     const form = new FormData()
     form.append('file', datasetData, 'dataset.csv')
     const ax = dmeadus

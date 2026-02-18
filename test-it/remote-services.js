@@ -2,8 +2,10 @@ import { strict as assert } from 'node:assert'
 import nock from 'nock'
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, superadmin, cdurning2 } from './utils/index.ts'
 
-const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/geocoder-api.json'), 'utf8'))
+const geocoderApi = JSON.parse(readFileSync(path.join(import.meta.dirname, '/resources/geocoder-api.json'), 'utf8'))
 
 describe('remote-services', function () {
   before(startApiServer)

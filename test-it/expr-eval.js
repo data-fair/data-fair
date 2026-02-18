@@ -1,13 +1,10 @@
 import { strict as assert } from 'node:assert'
 import exprEval from '../shared/expr-eval.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+
 const { parser, compile } = exprEval('Europe/Paris')
 
 describe('expression engine based on expr-eval', function () {
-  before(startApiServer)
-  beforeEach(scratchData)
-  after(stopApiServer)
-  afterEach((t) => checkPendingTasks(t.name))
-
   it('should evaluate simple expressions', function () {
     assert.equal(parser.parse('a + b').evaluate({ a: 1, b: 2 }), 3)
     assert.equal(parser.parse('UPPER(a)').evaluate({ a: 'a' }), 'A')

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, anonymous, dmeadus, dmeadusOrg, bhazeldean7Org, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, anonymous, dmeadus, dmeadusOrg, bhazeldean7Org, sendDataset, cdurning2 } from './utils/index.ts'
 import config from 'config'
 import * as workers from '../api/src/workers/index.ts'
 import * as rateLimitingUtils from '../api/src/misc/utils/rate-limiting.ts'

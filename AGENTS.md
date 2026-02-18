@@ -68,7 +68,7 @@ NODE_CONFIG_DIR=./api/config/ NODE_ENV=test node --test test-it/<test-name>.ts -
 - Use `assert.rejects(promise, { status: XXX })` instead of try-catch blocks for error assertions
 - Import utilities from `./test-it/utils/index.ts`
 - Import workers dynamically: `const workers = await import('../api/src/workers/index.ts')`
-- Use absolute paths for resources: `path.resolve(import.meta.dirname, '../test/resources/...')`
+- Use absolute paths for resources: `path.resolve(import.meta.dirname, '../test-it/resources/...')`
 - Type annotations often needed for callback functions: `(err: any) => err.key`
 
 **Note:** Some tests use large datasets and may hit storage limits. The test config sets `datasetStorage: 160000` bytes.

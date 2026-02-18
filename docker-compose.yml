@@ -6,7 +6,7 @@ services:
       - test
     network_mode: host
     volumes:
-      - ./test/resources/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./test-it/resources/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
   es:
     profiles:
@@ -87,8 +87,8 @@ services:
       - CONTACT=contact@test.com
       - CIPHER_PASSWORD=test
     volumes:
-      - ./test/resources/users.json:/webapp/data/users.json
-      - ./test/resources/organizations.json:/webapp/data/organizations.json
+      - ./test-it/resources/users.json:/webapp/data/users.json
+      - ./test-it/resources/organizations.json:/webapp/data/organizations.json
     healthcheck:
       test: ["CMD", "nc", "-z", "-v", "localhost", "8080"]
       interval: 5s
@@ -196,7 +196,7 @@ services:
       - redis
     volumes:
       - udata-fs:/udata/fs
-      - ./test/resources/udata.cfg:/udata/udata.cfg
+      - ./test-it/resources/udata.cfg:/udata/udata.cfg
 
 volumes:
   elasticsearch-data:

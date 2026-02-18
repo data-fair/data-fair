@@ -19,7 +19,7 @@ describe('rate limiting', function () {
       { params: { key: config.secretKeys.limits } })
 
     const tmpFile = await tmp.file({ postfix: '.csv' })
-    const csvContent = await fs.readFile('test/resources/datasets/dataset1.csv')
+    const csvContent = await fs.readFile('test-it/resources/datasets/dataset1.csv')
     for (let i = 0; i < 600; i++) {
       await fs.write(tmpFile.fd, csvContent)
     }

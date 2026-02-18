@@ -4,7 +4,7 @@ import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus,
 import fs from 'node:fs'
 import FormData from 'form-data'
 
-const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
 
 describe('datasets', function () {
   before(startApiServer)

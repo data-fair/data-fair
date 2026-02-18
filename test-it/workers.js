@@ -1,11 +1,12 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders } from './utils/index.ts'
 import fs from 'node:fs'
 import FormData from 'form-data'
 import config from 'config'
 import * as workers from '../api/src/workers/index.ts'
 import * as esUtils from '../api/src/datasets/es/index.ts'
+import es from '../api/src/es.ts'
 
 describe('workers', function () {
   before(startApiServer)
@@ -15,7 +16,7 @@ describe('workers', function () {
 
   it('Process newly uploaded CSV dataset', async function () {
     // Send dataset
-    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     const ax = dmeadus
@@ -66,7 +67,7 @@ describe('workers', function () {
     assert.equal(mapping2.properties._geopoint.type, 'geo_point')
 
     // Reupload data with bad localization
-    const datasetFd2 = fs.readFileSync('./resources/datasets/bad-format.csv')
+    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
@@ -82,8 +83,8 @@ describe('workers', function () {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')
     }
+    // this.timeout = 60000
 
-    this.timeout = 60000
     const ax = dmeadus
     const datasets = await Promise.all([
       sendDataset('geo/stations.zip', ax),
@@ -98,7 +99,7 @@ describe('workers', function () {
   })
 
   it('Manage expected failure in children processes', async function () {
-    const datasetFd = fs.readFileSync('./resources/geo/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./test-it/resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken2.geojson')
     const ax = dmeadus
@@ -129,7 +130,7 @@ describe('workers', function () {
 
     const form = new FormData()
     form.append('title', 'trigger test error')
-    form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset.csv')
     const ax = dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
 

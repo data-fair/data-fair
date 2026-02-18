@@ -13,7 +13,7 @@ describe('safe relative paths management', function () {
   it('relative path in dataset file name', async function () {
     const ax = dmeadus
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), '../dataset1.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), '../dataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)
     const workers = await import('../api/src/workers/index.ts')
@@ -24,18 +24,18 @@ describe('safe relative paths management', function () {
   it('relative path in dataset id', async function () {
     const ax = dmeadus
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
     form.append('id', '../dataset1')
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: formHeaders(form) }), (err: any) => err.status === 400)
 
     const form2 = new FormData()
-    form2.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form2.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
     await assert.rejects(ax.post('/api/v1/datasets/' + encodeURIComponent('../dataset1'), form2, { headers: formHeaders(form2) }), (err: any) => err.status === 404)
   })
 
   it('relative path in attachment name', async function () {
     const ax = dmeadus
-    const datasetFd = fs.readFileSync('./test/resources/datasets/files.zip')
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/files.zip')
     const form = new FormData()
     form.append('dataset', datasetFd, 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })

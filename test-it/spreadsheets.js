@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders } from './utils/index.ts'
 import * as xlsx from '../api/src/misc/utils/xlsx.ts'
 import fs from 'fs-extra'
 import * as workers from '../api/src/workers/index.ts'
@@ -42,7 +42,7 @@ describe('Spreadsheets conversions', function () {
 
   it('should manage XLSX file create by excel', async function () {
     const dates = []
-    for await (const lines of xlsx.iterCSV('resources/datasets/Les aides financières ADEME.xlsx')) {
+    for await (const lines of xlsx.iterCSV('./test-it/resources/datasets/Les aides financières ADEME.xlsx')) {
       for (const line of lines.split('\n')) {
         dates.push(line.split(',')[2])
       }
@@ -53,7 +53,7 @@ describe('Spreadsheets conversions', function () {
 
   it('should manage another XLSX file created by excel', async function () {
     const dates = []
-    for await (const lines of xlsx.iterCSV('resources/datasets/date-time.xlsx')) {
+    for await (const lines of xlsx.iterCSV('./test-it/resources/datasets/date-time.xlsx')) {
       for (const line of lines.split('\n')) {
         dates.push(line.split(',')[1])
       }
@@ -96,7 +96,7 @@ describe('Spreadsheets conversions', function () {
 
   it('should manage a ODS file with normalization options', async function () {
     const ax = dmeadus
-    const datasetFd = fs.readFileSync('resources/datasets/header.ods')
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/header.ods')
     const form = new FormData()
     form.append('file', datasetFd, 'header.ods')
     form.append('file_normalizeOptions', JSON.stringify({
@@ -116,7 +116,7 @@ describe('Spreadsheets conversions', function () {
 
   it('should manage a XLSX file with normalization options', async function () {
     const ax = dmeadus
-    const datasetFd = fs.readFileSync('resources/datasets/header.xlsx')
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/header.xlsx')
     const form = new FormData()
     form.append('file', datasetFd, 'header.ods')
     form.append('file_normalizeOptions', JSON.stringify({

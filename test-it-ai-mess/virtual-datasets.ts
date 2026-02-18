@@ -801,7 +801,7 @@ describe('virtual datasets', function () {
     const child = res.data
 
     const form = new FormData()
-    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/avatar.jpeg'))
+    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/avatar.jpeg'))
     form.append('attachment', attachmentContent, 'dir1/avatar.jpeg')
     form.append('attr1', '10')
     res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: formHeaders(form) })

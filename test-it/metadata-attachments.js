@@ -1,12 +1,12 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders } from './utils/index.ts'
 import fs from 'node:fs'
 import FormData from 'form-data'
 
 const sendAttachment = async (ax, datasetId, attachmentName) => {
   const attachmentForm = new FormData()
-  attachmentForm.append('attachment', fs.readFileSync('./resources/' + attachmentName), attachmentName)
+  attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/' + attachmentName), attachmentName)
   await ax.post(`/api/v1/datasets/${datasetId}/metadata-attachments`, attachmentForm, { headers: formHeaders(attachmentForm) })
   await ax.patch('/api/v1/datasets/' + datasetId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 }

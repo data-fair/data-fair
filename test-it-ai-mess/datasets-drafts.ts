@@ -21,7 +21,7 @@ describe('datasets in draft mode', function () {
 
   it('create new dataset in draft mode and validate it', async function () {
     const ax = dmeadus
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
@@ -66,7 +66,7 @@ describe('datasets in draft mode', function () {
     assert.equal(locProp2['x-refersTo'], 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long')
     assert.equal(locProp2['x-concept'].id, 'latLon')
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/bad-format.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/bad-format.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await assert.rejects(ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) }), (err: any) => err.status === 409)
@@ -111,14 +111,14 @@ describe('datasets in draft mode', function () {
     const notifications: any[] = []
     testEvents.on('notification', (n: any) => notifications.push(n))
 
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset2.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
@@ -188,14 +188,14 @@ describe('datasets in draft mode', function () {
     const notifications: any[] = []
     testEvents.on('notification', (n: any) => notifications.push(n))
 
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset2.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
@@ -236,14 +236,14 @@ describe('datasets in draft mode', function () {
   })
 
   it('create a draft when updating the data file and auto-validate if it\'s schema is compatible', async function () {
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1.csv')
     form2.append('description', 'draft description')
@@ -279,7 +279,7 @@ describe('datasets in draft mode', function () {
   })
 
   it('create a draft when updating the data file but do not auto-validate if there are some validation errors', async function () {
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = dmeadus
@@ -291,7 +291,7 @@ describe('datasets in draft mode', function () {
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
     dataset = await workers.hook('validateFile/' + dataset.id)
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1-invalid.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1-invalid.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-invalid.csv')
     form2.append('description', 'draft description')
@@ -308,7 +308,7 @@ describe('datasets in draft mode', function () {
   })
 
   it('create a draft when updating the data file and cancel it if there are some validation errors', async function () {
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = dmeadus
@@ -320,7 +320,7 @@ describe('datasets in draft mode', function () {
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
     dataset = await workers.hook('validateFile/' + dataset.id)
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1-invalid.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1-invalid.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-invalid.csv')
     form2.append('description', 'draft description')
@@ -338,7 +338,7 @@ describe('datasets in draft mode', function () {
   })
 
   it('create a draft at creation and update it with multiple follow-up uploads', async function () {
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = dmeadus
@@ -351,7 +351,7 @@ describe('datasets in draft mode', function () {
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'draft')
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset2.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-draft2.csv')
     form2.append('description', 'draft description 2')
@@ -363,7 +363,7 @@ describe('datasets in draft mode', function () {
     assert.equal(dataset.draft.draftReason.key, 'file-updated')
     assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
 
-    const datasetFd3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const datasetFd3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset2.csv'))
     const form3 = new FormData()
     form3.append('file', datasetFd3, 'dataset1-draft3.csv')
     form3.append('description', 'draft description 3')
@@ -383,14 +383,14 @@ describe('datasets in draft mode', function () {
   })
 
   it('create a draft and update it with second file upload', async function () {
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = await workers.hook('finalize/' + res.data.id)
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset2.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-draft1.csv')
     form2.append('description', 'draft description')
@@ -401,7 +401,7 @@ describe('datasets in draft mode', function () {
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.draft.file.name, 'dataset1-draft1.csv')
 
-    const datasetFd3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const datasetFd3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset2.csv'))
     const form3 = new FormData()
     form3.append('file', datasetFd3, 'dataset1-draft2.csv')
     form3.append('description', 'draft description')
@@ -444,8 +444,8 @@ describe('datasets in draft mode', function () {
 
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')
-    form.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/attachments.csv')), 'attachments.csv')
-    form.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files.zip')), 'files.zip')
+    form.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/attachments.csv')), 'attachments.csv')
+    form.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files.zip')), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     let dataset = res.data
     assert.equal(res.status, 201)
@@ -473,13 +473,13 @@ describe('datasets in draft mode', function () {
     const ax = dmeadus
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/attachments.csv')), 'attachments.csv')
-    form.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files.zip')), 'files.zip')
+    form.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/attachments.csv')), 'attachments.csv')
+    form.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files.zip')), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
 
     const form2 = new FormData()
-    form2.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files2.zip')), 'files2.zip')
+    form2.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files2.zip')), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: formHeaders(form2), params: { draft: true } })
     await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err: any) => {
       console.log(err.stack)
@@ -494,7 +494,7 @@ describe('datasets in draft mode', function () {
     assert.ok(!dataset.errorRetry)
 
     const form3 = new FormData()
-    form3.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/attachments2.csv')), 'attachments2.csv')
+    form3.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/attachments2.csv')), 'attachments2.csv')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: formHeaders(form3), params: { draft: true } })
     await workers.hook(`finalize/${dataset.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
@@ -512,13 +512,13 @@ describe('datasets in draft mode', function () {
     const ax = dmeadus
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/attachments.csv')), 'attachments.csv')
-    form.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files.zip')), 'files.zip')
+    form.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/attachments.csv')), 'attachments.csv')
+    form.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files.zip')), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
 
     const form2 = new FormData()
-    form2.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/attachments2.csv')), 'attachments2.csv')
+    form2.append('dataset', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/attachments2.csv')), 'attachments2.csv')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: formHeaders(form2), params: { draft: true } })
     await workers.hook(`finalize/${dataset.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
@@ -526,7 +526,7 @@ describe('datasets in draft mode', function () {
     assert.equal(lines.results[0]['_file.content'], 'This is a test libreoffice file.')
 
     const form3 = new FormData()
-    form3.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files2.zip')), 'files2.zip')
+    form3.append('attachments', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files2.zip')), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: formHeaders(form3), params: { draft: true } })
     await workers.hook(`finalize/${dataset.id}`)
     lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
@@ -546,7 +546,7 @@ describe('datasets in draft mode', function () {
       return
     }
 
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/geo/stations.zip'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/geo/stations.zip'))
     const form = new FormData()
     form.append('file', datasetFd, 'stations.zip')
     const ax = dmeadus
@@ -585,7 +585,7 @@ describe('datasets in draft mode', function () {
   it('Delete a dataset in draft state', async function () {
     const ax = dmeadus
 
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
@@ -601,7 +601,7 @@ describe('datasets in draft mode', function () {
 
   it('Accepts a new file with compatible keys but different names', async function () {
     const form = new FormData()
-    form.append('file', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1-names.csv')), 'dataset1.csv')
+    form.append('file', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1-names.csv')), 'dataset1.csv')
     const ax = dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)
@@ -613,7 +613,7 @@ describe('datasets in draft mode', function () {
     assert.ok(csv.startsWith('"Id","Adr"'))
 
     const form2 = new FormData()
-    form2.append('file', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv')), 'dataset1.csv')
+    form2.append('file', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv')), 'dataset1.csv')
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2), params: { draft: true } })).data
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].key, 'id')
@@ -630,7 +630,7 @@ describe('datasets in draft mode', function () {
     const ax = dmeadus
     const workers = await import('../api/src/workers/index.ts')
 
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
@@ -641,7 +641,7 @@ describe('datasets in draft mode', function () {
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
     dataset = await workers.hook('validateFile/' + dataset.id)
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1-invalid.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1-invalid.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-invalid.csv')
     form2.append('description', 'draft description')
@@ -662,7 +662,7 @@ describe('datasets in draft mode', function () {
     const ax = dmeadus
     const workers = await import('../api/src/workers/index.ts')
 
-    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.csv'))
+    const datasetFd = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.csv'))
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
@@ -674,7 +674,7 @@ describe('datasets in draft mode', function () {
     dataset = await ax.get('/api/v1/datasets/' + dataset.id)
     assert.equal(dataset.status, 'draft')
 
-    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const datasetFd2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset2.csv'))
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-draft2.csv')
     form2.append('description', 'draft description 2')
@@ -686,7 +686,7 @@ describe('datasets in draft mode', function () {
     assert.equal(dataset.draft.draftReason.key, 'file-new')
     assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
 
-    const datasetFd3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset2.csv'))
+    const datasetFd3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset2.csv'))
     const form3 = new FormData()
     form3.append('file', datasetFd3, 'dataset1-draft3.csv')
     form3.append('description', 'draft description 3')

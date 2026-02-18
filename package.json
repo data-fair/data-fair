@@ -6,7 +6,7 @@
   "scripts": {
     "build-types": "df-build-types ./api/",
     "test-base": "NODE_CONFIG_DIR=./api/config/ NODE_ENV=test EVENTS_LOG_LEVEL=warn node --disable-warning=ExperimentalWarning --test-force-exit --test-concurrency=1 --test --experimental-strip-types",
-    "test": "npm run test-base test-it/*.ts",
+    "test": "npm run test-base test-it/*.js",
     "test-old": "npm -w test run test",
     "test-s3": "FILES_STORAGE=s3 npm -w test run test",
     "test-deps": "docker compose --profile test up -d --wait",

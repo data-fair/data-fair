@@ -12,7 +12,7 @@ describe('Attachments', function () {
 
   it('Process newly uploaded attachments alone', async function () {
     const ax = dmeadus
-    const datasetFd = fs.readFileSync('./test/resources/datasets/files.zip')
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/files.zip')
     const form = new FormData()
     form.append('dataset', datasetFd, 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
@@ -43,8 +43,8 @@ describe('Attachments', function () {
     const ax = cdurning2
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)
@@ -70,14 +70,14 @@ describe('Attachments', function () {
     const workers = await import('../api/src/workers/index.ts')
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
     const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
-    form2.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form2.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.storage.attachments.size, attachmentsSize)
@@ -92,15 +92,15 @@ describe('Attachments', function () {
     const workers = await import('../api/src/workers/index.ts')
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
     const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
-    form2.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
-    form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
+    form2.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form2.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.ok(dataset.storage.attachments.size < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
@@ -115,14 +115,14 @@ describe('Attachments', function () {
     const workers = await import('../api/src/workers/index.ts')
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook(`finalize/${dataset.id}`)
     const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
-    form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
+    form2.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: formHeaders(form2) })
     try {
       await workers.hook(`finalize/${dataset.id}`)
@@ -132,7 +132,7 @@ describe('Attachments', function () {
     }
 
     const form3 = new FormData()
-    form3.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form3.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put('/api/v1/datasets/' + dataset.id, form3, { headers: formHeaders(form3) })
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.ok(dataset.storage.attachments.size < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
@@ -147,8 +147,8 @@ describe('Attachments', function () {
     const workers = await import('../api/src/workers/index.ts')
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments-wrong-paths.csv'), 'attachments-wrong-paths.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments-wrong-paths.csv'), 'attachments-wrong-paths.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)
@@ -165,8 +165,8 @@ describe('Attachments', function () {
     const workers = await import('../api/src/workers/index.ts')
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)

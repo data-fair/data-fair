@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, dmeadusOrg, formHeaders, anonymous } from './utils/index.ts'
 import fs from 'node:fs'
 import nock from 'nock'
 import FormData from 'form-data'
@@ -36,8 +36,8 @@ describe('thumbnails', function () {
     assert.ok(res.data.results[0]._thumbnail.endsWith('width=300&height=200'))
     const nockScope = nock('http://test-thumbnail.com')
       .get('/image.png').reply(200, () => '')
-      .get('/avatar.jpg').reply(200, () => fs.readFileSync('resources/avatar.jpeg'))
-      .get('/wikipedia.gif').reply(200, () => fs.readFileSync('resources/wikipedia.gif'))
+      .get('/avatar.jpg').reply(200, () => fs.readFileSync('./test-it/resources/avatar.jpeg'))
+      .get('/wikipedia.gif').reply(200, () => fs.readFileSync('./test-it/resources/wikipedia.gif'))
       .persist()
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
     const thumbres = await ax.get(res.data.results[1]._thumbnail)
@@ -63,7 +63,7 @@ describe('thumbnails', function () {
     let res = await ax.get('/api/v1/datasets/thumbnail')
     assert.ok(res.data.thumbnail)
     const nockScope = nock('http://test-thumbnail.com')
-      .get('/dataset-image.jpg').reply(200, () => fs.readFileSync('resources/avatar.jpeg'))
+      .get('/dataset-image.jpg').reply(200, () => fs.readFileSync('./test-it/resources/avatar.jpeg'))
     res = await ax.get(res.data.thumbnail)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-thumbnails-cache-status'], 'MISS')
@@ -89,8 +89,8 @@ describe('thumbnails', function () {
     const ax = dmeadusOrg
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')
-    form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form), params: { draft: true } })
     let dataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(dataset.draft.schema.some((field) => field.key === '_attachment_url' && field['x-refersTo'] === 'http://schema.org/image'))

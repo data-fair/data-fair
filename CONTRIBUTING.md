@@ -24,7 +24,7 @@ Run the 2 development servers with these commands in separate shells:
     npm run dev-server
     npm run dev-client
 
-When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `test/resources/users.json` to login with its email.
+When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `test-it/resources/users.json` to login with its email.
 
 Test built nuxt distributable in dev:
 

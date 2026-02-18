@@ -95,7 +95,7 @@ describe('file datasets with transformation rules', function () {
   it('create a XLSX dataset and apply a transformation on a column', async function () {
     const ax = dmeadus
     const form = new FormData()
-    form.append('file', fs.readFileSync(path.resolve('./test/resources/datasets/date-time.xlsx')), 'dataset1.xlsx')
+    form.append('file', fs.readFileSync(path.resolve('./test-it/resources/datasets/date-time.xlsx')), 'dataset1.xlsx')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     const workers = await import('../api/src/workers/index.ts')
     dataset = await workers.hook('finalize/' + dataset.id)

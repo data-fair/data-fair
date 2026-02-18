@@ -60,7 +60,7 @@ describe('Extensions', function () {
 
     await workers.workers.batchProcessor.run({ nbInputs: 1, latLon: 50 }, { name: 'setCoordsNock' })
     const form = new FormData()
-    const csvContent = await fs.readFile('test/resources/datasets/dataset-extensions.csv', 'utf-8')
+    const csvContent = await fs.readFile('test-it/resources/datasets/dataset-extensions.csv', 'utf-8')
     const content = csvContent + 'me,3 les noés la chapelé caro\n'
     form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: formHeaders(form) })
@@ -692,7 +692,7 @@ other,unknown address
     assert.ok(dataset.schema.find((field: any) => field.key === 'employees'))
 
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset2.csv'), 'dataset2.csv')
     dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: formHeaders(form), params: { draft: true } })).data
 
     await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err: any) => {

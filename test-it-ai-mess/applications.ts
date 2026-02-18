@@ -7,7 +7,7 @@ import path from 'node:path'
 
 const sendAttachment = async (ax: any, appId: string, attachmentName: string) => {
   const attachmentForm = new FormData()
-  attachmentForm.append('attachment', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/' + attachmentName)), attachmentName)
+  attachmentForm.append('attachment', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/' + attachmentName)), attachmentName)
   await ax.post(`/api/v1/applications/${appId}/attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
   await ax.patch('/api/v1/applications/' + appId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 }

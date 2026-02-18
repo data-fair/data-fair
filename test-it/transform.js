@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, formHeaders } from './utils/index.ts'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 import fs from 'fs-extra'
@@ -92,7 +92,7 @@ describe('file datasets with transformation rules', function () {
 
   it('create a XLSX dataset and apply a transformation on a column', async function () {
     const form = new FormData()
-    form.append('file', fs.readFileSync('resources/datasets/date-time.xlsx'), 'dataset1.xlsx')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/date-time.xlsx'), 'dataset1.xlsx')
     const ax = dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
     dataset = await workers.hook('finalize/' + dataset.id)

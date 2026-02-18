@@ -3,9 +3,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import normalize from '../api/src/misc/utils/dcat/normalize.js'
 import validate from '../api/src/misc/utils/dcat/validate.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, alone, dmeadusOrg, formHeaders, cdurning2, timeout } from './utils/index.ts'
+
 const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/ods-export.rdf'), 'utf-8')
-const cioExample = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, './resources/dcat/example-cio.json'), 'utf8'))
-const semiceuExample = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, './resources/dcat/example-semiceu.json'), 'utf8'))
+const cioExample = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/example-cio.json'), 'utf8'))
+const semiceuExample = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/example-semiceu.json'), 'utf8'))
 
 describe('DCAT support', function () {
   before(startApiServer)

@@ -13,7 +13,7 @@ describe('workers', function () {
   afterEach((t) => checkPendingTasks(t.name))
 
   it('Process newly uploaded CSV dataset', async function () {
-    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     const ax = dmeadus
@@ -61,7 +61,7 @@ describe('workers', function () {
     assert.equal(mapping2.properties.loc.type, 'keyword')
     assert.equal(mapping2.properties._geopoint.type, 'geo_point')
 
-    const datasetFd2 = fs.readFileSync('./test/resources/datasets/bad-format.csv')
+    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: formHeaders(form2) })
@@ -92,7 +92,7 @@ describe('workers', function () {
   })
 
   it('Manage expected failure in children processes', async function () {
-    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./test-it/resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken2.geojson')
     const ax = dmeadus
@@ -123,7 +123,7 @@ describe('workers', function () {
 
     const form = new FormData()
     form.append('title', 'trigger test error')
-    form.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), 'dataset.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset.csv')
     const ax = dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })).data
 

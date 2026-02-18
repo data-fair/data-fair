@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, hlalonde3, anonymous } from './utils/index.ts'
 import config from 'config'
 import fs from 'fs-extra'
 import tmp from 'tmp-promise'
@@ -21,7 +21,7 @@ describe('rate limiting', function () {
 
     // a public dataset of about 100KB
     const tmpFile = await tmp.file({ postfix: '.csv' })
-    const csvContent = await fs.readFile('resources/datasets/dataset1.csv')
+    const csvContent = await fs.readFile('./test-it/resources/datasets/dataset1.csv')
     for (let i = 0; i < 600; i++) {
       await fs.write(tmpFile.fd, csvContent)
     }

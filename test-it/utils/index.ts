@@ -20,8 +20,8 @@ import { memoizedGetPublicationSiteSettings } from '@data-fair/data-fair-api/src
 import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 export { config }
 
-const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test/resources/geocoder-api.json'), 'utf8'))
-const sireneApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test/resources/sirene-api.json'), 'utf8'))
+const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test-it/resources/geocoder-api.json'), 'utf8'))
+const sireneApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../test-it/resources/sirene-api.json'), 'utf8'))
 
 const debug = debugModule('test')
 
@@ -45,6 +45,7 @@ export const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 export const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
 export const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
 export const alone = await getAxiosAuth('alone@no.org', 'passwd')
+export const ccherryholme1 = await getAxiosAuth('ccherryholme1@icio.us', 'passwd')
 export const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
 export const superadminPersonal = await getAxiosAuth('superadmin@test.com', 'superpasswd')
 export const alban = await getAxiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
@@ -281,7 +282,7 @@ export const formHeaders = (form: FormData) => {
 
 export const sendDataset = async (fileName: string, ax: AxiosInstance, opts?: AxiosRequestConfig, body?: any) => {
   const workers = await import('../../api/src/workers/index.ts')
-  const datasetFd = fs.readFileSync(path.resolve('./test/resources/', fileName))
+  const datasetFd = fs.readFileSync(path.resolve('./test-it/resources/', fileName))
   const form = new FormData()
   form.append('file', datasetFd, fileName)
   if (body) form.append('body', JSON.stringify(body))

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, anonymous, icarlens9 } from './utils/index.ts'
 import path from 'node:path'
 import config from 'config'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, superadmin, formHeaders } from './utils/index.ts'
 import nock from 'nock'
 import fs from 'fs-extra'
 import FormData from 'form-data'
@@ -68,7 +68,7 @@ describe('Extensions', function () {
     // Re-prepare for extension, it should only process the new line
     await workers.workers.batchProcessor.run({ nbInputs: 1, latLon: 50 }, { name: 'setCoordsNock' })
     const form = new FormData()
-    let content = await fs.readFile('resources/datasets/dataset-extensions.csv')
+    let content = await fs.readFile('./test-it/resources/datasets/dataset-extensions.csv')
     content += 'me,3 les noés la chapelle caro\n'
     form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: formHeaders(form) })
@@ -760,7 +760,7 @@ other,unknown address
     assert.ok(dataset.schema.find(field => field.key === 'employees'))
 
     const form = new FormData()
-    form.append('file', fs.readFileSync('./resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset2.csv'), 'dataset2.csv')
     dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: formHeaders(form), params: { draft: true } })).data
 
     await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {

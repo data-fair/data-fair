@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert'
 // import parquet from '@dsnp/parquetjs'
 import { ParquetWriter } from '../parquet-writer/index.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 
 describe('parquet-writer', function () {
   it('writes parquet file into buffers from a dataset', function () {

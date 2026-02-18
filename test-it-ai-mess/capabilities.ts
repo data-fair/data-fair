@@ -242,8 +242,8 @@ describe('Properties capabilities', function () {
     const ax = cdurning2
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)

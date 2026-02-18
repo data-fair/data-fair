@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, cdurning2, formHeaders, superadmin } from './utils/index.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
@@ -238,8 +238,8 @@ describe('Properties capabilities', function () {
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)

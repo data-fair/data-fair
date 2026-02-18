@@ -395,7 +395,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     const dataset = res.data
 
     const form = new FormData()
-    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files/dir1/test.pdf'))
+    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files/dir1/test.pdf'))
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 10)
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: formHeaders(form) })
@@ -438,7 +438,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     })
 
     const form = new FormData()
-    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files/dir1/test.pdf'))
+    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files/dir1/test.pdf'))
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('_body', '{"attr1":10}')
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: formHeaders(form) })
@@ -464,7 +464,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     const dataset = res.data
 
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files.zip'))
+    const attachmentsContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files.zip'))
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
@@ -483,7 +483,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results.find((l: any) => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
 
     const form1 = new FormData()
-    const attachmentsContent1 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files2.zip'))
+    const attachmentsContent1 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files2.zip'))
     form1.append('attachments', attachmentsContent1, 'files2.zip')
     form1.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form1, { headers: formHeaders(form1) })
@@ -496,7 +496,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results.find((l: any) => l._id === 'line1')['_file.content'], 'This is another test libreoffice file.')
 
     const form2 = new FormData()
-    const attachmentsContent2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files3.zip'))
+    const attachmentsContent2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files3.zip'))
     form2.append('attachments', attachmentsContent2, 'files3.zip')
     form2.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line3', attr1: 'test2', attachmentPath: 'files3/test2.odt' }
@@ -513,7 +513,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results.find((l: any) => l._id === 'line3')['_file.content'], 'This is another test libreoffice file.')
 
     const form3 = new FormData()
-    const attachmentsContent3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files2.zip'))
+    const attachmentsContent3 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files2.zip'))
     form3.append('attachments', attachmentsContent3, 'files2.zip')
     form3.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line4', attr1: 'test3', attachmentPath: 'test.odt' }
@@ -530,7 +530,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results.find((l: any) => l._id === 'line4')['_file.content'], 'This is another test libreoffice file.')
 
     const form4 = new FormData()
-    const attachmentsContent4 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files4.zip'))
+    const attachmentsContent4 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files4.zip'))
     form4.append('attachments', attachmentsContent4, 'files4.zip')
     form4.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line5', attr1: 'test5', attachmentPath: 'testé.txt' },
@@ -570,7 +570,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     let dataset = res.data
 
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files.zip'))
+    const attachmentsContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files.zip'))
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
 
@@ -637,7 +637,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     })
 
     const form = new FormData()
-    form.append('actions', await fs.readFile(path.resolve(import.meta.dirname, '../test/resources/rest/access.log.ndjson')), 'actions.ndjson')
+    form.append('actions', await fs.readFile(path.resolve(import.meta.dirname, '../test-it/resources/rest/access.log.ndjson')), 'actions.ndjson')
     res = await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: formHeaders(form) })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbErrors, 0)
@@ -661,7 +661,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     })
 
     const form = new FormData()
-    form.append('actions', await fs.readFile(path.resolve(import.meta.dirname, '../test/resources/rest/access.log.ndjson')), 'actions.ndjson')
+    form.append('actions', await fs.readFile(path.resolve(import.meta.dirname, '../test-it/resources/rest/access.log.ndjson')), 'actions.ndjson')
     await assert.rejects(ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: formHeaders(form) }), (err: any) => {
       assert.equal(err.status, 400)
       assert.equal(err.data.nbErrors, 20)
@@ -894,7 +894,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     const dataset = res.data
 
     const form = new FormData()
-    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files/dir1/test.pdf'))
+    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files/dir1/test.pdf'))
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 'test1')
     form.append('attr2', 'test1')
@@ -907,7 +907,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     await workers.hook('finalize/resthistattach')
 
     const form2 = new FormData()
-    const attachmentContent2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files/test.odt'))
+    const attachmentContent2 = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files/test.odt'))
     form2.append('attachment', attachmentContent2, 'dir1/test.pdf')
     form2.append('attr2', 'test2')
     res = await ax.patch(`/api/v1/datasets/resthistattach/lines/${line._id}`, form2, { headers: formHeaders(form2) })
@@ -1400,7 +1400,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let dataset = res.data
 
     const form = new FormData()
-    form.append('actions', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/actions.xlsx')), 'actions.xlsx')
+    form.append('actions', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/actions.xlsx')), 'actions.xlsx')
     await ax.post('/api/v1/datasets/restxlsxfile/_bulk_lines', form, { headers: formHeaders(form) })
     const workers = await import('../api/src/workers/index.ts')
     dataset = await workers.hook('finalize/restxlsxfile')
@@ -1422,7 +1422,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let dataset = res.data
 
     const form = new FormData()
-    form.append('actions', fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/actions.xlsx')), 'actions.ods')
+    form.append('actions', fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/actions.xlsx')), 'actions.ods')
     await ax.post('/api/v1/datasets/restodsfile/_bulk_lines', form, { headers: formHeaders(form) })
     const workers = await import('../api/src/workers/index.ts')
     dataset = await workers.hook('finalize/restodsfile')
@@ -1444,7 +1444,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let dataset = res.data
 
     const form = new FormData()
-    const actionsContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/dataset1.zip'))
+    const actionsContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/dataset1.zip'))
     form.append('actions', actionsContent, 'dataset1.zip')
     await ax.post('/api/v1/datasets/restcsvzip/_bulk_lines', form, { headers: formHeaders(form) })
     const workers = await import('../api/src/workers/index.ts')
@@ -1794,7 +1794,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     const dataset = res.data
 
     const form = new FormData()
-    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test/resources/datasets/files/dir1/test.pdf'))
+    const attachmentContent = fs.readFileSync(path.resolve(import.meta.dirname, '../test-it/resources/datasets/files/dir1/test.pdf'))
     form.append('attachment', attachmentContent, 'Capture d\'écran du 2024-11-19 10-20-57.png')
     res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, form, { headers: formHeaders(form) })
     assert.equal(res.status, 201)

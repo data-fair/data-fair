@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { strict as assert } from 'node:assert'
 import FormData from 'form-data'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, cdurning2, hlalonde3Org, ngernier4, formHeaders, hlalonde3 } from './utils/index.ts'
 import * as workers from '../api/src/workers/index.ts'
 
 describe('virtual datasets', function () {
@@ -789,7 +789,7 @@ describe('virtual datasets', function () {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('resources/avatar.jpeg')
+    const attachmentContent = fs.readFileSync('./test-it/resources/avatar.jpeg')
     form.append('attachment', attachmentContent, 'dir1/avatar.jpeg')
     form.append('attr1', '10')
     res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: formHeaders(form) })

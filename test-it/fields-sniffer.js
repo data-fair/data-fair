@@ -1,12 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as sniffer from '../api/src/datasets/utils/fields-sniffer.js'
+import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 
 describe('field sniffer', function () {
-  before(startApiServer)
-  beforeEach(scratchData)
-  after(stopApiServer)
-  afterEach((t) => checkPendingTasks(t.name))
-
   it('Work with booleans', function () {
     assert.equal(sniffer.sniff(['true', 'false']).type, 'boolean')
     assert.equal(sniffer.sniff(['true', 'False', '1', '-1', 'vrai', 'oui']).type, 'boolean')

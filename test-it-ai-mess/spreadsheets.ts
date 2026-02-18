@@ -39,7 +39,7 @@ describe('Spreadsheets conversions', function () {
 
   it('should manage XLSX file create by excel', async function () {
     const dates: string[] = []
-    for await (const lines of xlsx.iterCSV('./test/resources/datasets/Les aides financières ADEME.xlsx')) {
+    for await (const lines of xlsx.iterCSV('./test-it/resources/datasets/Les aides financières ADEME.xlsx')) {
       for (const line of lines.split('\n')) {
         dates.push(line.split(',')[2])
       }
@@ -50,7 +50,7 @@ describe('Spreadsheets conversions', function () {
 
   it('should manage another XLSX file created by excel', async function () {
     const dates: string[] = []
-    for await (const lines of xlsx.iterCSV('./test/resources/datasets/date-time.xlsx')) {
+    for await (const lines of xlsx.iterCSV('./test-it/resources/datasets/date-time.xlsx')) {
       for (const line of lines.split('\n')) {
         dates.push(line.split(',')[1])
       }
@@ -96,7 +96,7 @@ describe('Spreadsheets conversions', function () {
     const workers = await import('../api/src/workers/index.ts')
     const fs = await import('node:fs')
     const FormData = (await import('form-data')).default
-    const datasetFd = fs.readFileSync('./test/resources/datasets/header.ods')
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/header.ods')
     const form = new FormData()
     form.append('file', datasetFd, 'header.ods')
     form.append('file_normalizeOptions', JSON.stringify({
@@ -119,7 +119,7 @@ describe('Spreadsheets conversions', function () {
     const workers = await import('../api/src/workers/index.ts')
     const fs = await import('node:fs')
     const FormData = (await import('form-data')).default
-    const datasetFd = fs.readFileSync('./test/resources/datasets/header.xlsx')
+    const datasetFd = fs.readFileSync('./test-it/resources/datasets/header.xlsx')
     const form = new FormData()
     form.append('file', datasetFd, 'header.ods')
     form.append('file_normalizeOptions', JSON.stringify({

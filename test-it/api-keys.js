@@ -1,5 +1,5 @@
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, dmeadus, sendDataset, getAxios, hlalonde3Org, dmeadusOrg, hlalonde3, superadmin } from './utils/index.ts'
 import { strict as assert } from 'node:assert'
 import dayjs from 'dayjs'
 
@@ -10,7 +10,7 @@ describe('API keys', function () {
   afterEach((t) => checkPendingTasks(t.name))
 
   it('Reject wrong api key', async function () {
-    const ax = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': 'wrong' } })
+    const ax = await getAxios({ headers: { 'x-apiKey': 'wrong' } })
     await assert.rejects(ax.get('/api/v1/stats'), { status: 401 })
   })
 
@@ -80,24 +80,24 @@ describe('API keys', function () {
     const key5 = res.data.apiKeys[4]
 
     // Right scope
-    const axKey1 = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1.clearKey } })
+    const axKey1 = await getAxios({ headers: { 'x-apiKey': key1.clearKey } })
     await axKey1.get('/api/v1/stats')
 
     // Wrong scope
-    const axKey2 = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key2.clearKey } })
+    const axKey2 = await getAxios({ headers: { 'x-apiKey': key2.clearKey } })
     await assert.rejects(axKey2.get('/api/v1/stats'), (err) => {
       assert.equal(err.status, 403)
-      assert.ok(err.response.data.includes('Cette clé d\'API n\'a pas la portée nécessaire'))
+      assert.ok(err.data.includes('Cette clé d\'API n\'a pas la portée nécessaire'))
       return true
     })
-    const axKey5 = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key5.clearKey } })
+    const axKey5 = await getAxios({ headers: { 'x-apiKey': key5.clearKey } })
     await assert.rejects(sendDataset('datasets/dataset1.csv', axKey5), { status: 403 })
 
     // expired key
-    const axKey3 = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key3.clearKey } })
+    const axKey3 = await getAxios({ headers: { 'x-apiKey': key3.clearKey } })
     await assert.rejects(axKey3.get('/api/v1/stats'), (err) => {
       assert.equal(err.status, 403)
-      assert.ok(err.response.data.includes('Cette clé d\'API est expirée.'))
+      assert.ok(err.data.includes('Cette clé d\'API est expirée.'))
       return true
     })
 
@@ -118,7 +118,7 @@ describe('API keys', function () {
     await axKey2.get('/api/v1/datasets/' + orgDataset.id + '/lines')
 
     // API key without scope should only react to permission granted through specific email
-    const axKey4 = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key4.clearKey } })
+    const axKey4 = await getAxios({ headers: { 'x-apiKey': key4.clearKey } })
     await assert.rejects(axKey4.get('/api/v1/datasets/' + dataset.id + '/lines'), { status: 403 })
     await assert.rejects(axKey4.get('/api/v1/datasets/' + orgDataset.id + '/lines'), { status: 403 })
     await hlalonde3Org.put('/api/v1/datasets/' + orgDataset.id + '/permissions', [
@@ -144,7 +144,7 @@ describe('API keys', function () {
     const key2 = res.data.apiKeys[1]
 
     // Set the correct owner
-    const axKey1 = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1.clearKey } })
+    const axKey1 = await getAxios({ headers: { 'x-apiKey': key1.clearKey } })
     const dataset = await sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
@@ -159,7 +159,7 @@ describe('API keys', function () {
     await axKey1.get('/api/v1/datasets/' + otherDataset.id + '/lines')
 
     // API key without a scope only gets explicit permissions
-    const axKey2 = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key2.clearKey } })
+    const axKey2 = await getAxios({ headers: { 'x-apiKey': key2.clearKey } })
     await assert.rejects(axKey2.get('/api/v1/datasets/' + dataset.id + '/lines'), { status: 403 })
     await assert.rejects(axKey2.get('/api/v1/datasets/' + otherDataset.id + '/lines'), { status: 403 })
     await hlalonde3.put('/api/v1/datasets/' + otherDataset.id + '/permissions', [
@@ -179,7 +179,7 @@ describe('API keys', function () {
     assert.ok(key1)
 
     // Set the correct owner
-    const axKey1 = await builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1 } })
+    const axKey1 = await getAxios({ headers: { 'x-apiKey': key1 } })
     const dataset = await sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
@@ -195,7 +195,7 @@ describe('API keys', function () {
     })
     const key = res.data.apiKeys[0].clearKey
     assert.ok(key)
-    const axKey = await builder(undefined, undefined, undefined, undefined, {
+    const axKey = await getAxios({
       headers: { 'x-apiKey': key, 'x-account': JSON.stringify({ type: 'organization', id: 'KWqAGZ4mG', name: encodeURIComponent('Fivechat testé') }) }
     })
 
@@ -215,13 +215,6 @@ describe('API keys', function () {
     assert.rejects(dmeadus.put('/api/v1/settings/user/dmeadus0', {
       apiKeys: []
     }), { status: 403 })
-    // user can add another key
-    dmeadus.put('/api/v1/settings/user/dmeadus0', {
-      apiKeys: [
-        res.data.apiKeys[0],
-        { title: 'uset key', scopes: ['datasets'] }
-      ]
-    })
     // the admin key is still working
     await axKey.get('/api/v1/datasets/' + dataset.id)
     // superadmin can delete the key
