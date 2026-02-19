@@ -259,7 +259,8 @@
         :height="mapHeight"
         navigation-position="top-left"
         :search="false"
-        :single-item="showMapPreview"
+        :selected-item="showMapPreview"
+        :no-interaction="true"
       />
     </v-card>
   </v-dialog>

@@ -46,10 +46,9 @@ import { withQuery } from 'ufo'
 import { useMap } from './use-map'
 import { type ControlPosition } from 'maplibre-gl'
 
-const { search, height, singleItem, selectable, navigationPosition, noInteraction, sampling } = defineProps({
+const { search, height, selectable, navigationPosition, noInteraction, sampling } = defineProps({
   search: { type: Boolean, default: true },
   height: { type: Number, required: true },
-  singleItem: { type: String, default: null },
   navigationPosition: { type: String as () => ControlPosition, default: 'top-right' },
   noInteraction: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
@@ -89,13 +88,12 @@ const tileUrl = computed(() => {
 const fetchBBOX = useFetch<{ bbox: [number, number, number, number] }>(`${$apiPath}/datasets/${id}/lines`, {
   query: computed(() => {
     const query: Record<string, string> = { format: 'geojson', size: '0', ...commonParams.value }
-    if (singleItem) query._id_eq = singleItem
-    else if (selectedItem.value) query._id_eq = selectedItem.value
+    if (selectedItem.value) query._id_eq = selectedItem.value
     return query
   })
 })
 
-useMap(tileUrl, singleItem, selectable, selectedItem, noInteraction, navigationPosition, computed(() => fetchBBOX.data.value?.bbox))
+useMap(tileUrl, selectable, selectedItem, noInteraction, navigationPosition, computed(() => fetchBBOX.data.value?.bbox))
 
 </script>
 
