@@ -81,7 +81,8 @@ export const useMap = (
       if (feature.properties._id === undefined) return console.error('needs _id property to be able to fetch item', feature.properties)
 
       if (selectable) {
-        selectedItem.value = feature.properties._id
+        if (selectedItem.value === feature.properties._id) selectedItem.value = ''
+        else selectedItem.value = feature.properties._id
       } else {
         const qs = `_id:"${feature.properties._id}"`
         const select = dataset.value.schema
