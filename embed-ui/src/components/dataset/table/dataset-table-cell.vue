@@ -53,6 +53,7 @@
           :title="t('unselectLine')"
           color="primary"
           :size="dense ? 'md' : 'large'"
+          density="compact"
           variant="text"
           :icon="mdiCheckboxMarked"
           @click="emit('select')"
@@ -60,6 +61,7 @@
         <v-btn
           v-else
           :size="dense ? 'md' : 'large'"
+          density="compact"
           variant="text"
           :title="t('selectLine')"
           :icon="mdiCheckboxBlankOutline"

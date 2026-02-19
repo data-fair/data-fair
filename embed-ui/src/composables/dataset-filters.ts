@@ -19,7 +19,8 @@ export const findEqFilter = (filters: DatasetFilter[], property: SchemaProperty,
     : (result.values[property.key] as ExtendedResultValue).raw === f.value))
 }
 
-export const useFilters = () => {
+export const useFilters = (options: { excludeKeys?: string[] } = {}) => {
+  const { excludeKeys = [] } = options
   const filters = ref<DatasetFilter[]>([])
 
   const addFilter = (filter: DatasetFilter) => {
@@ -78,9 +79,11 @@ export const useFilters = () => {
   const queryParamsFilters = computed(() => {
     const queryParamsFilters: DatasetFilter[] = []
     for (const [key, value] of Object.entries(reactiveSearchParams)) {
+      if (excludeKeys.includes(key)) continue
       const operator = operators.find(op => key.endsWith('_' + op)) as DatasetFilter['operator']
       if (!operator) continue
       const propKey = key.slice(0, key.length - (operator.length + 1))
+      if (excludeKeys.includes(propKey)) continue
       const property = dataset.value?.schema?.find(p => p.key === propKey)
       if (!property) continue
       queryParamsFilters.push({ property, operator, value, formattedValue: formatValue(value, property, null, localeDayjs) })
