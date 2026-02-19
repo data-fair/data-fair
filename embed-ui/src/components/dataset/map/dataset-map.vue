@@ -46,25 +46,30 @@ import { withQuery } from 'ufo'
 import { useMap } from './use-map'
 import { type ControlPosition } from 'maplibre-gl'
 
-const { search, height, singleItem, navigationPosition, noInteraction, sampling } = defineProps({
+const { search, height, singleItem, selectable, navigationPosition, noInteraction, sampling } = defineProps({
   search: { type: Boolean, default: true },
   height: { type: Number, required: true },
   singleItem: { type: String, default: null },
   navigationPosition: { type: String as () => ControlPosition, default: 'top-right' },
   noInteraction: { type: Boolean, default: false },
+  selectable: { type: Boolean, default: false },
   sampling: { type: String, default: null }
 })
 
+const { queryParams: filtersQueryParams } = useFilters()
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 
 const q = defineModel<string>('q', { default: '' })
+const selectedItem = defineModel<string>('selectedItem', { default: '' })
 const editQ = ref('')
 watch(q, () => { editQ.value = q.value }, { immediate: true })
 
 const { id, dataset } = useDatasetStore()
 
 const commonParams = computed(() => {
-  const params = { ...conceptFilters }
+  const params = { ...filtersQueryParams.value, ...conceptFilters }
+  // _id_eq is managed specifically as selectedItem
+  if (params._id_eq) delete params._id_eq
   if (q.value) params.q = q.value
   if (dataset.value?.draftReason) params.draft = 'true'
   if (dataset.value?.finalizedAt) params.finalizedAt = dataset.value.finalizedAt
@@ -85,11 +90,12 @@ const fetchBBOX = useFetch<{ bbox: [number, number, number, number] }>(`${$apiPa
   query: computed(() => {
     const query: Record<string, string> = { format: 'geojson', size: '0', ...commonParams.value }
     if (singleItem) query._id_eq = singleItem
+    else if (selectedItem.value) query._id_eq = selectedItem.value
     return query
   })
 })
 
-useMap(tileUrl, computed(() => singleItem), noInteraction, navigationPosition, computed(() => fetchBBOX.data.value?.bbox))
+useMap(tileUrl, singleItem, selectable, selectedItem, noInteraction, navigationPosition, computed(() => fetchBBOX.data.value?.bbox))
 
 </script>
 

@@ -6,8 +6,10 @@
   >
     <dataset-map
       v-model:q="q"
+      v-model:selected-item="selectedItem"
       :height="windowHeight"
       :no-interaction="!interaction"
+      :selectable="selectable"
     />
   </v-container>
 </template>
@@ -28,6 +30,8 @@ provideDatasetStore(route.params.id, draft.value ?? undefined)
 
 const q = useStringSearchParam('q')
 const interaction = useBooleanSearchParam('interaction', true)
+const selectable = useBooleanSearchParam('selectable', false)
+const selectedItem = useStringSearchParam('_iq_eq')
 </script>
 
 <style>
