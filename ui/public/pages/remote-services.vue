@@ -18,6 +18,7 @@
 
 <script>
 import { mapActions } from 'vuex'
+import '@data-fair/frame/lib/d-frame.js'
 import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
 
 export default {
@@ -30,7 +31,6 @@ export default {
   methods: {
     ...mapActions(['emitFrameNotif']),
     onMessage (message) {
-      console.log('message', message)
       // the iframe requests that we display a breadcrumb
       // we mirror its internal paths by using them as a "to" query param for our own current page
       if (message.breadcrumbs) {
