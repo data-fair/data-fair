@@ -9,6 +9,7 @@
       sync-params
       sync-path="/data-fair/remote-services/"
       :adapter.prop="stateChangeAdapter"
+      debug
       @message="message => onMessage(message.detail)"
       @iframe-message="message => onMessage(message.detail)"
       @notif="emitFrameNotif"
