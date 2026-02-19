@@ -9,6 +9,7 @@ export const useMap = (
   selectable: boolean,
   selectedItem: Ref<string>,
   noInteraction: boolean,
+  cols: string[] | null,
   navigationPosition: ControlPosition,
   bbox: Ref<LngLatBoundsLike | undefined>
 ) => {
@@ -94,6 +95,7 @@ export const useMap = (
 
         const htmlList = dataset.value.schema
           .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+          .filter(field => !cols || cols.includes(field.key))
           .filter(field => item[field.key] !== undefined)
           .map(field => {
             return `<li style="list-style-type: none;">${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`

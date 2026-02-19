@@ -46,13 +46,14 @@ import { withQuery } from 'ufo'
 import { useMap } from './use-map'
 import { type ControlPosition } from 'maplibre-gl'
 
-const { search, height, selectable, navigationPosition, noInteraction, sampling } = defineProps({
+const { search, height, selectable, navigationPosition, noInteraction, sampling, cols } = defineProps({
   search: { type: Boolean, default: true },
   height: { type: Number, required: true },
   navigationPosition: { type: String as () => ControlPosition, default: 'top-right' },
   noInteraction: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
-  sampling: { type: String, default: null }
+  sampling: { type: String, default: null },
+  cols: { type: Array as () => string[] | null, default: null }
 })
 
 const { queryParams: filtersQueryParams } = useFilters()
@@ -93,7 +94,7 @@ const fetchBBOX = useFetch<{ bbox: [number, number, number, number] }>(`${$apiPa
   })
 })
 
-useMap(tileUrl, selectable, selectedItem, noInteraction, navigationPosition, computed(() => fetchBBOX.data.value?.bbox))
+useMap(tileUrl, selectable, selectedItem, noInteraction, cols, navigationPosition, computed(() => fetchBBOX.data.value?.bbox))
 
 </script>
 

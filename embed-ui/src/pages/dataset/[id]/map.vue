@@ -10,6 +10,7 @@
       :height="windowHeight"
       :no-interaction="!interaction"
       :selectable="selectable"
+      :cols="cols"
     />
   </v-container>
 </template>
@@ -32,6 +33,7 @@ const q = useStringSearchParam('q')
 const interaction = useBooleanSearchParam('interaction', true)
 const selectable = useBooleanSearchParam('selectable', false)
 const selectedItem = useStringSearchParam('_iq_eq')
+const cols = useStringsArraySearchParam('cols')
 </script>
 
 <style>
