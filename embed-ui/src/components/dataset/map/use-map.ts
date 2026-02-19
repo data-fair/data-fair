@@ -6,21 +6,22 @@ const fitBoundsOpts = { maxZoom: 15, padding: 40 }
 
 export const useMap = (
   tileUrl: Ref<string | undefined>,
-  singleItem: Ref<string>,
+  selectable: boolean,
+  selectedItem: Ref<string>,
   noInteraction: boolean,
+  cols: string[],
   navigationPosition: ControlPosition,
   bbox: Ref<LngLatBoundsLike | undefined>
 ) => {
   const { sendUiNotif } = useUiNotif()
   const { t } = useI18n()
-  const { style, dataLayers } = useMapStyle(singleItem)
+  const { style, dataLayers } = useMapStyle()
   const { id, dataset } = useDatasetStore()
 
   let _map: Map
   const getMap = () => {
     if (!tileUrl.value || !bbox.value) return
     if (_map) return _map
-    console.log(tileUrl.value)
     const map = _map = new maplibregl.Map({
       container: 'map',
       style,
@@ -56,29 +57,33 @@ export const useMap = (
 
     fitBBox({ duration: 0 })
 
-    if (!singleItem.value) {
-      // Create a popup, but don't add it to the map yet.
-      const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+    // Create a popup, but don't add it to the map yet.
+    const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
 
-      const moveCallback = (e: any) => {
-        const feature = map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
-        if (!feature) return
+    const moveCallback = (e: any) => {
+      const feature = map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
+      if (!feature) return
 
-        if (feature.properties._id !== undefined) {
-          const itemFilter: LegacyFilterSpecification = ['==', '_id', feature.properties._id]
-          map.setFilter('results_hover', itemFilter)
-          map.setFilter('results_point_hover', ['all', ['==', '$type', 'Point'], itemFilter])
-        }
-        // Change the cursor style as a UI indicator.
-        map.getCanvas().style.cursor = 'pointer'
+      if (feature.properties._id !== undefined) {
+        const itemFilter: LegacyFilterSpecification = ['==', '_id', feature.properties._id]
+        map.setFilter('results_hover', itemFilter)
+        map.setFilter('results_point_hover', ['all', ['==', '$type', 'Point'], itemFilter])
       }
+      // Change the cursor style as a UI indicator.
+      map.getCanvas().style.cursor = 'pointer'
+    }
 
-      const clickCallback = async (e: any) => {
-        if (!dataset.value?.schema) return
-        const feature = map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
-        if (!feature) return
+    const clickCallback = async (e: any) => {
+      if (!dataset.value?.schema) return
+      const feature = map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
+      if (!feature) return
 
-        if (feature.properties._id === undefined) return console.error('needs _id property to be able to fetch item', feature.properties)
+      if (feature.properties._id === undefined) return console.error('needs _id property to be able to fetch item', feature.properties)
+
+      if (selectable) {
+        if (selectedItem.value === feature.properties._id) selectedItem.value = ''
+        else selectedItem.value = feature.properties._id
+      } else {
         const qs = `_id:"${feature.properties._id}"`
         const select = dataset.value.schema
           .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
@@ -91,6 +96,7 @@ export const useMap = (
 
         const htmlList = dataset.value.schema
           .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+          .filter(field => !cols.length || cols.includes(field.key))
           .filter(field => item[field.key] !== undefined)
           .map(field => {
             return `<li style="list-style-type: none;">${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
@@ -104,19 +110,19 @@ export const useMap = (
           .setHTML(html)
           .addTo(map)
       }
-
-      const leaveCallback = () => {
-        map.getCanvas().style.cursor = ''
-      }
-
-      dataLayers.value.forEach(layer => {
-        map.on('mousemove', layer.id, debounce(moveCallback, 30))
-        map.on('mouseleave', layer.id, leaveCallback)
-        if (!noInteraction) {
-          map.on('click', layer.id, clickCallback)
-        }
-      })
     }
+
+    const leaveCallback = () => {
+      map.getCanvas().style.cursor = ''
+    }
+
+    dataLayers.forEach(layer => {
+      map.on('mousemove', layer.id, debounce(moveCallback, 30))
+      map.on('mouseleave', layer.id, leaveCallback)
+      if (!noInteraction) {
+        map.on('click', layer.id, clickCallback)
+      }
+    })
 
     return map
   }
@@ -134,7 +140,7 @@ export const useMap = (
     const map = getMap()
     if (!map) return
     // First clear layers and source to be able to change the tiles url
-    dataLayers.value.forEach(layer => {
+    dataLayers.forEach(layer => {
       if (map.getLayer(layer.id)) map.removeLayer(layer.id)
     })
     if (map.getSource('data-fair')) map.removeSource('data-fair')
@@ -143,14 +149,25 @@ export const useMap = (
     initCustomSource()
   })
 
+  watch(selectedItem, () => {
+    applySelectedFilter()
+  })
+  const applySelectedFilter = () => {
+    const map = getMap()
+    if (!map?.loaded) return
+    const itemFilter: LegacyFilterSpecification = ['==', '_id', selectedItem.value]
+    map.setFilter('results_selected', itemFilter)
+    map.setFilter('results_point_selected', ['all', ['==', '$type', 'Point'], itemFilter])
+  }
+
   const initCustomSource = () => {
     if (!tileUrl.value) return
     const map = getMap()
-    if (!map) return
-    if (!map.loaded) return
+    if (!map?.loaded) return
     map.addSource('data-fair', { type: 'vector', tiles: [tileUrl.value] })
-    dataLayers.value.forEach(layer => {
+    dataLayers.forEach(layer => {
       map.addLayer(layer, $uiConfig.map.beforeLayer)
     })
+    applySelectedFilter()
   }
 }
