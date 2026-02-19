@@ -169,5 +169,13 @@ export const useMap = (
       map.addLayer(layer, $uiConfig.map.beforeLayer)
     })
     applySelectedFilter()
+
+    if (!selectable && selectedItem.value) {
+      dataLayers.forEach(layer => {
+        if (!layer.id.endsWith('_selected')) {
+          map.setFilter(layer.id, ['==', '_id', ''])
+        }
+      })
+    }
   }
 }
