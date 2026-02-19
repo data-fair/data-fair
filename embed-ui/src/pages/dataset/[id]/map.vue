@@ -32,7 +32,7 @@ provideDatasetStore(route.params.id, draft.value ?? undefined)
 const q = useStringSearchParam('q')
 const interaction = useBooleanSearchParam('interaction', true)
 const selectable = useBooleanSearchParam('selectable', false)
-const selectedItem = useStringSearchParam('_iq_eq')
+const selectedItem = useStringSearchParam('_id_eq')
 const cols = useStringsArraySearchParam('cols')
 </script>
 

@@ -13,7 +13,7 @@ export type TableHeader = {
 
 export type TableHeaderWithProperty = Omit<TableHeader, 'property'> & Required<Pick<TableHeader, 'property'>>
 
-export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, edit: boolean, fixed: Ref<string | undefined>) => {
+export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, edit: boolean, selectable: boolean, fixed: Ref<string | undefined>) => {
   const { dataset, imageField, can } = useDatasetStore()
   const { vocabulary } = useStore()
 
@@ -40,7 +40,7 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, 
       if (dataset.value?.bbox && !noInteraction) {
         headers.unshift({ title: '', key: '_map_preview' })
       }
-      if (edit && (can('updateLine') || can('deleteLine'))) {
+      if (selectable || (edit && (can('updateLine') || can('deleteLine') || selectable))) {
         headers.unshift({ title: '', key: '_actions', sticky: true })
       } else if (fixed.value) {
         const fixedHeader = headers.find(h => h.key === fixed.value)
