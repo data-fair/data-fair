@@ -46,14 +46,37 @@
         {{ result._owner }}
       </v-tooltip>
     </template>
-    <dataset-table-result-actions
-      v-else-if="header.key === '_actions'"
-      v-model:selected-results="selectedResults"
-      :result="result"
-      :dense="dense"
-      @edit="emit('edit')"
-      @delete="emit('delete')"
-    />
+    <template v-if="header.key === '_actions'">
+      <template v-if="selectable">
+        <v-btn
+          v-if="selected"
+          :title="t('unselectLine')"
+          color="primary"
+          :size="dense ? 'md' : 'large'"
+          density="compact"
+          variant="text"
+          :icon="mdiCheckboxMarked"
+          @click="emit('select')"
+        />
+        <v-btn
+          v-else
+          :size="dense ? 'md' : 'large'"
+          density="compact"
+          variant="text"
+          :title="t('selectLine')"
+          :icon="mdiCheckboxBlankOutline"
+          @click="emit('select')"
+        />
+      </template>
+      <dataset-table-result-actions
+        v-else
+        v-model:selected-results="selectedResults"
+        :result="result"
+        :dense="dense"
+        @edit="emit('edit')"
+        @delete="emit('delete')"
+      />
+    </template>
     <!--{{ item.__formatted[header.key] }}-->
     <dataset-item-value-multiple
       v-else-if="header.property && Array.isArray(result.values[header.key])"
@@ -83,12 +106,16 @@
 <i18n lang="yaml">
   fr:
     showMapPreview: Voir sur une carte
+    selectLine: Sélectionner la ligne
+    unselectLine: Désélectionner la ligne
   en:
     showMapPreview: Show on a map
+    selectLine: Select the line
+    unselectLine: Deselect the line
 </i18n>
 
 <script lang="ts" setup>
-import { mdiMap } from '@mdi/js'
+import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiMap } from '@mdi/js'
 import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset-lines'
 import { type DatasetFilter } from '../../../composables/dataset-filters'
@@ -100,7 +127,9 @@ defineProps({
   filter: { type: Object as () => DatasetFilter, default: null },
   dense: { type: Boolean, default: false },
   noInteraction: { type: Boolean, default: false },
-  hovered: { type: Object as () => ExtendedResultValue, default: null }
+  hovered: { type: Object as () => ExtendedResultValue, default: null },
+  selectable: { type: Boolean, default: false },
+  selected: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{
@@ -110,7 +139,8 @@ const emit = defineEmits<{
   showMapPreview: [],
   showDetailDialog: [value: ExtendedResultValue],
   edit: [],
-  delete: []
+  delete: [],
+  select: []
 }>()
 
 const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })

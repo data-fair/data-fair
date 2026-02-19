@@ -1,7 +1,7 @@
 <template lang="html">
   <v-card>
     <v-text-field
-      v-if="search"
+      v-if="search && !noInteraction"
       v-model="editQ"
       style="position: absolute;z-index:2;width:250px;"
       placeholder="Rechercher"
@@ -56,7 +56,7 @@ const { search, height, selectable, navigationPosition, noInteraction, sampling,
   cols: { type: Array as () => string[], default: () => [] }
 })
 
-const { queryParams: filtersQueryParams } = useFilters()
+const { queryParams: filtersQueryParams } = useFilters({ excludeKeys: ['_id_eq'] })
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 
 const q = defineModel<string>('q', { default: '' })
@@ -68,8 +68,6 @@ const { id, dataset } = useDatasetStore()
 
 const commonParams = computed(() => {
   const params = { ...filtersQueryParams.value, ...conceptFilters }
-  // _id_eq is managed specifically as selectedItem
-  if (params._id_eq) delete params._id_eq
   if (q.value) params.q = q.value
   if (dataset.value?.draftReason) params.draft = 'true'
   if (dataset.value?.finalizedAt) params.finalizedAt = dataset.value.finalizedAt

@@ -89,6 +89,7 @@
                 class="header-wrapper"
               >
                 <async-dataset-table-header-actions
+                  v-if="!selectable"
                   :results="results"
                   :selected-cols="selectedCols"
                   :dense="displayMode === 'table-dense'"
@@ -115,6 +116,7 @@
               :filters="filters"
               :filter-height="height - 20"
               :fixed="fixed === header.key"
+              :no-fix="selectable || edit"
               @filter="addFilter"
               @hide="hideHeader(header)"
               @fix-col="onFixCol(header.key)"
@@ -164,6 +166,8 @@
                 :filters="filters"
                 :dense="displayMode === 'table-dense'"
                 :map-preview-height="mapPreviewHeight"
+                :selectable="selectable"
+                :selected="selectedItem === item._id"
                 :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
                 :filter="header.property && findEqFilter(filters, header.property, item)"
                 @hoverstart="hoverStart"
@@ -173,6 +177,7 @@
                 @filter="f => !noInteraction && addFilter(f)"
                 @edit="showEditDialog = item"
                 @delete="showDeleteDialog = item"
+                @select="selectedItem = selectedItem === item._id ? '' : item._id"
               />
             </tr>
           </template>
@@ -383,10 +388,11 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, edit } = defineProps({
+const { height, noInteraction, edit, selectable } = defineProps({
   height: { type: Number, default: 800 },
   noInteraction: { type: Boolean, default: false },
   edit: { type: Boolean, default: false },
+  selectable: { type: Boolean, default: false },
 })
 
 const displayMode = defineModel<string>('display', { default: 'table' })
@@ -394,6 +400,7 @@ const cols = defineModel<string[]>('cols', { default: [] })
 const sortStr = defineModel<string>('sort')
 const fixed = defineModel<string>('fixed')
 const q = defineModel<string>('q', { default: '' })
+const selectedItem = defineModel<string>('selectedItem', { default: '' })
 
 const { t } = useI18n()
 
@@ -439,12 +446,12 @@ const hideHeader = (header: TableHeader) => {
   cols.value = newCols.filter(col => col !== header.key)
 }
 
-const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
+const { filters, addFilter, queryParams: filtersQueryParams } = useFilters({ excludeKeys: selectable ? ['_id_eq'] : [] })
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const indexedAt = ref<string>()
 const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
-const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, fixed)
+const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed)
 const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 const virtualScroll = ref<VVirtualScroll>()

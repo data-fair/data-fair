@@ -10,8 +10,10 @@
       v-model:q="q"
       v-model:sort="sort"
       v-model:fixed="fixed"
+      v-model:selected-item="selectedItem"
       :height="windowHeight"
       :no-interaction="!interaction"
+      :selectable="selectable"
     />
   </v-container>
 </template>
@@ -36,6 +38,8 @@ const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
 const fixed = useStringSearchParam('fixed')
 const interaction = useBooleanSearchParam('interaction', true)
+const selectable = useBooleanSearchParam('selectable', false)
+const selectedItem = useStringSearchParam('_id_eq')
 </script>
 
 <style>
