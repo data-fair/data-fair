@@ -53,7 +53,7 @@ const { search, height, selectable, navigationPosition, noInteraction, sampling,
   noInteraction: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
   sampling: { type: String, default: null },
-  cols: { type: Array as () => string[] | null, default: null }
+  cols: { type: Array as () => string[], default: () => [] }
 })
 
 const { queryParams: filtersQueryParams } = useFilters()
