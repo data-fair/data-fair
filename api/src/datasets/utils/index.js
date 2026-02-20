@@ -191,7 +191,9 @@ export const clean = (req, dataset, draft = false) => {
     if (dataset.image && dataset.public && !select.includes('-thumbnail')) {
       dataset.thumbnail = prepareThumbnailUrl(publicUrl + '/api/v1/datasets/' + encodeURIComponent(dataset.id) + '/thumbnail', thumbnail)
     }
-    if (dataset.image && publicUrl !== config.publicUrl) {
+    if (dataset.image && dataset.image.startsWith('/')) {
+      dataset.image = publicUrl + dataset.image
+    } else if (dataset.image && publicUrl !== config.publicUrl) {
       dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
     }
   }

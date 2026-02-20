@@ -42,7 +42,9 @@ export const clean = (application: Application, publicUrl: string, publicationSi
   if (application.image && application.public && !select.includes('-thumbnail')) {
     application.thumbnail = prepareThumbnailUrl(publicUrl + '/api/v1/applications/' + encodeURIComponent(application.id) + '/thumbnail', thumbnail)
   }
-  if (application.image && publicUrl !== config.publicUrl) {
+  if (application.image && application.image.startsWith('/')) {
+    application.image = publicUrl + application.image
+  } else if (application.image && publicUrl !== config.publicUrl) {
     application.image = application.image.replace(config.publicUrl, publicUrl)
   }
   return application
