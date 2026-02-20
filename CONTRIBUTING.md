@@ -24,7 +24,7 @@ Run the 2 development servers with these commands in separate shells:
     npm run dev-server
     npm run dev-client
 
-When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `test-it/resources/users.json` to login with its email.
+When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `dev/resources/users.json` to login with its email.
 
 Test built nuxt distributable in dev:
 
@@ -39,6 +39,10 @@ Run test suite:
 ```
 npm run test
 ```
+
+## Working with Git Worktrees
+
+This project supports git worktrees with fully isolated port allocations, allowing multiple branches to run concurrently (useful for AI agents or parallel development). Run `./dev/worktree.sh <branch-name>` to create a new worktree with its own `.env`, Docker Compose project, and randomized port range. In any worktree (including the main one), always run `source dev/env.sh` before starting services or tests to load the correct environment variables.
 
 ## Docker image
 

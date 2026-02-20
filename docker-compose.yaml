@@ -1,12 +1,20 @@
 services:
+  
   nginx:
     image: nginx:1.23.1-alpine
-    profiles:
-      - dev
-      - test
     network_mode: host
+    environment:
+      - NGINX_PORT1=${NGINX_PORT1}
+      - NGINX_PORT2=${NGINX_PORT2}
+      - DEV_API_PORT=${DEV_API_PORT}
+      - DEV_UI_PORT=${DEV_UI_PORT}
+      - SD_PORT=${SD_PORT}
+      - CAPTURE_PORT=${CAPTURE_PORT}
+      - OAV_PORT=${OAV_PORT}
+      - EVENTS_PORT=${EVENTS_PORT}
+      - CATALOGS_PORT=${CATALOGS_PORT}
     volumes:
-      - ./test-it/resources/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./dev/resources/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
 
   es:
     profiles:
@@ -14,8 +22,7 @@ services:
       - test
     image: ghcr.io/data-fair/elasticsearch:8.19.9
     ports:
-      - 9200:9200
-      - 9300:9300
+      - ${ES_PORT}:9200
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -35,9 +42,9 @@ services:
       - test
     image: mongo:8.0.17
     ports:
-      - 27017:27017
+      - ${MONGO_PORT}:27017
     volumes:
-      - mongo8-data:/data/db
+      - mongodb-data:/data/db
 
   s3mock:
     profiles:
@@ -48,7 +55,7 @@ services:
       - COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=buckettest,buckerdev
       - COM_ADOBE_TESTING_S3MOCK_STORE_ROOT=s3root
     ports:
-      - 9097:9090
+      - ${S3_PORT}:9090
     volumes:
       - s3mock-data:/s3root
 
@@ -61,16 +68,16 @@ services:
     depends_on:
       - mongodb
     environment:
+      - PORT=${SD_PORT}
       - DEBUG=webhooks,auth
       - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
-      - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:5600/api/v1/identities", "key": "dev_secret"}]'
-      - PUBLIC_URL=http://localhost:5600/simple-directory
-      - NOTIFY_URL=http://localhost:5600/notify
-      - PRIVATE_NOTIFY_URL=http://notify:8088
+      - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:${NGINX_PORT1}/api/v1/identities", "key": "dev_secret"}]'
+      - PUBLIC_URL=http://localhost:${NGINX_PORT1}/simple-directory
+      - PRIVATE_EVENTS_URL=http://events:${EVENTS_PORT}
       - MAILDEV_ACTIVE=true
       - STORAGE_TYPE=file
       #- STORAGE_TYPE=mongo
-      - STORAGE_MONGO_URL=mongodb://localhost:27017/simple-directory
+      - STORAGE_MONGO_URL=mongodb://localhost:${MONGO_PORT}/simple-directory
       - NUXT_BUILD_BLOCKING=false
       - NO_UI=${NO_UI}
       - AUTHRATELIMIT_ATTEMPTS=200
@@ -87,10 +94,10 @@ services:
       - CONTACT=contact@test.com
       - CIPHER_PASSWORD=test
     volumes:
-      - ./test-it/resources/users.json:/webapp/data/users.json
-      - ./test-it/resources/organizations.json:/webapp/data/organizations.json
+      - ./dev/resources/users.json:/webapp/data/users.json
+      - ./dev/resources/organizations.json:/webapp/data/organizations.json
     healthcheck:
-      test: ["CMD", "nc", "-z", "-v", "localhost", "8080"]
+      test: ["CMD", "nc", "-z", "-v", "localhost", "${SD_PORT}"]
       interval: 5s
 
   openapi-viewer:
@@ -99,10 +106,10 @@ services:
     image: ghcr.io/data-fair/openapi-viewer:feat-implement-serialize-query-params
     network_mode: host
     environment:
-      - PORT=5680
+      - PORT=${OAV_PORT}
       - USE_SIMPLE_DIRECTORY=true
-      - PRIVATE_DIRECTORY_URL=http://localhost:5600/simple-directory
-      - ALLOWED_URLS={"general":"http://localhost:5600/data-fair/api/v1/api-docs.json","dataset":"http://localhost:5600/data-fair/api/v1/datasets/{id}/api-docs.json","privateDataset":"http://localhost:5600/data-fair/api/v1/datasets/{id}/private-api-docs.json","application":"http://localhost:5600/data-fair/api/v1/applications/{id}/api-docs.json","remoteService":"http://localhost:5600/data-fair/api/v1/remote-services/{id}/api-docs.json"}
+      - PRIVATE_DIRECTORY_URL=http://localhost:${NGINX_PORT1}/simple-directory
+      - ALLOWED_URLS={"general":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/api-docs.json","dataset":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/datasets/{id}/api-docs.json","privateDataset":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/datasets/{id}/private-api-docs.json","application":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/applications/{id}/api-docs.json","remoteService":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/remote-services/{id}/api-docs.json"}
 
   capture:
     profiles:
@@ -111,9 +118,9 @@ services:
     network_mode: host
     shm_size: '1gb'
     environment:
-      - PORT=8087
+      - PORT=${CAPTURE_PORT}
       - DEBUG=capture
-      - PUBLIC_URL=http://localhost:5600/capture
+      - PUBLIC_URL=http://localhost:${NGINX_PORT1}/capture
       - ONLY_SAME_HOST=false
       - PROMETHEUS_ACTIVE=false
       - PUPPETEER_ARGS=["--no-sandbox"]
@@ -126,34 +133,36 @@ services:
     depends_on:
       - mongodb
     environment:
-      - PORT=8088
-      - PRIVATE_DIRECTORY_URL=http://localhost:5600/simple-directory
+      - PORT=${EVENTS_PORT}
+      - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
+      - MONGO_URL=mongodb://localhost:${MONGO_PORT}/events
       - SECRET_IDENTITIES=secret-identities
       - SECRET_EVENTS=secret-notifications
       - SECRET_SENDMAILS=secret-sendmails
       - OBSERVER_ACTIVE=false
 
-  catalogs:
-    profiles:
-      - dev
-    image: ghcr.io/data-fair/catalogs:master
-    network_mode: host
-    depends_on:
-      - mongodb
-    environment:
-      - DEBUG=webhooks-*
-      - PORT=8089
-      - OBSERVER_ACTIVE=false
-      - PRIVATE_DIRECTORY_URL=http://localhost:5600/simple-directory
-      - PRIVATE_EVENTS_URL=http://localhost:5600/notify
-      - CIPHER_PASSWORD=test
-      - SECRET_EVENTS=secret-notifications
-      - SECRET_CATALOGS=secret-catalogs
-      - SECRET_IDENTITIES=secret-identities
-      - IGNORE_ASSERT_REQ_INTERNAL=true
-      - DATA_DIR=/data
-    volumes:
-      - ./data/catalogs:/data
+  # catalogs:
+  #   profiles:
+  #     - dev
+  #   image: ghcr.io/data-fair/catalogs:master
+  #   network_mode: host
+  #   depends_on:
+  #     - mongodb
+  #   environment:
+  #     - PORT=${CATALOGS_PORT}
+  #     - DEBUG=webhooks-*
+  #     - OBSERVER_ACTIVE=false
+  #     - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
+  #     - PRIVATE_EVENTS_URL=http://localhost:${EVENTS_PORT}
+  #     - MONGO_URL=mongodb://localhost:${MONGO_PORT}/catalogs
+  #     - CIPHER_PASSWORD=test
+  #     - SECRET_EVENTS=secret-notifications
+  #     - SECRET_CATALOGS=secret-catalogs
+  #     - SECRET_IDENTITIES=secret-identities
+  #     - IGNORE_ASSERT_REQ_INTERNAL=true
+  #     - DATA_DIR=/data
+  #   volumes:
+  #     - ./data/catalogs:/data
 
   clamav:
     image: clamav/clamav:1.5.1
@@ -169,40 +178,11 @@ services:
       - CLAMAV_NO_FRESHCLAMD=true
       - CLAMAV_NO_MILTERD=true
     ports:
-      - 3310:3310
-
-  redis:
-    image: redis
-    profiles:
-      - udata
-    volumes:
-      - redis-data:/data
-    ports:
-    - 6379:6379
-
-  udata:
-    # init udata after running:
-    # docker exec -it data-fair-udata-1 bash
-    # udata init
-    # udata user create
-    # udata user set-admin alban83@gmail.com
-    image: udata/udata
-    # exposed on port 7000
-    network_mode: host
-    profiles:
-      - udata
-    depends_on:
-      - mongodb
-      - redis
-    volumes:
-      - udata-fs:/udata/fs
-      - ./test-it/resources/udata.cfg:/udata/udata.cfg
+      - ${CLAMAV_PORT}:3310
 
 volumes:
   elasticsearch-data:
-  mongo8-data:
-  udata-fs:
-  redis-data:
+  mongodb-data:
   clamav-data:
   clamav-tmp:
   s3mock-data:

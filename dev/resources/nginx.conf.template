@@ -6,7 +6,7 @@ proxy_cache_path /var/cache/nginx/data-fair levels=1:2 keys_zone=data-fair-cache
 proxy_cache_key $scheme$host$request_uri;
 
 server {
-  listen 5600;
+  listen ${NGINX_PORT1};
   server_name _;
 
   # Transmit host, protocol and user ip, we use it for routing, rate limiting, etc.
@@ -60,28 +60,24 @@ server {
   }
 
   location ~ /data-fair/embed/(.*)-ui-config.js {
-    proxy_pass http://localhost:5599;
+    proxy_pass http://localhost:${DEV_API_PORT};
   }
   # comment this to test built UI served by api
   location /data-fair/embed {
-    proxy_pass http://localhost:6220;
+    proxy_pass http://localhost:${DEV_UI_PORT};
   }
 
   location /data-fair {
     rewrite  ^/data-fair/(.*) /$1 break;
-    proxy_pass http://localhost:5599/;
+    proxy_pass http://localhost:${DEV_API_PORT}/;
   }
 
   location /simple-directory {
-    proxy_pass http://localhost:8080;
+    proxy_pass http://localhost:${SD_PORT};
   }
-  location /mails {
-    rewrite  ^/mails/(.*) /$1 break;
-    proxy_pass http://localhost:1080/;
-  }
-
+  
   location /openapi-viewer {
-    proxy_pass http://localhost:5680;
+    proxy_pass http://localhost:${OAV_PORT};
   }
 
   location /capture {
@@ -90,22 +86,17 @@ server {
   }
 
   location /events {
-    proxy_pass http://localhost:8088;
+    proxy_pass http://localhost:${EVENTS_PORT};
   }
 
   location /catalogs {
-    proxy_pass http://localhost:8089;
-  }
-
-  location /thumbor {
-    rewrite  ^/thumbor/(.*) /$1 break;
-    proxy_pass http://localhost:8000/;
+    proxy_pass http://localhost:${CATALOGS_PORT};
   }
 }
 
 # secondary exposition to simulate a publication site
 server {
-  listen 5601;
+  listen ${NGINX_PORT2};
   server_name _;
 
   # Transmit host, protocol and user ip, we use it for routing, rate limiting, etc.
@@ -151,35 +142,26 @@ server {
 
   location /data-fair {
     rewrite  ^/data-fair/(.*) /$1 break;
-    proxy_pass http://localhost:5599/;
+    proxy_pass http://localhost:${DEV_API_PORT}/;
   }
 
   location /simple-directory {
     rewrite  ^/simple-directory/(.*) /$1 break;
-    proxy_pass http://localhost:8080/;
+    proxy_pass http://localhost:${SD_PORT}/;
   }
-  location /mails {
-    rewrite  ^/mails/(.*) /$1 break;
-    proxy_pass http://localhost:1080/;
-  }
-
+  
   location /api-doc {
     rewrite  ^/api-doc/(.*) /$1 break;
-    proxy_pass http://localhost:5680/;
+    proxy_pass http://localhost:${OAV_PORT}/;
   }
 
   location /capture {
     rewrite  ^/capture/(.*) /$1 break;
-    proxy_pass http://localhost:8087/;
+    proxy_pass http://localhost:${CAPTURE_PORT}/;
   }
 
-  location /notify {
-    rewrite  ^/notify/(.*) /$1 break;
-    proxy_pass http://localhost:8088/;
-  }
-
-  location /thumbor {
-    rewrite  ^/thumbor/(.*) /$1 break;
-    proxy_pass http://localhost:8000/;
+  location /events {
+    rewrite  ^/events/(.*) /$1 break;
+    proxy_pass http://localhost:${EVENTS_PORT}/;
   }
 }

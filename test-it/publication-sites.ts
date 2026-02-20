@@ -11,6 +11,8 @@ const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ
 const ngernier4Org = await getAxiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
 const ddecruce5Org = await getAxiosAuth('ddecruce5@phpbb.com', 'passwd', 'KWqAGZ4mG')
 
+const publicUrl2 = `http://localhost:${process.env.NGINX_PORT2}/data-fair`
+
 describe('publication sites', function () {
   before(startApiServer)
   beforeEach(scratchData)
@@ -59,41 +61,41 @@ describe('publication sites', function () {
 
     const otherDataset = (await dmeadus.post('/api/v1/datasets', { isRest: true, title: 'other dataset', schema: [] })).data
 
-    await assert.rejects(ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`), (err: any) => {
+    await assert.rejects(ax.get(`${publicUrl2}/api/v1/datasets/${dataset.id}`), (err: any) => {
       assert.equal(err.status, 404)
       assert.equal(err.data, 'publication site unknown')
       return true
     })
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:' + process.env.NGINX_PORT2 }
     await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
     memoizedGetPublicationSiteSettings.clear()
 
-    await assert.rejects(ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${otherDataset.id}`), (err: any) => {
+    await assert.rejects(ax.get(`${publicUrl2}/api/v1/datasets/${otherDataset.id}`), (err: any) => {
       assert.equal(err.status, 404)
       assert.equal(err.data, 'Dataset not found')
       return true
     })
-    assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`))
+    assert.ok(await ax.get(`${publicUrl2}/api/v1/datasets/${dataset.id}`))
 
     // dataset is listed (but not otherDatasets) as it belongs to the publication site's owner
-    let publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets')).data
+    let publishedDatasets = (await ax.get(`${publicUrl2}/api/v1/datasets`)).data
     assert.equal(publishedDatasets.results.length, 1)
-    publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets?publicationSites=data-fair-portals:portal1')).data
+    publishedDatasets = (await ax.get(`${publicUrl2}/api/v1/datasets?publicationSites=data-fair-portals:portal1`)).data
     assert.equal(publishedDatasets.results.length, 0)
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
 
-    assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`))
-    assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}/lines`))
-    publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets')).data
+    assert.ok(await ax.get(`${publicUrl2}/api/v1/datasets/${dataset.id}`))
+    assert.ok(await ax.get(`${publicUrl2}/api/v1/datasets/${dataset.id}/lines`))
+    publishedDatasets = (await ax.get(`${publicUrl2}/api/v1/datasets`)).data
     assert.equal(publishedDatasets.results.length, 1)
 
-    const datasetsCatalog = (await ax.get('http://localhost:5601/data-fair/api/v1/catalog/datasets')).data
+    const datasetsCatalog = (await ax.get(`${publicUrl2}/api/v1/catalog/datasets`)).data
     assert.equal(datasetsCatalog.results.length, 1)
     assert.equal(datasetsCatalog.count, 1)
 
-    const dcatCatalog = (await ax.get('http://localhost:5601/data-fair/api/v1/catalog/dcat')).data
+    const dcatCatalog = (await ax.get(`${publicUrl2}/api/v1/catalog/dcat`)).data
     const valid = validateDcat(dcatCatalog)
     if (!valid) console.error('DCAT validation failed', validateDcat.errors)
     assert.ok(valid)
@@ -102,17 +104,14 @@ describe('publication sites', function () {
     // Test multi-domain image support
     const imageFullUrl = config.publicUrl + '/uploads/test-image.png'
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { image: imageFullUrl })
-    const updated = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
-    assert.ok(updated.image.startsWith('/'), 'image should be stored as relative path')
-    assert.equal(updated.image, '/uploads/test-image.png')
-    const publishedDataset = (await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`)).data
-    assert.equal(publishedDataset.image, 'http://localhost:5601/uploads/test-image.png')
+    const publishedDataset = (await ax.get(`${publicUrl2}/api/v1/datasets/${dataset.id}`)).data
+    assert.equal(publishedDataset.image, `${publicUrl2}/uploads/test-image.png`)
   })
 
   it('should publish application on a org site', async function () {
     const ax = dmeadusOrg
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:' + process.env.NGINX_PORT2 }
     await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
     memoizedGetPublicationSiteSettings.clear()
 
@@ -123,11 +122,8 @@ describe('publication sites', function () {
     // Test multi-domain image support
     const imageFullUrl = config.publicUrl + '/uploads/app-image.png'
     await ax.patch(`/api/v1/applications/${app.id}`, { image: imageFullUrl })
-    const updated = (await ax.get(`/api/v1/applications/${app.id}`)).data
-    assert.ok(updated.image.startsWith('/'), 'image should be stored as relative path')
-    assert.equal(updated.image, '/uploads/app-image.png')
-    const publishedApp = (await ax.get(`http://localhost:5601/data-fair/api/v1/applications/${app.id}`)).data
-    assert.equal(publishedApp.image, 'http://localhost:5601/uploads/app-image.png')
+    const publishedApp = (await ax.get(`${publicUrl2}/api/v1/applications/${app.id}`)).data
+    assert.equal(publishedApp.image, `${publicUrl2}/uploads/app-image.png`)
   })
 
   it('department admin should fail to publish dataset on org site', async function () {

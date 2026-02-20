@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { strict as assert } from 'node:assert'
 import FormData from 'form-data'
+import config from 'config'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import * as workers from '../api/src/workers/index.ts'
@@ -831,7 +832,7 @@ describe('virtual datasets', function () {
     assert.equal(res.status, 200)
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
-    assert.equal(res.data.results[0]._attachment_url, `http://localhost:5600/data-fair/api/v1/datasets/${virtualDataset.id}/attachments/${child.id}/${attachmentPath}`)
+    assert.equal(res.data.results[0]._attachment_url, `${config.publicUrl}/api/v1/datasets/${virtualDataset.id}/attachments/${child.id}/${attachmentPath}`)
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?thumbnail=true`)
     assert.ok(res.data.results[0]._thumbnail)
