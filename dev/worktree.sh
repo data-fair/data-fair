@@ -1,51 +1,24 @@
 #!/bin/bash
 
-# Usage: ./setup_agent.sh <branch-name>
 BRANCH_NAME=$1
 
 if [ -z "$BRANCH_NAME" ]; then
     echo "Error: Please provide a branch name."
-    echo "Usage: source dev/worktree.sh feat-xyz"
+    echo "Usage: ./dev/worktree.sh feat-xyz"
     exit 1
 fi
 
-# 1. Define the path (placing it one level up from the current repo)
+SOURCE_BRANCH=$(git branch --show-current)
 REPO_NAME=$(basename "$PWD")
 TARGET_DIR="../${REPO_NAME}_${BRANCH_NAME}"
 
-# 2. Create the Git Worktree
-echo "Creating worktree at $TARGET_DIR..."
-git worktree add -b "$BRANCH_NAME" "$TARGET_DIR" master
+echo "Creating worktree at $TARGET_DIR from $SOURCE_BRANCH..."
+git worktree add -b "$BRANCH_NAME" "$TARGET_DIR" $SOURCE_BRANCH
 
-# 3. Generate a random port (3000-9000)
 RANDOM_NB=$((3000 + RANDOM % 6001))
-NGINX_PORT1=
-NGINX_PORT2=$((RANDOM_NB + 2))
-DEV_PORT=$((RANDOM_NB + 3))
-DEV_UI_PORT=$((RANDOM_NB + 4))
+echo "Use random port $RANDOM_NB as base..."
 
-# 4. Create the config directory inside the new worktree
-CONFIG_DIR="$TARGET_DIR/api/config"
-mkdir -p "$CONFIG_DIR"
-
-# 5. Write the local config files
-cat <<EOF > "$CONFIG_DIR/local-development.cjs"
-module.exports = {
-  port: $DEV_PORT,
-  mongo: {
-    url: 'mongodb://localhost:27017/data-fair-dev-'$BRANCH_NAME
-  }
-};
-EOF
-cat <<EOF > "$CONFIG_DIR/local-test.cjs"
-module.exports = {
-  port: $DEV_PORT,
-  mongo: {
-    url: 'mongodb://localhost:27017/data-fair-test-'$BRANCH_NAME
-  }
-};
-EOF
-# 2. Write the specific variables for this agent
+echo "Create worktree specific .env file..."
 cat <<EOF > "$TARGET_DIR/.env"
 WORKTREE=default
 
@@ -67,6 +40,7 @@ CAPTURE_PORT=$((RANDOM_NB + 33))
 CATALOGS_PORT=$((RANDOM_NB + 34))
 EOF
 
+echo "Run npm install in directory..."
 cd $TARGET_DIR
 npm install
 source dev/env.sh
