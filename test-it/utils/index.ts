@@ -231,7 +231,7 @@ export const scratchData = async () => {
       mongo.remoteServices.deleteMany({ id: /dataset:(.*)/ }),
       mongo.db.collection('journals').deleteMany({}),
       fs.emptyDir('./data/test-tmp'),
-      filesStorage.removeDir(path.resolve('../data/test'))
+      filesStorage.removeDir(path.resolve('./data/test'))
     ])
     await fs.emptyDir('./data/test')
     memoizedGetPublicationSiteSettings.clear()
