@@ -20,7 +20,7 @@ echo "Use random port $RANDOM_NB as base"
 
 echo "Create worktree specific .env file"
 cat <<EOF > "$TARGET_DIR/.env"
-WORKTREE=default
+WORKTREE=$BRANCH_NAME
 
 NGINX_PORT1=$((RANDOM_NB))
 NGINX_PORT2=$((RANDOM_NB + 1))
@@ -52,3 +52,4 @@ echo "-----------------------------------------------"
 echo "Next step:"
 echo "   cd $TARGET_DIR"
 echo "   source dev/env.sh"
+echo ""

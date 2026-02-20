@@ -41,7 +41,7 @@ npm run dev-deps          # Start MongoDB, ElasticSearch via Docker
 The test suite is very long, when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
 
 ```bash
-# Start test dependencies (Mongo, ES, MinIO)
+# Start test dependencies (Mongo, ES, MinIO), these will usually already be started when an AI agent is used
 npm run test-deps        
 # Run all tests
 npm test
