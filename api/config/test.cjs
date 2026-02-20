@@ -116,7 +116,7 @@ module.exports = {
     url: 'http://test.com/sirene/api-docs.json'
   }],
   observer: {
-    port: 9092
+    port: process.env.DEV_OBSERVER_PORT
   },
   cache: {
     // set cache-control max-age for public GET endpoints (in seconds)

@@ -27,6 +27,7 @@ NGINX_PORT2=$((RANDOM_NB + 1))
 
 DEV_API_PORT=$((RANDOM_NB + 10))
 DEV_UI_PORT=$((RANDOM_NB + 11))
+DEV_OBSERVER_PORT=$((RANDOM_NB + 12))
 
 ES_PORT=$((RANDOM_NB + 20))
 MONGO_PORT=$((RANDOM_NB + 21))
@@ -40,9 +41,13 @@ CAPTURE_PORT=$((RANDOM_NB + 33))
 CATALOGS_PORT=$((RANDOM_NB + 34))
 EOF
 
-echo "Run npm ci in worktree directory"
 cd $TARGET_DIR
+
+echo "Run npm ci in worktree directory"
 npm ci
+
+echo "Run test deps in worktree directory"
+npm run test-deps
 
 echo "-----------------------------------------------"
 echo "✅ Setup Complete!"
