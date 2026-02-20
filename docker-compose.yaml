@@ -71,7 +71,7 @@ services:
       - PORT=${SD_PORT}
       - DEBUG=webhooks,auth
       - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
-      - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:${NGINX_PORT}/api/v1/identities", "key": "dev_secret"}]'
+      - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:${NGINX_PORT1}/api/v1/identities", "key": "dev_secret"}]'
       - PUBLIC_URL=http://localhost:${NGINX_PORT1}/simple-directory
       - PRIVATE_EVENTS_URL=http://events:${EVENTS_PORT}
       - MAILDEV_ACTIVE=true
@@ -109,7 +109,7 @@ services:
       - PORT=${OAV_PORT}
       - USE_SIMPLE_DIRECTORY=true
       - PRIVATE_DIRECTORY_URL=http://localhost:${NGINX_PORT1}/simple-directory
-      - ALLOWED_URLS={"general":"http://localhost:5600/data-fair/api/v1/api-docs.json","dataset":"http://localhost:5600/data-fair/api/v1/datasets/{id}/api-docs.json","privateDataset":"http://localhost:5600/data-fair/api/v1/datasets/{id}/private-api-docs.json","application":"http://localhost:5600/data-fair/api/v1/applications/{id}/api-docs.json","remoteService":"http://localhost:5600/data-fair/api/v1/remote-services/{id}/api-docs.json"}
+      - ALLOWED_URLS={"general":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/api-docs.json","dataset":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/datasets/{id}/api-docs.json","privateDataset":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/datasets/{id}/private-api-docs.json","application":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/applications/{id}/api-docs.json","remoteService":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/remote-services/{id}/api-docs.json"}
 
   capture:
     profiles:
@@ -129,13 +129,13 @@ services:
     profiles:
       - dev
     image: ghcr.io/data-fair/events:main
-    ports:
-      - ${EVENTS_PORT}:8080
+    network_mode: host
     depends_on:
       - mongodb
     environment:
-      - PRIVATE_DIRECTORY_URL=http://sd:${SD_PORT}
-      - MONGO_URL=mongodb://mongo:${MONGO_PORT}/events
+      - PORT=${EVENTS_PORT}
+      - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
+      - MONGO_URL=mongodb://localhost:${MONGO_PORT}/events
       - SECRET_IDENTITIES=secret-identities
       - SECRET_EVENTS=secret-notifications
       - SECRET_SENDMAILS=secret-sendmails
@@ -145,16 +145,16 @@ services:
   #   profiles:
   #     - dev
   #   image: ghcr.io/data-fair/catalogs:master
-  #   ports:
-  #     - ${CATALOGS_PORT}:8080
+  #   network_mode: host
   #   depends_on:
   #     - mongodb
   #   environment:
+  #     - PORT=${CATALOGS_PORT}
   #     - DEBUG=webhooks-*
   #     - OBSERVER_ACTIVE=false
-  #     - PRIVATE_DIRECTORY_URL=http://sd:${SD_PORT}
-  #     - PRIVATE_EVENTS_URL=http://events:${EVENTS_PORT}
-  #     - MONGO_URL=mongodb://mongo:${MONGO_PORT}/catalogs
+  #     - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
+  #     - PRIVATE_EVENTS_URL=http://localhost:${EVENTS_PORT}
+  #     - MONGO_URL=mongodb://localhost:${MONGO_PORT}/catalogs
   #     - CIPHER_PASSWORD=test
   #     - SECRET_EVENTS=secret-notifications
   #     - SECRET_CATALOGS=secret-catalogs

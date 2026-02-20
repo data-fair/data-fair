@@ -4,8 +4,6 @@ source dev/default.env
 set +a
 
 # 2. Override with worktree-specific settings
-[ -f .env ] && source .env
-
 if [ -f ".env" ]; then
   set -a
   source .env
