@@ -24,8 +24,13 @@ export const formatLine = (item, schema) => {
     const prop = schema.find(p => p.key === key)
     if (prop && typeof item[key] === 'string') {
       const value = fieldsSniffer.format(item[key], prop)
-      if (value === null) delete item[key]
-      else item[key] = value
+      if (value === null) {
+        // for patch operations, convert empty string to null to signal property removal
+        if (item._action === 'patch') item[key] = null
+        else delete item[key]
+      } else {
+        item[key] = value
+      }
     }
     // special case for rest datasets where null values are kept in a patch
     if (item._action !== 'patch') {
