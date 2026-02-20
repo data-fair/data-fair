@@ -11,12 +11,6 @@ export const initialize = async function (dataset: Dataset) {
   await initialize.default(dataset)
 }
 
-export const downloadFile = async function (dataset: Dataset) {
-  await mongo.connect(true)
-  const downloadFile = await import('./download-file.ts')
-  await downloadFile.default(dataset)
-}
-
 export const storeFile = async function (dataset: Dataset) {
   await mongo.connect(true)
   const storeFile = await import('./store-file.ts')

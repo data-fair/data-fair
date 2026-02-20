@@ -11,8 +11,7 @@ const body = {
     isVirtual: datasetSchema.properties.isVirtual,
     isRest: datasetSchema.properties.isRest,
     isMetaOnly: datasetSchema.properties.isMetaOnly,
-    owner: datasetSchema.properties.owner,
-    remoteFile: datasetSchema.properties.remoteFile
+    owner: datasetSchema.properties.owner
   }
 }
 
