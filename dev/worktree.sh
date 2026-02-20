@@ -40,14 +40,15 @@ CAPTURE_PORT=$((RANDOM_NB + 33))
 CATALOGS_PORT=$((RANDOM_NB + 34))
 EOF
 
-echo "Run npm install in directory..."
+echo "Run npm ci in directory..."
 cd $TARGET_DIR
-npm install
-source dev/env.sh
+npm ci
 
 echo "-----------------------------------------------"
 echo "✅ Setup Complete!"
 echo "Location: $TARGET_DIR"
 echo "Branch:   $BRANCH_NAME"
 echo "-----------------------------------------------"
-echo "Next step: opencode $TARGET_DIR"
+echo "Next step:"
+echo "   cd $TARGET_DIR"
+echo "   source dev/env.sh"
