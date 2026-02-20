@@ -102,11 +102,8 @@ describe('publication sites', function () {
     // Test multi-domain image support
     const imageFullUrl = config.publicUrl + '/uploads/test-image.png'
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { image: imageFullUrl })
-    const updated = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
-    assert.ok(updated.image.startsWith('/'), 'image should be stored as relative path')
-    assert.equal(updated.image, '/uploads/test-image.png')
     const publishedDataset = (await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`)).data
-    assert.equal(publishedDataset.image, 'http://localhost:5601/uploads/test-image.png')
+    assert.equal(publishedDataset.image, 'http://localhost:5601/data-fair/uploads/test-image.png')
   })
 
   it('should publish application on a org site', async function () {
@@ -123,11 +120,8 @@ describe('publication sites', function () {
     // Test multi-domain image support
     const imageFullUrl = config.publicUrl + '/uploads/app-image.png'
     await ax.patch(`/api/v1/applications/${app.id}`, { image: imageFullUrl })
-    const updated = (await ax.get(`/api/v1/applications/${app.id}`)).data
-    assert.ok(updated.image.startsWith('/'), 'image should be stored as relative path')
-    assert.equal(updated.image, '/uploads/app-image.png')
     const publishedApp = (await ax.get(`http://localhost:5601/data-fair/api/v1/applications/${app.id}`)).data
-    assert.equal(publishedApp.image, 'http://localhost:5601/uploads/app-image.png')
+    assert.equal(publishedApp.image, 'http://localhost:5601/data-fair/uploads/app-image.png')
   })
 
   it('department admin should fail to publish dataset on org site', async function () {

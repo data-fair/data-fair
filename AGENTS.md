@@ -27,7 +27,6 @@ This is a monorepo using npm workspaces with the following packages:
 - **Frontend:** Vue.js 2, Nuxt 2, Vuetify 2
 - **Storage:** Local filesystem or S3-compatible storage
 - **Data Formats:** CSV, Excel, JSON, GeoJSON, Parquet, Shapefile
-- **Standards:** DCAT, RDF, JSON-LD
 
 ## Running the Project
 
@@ -35,32 +34,22 @@ This is a monorepo using npm workspaces with the following packages:
 
 ```bash
 npm run dev-deps          # Start MongoDB, ElasticSearch via Docker
-npm run dev-api           # Start API server (port 5600)
-npm run dev-ui            # Start frontend dev server
-npm run dev-zellij        # Start both with Zellij layout
+npm run dev-proxy         # Start local Nginx
 ```
 
 ### Testing
 
+The test suite is very long, when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
+
 ```bash
-npm test                  # Run all tests (test-it/)
-npm run test-deps        # Start test dependencies (Mongo, ES, MinIO)
-```
-
-### New Test Runner (test-it/)
-
-Tests have been migrated from Mocha (`test/`) to Node.js native test runner (`test-it/`).
-
-**Running tests:**
-```bash
-# Run all migrated tests
+# Start test dependencies (Mongo, ES, MinIO)
+npm run test-deps        
+# Run all tests
 npm test
-
 # Run a specific test file
-NODE_CONFIG_DIR=./api/config/ NODE_ENV=test node --test test-it/<test-name>.ts
-
+npm run test-base test-it/<test-name>.ts
 # Run a specific test
-NODE_CONFIG_DIR=./api/config/ NODE_ENV=test node --test test-it/<test-name>.ts -t "test name"
+npm run test-base test-it/<test-name>.ts -t "test name"
 ```
 
 **Test conventions:**
