@@ -3,7 +3,7 @@ import validateDcat from '../api/src/misc/utils/dcat/validate.js'
 import { memoizedGetPublicationSiteSettings } from '@data-fair/data-fair-api/src/misc/utils/settings.ts'
 import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
-import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth } from './utils/index.ts'
+import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, config } from './utils/index.ts'
 
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
@@ -98,17 +98,36 @@ describe('publication sites', function () {
     if (!valid) console.error('DCAT validation failed', validateDcat.errors)
     assert.ok(valid)
     assert.ok(dcatCatalog.dataset?.length, 1)
+
+    // Test multi-domain image support
+    const imageFullUrl = config.publicUrl + '/uploads/test-image.png'
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { image: imageFullUrl })
+    const updated = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
+    assert.ok(updated.image.startsWith('/'), 'image should be stored as relative path')
+    assert.equal(updated.image, '/uploads/test-image.png')
+    const publishedDataset = (await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`)).data
+    assert.equal(publishedDataset.image, 'http://localhost:5601/uploads/test-image.png')
   })
 
   it('should publish application on a org site', async function () {
     const ax = dmeadusOrg
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }
     await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+    memoizedGetPublicationSiteSettings.clear()
 
     const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
 
     await ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: ['data-fair-portals:portal1'] })
+
+    // Test multi-domain image support
+    const imageFullUrl = config.publicUrl + '/uploads/app-image.png'
+    await ax.patch(`/api/v1/applications/${app.id}`, { image: imageFullUrl })
+    const updated = (await ax.get(`/api/v1/applications/${app.id}`)).data
+    assert.ok(updated.image.startsWith('/'), 'image should be stored as relative path')
+    assert.equal(updated.image, '/uploads/app-image.png')
+    const publishedApp = (await ax.get(`http://localhost:5601/data-fair/api/v1/applications/${app.id}`)).data
+    assert.equal(publishedApp.image, 'http://localhost:5601/uploads/app-image.png')
   })
 
   it('department admin should fail to publish dataset on org site', async function () {

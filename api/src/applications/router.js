@@ -299,6 +299,11 @@ router.patch('/:applicationId',
     const application = req.application
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
 
+    // Strip publicBaseUrl from image URL for multi-domain compatibility
+    if (patch.image?.startsWith(req.publicBaseUrl)) {
+      patch.image = patch.image.slice(req.publicBaseUrl.length)
+    }
+
     // Retry previously failed publications
     if (!patch.publications) {
       const failedPublications = (application.publications || []).filter(p => p.status === 'error')

@@ -4,6 +4,7 @@ import equal from 'deep-equal'
 import moment from 'moment'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
+import config from '#config'
 import * as geo from './geo.js'
 import * as datasetUtils from './index.js'
 import * as extensions from './extensions.ts'
@@ -24,6 +25,11 @@ import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queu
  */
 export const preparePatch = async (app, patch, dataset, sessionState, locale, draftValidationMode, files) => {
   const db = mongo.db
+
+  // Strip publicUrl from image URL for multi-domain compatibility
+  if (patch.image?.startsWith(config.publicUrl)) {
+    patch.image = patch.image.slice(config.publicUrl.length)
+  }
 
   patch.id = dataset.id
   patch.slug = patch.slug || dataset.slug
