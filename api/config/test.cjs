@@ -27,9 +27,9 @@ module.exports = {
   privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
   captureUrl: `http://localhost:${process.env.NGINX_PORT1}/capture`,
   privateCaptureUrl: `http://localhost:${process.env.CAPTURE_PORT}`,
-  dataDir: '../data/test',
-  tmpDir: '../data/test-tmp',
-  workerTmpDir: '../data/test-worker-tmp',
+  dataDir: './data/test',
+  tmpDir: './data/test-tmp',
+  workerTmpDir: './data/test-worker-tmp',
   brand: {
     embed: '<div>application embed</div>'
   },
