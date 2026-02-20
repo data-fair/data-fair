@@ -1,15 +1,25 @@
 // use this host when debugging a data-fair inside a virtualbox vm
 // in this case docker compose.yml also needs a few modifications
-// const host = '10.0.2.2'
-const host = 'localhost'
+
+if (!process.env.WORKTREE) throw new Error('missing WORKTREE env variable, use "source dev/env.sh" to load env vars')
 
 module.exports = {
   port: 5599,
   dataDir: '../data/development',
+  mongo: {
+    url: `mongodb://localhost:${process.env.MONGO_PORT}/data-fair-development`,
+  },
+  elasticsearch: {
+    host: `localhost:${process.env.ES_PORT}`,
+    // searchTimeout: '2s'
+    acceptYellowStatus: true
+  },
   filesStorage: 'fs',
+  publicUrl: `http://localhost:${process.env.NGINX_PORT1}/data-fair`,
+  wsPublicUrl: `ws://localhost:${process.env.NGINX_PORT1}/data-fair`,
   s3: {
     region: 'us-east-1',
-    endpoint: 'http://localhost:9097',
+    endpoint: `http://localhost:${process.env.S3_PORT}`,
     bucket: 'bucketdev',
     credentials: {
       accessKeyId: '',
@@ -17,14 +27,12 @@ module.exports = {
     },
     forcePathStyle: true
   },
-  publicUrl: `http://${host}:5600/data-fair`,
-  wsPublicUrl: `ws://${host}:5600/data-fair`,
-  directoryUrl: `http://${host}:5600/simple-directory`,
-  privateDirectoryUrl: 'http://localhost:5600/simple-directory',
-  captureUrl: `http://${host}:5600/capture`,
-  privateCaptureUrl: 'http://localhost:8087',
-  privateCatalogsUrl: `http://${host}:5600/catalogs`,
-  privateEventsUrl: 'http://localhost:8088',
+  directoryUrl: `http://localhost:${process.env.NGINX_PORT1}/simple-directory`,
+  privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
+  captureUrl: `http://localhost:${process.env.NGINX_PORT1}/capture`,
+  privateCaptureUrl: `http://localhost:${process.env.CAPTURE_PORT}`,
+  // privateCatalogsUrl: `http://${host}:5600/catalogs`,
+  privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
     totalStorage: 10000000000,
@@ -65,7 +73,7 @@ module.exports = {
     {
       id: 'test',
       title: { fr: 'Test', en: 'Test en' },
-      iframe: `http://${host}:5600/data-fair/_dev/extra`,
+      iframe: `http://localhost:${process.env.NGINX_PORT1}/data-fair/_dev/extra`,
       basePath: '/data-fair',
       icon: 'mdi-link',
       group: 'help'
@@ -90,13 +98,10 @@ module.exports = {
   disableApplications: false,
   disableRemoteServices: false,
   disablePublicationSites: false,
-  elasticsearch: {
-    // searchTimeout: '2s'
-    acceptYellowStatus: true
-  },
   clamav: {
     active: true,
-    dataDir: '/data/data-fair/development'
+    dataDir: '/data/data-fair/development',
+    port: process.env.CLAMAV_PORT,
   },
   assertImmutable: true,
   agentkeepaliveOptions: {

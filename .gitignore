@@ -18,3 +18,4 @@ node_modules
 /api/config/local-*
 .type/
 /tmp
+.env

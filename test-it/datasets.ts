@@ -536,13 +536,13 @@ describe('datasets', function () {
     const thumbnail1 = res.data.results[0]._thumbnail
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err: any) => err.status === 302)
     await assert.rejects(anonymous.get(res.data.results[0]._thumbnail), (err: any) => err.status === 403)
-    assert.ok(thumbnail1.startsWith(`http://localhost:5600/data-fair/api/v1/datasets/${dataset.id}/thumbnail/`))
+    assert.ok(thumbnail1.startsWith(`${config.publicUrl}/api/v1/datasets/${dataset.id}/thumbnail/`))
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://localhost:${process.env.NGINX_PORT2}` }
     await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
 
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: 'localhost:5601' } })
-    assert.equal(thumbnail1.replace('localhost:5600', 'localhost:5601'), res.data.results[0]._thumbnail)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `localhost:${process.env.NGINX_PORT2}` } })
+    assert.equal(thumbnail1.replace('localhost:' + process.env.NGINX_PORT1, `localhost:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
 
     // remove attachmentsAsImage
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { attachmentsAsImage: null }, { params: { draft: true } })).data

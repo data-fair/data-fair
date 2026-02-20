@@ -14,7 +14,7 @@ describe('datasets based on remote files', function () {
 
   it('manage failure to fetch file', async function () {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://localhost:5600/notafile' } })
+    const res = await ax.post('/api/v1/datasets', { remoteFile: { url: `http://localhost:${process.env.NGINX_PORT1}/notafile` } })
     const dataset = res.data
     await assert.rejects(workers.hook('finalize/' + dataset.id), (err: any) => {
       assert.ok(err.message.includes('404 - Not Found'))

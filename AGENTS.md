@@ -34,7 +34,6 @@ This is a monorepo using npm workspaces with the following packages:
 
 ```bash
 npm run dev-deps          # Start MongoDB, ElasticSearch via Docker
-npm run dev-proxy         # Start local Nginx
 ```
 
 ### Testing

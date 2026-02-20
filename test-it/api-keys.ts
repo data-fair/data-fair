@@ -88,7 +88,7 @@ describe('API keys', function () {
     const key2 = res.data.apiKeys[1]
     const key3 = res.data.apiKeys[2]
     const key4 = res.data.apiKeys[3]
-    assert.ok(key4.email.endsWith('@api-key.localhost:5600'))
+    assert.ok(key4.email.endsWith('@api-key.localhost:' + process.env.NGINX_PORT1))
     const key5 = res.data.apiKeys[4]
 
     // Right scope

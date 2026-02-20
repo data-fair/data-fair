@@ -14,8 +14,6 @@
     "lint-fix": "eslint --fix . && npm -w ui run lint-fix && npm -w embed-ui run lint-fix",
     "dev-deps": "docker compose --profile dev up -d --wait",
     "stop-dev-deps": "docker compose --profile dev stop",
-    "dev-proxy": "docker compose -f docker-compose-proxy.yaml up -d --wait",
-    "stop-dev-proxy": "docker compose -f docker-compose-proxy.yaml stop",
     "dev-api": "MODE=server npm -w api run dev",
     "dev-worker": "MODE=worker DEBUG=upgrade* OBSERVER_PORT=9091 npm -w api run dev",
     "dev-ui": "npm -w ui run dev",
