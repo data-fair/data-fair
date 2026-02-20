@@ -19,5 +19,8 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Load environment variables
+      run: source dev/env.sh
+
     - name: Run quality checks
       run: OGR2OGR_SKIP=true npm run quality
