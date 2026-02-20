@@ -26,7 +26,7 @@
     "build-parser-group-by": "peggy --dts --format es --output api/src/api-compat/ods/group-by.peg.js api/src/api-compat/ods/group-by.pegjs api/src/api-compat/ods/lexic.pegjs",
     "build-parser-aliases": "peggy --dts --format es --output api/src/api-compat/ods/aliases.peg.js api/src/api-compat/ods/aliases.pegjs api/src/api-compat/ods/lexic.pegjs",
     "build-parser-refine": "peggy --dts --format es --output api/src/api-compat/ods/refine.peg.js api/src/api-compat/ods/refine.pegjs api/src/api-compat/ods/lexic.pegjs",
-    "postinstall": "patch-package && npm run build-types && npm run build",
+    "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc",
     "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm run test-s3 && npm audit --omit=dev --audit-level=critical"

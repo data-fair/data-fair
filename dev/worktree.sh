@@ -41,13 +41,20 @@ CAPTURE_PORT=$((RANDOM_NB + 33))
 CATALOGS_PORT=$((RANDOM_NB + 34))
 EOF
 
+echo "Move into $TARGET_DIR"
 cd $TARGET_DIR
+source dev/env.sh
 
-echo "Run npm ci in worktree directory"
+echo "npm ci"
 npm ci
 
-echo "Run test deps in worktree directory"
-source dev/env.sh
+echo "npm run build-types"
+npm run build-types
+
+echo "npm -w embed-ui run build"
+npm -w embed-ui run build
+
+echo "npm run test-deps"
 npm run test-deps
 
 echo "-----------------------------------------------"
