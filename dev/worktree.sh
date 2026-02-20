@@ -47,6 +47,7 @@ echo "Run npm ci in worktree directory"
 npm ci
 
 echo "Run test deps in worktree directory"
+source dev/env.sh
 npm run test-deps
 
 echo "-----------------------------------------------"
