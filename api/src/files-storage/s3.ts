@@ -1,6 +1,6 @@
 import config from '#config'
 import { relative as relativePath, resolve as resolvePath, join as joinPath } from 'node:path'
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2, PutObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCopyCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
 import { unlink } from 'node:fs/promises'
@@ -67,7 +67,7 @@ export class S3Backend implements FileBackend {
   }
 
   async removeDir (path: string): Promise<void> {
-    // the page size cannot be too large as it is also the number of parallel copies
+    // the page size cannot be too large as it is also the number of parallel deletes
     const pages = paginateListObjectsV2(
       { client: this.client, pageSize: 100 },
       { Bucket: config.s3.bucket, Prefix: bucketPath(path) }
@@ -76,13 +76,13 @@ export class S3Backend implements FileBackend {
     for await (const page of pages) {
       if (!page.Contents) continue
 
-      // Map each object in the current page to a Copy promise
+      // Map each object in the current page to a Delete promise
       const deletePromises = page.Contents.map((obj) => {
         const deleteParams = { Bucket: config.s3.bucket, Key: obj.Key, }
         return this.client.send(new DeleteObjectCommand(deleteParams))
       })
 
-      // Execute the batch of copies for this page
+      // Execute the batch of deletes for this page
       await Promise.all(deletePromises)
     }
   }
@@ -168,13 +168,70 @@ export class S3Backend implements FileBackend {
   }
 
   async copyFile (srcPath: string, dstPath: string) {
-    const params = {
-      Bucket: config.s3.bucket,
-      CopySource: `${config.s3.bucket}/${encodeURI(bucketPath(srcPath))}`,
-      Key: bucketPath(dstPath),
+    const srcKey = bucketPath(srcPath)
+    const dstKey = bucketPath(dstPath)
+
+    const headResp = await this.client.send(new HeadObjectCommand({ Bucket: config.s3.bucket, Key: srcKey }))
+    const fileSize = headResp.ContentLength!
+
+    const maxSingleCopySize = config.s3.maxSingleCopySize || 5 * 1024 * 1024 * 1024
+
+    if (fileSize < maxSingleCopySize) {
+      await this.client.send(new CopyObjectCommand({
+        Bucket: config.s3.bucket,
+        CopySource: `${config.s3.bucket}/${encodeURI(srcKey)}`,
+        Key: dstKey,
+      }))
+      return
     }
 
-    await this.client.send(new CopyObjectCommand(params))
+    const multipartChunkSize = config.s3.multipartChunkSize || 100 * 1024 * 1024
+    const totalParts = Math.ceil(fileSize / multipartChunkSize)
+
+    const createResp = await this.client.send(new CreateMultipartUploadCommand({
+      Bucket: config.s3.bucket,
+      Key: dstKey,
+    }))
+    const uploadId = createResp.UploadId!
+
+    try {
+      const copyParts = []
+      for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+        const start = (partNumber - 1) * multipartChunkSize
+        const end = Math.min(partNumber * multipartChunkSize, fileSize) - 1
+
+        const copyPart = this.client.send(new UploadPartCopyCommand({
+          Bucket: config.s3.bucket,
+          Key: dstKey,
+          CopySource: `${config.s3.bucket}/${encodeURI(srcKey)}`,
+          CopySourceRange: `bytes=${start}-${end}`,
+          UploadId: uploadId,
+          PartNumber: partNumber,
+        }))
+        copyParts.push(copyPart)
+      }
+
+      const responses = await Promise.all(copyParts)
+
+      await this.client.send(new CompleteMultipartUploadCommand({
+        Bucket: config.s3.bucket,
+        Key: dstKey,
+        UploadId: uploadId,
+        MultipartUpload: {
+          Parts: responses.map((r, i) => ({
+            ETag: r.CopyPartResult!.ETag,
+            PartNumber: i + 1,
+          })),
+        },
+      }))
+    } catch (err) {
+      await this.client.send(new AbortMultipartUploadCommand({
+        Bucket: config.s3.bucket,
+        Key: dstKey,
+        UploadId: uploadId,
+      }))
+      throw err
+    }
   }
 
   async moveFile (srcPath: string, dstPath: string) {
@@ -195,14 +252,11 @@ export class S3Backend implements FileBackend {
       // Map each object in the current page to a Copy promise
       const copyPromises = page.Contents.map((obj) => {
         const sourceKey = obj.Key!
-        // Replace the old prefix with the new prefix for the destination
-        const copyParams = {
-          Bucket: config.s3.bucket,
-          CopySource: `${config.s3.bucket}/${encodeURI(sourceKey)}`,
-          Key: sourceKey.replace(bucketPath(srcPath), bucketPath(dstPath)),
-        }
-
-        return this.client.send(new CopyObjectCommand(copyParams))
+        const destKey = sourceKey.replace(bucketPath(srcPath), bucketPath(dstPath))
+        return this.copyFile(
+          joinPath(dataDir, sourceKey),
+          joinPath(dataDir, destKey)
+        )
       })
 
       // Execute the batch of copies for this page
