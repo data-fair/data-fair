@@ -75,6 +75,7 @@ ADD patches patches
 RUN npm ci --no-audit --no-fund
 
 ADD /api/types api/types
+ADD /api/types api/types
 ADD /api/doc api/doc
 ADD /api/contract api/contract
 RUN npm run build-types
