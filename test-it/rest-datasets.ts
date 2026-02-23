@@ -99,6 +99,42 @@ describe('REST datasets', function () {
     await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
   })
 
+  it('Patch with empty string and null should remove properties', async function () {
+    const ax = dmeadus
+    await ax.put('/api/v1/datasets/restpatchempty', {
+      isRest: true,
+      title: 'restpatchempty',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    let res = await ax.post('/api/v1/datasets/restpatchempty/lines', { _id: 'line1', attr1: 'test1', attr2: 'test1' })
+    await workers.hook('finalize/restpatchempty')
+
+    // patch with empty string should remove the property
+    res = await ax.patch('/api/v1/datasets/restpatchempty/lines/line1', { attr1: '' })
+    await workers.hook('finalize/restpatchempty')
+    res = await ax.get('/api/v1/datasets/restpatchempty/lines/line1')
+    assert.equal(res.data.attr1, undefined, 'empty string patch should remove property')
+    assert.equal(res.data.attr2, 'test1', 'attr2 should be unchanged')
+
+    // patch with null should also remove the property
+    res = await ax.patch('/api/v1/datasets/restpatchempty/lines/line1', { attr2: null })
+    await workers.hook('finalize/restpatchempty')
+    res = await ax.get('/api/v1/datasets/restpatchempty/lines/line1')
+    assert.equal(res.data.attr1, undefined, 'attr1 should still be removed')
+    assert.equal(res.data.attr2, undefined, 'null patch should remove property')
+
+    // also test in bulk
+    await ax.post('/api/v1/datasets/restpatchempty/lines', { _id: 'line2', attr1: 'val1', attr2: 'val2' })
+    await workers.hook('finalize/restpatchempty')
+    res = await ax.post('/api/v1/datasets/restpatchempty/_bulk_lines', [
+      { _action: 'patch', _id: 'line2', attr1: '', attr2: null }
+    ])
+    await workers.hook('finalize/restpatchempty')
+    res = await ax.get('/api/v1/datasets/restpatchempty/lines/line2')
+    assert.equal(res.data.attr1, undefined, 'bulk patch: empty string should remove property')
+    assert.equal(res.data.attr2, undefined, 'bulk patch: null should remove property')
+  })
+
   it('Reject properly json missing content-type', async function () {
     const ax = dmeadus
     await ax.post('/api/v1/datasets/restjson', {
