@@ -115,7 +115,7 @@ module.exports = {
           // used by routes with dynamic contents (search mostly)
           dynamic: 500000, // 500 kB/s
           // used by routes with static files content
-          static: 2000000 // 2 mB/s
+          static: 8000000 // 8 mB/s
         }
       },
       user: {
@@ -126,7 +126,7 @@ module.exports = {
           // used by routes with dynamic contents (search mostly)
           dynamic: 1000000, // 1 mB/s
           // used by routes with static files content
-          static: 8000000 // 8mB/s
+          static: 16000000 // 16 mB/s
         }
       },
       remoteService: {
