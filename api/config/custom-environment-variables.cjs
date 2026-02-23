@@ -176,6 +176,31 @@ module.exports = {
     maxSpreadsheetSize: {
       __name: 'DEFAULT_LIMITS_MAX_SPREADSHEET_SIZE',
       __format: 'json'
+    },
+    apiRate: {
+      anonymous: {
+        duration: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_DURATION',
+        nb: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_NB',
+        bandwidth: {
+          dynamic: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_BANDWIDTH_DYNAMIC',
+          static: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_BANDWIDTH_STATIC'
+        }
+      },
+      user: {
+        duration: 'DEFAULT_LIMITS_API_RATE_USER_DURATION',
+        nb: 'DEFAULT_LIMITS_API_RATE_USER_NB',
+        bandwidth: {
+          dynamic: 'DEFAULT_LIMITS_API_RATE_USER_BANDWIDTH_DYNAMIC',
+          static: 'DEFAULT_LIMITS_API_RATE_USER_BANDWIDTH_STATIC'
+        }
+      },
+      remoteService: {
+        duration: 'DEFAULT_LIMITS_API_RATE_REMOTE_SERVICE_DURATION',
+        nb: 'DEFAULT_LIMITS_API_RATE_REMOTE_SERVICE_NB',
+        bandwidth: {
+          dynamic: 'DEFAULT_LIMITS_API_RATE_REMOTE_SERVICE_BANDWIDTH_DYNAMIC'
+        }
+      }
     }
   },
   worker: {
