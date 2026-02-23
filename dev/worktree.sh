@@ -15,7 +15,7 @@ TARGET_DIR="../${REPO_NAME}_${BRANCH_NAME}"
 echo "Creating worktree at $TARGET_DIR from branch $SOURCE_BRANCH"
 git worktree add -b "$BRANCH_NAME" "$TARGET_DIR" $SOURCE_BRANCH
 
-RANDOM_NB=$((3000 + RANDOM % 6001))
+RANDOM_NB=$((1024 + RANDOM % 48000))
 echo "Use random port $RANDOM_NB as base"
 
 echo "Create worktree specific .env file"
