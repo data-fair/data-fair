@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import { resolvedSchema as _remoteServicePatchSchema } from '../doc/remote-services/patch-req/.type/index.js'
 import { resolvedSchema as _remoteServiceSchema } from '#types/remote-service/index.js'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'

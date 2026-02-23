@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import pJson from './p-json.js'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as utils from './utils.js'

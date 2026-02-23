@@ -1,0 +1,514 @@
+{
+  "$id": "https://github.com/data-fair/data-fair/api/config",
+  "x-exports": [
+    "types",
+    "validate"
+  ],
+  "x-ajv": {
+    "coerceTypes": "array"
+  },
+  "x-jstt": {
+    "additionalProperties": false
+  },
+  "type": "object",
+  "title": "Api config",
+  "required": [
+    "mode",
+    "port",
+    "publicUrl",
+    "dataDir",
+    "filesStorage",
+    "mongo",
+    "elasticsearch",
+    "indicesPrefix",
+    "defaultLimits",
+    "worker",
+    "secretKeys",
+    "globalWebhooks",
+    "locks",
+    "datasetStateRetries",
+    "cache",
+    "tiles",
+    "analytics",
+    "browserLogLevel",
+    "nuxtDev",
+    "applicationsDirectories",
+    "applications",
+    "applicationsPrivateMapping",
+    "brand",
+    "info",
+    "baseAppsCategories",
+    "remoteServices",
+    "catalogs",
+    "remoteTimeout",
+    "ogr2ogr",
+    "dateFormats",
+    "dateTimeFormats",
+    "defaultTimeZone",
+    "i18n",
+    "observer",
+    "agentkeepaliveOptions",
+    "clamav",
+    "assertImmutable",
+    "remoteAttachmentCacheDuration",
+    "extensionUpdateDelay",
+    "apiKeysMaxDuration"
+  ],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["server_worker", "server", "worker"]
+    },
+    "port": {
+      "type": "number"
+    },
+    "listenWhenReady": {
+      "type": "boolean"
+    },
+    "publicUrl": {
+      "type": "string"
+    },
+    "oldPublicUrl": {
+      "type": "string"
+    },
+    "wsPublicUrl": {
+      "type": "string"
+    },
+    "dataDir": {
+      "type": "string"
+    },
+    "tmpDir": {
+      "type": "string"
+    },
+    "filesStorage": {
+      "type": "string",
+      "enum": ["fs", "s3"]
+    },
+    "s3": {
+      "type": "object",
+      "properties": {
+        "region": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "bucket": { "type": "string" },
+        "credentials": {
+          "type": "object",
+          "properties": {
+            "accessKeyId": { "type": "string" },
+            "secretAccessKey": { "type": "string" }
+          }
+        },
+        "forcePathStyle": { "type": "boolean" }
+      }
+    },
+    "sessionDomain": {
+      "type": ["string", "null"]
+    },
+    "directoryUrl": {
+      "type": "string"
+    },
+    "privateDirectoryUrl": {
+      "type": ["string", "null"]
+    },
+    "captureUrl": {
+      "type": "string"
+    },
+    "privateCaptureUrl": {
+      "type": ["string", "null"]
+    },
+    "privateCatalogsUrl": {
+      "type": ["string", "null"]
+    },
+    "privateEventsUrl": {
+      "type": ["string", "null"]
+    },
+    "privatePortalsManagerUrl": {
+      "type": ["string", "null"]
+    },
+    "privateProcessingsUrl": {
+      "type": ["string", "null"]
+    },
+    "privateMetricsUrl": {
+      "type": ["string", "null"]
+    },
+    "subscriptionUrl": {
+      "type": ["string", "null"]
+    },
+    "pluginsDir": {
+      "type": "string"
+    },
+    "mongo": {
+      "type": "object",
+      "required": ["url", "maxBulkOps", "options"],
+      "properties": {
+        "url": { "type": "string" },
+        "maxBulkOps": { "type": "number" },
+        "options": { "type": "object" }
+      }
+    },
+    "map": {
+      "type": "object",
+      "properties": {
+        "style": { "type": "string" },
+        "beforeLayer": { "type": "string" }
+      }
+    },
+    "elasticsearch": {
+      "type": "object",
+      "required": ["host", "auth", "nodes", "options", "ca", "defaultAnalyzer", "maxBulkLines", "maxBulkChars", "maxShardSize", "nbReplicas", "maxPageSize", "singleLineOpRefresh", "searchTimeout", "acceptYellowStatus"],
+      "properties": {
+        "host": { "type": "string" },
+        "auth": { "type": ["object", "null"] },
+        "nodes": { "type": ["array", "null"] },
+        "options": { "type": "object" },
+        "ca": { "type": ["string", "null"] },
+        "defaultAnalyzer": { "type": "string" },
+        "maxBulkLines": { "type": "number" },
+        "maxBulkChars": { "type": "number" },
+        "maxShardSize": { "type": "number" },
+        "nbReplicas": { "type": "number" },
+        "maxPageSize": { "type": "number" },
+        "singleLineOpRefresh": { "type": "string" },
+        "searchTimeout": { "type": "string" },
+        "acceptYellowStatus": { "type": "boolean" }
+      }
+    },
+    "indicesPrefix": {
+      "type": "string"
+    },
+    "info": {
+      "type": "object",
+      "properties": {
+        "termsOfService": { "type": "string" },
+        "contact": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "url": { "type": "string" }
+          }
+        }
+      }
+    },
+    "brand": {
+      "type": "object",
+      "properties": {
+        "logo": { "type": ["string", "null"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "embed": { "type": ["string", "null"] }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "dark": { "type": "boolean" },
+        "colors": {
+          "type": "object",
+          "properties": {
+            "primary": { "type": "string" },
+            "secondary": { "type": "string" },
+            "accent": { "type": "string" },
+            "error": { "type": "string" },
+            "info": { "type": "string" },
+            "success": { "type": "string" },
+            "warning": { "type": "string" },
+            "admin": { "type": "string" }
+          }
+        },
+        "darkColors": { "type": "object" },
+        "cssUrl": { "type": ["string", "null"] },
+        "cssText": { "type": "string" }
+      }
+    },
+    "darkModeSwitch": {
+      "type": "boolean"
+    },
+    "defaultLimits": {
+      "$ref": "#/$defs/defaultLimits"
+    },
+    "worker": {
+      "type": "object",
+      "required": ["interval", "baseConcurrency", "errorRetryDelay", "closeTimeout"],
+      "properties": {
+        "interval": { "type": "number" },
+        "baseConcurrency": { "type": "number" },
+        "errorRetryDelay": { "type": "number" },
+        "closeTimeout": { "type": "number" }
+      }
+    },
+    "adminRole": {
+      "type": "string"
+    },
+    "contribRole": {
+      "type": "string"
+    },
+    "userRole": {
+      "type": "string"
+    },
+    "secretKeys": {
+      "type": "object",
+      "properties": {
+        "identities": { "type": ["string", "null"] },
+        "limits": { "type": ["string", "null"] },
+        "catalogs": { "type": ["string", "null"] },
+        "notifications": { "type": ["string", "null"] },
+        "events": { "type": ["string", "null"] },
+        "ignoreRateLimiting": { "type": ["string", "null"] }
+      }
+    },
+    "globalWebhooks": {
+      "type": "object",
+      "properties": {
+        "consumption": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "locks": {
+      "type": "object",
+      "properties": {
+        "ttl": { "type": "number" }
+      }
+    },
+    "datasetStateRetries": {
+      "type": "object",
+      "required": ["interval", "nb"],
+      "properties": {
+        "interval": { "type": "number" },
+        "nb": { "type": "number" }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "required": ["publicMaxAge", "timestampedPublicMaxAge", "mongoSize", "reverseProxyCache"],
+      "properties": {
+        "publicMaxAge": { "type": "number" },
+        "timestampedPublicMaxAge": { "type": "number" },
+        "mongoSize": { "type": "number" },
+        "reverseProxyCache": { "type": "boolean" }
+      }
+    },
+    "tiles": {
+      "type": "object",
+      "required": ["geojsonvtTolerance", "vtPrepareMaxZoom", "maxThreads"],
+      "properties": {
+        "geojsonvtTolerance": { "type": "number" },
+        "vtPrepareMaxZoom": { "type": "number" },
+        "maxThreads": { "type": "number" }
+      }
+    },
+    "analytics": {
+      "type": "object"
+    },
+    "browserLogLevel": {
+      "type": "string"
+    },
+    "nuxtDev": {
+      "type": "boolean"
+    },
+    "applicationsDirectories": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "applications": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "applicationsPrivateMapping": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "baseAppsCategories": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "remoteServices": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "remoteServicesPrivateMapping": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "catalogs": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "defaultRemoteKey": {
+      "type": "object",
+      "properties": {
+        "in": { "type": "string" },
+        "name": { "type": "string" },
+        "value": { "type": ["string", "null"] }
+      }
+    },
+    "remoteTimeout": {
+      "type": "number"
+    },
+    "disableSharing": {
+      "type": "boolean"
+    },
+    "disableApplications": {
+      "type": "boolean"
+    },
+    "disableRemoteServices": {
+      "type": "boolean"
+    },
+    "disablePublicationSites": {
+      "type": "boolean"
+    },
+    "proxyNuxt": {
+      "type": "boolean"
+    },
+    "ogr2ogr": {
+      "type": "object",
+      "required": ["skip", "timeout"],
+      "properties": {
+        "skip": { "type": "boolean" },
+        "timeout": { "type": "number" }
+      }
+    },
+    "extraNavigationItems": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "extraAdminNavigationItems": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "extraDocLinks": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "dateFormats": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "dateTimeFormats": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "defaultTimeZone": {
+      "type": "string"
+    },
+    "i18n": {
+      "type": "object",
+      "required": ["locales", "defaultLocale"],
+      "properties": {
+        "locales": { "type": "string" },
+        "defaultLocale": { "type": "string" }
+      }
+    },
+    "remoteFilesAutoUpdates": {
+      "type": "object",
+      "properties": {
+        "cron": { "type": "string" }
+      }
+    },
+    "observer": {
+      "type": "object",
+      "required": ["active", "port"],
+      "properties": {
+        "active": { "type": "boolean" },
+        "port": { "type": "number" }
+      }
+    },
+    "agentkeepaliveOptions": {
+      "type": "object",
+      "required": ["maxSockets", "maxFreeSockets", "timeout", "freeSocketTimeout"],
+      "properties": {
+        "maxSockets": { "type": "number" },
+        "maxFreeSockets": { "type": "number" },
+        "timeout": { "type": "number" },
+        "freeSocketTimeout": { "type": "number" }
+      }
+    },
+    "clamav": {
+      "type": "object",
+      "required": ["active", "host", "port", "dataDir"],
+      "properties": {
+        "active": { "type": "boolean" },
+        "host": { "type": "string" },
+        "port": { "type": "number" },
+        "dataDir": { "type": "string" }
+      }
+    },
+    "assertImmutable": {
+      "type": "boolean"
+    },
+    "remoteAttachmentCacheDuration": {
+      "type": "number"
+    },
+    "extensionUpdateDelay": {
+      "type": "number"
+    },
+    "compatODS": {
+      "type": "boolean"
+    },
+    "apiKeysMaxDuration": {
+      "type": "number"
+    }
+  },
+  "$defs": {
+    "defaultLimits": {
+      "type": "object",
+      "required": [
+        "totalStorage",
+        "totalIndexed",
+        "datasetStorage",
+        "datasetIndexed",
+        "nbDatasets",
+        "attachmentStorage",
+        "attachmentIndexed",
+        "apiRate",
+        "hideBrand",
+        "maxSpreadsheetSize"
+      ],
+      "properties": {
+        "totalStorage": { "type": "number" },
+        "totalIndexed": { "type": "number" },
+        "datasetStorage": { "type": "number" },
+        "datasetIndexed": { "type": "number" },
+        "nbDatasets": { "type": "number" },
+        "attachmentStorage": { "type": "number" },
+        "attachmentIndexed": { "type": "number" },
+        "apiRate": {
+          "type": "object",
+          "properties": {
+            "anonymous": { "$ref": "#/$defs/apiRateLimit" },
+            "user": { "$ref": "#/$defs/apiRateLimit" },
+            "remoteService": { "$ref": "#/$defs/apiRateLimit" },
+            "postApplicationKey": { "$ref": "#/$defs/rateLimitSimple" },
+            "appCaptures": { "$ref": "#/$defs/rateLimitSimple" }
+          }
+        },
+        "hideBrand": { "type": "number" },
+        "maxSpreadsheetSize": { "type": "number" }
+      }
+    },
+    "apiRateLimit": {
+      "type": "object",
+      "required": ["duration", "nb", "bandwidth"],
+      "properties": {
+        "duration": { "type": "number" },
+        "nb": { "type": "number" },
+        "bandwidth": {
+          "type": "object",
+          "properties": {
+            "dynamic": { "type": "number" },
+            "static": { "type": "number" }
+          }
+        }
+      }
+    },
+    "rateLimitSimple": {
+      "type": "object",
+      "required": ["duration", "nb"],
+      "properties": {
+        "duration": { "type": "number" },
+        "nb": { "type": "number" }
+      }
+    }
+  }
+}

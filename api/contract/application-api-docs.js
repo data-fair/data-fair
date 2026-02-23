@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import { resolvedSchema as applicationSchema } from '../types/application/index.js'
 import { resolvedSchema as appConfigSchema } from '../types/app-config/index.js'
 
