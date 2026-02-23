@@ -16,7 +16,9 @@ module.exports = {
       accessKeyId: '',
       secretAccessKey: '',
     },
-    forcePathStyle: true
+    forcePathStyle: true,
+    maxSingleCopySize: 5 * 1024 * 1024 * 1024, // 5GB - threshold for using multipart copy
+    multipartChunkSize: 100 * 1024 * 1024, // 100MB - chunk size for multipart copy
   },
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',

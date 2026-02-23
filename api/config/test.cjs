@@ -21,7 +21,9 @@ module.exports = {
       accessKeyId: '',
       secretAccessKey: '',
     },
-    forcePathStyle: true
+    forcePathStyle: true,
+    maxSingleCopySize: 5 * 1024 * 1024 * 1024,
+    multipartChunkSize: 100 * 1024 * 1024
   },
   directoryUrl: `http://localhost:${process.env.NGINX_PORT1}/simple-directory`,
   privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
