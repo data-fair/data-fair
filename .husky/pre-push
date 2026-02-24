@@ -1,5 +1,1 @@
-bash << EOF
-set -e
-source dev/env.sh
 npm run quality
-EOF

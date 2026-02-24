@@ -42,7 +42,7 @@ npm run test
 
 ## Working with Git Worktrees
 
-This project supports git worktrees with fully isolated port allocations, allowing multiple branches to run concurrently (useful for AI agents or parallel development). Run `./dev/worktree.sh <branch-name>` to create a new worktree with its own `.env`, Docker Compose project, and randomized port range. In any worktree (including the main one), always run `source dev/env.sh` before starting services or tests to load the correct environment variables.
+This project supports git worktrees with fully isolated port allocations, allowing multiple branches to run concurrently (useful for AI agents or parallel development). Run `./dev/worktree.sh <branch-name>` to create a new worktree with its own `.env`, Docker Compose project, and randomized port range. When setting up for the first time, not in a worktree, you can run `./dev/init-env.sh`.
 
 ## Docker image
 

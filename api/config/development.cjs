@@ -1,10 +1,9 @@
-// use this host when debugging a data-fair inside a virtualbox vm
-// in this case docker compose.yml also needs a few modifications
+require('dotenv').config()
 
-if (!process.env.WORKTREE) throw new Error('missing WORKTREE env variable, use "source dev/env.sh" to load env vars')
+if (!process.env.DEV_API_PORT) throw new Error('missing DEV_API_PORT env variable, use "source dev/init-env.sh" to init .env file')
 
 module.exports = {
-  port: 5599,
+  port: process.env.DEV_API_PORT,
   dataDir: '../data/development',
   mongo: {
     url: `mongodb://localhost:${process.env.MONGO_PORT}/data-fair-development`,
@@ -113,5 +112,8 @@ module.exports = {
     description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
     server: 'https://staging-koumoul.com/tileserver'
   }],
-  compatODS: true
+  compatODS: true,
+  observer: {
+    port: process.env.DEV_OBSERVER_PORT
+  },
 }

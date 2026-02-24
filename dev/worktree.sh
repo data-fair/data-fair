@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x # trace all commandes
+
 BRANCH_NAME=$1
 
 if [ -z "$BRANCH_NAME" ]; then
@@ -15,35 +17,10 @@ TARGET_DIR="../${REPO_NAME}_${BRANCH_NAME}"
 echo "Creating worktree at $TARGET_DIR from branch $SOURCE_BRANCH"
 git worktree add -b "$BRANCH_NAME" "$TARGET_DIR" $SOURCE_BRANCH
 
-RANDOM_NB=$((1024 + RANDOM % 48000))
-echo "Use random port $RANDOM_NB as base"
-
-echo "Create worktree specific .env file"
-cat <<EOF > "$TARGET_DIR/.env"
-WORKTREE=$BRANCH_NAME
-
-NGINX_PORT1=$((RANDOM_NB))
-NGINX_PORT2=$((RANDOM_NB + 1))
-
-DEV_API_PORT=$((RANDOM_NB + 10))
-DEV_UI_PORT=$((RANDOM_NB + 11))
-DEV_OBSERVER_PORT=$((RANDOM_NB + 12))
-
-ES_PORT=$((RANDOM_NB + 20))
-MONGO_PORT=$((RANDOM_NB + 21))
-S3_PORT=$((RANDOM_NB + 22))
-CLAMAV_PORT=$((RANDOM_NB + 23))
-
-SD_PORT=$((RANDOM_NB + 30))
-EVENTS_PORT=$((RANDOM_NB + 31))
-OAV_PORT=$((RANDOM_NB + 32))
-CAPTURE_PORT=$((RANDOM_NB + 33))
-CATALOGS_PORT=$((RANDOM_NB + 34))
-EOF
-
-echo "Move into $TARGET_DIR"
 cd $TARGET_DIR
-source dev/env.sh
+
+echo "Create .env file"
+./dev/init-env.sh
 
 echo "npm ci"
 npm ci

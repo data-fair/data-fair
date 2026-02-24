@@ -1,4 +1,6 @@
-if (!process.env.WORKTREE) throw new Error('missing WORKTREE env variable, use "source dev/env.sh" to load env vars')
+require('dotenv').config()
+
+if (!process.env.DEV_API_PORT) throw new Error('missing DEV_API_PORT env variable, use "source dev/init-env.sh" to init .env file')
 
 module.exports = {
   port: process.env.DEV_API_PORT,

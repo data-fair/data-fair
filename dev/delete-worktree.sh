@@ -18,7 +18,6 @@ fi
 
 echo "Stopping docker compose services in $TARGET_DIR"
 cd "$TARGET_DIR"
-source dev/env.sh
 docker compose --profile dev down
 
 echo "Removing git worktree at $TARGET_DIR"
