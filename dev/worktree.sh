@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x # trace all commandes
-
 BRANCH_NAME=$1
 
 if [ -z "$BRANCH_NAME" ]; then

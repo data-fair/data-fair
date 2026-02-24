@@ -1,8 +1,7 @@
 #!/bin/bash
 
-set -x # trace all commandes
-
 RANDOM_NB=$((1024 + RANDOM % 48000))
+echo "Use random base port $RANDOM_NB"
 
 cat <<EOF > ".env"
 NGINX_PORT1=$((RANDOM_NB))
