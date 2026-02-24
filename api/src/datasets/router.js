@@ -752,7 +752,7 @@ const readLines = async (req, res) => {
   const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
   const vtPrepared = vectorTileRequested && xyz[2] <= config.tiles.vtPrepareMaxZoom && geoshapeProp?.['x-capabilities']?.vtPrepare
 
-  if (['geojson', 'mvt', 'vt', 'pbf'].includes(query.format)) {
+  if (['geojson', 'mvt', 'vt', 'pbf', 'shp'].includes(query.format)) {
     const select = (query.select ? query.select.split(',') : tiles.defaultSelect(req.dataset))
     if (!vtPrepared && !select.includes('_geoshape') && geoshapeProp) {
       select.push('_geoshape')
