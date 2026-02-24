@@ -10,5 +10,13 @@
     "checkJs": true,
     "skipLibCheck": true
   },
-  "exclude": ["node_modules", "types", "public", "nuxt-dist", "data", ".nuxt", "parquet_writer"]
+  "exclude": [
+    "node_modules",
+    "types",
+    "data",
+    "parquet_writer",
+    "ui",
+    "embed-ui",
+    "test-it"
+  ]
 }
