@@ -74,7 +74,7 @@ ADD patches patches
 # also used to fill the npm cache for faster install of api deps
 RUN npm ci --no-audit --no-fund
 
-ADD /api/types api/types
+ADD /api/config api/config
 ADD /api/types api/types
 ADD /api/doc api/doc
 ADD /api/contract api/contract
@@ -85,8 +85,6 @@ FROM installer AS builder
 
 ADD ui ui 
 RUN mkdir -p /app/ui/node_modules
-ADD api/config api/config
-ADD api/contract api/contract
 ADD api/types api/types
 ADD api/src/config.ts api/src/config.ts
 RUN mkdir -p /app/api/node_modules
@@ -98,7 +96,6 @@ RUN npm run build
 ##########################
 FROM installer AS embed-ui-builder
 
-ADD /api/config api/config
 ADD /api/src/config.ts api/src/config.ts
 ADD /api/src/ui-config.ts api/src/ui-config.ts
 ADD /shared shared
