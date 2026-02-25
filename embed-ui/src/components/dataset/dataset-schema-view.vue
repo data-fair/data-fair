@@ -65,7 +65,7 @@ fr:
   tableSchema: Schéma Table
   group: Groupe
   key: Clé
-  name: Nom
+  title: Libellé
   type: Type
   x-refersTo: Concept
   description: Description
@@ -75,7 +75,7 @@ en:
   jsonSchema: JSON Schema
   tableSchema: Table Schema
   key: Key
-  name: Name
+  title: Title
   type: Type
   x-refersTo: Concept
   description: Description
@@ -96,7 +96,7 @@ const downloadUrls = {
 
 const headers = [
   { key: 'key', title: t('key') },
-  { key: 'name', title: t('name') },
+  { key: 'title', title: t('title') },
   { key: 'type', title: t('type') },
   { key: 'x-refersTo', title: t('x-refersTo') },
   { key: 'description', title: t('description') }
