@@ -699,7 +699,7 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
     }
   }
 
-  if (query.draft && res._attachment_url) res._attachment_url += '?draft=true'
+  if (query.draft === 'true' && res._attachment_url) res._attachment_url += '?draft=true'
 
   // format markdown and sanitize it for XSS prevention
   // either using x-display=markdown info or implicitly for description
