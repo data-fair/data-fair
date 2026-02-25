@@ -9,7 +9,7 @@
       <!-- add a dataset -->
       <v-autocomplete
         :value="null"
-        :items="datasets || []"
+        :items="childrenItems"
         :loading="loadingDatasets"
         :search-input.sync="searchDataset"
         :filter="() => true"
@@ -24,7 +24,17 @@
         class="my-2"
         hide-details="auto"
         @change="addChild"
-      />
+      >
+        <template #item="{item}">
+          <dataset-list-item
+            :dataset="item"
+            :dense="true"
+            :show-topics="true"
+            :no-link="true"
+            :show-owner="item.owner.type !== activeAccount.type || item.owner.id !== activeAccount.id || (item.owner.department || null) !== (activeAccount.department || null)"
+          />
+        </template>
+      </v-autocomplete>
 
       <v-progress-linear
         v-if="loadingChildren"
@@ -354,7 +364,8 @@ export default {
   components: { Draggable },
   data () {
     return {
-      datasets: null,
+      refDatasets: [],
+      datasets: [],
       loadingDatasets: false,
       searchDataset: '',
       searchedDataset: null,
@@ -375,6 +386,7 @@ export default {
   computed: {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['can']),
+    ...mapGetters('session', ['activeAccount']),
     existingFields () {
       return this.schema.map(f => f.key)
     },
@@ -409,7 +421,21 @@ export default {
     },
     hasChanges () {
       return this.originalVirtual !== JSON.stringify(this.virtual) || this.originalSchema !== JSON.stringify(this.schema)
-    }
+    },
+    childrenItems () {
+      let items = []
+      if (this.refDatasets.length) {
+        items.push({ header: this.$t('masterData') })
+        items = items.concat(this.refDatasets.filter(d => this.virtual.children.find(c => c.id === d.id)))
+        items = items.concat(this.refDatasets.filter(d => !this.virtual.children.find(c => c.id === d.id)))
+      }
+      if (this.refDatasets.length && this.datasets.length) {
+        items.push({ header: this.$t('ownerDatasets') })
+      }
+      items = items.concat(this.datasets.filter(d => this.virtual.children.find(c => c.id === d.id)))
+      items = items.concat(this.datasets.filter(d => !this.virtual.children.find(c => c.id === d.id)))
+      return items
+    },
   },
   watch: {
     searchDataset: {
@@ -455,11 +481,21 @@ export default {
     },
     async searchDatasets () {
       this.loadingDatasets = true
-      const res = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.searchDataset, size: 20, select: 'id,title', status: 'finalized', owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` }
+      const remoteServicesRes = await this.$axios.$get('api/v1/remote-services', {
+        params: { q: this.searchDataset, size: 1000, select: 'id,title,virtualDatasets', privateAccess: `${this.activeAccount.type}:${this.activeAccount.id}`, virtualDatasets: true }
       })
-      this.datasets = res.results
-        .filter(d => d.id !== this.dataset.id && !this.virtual.children.includes(d.id))
+      const select = 'id,owner,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,attachmentsAsImage,-userPermissions,-links'
+      // TODO: remove remote-service intermediary
+      const refDatasetsRes = await this.$axios.$get('api/v1/datasets', {
+        params: { q: this.searchDataset, size: 20, select, id: remoteServicesRes.results.map(r => r.virtualDatasets.parent.id).join(','), queryable: true }
+      })
+      this.refDatasets = refDatasetsRes.results
+
+      const datasetsRes = await this.$axios.$get('api/v1/datasets', {
+        params: { q: this.searchDataset, size: 20, select, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, queryable: true }
+      })
+
+      this.datasets = datasetsRes.results
       this.loadingDatasets = false
     },
     async addChild (child) {

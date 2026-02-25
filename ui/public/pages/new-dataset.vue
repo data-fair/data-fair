@@ -726,6 +726,7 @@ fr:
   masterData: Données de référence
   ownerDatasets: Vos jeux de données
   autoUpdate: Activer la mise à jour automatique
+  search: Rechercher
 en:
   datasetType: Dataset type
   newDataset: Create a dataset
@@ -781,6 +782,7 @@ en:
   masterData: Master data
   ownerDatasets: Your datasets
   autoUpdate: Activate auto-update
+  search: Search
 </i18n>
 
 <script>
