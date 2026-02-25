@@ -133,6 +133,7 @@ COPY --from=api-installer /app/node_modules /app/node_modules
 COPY --from=api-installer /app/api/node_modules /app/api/node_modules
 COPY --from=api-installer /app/api/types /app/api/types
 COPY --from=api-installer /app/api/doc /app/api/doc
+COPY --from=api-installer /app/api/config /app/api/config
 COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
 COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
 COPY --from=embed-ui-builder /app/embed-ui/dist embed-ui/dist
