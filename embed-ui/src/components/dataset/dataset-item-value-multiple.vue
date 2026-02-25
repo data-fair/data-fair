@@ -26,15 +26,6 @@
   </v-chip-group>
 </template>
 
-<i18n lang="yaml">
-fr:
-  filterValue: Filtrer les lignes qui ont la même valeur dans cette colonne
-  showFullValue: Afficher la valeur entière
-en:
-  filterValue: Filter the lines that have the same value in this column
-  showFullValue: Show full value
-</i18n>
-
 <script lang="ts" setup>
 import { type SchemaProperty } from '#api/types'
 import { type DatasetFilter } from '../../composables/dataset-filters'

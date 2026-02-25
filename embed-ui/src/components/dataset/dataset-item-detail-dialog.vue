@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/no-v-html -->
 <template lang="html">
   <v-dialog
-    :model-value="show"
+    v-model="show"
     max-width="700"
     :scrim="false"
   >
