@@ -435,7 +435,7 @@
           <v-progress-linear
             v-if="section.id === 'activity' && taskProgress?.task"
             :value="taskProgress.progress"
-            :indeterminate="taskProgress.progress === -1"
+            :indeterminate="taskProgress.progress === -1 && !taskProgress.error"
             absolute
             bottom
             :color="taskProgress.error ? 'error' : 'primary'"
