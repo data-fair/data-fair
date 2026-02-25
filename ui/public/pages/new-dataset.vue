@@ -437,7 +437,11 @@
         </v-stepper-content>
 
         <v-stepper-content step="3">
-          <v-form v-model="restParamsForm">
+          <v-form
+            v-model="restParamsForm"
+            @submit.prevent
+            @submit="currentStep = restParamsForm ? (currentStep + 1) : currentStep"
+          >
             <v-text-field
               v-model="restDataset.title"
               name="title"
@@ -514,7 +518,10 @@
       <!-- VIRTUAL steps -->
       <template v-if="datasetType === 'virtual'">
         <v-stepper-content step="2">
-          <v-form v-model="virtualParamsForm">
+          <v-form
+            v-model="virtualParamsForm"
+            @submit.prevent
+          >
             <v-text-field
               v-model="virtualDataset.title"
               name="title"
@@ -584,7 +591,7 @@
             color="primary"
             class="ml-2 mt-4"
             :disabled="!virtualParamsForm"
-            @click.native="currentStep = 3"
+            @click.native="currentStep += 1"
           />
         </v-stepper-content>
 
@@ -613,7 +620,11 @@
       <!-- META ONLY steps -->
       <template v-if="datasetType === 'metaOnly'">
         <v-stepper-content step="2">
-          <v-form v-model="metaParamsForm">
+          <v-form
+            v-model="metaParamsForm"
+            @submit.prevent
+            @submit="currentStep = metaParamsForm ? (currentStep + 1) : currentStep"
+          >
             <v-text-field
               v-model="metaOnlyDataset.title"
               name="title"
@@ -630,7 +641,7 @@
             color="primary"
             class="ml-2 mt-4"
             :disabled="!metaParamsForm"
-            @click.native="currentStep = 3"
+            @click.native="currentStep += 1"
           />
         </v-stepper-content>
 
