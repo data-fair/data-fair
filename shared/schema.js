@@ -19,6 +19,7 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
   }
   if (cleanProp['x-fromUrl'] && publicBaseUrl) {
     cleanProp['x-fromUrl'] = cleanProp['x-fromUrl'].replace(defaultPublicUrl, publicBaseUrl)
+    delete cleanProp.examples
   }
   if (cleanProp.separator) cleanProp['x-separator'] = cleanProp.separator
 
