@@ -102,6 +102,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
 }
 
 export const getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
+  if (url.startsWith('/')) url = req.publicBaseUrl + url
   const db = mongo.db
   const sharpOptions = { fit: req.query.fit || 'cover', position: req.query.position || 'center' }
   // resizeMode was mostly adapted from thumbor and comes from dataset schema
