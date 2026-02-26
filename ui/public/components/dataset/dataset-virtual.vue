@@ -330,6 +330,8 @@ fr:
   noFilter: Aucun filtre défini.
   filterActiveAccount: Filtrer sur les comptes actifs
   save: Enregister
+  ownerDatasets: Vos jeux de données
+  masterData: Données de référence
 en:
   search: Search
   children: Aggregated datasets
@@ -354,6 +356,8 @@ en:
   noFilter: No filter defined.
   filterActiveAccount: Filter on active accounts
   save: Save
+  ownerDatasets: Your datasets
+  masterData: Master data
 </i18n>
 
 <script>
@@ -426,14 +430,12 @@ export default {
       let items = []
       if (this.refDatasets.length) {
         items.push({ header: this.$t('masterData') })
-        items = items.concat(this.refDatasets.filter(d => this.virtual.children.find(c => c.id === d.id)))
-        items = items.concat(this.refDatasets.filter(d => !this.virtual.children.find(c => c.id === d.id)))
+        items = items.concat(this.refDatasets.filter(d => d.id !== this.dataset.id && !this.virtual.children.find(c => c.id === d.id)))
       }
       if (this.refDatasets.length && this.datasets.length) {
         items.push({ header: this.$t('ownerDatasets') })
       }
-      items = items.concat(this.datasets.filter(d => this.virtual.children.find(c => c.id === d.id)))
-      items = items.concat(this.datasets.filter(d => !this.virtual.children.find(c => c.id === d.id)))
+      items = items.concat(this.datasets.filter(d => d.id !== this.dataset.id && !this.virtual.children.find(c => c.id === d.id)))
       return items
     },
   },
@@ -482,17 +484,22 @@ export default {
     async searchDatasets () {
       this.loadingDatasets = true
       const remoteServicesRes = await this.$axios.$get('api/v1/remote-services', {
-        params: { q: this.searchDataset, size: 1000, select: 'id,title,virtualDatasets', privateAccess: `${this.activeAccount.type}:${this.activeAccount.id}`, virtualDatasets: true }
+        params: { q: this.searchDataset, size: 1000, select: 'id,title,virtualDatasets', privateAccess: `${this.dataset.owner.type}:${this.dataset.owner.id}`, virtualDatasets: true }
       })
       const select = 'id,owner,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,attachmentsAsImage,-userPermissions,-links'
       // TODO: remove remote-service intermediary
-      const refDatasetsRes = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.searchDataset, size: 20, select, id: remoteServicesRes.results.map(r => r.virtualDatasets.parent.id).join(','), queryable: true }
-      })
-      this.refDatasets = refDatasetsRes.results
+      if (remoteServicesRes.results.length) {
+        // TODO: remove remote-service intermediary
+        const refDatasetsRes = await this.$axios.$get('api/v1/datasets', {
+          params: { q: this.search, size: 20, select, id: remoteServicesRes.results.map(r => r.virtualDatasets.parent.id).join(','), queryable: true }
+        })
+        this.refDatasets = refDatasetsRes.results
+      } else {
+        this.refDatasets = []
+      }
 
       const datasetsRes = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.searchDataset, size: 20, select, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, queryable: true }
+        params: { q: this.searchDataset, size: 20, select, owner: `${this.dataset.owner.type}:${this.dataset.owner.id}`, queryable: true }
       })
 
       this.datasets = datasetsRes.results
