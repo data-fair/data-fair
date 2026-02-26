@@ -1,14 +1,14 @@
 import { strict as assert } from 'node:assert'
-
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, formHeaders } from './utils/index.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import config from 'config'
+import config from '../api/src/config.ts'
 import * as workers from '../api/src/workers/index.ts'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 import { S3Backend } from '@data-fair/data-fair-api/src/files-storage/s3.ts'
 import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
+import { Readable } from 'node:stream'
 
 const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
 
@@ -18,41 +18,41 @@ describe('S3 multipart copy', function () {
   after(stopApiServer)
   afterEach((t) => checkPendingTasks(t.name))
 
-  it('should use multipart copy for files larger than threshold', async function () {
+  it.only('should use multipart copy for files larger than threshold', async function () {
     if (!(filesStorage instanceof S3Backend)) {
       console.log('Skipping test: not using S3 backend')
       return
     }
 
     const s3Backend = filesStorage as S3Backend
-    const cfg = config as any
-    const originalMaxSingleCopySize = cfg.get('s3.maxSingleCopySize')
-    const originalMultipartChunkSize = cfg.get('s3.multipartChunkSize')
-
-    cfg.set('s3.maxSingleCopySize', 1000)
-    cfg.set('s3.multipartChunkSize', 500)
+    const originalMaxSingleCopySize = config.s3.maxSingleCopySize
+    const originalMultipartChunkSize = config.s3.multipartChunkSize
+    config.s3.maxSingleCopySize = 10 * 1024 * 1024
+    config.s3.multipartChunkSize = 5 * 1024 * 1024
 
     try {
-      const testFileContent = 'a'.repeat(2000)
+      async function * generateString () {
+        for (let i = 0; i < 100 * 1024; i++) {
+          yield '012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789'
+        }
+      }
       const testFilePath = `${dataDir}/multipart-test-source.txt`
       const testFileDestPath = `${dataDir}/multipart-test-dest.txt`
 
-      await fs.ensureDir(dataDir)
-      await fs.writeFile(testFilePath, testFileContent)
-
+      await s3Backend.writeStream(Readable.from(generateString()), testFilePath)
       await s3Backend.copyFile(testFilePath, testFileDestPath)
 
       const destExists = await filesStorage.pathExists(testFileDestPath)
       assert.ok(destExists, 'Destination file should exist after copy')
 
       const destStats = await filesStorage.fileStats(testFileDestPath)
-      assert.equal(destStats.size, 2000, 'Destination file should have same size')
+      assert.equal(destStats.size, 12288000, 'Destination file should have same size')
 
-      await fs.remove(testFilePath)
-      await fs.remove(testFileDestPath)
+      await s3Backend.removeFile(testFilePath)
+      await s3Backend.removeFile(testFileDestPath)
     } finally {
-      cfg.set('s3.maxSingleCopySize', originalMaxSingleCopySize)
-      cfg.set('s3.multipartChunkSize', originalMultipartChunkSize)
+      config.s3.maxSingleCopySize = originalMaxSingleCopySize
+      config.s3.multipartChunkSize = originalMultipartChunkSize
     }
   })
 
@@ -63,19 +63,15 @@ describe('S3 multipart copy', function () {
     }
 
     const s3Backend = filesStorage as S3Backend
-    const cfg = config as any
-    const originalMaxSingleCopySize = cfg.get('s3.maxSingleCopySize')
-
-    cfg.set('s3.maxSingleCopySize', 10000)
+    const originalMaxSingleCopySize = config.s3.maxSingleCopySize
+    config.s3.maxSingleCopySize = 10000
 
     try {
       const testFileContent = 'a'.repeat(2000)
       const testFilePath = `${dataDir}/single-copy-source.txt`
       const testFileDestPath = `${dataDir}/single-copy-dest.txt`
 
-      await fs.ensureDir(dataDir)
-      await fs.writeFile(testFilePath, testFileContent)
-
+      await s3Backend.writeString(testFilePath, testFileContent)
       await s3Backend.copyFile(testFilePath, testFileDestPath)
 
       const destExists = await filesStorage.pathExists(testFileDestPath)
@@ -84,10 +80,10 @@ describe('S3 multipart copy', function () {
       const destStats = await filesStorage.fileStats(testFileDestPath)
       assert.equal(destStats.size, 2000, 'Destination file should have same size')
 
-      await fs.remove(testFilePath)
-      await fs.remove(testFileDestPath)
+      await s3Backend.removeFile(testFilePath)
+      await s3Backend.removeFile(testFileDestPath)
     } finally {
-      cfg.set('s3.maxSingleCopySize', originalMaxSingleCopySize)
+      config.s3.maxSingleCopySize = originalMaxSingleCopySize
     }
   })
 
@@ -97,12 +93,10 @@ describe('S3 multipart copy', function () {
       return
     }
 
-    const cfg = config as any
-    const originalMaxSingleCopySize = cfg.get('s3.maxSingleCopySize')
-    const originalMultipartChunkSize = cfg.get('s3.multipartChunkSize')
-
-    cfg.set('s3.maxSingleCopySize', 1000)
-    cfg.set('s3.multipartChunkSize', 500)
+    const originalMaxSingleCopySize = config.s3.maxSingleCopySize
+    const originalMultipartChunkSize = config.s3.multipartChunkSize
+    config.s3.maxSingleCopySize = 1000
+    config.s3.multipartChunkSize = 500
 
     try {
       const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
@@ -123,8 +117,8 @@ describe('S3 multipart copy', function () {
       const finalizedDataset = await workers.hook('finalize/' + dataset.id)
       assert.equal(finalizedDataset.status, 'finalized')
     } finally {
-      cfg.set('s3.maxSingleCopySize', originalMaxSingleCopySize)
-      cfg.set('s3.multipartChunkSize', originalMultipartChunkSize)
+      config.s3.maxSingleCopySize = originalMaxSingleCopySize
+      config.s3.multipartChunkSize = originalMultipartChunkSize
     }
   })
 })
