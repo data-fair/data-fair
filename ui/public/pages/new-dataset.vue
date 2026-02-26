@@ -289,7 +289,11 @@
         </v-stepper-content>
 
         <v-stepper-content :step="$route.query.simple === 'true' ? 4 : 5">
-          <v-form v-model="fileParamsForm">
+          <v-form
+            v-model="fileParamsForm"
+            @submit.prevent
+            @submit="currentStep = fileParamsForm ? (currentStep + 1) : currentStep"
+          >
             <v-checkbox
               v-if="!initFileFromData && !!file"
               v-model="filenameTitle"
@@ -362,7 +366,7 @@
             color="primary"
             class="ml-2 mt-4"
             :disabled="!fileParamsForm"
-            @click.native="currentStep = $route.query.simple ? 5 : 6"
+            @click.native="currentStep += 1"
           />
         </v-stepper-content>
 
