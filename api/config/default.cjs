@@ -170,10 +170,6 @@ module.exports = {
     events: null,
     ignoreRateLimiting: null
   },
-  // Configure outgoing http calls
-  globalWebhooks: {
-    consumption: []
-  },
   locks: {
     // in seconds
     ttl: 60

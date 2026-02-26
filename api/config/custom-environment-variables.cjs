@@ -109,12 +109,6 @@ module.exports = {
     events: 'SECRET_EVENTS',
     ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
   },
-  globalWebhooks: {
-    consumption: {
-      __name: 'WEBHOOKS_CONSUMPTION',
-      __format: 'json'
-    }
-  },
   brand: {
     logo: 'BRAND_LOGO',
     title: 'BRAND_TITLE',

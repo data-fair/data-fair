@@ -25,7 +25,6 @@
     "defaultLimits",
     "worker",
     "secretKeys",
-    "globalWebhooks",
     "locks",
     "datasetStateRetries",
     "cache",
@@ -257,15 +256,6 @@
         "notifications": { "type": ["string", "null"] },
         "events": { "type": ["string", "null"] },
         "ignoreRateLimiting": { "type": ["string", "null"] }
-      }
-    },
-    "globalWebhooks": {
-      "type": "object",
-      "properties": {
-        "consumption": {
-          "type": "array",
-          "items": { "type": "object" }
-        }
       }
     },
     "locks": {
