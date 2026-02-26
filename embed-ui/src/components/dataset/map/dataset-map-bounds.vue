@@ -28,6 +28,9 @@ import { useTheme } from 'vuetify'
 import bbox from '@turf/bbox'
 import bboxPolygon from '@turf/bbox-polygon'
 
+// @ts-ignore
+maplibregl.config.CSP_NONCE = $cspNonce
+
 const { height } = defineProps({
   height: { type: Number, required: true }
 })

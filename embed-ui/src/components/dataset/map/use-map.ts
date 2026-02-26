@@ -2,6 +2,9 @@ import maplibregl, { Map, ControlPosition, LegacyFilterSpecification, LngLatBoun
 import { useMapStyle } from './use-map-style'
 import debounce from 'debounce'
 
+// @ts-ignore
+maplibregl.config.CSP_NONCE = $cspNonce
+
 const fitBoundsOpts = { maxZoom: 15, padding: 40 }
 
 export const useMap = (
