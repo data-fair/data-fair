@@ -1,6 +1,6 @@
 import config from '#config'
 import { relative as relativePath, resolve as resolvePath, join as joinPath } from 'node:path'
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCopyCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand } from '@aws-sdk/client-s3'
+import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, paginateListObjectsV2, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCopyCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand, type S3ClientConfig } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { FileStats, FileBackend } from './types.ts'
 import { unlink } from 'node:fs/promises'
@@ -10,6 +10,8 @@ import { httpError } from '@data-fair/lib-express'
 import unzipper from 'unzipper'
 import debugModule from 'debug'
 import { S3ReadStream } from 's3-readstream'
+import { NodeHttpHandler } from '@smithy/node-http-handler'
+import { HttpAgent, HttpsAgent } from 'agentkeepalive'
 
 const debug = debugModule('s3')
 
@@ -21,18 +23,36 @@ const bucketPath = (path: string) => {
 }
 
 export class S3Backend implements FileBackend {
-  private client: S3Client
+  private dataClient: S3Client
+  private metadataClient: S3Client
 
   constructor () {
     debug('create client', config.s3)
-    this.client = new S3Client(config.s3)
+    // Customizing the handler for high throughput
+    // and splitting data and metadata client so that long running queries do not block short metadata queries
+    // TODO: monitor the sockets like we do in @data-fair/lib-node/http-agents ?
+    this.dataClient = new S3Client({
+      ...config.s3 as S3ClientConfig,
+      requestHandler: new NodeHttpHandler({
+        httpAgent: new HttpAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50 }),
+        httpsAgent: new HttpsAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50 }),
+      }),
+    })
+    this.metadataClient = new S3Client({
+      ...config.s3 as S3ClientConfig,
+      // Customizing the handler for high throughput
+      requestHandler: new NodeHttpHandler({
+        httpAgent: new HttpAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50 }),
+        httpsAgent: new HttpsAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50 }),
+      }),
+    })
   }
 
   async checkAccess () {
     debug('check access')
     const command = new PutObjectCommand({ Bucket: config.s3.bucket, Key: 'check-access.txt', Body: 'ok' })
     debug('access ok')
-    await this.client.send(command)
+    await this.metadataClient.send(command, { requestTimeout: 10000 })
   }
 
   async lsr (targetPath: string): Promise<string[]> {
@@ -45,7 +65,7 @@ export class S3Backend implements FileBackend {
   async lsrWithStats (targetPath: string): Promise<FileStats[]> {
     debug('lrsWithStats', targetPath, bucketPath(targetPath))
     const command = new ListObjectsV2Command({ Bucket: config.s3.bucket, Prefix: bucketPath(targetPath) })
-    const response = await this.client.send(command)
+    const response = await this.metadataClient.send(command)
     const filesStats = (response.Contents || []).map((obj) => ({
       path: relativePath(targetPath, joinPath(dataDir, obj.Key!)),
       size: obj.Size!,
@@ -57,19 +77,19 @@ export class S3Backend implements FileBackend {
 
   async fileStats (path: string) {
     const command = new HeadObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path) })
-    const response = await this.client.send(command)
+    const response = await this.metadataClient.send(command)
     return { size: response.ContentLength!, lastModified: response.LastModified! }
   }
 
   async removeFile (path: string): Promise<void> {
     const command = new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path) })
-    await this.client.send(command)
+    await this.metadataClient.send(command)
   }
 
   async removeDir (path: string): Promise<void> {
     // the page size cannot be too large as it is also the number of parallel deletes
     const pages = paginateListObjectsV2(
-      { client: this.client, pageSize: 100 },
+      { client: this.metadataClient, pageSize: 100 },
       { Bucket: config.s3.bucket, Prefix: bucketPath(path) }
     )
 
@@ -79,7 +99,7 @@ export class S3Backend implements FileBackend {
       // Map each object in the current page to a Delete promise
       const deletePromises = page.Contents.map((obj) => {
         const deleteParams = { Bucket: config.s3.bucket, Key: obj.Key, }
-        return this.client.send(new DeleteObjectCommand(deleteParams))
+        return this.metadataClient.send(new DeleteObjectCommand(deleteParams))
       })
 
       // Execute the batch of deletes for this page
@@ -93,7 +113,7 @@ export class S3Backend implements FileBackend {
 
     const bucketParams = { Bucket: config.s3.bucket, Key: bucketPath(path), IfModifiedSince: ifModifiedSinceDate, }
     try {
-      const headObject = await this.client.send(new HeadObjectCommand(bucketParams))
+      const headObject = await this.dataClient.send(new HeadObjectCommand(bucketParams))
 
       // this shouldn't happen except if the s3 provider does not support conditional header
       if (ifModifiedSinceDate && Math.floor(headObject.LastModified!.getTime() / 1000) <= Math.floor(ifModifiedSinceDate.getTime() / 1000)) {
@@ -103,7 +123,7 @@ export class S3Backend implements FileBackend {
       const s3ChunkSize = 1 * 1024 * 1024
       if (!slow || range || headObject.ContentLength! < (s3ChunkSize)) {
         // simpler mono-request mode
-        const response = await this.client.send(new GetObjectCommand({ ...bucketParams, Range: range }))
+        const response = await this.dataClient.send(new GetObjectCommand({ ...bucketParams, Range: range }))
         debug('readStream simple mode ok', response)
         const stream = response.Body as Readable
         // this error will also be thrown on the stream consumer, but the stacktrace can be very generic
@@ -118,7 +138,7 @@ export class S3Backend implements FileBackend {
       } else {
         // the chunked mode prevents long running http requests that can endup being aborted, for example during indexing of large dataset
         const stream = new S3ReadStream({
-          s3: this.client,
+          s3: this.dataClient,
           command: new GetObjectCommand(bucketParams),
           maxLength: headObject.ContentLength!,
           byteRange: s3ChunkSize
@@ -152,7 +172,7 @@ export class S3Backend implements FileBackend {
 
   async writeStream (readStream: Readable, path: string): Promise<void> {
     const upload = new Upload({
-      client: this.client,
+      client: this.dataClient,
       params: {
         Bucket: config.s3.bucket,
         Key: bucketPath(path),
@@ -164,20 +184,20 @@ export class S3Backend implements FileBackend {
 
   async writeString (path: string, content: string) {
     const command = new PutObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path), Body: content })
-    await this.client.send(command)
+    await this.dataClient.send(command)
   }
 
   async copyFile (srcPath: string, dstPath: string) {
     const srcKey = bucketPath(srcPath)
     const dstKey = bucketPath(dstPath)
 
-    const headResp = await this.client.send(new HeadObjectCommand({ Bucket: config.s3.bucket, Key: srcKey }))
+    const headResp = await this.metadataClient.send(new HeadObjectCommand({ Bucket: config.s3.bucket, Key: srcKey }))
     const fileSize = headResp.ContentLength!
 
     const maxSingleCopySize = config.s3.maxSingleCopySize || 5 * 1024 * 1024 * 1024
 
     if (fileSize < maxSingleCopySize) {
-      await this.client.send(new CopyObjectCommand({
+      await this.dataClient.send(new CopyObjectCommand({
         Bucket: config.s3.bucket,
         CopySource: `${config.s3.bucket}/${encodeURI(srcKey)}`,
         Key: dstKey,
@@ -188,7 +208,7 @@ export class S3Backend implements FileBackend {
     const multipartChunkSize = config.s3.multipartChunkSize || 100 * 1024 * 1024
     const totalParts = Math.ceil(fileSize / multipartChunkSize)
 
-    const createResp = await this.client.send(new CreateMultipartUploadCommand({
+    const createResp = await this.dataClient.send(new CreateMultipartUploadCommand({
       Bucket: config.s3.bucket,
       Key: dstKey,
     }))
@@ -200,7 +220,7 @@ export class S3Backend implements FileBackend {
         const start = (partNumber - 1) * multipartChunkSize
         const end = Math.min(partNumber * multipartChunkSize, fileSize) - 1
 
-        const copyPart = this.client.send(new UploadPartCopyCommand({
+        const copyPart = this.dataClient.send(new UploadPartCopyCommand({
           Bucket: config.s3.bucket,
           Key: dstKey,
           CopySource: `${config.s3.bucket}/${encodeURI(srcKey)}`,
@@ -213,7 +233,7 @@ export class S3Backend implements FileBackend {
 
       const responses = await Promise.all(copyParts)
 
-      await this.client.send(new CompleteMultipartUploadCommand({
+      await this.dataClient.send(new CompleteMultipartUploadCommand({
         Bucket: config.s3.bucket,
         Key: dstKey,
         UploadId: uploadId,
@@ -225,7 +245,7 @@ export class S3Backend implements FileBackend {
         },
       }))
     } catch (err) {
-      await this.client.send(new AbortMultipartUploadCommand({
+      await this.dataClient.send(new AbortMultipartUploadCommand({
         Bucket: config.s3.bucket,
         Key: dstKey,
         UploadId: uploadId,
@@ -242,7 +262,7 @@ export class S3Backend implements FileBackend {
   async copyDir (srcPath: string, dstPath: string) {
     // the page size cannot be too large as it is also the number of parallel copies
     const pages = paginateListObjectsV2(
-      { client: this.client, pageSize: 100 },
+      { client: this.dataClient, pageSize: 100 },
       { Bucket: config.s3.bucket, Prefix: bucketPath(srcPath) }
     )
 
@@ -275,12 +295,12 @@ export class S3Backend implements FileBackend {
       Prefix: bucketPath(path),
       MaxKeys: 1, // We only need to know if at least one exists
     }
-    const response = await this.client.send(new ListObjectsV2Command(params))
+    const response = await this.metadataClient.send(new ListObjectsV2Command(params))
     return !!(response.Contents && response.Contents.length > 0)
   }
 
   async zipDirectory (path: string) {
-    return unzipper.Open.s3_v3(this.client, { Bucket: config.s3.bucket, Key: bucketPath(path) })
+    return unzipper.Open.s3_v3(this.dataClient, { Bucket: config.s3.bucket, Key: bucketPath(path) })
   }
 
   async fileSample (path: string) {
@@ -289,7 +309,7 @@ export class S3Backend implements FileBackend {
       Key: bucketPath(path),
       Range: 'bytes=0-' + (1024 * 1024)
     })
-    const response = await this.client.send(command)
+    const response = await this.dataClient.send(command)
     return Buffer.from(await response.Body!.transformToByteArray())
   }
 }
