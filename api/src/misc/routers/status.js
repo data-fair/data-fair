@@ -5,12 +5,18 @@ import axios from '../utils/axios.js'
 import fs from 'fs-extra'
 import * as clamav from '../utils/clamav.ts'
 import filesStorage from '#files-storage'
+import debugModule from 'debug'
+
+const debug = debugModule('status')
 
 async function mongoStatus (req) {
+  debug('mongoStatus ?')
   await mongo.db.command({ ping: 1 })
+  debug('mongoStatus ok')
 }
 
 async function esStatus (req) {
+  debug('esStatus ?')
   const es = req.app.get('es')
   const health = await es.cluster.health()
   const healthStatus = health?.status
@@ -21,6 +27,7 @@ async function esStatus (req) {
   } else {
     throw new Error('Health status is ' + healthStatus)
   }
+  debug('esStatus ok')
   /* since v8 ingest-attachment is no longer a plugin, it is pre-packaged
   const ingestAttachment = (await es.cat.plugins({ format: 'json' })).find(p => p.component === 'ingest-attachment')
   if (!ingestAttachment) throw new Error('Ingest attachment plugin is not installed.')
@@ -28,20 +35,26 @@ async function esStatus (req) {
 }
 
 async function jwksStatus (req) {
+  debug('jwksStatus ?')
   const jwksRes = (await axios.get((config.privateDirectoryUrl || config.directoryUrl) + '/.well-known/jwks.json')).data
   if (!jwksRes || !jwksRes.keys || !jwksRes.keys.length) throw new Error('Incomplete JWKS response')
+  debug('jwksStatus ok')
 }
 
 async function nuxtStatus (req) {
+  debug('nuxtStatus ?')
   if (process.env.NODE_ENV === 'test') return
   const nuxtConfig = (await import('@data-fair/data-fair-ui/nuxt.config.js')).default
   const dir = nuxtConfig.buildDir || '.nuxt'
   await fs.writeFile(`${dir}/check-access.txt`, 'ok')
   if (req.app.get('nuxt')) await req.app.get('nuxt').renderRoute('/')
+  debug('nuxtStatus ok')
 }
 
 async function dataDirStatus (req) {
+  debug('dataDirStatus ?')
   await filesStorage.checkAccess()
+  debug('dataDirStatus ok')
 }
 
 async function singleStatus (req, fn, name) {
