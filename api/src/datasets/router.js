@@ -752,9 +752,15 @@ const readLines = async (req, res) => {
   const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
   const vtPrepared = vectorTileRequested && xyz[2] <= config.tiles.vtPrepareMaxZoom && geoshapeProp?.['x-capabilities']?.vtPrepare
 
-  if (['geojson', 'mvt', 'vt', 'pbf', 'shp'].includes(query.format)) {
-    const select = (query.select ? query.select.split(',') : tiles.defaultSelect(req.dataset))
-    if (!vtPrepared && !select.includes('_geoshape') && geoshapeProp) {
+  // vector tiles have a specific default select to prevent huge tiles
+  if (vectorTileRequested && !query.select) {
+    query.select = tiles.defaultSelect(req.dataset).join(',')
+  }
+
+  // make sure we have _geoshape and _geopoint for geo formats no matter what is in the select
+  if (['geojson', 'mvt', 'vt', 'pbf', 'shp'].includes(query.format) && query.select && !vtPrepared) {
+    const select = query.select.split(',')
+    if (!select.includes('_geoshape') && geoshapeProp) {
       select.push('_geoshape')
     }
     if (!select.includes('_geopoint')) select.push('_geopoint')
