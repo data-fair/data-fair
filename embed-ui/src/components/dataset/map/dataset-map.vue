@@ -56,15 +56,14 @@ const { search, height, selectable, navigationPosition, noInteraction, sampling,
   cols: { type: Array as () => string[], default: () => [] }
 })
 
-const { queryParams: filtersQueryParams } = useFilters({ excludeKeys: ['_id_eq'] })
+const { id, dataset } = useDatasetStore()
+const { queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: ['_id_eq'] })
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 
 const q = defineModel<string>('q', { default: '' })
 const selectedItem = defineModel<string>('selectedItem', { default: '' })
 const editQ = ref('')
 watch(q, () => { editQ.value = q.value }, { immediate: true })
-
-const { id, dataset } = useDatasetStore()
 
 const commonParams = computed(() => {
   const params = { ...filtersQueryParams.value, ...conceptFilters }

@@ -1,5 +1,6 @@
 import { type SchemaProperty } from '#api/types'
 import { type ExtendedResult, type ExtendedResultValue } from './dataset-lines'
+import type { ExtendedDataset } from './dataset-store'
 
 export type Operator = 'in' | 'nin' | 'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'search' | 'contains' | 'starts' | 'exists' | 'nexists'
 
@@ -19,7 +20,7 @@ export const findEqFilter = (filters: DatasetFilter[], property: SchemaProperty,
     : (result.values[property.key] as ExtendedResultValue).raw === f.value))
 }
 
-export const useFilters = (options: { excludeKeys?: string[] } = {}) => {
+export const useFilters = (datasetRef: MaybeRefOrGetter<ExtendedDataset | null>, options: { excludeKeys?: string[] } = {}) => {
   const { excludeKeys = [] } = options
   const filters = ref<DatasetFilter[]>([])
 
@@ -73,10 +74,10 @@ export const useFilters = (options: { excludeKeys?: string[] } = {}) => {
   }
 
   const reactiveSearchParams = useReactiveSearchParams()
-  const { dataset } = useDatasetStore()
   const localeDayjs = useLocaleDayjs()
 
   const queryParamsFilters = computed(() => {
+    const dataset = toValue(datasetRef)
     const queryParamsFilters: DatasetFilter[] = []
     for (const [key, value] of Object.entries(reactiveSearchParams)) {
       if (excludeKeys.includes(key)) continue
@@ -84,7 +85,7 @@ export const useFilters = (options: { excludeKeys?: string[] } = {}) => {
       if (!operator) continue
       const propKey = key.slice(0, key.length - (operator.length + 1))
       if (excludeKeys.includes(propKey)) continue
-      const property = dataset.value?.schema?.find(p => p.key === propKey)
+      const property = dataset?.schema?.find(p => p.key === propKey)
       if (!property) continue
       queryParamsFilters.push({ property, operator, value, formattedValue: formatValue(value, property, null, localeDayjs) })
     }
