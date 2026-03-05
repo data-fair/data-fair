@@ -61,6 +61,9 @@ describe('geo files support', function () {
     const feature = geojson.features[0]
     assert.equal(feature.properties._i, 1)
     assert.equal(feature.properties.bool, true)
+    assert.equal(feature.geometry.type, 'LineString')
+    assert.equal(feature.properties._geopoint, '0.5,103.5')
+    assert.ok(!feature.properties.geometry)
 
     const wkt = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'wkt' } })).data
     assert.ok(wkt.startsWith('GEOMETRYCOLLECTION'))
