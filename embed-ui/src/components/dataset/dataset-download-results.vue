@@ -1,39 +1,77 @@
 <template>
-  <v-menu
-    v-model="menu"
-    :close-on-content-click="false"
-    max-width="300"
-  >
-    <template #activator="{ props }">
+  <v-sheet>
+    <v-alert
+      type="info"
+      tile
+      variant="text"
+      :icon="false"
+      class="mb-0"
+    >
+      {{ t('alert1') }}
+    </v-alert>
+    <v-list
+      v-if="total > pageSize"
+      class="py-0"
+      density="compact"
+      style="position:relative"
+    >
+      <v-list-item
+        target="download"
+        :disabled="largeCsvLoading || total === 0"
+        @click="showCsvOptions = !showCsvOptions"
+      >
+        <template #prepend>
+          <v-icon :icon="mdiFileDelimitedOutline" />
+        </template>
+        <v-list-item-title>
+          {{ t('csv') }}
+        </v-list-item-title>
+      </v-list-item>
+      <dataset-download-csv-options
+        v-if="showCsvOptions"
+        v-model:csv-sep="csvSep"
+        @click="downloadLargeCSV.execute()"
+      />
       <v-btn
-        color="primary"
-        icon
-        size="large"
-        :title="t('downloadTitle')"
-        v-bind="props"
-      >
-        <v-icon :icon="mdiDownload" />
-      </v-btn>
-    </template>
-    <v-sheet>
-      <v-alert
-        type="info"
-        tile
-        variant="text"
-        :icon="false"
-        class="mb-0 mt-1"
-      >
-        {{ t('alert1') }}
-      </v-alert>
-      <v-list
-        v-if="total > pageSize"
-        class="py-0"
+        v-if="largeCsvLoading"
+        :icon="mdiCancel"
+        :title="t('cancel')"
+        color="warning"
         density="compact"
-        style="position:relative"
-      >
+        style="position:absolute;top:6px;right:8px;"
+        @click="cancelLargeCsv"
+      />
+      <div style="height:4px;width:100%;">
+        <v-progress-linear
+          v-if="largeCsvLoading"
+          :buffer-value="largeCsvBufferProgress"
+          :model-value="largeCsvProgress"
+          stream
+          height="4"
+          style="margin:0;"
+        />
+      </div>
+    </v-list>
+    <v-alert
+      v-if="total > pageSize"
+      type="warning"
+      tile
+      density="compact"
+      variant="text"
+      :icon="false"
+      class="my-0"
+    >
+      {{ t('alert2') }}
+    </v-alert>
+
+    <v-list
+      class="pt-0"
+      density="compact"
+    >
+      <template v-if="total <= pageSize">
         <v-list-item
           target="download"
-          :disabled="largeCsvLoading"
+          :disabled="total === 0"
           @click="showCsvOptions = !showCsvOptions"
         >
           <template #prepend>
@@ -46,117 +84,67 @@
         <dataset-download-csv-options
           v-if="showCsvOptions"
           v-model:csv-sep="csvSep"
-          @click="downloadLargeCSV.execute()"
+          :href="downloadUrls.csv"
+          @click="clickDownload('csv')"
         />
-        <v-btn
-          v-if="largeCsvLoading"
-          :icon="mdiCancel"
-          :title="t('cancel')"
-          color="warning"
-          density="compact"
-          style="position:absolute;top:6px;right:8px;"
-          @click="cancelLargeCsv"
-        />
-        <div style="height:4px;width:100%;">
-          <v-progress-linear
-            v-if="largeCsvLoading"
-            :buffer-value="largeCsvBufferProgress"
-            :model-value="largeCsvProgress"
-            stream
-            height="4"
-            style="margin:0;"
-          />
-        </div>
-      </v-list>
-      <v-alert
-        v-if="total > pageSize"
-        type="warning"
-        tile
-        density="compact"
-        variant="text"
-        :icon="false"
-        class="my-0"
-      >
-        {{ t('alert2') }}
-      </v-alert>
+      </template>
 
-      <v-list
-        class="pt-0"
-        density="compact"
+      <v-list-item
+        :href="downloadUrls.xlsx"
+        target="download"
+        :disabled="total === 0"
+        @click="clickDownload('xlsx')"
       >
-        <template v-if="total <= pageSize">
-          <v-list-item
-            target="download"
-            @click="showCsvOptions = !showCsvOptions"
-          >
-            <template #prepend>
-              <v-icon :icon="mdiFileDelimitedOutline" />
-            </template>
-            <v-list-item-title>
-              {{ t('csv') }}
-            </v-list-item-title>
-          </v-list-item>
-          <dataset-download-csv-options
-            v-if="showCsvOptions"
-            v-model:csv-sep="csvSep"
-            :href="downloadUrls.csv"
-            @click="clickDownload('csv')"
-          />
+        <template #prepend>
+          <v-icon :icon="mdiMicrosoftExcel" />
         </template>
-
-        <v-list-item
-          :href="downloadUrls.xlsx"
-          target="download"
-          @click="clickDownload('xlsx')"
-        >
-          <template #prepend>
-            <v-icon :icon="mdiMicrosoftExcel" />
-          </template>
-          <v-list-item-title>
-            {{ t('xlsx') }}
-          </v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          :href="downloadUrls.ods"
-          target="download"
-          @click="clickDownload('ods')"
-        >
-          <template #prepend>
-            <v-icon :icon="mdiFileTableOutline" />
-          </template>
-          <v-list-item-title>
-            {{ t('ods') }}
-          </v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="dataset?.bbox"
-          :href="downloadUrls.geojson"
-          target="download"
-          @click="clickDownload('geojson')"
-        >
-          <template #prepend>
-            <v-icon :icon="mdiMap" />
-          </template>
-          <v-list-item-title>
-            {{ t('geojson') }}
-          </v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="dataset?.bbox"
-          :href="downloadUrls.shp"
-          target="download"
-          @click="clickDownload('shp')"
-        >
-          <template #prepend>
-            <v-icon :icon="mdiMap" />
-          </template>
-          <v-list-item-title>
-            {{ t('shp') }}
-          </v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-sheet>
-  </v-menu>
+        <v-list-item-title>
+          {{ t('xlsx') }}
+        </v-list-item-title>
+      </v-list-item>
+      <v-list-item
+        :href="downloadUrls.ods"
+        target="download"
+        :disabled="total === 0"
+        @click="clickDownload('ods')"
+      >
+        <template #prepend>
+          <v-icon :icon="mdiFileTableOutline" />
+        </template>
+        <v-list-item-title>
+          {{ t('ods') }}
+        </v-list-item-title>
+      </v-list-item>
+      <v-list-item
+        v-if="dataset?.bbox"
+        :href="downloadUrls.geojson"
+        target="download"
+        :disabled="total === 0"
+        @click="clickDownload('geojson')"
+      >
+        <template #prepend>
+          <v-icon :icon="mdiMap" />
+        </template>
+        <v-list-item-title>
+          {{ t('geojson') }}
+        </v-list-item-title>
+      </v-list-item>
+      <v-list-item
+        v-if="dataset?.bbox"
+        :href="downloadUrls.shp"
+        target="download"
+        :disabled="total === 0"
+        @click="clickDownload('shp')"
+      >
+        <template #prepend>
+          <v-icon :icon="mdiMap" />
+        </template>
+        <v-list-item-title>
+          {{ t('shp') }}
+        </v-list-item-title>
+      </v-list-item>
+    </v-list>
+  </v-sheet>
 </template>
 
 <i18n lang="yaml">
@@ -186,7 +174,7 @@ en:
 import streamSaver from 'streamsaver'
 import LinkHeader from 'http-link-header'
 import { withQuery } from 'ufo'
-import { mdiFileDelimitedOutline, mdiFileTableOutline, mdiMicrosoftExcel, mdiMap, mdiDownload, mdiCancel } from '@mdi/js'
+import { mdiFileDelimitedOutline, mdiFileTableOutline, mdiMicrosoftExcel, mdiMap, mdiCancel } from '@mdi/js'
 import debugModule from 'debug'
 
 const debug = debugModule('download-results')
@@ -199,10 +187,11 @@ const { baseUrl, selectedCols, total } = defineProps({
   total: { type: Number, required: true }
 })
 
+const emit = defineEmits(['download'])
+
 const { t } = useI18n()
 const { dataset } = useDatasetStore()
 
-const menu = ref(false)
 const largeCsvLoading = ref(false)
 const largeCsvBufferProgress = ref(0)
 const largeCsvProgress = ref(0)
@@ -296,7 +285,7 @@ const cancelLargeCsv = () => {
 
 const clickDownload = (format: string) => {
   parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${dataset.value?.slug} - ${format}` } })
-  menu.value = false
+  emit('download')
 }
 
 </script>

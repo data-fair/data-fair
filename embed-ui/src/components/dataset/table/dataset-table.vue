@@ -44,7 +44,7 @@
         :edit="edit"
       />
       <dataset-select-cols v-model="cols" />
-      <dataset-download-results
+      <dataset-download-results-menu
         v-if="baseFetchUrl && total !== undefined"
         :base-url="baseFetchUrl"
         :selected-cols="cols"
@@ -446,7 +446,7 @@ const hideHeader = (header: TableHeader) => {
   cols.value = newCols.filter(col => col !== header.key)
 }
 
-const { filters, addFilter, queryParams: filtersQueryParams } = useFilters({ excludeKeys: selectable ? ['_id_eq'] : [] })
+const { filters, addFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const indexedAt = ref<string>()

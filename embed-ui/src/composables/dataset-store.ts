@@ -3,7 +3,7 @@ import type { Event, Dataset } from '#api/types'
 import { isRestDataset } from '#shared/types-utils'
 import type { PatchDatasetReq } from '#api-doc/datasets/patch-req/index.js'
 
-type ExtendedDataset = Dataset & { userPermissions: string[], draftReason?: string }
+export type ExtendedDataset = Dataset & { userPermissions: string[], draftReason?: string }
 export type TaskProgress = { task: string, progress: number, error?: string }
 
 export type DatasetStore = ReturnType<typeof createDatasetStore>
