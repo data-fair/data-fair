@@ -34,8 +34,8 @@ export class S3Backend implements FileBackend {
     this.dataClient = new S3Client({
       ...config.s3 as S3ClientConfig,
       requestHandler: new NodeHttpHandler({
-        httpAgent: new HttpAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50 }),
-        httpsAgent: new HttpsAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50 }),
+        httpAgent: new HttpAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50, timeout: 60000 }),
+        httpsAgent: new HttpsAgent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 50, timeout: 60000 }),
       }),
     })
     this.metadataClient = new S3Client({

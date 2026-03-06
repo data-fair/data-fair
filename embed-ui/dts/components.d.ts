@@ -13,6 +13,7 @@ declare module 'vue' {
     DatasetCard: typeof import('./../src/components/dataset/dataset-card.vue')['default']
     DatasetDownloadCsvOptions: typeof import('./../src/components/dataset/dataset-download-csv-options.vue')['default']
     DatasetDownloadResults: typeof import('./../src/components/dataset/dataset-download-results.vue')['default']
+    DatasetDownloadResultsMenu: typeof import('./../src/components/dataset/dataset-download-results-menu.vue')['default']
     DatasetEditLineForm: typeof import('./../src/components/dataset/form/dataset-edit-line-form.vue')['default']
     DatasetEditMultipleLines: typeof import('./../src/components/dataset/form/dataset-edit-multiple-lines.vue')['default']
     DatasetFileFormats: typeof import('./../src/components/dataset/dataset-file-formats.vue')['default']
