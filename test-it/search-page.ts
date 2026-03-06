@@ -3,7 +3,7 @@ import nock from 'nock'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth } from './utils/index.ts'
 import { memoizedGetPublicationSiteSettings } from '@data-fair/data-fair-api/src/misc/utils/settings.ts'
-import { isPublic, getPrivateAccess, buildPostSearchPage } from '../api/src/search-page/utils.ts'
+import { isPublic, getPrivateAccess, buildPostSearchPage } from '@data-fair/data-fair-api/src/search-pages/utils.ts'
 import config from '../api/src/config.ts'
 
 const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')

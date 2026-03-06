@@ -2,6 +2,9 @@ import axios from 'axios'
 import config from '#config'
 import mongo from '#mongo'
 import { buildPostSearchPage, extractPortalId } from './utils.ts'
+import debugModule from 'debug'
+
+const debug = debugModule('search-pages-webhook')
 
 export type ResourceWithOwner = {
   id: string
@@ -19,6 +22,7 @@ const sendToPortals = async (searchPage: any) => {
   }
 
   try {
+    debug('POST search-pages', searchPage)
     await axios.post(`${config.privatePortalsManagerUrl}/api/search-pages`, searchPage, {
       headers: {
         Authorization: `Bearer ${config.secretKeys.searchPages}`
@@ -35,6 +39,7 @@ export const notifyPortals = async (
   resourceType: 'dataset' | 'application',
   indexingStatus: 'toIndex' | 'toDelete'
 ) => {
+  debug('notifyPortals ?', resourceType, resource.id)
   const publicationSites = resource.publicationSites || []
   const searchPages: any[] = []
   const rt = resourceType === 'dataset' ? 'datasets' : 'applications'
