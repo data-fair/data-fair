@@ -759,7 +759,7 @@ const readLines = async (req, res) => {
 
   // make sure we have _geoshape and _geopoint for geo formats no matter what is in the select
   if (['geojson', 'mvt', 'vt', 'pbf', 'shp'].includes(query.format) && !vtPrepared) {
-    const select = query.select ? query.select.split(',') : req.dataset.schema.filter(p => p.key !== '_geoshape' && p.key !== '_geocorners' && p['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry').map(p => p.key)
+    const select = query.select ? query.select.split(',') : req.dataset.schema.filter(p => p.key !== '_geocorners' && p['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry' && p['x-refersTo'] !== 'http://data.ign.fr/def/geometrie#Geometry').map(p => p.key)
     if (!select.includes('_geoshape') && geoshapeProp) {
       select.push('_geoshape')
     } else if (!select.includes('_geopoint')) {
