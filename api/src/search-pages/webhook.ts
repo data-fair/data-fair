@@ -24,10 +24,7 @@ const sendToPortals = async (searchPage: any) => {
   try {
     debug('POST search-pages', searchPage)
     await axios.post(`${config.privatePortalsManagerUrl}/api/search-pages`, searchPage, {
-      headers: {
-        Authorization: `Bearer ${config.secretKeys.searchPages}`
-      },
-      timeout: 10000
+      headers: { 'x-api-key': config.secretKeys.searchPages }
     })
   } catch (err: any) {
     console.error('Failed to send search page to portals:', err.message)
