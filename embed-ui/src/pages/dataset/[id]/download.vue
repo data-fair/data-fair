@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container data-iframe-height>
     <v-row>
       <v-col
         v-if="header && dataset && fetchTotal.data.value"
