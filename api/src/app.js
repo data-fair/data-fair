@@ -141,6 +141,7 @@ export const run = async () => {
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
     app.use('/api/v1/catalog', apiKey('datasets'), (await import('./misc/routers/catalog.js')).default)
+    app.use('/api/v1/search-pages', (await import('./search-page/router.js')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
     app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
