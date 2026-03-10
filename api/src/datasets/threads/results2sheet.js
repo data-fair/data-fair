@@ -61,33 +61,31 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
     ['dataUpdatedAt', labels.dataUpdatedAt, dataset.dataUpdatedAt || '']
   ]
 
-  // DCAT metadata fields: show if active in settings or if value is present
-  const dcatFields = [
+  // Optional metadata fields: show only if value is present, use custom label from settings if available
+  const optionalFields = [
     { key: 'modified', value: dataset.modified },
     { key: 'spatial', value: dataset.spatial },
-    {
-      key: 'temporal',
-      value: dataset.temporal
-        ? [dataset.temporal.start, dataset.temporal.end].filter(Boolean).join(' - ')
-        : undefined
-    },
+    { key: 'temporal', value: dataset.temporal ? [dataset.temporal.start, dataset.temporal.end].filter(Boolean).join(' - ') : undefined },
     { key: 'frequency', value: dataset.frequency },
     { key: 'creator', value: dataset.creator },
-    { key: 'keywords', value: dataset.keywords && dataset.keywords.length ? dataset.keywords.join(', ') : undefined }
+    { key: 'keywords', value: dataset.keywords?.length ? dataset.keywords.join(', ') : undefined },
+    { key: 'origin', value: dataset.origin },
+    { key: 'license', value: dataset.license?.title },
+    { key: 'licenseUrl', value: dataset.license?.href },
+    { key: 'topics', value: dataset.topics?.length ? dataset.topics.map(t => t.title).join(', ') : undefined }
   ]
-  for (const field of dcatFields) {
+  for (const field of optionalFields) {
+    if (!field.value) continue
     const settingsField = datasetsMetadata[field.key]
-    if (field.value || (settingsField && settingsField.active)) {
-      const label = (settingsField && settingsField.title) || labels[field.key] || field.key
-      metadataArray.push([field.key, label, field.value || ''])
-    }
+    const label = (settingsField && settingsField.title) || labels[field.key] || field.key
+    metadataArray.push([field.key, label, field.value])
   }
 
   // Custom metadata from organization settings
-  if (datasetsMetadata.custom && datasetsMetadata.custom.length && dataset.customMetadata) {
+  if (datasetsMetadata.custom && datasetsMetadata.custom.length) {
     for (const custom of datasetsMetadata.custom) {
       if (!custom.key) continue
-      const value = dataset.customMetadata[custom.key]
+      const value = dataset.customMetadata ? dataset.customMetadata[custom.key] : undefined
       metadataArray.push([custom.key, custom.title || custom.key, value || ''])
     }
   }
@@ -98,16 +96,19 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
 
   // --- Sheet 3: schema ---
   const schemaArray = [
-    [labels.schemaKey, labels.schemaType, labels.schemaFormat, labels.schemaTitle, labels.schemaDescription, labels.schemaOriginalName]
+    [labels.schemaKey, labels.schemaType, labels.schemaFormat, labels.schemaTitle, labels.schemaDescription, labels.schemaOriginalName, labels.schemaConceptId, labels.schemaConceptTitle]
   ]
   for (const prop of allProperties) {
+    const concept = prop['x-concept']
     schemaArray.push([
       prop.key,
       prop.type || '',
       prop.format || '',
       prop.title || '',
       prop.description || '',
-      prop['x-originalName'] || ''
+      prop['x-originalName'] || '',
+      concept?.id || '',
+      concept?.title || ''
     ])
   }
   const schemaSheet = XLSX.utils.aoa_to_sheet(schemaArray, { cellDates: true })
