@@ -2,16 +2,21 @@
 // used during development and testing. Started as part of dev-deps.
 // Replaces the in-process nock mocks from the old test setup.
 
-import { createServer } from 'node:http'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const port = parseInt(process.env.MOCK_PORT || '8999')
+const mockOrigin = `http://localhost:${port}`
 
+// Load API docs and patch server URLs to point to this mock server
 const geocoderApi = JSON.parse(readFileSync(resolve(__dirname, '../test-it/resources/geocoder-api.json'), 'utf8'))
+geocoderApi.servers = [{ url: `${mockOrigin}/geocoder`, description: 'Mock server' }]
+
 const sireneApi = JSON.parse(readFileSync(resolve(__dirname, '../test-it/resources/sirene-api.json'), 'utf8'))
+sireneApi.servers = [{ url: `${mockOrigin}/sirene`, description: 'Mock server' }]
 
 const html = `
   <html>
@@ -115,12 +120,19 @@ const monapp3ConfigSchema = {
   layout: 'tabs'
 }
 
-type RouteHandler = { status: number, body: any, contentType?: string }
+type RouteResult = { status: number, body: any, contentType?: string, delay?: number }
 
-const routes: Record<string, () => RouteHandler> = {
-  // Remote services API docs
+const staticRoutes: Record<string, () => RouteResult> = {
+  // Remote services API docs (patched to use mock server URLs)
   '/geocoder/api-docs.json': () => ({ status: 200, body: geocoderApi }),
   '/sirene/api-docs.json': () => ({ status: 200, body: sireneApi }),
+
+  // Geocoder proxy endpoints (for remote service proxy forwarding)
+  '/geocoder/coord': () => ({ status: 200, body: {} }),
+  '/geocoder/coords': () => ({ status: 200, body: {} }),
+
+  // Sirene proxy endpoints
+  '/sirene/etablissements_bulk': () => ({ status: 200, body: {} }),
 
   // Catalog
   '/catalog/api/1/site/': () => ({ status: 200, body: { title: 'My catalog' } }),
@@ -141,19 +153,69 @@ const routes: Record<string, () => RouteHandler> = {
   '/monapp3/config-schema.json': () => ({ status: 200, body: monapp3ConfigSchema }),
 }
 
-const server = createServer((req, res) => {
-  const url = new URL(req.url || '/', `http://localhost:${port}`)
-  const handler = routes[url.pathname]
+// Dynamic routes registered by tests via /_test/routes API
+// These override static routes and are cleared between tests.
+let dynamicRoutes: Record<string, RouteResult> = {}
 
-  if (handler) {
-    const result = handler()
-    const contentType = result.contentType || 'application/json'
-    res.writeHead(result.status, { 'Content-Type': contentType })
-    res.end(typeof result.body === 'string' ? result.body : JSON.stringify(result.body))
-  } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' })
-    res.end('Not found')
+function readBody (req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    req.on('data', (chunk: Buffer) => chunks.push(chunk))
+    req.on('end', () => resolve(Buffer.concat(chunks).toString()))
+    req.on('error', reject)
+  })
+}
+
+function sendResult (res: ServerResponse, result: RouteResult) {
+  const contentType = result.contentType || 'application/json'
+  res.writeHead(result.status, { 'Content-Type': contentType })
+  res.end(typeof result.body === 'string' ? result.body : JSON.stringify(result.body))
+}
+
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url || '/', `http://localhost:${port}`)
+  const pathname = url.pathname
+
+  // Dynamic route management API
+  if (pathname === '/_test/routes' && req.method === 'POST') {
+    const body = JSON.parse(await readBody(req))
+    dynamicRoutes[body.path] = {
+      status: body.status || 200,
+      body: body.body,
+      contentType: body.contentType,
+      delay: body.delay
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end('{"ok":true}')
+    return
   }
+
+  if (pathname === '/_test/routes' && req.method === 'DELETE') {
+    dynamicRoutes = {}
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end('{"ok":true}')
+    return
+  }
+
+  // Check dynamic routes first (they override static ones)
+  const dynamicResult = dynamicRoutes[pathname]
+  if (dynamicResult) {
+    if (dynamicResult.delay) {
+      await new Promise(resolve => setTimeout(resolve, dynamicResult.delay))
+    }
+    sendResult(res, dynamicResult)
+    return
+  }
+
+  // Check static routes
+  const staticHandler = staticRoutes[pathname]
+  if (staticHandler) {
+    sendResult(res, staticHandler())
+    return
+  }
+
+  res.writeHead(404, { 'Content-Type': 'text/plain' })
+  res.end('Not found')
 })
 
 server.listen(port, () => {

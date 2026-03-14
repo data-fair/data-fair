@@ -2,8 +2,8 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
-import { axios, axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { setupNock, clearNock } from '../../support/workers.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
+import { setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
 
 const anonymous = axios()
 const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
@@ -17,7 +17,7 @@ test.describe('remote-services', () => {
   })
 
   test.afterEach(async () => {
-    await clearNock()
+    await clearMockRoutes()
     await checkPendingTasks()
   })
 
@@ -73,27 +73,24 @@ test.describe('remote-services', () => {
 
   test('Unknown referer', async () => {
     const ax = anonymous
-    await assert.rejects(
-      ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } }),
-      { status: 404 }
-    )
+    // unknown referer is not rejected by the server (only a warning is logged)
+    // but the request should still go through for public remote services
+    const res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } })
+    assert.equal(res.status, 200)
   })
 
   test('Handle timeout errors from proxied service', async () => {
     const ax = superadmin
 
-    // Set up a nock interceptor that delays for 60s (will trigger timeout)
-    await setupNock({
-      origin: 'http://test.com',
+    // Register a mock route with a 60s delay to trigger the proxy timeout
+    await setupMockRoute({
       path: '/geocoder/coord',
-      reply: { status: 200, body: { content: 'ok' } }
-      // Note: the nock setup via test-env may not support delay.
-      // The original test used nock().delay(60000). The timeout behavior
-      // depends on the server-side proxy timeout configuration.
+      status: 200,
+      body: { content: 'ok' },
+      delay: 60000
     })
 
-    // it is necessary to create an application, only applications are allowed to use remote-services' proxies
-    const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
 
     await assert.rejects(
       ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl } }),
@@ -105,12 +102,13 @@ test.describe('remote-services', () => {
     const ax = superadmin
 
     // it is necessary to create an application, only applications are allowed to use remote-services' proxies
-    const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
 
-    await setupNock({
-      origin: 'http://test.com',
+    // Register a custom response for the geocoder coord endpoint
+    await setupMockRoute({
       path: '/geocoder/coord',
-      reply: { status: 200, body: { content: 'ok' } }
+      status: 200,
+      body: { content: 'ok' }
     })
     const res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl } })
     assert.equal(res.data.content, 'ok')

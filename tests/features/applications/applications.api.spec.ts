@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import FormData from 'form-data'
-import { axios, axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl, mockAppId } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 
 const anonymous = axios()
@@ -58,7 +58,7 @@ test.describe('Applications', () => {
     res = await adminAx.get('/api/v1/admin/base-applications')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)
-    await adminAx.patch('/api/v1/base-applications/http:monapp2.com', {
+    await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, {
       privateAccess: [{ type: 'user', id: 'dmeadus0' }, { type: 'user', id: 'another' }]
     })
     assert.equal(res.status, 200)
@@ -67,19 +67,19 @@ test.describe('Applications', () => {
     res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)
-    const baseApp = res.data.results.find((a: any) => a.url === 'http://monapp2.com/')
+    const baseApp = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
     assert.equal(baseApp.privateAccess.length, 1)
   })
 
   test('Get base apps completed with contextual dataset', async () => {
     const ax = dmeadus
     const adminAx = superadmin
-    await adminAx.patch('/api/v1/base-applications/http:monapp2.com', { privateAccess: [{ type: 'user', id: 'dmeadus0' }] })
+    await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, { privateAccess: [{ type: 'user', id: 'dmeadus0' }] })
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     const res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0&dataset=' + dataset.id)
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)
-    const app = res.data.results.find((a: any) => a.url === 'http://monapp2.com/')
+    const app = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
     assert.equal(app.category, 'autre')
     assert.equal(app.disabled.length, 1)
     assert.equal(app.disabled[0], 'n\'utilise pas de jeu de données comme source.')
@@ -102,7 +102,7 @@ test.describe('Applications', () => {
 
   test('Post an application configuration, read it, update it and delete it', async () => {
     const ax = dmeadus
-    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     assert.equal(res.status, 201)
 
     const appId = res.data.id
@@ -110,7 +110,7 @@ test.describe('Applications', () => {
     assert.equal(res.status, 200)
     assert.ok(res.data.count >= 1)
     res = await ax.get('/api/v1/applications/' + appId)
-    assert.equal(res.data.url, 'http://monapp1.com/')
+    assert.equal(res.data.url, mockAppUrl('monapp1'))
     res = await ax.get('/api/v1/applications/' + appId + '/api-docs.json')
     assert.ok(res.data.openapi)
     res = await ax.get('/api/v1/applications/' + appId + '/config')
@@ -133,7 +133,7 @@ test.describe('Applications', () => {
     const dataset2 = await sendDataset('datasets/split.csv', ax)
     const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
 
-    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const appId = res.data.id
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{ id: dataset.id, href: datasetRefInit.href }, { id: dataset2.id, href: datasetRefInit2.href }]
@@ -169,7 +169,7 @@ test.describe('Applications', () => {
     const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
 
     let res = await ax.post('/api/v1/applications', {
-      url: 'http://monapp1.com/',
+      url: mockAppUrl('monapp1'),
       configuration: {
         datasets: [
           { id: dataset.id, href: datasetRefInit.href },
@@ -217,7 +217,7 @@ test.describe('Applications', () => {
 
   test('Read base app info of an application', async () => {
     const ax = dmeadus
-    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const appId = res.data.id
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{ href: config.publicUrl + '/api/v1/datasets/111' }]
@@ -226,7 +226,7 @@ test.describe('Applications', () => {
     res = await ax.get('/api/v1/applications/' + appId + '/base-application')
     assert.equal(res.status, 200)
     assert.equal(res.data.applicationName, 'test')
-    assert.equal(res.data.image, 'http://monapp1.com/thumbnail.png')
+    assert.equal(res.data.image, mockAppUrl('monapp1') + 'thumbnail.png')
   })
 
   test('Read capture of application', async () => {
@@ -239,7 +239,7 @@ test.describe('Applications', () => {
       return
     }
 
-    const { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const { data: dataset } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }] })
     const updatedAt = (await ax.get('/api/v1/applications/' + app.id)).data.updatedAt
@@ -296,11 +296,11 @@ test.describe('Applications', () => {
   test('Sort applications by title', async () => {
     const ax = dmeadus
 
-    await ax.post('/api/v1/applications', { title: 'aa', url: 'http://monapp1.com/' })
-    await ax.post('/api/v1/applications', { title: 'bb', url: 'http://monapp1.com/' })
-    await ax.post('/api/v1/applications', { title: 'àb', url: 'http://monapp1.com/' })
-    await ax.post('/api/v1/applications', { title: ' àb', url: 'http://monapp1.com/' })
-    await ax.post('/api/v1/applications', { title: '1a', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: 'aa', url: mockAppUrl('monapp1') })
+    await ax.post('/api/v1/applications', { title: 'bb', url: mockAppUrl('monapp1') })
+    await ax.post('/api/v1/applications', { title: 'àb', url: mockAppUrl('monapp1') })
+    await ax.post('/api/v1/applications', { title: ' àb', url: mockAppUrl('monapp1') })
+    await ax.post('/api/v1/applications', { title: '1a', url: mockAppUrl('monapp1') })
 
     let res = await ax.get('/api/v1/applications', { params: { select: 'title', raw: true, sort: 'title:1' } })
     assert.deepEqual(res.data.results.map((d: any) => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])
@@ -314,13 +314,13 @@ test.describe('Applications', () => {
       assert.ok(error.data.includes('Ce slug est déjà utilisé'))
       return true
     })
-    res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', title: 'test slug 2', slug: 'test-slug' })
+    res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'test slug 2', slug: 'test-slug' })
     assert.equal(res.data.slug, 'test-slug-2')
   })
 
   test('Upload a simple attachment on an application', async () => {
     const ax = dmeadus
-    let { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    let { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
 
     await sendAttachment(ax, app.id, 'avatar.jpeg')
 

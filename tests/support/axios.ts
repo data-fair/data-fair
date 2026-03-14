@@ -1,11 +1,18 @@
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { axiosAuth as _axiosAuth } from '@data-fair/lib-node/axios-auth.js'
+import slug from 'slugify'
 
 export const directoryUrl = `http://localhost:${process.env.NGINX_PORT1}/simple-directory`
 export const apiUrl = `http://localhost:${process.env.DEV_API_PORT}`
 export const baseURL = `http://localhost:${process.env.NGINX_PORT1}/data-fair`
 export const wsUrl = `ws://localhost:${process.env.NGINX_PORT1}/data-fair`
 export const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
+
+/** Get the full URL for a mock application (e.g. mockAppUrl('monapp1') → 'http://localhost:8999/monapp1/') */
+export const mockAppUrl = (name: string) => `${mockUrl}/${name}/`
+
+/** Get the base-application ID for a mock app (slugified URL) */
+export const mockAppId = (name: string) => slug(`${mockUrl}/${name}/`, { lower: true })
 
 const axiosOpts = { baseURL }
 

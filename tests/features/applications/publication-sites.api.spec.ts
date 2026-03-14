@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '../../support/axios.ts'
 import { clearPublicationSitesCache } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
@@ -31,7 +31,7 @@ test.describe('publication sites', () => {
   test('should fail to publish application on unknown site', async () => {
     const ax = dmeadusOrg
 
-    const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
     await assert.rejects(ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
       (err: any) => err.status === 404)
   })
@@ -113,7 +113,7 @@ test.describe('publication sites', () => {
     await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
     await clearPublicationSitesCache()
 
-    const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
 
     await ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: ['data-fair-portals:portal1'] })
 

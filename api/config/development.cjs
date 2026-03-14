@@ -120,6 +120,7 @@ module.exports = {
     url: `http://localhost:${process.env.MOCK_PORT}/sirene/api-docs.json`
   }],
   observer: {
+    active: false,
     port: process.env.DEV_OBSERVER_PORT
   },
   cache: {

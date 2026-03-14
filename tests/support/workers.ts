@@ -3,7 +3,7 @@ import FormData from 'form-data'
 import fs from 'fs-extra'
 import path from 'node:path'
 import { DataFairWsClient } from '@data-fair/lib-node/ws-client.js'
-import { apiUrl, anonymousAx, wsUrl } from './axios.ts'
+import { apiUrl, anonymousAx, wsUrl, mockUrl } from './axios.ts'
 
 const log = { info: async (...args: any[]) => console.log(...args), error: console.error, debug: console.debug }
 
@@ -139,6 +139,8 @@ export const doAndWaitForFinalize = async (
 /**
  * Wait for a specific journal event type on a dataset.
  * For cases where you need to wait for something other than finalize-end.
+ * Note: for 'error' events, use waitForDatasetError() instead since
+ * DataFairWsClient.waitForJournal throws on error events.
  */
 export const waitForJournalEvent = async (
   datasetId: string,
@@ -151,6 +153,24 @@ export const waitForJournalEvent = async (
   } finally {
     wsClient.close()
   }
+}
+
+/**
+ * Wait for a dataset to enter error status by polling.
+ * Used when the expected outcome is an error (e.g. invalid file upload).
+ */
+export const waitForDatasetError = async (
+  ax: AxiosInstance,
+  datasetId: string,
+  timeout = 30000
+): Promise<any> => {
+  const start = Date.now()
+  while (Date.now() - start < timeout) {
+    const res = await ax.get(`/api/v1/datasets/${datasetId}`)
+    if (res.data.status === 'error') return res.data
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+  throw new Error(`waitForDatasetError timeout after ${timeout}ms for dataset ${datasetId}`)
 }
 
 /**
@@ -173,36 +193,36 @@ export const sendDataset = async (
 }
 
 /**
- * Set up a nock interceptor in the server process via test-env API.
+ * Register a dynamic route on the mock server.
+ * The route will override any static route with the same path.
  */
-export const setupNock = async (config: {
-  origin: string
-  method?: string
+export const setupMockRoute = async (config: {
   path: string
-  query?: any
-  reply?: { status?: number, body?: any, headers?: Record<string, string> }
-  persist?: boolean
+  status?: number
+  body?: any
+  contentType?: string
+  delay?: number
 }) => {
-  await anonymousAx.post(`${apiUrl}/api/v1/test-env/nock`, config)
+  await anonymousAx.post(`${mockUrl}/_test/routes`, config)
 }
 
 /**
- * Clear all nock interceptors in the server process.
+ * Clear all dynamic mock routes.
  */
-export const clearNock = async () => {
-  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/nock`)
+export const clearMockRoutes = async () => {
+  await anonymousAx.delete(`${mockUrl}/_test/routes`)
 }
 
 /**
- * Set up a nock in a worker thread via test-env API.
- * Replaces direct `workers.workers.batchProcessor.run(params, { name: 'setCoordsNock' })` calls.
+ * Call a function in a worker thread via test-env API.
+ * Used for things like setting environment variables in worker threads.
  */
-export const setupWorkerNock = async (
+export const callWorkerFunction = async (
   worker: string,
   functionName: string,
   params: any = {}
 ) => {
-  await anonymousAx.post(`${apiUrl}/api/v1/test-env/worker-nock`, { worker, functionName, params })
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/worker-call`, { worker, functionName, params })
 }
 
 /**

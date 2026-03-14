@@ -20,3 +20,5 @@ node_modules
 /tmp
 .env
 .vscode
+dev/logs/
+test-results/

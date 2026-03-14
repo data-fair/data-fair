@@ -385,7 +385,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async
 
 const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
   const options = {
-    host: targetUrl.host,
+    hostname: targetUrl.hostname,
     port: targetUrl.port,
     protocol: targetUrl.protocol,
     path: targetUrl.pathname + targetUrl.hash + targetUrl.search,

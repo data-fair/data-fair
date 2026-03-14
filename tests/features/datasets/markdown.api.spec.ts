@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
@@ -72,7 +72,7 @@ test.describe('markdown contents management', () => {
     let res = await ax.post('/api/v1/applications', {
       title: 'app markdown',
       description: 'This is a **markdown** description.',
-      url: 'http://monapp1.com/'
+      url: mockAppUrl('monapp1')
     })
     assert.equal(res.status, 201)
     const app = res.data

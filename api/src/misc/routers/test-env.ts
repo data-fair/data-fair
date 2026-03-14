@@ -69,47 +69,22 @@ router.get('/dataset-es-info/:id', async (req, res, next) => {
   }
 })
 
-// Check if a file exists in storage
+// Check if a file exists in storage (path is relative to dataDir)
 router.get('/file-exists', async (req, res, next) => {
   try {
     const filePath = req.query.path as string
     if (!filePath) return res.status(400).json({ error: 'missing path query parameter' })
-    const exists = await fs.pathExists(filePath)
+    const { resolve } = await import('node:path')
+    const fullPath = resolve(dataDir, filePath)
+    const exists = await fs.pathExists(fullPath)
     res.json({ exists })
   } catch (err) {
     next(err)
   }
 })
 
-// Set up nock interceptor in server process
-router.post('/nock', async (req, res, next) => {
-  try {
-    const nock = (await import('nock')).default
-    const { origin, method, path: nockPath, query, reply, persist } = req.body
-    let interceptor = nock(origin)
-    if (persist) interceptor = interceptor.persist()
-    let scope = interceptor[method || 'get'](nockPath)
-    if (query) scope = scope.query(query)
-    scope.reply(reply?.status || 200, reply?.body, reply?.headers)
-    res.json({ ok: true })
-  } catch (err) {
-    next(err)
-  }
-})
-
-// Clean all nocks
-router.delete('/nock', async (req, res, next) => {
-  try {
-    const nock = (await import('nock')).default
-    nock.cleanAll()
-    res.json({ ok: true })
-  } catch (err) {
-    next(err)
-  }
-})
-
-// Call worker thread's nock setup function
-router.post('/worker-nock', async (req, res, next) => {
+// Call a function in a worker thread (e.g. setEnv for testing)
+router.post('/worker-call', async (req, res, next) => {
   try {
     const { workers } = await import('../../workers/tasks.ts')
     const { worker, functionName, params } = req.body
@@ -120,7 +95,7 @@ router.post('/worker-nock', async (req, res, next) => {
   }
 })
 
-// Re-initialize base applications from config (needed after nock setup)
+// Re-initialize base applications from config
 router.post('/reload-base-apps', async (req, res, next) => {
   try {
     const { init } = await import('../../base-applications/router.ts')

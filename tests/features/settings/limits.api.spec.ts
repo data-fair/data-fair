@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import fs from 'fs-extra'
 import tmp from 'tmp-promise'
-import { axios, axiosAuth, anonymousAx, apiUrl, clean, checkPendingTasks, config } from '../../support/axios.ts'
-import { sendDataset, waitForJournalEvent } from '../../support/workers.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
+import { sendDataset, waitForDatasetError, clearRateLimiting } from '../../support/workers.ts'
 
 const anonymous = axios()
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
@@ -35,7 +35,7 @@ test.describe('limits', () => {
     form.append('file', Buffer.alloc(150000), 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
-    await waitForJournalEvent(res.data.id, 'error')
+    await waitForDatasetError(ax, res.data.id)
 
     // Send dataset applying default limits
     form = new FormData()
@@ -49,7 +49,7 @@ test.describe('limits', () => {
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
     res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
-    await waitForJournalEvent(res.data.id, 'error')
+    await waitForDatasetError(ax, res.data.id)
     assert.equal(res.status, 201)
     form = new FormData()
     form.append('file', Buffer.alloc(100004), 'dataset.csv')
@@ -168,8 +168,8 @@ test.describe('limits', () => {
     )
     // after 1 s the rate limiter is emptied
     await new Promise(resolve => setTimeout(resolve, 1000))
-    // clear rate limiting state via test-env reset
-    await anonymousAx.delete(`${apiUrl}/api/v1/test-env`)
+    // clear rate limiting state
+    await clearRateLimiting()
     await ax.get('/api/v1/datasets')
   })
 })

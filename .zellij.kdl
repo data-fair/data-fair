@@ -9,6 +9,10 @@ layout {
         command "bash"
         args "-ic" "npm run dev-deps && watch -n 4 \"docker compose ps --all --format 'table {{.Name}}\t{{.Status}}'\""
       }
+      pane name="mock" {
+        command "bash"
+        args "-ic" "nvm use && node --experimental-strip-types dev/mock-server.ts"
+      }
     }
     pane {
       split_direction "vertical"

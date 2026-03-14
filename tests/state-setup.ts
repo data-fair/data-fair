@@ -22,12 +22,13 @@ If you are an agent do not try to start it. Instead check for a startup failure 
     `Mock server seems to be unavailable at ${mockUrl}. Start it with: node --experimental-strip-types dev/mock-server.ts`
   )
 
-  // More visible dev api server logs straight in the test output
+  // More visible dev server logs straight in the test output
   try {
     const { existsSync, mkdirSync } = await import('node:fs')
     if (!existsSync('dev/logs')) mkdirSync('dev/logs', { recursive: true })
-    const tail = spawn('tail', ['-n', '0', '-f', 'dev/logs/dev-api.log'], { stdio: 'inherit', detached: true })
-    process.env.TAIL_PID = tail.pid?.toString()
+    const tailApi = spawn('tail', ['-n', '0', '-f', 'dev/logs/dev-api.log'], { stdio: 'inherit', detached: true })
+    const tailWorker = spawn('tail', ['-n', '0', '-f', 'dev/logs/dev-worker.log'], { stdio: 'inherit', detached: true })
+    process.env.TAIL_PIDS = [tailApi.pid, tailWorker.pid].filter(Boolean).join(',')
   } catch {
     // log tailing is optional
   }
