@@ -15,6 +15,7 @@
     "dev-deps": "docker compose --profile dev up -d --wait",
     "stop-dev-deps": "docker compose --profile dev stop",
     "dev-api": "MODE=server npm -w api run dev",
+    "dev-benchmark": "MODE=server_worker npm -w api run dev-benchmark",
     "dev-worker": "MODE=worker DEBUG=upgrade* OBSERVER_PORT=9091 npm -w api run dev",
     "dev-ui": "npm -w ui run dev",
     "dev-zellij": "dotenv -- zellij --layout .zellij.kdl",
@@ -29,7 +30,8 @@
     "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc && tsc -p test-it/tsconfig.json && npm -w embed-ui run check-types",
-    "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w embed-ui run check-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm run test-s3 && npm audit --omit=dev --audit-level=critical"
+    "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w embed-ui run check-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm run test-s3 && npm audit --omit=dev --audit-level=critical",
+    "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning benchmark/src/index.ts"
   },
   "engines": {
     "node": "v24"
@@ -70,7 +72,8 @@
     "ui",
     "embed-ui",
     "shared",
-    "parquet-writer"
+    "parquet-writer",
+    "benchmark"
   ],
   "dependencies": {
     "@data-fair/lib-node": "^2.9.1"

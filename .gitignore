@@ -20,3 +20,4 @@ node_modules
 /tmp
 .env
 .vscode
+/benchmark/results/*.json
