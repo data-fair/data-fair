@@ -5,6 +5,7 @@ export const directoryUrl = `http://localhost:${process.env.NGINX_PORT1}/simple-
 export const apiUrl = `http://localhost:${process.env.DEV_API_PORT}`
 export const baseURL = `http://localhost:${process.env.NGINX_PORT1}/data-fair`
 export const wsUrl = `ws://localhost:${process.env.NGINX_PORT1}/data-fair`
+export const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
 
 const axiosOpts = { baseURL }
 
@@ -24,6 +25,14 @@ export const axiosAuth = (email: string, password = 'passwd', org?: string, admi
 
 export const clean = async () => {
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env`)
+}
+
+export const config = {
+  publicUrl: baseURL,
+  directoryUrl,
+  secretKeys: { identities: 'identities-test-key', limits: 'limits-test-key' },
+  cache: { publicMaxAge: 1, timestampedPublicMaxAge: 604800 },
+  defaultRemoteKey: { in: 'header', name: 'x-apiKey', value: 'test_default_key' },
 }
 
 export const checkPendingTasks = async () => {

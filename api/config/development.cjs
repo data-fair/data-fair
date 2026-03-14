@@ -7,11 +7,12 @@ module.exports = {
   dataDir: '../data/development',
   mongo: {
     url: `mongodb://localhost:${process.env.MONGO_PORT}/data-fair-development`,
+    maxBulkOps: 100
   },
   elasticsearch: {
     host: `localhost:${process.env.ES_PORT}`,
-    // searchTimeout: '2s'
-    acceptYellowStatus: true
+    acceptYellowStatus: true,
+    singleLineOpRefresh: true
   },
   filesStorage: 'fs',
   publicUrl: `http://localhost:${process.env.NGINX_PORT1}/data-fair`,
@@ -30,35 +31,109 @@ module.exports = {
   privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
   captureUrl: `http://localhost:${process.env.NGINX_PORT1}/capture`,
   privateCaptureUrl: `http://localhost:${process.env.CAPTURE_PORT}`,
-  // privateCatalogsUrl: `http://${host}:5600/catalogs`,
   privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
-  // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
+  brand: {
+    embed: '<div>application embed</div>'
+  },
   defaultLimits: {
-    totalStorage: 10000000000,
-    totalIndexed: 10000000000,
-    nbDatasets: 1000
-    // datasetStorage: -1,
+    totalStorage: 200000,
+    datasetStorage: 160000,
+    nbDatasets: 20,
+    remoteServiceRate: {
+      duration: 1,
+      nb: 10,
+      kb: 50
+    },
+    apiRate: {
+      anonymous: {
+        duration: 1,
+        nb: 100,
+        bandwidth: {
+          dynamic: 100000,
+          static: 200000
+        }
+      },
+      user: {
+        duration: 1,
+        nb: 100,
+        bandwidth: {
+          dynamic: 200000,
+          static: 400000
+        }
+      },
+      postApplicationKey: {
+        duration: 60,
+        nb: 1
+      },
+      appCaptures: {
+        duration: 60,
+        nb: 10
+      }
+    }
+  },
+  worker: {
+    interval: 500,
+    baseConcurrency: 1,
+    errorRetryDelay: 0,
+    closeTimeout: 1
   },
   locks: {
     // in seconds
-    ttl: 4
+    ttl: 1
   },
-  /* For virtual box debugging
-  publicUrl: 'http://10.0.2.2:5600',
-  wsPublicUrl: 'ws://10.0.2.2:5600',
-  directoryUrl: 'https://staging.koumoul.com',
-  */
+  datasetStateRetries: {
+    interval: 1,
+    nb: 1
+  },
+  defaultRemoteKey: {
+    in: 'header',
+    name: 'x-apiKey',
+    value: 'test_default_key'
+  },
+  remoteTimeout: 500,
   secretKeys: {
-    identities: 'dev_secret',
+    identities: 'identities-test-key',
+    limits: 'limits-test-key',
     events: 'secret-notifications',
     catalogs: 'secret-catalogs'
   },
+  nuxtBuild: {
+    active: false
+  },
+  applications: [{
+    title: 'App test1',
+    url: `http://localhost:${process.env.MOCK_PORT}/monapp1`,
+    public: true
+  }, {
+    title: 'App test2',
+    url: `http://localhost:${process.env.MOCK_PORT}/monapp2`
+  }, {
+    title: 'App test3',
+    url: `http://localhost:${process.env.MOCK_PORT}/monapp3`,
+    public: true
+  }],
+  remoteServices: [{
+    title: 'Geocoder',
+    url: `http://localhost:${process.env.MOCK_PORT}/geocoder/api-docs.json`
+  }, {
+    title: 'Sirene',
+    url: `http://localhost:${process.env.MOCK_PORT}/sirene/api-docs.json`
+  }],
+  observer: {
+    port: process.env.DEV_OBSERVER_PORT
+  },
   cache: {
+    publicMaxAge: 1,
     disabled: true
   },
-  worker: {
-    closeTimeout: 1000
+  clamav: {
+    active: true,
+    dataDir: '/data/data-fair/development',
+    port: process.env.CLAMAV_PORT,
   },
+  assertImmutable: true,
+  remoteAttachmentCacheDuration: 1000,
+  compatODS: true,
   browserLogLevel: 'debug',
   catalogs: [{
     title: 'Data.gouv.fr',
@@ -97,23 +172,7 @@ module.exports = {
   disableApplications: false,
   disableRemoteServices: false,
   disablePublicationSites: false,
-  clamav: {
-    active: true,
-    dataDir: '/data/data-fair/development',
-    port: process.env.CLAMAV_PORT,
-  },
-  assertImmutable: true,
   agentkeepaliveOptions: {
     keepAlive: false
-  },
-  remoteServices: [{
-    title: 'Service de données cartographiques',
-    id: 'tileserver-koumoul',
-    description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
-    server: 'https://staging-koumoul.com/tileserver'
-  }],
-  compatODS: true,
-  observer: {
-    port: process.env.DEV_OBSERVER_PORT
   },
 }

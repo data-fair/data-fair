@@ -60,7 +60,7 @@ const createWorkers = () => {
       }
     })
   }
-  if (process.env.NODE_ENV === 'test') {
+  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
     for (const worker of Object.values(workers)) {
       worker.on('message', (message) => {
         testEvents.emit('notification', message)

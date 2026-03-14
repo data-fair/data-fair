@@ -8,23 +8,132 @@ import { apiUrl, anonymousAx, wsUrl } from './axios.ts'
 const log = { info: async (...args: any[]) => console.log(...args), error: console.error, debug: console.debug }
 
 /**
+ * Create a WS subscriber that pre-subscribes to a dataset journal channel.
+ * Buffers all messages from the moment of subscription so none are missed.
+ * Use this when you need to subscribe BEFORE triggering the action that causes the event.
+ */
+export const subscribeJournal = async (
+  datasetId: string
+) => {
+  const channel = `datasets/${datasetId}/journal`
+  const wsClient = new DataFairWsClient({ url: wsUrl, log })
+
+  // Buffer messages from the moment we subscribe
+  const buffer: any[] = []
+  wsClient.on('message', (msg: any) => {
+    if (msg.channel === channel && msg.type !== 'subscribe-confirm') {
+      buffer.push(msg.data)
+    }
+  })
+
+  await wsClient.subscribe(channel)
+
+  return {
+    waitFor: async (eventType: string, timeout = 30000) => {
+      // Check buffer first
+      const match = buffer.find((e: any) => e.type === eventType || e.type === 'error')
+      if (match) {
+        wsClient.close()
+        if (match.type === 'error') throw new Error(match.data)
+        return match
+      }
+      // Wait for new messages
+      return new Promise<any>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          wsClient.close()
+          reject(new Error(`subscribeJournal timeout after ${timeout}ms waiting for "${eventType}" on "${datasetId}"`))
+        }, timeout)
+        const check = (msg: any) => {
+          if (msg.channel !== channel) return
+          if (msg.data?.type === eventType || msg.data?.type === 'error') {
+            clearTimeout(timer)
+            wsClient.off('message', check)
+            wsClient.close()
+            if (msg.data.type === 'error') reject(new Error(msg.data.data))
+            else resolve(msg.data)
+          }
+        }
+        wsClient.on('message', check)
+        // Re-check buffer in case message arrived between first check and listener setup
+        const late = buffer.find((e: any) => e.type === eventType || e.type === 'error')
+        if (late) {
+          clearTimeout(timer)
+          wsClient.off('message', check)
+          wsClient.close()
+          if (late.type === 'error') reject(new Error(late.data))
+          else resolve(late)
+        }
+      })
+    },
+    close: () => wsClient.close()
+  }
+}
+
+/**
  * Wait for finalize-end on a dataset, then return the updated dataset.
  * Throws if an error event is received before finalize-end.
- * Replaces the old `workers.hook('finalize/' + id)` pattern.
+ * Uses WS subscription for instant notification.
  */
 export const waitForFinalize = async (
   ax: AxiosInstance,
   datasetId: string,
   timeout = 30000
 ): Promise<any> => {
+  // First check current state — if status is already finalized and no partial rest status,
+  // we need to wait for a NEW finalization. Record current finalizedAt.
+  let currentFinalizedAt: string | undefined
+  try {
+    const current = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
+    currentFinalizedAt = current.finalizedAt
+  } catch {
+    // dataset might not exist yet (just created)
+  }
+
   const wsClient = new DataFairWsClient({ url: wsUrl, log })
   try {
     await wsClient.waitForJournal(datasetId, 'finalize-end', timeout)
   } finally {
     wsClient.close()
   }
+
+  // Verify we got a NEW finalization (not a stale one)
   const res = await ax.get(`/api/v1/datasets/${datasetId}`)
+  if (currentFinalizedAt && res.data.finalizedAt === currentFinalizedAt) {
+    // The finalize-end we caught was stale, wait for the real one via polling
+    const start = Date.now()
+    while (Date.now() - start < timeout) {
+      const poll = await ax.get(`/api/v1/datasets/${datasetId}`)
+      if (poll.data.status === 'error') throw new Error(`Dataset ${datasetId} is in error status`)
+      if (poll.data.finalizedAt !== currentFinalizedAt) return poll.data
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    throw new Error(`waitForFinalize: finalizedAt did not change for dataset ${datasetId}`)
+  }
   return res.data
+}
+
+/**
+ * Perform an action and wait for the dataset to be re-finalized.
+ * Records finalizedAt before the action, then polls until it changes.
+ * This avoids race conditions with WS events.
+ */
+export const doAndWaitForFinalize = async (
+  ax: AxiosInstance,
+  datasetId: string,
+  action: () => Promise<any>,
+  timeout = 30000
+): Promise<any> => {
+  const before = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
+  const previousFinalizedAt = before.finalizedAt
+  await action()
+  const start = Date.now()
+  while (Date.now() - start < timeout) {
+    const res = await ax.get(`/api/v1/datasets/${datasetId}`)
+    if (res.data.status === 'error') throw new Error(`Dataset ${datasetId} is in error status`)
+    if (res.data.status === 'finalized' && res.data.finalizedAt !== previousFinalizedAt) return res.data
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+  throw new Error(`doAndWaitForFinalize timeout after ${timeout}ms for dataset ${datasetId}`)
 }
 
 /**
@@ -94,4 +203,26 @@ export const setupWorkerNock = async (
   params: any = {}
 ) => {
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/worker-nock`, { worker, functionName, params })
+}
+
+/**
+ * Clear rate limiting without full data cleanup.
+ */
+export const clearRateLimiting = async () => {
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/rate-limiting`)
+}
+
+/**
+ * Clear memoized publication site settings cache.
+ */
+export const clearPublicationSitesCache = async () => {
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/publication-sites-cache`)
+}
+
+/**
+ * Check if a file exists via test-env API.
+ */
+export const fileExists = async (filePath: string): Promise<boolean> => {
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: filePath } })
+  return res.data.exists
 }

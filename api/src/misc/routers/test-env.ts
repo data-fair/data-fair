@@ -26,15 +26,23 @@ router.delete('/', async (req, res, next) => {
       mongo.settings.deleteMany({}),
       mongo.db.collection('locks').deleteMany({}),
       mongo.db.collection('extensions-cache').deleteMany({}),
-      mongo.remoteServices.deleteMany({ id: /dataset:(.*)/ }),
+      mongo.remoteServices.deleteMany({}),
+      mongo.baseApplications.deleteMany({}),
       mongo.db.collection('journals').deleteMany({}),
-      fs.emptyDir(tmpDir),
-      filesStorage.removeDir(dataDir)
+      filesStorage.removeDir(dataDir),
+      es.client.indices.delete({ index: config.indicesPrefix + '-*', ignore_unavailable: true }).catch(() => {})
     ])
-    await fs.emptyDir(dataDir)
+    await fs.ensureDir(dataDir)
+    await fs.ensureDir(tmpDir)
     memoizedGetPublicationSiteSettings.clear()
     rateLimiting.clear()
     testEvents.removeAllListeners()
+
+    // re-initialize remote services and base apps from config after cleanup
+    const { init: initRemoteServices } = await import('../../remote-services/utils.ts')
+    await initRemoteServices()
+    const { init: initBaseApps } = await import('../../base-applications/router.ts')
+    await initBaseApps()
 
     res.status(200).json({ ok: true })
   } catch (err) {
@@ -110,6 +118,40 @@ router.post('/worker-nock', async (req, res, next) => {
   } catch (err) {
     next(err)
   }
+})
+
+// Re-initialize base applications from config (needed after nock setup)
+router.post('/reload-base-apps', async (req, res, next) => {
+  try {
+    const { init } = await import('../../base-applications/router.ts')
+    await init()
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Re-initialize remote services from config
+router.post('/reload-remote-services', async (req, res, next) => {
+  try {
+    const { init } = await import('../../remote-services/utils.ts')
+    await init()
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Clear rate limiting only (without full data cleanup)
+router.delete('/rate-limiting', (req, res) => {
+  rateLimiting.clear()
+  res.json({ ok: true })
+})
+
+// Clear memoized publication site settings cache
+router.delete('/publication-sites-cache', (req, res) => {
+  memoizedGetPublicationSiteSettings.clear()
+  res.json({ ok: true })
 })
 
 // SSE stream of testEvents emissions
