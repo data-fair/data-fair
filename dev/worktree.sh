@@ -23,6 +23,9 @@ echo "Create .env file"
 echo "npm ci"
 npm ci
 
+echo "build native modules"
+npm -w parquet-writer run build
+
 echo "npm run build-types"
 npm run build-types
 

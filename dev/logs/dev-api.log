@@ -1,0 +1,26 @@
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,ts,json[39m
+[32m[nodemon] starting `node --experimental-strip-types --disable-warning=ExperimentalWarning index.ts || (sleep 2 && touch index.ts)`[39m
+unknown format "media-range" ignored in schema at path "#/propertyNames"
+unknown format "media-range" ignored in schema at path "#/propertyNames"
+unknown format "media-range" ignored in schema at path "#/properties/contentType"
+unknown format "media-range" ignored in schema at path "#/properties/contentType"
+
+Workers are configured with a base concurrency of 2.
+You should allocate about 4GB of memory.
+
+connecting to mongodb...
+...ok
+Observer server available on http://localhost:24667
+    GET /metrics -> get prometheus metrics for this instance
+    GET /service-metrics -> get prometheus metrics shared accross all instances
+    GET /cpu-profile -> generate and fetch a CPU profile
+    GET /heap-profile -> generate and fetch a sampled heap allocation snapshot
+    GET /heap-profile-all -> generate and fetch a sampled heap allocation snapshot including objects collected by GC
+
+Web socket and HTTP server listening on http://localhost:24665
+Exposed on http://localhost:24655/data-fair
+df-event: {"time":"2026-03-14T07:07:18.561Z","level":"alert","code":"df.apikeys.permission","message":"a user attempted to overwrite settings from another account","hostname":"alban-laptop","ip":"127.0.0.1","host":"-","accountKey":"user.dmeadus0","accountName":"Danna Meadus","userId":"dmeadus0","userName":"Danna Meadus"}
+df-event: {"time":"2026-03-14T07:07:18.672Z","level":"info","code":"df.apikeys.create","message":"a user created an api key Api key 1 (lg3kcp4i2f-rs0gdjfgk-3le), scopes=","hostname":"alban-laptop","ip":"127.0.0.1","host":"-","accountKey":"organization.KWqAGZ4mG","accountName":"Fivechat","userId":"dmeadus0","userName":"Danna Meadus"}

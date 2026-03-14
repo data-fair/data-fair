@@ -153,6 +153,9 @@ export const run = async () => {
     if (config.compatODS) {
       app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./api-compat/ods/index.ts')).default)
     }
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+      app.use('/api/v1/test-env', (await import('./misc/routers/test-env.ts')).default)
+    }
 
     app.use('/api/', (req, res) => {
       return res.status(404).send('unknown api endpoint')
