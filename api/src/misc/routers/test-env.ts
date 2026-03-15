@@ -142,10 +142,13 @@ router.get('/events', (req, res) => {
   }
 
   const onNotification = (data: any) => onEvent('notification', data)
+  const onExtensionInputs = (data: any) => onEvent('extension-inputs', data)
   testEvents.on('notification', onNotification)
+  testEvents.on('extension-inputs', onExtensionInputs)
 
   req.on('close', () => {
     testEvents.off('notification', onNotification)
+    testEvents.off('extension-inputs', onExtensionInputs)
   })
 })
 

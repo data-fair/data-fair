@@ -200,6 +200,7 @@ export const setupMockRoute = async (config: {
   path: string
   status?: number
   body?: any
+  bodyBase64?: string
   contentType?: string
   delay?: number
 }) => {

@@ -2,6 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '../../support/axios.ts'
 import { clearPublicationSitesCache } from '../../support/workers.ts'
+import { TestEventClient } from '../../support/events.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
@@ -133,15 +134,30 @@ test.describe('publication sites', () => {
       (err: any) => err.status === 403)
   })
 
-  // TODO: This test requires testEvents.on('notification', ...) which cannot be used externally.
-  // A dedicated SSE/webhook endpoint is needed to capture notifications in external tests.
-  test.skip('department admin can request publishing dataset on org site', async () => {
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+  test('department admin can request publishing dataset on org site', async () => {
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
 
-    const dataset = (await hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
-    // TODO: notification assertions require testEvents
+      const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
+      await dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+
+      const dataset = (await hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
+      await hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
+
+      // Wait briefly for notification to arrive via SSE
+      await new Promise(resolve => setTimeout(resolve, 500))
+      const notif = notifs.find((n: any) => n.topic?.key?.includes('publication-requested'))
+      assert.ok(notif, 'expected a publication-requested notification')
+      assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
+      assert.equal(notif.sender.type, 'organization')
+      assert.equal(notif.sender.id, 'KWqAGZ4mG')
+      assert.equal(notif.sender.department, undefined)
+    } finally {
+      events.close()
+    }
   })
 
   test('department admin can publish dataset on department site', async () => {
@@ -176,14 +192,30 @@ test.describe('publication sites', () => {
       (err: any) => err.status === 403)
   })
 
-  // TODO: This test requires testEvents.on('notification', ...) which cannot be used externally.
-  test.skip('department contrib can request publishing dataset on department site', async () => {
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
+  test('department contrib can request publishing dataset on department site', async () => {
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
 
-    const dataset = (await hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
-    // TODO: notification assertions require testEvents
+      const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
+      await hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
+
+      const dataset = (await hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
+      await ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
+
+      // Wait briefly for notification to arrive via SSE
+      await new Promise(resolve => setTimeout(resolve, 500))
+      const notif = notifs.find((n: any) => n.topic?.key?.includes('publication-requested'))
+      assert.ok(notif, 'expected a publication-requested notification')
+      assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
+      assert.equal(notif.sender.type, 'organization')
+      assert.equal(notif.sender.id, 'KWqAGZ4mG')
+      assert.equal(notif.sender.department, 'dep1')
+    } finally {
+      events.close()
+    }
   })
 
   test('contrib can publish on a "staging" publication site', async () => {

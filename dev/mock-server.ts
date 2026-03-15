@@ -120,7 +120,7 @@ const monapp3ConfigSchema = {
   layout: 'tabs'
 }
 
-type RouteResult = { status: number, body: any, contentType?: string, delay?: number }
+type RouteResult = { status: number, body?: any, bodyBase64?: string, contentType?: string, delay?: number }
 
 const staticRoutes: Record<string, () => RouteResult> = {
   // Remote services API docs (patched to use mock server URLs)
@@ -169,7 +169,11 @@ function readBody (req: IncomingMessage): Promise<string> {
 function sendResult (res: ServerResponse, result: RouteResult) {
   const contentType = result.contentType || 'application/json'
   res.writeHead(result.status, { 'Content-Type': contentType })
-  res.end(typeof result.body === 'string' ? result.body : JSON.stringify(result.body))
+  if (result.bodyBase64) {
+    res.end(Buffer.from(result.bodyBase64, 'base64'))
+  } else {
+    res.end(typeof result.body === 'string' ? result.body : JSON.stringify(result.body))
+  }
 }
 
 const server = createServer(async (req, res) => {
@@ -182,6 +186,7 @@ const server = createServer(async (req, res) => {
     dynamicRoutes[body.path] = {
       status: body.status || 200,
       body: body.body,
+      bodyBase64: body.bodyBase64,
       contentType: body.contentType,
       delay: body.delay
     }

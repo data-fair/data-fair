@@ -2,8 +2,9 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import fs from 'node:fs'
-import { axios, axiosAuth, clean, checkPendingTasks, config, apiUrl, anonymousAx } from '../../support/axios.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, config, apiUrl, anonymousAx, wsUrl } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
+import { WsClient } from '@data-fair/lib-node/ws-client.js'
 
 const anonymous = axios()
 const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
@@ -122,33 +123,35 @@ test.describe('root', () => {
     assert.ok(!fileExistsRes.data.exists)
   })
 
-  // WebSocket tests skipped - they test wsServer internals that require in-process access
-  test.skip('Connect to web socket server', async () => {
-    // requires in-process WebSocket and wsEmitter access
+  test('Connect to web socket server', async () => {
+    const log = { info: async (...args: any[]) => {}, error: console.error, debug: () => {} }
+    const wsClient = new WsClient({ url: wsUrl, log })
+    // If we can subscribe to a channel, the connection works
+    await wsClient.subscribe('test_channel')
+    wsClient.close()
   })
 
-  test.skip('Receive error from websocker server when sending bad input', async () => {
-    // requires in-process WebSocket and wsEmitter access
+  test('Receive error from websocker server when sending bad input', async () => {
+    const WebSocket = (await import('ws')).default
+    const wsServerUrl = wsUrl.replace('/data-fair', '/data-fair/')
+    const cli = new WebSocket(wsServerUrl)
+    await new Promise<void>((resolve, reject) => {
+      cli.on('open', resolve)
+      cli.on('error', reject)
+    })
+    cli.send('{blabla}')
+    const msg: any = await new Promise(resolve => cli.on('message', (data: any) => resolve(JSON.parse(data.toString()))))
+    assert.equal(msg.type, 'error')
+    cli.close()
   })
 
+  // Requires wsEmitter for server-side event emission
   test.skip('Subscribe to channel', async () => {
-    // requires in-process WebSocket and wsEmitter access
   })
 
+  // Requires wsEmitter for server-side event emission
   test.skip('Send lots of events', async () => {
-    // requires in-process WebSocket and wsEmitter access
   })
 
-  // DCAT tests skipped - they require importing internal API modules (dcatNormalize, dcatValidate)
-  test.skip('DCAT should preserve serialization of a valid example', async () => {
-    // requires internal dcatNormalize and dcatValidate imports
-  })
-
-  test.skip('Read a XML+RDF DCAT export', async () => {
-    // requires internal dcatNormalize and dcatValidate imports
-  })
-
-  test.skip('Validate a DCAT example with different serialization', async () => {
-    // requires internal dcatNormalize and dcatValidate imports
-  })
+  // DCAT unit tests moved to dcat.unit.spec.ts
 })

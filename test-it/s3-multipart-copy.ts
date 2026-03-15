@@ -18,7 +18,7 @@ describe('S3 multipart copy', function () {
   after(stopApiServer)
   afterEach((t) => checkPendingTasks(t.name))
 
-  it.only('should use multipart copy for files larger than threshold', async function () {
+  it('should use multipart copy for files larger than threshold', async function () {
     if (!(filesStorage instanceof S3Backend)) {
       console.log('Skipping test: not using S3 backend')
       return
