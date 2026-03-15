@@ -6,7 +6,7 @@ import moment from 'moment'
 import zlib from 'zlib'
 import iconv from 'iconv-lite'
 import { axios, axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError } from '../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, lsAttachments } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
@@ -210,26 +210,22 @@ test.describe('REST datasets', () => {
     assert.equal(res.data.results[2]._id, 'line2')
     assert.equal(res.data.results[3]._id, 'line1')
 
-    // TODO: requires direct MongoDB/filesystem access
     // Patch one through db query to check that it won't be processed
     // we must be sure that the whole dataset is not reindexed each time, only the diffs
-    // const collection = restDatasetsUtils.collection(dataset)
-    // await collection.updateOne({ _id: 'line4' }, { $set: { attr2: 'altered' } })
-    // assert.equal((await collection.findOne({ _id: 'line4' })).attr2, 'altered')
+    await restCollectionUpdateOne('rest3', { _id: 'line4' }, { $set: { attr2: 'altered' } })
+    assert.equal((await restCollectionFindOne('rest3', { _id: 'line4' })).attr2, 'altered')
 
     res = await ax.post('/api/v1/datasets/rest3/_bulk_lines?async=true', [
       { _action: 'delete', _id: 'line1' },
       { _action: 'patch', _id: 'line2', attr1: 'test2' }
     ])
-    // TODO: requires direct MongoDB/filesystem access
-    // assert.equal(await collection.countDocuments({ _needsIndexing: true }), 2)
+    assert.equal(await restCollectionCount('rest3', { _needsIndexing: true }), 2)
 
     dataset = await waitForFinalize(ax, 'rest3')
     assert.equal(dataset.updatedAt, dataset.createdAt)
     assert.ok(dataset.dataUpdatedAt > dataset.updatedAt)
     assert.ok(dataset.finalizedAt > dataset.dataUpdatedAt)
-    // TODO: requires direct MongoDB/filesystem access
-    // assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
+    assert.equal(await restCollectionCount('rest3', { _needsIndexing: true }), 0)
     assert.equal(dataset.count, 3)
     res = await ax.get('/api/v1/datasets/rest3/lines')
     assert.equal(res.data.total, 3)
@@ -389,11 +385,10 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [{ _action: 'patch', _id: line._id, attr1: 'patched1' }])
     assert.equal(res.data.nbOk, 1)
 
-    // TODO: requires direct MongoDB/filesystem access
     // on older datasets that multivalued data was stored with separator, we simulate this situation
-    // await restDatasetsUtils.collection(dataset).updateOne({ _id: line._id }, { $set: { attr3: 'test1, test2' } })
-    // res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [{ _action: 'patch', _id: line._id, attr1: 'patched1' }])
-    // assert.equal(res.data.nbOk, 1)
+    await restCollectionUpdateOne('rest4', { _id: line._id }, { $set: { attr3: 'test1, test2' } })
+    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [{ _action: 'patch', _id: line._id, attr1: 'patched1' }])
+    assert.equal(res.data.nbOk, 1)
 
     await waitForFinalize(ax, 'rest4')
   })
@@ -452,19 +447,17 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
     assert.equal(res.data.results[0].attr1, 10)
-    // TODO: requires direct MongoDB/filesystem access
-    // let attachments = await lsAttachments(dataset)
-    // assert.equal(attachments.length, 1)
-    // assert.equal(attachments[0], res.data.results[0].attachmentPath)
+    let attachments = await lsAttachments('rest5')
+    assert.equal(attachments.length, 1)
+    assert.equal(attachments[0], res.data.results[0].attachmentPath)
 
     await ax.delete('/api/v1/datasets/rest5/lines/' + line._id)
     await waitForFinalize(ax, 'rest5')
 
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 0)
-    // TODO: requires direct MongoDB/filesystem access
-    // attachments = await lsAttachments(dataset)
-    // assert.equal(attachments.length, 0)
+    attachments = await lsAttachments('rest5')
+    assert.equal(attachments.length, 0)
   })
 
   test('Send attachment with multipart and special _body key', async () => {
@@ -514,9 +507,8 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 2)
     await waitForFinalize(ax, 'rest6')
-    // TODO: requires direct MongoDB/filesystem access
-    // const ls = await lsAttachments(dataset)
-    // assert.equal(ls.length, 2)
+    const ls = await lsAttachments('rest6')
+    assert.equal(ls.length, 2)
 
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 2)
@@ -530,9 +522,8 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form1, { headers: { 'Content-Length': form1.getLengthSync(), ...form1.getHeaders() } })
     assert.equal(res.status, 200)
     await waitForFinalize(ax, 'rest6')
-    // TODO: requires direct MongoDB/filesystem access
-    // const ls1 = await lsAttachments(dataset)
-    // assert.equal(ls1.length, 2)
+    const ls1 = await lsAttachments('rest6')
+    assert.equal(ls1.length, 2)
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.find((l: any) => l._id === 'line1')['_file.content'], 'This is another test libreoffice file.')
@@ -548,9 +539,8 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 1)
     await waitForFinalize(ax, 'rest6')
-    // TODO: requires direct MongoDB/filesystem access
-    // const ls2 = await lsAttachments(dataset)
-    // assert.equal(ls2.length, 3)
+    const ls2 = await lsAttachments('rest6')
+    assert.equal(ls2.length, 3)
 
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 3)
@@ -567,9 +557,8 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 1)
     await waitForFinalize(ax, 'rest6')
-    // TODO: requires direct MongoDB/filesystem access
-    // const ls3 = await lsAttachments(dataset)
-    // assert.equal(ls3.length, 1)
+    const ls3 = await lsAttachments('rest6')
+    assert.equal(ls3.length, 1)
 
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 1)
@@ -587,9 +576,8 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 2)
     await waitForFinalize(ax, 'rest6')
-    // TODO: requires direct MongoDB/filesystem access
-    // const ls4 = await lsAttachments(dataset)
-    // assert.equal(ls4.length, 2)
+    const ls4 = await lsAttachments('rest6')
+    assert.equal(ls4.length, 2)
 
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 3)
@@ -957,9 +945,8 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results[2].attr2, 'test1')
     assert.equal(res.data.results[2].attachmentPath, res.data.results[1].attachmentPath)
     assert.notEqual(res.data.results[1].attachmentPath, res.data.results[0].attachmentPath)
-    // TODO: requires direct MongoDB/filesystem access
-    // let attachments = await lsAttachments(dataset)
-    // assert.equal(attachments.length, 2)
+    let attachments = await lsAttachments('resthistattach')
+    assert.equal(attachments.length, 2)
 
     // delete the line, the attachments should still be there
     await ax.delete(`/api/v1/datasets/resthistattach/lines/${line._id}`)
@@ -967,9 +954,8 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
     res = await ax.get(`/api/v1/datasets/resthistattach/lines/${line._id}/revisions`)
     assert.equal(res.data.results.length, 4)
-    // TODO: requires direct MongoDB/filesystem access
-    // attachments = await lsAttachments(dataset)
-    // assert.equal(attachments.length, 2)
+    attachments = await lsAttachments('resthistattach')
+    assert.equal(attachments.length, 2)
   })
 
   test('Apply a TTL on some date-field', async () => {
@@ -1017,29 +1003,24 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.get('/api/v1/datasets/restidem/lines')
     assert.equal(res.data.total, 4)
 
-    // TODO: requires direct MongoDB/filesystem access
-    // const collection = restDatasetsUtils.collection(dataset)
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' }
     ])
     await waitForFinalize(ax, 'restidem')
-    // TODO: requires direct MongoDB/filesystem access
-    // assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
+    assert.equal(await restCollectionCount('restidem', { _needsIndexing: true }), 0)
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _action: 'delete', _id: 'line2' }
     ])
-    // TODO: requires direct MongoDB/filesystem access
-    // assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
+    assert.equal(await restCollectionCount('restidem', { _needsIndexing: true }), 1)
     await waitForFinalize(ax, 'restidem')
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
       { _action: 'patch', _id: 'line4', attr1: 'test1' }
     ])
-    // TODO: requires direct MongoDB/filesystem access
-    // assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
+    assert.equal(await restCollectionCount('restidem', { _needsIndexing: true }), 1)
     await waitForFinalize(ax, 'restidem')
     res = await ax.get('/api/v1/datasets/restidem')
     assert.equal(res.data.count, 3)
@@ -1068,9 +1049,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
       { _action: 'patch', _id: 'line1', attr1: 'test2' },
       { _action: 'patch', _id: 'line2', attr1: 'test1' }
     ])
-    // TODO: requires direct MongoDB/filesystem access
-    // const collection = restDatasetsUtils.collection(dataset)
-    // assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
+    assert.equal(await restCollectionCount('resthistidem', { _needsIndexing: true }), 1)
     await waitForFinalize(ax, 'resthistidem')
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
     assert.equal(res.data.total, 2)
@@ -1082,8 +1061,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
       { _action: 'patch', _id: 'line1', attr1: 'test2' },
       { _action: 'patch', _id: 'line2', attr1: 'test1' }
     ])
-    // TODO: requires direct MongoDB/filesystem access
-    // assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
+    assert.equal(await restCollectionCount('resthistidem', { _needsIndexing: true }), 0)
     await waitForFinalize(ax, 'resthistidem')
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
     assert.equal(res.data.total, 2)
@@ -1112,9 +1090,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     await waitForFinalize(ax, 'restdel')
     res = await ax.get('/api/v1/datasets/restdel')
     assert.equal(res.data.count, 0)
-    // TODO: requires direct MongoDB/filesystem access
-    // const collection = restDatasetsUtils.collection(dataset)
-    // assert.equal(await collection.countDocuments({}), 0)
+    assert.equal(await restCollectionCount('restdel', {}), 0)
   })
 
   test('Send bulk actions as a CSV body', async () => {

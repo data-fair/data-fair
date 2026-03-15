@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import fs from 'node:fs'
 import { axios, axiosAuth, clean, checkPendingTasks, config, apiUrl, anonymousAx, wsUrl } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, wsEmit } from '../../support/workers.ts'
 import { WsClient } from '@data-fair/lib-node/ws-client.js'
 
 const anonymous = axios()
@@ -145,12 +145,26 @@ test.describe('root', () => {
     cli.close()
   })
 
-  // Requires wsEmitter for server-side event emission
-  test.skip('Subscribe to channel', async () => {
-  })
-
-  // Requires wsEmitter for server-side event emission
-  test.skip('Send lots of events', async () => {
+  test('Subscribe to channel', async () => {
+    const WebSocket = (await import('ws')).default
+    const wsServerUrl = wsUrl.replace('/data-fair', '/data-fair/')
+    const cli = new WebSocket(wsServerUrl)
+    await new Promise<void>((resolve, reject) => {
+      cli.on('open', resolve)
+      cli.on('error', reject)
+    })
+    cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
+    const msg: any = await new Promise(resolve => cli.on('message', (data: any) => resolve(JSON.parse(data.toString()))))
+    assert.equal(msg.type, 'subscribe-confirm')
+    assert.equal(msg.channel, 'test_channel')
+    const [, msg2] = await Promise.all([
+      wsEmit('test_channel', 'test_data'),
+      new Promise(resolve => cli.on('message', (data: any) => resolve(JSON.parse(data.toString()))))
+    ]) as [void, any]
+    assert.equal(msg2.type, 'message')
+    assert.equal(msg2.channel, 'test_channel')
+    assert.equal(msg2.data, 'test_data')
+    cli.close()
   })
 
   // DCAT unit tests moved to dcat.unit.spec.ts

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setConfig } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
@@ -101,33 +101,37 @@ test.describe('workers', () => {
     assert.equal(journal[0].data, 'This is a test 400 error')
   })
 
-  // TODO: requires config.worker.errorRetryDelay manipulation
-  test.skip('Manage unexpected failure in children processes', async () => {
-    const ax = dmeadus
-    const form = new FormData()
-    form.append('title', 'trigger test error')
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset.csv')
-    const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
-    let dataset = (await ax.post('/api/v1/datasets', form, { headers })).data
+  test('Manage unexpected failure in children processes', async () => {
+    await setConfig('worker.errorRetryDelay', 120)
+    try {
+      const ax = dmeadus
+      const form = new FormData()
+      form.append('title', 'trigger test error')
+      form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset.csv')
+      const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+      let dataset = (await ax.post('/api/v1/datasets', form, { headers })).data
 
-    await waitForDatasetError(ax, dataset.id)
-    let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+      await waitForDatasetError(ax, dataset.id)
+      let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
 
-    assert.equal(journal[0].type, 'error-retry')
-    assert.equal(journal[0].data, 'This is a test error')
-    dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
-    assert.equal(dataset.status, 'error')
-    assert.equal(dataset.errorStatus, 'validated')
-    assert.ok(dataset.errorRetry)
+      assert.equal(journal[0].type, 'error-retry')
+      assert.equal(journal[0].data, 'This is a test error')
+      dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
+      assert.equal(dataset.status, 'error')
+      assert.equal(dataset.errorStatus, 'validated')
+      assert.ok(dataset.errorRetry)
 
-    await waitForDatasetError(ax, dataset.id)
-    journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-    assert.equal(journal[0].type, 'error')
-    assert.equal(journal[0].data, 'This is a test error')
-    dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
-    assert.equal(dataset.status, 'error')
-    assert.equal(dataset.errorStatus, 'validated')
-    assert.ok(!dataset.errorRetry)
+      await waitForDatasetError(ax, dataset.id)
+      journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+      assert.equal(journal[0].type, 'error')
+      assert.equal(journal[0].data, 'This is a test error')
+      dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
+      assert.equal(dataset.status, 'error')
+      assert.equal(dataset.errorStatus, 'validated')
+      assert.ok(!dataset.errorRetry)
+    } finally {
+      await setConfig('worker.errorRetryDelay', 0)
+    }
   })
 
   test('Update dataset schema and apply only required worker tasks', async () => {

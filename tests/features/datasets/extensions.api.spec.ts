@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, callWorkerFunction } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, callWorkerFunction, restCollectionCount } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
@@ -717,8 +717,7 @@ other,unknown address
     assert.equal(res.data.status, 'finalized')
     assert.equal(res.data.extensions[0].needsUpdate, true)
     await waitForFinalize(ax, dataset.id)
-    // TODO: MongoDB assertion skipped - requires restDatasetsUtils.collection(dataset) for direct MongoDB access
-    // Original test checked that only 1 line had _needsIndexing: true after the extend step
+    assert.equal(await restCollectionCount(dataset.id, { _needsIndexing: true }), 1)
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'finalized')
   })

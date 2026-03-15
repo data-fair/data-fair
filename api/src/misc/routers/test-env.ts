@@ -129,6 +129,117 @@ router.delete('/publication-sites-cache', (req, res) => {
   res.json({ ok: true })
 })
 
+// Count documents in a REST dataset MongoDB collection
+router.get('/rest-collection-count/:datasetId', async (req, res, next) => {
+  try {
+    const filter = req.query.filter ? JSON.parse(req.query.filter as string) : {}
+    const count = await mongo.db.collection('dataset-data-' + req.params.datasetId).countDocuments(filter)
+    res.json({ count })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Find one document in a REST dataset MongoDB collection
+router.get('/rest-collection-find-one/:datasetId', async (req, res, next) => {
+  try {
+    const filter = req.query.filter ? JSON.parse(req.query.filter as string) : {}
+    const projection = req.query.projection ? JSON.parse(req.query.projection as string) : undefined
+    const doc = await mongo.db.collection('dataset-data-' + req.params.datasetId).findOne(filter, { projection })
+    res.json(doc)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Update one document in a REST dataset MongoDB collection
+router.post('/rest-collection-update-one/:datasetId', async (req, res, next) => {
+  try {
+    const { filter, update } = req.body
+    await mongo.db.collection('dataset-data-' + req.params.datasetId).updateOne(filter, update)
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Count ES indices matching a dataset prefix
+router.get('/dataset-es-indices-count/:datasetId', async (req, res, next) => {
+  try {
+    const { indexPrefix } = await import('../../datasets/es/manage-indices.js')
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).json({ error: 'dataset not found' })
+    const indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
+    res.json({ count: Object.keys(indices).length })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Get ES alias name for a dataset
+router.get('/dataset-es-alias-name/:datasetId', async (req, res, next) => {
+  try {
+    const { aliasName } = await import('../../datasets/es/commons.js')
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).json({ error: 'dataset not found' })
+    res.json({ aliasName: aliasName(dataset) })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// List attachment files for a dataset
+router.get('/ls-attachments/:datasetId', async (req, res, next) => {
+  try {
+    const { lsAttachments } = await import('../../datasets/utils/files.ts')
+    const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+    if (!dataset) return res.status(404).json({ error: 'dataset not found' })
+    const files = await lsAttachments(dataset)
+    res.json({ files })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Emit a WebSocket event via wsEmitter
+router.post('/ws-emit', async (req, res, next) => {
+  try {
+    const wsEmitter = await import('@data-fair/lib-node/ws-emitter.js')
+    const { channel, data } = req.body
+    await wsEmitter.emit(channel, data)
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Validate DCAT JSON
+router.post('/validate-dcat', async (req, res, next) => {
+  try {
+    const validateDcat = (await import('../utils/dcat/validate.js')).default
+    const valid = validateDcat(req.body)
+    res.json({ valid, errors: valid ? undefined : validateDcat.errors })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Set a config value (for testing)
+router.post('/set-config', (req, res, next) => {
+  try {
+    const { path, value } = req.body
+    const parts = path.split('.')
+    let obj: any = config
+    for (let i = 0; i < parts.length - 1; i++) {
+      obj = obj[parts[i]]
+    }
+    obj[parts[parts.length - 1]] = value
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // SSE stream of testEvents emissions
 router.get('/events', (req, res) => {
   res.writeHead(200, {

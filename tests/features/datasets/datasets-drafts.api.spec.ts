@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, fileExists, callWorkerFunction, setupMockRoute } from '../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, fileExists, callWorkerFunction, setupMockRoute, datasetEsIndicesCount, datasetEsAliasName } from '../../support/workers.ts'
+import { TestEventClient } from '../../support/events.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
@@ -41,9 +42,8 @@ test.describe('datasets in draft mode', () => {
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.draft, undefined)
     assert.equal(dataset.draftReason.key, 'file-new')
-    // TODO: requires direct ES access
-    // const esAlias = esUtils.aliasName(dataset)
-    // assert.ok(esAlias.startsWith('dataset-test_draft-'))
+    const esAlias = await datasetEsAliasName(dataset.id)
+    assert.ok(esAlias.startsWith('dataset-test_draft-'))
 
     // Update schema to specify geo point
     const locProp = dataset.schema.find((p: any) => p.key === 'loc')
@@ -105,9 +105,7 @@ test.describe('datasets in draft mode', () => {
     assert.equal(journal.pop().type, 'draft-validated')
     assert.equal(journal.pop().type, 'finalize-end')
 
-    // TODO: requires direct ES access
-    // const indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
-    // assert.equal(Object.keys(indices).length, 1)
+    assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
     assert.ok(await fileExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
@@ -115,9 +113,10 @@ test.describe('datasets in draft mode', () => {
   })
 
   test('create a draft when updating the data file', async () => {
-    // TODO: requires testEvents for notification testing
-    // const notifications = []
-    // testEvents.on('notification', (n) => notifications.push(n))
+    const notifications: any[] = []
+    const eventClient = new TestEventClient()
+    await eventClient.ready
+    eventClient.on('notification', (n: any) => notifications.push(n))
 
     // Send dataset
     const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
@@ -152,9 +151,7 @@ test.describe('datasets in draft mode', () => {
     // schema should preserve the old order of columns
     assert.deepEqual(dataset.draft.schema.filter((c: any) => !c['x-calculated']).map((c: any) => c.key), ['id', 'adr', 'somedate', 'employees'])
 
-    // TODO: requires direct ES access
-    // let indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
-    // assert.equal(Object.keys(indices).length, 2)
+    assert.equal(await datasetEsIndicesCount(dataset.id), 2)
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
@@ -167,9 +164,7 @@ test.describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 6)
     assert.equal(res.data.results[0].id, 'koumoul')
 
-    // TODO: requires direct ES access
-    // indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
-    // assert.equal(Object.keys(indices).length, 1)
+    assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -192,22 +187,21 @@ test.describe('datasets in draft mode', () => {
     assert.equal(evt.type, 'finalize-end')
     assert.equal(evt.draft, undefined)
 
-    // TODO: requires direct ES access
-    // indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
-    // assert.equal(Object.keys(indices).length, 1)
+    assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
-    // TODO: requires testEvents for notification testing
-    // assert.equal(notifications.shift().topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
-    // assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
-    // assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-draft-validated:' + dataset.slug)
-    // assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:' + dataset.slug)
-    // assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
+    eventClient.close()
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-draft-validated:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
   })
 
   test('create a draft when updating the data file and cancel it', async () => {
-    // TODO: requires testEvents for notification testing
-    // const notifications = []
-    // testEvents.on('notification', (n) => notifications.push(n))
+    const notifications: any[] = []
+    const eventClient = new TestEventClient()
+    await eventClient.ready
+    eventClient.on('notification', (n: any) => notifications.push(n))
 
     // Send dataset
     const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
@@ -229,9 +223,7 @@ test.describe('datasets in draft mode', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 6)
 
-    // TODO: requires direct ES access
-    // let indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
-    // assert.equal(Object.keys(indices).length, 2)
+    assert.equal(await datasetEsIndicesCount(dataset.id), 2)
 
     // cancel the draft
     await ax.delete(`/api/v1/datasets/${dataset.id}/draft`)
@@ -240,9 +232,7 @@ test.describe('datasets in draft mode', () => {
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
     assert.equal(dataset.draftReason, undefined)
 
-    // TODO: requires direct ES access
-    // indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
-    // assert.equal(Object.keys(indices).length, 1)
+    assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -263,6 +253,8 @@ test.describe('datasets in draft mode', () => {
     assert.equal(journal.pop().type, 'draft-cancelled')
     evt = journal.pop()
     assert.equal(journal.length, 0)
+
+    eventClient.close()
   })
 
   test('create a draft when updating the data file and auto-validate if its schema is compatible', async () => {

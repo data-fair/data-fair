@@ -255,3 +255,76 @@ export const fileExists = async (filePath: string): Promise<boolean> => {
   const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: filePath } })
   return res.data.exists
 }
+
+/**
+ * Count documents in a REST dataset's MongoDB collection.
+ */
+export const restCollectionCount = async (datasetId: string, filter: Record<string, any> = {}): Promise<number> => {
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-count/${datasetId}`, {
+    params: { filter: JSON.stringify(filter) }
+  })
+  return res.data.count
+}
+
+/**
+ * Find one document in a REST dataset's MongoDB collection.
+ */
+export const restCollectionFindOne = async (datasetId: string, filter: Record<string, any> = {}, projection?: Record<string, any>): Promise<any> => {
+  const params: any = { filter: JSON.stringify(filter) }
+  if (projection) params.projection = JSON.stringify(projection)
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${datasetId}`, { params })
+  return res.data
+}
+
+/**
+ * Update one document in a REST dataset's MongoDB collection.
+ */
+export const restCollectionUpdateOne = async (datasetId: string, filter: Record<string, any>, update: Record<string, any>): Promise<void> => {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${datasetId}`, { filter, update })
+}
+
+/**
+ * Count ES indices matching a dataset prefix.
+ */
+export const datasetEsIndicesCount = async (datasetId: string): Promise<number> => {
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/dataset-es-indices-count/${datasetId}`)
+  return res.data.count
+}
+
+/**
+ * Get ES alias name for a dataset.
+ */
+export const datasetEsAliasName = async (datasetId: string): Promise<string> => {
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/dataset-es-alias-name/${datasetId}`)
+  return res.data.aliasName
+}
+
+/**
+ * List attachment files for a dataset.
+ */
+export const lsAttachments = async (datasetId: string): Promise<string[]> => {
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/ls-attachments/${datasetId}`)
+  return res.data.files
+}
+
+/**
+ * Emit a WebSocket event via wsEmitter.
+ */
+export const wsEmit = async (channel: string, data: any): Promise<void> => {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/ws-emit`, { channel, data })
+}
+
+/**
+ * Validate DCAT JSON.
+ */
+export const validateDcat = async (body: any): Promise<{ valid: boolean, errors?: any[] }> => {
+  const res = await anonymousAx.post(`${apiUrl}/api/v1/test-env/validate-dcat`, body)
+  return res.data
+}
+
+/**
+ * Set a config value on the server (for testing).
+ */
+export const setConfig = async (path: string, value: any): Promise<void> => {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path, value })
+}

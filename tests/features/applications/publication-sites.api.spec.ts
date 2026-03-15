@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '../../support/axios.ts'
-import { clearPublicationSitesCache } from '../../support/workers.ts'
+import { clearPublicationSitesCache, validateDcat } from '../../support/workers.ts'
 import { TestEventClient } from '../../support/events.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
@@ -97,8 +97,9 @@ test.describe('publication sites', () => {
     assert.equal(datasetsCatalog.results.length, 1)
     assert.equal(datasetsCatalog.count, 1)
 
-    // TODO: validateDcat is imported from api/src and cannot be used externally
-    // const dcatCatalog = (await ax.get(`${publicUrl2}/api/v1/catalog/dcat`)).data
+    const dcatCatalog = (await ax.get(`${publicUrl2}/api/v1/catalog/dcat`)).data
+    const dcatValidation = await validateDcat(dcatCatalog)
+    assert.ok(dcatValidation.valid, `DCAT validation failed: ${JSON.stringify(dcatValidation.errors)}`)
 
     // Test multi-domain image support
     const imageFullUrl = config.publicUrl + '/uploads/test-image.png'

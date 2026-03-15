@@ -4,7 +4,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, restCollectionFindOne } from '../../support/workers.ts'
 import FormData from 'form-data'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
@@ -376,7 +376,10 @@ test.describe('Master data management', () => {
     assert.ok(!results[0]['_siret.extra'])
     assert.ok(!results[0]['siretextextra'])
     assert.ok(!results[0]['siretextra'])
-    // TODO: requires direct MongoDB access to verify _needsIndexing
+    const doc = await restCollectionFindOne('slave')
+    assert.ok(!doc['_siret'])
+    assert.ok(!doc['siretextextra'])
+    assert.ok(!doc['siretextra'])
   })
 
   test('accept an input with elasticsearch special chars', async () => {
