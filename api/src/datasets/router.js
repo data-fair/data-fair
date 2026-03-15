@@ -177,7 +177,16 @@ router.patch('/:datasetId',
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
   (req, res, next) => req.body.masterData ? permissionsManageMasterData(req, res, next) : next(),
-  (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
+  (req, res, next) => {
+    if (descriptionHasBreakingChanges(req)) {
+      permissionsWriteDescriptionBreaking(req, res, next)
+    } else if (can('datasets', req.resource, 'writeDescription', reqSession(req))) {
+      permissionsWriteDescription(req, res, next)
+    } else {
+      // writeDescriptionBreaking implies writeDescription for non-breaking changes
+      permissionsWriteDescriptionBreaking(req, res, next)
+    }
+  },
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
   (req, res, next) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),

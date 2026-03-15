@@ -150,8 +150,7 @@ test.describe('permissions', () => {
     await bhazeldean7Org.get('/api/v1/datasets/' + datasetId)
   })
 
-  // TODO: writeDescriptionBreaking permission doesn't imply writeDescription in dev mode
-  test.skip('give permission to patch a dataset info except for potentiel breaking changes', async () => {
+  test('give permission to patch a dataset info except for potentiel breaking changes', async () => {
     // A dataset with restricted permissions
     let res = await dmeadus.post('/api/v1/datasets', {
       isRest: true,
@@ -179,7 +178,7 @@ test.describe('permissions', () => {
       (err: any) => err.status === 403
     )
 
-    // permission to write breaking changes
+    // permission to write breaking changes (implies writeDescription for non-breaking changes too)
     res = await ddecruce5.patch('/api/v1/datasets/' + datasetId, { description: 'Description' })
     assert.equal(res.status, 200)
     res = await ddecruce5.patch('/api/v1/datasets/' + datasetId, { primaryKey: ['test'] })

@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import dayjs from 'dayjs'
 import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockAppUrl } from '../../support/axios.ts'
-import { sendDataset, waitForFinalize } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize, clearRateLimiting } from '../../support/workers.ts'
 
 const anonymous = axios()
 const bhazeldean7Org = await axiosAuth('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG')
@@ -408,8 +408,7 @@ test.describe('API keys', () => {
       (err: any) => err.status === 403)
   })
 
-  // TODO: rate limiting and anonymous token interaction in dev mode differs from test mode
-  test.skip('Use an application key to post lines into referenced datasets', async () => {
+  test('Use an application key to post lines into referenced datasets', async () => {
     const ax = dmeadus
     let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const appId = res.data.id
@@ -442,12 +441,9 @@ test.describe('API keys', () => {
       anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
       (err: any) => err.status === 429)
 
-    // TODO: rateLimitingUtils.clear() cannot be called remotely.
-    // The original test clears rate limiting state then waits 2s for the anonymous token to age.
-    // Without a dedicated test-env endpoint for clearing rate limiting only, the rest of this
-    // sub-test cannot be verified. A full clean() would also clear all created data.
-    // For now, we wait and hope the rate limit (duration: 1s for anonymous token age) expires.
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    // clear rate limiting state then wait for the anonymous token to age
+    await clearRateLimiting()
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
     // accepted because token is the right age
     res = await anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
@@ -460,8 +456,7 @@ test.describe('API keys', () => {
       (err: any) => err.status === 429)
   })
 
-  // TODO: rate limiting and anonymous token interaction in dev mode differs from test mode
-  test.skip('Use an application key to manage own lines', async () => {
+  test('Use an application key to manage own lines', async () => {
     const ax = dmeadus
     let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const appId = res.data.id

@@ -252,29 +252,7 @@ test.describe('Many case of special file datasets', () => {
     await checkDateDataset('xlsx')
   })
 
-  // TODO: move to unit tests - requires direct module import of xlsx
-  test.skip('should manage XLSX file create by excel', async () => {
-    // const dates = []
-    // for await (const lines of xlsx.iterCSV('./test-it/resources/datasets/Les aides financières ADEME.xlsx')) {
-    //   for (const line of lines.split('\n')) {
-    //     dates.push(line.split(',')[2])
-    //   }
-    // }
-    // assert.equal(dates[1], '2019-03-20')
-    // assert.equal(dates[2], '2018-04-05')
-  })
-
-  // TODO: move to unit tests - requires direct module import of xlsx
-  test.skip('should manage another XLSX file created by excel', async () => {
-    // const dates = []
-    // for await (const lines of xlsx.iterCSV('./test-it/resources/datasets/date-time.xlsx')) {
-    //   for (const line of lines.split('\n')) {
-    //     dates.push(line.split(',')[1])
-    //   }
-    // }
-    // assert.equal(dates[1], '2050-01-01T00:00:00.000Z')
-    // assert.equal(dates[2], '2050-01-01T01:00:00.000Z')
-  })
+  // XLSX date parsing tests moved to xlsx.unit.spec.ts
 
   test('should manage a sparse XLSX file', async () => {
     const ax = dmeadus
