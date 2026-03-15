@@ -157,6 +157,9 @@ const staticRoutes: Record<string, () => RouteResult> = {
 // These override static routes and are cleared between tests.
 let dynamicRoutes: Record<string, RouteResult> = {}
 
+// Collected request bodies for dynamic routes (for assertions in tests)
+let receivedRequests: Array<{ path: string, method: string, body: any }> = []
+
 function readBody (req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
@@ -197,6 +200,21 @@ const server = createServer(async (req, res) => {
 
   if (pathname === '/_test/routes' && req.method === 'DELETE') {
     dynamicRoutes = {}
+    receivedRequests = []
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end('{"ok":true}')
+    return
+  }
+
+  // Return collected requests (for test assertions)
+  if (pathname === '/_test/received' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify(receivedRequests))
+    return
+  }
+
+  if (pathname === '/_test/received' && req.method === 'DELETE') {
+    receivedRequests = []
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end('{"ok":true}')
     return
@@ -205,6 +223,15 @@ const server = createServer(async (req, res) => {
   // Check dynamic routes first (they override static ones)
   const dynamicResult = dynamicRoutes[pathname]
   if (dynamicResult) {
+    // Collect request body for POST/PUT/PATCH to dynamic routes
+    if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+      const bodyStr = await readBody(req)
+      try {
+        receivedRequests.push({ path: pathname, method: req.method, body: JSON.parse(bodyStr) })
+      } catch {
+        receivedRequests.push({ path: pathname, method: req.method, body: bodyStr })
+      }
+    }
     if (dynamicResult.delay) {
       await new Promise(resolve => setTimeout(resolve, dynamicResult.delay))
     }

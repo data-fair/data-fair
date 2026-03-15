@@ -208,10 +208,18 @@ export const setupMockRoute = async (config: {
 }
 
 /**
- * Clear all dynamic mock routes.
+ * Clear all dynamic mock routes and received requests.
  */
 export const clearMockRoutes = async () => {
   await anonymousAx.delete(`${mockUrl}/_test/routes`)
+}
+
+/**
+ * Get all requests received by dynamic mock routes.
+ */
+export const getMockReceivedRequests = async (): Promise<Array<{ path: string, method: string, body: any }>> => {
+  const res = await anonymousAx.get(`${mockUrl}/_test/received`)
+  return res.data
 }
 
 /**

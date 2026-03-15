@@ -143,12 +143,15 @@ router.get('/events', (req, res) => {
 
   const onNotification = (data: any) => onEvent('notification', data)
   const onExtensionInputs = (data: any) => onEvent('extension-inputs', data)
+  const onWebhook = (data: any) => onEvent('webhook', data)
   testEvents.on('notification', onNotification)
   testEvents.on('extension-inputs', onExtensionInputs)
+  testEvents.on('webhook', onWebhook)
 
   req.on('close', () => {
     testEvents.off('notification', onNotification)
     testEvents.off('extension-inputs', onExtensionInputs)
+    testEvents.off('webhook', onWebhook)
   })
 })
 

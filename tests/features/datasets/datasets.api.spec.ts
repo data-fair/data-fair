@@ -1,15 +1,17 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockUrl } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
-import { TestEventClient } from '../../support/events.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getMockReceivedRequests } from '../../support/workers.ts'
+import { TestEventClient, collectWsEvents } from '../../support/events.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
+import { validate } from 'tableschema'
 
 const anonymous = axios()
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
 const alone = await axiosAuth('alone@no.org')
+const cdurning2 = await axiosAuth('cdurning2@desdev.cn')
 const ngernier4Org = await axiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
 
 const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
@@ -258,8 +260,100 @@ test.describe('datasets', () => {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }), (err: any) => err.status === 401)
   })
 
-  // TODO: requires notifier, WebSocket, webhooks
-  test.skip('Upload dataset - full test with webhooks', async () => {
+  test('Upload dataset - full test with webhooks', async () => {
+    const ax = cdurning2
+
+    // Set up mock route to accept webhook POSTs
+    await setupMockRoute({ path: '/webhook', status: 200, body: { ok: true } })
+
+    // Configure webhook for dataset-finalize-end events
+    await ax.put('/api/v1/settings/user/cdurning2', {
+      webhooks: [{
+        title: 'test',
+        events: ['dataset-finalize-end'],
+        target: { type: 'http', params: { url: `${mockUrl}/webhook` } }
+      }]
+    })
+
+    // Upload a CSV file
+    let form = new FormData()
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+    const datasetId = res.data.id
+
+    // Wait for finalize and verify first webhook received
+    await waitForFinalize(ax, datasetId)
+    let received = await getMockReceivedRequests()
+    assert.equal(received.length, 1, 'should have received first webhook')
+    assert.equal(received[0].body.event, 'finalize-end')
+    assert.ok(received[0].body.href.includes(datasetId))
+
+    // Verify API docs
+    res = await ax.get(`/api/v1/datasets/${datasetId}/api-docs.json`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.openapi, '3.1.0')
+    res = await ax.post('/api/v1/_check-api', res.data)
+
+    // Testing journal
+    res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.length, 2)
+
+    // Subscribe to WS journal events before re-uploading
+    const wsCollector = collectWsEvents('datasets/' + datasetId + '/journal')
+
+    // Send again the data to the same dataset
+    form = new FormData()
+    form.append('file', fs.readFileSync('./test-it/resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
+    res = await ax.post('/api/v1/datasets/' + datasetId, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 200)
+
+    // Wait for second finalize
+    await waitForFinalize(ax, datasetId)
+
+    // Verify WS journal events were received
+    await new Promise(resolve => setTimeout(resolve, 300))
+    assert.ok(wsCollector.events.length > 0, 'should have received WS journal events')
+    wsCollector.stop()
+
+    // Verify second webhook
+    received = await getMockReceivedRequests()
+    assert.equal(received.length, 2, 'should have received second webhook')
+
+    res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
+    assert.equal(res.data.length, 5)
+
+    // Testing permissions
+    await assert.rejects(dmeadus.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 403)
+    await assert.rejects(anonymous.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 403)
+
+    // Updating schema
+    res = await ax.get('/api/v1/datasets/' + datasetId)
+    const schema = res.data.schema
+    schema.find((field: any) => field.key === 'lat')['x-refersTo'] = 'http://schema.org/latitude'
+    schema.find((field: any) => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
+    res = await ax.patch('/api/v1/datasets/' + datasetId, { schema })
+
+    assert.ok(res.data.dataUpdatedAt > res.data.createdAt)
+    assert.ok(res.data.updatedAt > res.data.dataUpdatedAt)
+
+    // Wait for third finalize and verify third webhook
+    await waitForFinalize(ax, datasetId)
+    received = await getMockReceivedRequests()
+    assert.equal(received.length, 3, 'should have received third webhook')
+
+    // Validate tableschema
+    res = await ax.get('/api/v1/datasets/' + datasetId + '/schema?mimeType=application/tableschema%2Bjson')
+    const { valid } = await validate(res.data)
+    assert.equal(valid, true)
+
+    // Delete the dataset
+    res = await ax.delete('/api/v1/datasets/' + datasetId)
+    assert.equal(res.status, 204)
+    await assert.rejects(ax.get('/api/v1/datasets/' + datasetId), (err: any) => err.status === 404)
+
+    await clearMockRoutes()
   })
 
   test('Upload dataset and update with different file name', async () => {
