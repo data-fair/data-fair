@@ -1,4 +1,3 @@
-import clone from '@data-fair/lib-utils/clone.js'
 import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
@@ -207,7 +206,7 @@ export const memoizedGetDataset = memoize(getDataset, {
 /**
  * Like getDataset but validates the memoized cache with a lightweight updatedAt check.
  * This avoids full MongoDB reads when the dataset hasn't changed, while still guaranteeing freshness.
- * Returns a deep clone of cached results so downstream code can safely mutate them.
+ * Returns cached results directly when fresh (protected by assertImmutable in dev/test).
  */
 export const getDatasetFresh = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody) => {
   // first try the memoized cache
@@ -220,22 +219,33 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
     return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   }
 
-  // cache has a result — check if it's still fresh via a lightweight updatedAt query
-  const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection: { updatedAt: 1, status: 1, _id: 0 } })
+  // cache has a result — check if it's still fresh via a lightweight query
+  const projection = { updatedAt: 1, status: 1, _id: 0 }
+  if (useDraft) projection['draft.updatedAt'] = 1
+  const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection })
   if (!fresh) return {} // dataset was deleted
 
-  // compare updatedAt to detect staleness
-  if (cached.datasetFull && cached.datasetFull.updatedAt === fresh.updatedAt) {
-    // also check status if acceptedStatuses is used
-    if (_acceptedStatuses && fresh.status !== cached.datasetFull.status) {
-      return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
-    }
-    // cache is fresh — return a deep clone so downstream code can safely mutate
-    return { dataset: clone(cached.dataset), datasetFull: cached.datasetFull ? clone(cached.datasetFull) : undefined }
+  // check top-level updatedAt
+  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt) {
+    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   }
 
-  // stale — do a full read
-  return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  // when using draft mode, also check draft.updatedAt to detect draft-only changes
+  if (useDraft) {
+    const cachedDraftUpdatedAt = cached.datasetFull.draft?.updatedAt
+    const freshDraftUpdatedAt = fresh.draft?.updatedAt
+    if (cachedDraftUpdatedAt !== freshDraftUpdatedAt) {
+      return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+    }
+  }
+
+  // also check status if acceptedStatuses is used
+  if (_acceptedStatuses && fresh.status !== cached.datasetFull.status) {
+    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  }
+
+  // cache is fresh — return cached result directly (assertImmutable proxy guards against mutations in dev/test)
+  return cached
 }
 
 /**
