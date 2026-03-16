@@ -249,6 +249,14 @@ export const clearPublicationSitesCache = async () => {
 }
 
 /**
+ * Clear memoized dataset cache.
+ * Use after modifying dataset permissions or other fields that may be stale in the 30s memoize cache.
+ */
+export const clearDatasetCache = async () => {
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+}
+
+/**
  * Check if a file exists via test-env API.
  */
 export const fileExists = async (filePath: string): Promise<boolean> => {
@@ -320,6 +328,18 @@ export const wsEmit = async (channel: string, data: any): Promise<void> => {
 export const validateDcat = async (body: any): Promise<{ valid: boolean, errors?: any[] }> => {
   const res = await anonymousAx.post(`${apiUrl}/api/v1/test-env/validate-dcat`, body)
   return res.data
+}
+
+/**
+ * Set an environment variable in the main server process and worker threads.
+ * Pass undefined as value to unset.
+ */
+export const setServerEnv = async (key: string, value?: string) => {
+  await Promise.all([
+    anonymousAx.post(`${apiUrl}/api/v1/test-env/set-env`, { key, value }),
+    callWorkerFunction('batchProcessor', 'setEnv', { key, value }),
+    callWorkerFunction('filesProcessor', 'setEnv', { key, value }),
+  ])
 }
 
 /**

@@ -3,17 +3,13 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, doAndWaitForFinalize } from '../../support/workers.ts'
+import { waitForFinalize, doAndWaitForFinalize, clearDatasetCache } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 const cdurning2 = await axiosAuth('cdurning2@desdev.cn')
 const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
 
-// TODO: capabilities tests fail because schema capability changes (insensitive, values, text, etc.)
-// don't properly rebuild the ES index in development mode.
-// The index mapping isn't updated when only x-capabilities change.
-// This needs investigation in the finalization worker.
-test.describe.skip('Properties capabilities', () => {
+test.describe('Properties capabilities', () => {
   test.beforeEach(async () => {
     await clean()
   })
@@ -41,6 +37,7 @@ test.describe.skip('Properties capabilities', () => {
 
     await doAndWaitForFinalize(ax, 'rest-insensitive', () =>
       ax.patch('/api/v1/datasets/rest-insensitive', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }] }))
+    await clearDatasetCache()
     res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
     assert.deepEqual(res.data.results.map((result: any) => result.str1), ['Test2', 'test1', 'test2', 'test3'])
   })
@@ -82,6 +79,7 @@ test.describe.skip('Properties capabilities', () => {
           }
         }]
       }))
+    await clearDatasetCache()
     prop = dataset.schema.find((p: any) => p.key === 'str1')
     assert.equal(prop['x-cardinality'], undefined)
     assert.ok(!prop.enum)
@@ -124,6 +122,7 @@ test.describe.skip('Properties capabilities', () => {
 
     await doAndWaitForFinalize(ax, 'rest-textagg', () =>
       ax.patch('/api/v1/datasets/rest-textagg', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { textAgg: true } }] }))
+    await clearDatasetCache()
 
     aggSchema = (await ax.get('/api/v1/datasets/rest-textagg/schema', { params: { capability: 'textAgg' } })).data
     assert.equal(aggSchema.length, 1)
@@ -155,6 +154,7 @@ test.describe.skip('Properties capabilities', () => {
 
     await doAndWaitForFinalize(ax, 'rest-index', () =>
       ax.patch('/api/v1/datasets/rest-index', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { index: false } }] }))
+    await clearDatasetCache()
     await assert.rejects(
       ax.get('/api/v1/datasets/rest-index/lines', { params: { qs: 'str1:test3' } }),
       (err: any) => {
@@ -193,12 +193,14 @@ test.describe.skip('Properties capabilities', () => {
 
     await doAndWaitForFinalize(ax, 'rest-text', () =>
       ax.patch('/api/v1/datasets/rest-text', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { text: false } }] }))
+    await clearDatasetCache()
 
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'test' } })
     assert.equal(res.data.total, 1)
 
     await doAndWaitForFinalize(ax, 'rest-text', () =>
       ax.patch('/api/v1/datasets/rest-text', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { text: false, textStandard: false } }] }))
+    await clearDatasetCache()
 
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'test' } })
     assert.equal(res.data.total, 0)
@@ -230,6 +232,7 @@ test.describe.skip('Properties capabilities', () => {
           { key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry', 'x-capabilities': { geoShape: false, geoCorners: false } }
         ]
       }))
+    await clearDatasetCache()
     const geoShapeProp = dataset.schema.find((p: any) => p.key === '_geoshape')
     assert.ok(geoShapeProp)
     assert.equal(geoShapeProp['x-capabilities'].geoShape, false)
@@ -274,6 +277,7 @@ test.describe.skip('Properties capabilities', () => {
           { key: 'attachment', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument', 'x-capabilities': { indexAttachment: false } }
         ]
       }))
+    await clearDatasetCache()
     // _file.content is no longer searchable
     assert.equal(dataset.schema.find((p: any) => p.key === '_file.content'), undefined)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'libreoffice' } })

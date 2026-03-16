@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, clearDatasetCache } from '../../support/workers.ts'
 
 const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
 
@@ -496,13 +496,14 @@ val 1;val 1, val 2
 
     await ax.patch('/api/v1/datasets/rest-insensitive', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }] })
     await waitForFinalize(ax, 'rest-insensitive')
+    await clearDatasetCache()
     res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
     assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
     res = await ax.get('/api/v1/datasets/rest-insensitive/compat-ods/records', { params: { order_by: 'str1' } })
     assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
   })
 
-  test.skip('manages geo data', async () => {
+  test('manages geo data', async () => {
     const ax = dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })

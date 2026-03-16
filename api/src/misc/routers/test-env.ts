@@ -6,6 +6,7 @@ import config from '#config'
 import { pendingTasks } from '../../workers/tasks.ts'
 import { reset as resetPing } from '../../workers/ping.ts'
 import { memoizedGetPublicationSiteSettings } from '../utils/settings.ts'
+import { memoizedGetDataset } from '../../datasets/service.js'
 import * as rateLimiting from '../utils/rate-limiting.ts'
 import testEvents from '../utils/test-events.ts'
 import filesStorage from '../../files-storage/index.ts'
@@ -35,6 +36,7 @@ router.delete('/', async (req, res, next) => {
     await fs.ensureDir(dataDir)
     await fs.ensureDir(tmpDir)
     memoizedGetPublicationSiteSettings.clear()
+    memoizedGetDataset.clear()
     rateLimiting.clear()
     testEvents.removeAllListeners()
 
@@ -129,6 +131,12 @@ router.delete('/publication-sites-cache', (req, res) => {
   res.json({ ok: true })
 })
 
+// Clear memoized dataset cache
+router.delete('/dataset-cache', (req, res) => {
+  memoizedGetDataset.clear()
+  res.json({ ok: true })
+})
+
 // Count documents in a REST dataset MongoDB collection
 router.get('/rest-collection-count/:datasetId', async (req, res, next) => {
   try {
@@ -219,6 +227,21 @@ router.post('/validate-dcat', async (req, res, next) => {
     const validateDcat = (await import('../utils/dcat/validate.js')).default
     const valid = validateDcat(req.body)
     res.json({ valid, errors: valid ? undefined : validateDcat.errors })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Set an environment variable in the main process (for testing)
+router.post('/set-env', (req, res, next) => {
+  try {
+    const { key, value } = req.body
+    if (value === undefined || value === null) {
+      delete process.env[key]
+    } else {
+      process.env[key] = value
+    }
+    res.json({ ok: true })
   } catch (err) {
     next(err)
   }

@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import dayjs from 'dayjs'
 import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockAppUrl } from '../../support/axios.ts'
-import { sendDataset, waitForFinalize, clearRateLimiting } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize, clearRateLimiting, clearDatasetCache } from '../../support/workers.ts'
 
 const anonymous = axios()
 const bhazeldean7Org = await axiosAuth('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG')
@@ -69,8 +69,7 @@ test.describe('API keys', () => {
     }), { status: 403 })
   })
 
-  // TODO: email-based permission resolution on datasets owned by other users fails in dev mode
-  test.skip('Create and use a User level api key', async () => {
+  test('Create and use a User level api key', async () => {
     const yesterday = dayjs().add(-1, 'day').format('YYYY-MM-DD')
     const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD')
     const res = await dmeadus.put('/api/v1/settings/user/dmeadus0', {
@@ -129,6 +128,7 @@ test.describe('API keys', () => {
     await hlalonde3Org.put('/api/v1/datasets/' + orgDataset.id + '/permissions', [
       { type: 'user', email: 'dmeadus0@answers.com', classes: ['read'] }
     ])
+    await clearDatasetCache()
     await axKey2.get('/api/v1/datasets/' + orgDataset.id + '/lines')
 
     // API key without scope should only react to permission granted through specific email
@@ -138,11 +138,11 @@ test.describe('API keys', () => {
     await hlalonde3Org.put('/api/v1/datasets/' + orgDataset.id + '/permissions', [
       { type: 'user', email: key4.email, classes: ['read'] }
     ])
+    await clearDatasetCache()
     await axKey4.get('/api/v1/datasets/' + orgDataset.id + '/lines')
   })
 
-  // TODO: email-based permission resolution on datasets owned by other users fails in dev mode
-  test.skip('Create and use an organization level api key', async () => {
+  test('Create and use an organization level api key', async () => {
     const res = await dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG', {
       apiKeys: [
         { title: 'Key 1', scopes: ['datasets'] },
@@ -171,6 +171,7 @@ test.describe('API keys', () => {
     await hlalonde3.put('/api/v1/datasets/' + otherDataset.id + '/permissions', [
       { type: 'user', email: key1.email, classes: ['read'] }
     ])
+    await clearDatasetCache()
     await axKey1.get('/api/v1/datasets/' + otherDataset.id + '/lines')
 
     // API key without a scope only gets explicit permissions
@@ -180,6 +181,7 @@ test.describe('API keys', () => {
     await hlalonde3.put('/api/v1/datasets/' + otherDataset.id + '/permissions', [
       { type: 'user', email: key2.email, classes: ['read'] }
     ])
+    await clearDatasetCache()
     await axKey2.get('/api/v1/datasets/' + otherDataset.id + '/lines')
   })
 
@@ -448,7 +450,7 @@ test.describe('API keys', () => {
     // accepted because token is the right age
     res = await anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
     assert.equal(res.status, 201)
-    await waitForFinalize(anonymous, 'restcrowd')
+    await waitForFinalize(ax, 'restcrowd')
 
     // rejected because of simple rate limiting
     await assert.rejects(
@@ -489,7 +491,7 @@ test.describe('API keys', () => {
 
     res = await cdurning2.post('/api/v1/datasets/restcrowdown/own/user:cdurning2/lines', {}, { headers })
     assert.equal(res.status, 201)
-    await waitForFinalize(cdurning2, 'restcrowdown')
+    await waitForFinalize(ax, 'restcrowdown')
 
     res = await cdurning2.get('/api/v1/datasets/restcrowdown/own/user:cdurning2/lines', { headers })
     assert.equal(res.status, 200)

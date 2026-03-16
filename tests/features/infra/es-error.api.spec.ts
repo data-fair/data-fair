@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { sendDataset, waitForDatasetError, callWorkerFunction } from '../../support/workers.ts'
+import { axiosAuth, clean, checkPendingTasks, anonymousAx } from '../../support/axios.ts'
+import { sendDataset, waitForDatasetError } from '../../support/workers.ts'
 
 const esHost = `localhost:${process.env.ES_PORT}`
 const indicesPrefix = 'dataset-development'
@@ -49,23 +49,34 @@ test.describe('Elasticsearch errors management', () => {
     )
   })
 
-  // TODO: callWorkerFunction('batchProcessor', 'setEnv') doesn't properly simulate
-  // read-only ES index in development mode, causing the test to timeout
-  test.skip('Manage read only index error', async () => {
+  test('Manage read only index error', async () => {
     const ax = dmeadus
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    // upload a new file but the index won't be writable (simulates a lock from flood watermark errors)
-    await callWorkerFunction('batchProcessor', 'setEnv', { key: 'READ_ONLY_ES_INDEX', value: 'true' })
-    await superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
-    await waitForDatasetError(ax, dataset.id)
+    // Create an ES index template that makes any new index for this dataset read-only.
+    // This simulates ES flood watermark errors that lock indices.
+    const templateName = 'test-read-only'
+    await anonymousAx.put(`http://${esHost}/_index_template/${templateName}`, {
+      index_patterns: [`${indicesPrefix}-${dataset.id}-*`],
+      priority: 500,
+      template: {
+        settings: {
+          'index.blocks.read_only_allow_delete': true
+        }
+      }
+    })
 
-    // dataset is in error, but still queryable from previous index
-    dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
-    assert.equal(dataset.status, 'error')
-    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
-    assert.equal(lines.total, 2)
+    try {
+      await superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
+      await waitForDatasetError(ax, dataset.id)
 
-    await callWorkerFunction('batchProcessor', 'setEnv', { key: 'READ_ONLY_ES_INDEX' })
+      // dataset is in error, but still queryable from previous index
+      dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
+      assert.equal(dataset.status, 'error')
+      const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+      assert.equal(lines.total, 2)
+    } finally {
+      await anonymousAx.delete(`http://${esHost}/_index_template/${templateName}`)
+    }
   })
 })
