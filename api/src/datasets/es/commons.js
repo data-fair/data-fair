@@ -21,6 +21,8 @@ import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.js'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
+const filterSuffixes = ['_in', '_nin', '_eq', '_neq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts', '_exists', '_nexists']
+
 // From a property in data-fair schema to the property in an elasticsearch mapping
 export const esProperty = prop => {
   const capabilities = prop['x-capabilities'] || {}
@@ -282,9 +284,18 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   const esQuery = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
 
-  // Valid "total" value
-  // TODO: make it optional for perf on large queries ?
-  esQuery.track_total_hits = true
+  // track_total_hits is expensive on large datasets
+  // skip it on pages 2+ (client already has the total from page 1)
+  // also support count=false or count=estimate query parameter
+  if (query.after) {
+    esQuery.track_total_hits = false
+  } else if (query.count === 'false') {
+    esQuery.track_total_hits = false
+  } else if (query.count === 'estimate') {
+    esQuery.track_total_hits = 1000
+  } else {
+    esQuery.track_total_hits = true
+  }
 
   // Pagination
   esQuery.size = query.size ? Number(query.size) : 12
@@ -436,18 +447,26 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       must.push(qBool)
     }
   }
+  // pre-build schema lookup maps for O(1) field resolution
+  const schemaByKey = new Map()
+  const schemaByConcept = new Map()
+  for (const p of dataset.schema) {
+    schemaByKey.set(p.key, p)
+    if (p['x-concept']?.primary) schemaByConcept.set(p['x-concept'].id, p)
+  }
+
   for (const queryKey of Object.keys(query)) {
-    const filterSuffix = ['_in', '_nin', '_eq', '_neq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts', '_exists', '_nexists'].find(suffix => queryKey.endsWith(suffix))
+    const filterSuffix = filterSuffixes.find(suffix => queryKey.endsWith(suffix))
     if (!filterSuffix) continue
     let prop
     if (queryKey.startsWith('_c_')) {
       const conceptId = queryKey.slice(3, queryKey.length - filterSuffix.length)
-      prop = dataset.schema.find(p => p['x-concept'] && p['x-concept'].primary && p['x-concept'].id === conceptId)
+      prop = schemaByConcept.get(conceptId)
       // concept filters can be applied to any dataset by dashboards, they should be ignored if no match is found
       if (!prop) continue
     } else {
       const propKey = queryKey.slice(0, queryKey.length - filterSuffix.length)
-      prop = dataset.schema.find(p => p.key === propKey)
+      prop = schemaByKey.get(propKey)
       if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${propKey}, il n'existe pas dans le jeu de données.`)
     }
 
@@ -460,8 +479,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       } catch (err) {
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
-    }
-    if (filterSuffix === '_nin') {
+    } else if (filterSuffix === '_nin') {
       requiredCapability(prop, filterSuffix)
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
@@ -470,18 +488,15 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       } catch (err) {
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
-    }
-    if (filterSuffix === '_eq') {
+    } else if (filterSuffix === '_eq') {
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ term: { [prop.key]: query[queryKey] } })
-    }
-    if (filterSuffix === '_neq') {
+    } else if (filterSuffix === '_neq') {
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ bool: { must_not: { term: { [prop.key]: query[queryKey] } } } })
-    }
-    if (filterSuffix === '_gt') {
+    } else if (filterSuffix === '_gt') {
       // TODO: check if this filter required a "index" capability or "values"
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
@@ -490,8 +505,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       } else {
         filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
       }
-    }
-    if (filterSuffix === '_gte') {
+    } else if (filterSuffix === '_gte') {
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
@@ -499,8 +513,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       } else {
         filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
       }
-    }
-    if (filterSuffix === '_lt') {
+    } else if (filterSuffix === '_lt') {
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
@@ -508,8 +521,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       } else {
         filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
       }
-    }
-    if (filterSuffix === '_lte') {
+    } else if (filterSuffix === '_lte') {
       requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
@@ -517,27 +529,22 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       } else {
         filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
       }
-    }
-    if (filterSuffix === '_starts') {
+    } else if (filterSuffix === '_starts') {
       requiredCapability(prop, filterSuffix)
       filter.push({ prefix: { [prop.key]: query[queryKey] } })
-    }
-    if (filterSuffix === '_contains') {
+    } else if (filterSuffix === '_contains') {
       requiredCapability(prop, filterSuffix, 'wildcard')
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
-    }
-    if (filterSuffix === '_search') {
+    } else if (filterSuffix === '_search') {
       const subfields = []
       if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
       if (prop['x-capabilities']?.text !== false) subfields.push('text')
       if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
       must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
-    }
-    if (filterSuffix === '_exists') {
+    } else if (filterSuffix === '_exists') {
       requiredCapability(prop, filterSuffix)
       filter.push({ exists: { field: prop.key } })
-    }
-    if (filterSuffix === '_nexists') {
+    } else if (filterSuffix === '_nexists') {
       requiredCapability(prop, filterSuffix)
       mustNot.push({ exists: { field: prop.key } })
     }
@@ -660,19 +667,160 @@ export const getQueryBBOX = (query) => {
   return bbox
 }
 
-export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = config.publicUrl) => {
+/**
+ * Pre-compute schema lookups once per request instead of per result item.
+ * This eliminates O(N*S) linear scans where N=items and S=schema length.
+ */
+export const prepareResultContext = (dataset, query) => {
+  const schema = dataset.schema
+  const schemaByKey = new Map()
+  let hasIdField = false
+  let imageField
+  let descriptionFieldKey
+  let linkField
+  let emailField
+  let docField
+  let geometryField
+  const markdownFields = []
+  const separatorKeys = new Set()
+
+  for (const f of schema) {
+    schemaByKey.set(f.key, f)
+    if (f.key === '_id') hasIdField = true
+    if (f['x-refersTo'] === 'http://schema.org/image') imageField = f
+    if (f['x-refersTo'] === 'http://schema.org/description') descriptionFieldKey = f.key
+    if (f['x-refersTo'] === 'https://schema.org/WebPage') linkField = f
+    if (f['x-refersTo'] === 'https://www.w3.org/2006/vcard/ns#email') emailField = f
+    if (f['x-refersTo'] === 'http://schema.org/DigitalDocument') docField = f
+    if (f['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') geometryField = f
+    if (f['x-display'] === 'markdown') markdownFields.push(f)
+    if (f.separator) separatorKeys.add(f.key)
+  }
+
+  const selectIncludesId = hasIdField && (!query.select || query.select === '*' || query.select.split(',').includes('_id'))
+  const highlightKeys = query.highlight ? query.highlight.split(',') : null
+  const truncate = query.truncate ? Number(query.truncate) : 0
+  const skipTruncateKeys = new Set(['_thumbnail', '_highlight', '_id', '_geopoint', '_geoshape', '_attachment_url'])
+  if (imageField) skipTruncateKeys.add(imageField.key)
+  if (linkField) skipTruncateKeys.add(linkField.key)
+  if (emailField) skipTruncateKeys.add(emailField.key)
+  if (docField) skipTruncateKeys.add(docField.key)
+
+  const geoDistanceParams = query.geo_distance ?? query._c_geo_distance
+  const geoDistanceParts = geoDistanceParams ? geoDistanceParams.split(/[,:]/) : null
+
+  return {
+    schemaByKey,
+    hasIdField,
+    selectIncludesId,
+    imageField,
+    descriptionFieldKey,
+    linkField,
+    emailField,
+    docField,
+    geometryField,
+    markdownFields,
+    separatorKeys,
+    highlightKeys,
+    truncate,
+    skipTruncateKeys,
+    geoDistanceParts,
+    schema
+  }
+}
+
+export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = config.publicUrl, ctx) => {
   const res = flatten(hit._source)
   res._score = hit._score
+
+  if (ctx) {
+    // fast path with pre-computed context
+    if (ctx.selectIncludesId) res._id = hit._id
+
+    if (ctx.highlightKeys) {
+      res._highlight = {}
+      for (const key of ctx.highlightKeys) {
+        const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
+        const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
+        if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {
+          res._highlight[key] = textStandardHighlight
+        } else {
+          res._highlight[key] = textHighlight
+        }
+      }
+    }
+
+    if (query.thumbnail) {
+      if (!ctx.imageField) throw httpError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
+      if (res[ctx.imageField.key]) {
+        let imageUrl = res[ctx.imageField.key]
+        if (dataset.attachmentsAsImage) {
+          imageUrl = imageUrl.replace(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
+          imageUrl = imageUrl.replace(`${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
+        }
+        const thumbnailId = Buffer.from(imageUrl).toString('hex')
+        res._thumbnail = prepareThumbnailUrl(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/thumbnail/${encodeURIComponent(thumbnailId)}`, query.thumbnail, query.draft)
+      }
+    }
+
+    if (query.draft === 'true' && res._attachment_url) res._attachment_url += '?draft=true'
+
+    if (query.html === 'true' || query.html === 'vuetify') {
+      for (const field of ctx.markdownFields) {
+        if (res[field.key]) {
+          if (query.html === 'vuetify') res[field.key] = vuetifyMarked.parse(res[field.key]).trim()
+          else res[field.key] = defaultMarked.parse(res[field.key]).trim()
+          res[field.key] = sanitizeHtml(res[field.key])
+        }
+      }
+      if (ctx.descriptionFieldKey && !ctx.markdownFields.some(f => f.key === ctx.descriptionFieldKey) && res[ctx.descriptionFieldKey]) {
+        if (query.html === 'vuetify') res[ctx.descriptionFieldKey] = vuetifyMarked.parse(res[ctx.descriptionFieldKey]).trim()
+        else res[ctx.descriptionFieldKey] = defaultMarked.parse(res[ctx.descriptionFieldKey]).trim()
+        res[ctx.descriptionFieldKey] = sanitizeHtml(res[ctx.descriptionFieldKey])
+      }
+    }
+
+    if (ctx.truncate) {
+      for (const key in res) {
+        if (typeof res[key] !== 'string') continue
+        if (ctx.skipTruncateKeys.has(key)) continue
+        if (ctx.separatorKeys.has(key)) continue
+        const field = ctx.schemaByKey.get(key)
+        if (query.html === 'true' && field && (field['x-display'] === 'markdown' || field.key === ctx.descriptionFieldKey)) {
+          res[key] = truncateHTML(res[key], ctx.truncate)
+        } else {
+          res[key] = truncateMiddle(res[key], ctx.truncate, 0, '...')
+        }
+      }
+    }
+
+    if (query.wkt === 'true') {
+      if (ctx.geometryField && res[ctx.geometryField.key]) {
+        const geometry = typeof res[ctx.geometryField.key] === 'string' ? JSON.parse(res[ctx.geometryField.key]) : res[ctx.geometryField.key]
+        res[ctx.geometryField.key] = geojsonToWKT(geometry)
+      }
+      if (res._geoshape) res._geoshape = geojsonToWKT(res._geoshape)
+    }
+
+    if (res._geopoint && ctx.geoDistanceParts) {
+      const [lon, lat] = ctx.geoDistanceParts
+      const [centerLat, centerLon] = res._geopoint.split(',')
+      const distance = turfDistance([lon, lat], [centerLon, centerLat])
+      res._geo_distance = distance * 1000
+    }
+
+    return res
+  }
+
+  // legacy path without pre-computed context (used by aggregation endpoints)
   if (dataset.schema.find(f => f.key === '_id')) {
     if (!query.select || query.select === '*' || query.select.split(',').includes('_id')) {
       res._id = hit._id
     }
   }
   if (query.highlight) {
-    // return hightlight results and remove .text suffix of fields
     res._highlight = query.highlight.split(',')
       .reduce((a, key) => {
-        // is it possible to merge these 2 instead of chosing one ?
         const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
         const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
         if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {
@@ -694,15 +842,12 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
         imageUrl = imageUrl.replace(`${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
       }
       const thumbnailId = Buffer.from(imageUrl).toString('hex')
-      // TODO: generate a shorter url with _id when it is present and thumbnailId is very long ?
       res._thumbnail = prepareThumbnailUrl(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/thumbnail/${encodeURIComponent(thumbnailId)}`, query.thumbnail, query.draft)
     }
   }
 
   if (query.draft === 'true' && res._attachment_url) res._attachment_url += '?draft=true'
 
-  // format markdown and sanitize it for XSS prevention
-  // either using x-display=markdown info or implicitly for description
   const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')?.key
   if (query.html === 'true' || query.html === 'vuetify') {
     for (const field of dataset.schema) {
@@ -714,18 +859,13 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
     }
   }
 
-  // Truncate string results for faster previews
   if (query.truncate) {
     const linkField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
     const emailField = dataset.schema.find(f => f['x-refersTo'] === 'https://www.w3.org/2006/vcard/ns#email')
     const docField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-
     const truncate = Number(query.truncate)
     for (const key in res) {
       if (typeof res[key] !== 'string') continue
-      // we used to exclude the description field from being truncated, but it doesn't really make sense
-      // I hope this will not create a regression somewhere
-      // if (descriptionField === key) continue
       if (imageField && imageField.key === key) continue
       if (linkField && linkField.key === key) continue
       if (emailField && emailField.key === key) continue

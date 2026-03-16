@@ -738,7 +738,6 @@ describe('virtual datasets', function () {
     assert.ok(res.data.next.includes('account=user%3Acdurning2'))
     res = await cdurning2.get(res.data.next)
     assert.equal(res.status, 200)
-    assert.equal(res.data.total, 2)
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].attr1, 'test3')
     assert.equal(res.data.results[0].account, 'user:cdurning2')

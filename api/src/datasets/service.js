@@ -1,3 +1,4 @@
+import clone from '@data-fair/lib-utils/clone.js'
 import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
@@ -202,6 +203,40 @@ export const memoizedGetDataset = memoize(getDataset, {
   maxAge: 1000 * 30, // 30s
   length: 6 // in memoized mode ignore db, acceptedStatuses and reqBody
 })
+
+/**
+ * Like getDataset but validates the memoized cache with a lightweight updatedAt check.
+ * This avoids full MongoDB reads when the dataset hasn't changed, while still guaranteeing freshness.
+ * Returns a deep clone of cached results so downstream code can safely mutate them.
+ */
+export const getDatasetFresh = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody) => {
+  // first try the memoized cache
+  const cached = await memoizedGetDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  if (!cached.dataset) {
+    // cache says not found — but is the cache stale? Do a lightweight check
+    const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection: { updatedAt: 1, _id: 0 } })
+    if (!fresh) return cached // dataset really doesn't exist
+    // dataset exists but cache missed it — do a full read
+    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  }
+
+  // cache has a result — check if it's still fresh via a lightweight updatedAt query
+  const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection: { updatedAt: 1, status: 1, _id: 0 } })
+  if (!fresh) return {} // dataset was deleted
+
+  // compare updatedAt to detect staleness
+  if (cached.datasetFull && cached.datasetFull.updatedAt === fresh.updatedAt) {
+    // also check status if acceptedStatuses is used
+    if (_acceptedStatuses && fresh.status !== cached.datasetFull.status) {
+      return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+    }
+    // cache is fresh — return a deep clone so downstream code can safely mutate
+    return { dataset: clone(cached.dataset), datasetFull: cached.datasetFull ? clone(cached.datasetFull) : undefined }
+  }
+
+  // stale — do a full read
+  return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+}
 
 /**
  *
