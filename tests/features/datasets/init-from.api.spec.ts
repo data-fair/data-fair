@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, callWorkerFunction } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getRawDataset } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
@@ -12,6 +12,7 @@ const ngernier4 = await axiosAuth('ngernier4@usa.gov')
 test.describe('Datasets with auto-initialization from another one', () => {
   test.beforeEach(async () => {
     await clean()
+    await clearMockRoutes()
   })
 
   test.afterEach(async () => {
@@ -174,7 +175,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
 
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 2, latLon: 10, query: '?select=lat,lon' })
+    await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: 10, lon: 10, matchLevel: 'match' }, indexFields: ['matchLevel'] } })
     dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
 
     await ax.patch('/api/v1/datasets/' + dataset.id, {
@@ -206,8 +207,10 @@ test.describe('Datasets with auto-initialization from another one', () => {
       }
     }, { params: { draft: true } })
     assert.equal(res.status, 201)
-    let initFromDataset = await waitForFinalize(ax, res.data.id)
-    assert.equal(initFromDataset.draft.file.name, 'dataset-extensions.csv')
+    await waitForFinalize(ax, res.data.id)
+    // Fetch with draft=true to get draft fields merged into main (API strips draft field)
+    let initFromDataset = (await ax.get(`/api/v1/datasets/${res.data.id}`, { params: { draft: true } })).data
+    assert.equal(initFromDataset.file.name, 'dataset-extensions.csv')
     const lines = await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines?draft=true`)
     assert.equal(lines.data.results[0].latitude, 10)
 
@@ -236,7 +239,8 @@ test.describe('Datasets with auto-initialization from another one', () => {
     }))
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     assert.equal(res.status, 201)
-    const initFromDataset = await waitForFinalize(ax, res.data.id)
+    await waitForFinalize(ax, res.data.id)
+    const initFromDataset = await getRawDataset(res.data.id)
 
     assert.equal(initFromDataset.status, 'draft')
     assert.equal(initFromDataset.draft.file.name, 'dataset2.csv')

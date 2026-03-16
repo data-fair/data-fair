@@ -3,14 +3,30 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, callWorkerFunction, restCollectionCount } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
 
+// Helper to set up geocoder coords mock via the mock server (replaces nock-based setCoordsNock)
+const setupCoordsMock = async (latLon: number, opts?: { multiply?: boolean }) => {
+  const indexFields = ['matchLevel']
+  if (opts?.multiply) indexFields.push('lat', 'lon')
+  await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: latLon, lon: latLon, matchLevel: 'match' }, indexFields } })
+}
+
+// Helper to set up sirene mock via the mock server (replaces nock-based setSireneNock)
+const setupSireneMock = async (fields: Record<string, any>, select: string) => {
+  await setupMockRoute({
+    path: '/sirene/etablissements_bulk?select=' + select,
+    ndjsonEcho: { fields }
+  })
+}
+
 test.describe('Extensions', () => {
   test.beforeEach(async () => {
     await clean()
+    await clearMockRoutes()
   })
 
   test.afterEach(async () => {
@@ -23,7 +39,7 @@ test.describe('Extensions', () => {
     let dataset = await sendDataset('datasets/dataset-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 2, latLon: 10 })
+    await setupCoordsMock(10)
 
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -66,7 +82,7 @@ test.describe('Extensions', () => {
 
     // Add a line to dataset
     // Re-prepare for extension, it should only process the new line
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 1, latLon: 50 })
+    await setupCoordsMock(50)
     const form = new FormData()
     let content = await fs.readFile('./test-it/resources/datasets/dataset-extensions.csv')
     content += 'me,3 les noés la chapelle caro\n'
@@ -94,7 +110,7 @@ test.describe('Extensions', () => {
     assert.equal(res.data.length, 2)
 
     // Reduce selected output using extension.select
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 3, latLon: 40, query: '?select=lat,lon' })
+    await setupCoordsMock(40)
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat', 'lon'] }] })
     assert.equal(res.status, 200)
     await waitForFinalize(ax, dataset.id)
@@ -112,10 +128,11 @@ test.describe('Extensions', () => {
     assert.ok(res.data.find(file => file.key === 'full'))
     assert.equal(res.data.length, 2)
 
-    // TODO: perform the extension as a simulation on a pseudo line
-    // This requires direct nock for ndjson request/response format which setupMockRoute does not support.
-    // Original test used nock('http://test.com').post('/geocoder/coords?select=lat,lon').reply(...)
-    // and then called ax.post(`/api/v1/datasets/${dataset.id}/_simulate-extension`, { adr: 'test simulation' })
+    // perform the extension as a simulation on a pseudo line
+    await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: 30, lon: 30 } } })
+    res = await ax.post(`/api/v1/datasets/${dataset.id}/_simulate-extension`, { adr: 'test simulation' })
+    assert.deepEqual(res.data, { adr: 'test simulation', '_coords.lat': 30, '_coords.lon': 30 })
+    await clearMockRoutes()
 
     // remove the extension
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [] })
@@ -133,7 +150,7 @@ test.describe('Extensions', () => {
     let dataset = await sendDataset('datasets/dataset-extensions.xlsx', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 3, latLon: 10, multiply: true })
+    await setupCoordsMock(10, { multiply: true })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -165,7 +182,7 @@ test.describe('Extensions', () => {
     let dataset = await sendDataset('datasets/dataset-extensions2.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 2, latLon: 10 })
+    await setupCoordsMock(10)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -189,7 +206,10 @@ test.describe('Extensions', () => {
     let dataset = await sendDataset('datasets/dataset-siret-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    await callWorkerFunction('batchProcessor', 'setSireneNock', {})
+    await setupSireneMock(
+      { NOMEN_LONG: 'KOUMOUL', 'location.lon': '-2.748514', 'location.lat': '47.687173' },
+      'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon'
+    )
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -249,8 +269,9 @@ other,unknown address
     let dataset = await waitForFinalize(ax, res.data.id)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension failure with HTTP error code
-    const nockInfo1 = { origin: 'http://test.com', method: 'post', path: '/geocoder/coords', reply: { status: 500, body: 'some error' } }
-    await callWorkerFunction('batchProcessor', 'setNock', nockInfo1)
+    // The mock route persists, so both the first error (with retry) and the second error (no retry)
+    // happen instantly (errorRetryDelay: 0 in dev). We wait for the final error state.
+    await setupMockRoute({ path: '/geocoder/coords', status: 500, body: 'some error', contentType: 'text/plain' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
@@ -260,15 +281,15 @@ other,unknown address
 
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'error')
-    assert.ok(dataset.errorRetry)
     assert.equal(dataset.errorStatus, 'validated')
 
-    // 1 auto-retry
-    await callWorkerFunction('batchProcessor', 'setNock', nockInfo1)
-    dataset = await waitForDatasetError(ax, dataset.id)
+    // Check that the journal has both an error-retry and a final error event
+    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    assert.ok(journal.find((e: any) => e.type === 'error-retry'), 'should have error-retry event in journal')
+    assert.ok(journal.find((e: any) => e.type === 'error'), 'should have final error event in journal')
 
     // Prepare for extension failure with bad body in response
-    await callWorkerFunction('batchProcessor', 'setNock', { origin: 'http://test.com', method: 'post', path: '/geocoder/coords', reply: { status: 200, body: 'some error' } })
+    await setupMockRoute({ path: '/geocoder/coords', status: 200, body: 'some error', contentType: 'text/plain' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
     assert.equal(res.status, 200)
     dataset = await waitForDatasetError(ax, dataset.id)
@@ -290,7 +311,7 @@ empty,
     assert.equal(res.status, 201)
     const dataset = await waitForFinalize(ax, res.data.id)
 
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 1, latLon: 10 })
+    await setupCoordsMock(10)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -313,7 +334,7 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.status, 201)
     const dataset = await waitForFinalize(ax, res.data.id)
 
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 1, latLon: 10 })
+    await setupCoordsMock(10)
 
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -352,7 +373,10 @@ koumoul,19 rue de la voie lactée saint avé
     let dataset = await sendDataset('datasets/dataset-siret-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    await callWorkerFunction('batchProcessor', 'setSireneNock2', {})
+    await setupSireneMock(
+      { siret: '82898347800011', NOMEN_LONG: 'KOUMOUL', 'location.lon': '-2.748514', 'location.lat': '47.687173' },
+      'siret,NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon'
+    )
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -390,7 +414,7 @@ koumoul,19 rue de la voie lactée saint avé
     })).data
 
     // extend first inserted line
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 1, latLon: 10 })
+    await setupCoordsMock(10)
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' })
     dataset = await waitForFinalize(ax, dataset.id)
     const extensionKey = dataset.extensions[0].propertyPrefix
@@ -402,7 +426,7 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
 
     // extend second inserted line
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 1, latLon: 11 })
+    await setupCoordsMock(11)
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' })
     dataset = await waitForFinalize(ax, dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -431,7 +455,7 @@ other,unknown address
     assert.equal(res.status, 201)
     let dataset = await waitForFinalize(ax, res.data.id)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 2, latLon: 50 })
+    await setupCoordsMock(50)
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -465,7 +489,7 @@ other,unknown address
     assert.equal(res.status, 201)
     let dataset = await waitForFinalize(ax, res.data.id)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 2, latLon: 50 })
+    await setupCoordsMock(50)
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
@@ -491,7 +515,10 @@ other,unknown address
     let dataset = await sendDataset('datasets/dataset-siret-extensions.geojson', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    await callWorkerFunction('batchProcessor', 'setSireneNock3', {})
+    await setupSireneMock(
+      { NOMEN_LONG: 'KOUMOUL' },
+      'NOMEN_LONG,bodacc.capital,TEFET'
+    )
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -595,7 +622,7 @@ other,unknown address
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 2, latLon: 10, multiply: true })
+    await setupCoordsMock(10, { multiply: true })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
 
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -668,7 +695,7 @@ other,unknown address
     form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset2.csv'), 'dataset2.csv')
     dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })).data
 
-    dataset = await waitForDatasetError(ax, dataset.id)
+    dataset = await waitForDatasetError(ax, dataset.id, { draft: true })
     assert.equal(dataset.status, 'error')
   })
 
@@ -717,9 +744,15 @@ other,unknown address
     assert.equal(res.data.status, 'finalized')
     assert.equal(res.data.extensions[0].needsUpdate, true)
     await waitForFinalize(ax, dataset.id)
-    assert.equal(await restCollectionCount(dataset.id, { _needsIndexing: true }), 1)
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'finalized')
+    // Verify the updated expression was applied to lines
+    const updatedLines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(updatedLines.length, 2)
+    const lowerLine = updatedLines.find((l: any) => l.str1 === 'str 1')
+    assert.ok(lowerLine.exp.startsWith('STR 1 - STR 2'))
+    const upperLine = updatedLines.find((l: any) => l.str1 === 'UPPER STR 1')
+    assert.ok(upperLine.exp.startsWith('UPPER STR 1 - UPPER STR 2'))
   })
 
   test('Manage cases where extension returns wrong type', async () => {

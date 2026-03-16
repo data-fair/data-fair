@@ -57,6 +57,17 @@ router.get('/pending-tasks', (req, res) => {
   res.json(pendingTasks)
 })
 
+// Return the raw MongoDB document for a dataset (including draft field)
+router.get('/raw-dataset/:id', async (req, res, next) => {
+  try {
+    const dataset = await mongo.datasets.findOne({ id: req.params.id })
+    if (!dataset) return res.status(404).json({ error: 'dataset not found' })
+    res.json(dataset)
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Return ES index mapping/settings for a dataset
 router.get('/dataset-es-info/:id', async (req, res, next) => {
   try {
@@ -188,8 +199,10 @@ router.get('/dataset-es-indices-count/:datasetId', async (req, res, next) => {
 router.get('/dataset-es-alias-name/:datasetId', async (req, res, next) => {
   try {
     const { aliasName } = await import('../../datasets/es/commons.js')
+    const mergeDraft = (await import('../../datasets/utils/merge-draft.js')).default
     const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
     if (!dataset) return res.status(404).json({ error: 'dataset not found' })
+    if (dataset.draft) mergeDraft(dataset)
     res.json({ aliasName: aliasName(dataset) })
   } catch (err) {
     next(err)

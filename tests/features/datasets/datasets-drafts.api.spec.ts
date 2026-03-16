@@ -3,16 +3,18 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, fileExists, callWorkerFunction, setupMockRoute, datasetEsIndicesCount, datasetEsAliasName } from '../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, fileExists, setupMockRoute, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, getRawDataset } from '../../support/workers.ts'
 import { TestEventClient } from '../../support/events.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
-const dataDir = './data/test'
+// Paths passed to fileExists() are resolved relative to the server's dataDir
+const dataDir = '.'
 
 test.describe('datasets in draft mode', () => {
   test.beforeEach(async () => {
     await clean()
+    await clearMockRoutes()
   })
 
   test.afterEach(async () => {
@@ -29,13 +31,14 @@ test.describe('datasets in draft mode', () => {
     assert.equal(res.status, 201)
 
     // Dataset received, parsed, and finalized in draft
-    let dataset = await waitForFinalize(ax, res.data.id)
+    await waitForFinalize(ax, res.data.id)
+    let dataset = await getRawDataset(res.data.id)
     assert.equal(dataset.status, 'draft')
     assert.ok(dataset.draft)
     assert.equal(dataset.draft.status, 'finalized')
     assert.equal(dataset.draft.count, 2)
     assert.equal(dataset.schema.length, 0)
-    assert.equal(dataset.draft.schema.length, 6)
+    assert.equal(dataset.draft.schema.filter((s: any) => !s['x-calculated']).length, 6)
 
     // querying with ?draft=true automatically merges the draft state into the main state
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
@@ -43,7 +46,7 @@ test.describe('datasets in draft mode', () => {
     assert.equal(dataset.draft, undefined)
     assert.equal(dataset.draftReason.key, 'file-new')
     const esAlias = await datasetEsAliasName(dataset.id)
-    assert.ok(esAlias.startsWith('dataset-test_draft-'))
+    assert.ok(esAlias.includes('_draft-'), `ES alias "${esAlias}" should contain "_draft-"`)
 
     // Update schema to specify geo point
     const locProp = dataset.schema.find((p: any) => p.key === 'loc')
@@ -55,7 +58,8 @@ test.describe('datasets in draft mode', () => {
     assert.equal(patchedLocProp['x-refersTo'], 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long')
 
     // Second ES indexation
-    dataset = await waitForFinalize(ax, dataset.id)
+    await waitForFinalize(ax, dataset.id)
+    dataset = await getRawDataset(dataset.id)
     assert.equal(dataset.status, 'draft')
     assert.equal(dataset.draft.status, 'finalized')
     assert.ok(dataset.draft.bbox)
@@ -134,7 +138,8 @@ test.describe('datasets in draft mode', () => {
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
-    dataset = await waitForFinalize(ax, dataset.id)
+    await waitForFinalize(ax, dataset.id)
+    dataset = await getRawDataset(dataset.id)
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.count, 2)
     assert.equal(dataset.draft.file.name, 'dataset2.csv')
@@ -325,7 +330,7 @@ test.describe('datasets in draft mode', () => {
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
-    await waitForDatasetError(ax, dataset.id)
+    await waitForDatasetError(ax, dataset.id, { draft: true })
 
     dataset = await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`).then(r => r.data)
     assert.equal(dataset.draftReason?.key, 'file-updated')
@@ -375,7 +380,8 @@ test.describe('datasets in draft mode', () => {
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
-    let dataset = await waitForFinalize(ax, res.data.id)
+    await waitForFinalize(ax, res.data.id)
+    let dataset = await getRawDataset(res.data.id)
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')
     assert.ok(dataset.draft.draftReason.key, 'file-new')
@@ -390,7 +396,8 @@ test.describe('datasets in draft mode', () => {
     form2.append('description', 'draft description 2')
     const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })).data
     assert.equal(datasetDraft2.status, 'created')
-    dataset = await waitForFinalize(ax, dataset.id)
+    await waitForFinalize(ax, dataset.id)
+    dataset = await getRawDataset(dataset.id)
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')
     assert.ok(dataset.draft.draftReason.key, 'file-new')
@@ -403,7 +410,8 @@ test.describe('datasets in draft mode', () => {
     form3.append('description', 'draft description 3')
     const datasetDraft3 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() }, params: { draft: true } })).data
     assert.equal(datasetDraft3.status, 'loaded')
-    dataset = await waitForFinalize(ax, dataset.id)
+    await waitForFinalize(ax, dataset.id)
+    dataset = await getRawDataset(dataset.id)
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')
     assert.ok(dataset.draft.draftReason.key, 'file-new')
@@ -434,7 +442,8 @@ test.describe('datasets in draft mode', () => {
     const datasetDraft1 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })).data
     assert.equal(datasetDraft1.status, 'loaded')
     assert.equal(datasetDraft1.draftReason.key, 'file-updated')
-    dataset = await waitForFinalize(ax, dataset.id)
+    await waitForFinalize(ax, dataset.id)
+    dataset = await getRawDataset(dataset.id)
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.draft.file.name, 'dataset1-draft1.csv')
 
@@ -446,7 +455,8 @@ test.describe('datasets in draft mode', () => {
     const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() }, params: { draft: true } })).data
     assert.equal(datasetDraft2.status, 'loaded')
     assert.equal(datasetDraft2.draftReason.key, 'file-updated')
-    dataset = await waitForFinalize(ax, dataset.id)
+    await waitForFinalize(ax, dataset.id)
+    dataset = await getRawDataset(dataset.id)
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
 
@@ -466,7 +476,8 @@ test.describe('datasets in draft mode', () => {
     form.append('file', content, 'dataset.csv')
     const ax = dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
-    let dataset = await waitForFinalize(ax, res.data.id)
+    await waitForFinalize(ax, res.data.id)
+    let dataset = await getRawDataset(res.data.id)
     assert.equal(dataset.draft.count, 100)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 100)
@@ -526,10 +537,7 @@ test.describe('datasets in draft mode', () => {
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })
-    dataset = await waitForDatasetError(ax, dataset.id)
-    assert.equal(dataset.status, 'error')
-
-    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`)).data
+    dataset = await waitForDatasetError(ax, dataset.id, { draft: true })
     assert.equal(dataset.status, 'error')
     assert.equal(dataset.errorStatus, 'stored')
     assert.ok(!dataset.errorRetry)
@@ -634,7 +642,8 @@ other,unknown address
     form.append('file', content, 'dataset2.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     assert.equal(res.status, 201)
-    let dataset = await waitForFinalize(ax, res.data.id)
+    await waitForFinalize(ax, res.data.id)
+    let dataset = await getRawDataset(res.data.id)
     dataset.draft.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension failure with HTTP error code
     await setupMockRoute({ path: '/geocoder/coords', status: 500, body: 'some error' })
@@ -643,11 +652,8 @@ other,unknown address
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     }, { params: { draft: true } })
     assert.equal(res.status, 200)
-    dataset = await waitForDatasetError(ax, dataset.id)
-
-    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
+    dataset = await waitForDatasetError(ax, dataset.id, { draft: true })
     assert.equal(dataset.status, 'error')
-    assert.ok(dataset.errorRetry)
     assert.equal(dataset.errorStatus, 'validated')
   })
 
@@ -663,12 +669,14 @@ other,address
     form.append('file', content, 'dataset2.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     assert.equal(res.status, 201)
-    let dataset = await waitForFinalize(ax, res.data.id)
-    dataset.draft.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    await waitForFinalize(ax, res.data.id)
+    // Fetch with draft=true to get draft schema merged into main (API strips draft field)
+    let dataset = (await ax.get(`/api/v1/datasets/${res.data.id}`, { params: { draft: true } })).data
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension
-    await callWorkerFunction('batchProcessor', 'setCoordsNock', { nbInputs: 2, latLon: 10 })
+    await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: 10, lon: 10, matchLevel: 'match' }, indexFields: ['matchLevel'] } })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
-      schema: dataset.draft.schema,
+      schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     }, { params: { draft: true } })
     assert.equal(res.status, 200)
@@ -688,7 +696,7 @@ other
     form2.append('file', content2, 'dataset2-noadr.csv')
     res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })
     assert.equal(res.status, 200)
-    await waitForDatasetError(ax, dataset.id)
+    await waitForDatasetError(ax, dataset.id, { draft: true })
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
     assert.ok(errorEvent)

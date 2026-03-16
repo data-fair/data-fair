@@ -79,37 +79,43 @@ export const waitForFinalize = async (
   datasetId: string,
   timeout = 30000
 ): Promise<any> => {
-  // First check current state — if status is already finalized and no partial rest status,
-  // we need to wait for a NEW finalization. Record current finalizedAt.
+  // Record current state to detect changes
   let currentFinalizedAt: string | undefined
+  let currentDraftFinalizedAt: string | undefined
   try {
     const current = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
     currentFinalizedAt = current.finalizedAt
+    // Also record draft finalizedAt via raw document
+    const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+    currentDraftFinalizedAt = raw.draft?.finalizedAt
   } catch {
     // dataset might not exist yet (just created)
   }
 
+  // Subscribe to WS first, then check if already done.
+  // This avoids the race condition where the event fires between check and subscribe.
   const wsClient = new DataFairWsClient({ url: wsUrl, log })
+  const wsPromise = wsClient.waitForJournal(datasetId, 'finalize-end', timeout)
+
+  // Check if finalization already happened while WS is listening
+  const res = await ax.get(`/api/v1/datasets/${datasetId}`)
+  if (res.data.status === 'error') { wsClient.close(); throw new Error(`Dataset ${datasetId} is in error status`) }
+  if (res.data.finalizedAt && res.data.finalizedAt !== currentFinalizedAt) { wsClient.close(); return res.data }
   try {
-    await wsClient.waitForJournal(datasetId, 'finalize-end', timeout)
+    const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
+    if (raw.draft?.status === 'error') { wsClient.close(); throw new Error(`Dataset ${datasetId} draft is in error status`) }
+    if (raw.draft?.finalizedAt && raw.draft.finalizedAt !== currentDraftFinalizedAt) { wsClient.close(); return res.data }
+  } catch (err: any) {
+    if (err.message?.includes('error status')) { wsClient.close(); throw err }
+  }
+
+  // Not yet done — wait for WS event
+  try {
+    await wsPromise
   } finally {
     wsClient.close()
   }
-
-  // Verify we got a NEW finalization (not a stale one)
-  const res = await ax.get(`/api/v1/datasets/${datasetId}`)
-  if (currentFinalizedAt && res.data.finalizedAt === currentFinalizedAt) {
-    // The finalize-end we caught was stale, wait for the real one via polling
-    const start = Date.now()
-    while (Date.now() - start < timeout) {
-      const poll = await ax.get(`/api/v1/datasets/${datasetId}`)
-      if (poll.data.status === 'error') throw new Error(`Dataset ${datasetId} is in error status`)
-      if (poll.data.finalizedAt !== currentFinalizedAt) return poll.data
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-    throw new Error(`waitForFinalize: finalizedAt did not change for dataset ${datasetId}`)
-  }
-  return res.data
+  return (await ax.get(`/api/v1/datasets/${datasetId}`)).data
 }
 
 /**
@@ -162,11 +168,13 @@ export const waitForJournalEvent = async (
 export const waitForDatasetError = async (
   ax: AxiosInstance,
   datasetId: string,
-  timeout = 30000
+  opts?: { timeout?: number, draft?: boolean }
 ): Promise<any> => {
+  const timeout = opts?.timeout ?? 30000
+  const params = opts?.draft ? { draft: true } : undefined
   const start = Date.now()
   while (Date.now() - start < timeout) {
-    const res = await ax.get(`/api/v1/datasets/${datasetId}`)
+    const res = await ax.get(`/api/v1/datasets/${datasetId}`, { params })
     if (res.data.status === 'error') return res.data
     await new Promise(resolve => setTimeout(resolve, 100))
   }
@@ -203,6 +211,8 @@ export const setupMockRoute = async (config: {
   bodyBase64?: string
   contentType?: string
   delay?: number
+  ndjsonEcho?: { fields: Record<string, any>, indexFields?: string[] }
+  once?: boolean
 }) => {
   await anonymousAx.post(`${mockUrl}/_test/routes`, config)
 }
@@ -232,6 +242,16 @@ export const callWorkerFunction = async (
   params: any = {}
 ) => {
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/worker-call`, { worker, functionName, params })
+}
+
+/**
+ * Get the raw MongoDB document for a dataset (including draft field).
+ * Use when you need access to draft.schema, draft.status, etc.
+ * The standard API always strips the draft field from responses.
+ */
+export const getRawDataset = async (datasetId: string): Promise<any> => {
+  const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)
+  return res.data
 }
 
 /**

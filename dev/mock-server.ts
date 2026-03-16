@@ -120,7 +120,20 @@ const monapp3ConfigSchema = {
   layout: 'tabs'
 }
 
-type RouteResult = { status: number, body?: any, bodyBase64?: string, contentType?: string, delay?: number }
+type NdjsonEchoConfig = {
+  fields: Record<string, any>
+  indexFields?: string[]  // fields modified by line index: numbers get multiplied, strings get index appended
+}
+
+type RouteResult = {
+  status: number
+  body?: any
+  bodyBase64?: string
+  contentType?: string
+  delay?: number
+  ndjsonEcho?: NdjsonEchoConfig
+  once?: boolean
+}
 
 const staticRoutes: Record<string, () => RouteResult> = {
   // Remote services API docs (patched to use mock server URLs)
@@ -129,10 +142,6 @@ const staticRoutes: Record<string, () => RouteResult> = {
 
   // Geocoder proxy endpoints (for remote service proxy forwarding)
   '/geocoder/coord': () => ({ status: 200, body: {} }),
-  '/geocoder/coords': () => ({ status: 200, body: {} }),
-
-  // Sirene proxy endpoints
-  '/sirene/etablissements_bulk': () => ({ status: 200, body: {} }),
 
   // Catalog
   '/catalog/api/1/site/': () => ({ status: 200, body: { title: 'My catalog' } }),
@@ -155,6 +164,7 @@ const staticRoutes: Record<string, () => RouteResult> = {
 
 // Dynamic routes registered by tests via /_test/routes API
 // These override static routes and are cleared between tests.
+// Keys can be pathname only or pathname+query (e.g., '/geocoder/coords?select=lat,lon')
 let dynamicRoutes: Record<string, RouteResult> = {}
 
 // Collected request bodies for dynamic routes (for assertions in tests)
@@ -179,6 +189,32 @@ function sendResult (res: ServerResponse, result: RouteResult) {
   }
 }
 
+function findDynamicRoute (pathname: string, search: string): { result: RouteResult, key: string } | undefined {
+  // Try exact match with query string first, then pathname only
+  if (search) {
+    const key = pathname + search
+    if (dynamicRoutes[key]) return { result: dynamicRoutes[key], key }
+  }
+  if (dynamicRoutes[pathname]) return { result: dynamicRoutes[pathname], key: pathname }
+  return undefined
+}
+
+function handleNdjsonEcho (bodyStr: string, config: NdjsonEchoConfig): string {
+  const inputs = bodyStr.trim().split('\n').map(line => JSON.parse(line))
+  const indexFields = new Set(config.indexFields || [])
+  return inputs.map((input, i) => {
+    const result: Record<string, any> = { key: input.key }
+    for (const [k, v] of Object.entries(config.fields)) {
+      if (indexFields.has(k)) {
+        result[k] = typeof v === 'number' ? v * i : v + '' + i
+      } else {
+        result[k] = v
+      }
+    }
+    return JSON.stringify(result)
+  }).join('\n') + '\n'
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://localhost:${port}`)
   const pathname = url.pathname
@@ -191,7 +227,9 @@ const server = createServer(async (req, res) => {
       body: body.body,
       bodyBase64: body.bodyBase64,
       contentType: body.contentType,
-      delay: body.delay
+      delay: body.delay,
+      ndjsonEcho: body.ndjsonEcho,
+      once: body.once
     }
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end('{"ok":true}')
@@ -221,11 +259,15 @@ const server = createServer(async (req, res) => {
   }
 
   // Check dynamic routes first (they override static ones)
-  const dynamicResult = dynamicRoutes[pathname]
-  if (dynamicResult) {
+  const dynamicMatch = findDynamicRoute(pathname, url.search)
+  if (dynamicMatch) {
+    const { result: dynamicResult, key: routeKey } = dynamicMatch
+    // Remove one-shot routes after matching
+    if (dynamicResult.once) delete dynamicRoutes[routeKey]
     // Collect request body for POST/PUT/PATCH to dynamic routes
+    let bodyStr = ''
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-      const bodyStr = await readBody(req)
+      bodyStr = await readBody(req)
       try {
         receivedRequests.push({ path: pathname, method: req.method, body: JSON.parse(bodyStr) })
       } catch {
@@ -234,6 +276,13 @@ const server = createServer(async (req, res) => {
     }
     if (dynamicResult.delay) {
       await new Promise(resolve => setTimeout(resolve, dynamicResult.delay))
+    }
+    // ndjsonEcho: parse ndjson input, echo back key + configured fields per line
+    if (dynamicResult.ndjsonEcho && bodyStr) {
+      const output = handleNdjsonEcho(bodyStr, dynamicResult.ndjsonEcho)
+      res.writeHead(dynamicResult.status || 200, { 'Content-Type': 'application/x-ndjson' })
+      res.end(output)
+      return
     }
     sendResult(res, dynamicResult)
     return
