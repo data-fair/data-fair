@@ -11,6 +11,7 @@ import * as rateLimiting from '../utils/rate-limiting.ts'
 import testEvents from '../utils/test-events.ts'
 import filesStorage from '../../files-storage/index.ts'
 import { dataDir, tmpDir } from '../../datasets/utils/files.ts'
+import { capturedNotifications } from '../utils/test-notif-buffer.ts'
 
 const router = express.Router()
 
@@ -276,13 +277,25 @@ router.post('/set-config', (req, res, next) => {
   }
 })
 
+// Notification capture via shared buffer module
+router.post('/events/start', (req, res) => {
+  res.json({ offset: capturedNotifications.length })
+})
+
+router.get('/events/buffer', (req, res) => {
+  const offset = parseInt(req.query.offset as string) || 0
+  res.json(capturedNotifications.slice(offset))
+})
+
 // SSE stream of testEvents emissions
 router.get('/events', (req, res) => {
+  req.socket.setNoDelay(true)
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive'
   })
+  res.flushHeaders()
 
   const onEvent = (eventType: string, data: any) => {
     res.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`)

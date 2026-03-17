@@ -143,6 +143,37 @@ export const doAndWaitForFinalize = async (
 }
 
 /**
+ * Perform an action and wait for the dataset to return to finalized status.
+ * Unlike doAndWaitForFinalize, this does NOT require finalizedAt to change.
+ * Use for schema-only patches where the data isn't re-indexed.
+ */
+export const doAndWaitForStatus = async (
+  ax: AxiosInstance,
+  datasetId: string,
+  action: () => Promise<any>,
+  status = 'finalized',
+  timeout = 30000
+): Promise<any> => {
+  await action()
+  const start = Date.now()
+  // first wait for the status to change away from finalized (the action should trigger this)
+  while (Date.now() - start < timeout) {
+    const res = await ax.get(`/api/v1/datasets/${datasetId}`)
+    if (res.data.status === 'error') throw new Error(`Dataset ${datasetId} is in error status`)
+    if (res.data.status !== status) break
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+  // then wait for it to come back to the desired status
+  while (Date.now() - start < timeout) {
+    const res = await ax.get(`/api/v1/datasets/${datasetId}`)
+    if (res.data.status === 'error') throw new Error(`Dataset ${datasetId} is in error status`)
+    if (res.data.status === status) return res.data
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+  throw new Error(`doAndWaitForStatus timeout after ${timeout}ms for dataset ${datasetId}`)
+}
+
+/**
  * Wait for a specific journal event type on a dataset.
  * For cases where you need to wait for something other than finalize-end.
  * Note: for 'error' events, use waitForDatasetError() instead since
@@ -367,4 +398,34 @@ export const setServerEnv = async (key: string, value?: string) => {
  */
 export const setConfig = async (path: string, value: any): Promise<void> => {
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path, value })
+}
+
+/**
+ * Start collecting test events (notifications) on the server side.
+ * Returns a collector object with methods to get events and stop collecting.
+ */
+export const collectNotifications = async () => {
+  const res = await anonymousAx.post(`${apiUrl}/api/v1/test-env/events/start`)
+  const offset = res.data.offset
+
+  return {
+    /** Get all collected notifications since start */
+    getAll: async (): Promise<any[]> => {
+      const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/events/buffer`, { params: { offset } })
+      return res.data
+    },
+    /** Wait until at least `count` notifications are collected, then return them */
+    waitForCount: async (count: number, timeout = 10000): Promise<any[]> => {
+      const start = Date.now()
+      while (Date.now() - start < timeout) {
+        const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/events/buffer`, { params: { offset } })
+        if (res.data.length >= count) return res.data
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/events/buffer`, { params: { offset } })
+      return res.data
+    },
+    /** No cleanup needed with offset-based approach */
+    close: async () => {}
+  }
 }

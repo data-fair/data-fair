@@ -62,9 +62,15 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
 
 export const send = async (event: PushEvent, sessionState?: SessionState) => {
   if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
-    if (isMainThread) testEvents.emit('notification', event)
-    // @ts-ignore
-    else parentPort?.postMessage(event)
+    if (isMainThread) {
+      testEvents.emit('notification', event)
+      // Also push to test notification buffer
+      const { capturedNotifications } = await import('./test-notif-buffer.ts')
+      capturedNotifications.push(event)
+    } else {
+      // @ts-ignore
+      parentPort?.postMessage(event)
+    }
   } else {
     if (config.privateEventsUrl) {
       if (sessionState?.user && (sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
