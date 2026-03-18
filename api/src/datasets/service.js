@@ -220,13 +220,13 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
   }
 
   // cache has a result — check if it's still fresh via a lightweight query
-  const projection = { updatedAt: 1, status: 1, _id: 0 }
+  const projection = { updatedAt: 1, finalizedAt: 1, status: 1, _id: 0 }
   if (useDraft) projection['draft.updatedAt'] = 1
   const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection })
   if (!fresh) return {} // dataset was deleted
 
-  // check top-level updatedAt
-  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt) {
+  // check top-level updatedAt and finalizedAt
+  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt || cached.datasetFull.finalizedAt !== fresh.finalizedAt) {
     return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   }
 
