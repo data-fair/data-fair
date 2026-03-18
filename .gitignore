@@ -22,3 +22,4 @@ node_modules
 .vscode
 dev/logs/
 test-results/
+/benchmark/results/*.json

@@ -204,6 +204,51 @@ export const memoizedGetDataset = memoize(getDataset, {
 })
 
 /**
+ * Like getDataset but validates the memoized cache with a lightweight updatedAt check.
+ * This avoids full MongoDB reads when the dataset hasn't changed, while still guaranteeing freshness.
+ * Returns cached results directly when fresh (protected by assertImmutable in dev/test).
+ */
+export const getDatasetFresh = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody) => {
+  // first try the memoized cache
+  const cached = await memoizedGetDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  if (!cached.dataset) {
+    // cache says not found — but is the cache stale? Do a lightweight check
+    const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection: { updatedAt: 1, _id: 0 } })
+    if (!fresh) return cached // dataset really doesn't exist
+    // dataset exists but cache missed it — do a full read
+    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  }
+
+  // cache has a result — check if it's still fresh via a lightweight query
+  const projection = { updatedAt: 1, status: 1, _id: 0 }
+  if (useDraft) projection['draft.updatedAt'] = 1
+  const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection })
+  if (!fresh) return {} // dataset was deleted
+
+  // check top-level updatedAt
+  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt) {
+    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  }
+
+  // when using draft mode, also check draft.updatedAt to detect draft-only changes
+  if (useDraft) {
+    const cachedDraftUpdatedAt = cached.datasetFull.draft?.updatedAt
+    const freshDraftUpdatedAt = fresh.draft?.updatedAt
+    if (cachedDraftUpdatedAt !== freshDraftUpdatedAt) {
+      return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+    }
+  }
+
+  // also check status if acceptedStatuses is used
+  if (_acceptedStatuses && fresh.status !== cached.datasetFull.status) {
+    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  }
+
+  // cache is fresh — return cached result directly (assertImmutable proxy guards against mutations in dev/test)
+  return cached
+}
+
+/**
  *
  * @param {import('mongodb').Db} db
  * @param {import('@elastic/elasticsearch').Client} es

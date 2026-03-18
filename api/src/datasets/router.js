@@ -44,6 +44,7 @@ import * as publicationSites from '../misc/utils/publication-sites.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import * as apiKeyUtils from '../misc/utils/api-key.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.ts'
+import { notifyPortals } from '../search-pages/webhook.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.ts'
 import { dir, dataFilesDir, attachmentsDir } from './utils/files.ts'
@@ -230,6 +231,8 @@ router.patch('/:datasetId',
       await syncRemoteService(dataset)
     }
 
+    await notifyPortals(dataset, 'dataset', 'toIndex')
+
     res.status(200).json(clean(req, dataset))
   })
 
@@ -359,6 +362,7 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
 
   await syncRemoteService({ ...datasetFull, masterData: null })
   await updateTotalStorage(datasetFull.owner)
+  await notifyPortals(dataset, 'dataset', 'toDelete')
   res.sendStatus(204)
 })
 
@@ -672,7 +676,7 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   }
   const flatten = getFlatten(req.dataset)
   const result = {
-    total: esResponse.hits.total.value,
+    total: esResponse.hits.total?.value,
     results: esResponse.hits.hits.map(hit => {
       const item = esUtils.prepareResultItem(hit, req.dataset, req.query, flatten, req.publicBaseUrl)
       let label = item[singleSearch.output.key]
@@ -780,6 +784,8 @@ const readLines = async (req, res) => {
   if (vectorTileRequested) {
     // default is smaller (see es/commons) for other format, but we want filled tiles by default
     if (!('size' in query)) query.size = config.elasticsearch.maxPageSize + ''
+    // track_total_hits is expensive and not needed for tile rendering, disable by default
+    if (query.count !== 'true') query.count = 'false'
   }
 
   if (query.format === 'wkt') {
@@ -939,13 +945,13 @@ const readLines = async (req, res) => {
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (useVTCache) cache.set(cacheHash, { tile: new mongodb.Binary(tile), count: esResponse.hits.hits.length, total: esResponse.hits.total.value })
+    if (useVTCache) cache.set(cacheHash, { tile: new mongodb.Binary(tile), count: esResponse.hits.hits.length, total: esResponse.hits.total?.value })
     res.setHeader('x-tilesmode', tilesMode)
-    res.setHeader('x-tilesampling', esResponse.hits.hits.length + '/' + esResponse.hits.total.value)
+    if (esResponse.hits.total) res.setHeader('x-tilesampling', esResponse.hits.hits.length + '/' + esResponse.hits.total.value)
     return res.status(200).send(tile)
   }
 
-  const result = { total: esResponse.hits.total.value }
+  const result = { total: esResponse.hits.total?.value }
   if (nextLinkURL) result.next = nextLinkURL.href
   if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = []

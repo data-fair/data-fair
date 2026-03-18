@@ -77,13 +77,16 @@ describe('geo files support', function () {
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
     assert.equal(res.headers['x-tilesmode'], 'es/neighbors/10000')
-    assert.equal(res.headers['x-tilesampling'], '1/1')
+    assert.equal(res.headers['x-tilesampling'], undefined)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=51,31,6&format=pbf`)
     assert.equal(res.status, 204)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
     assert.equal(res.headers['x-tilesmode'], 'es/max')
+    assert.equal(res.headers['x-tilesampling'], undefined)
+    // vector tiles with count=true to get x-tilesampling
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&count=true`)
     assert.equal(res.headers['x-tilesampling'], '1/1')
     // vector tiles with some preparation at index time
     const geomProp = dataset.schema.find(p => p.key === 'geometry')
@@ -95,7 +98,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
     assert.equal(res.headers['x-tilesmode'], 'es/max/prepared')
-    assert.equal(res.headers['x-tilesampling'], '1/1')
+    assert.equal(res.headers['x-tilesampling'], undefined)
 
     // virtual dataset based on this file
     let virtualDataset = await ax.post('/api/v1/datasets', {

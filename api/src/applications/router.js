@@ -19,6 +19,7 @@ import * as capture from '../misc/utils/capture.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir, dir } from './utils.ts'
 import { findApplications } from './service.js'
 import { syncApplications } from '../datasets/service.js'
+import { notifyPortals } from '../search-pages/webhook.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { checkStorage } from '../datasets/middlewares.js'
@@ -347,6 +348,7 @@ router.patch('/:applicationId',
     }, sessionState)
 
     await syncDatasets(patchedApplication, application)
+    await notifyPortals(patchedApplication, 'application', 'toIndex')
     res.status(200).json(clean(patchedApplication, req.publicBaseUrl, req.publicationSite))
   }
 )
@@ -447,6 +449,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
   }, sessionState)
 
   await syncDatasets(application)
+  await notifyPortals(application, 'application', 'toDelete')
   res.sendStatus(204)
 })
 
@@ -488,6 +491,10 @@ const writeConfig = async (req, res) => {
 
   await journals.log('applications', application, { type: 'config-updated' })
   await syncDatasets({ configuration: req.body })
+
+  const updatedApp = await db.collection('applications').findOne({ id: req.params.applicationId })
+  await notifyPortals(updatedApp, 'application', 'toIndex')
+
   res.status(200).json(req.body)
 }
 router.put('/:applicationId/config', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)

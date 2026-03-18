@@ -50,10 +50,19 @@ export default async (client: Client, dataset, query, publicBaseUrl, vtXYZ) => {
       if (config.oldPublicUrl) hit._source._attachment_url = hit._source._attachment_url.replace(config.oldPublicUrl, config.publicUrl)
       if (publicBaseUrl) hit._source._attachment_url = hit._source._attachment_url.replace(config.publicUrl, publicBaseUrl)
       if (dataset.isVirtual) {
-        const url = new URL(hit._source._attachment_url)
-        const childDatasetId = url.pathname.split('/')[5]
-        url.pathname = url.pathname.replace(`/data-fair/api/v1/datasets/${childDatasetId}/attachments/`, `/data-fair/api/v1/datasets/${dataset.id}/attachments/${childDatasetId}/`)
-        hit._source._attachment_url = url.href
+        // use string manipulation instead of new URL() for performance
+        const attachIdx = hit._source._attachment_url.indexOf('/data-fair/api/v1/datasets/')
+        if (attachIdx !== -1) {
+          const afterPrefix = hit._source._attachment_url.substring(attachIdx + '/data-fair/api/v1/datasets/'.length)
+          const slashIdx = afterPrefix.indexOf('/')
+          if (slashIdx !== -1) {
+            const childDatasetId = afterPrefix.substring(0, slashIdx)
+            hit._source._attachment_url = hit._source._attachment_url.replace(
+              `/data-fair/api/v1/datasets/${childDatasetId}/attachments/`,
+              `/data-fair/api/v1/datasets/${dataset.id}/attachments/${childDatasetId}/`
+            )
+          }
+        }
       }
     }
     if (hit.fields?._vt?.[0]) {
