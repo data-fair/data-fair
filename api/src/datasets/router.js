@@ -193,7 +193,8 @@ router.patch('/:datasetId',
   (req, res, next) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
   async (req, res) => {
     // @ts-ignore
-    const dataset = req.dataset
+    // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
+    const dataset = structuredClone(req.dataset.__proxyTarget ?? req.dataset)
 
     const locale = req.getLocale()
     const sessionState = reqSessionAuthenticated(req)
