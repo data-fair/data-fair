@@ -44,6 +44,7 @@ import * as publicationSites from '../misc/utils/publication-sites.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import * as apiKeyUtils from '../misc/utils/api-key.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.ts'
+import { notifyPortals } from '../search-pages/webhook.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.ts'
 import { dir, dataFilesDir, attachmentsDir } from './utils/files.ts'
@@ -221,6 +222,8 @@ router.patch('/:datasetId',
       await syncRemoteService(dataset)
     }
 
+    await notifyPortals(dataset, 'dataset', 'toIndex')
+
     res.status(200).json(clean(req, dataset))
   })
 
@@ -350,6 +353,7 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
 
   await syncRemoteService({ ...datasetFull, masterData: null })
   await updateTotalStorage(datasetFull.owner)
+  await notifyPortals(dataset, 'dataset', 'toDelete')
   res.sendStatus(204)
 })
 

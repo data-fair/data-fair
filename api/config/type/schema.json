@@ -255,7 +255,8 @@
         "catalogs": { "type": ["string", "null"] },
         "notifications": { "type": ["string", "null"] },
         "events": { "type": ["string", "null"] },
-        "ignoreRateLimiting": { "type": ["string", "null"] }
+        "ignoreRateLimiting": { "type": ["string", "null"] },
+        "searchPages": { "type": ["string", "null"] }
       }
     },
     "locks": {
