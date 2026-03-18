@@ -1,7 +1,7 @@
 // see syntax examples https://github.com/pegjs/pegjs/tree/master/examples
 {{
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { requiredCapability } from '../../datasets/es/commons.js'
+import { requiredCapability } from '../../datasets/es/operations.ts'
 }}
 
 // https://help.opendatasoft.com/apis/ods-explore-v2/#section/Opendatasoft-Query-Language-(ODSQL)/Order-by-clause

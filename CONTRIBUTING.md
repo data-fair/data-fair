@@ -56,7 +56,7 @@ docker run --network=host --env PORT=8081 data-fair-dev
 
 ## Rust native modules
 
-To debug a rist native module inside this project (like "parquet-writer"), use something like this:
+To debug a rust native module inside this project (like "parquet-writer"), use something like this:
 
 ```
 npm -w parquet-writer run build:debug && RUST_BACKTRACE=1 npm test

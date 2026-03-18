@@ -1,6 +1,6 @@
 [{
-    "id": "KWqAGZ4mG",
-    "name": "Fivechat",
+    "id": "test_org1",
+    "name": "Test Org 1",
     "departments": [{
       "id": "dep1",
       "name": "department 1"
@@ -9,105 +9,105 @@
       "name": "department 2"
     }],
     "members": [{
-      "id": "dmeadus0",
+      "id": "test_user1",
       "role": "admin"
     }, {
-      "id": "ngernier4",
+      "id": "test_user5",
       "role": "contrib"
     }, {
-      "id": "bhazeldean7",
+      "id": "test_user8",
       "role": "user"
     }, {
-      "id": "icarlens9",
+      "id": "test_user10",
       "role": "contrib",
       "department": "dep2"
     }, {
-      "id": "ddecruce5",
+      "id": "test_user6",
       "role": "contrib",
       "department": "dep1"
     }, {
-      "id": "hlalonde3",
+      "id": "test_user4",
       "role": "admin",
       "department": "dep1"
     }, {
-      "id": "hlalonde3",
+      "id": "test_user4",
       "role": "admin",
       "department": "dep2"
     }]
   },
   {
-    "id": "ihMQiGTaY",
-    "name": "Blogpad",
+    "id": "test_org2",
+    "name": "Test Org 2",
     "members": [{
-      "id": "ngernier4",
+      "id": "test_user5",
       "role": "admin"
     }, {
-      "id": "icarlens9",
+      "id": "test_user10",
       "role": "user"
     }, {
-      "id": "ddecruce5",
+      "id": "test_user6",
       "role": "user"
     }]
   },
   {
-    "id": "3sSi7xDIK",
-    "name": "Ntag",
+    "id": "test_org3",
+    "name": "Test Org 3",
     "members": [{
-      "id": "cdurning2",
+      "id": "test_user3",
       "role": "admin"
     }, {
-      "id": "ccherryholme1",
+      "id": "test_user2",
       "role": "admin"
     }, {
-      "id": "icarlens9",
+      "id": "test_user10",
       "role": "user"
     }, {
-      "id": "hlalonde3",
+      "id": "test_user4",
       "role": "user"
     }, {
-      "id": "dmeadus0",
+      "id": "test_user1",
       "role": "user"
     }]
   },
   {
-    "id": "uakapD5tu",
-    "name": "Skilith",
+    "id": "test_org4",
+    "name": "Test Org 4",
     "members": [{
-      "id": "cdurning2",
+      "id": "test_user3",
       "role": "admin"
     }, {
-      "id": "vdulany6",
+      "id": "test_user7",
       "role": "user"
     }]
   },
   {
-    "id": "Yty0BxuZG",
-    "name": "Topicblab",
+    "id": "test_org5",
+    "name": "Test Org 5",
     "members": [{
-      "id": "icarlens9",
+      "id": "test_user10",
       "role": "admin"
     }]
   },
   {
-    "id": "EnTgB2UbH",
-    "name": "Livefish",
+    "id": "test_org6",
+    "name": "Test Org 6",
     "members": [{
-      "id": "vdulany6",
+      "id": "test_user7",
       "role": "admin"
     }, {
-      "id": "ngernier4",
+      "id": "test_user5",
       "role": "admin"
     }, {
-      "id": "cdurning2",
+      "id": "test_user3",
       "role": "user"
     }, {
-      "id": "bhazeldean7",
+      "id": "test_user8",
       "role": "user"
     }, {
-      "id": "dhannan8",
+      "id": "test_user9",
       "role": "user"
     }, {
-      "id": "superadmin",
+      "id": "test_superadmin",
       "role": "admin"
     }]
   },
@@ -118,24 +118,24 @@
       "id": "albanm",
       "role": "admin"
     }, {
-      "id": "superadmin",
+      "id": "test_superadmin",
       "role": "admin"
     }, {
-      "id": "dhannan8",
+      "id": "test_user9",
       "role": "user"
     }, {
-      "id": "user1",
+      "id": "test_user",
       "role": "user"
     }, {
-      "id": "contrib1",
+      "id": "test_contrib",
       "role": "contrib"
     }],
     "partners": [{
-      "id": "KWqAGZ4mG",
-      "name": "Fivechat"
+      "id": "test_org1",
+      "name": "Test Org 1"
     }, {
-      "id": "EnTgB2UbH",
-      "name": "Livefish"
+      "id": "test_org6",
+      "name": "Test Org 6"
     }]
   }
 ]

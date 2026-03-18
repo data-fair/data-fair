@@ -186,6 +186,9 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
     // some timeZone has changed on a field, trigger full re-indexing
     patch.status = reindexerStatus
+  } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && !equal(df['x-capabilities'], f['x-capabilities'])))) {
+    // x-capabilities changes affect ES analyzers/normalizers and require full re-indexing
+    patch.status = reindexerStatus
   } else if (removedRestProps.length) {
     patch.status = 'analyzed'
   } else if (dataset.file && patch.schema && datasetUtils.schemasTransformChange(patch.schema, dataset.schema)) {

@@ -43,7 +43,7 @@ async function jwksStatus (req) {
 
 async function nuxtStatus (req) {
   debug('nuxtStatus ?')
-  if (process.env.NODE_ENV === 'test') return
+  if (process.env.NODE_ENV === 'development') return
   const nuxtConfig = (await import('@data-fair/data-fair-ui/nuxt.config.js')).default
   const dir = nuxtConfig.buildDir || '.nuxt'
   await fs.writeFile(`${dir}/check-access.txt`, 'ok')
@@ -72,9 +72,11 @@ async function getStatus (req) {
     singleStatus(req, mongoStatus, 'mongodb'),
     singleStatus(req, esStatus, 'elasticsearch'),
     singleStatus(req, jwksStatus, 'auth-directory'),
-    singleStatus(req, nuxtStatus, 'nuxt'),
     singleStatus(req, dataDirStatus, 'data-dir')
   ]
+  if (!config.proxyNuxt) {
+    promises.push(singleStatus(req, nuxtStatus, 'nuxt'))
+  }
   if (config.clamav.active) {
     promises.push(singleStatus(req, clamav.ping, 'clamav'))
   }

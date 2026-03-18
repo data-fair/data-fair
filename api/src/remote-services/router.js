@@ -256,7 +256,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
   targetUrl.search = incomingUrl.searchParams
 
   const options = {
-    host: targetUrl.host,
+    hostname: targetUrl.hostname,
     port: targetUrl.port,
     protocol: targetUrl.protocol,
     path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
@@ -302,7 +302,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
       }
     })
     req.on('error', err => {
-      if (timedout) {
+      if (timedout || err.code === 'ERR_SOCKET_TIMEOUT' || err.code === 'ECONNRESET') {
         res.status(504).type('text/plain').send('remote-service timed out')
         resolve()
       } else {

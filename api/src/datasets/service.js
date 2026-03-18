@@ -220,13 +220,13 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
   }
 
   // cache has a result — check if it's still fresh via a lightweight query
-  const projection = { updatedAt: 1, status: 1, _id: 0 }
+  const projection = { updatedAt: 1, finalizedAt: 1, status: 1, errorStatus: 1, errorRetry: 1, _id: 0 }
   if (useDraft) projection['draft.updatedAt'] = 1
   const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection })
   if (!fresh) return {} // dataset was deleted
 
-  // check top-level updatedAt
-  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt) {
+  // check top-level updatedAt, finalizedAt and status
+  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt || cached.datasetFull.finalizedAt !== fresh.finalizedAt || cached.datasetFull.status !== fresh.status || cached.datasetFull.errorStatus !== fresh.errorStatus || cached.datasetFull.errorRetry !== fresh.errorRetry) {
     return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   }
 
@@ -237,11 +237,6 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
     if (cachedDraftUpdatedAt !== freshDraftUpdatedAt) {
       return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
     }
-  }
-
-  // also check status if acceptedStatuses is used
-  if (_acceptedStatuses && fresh.status !== cached.datasetFull.status) {
-    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   }
 
   // cache is fresh — return cached result directly (assertImmutable proxy guards against mutations in dev/test)

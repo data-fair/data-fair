@@ -4,6 +4,7 @@ import config from '#config'
 import settingsSchema from '#types/settings/schema.js'
 import debugLib from 'debug'
 import type { Resource, Event, Dataset, ResourceType } from '#types'
+import testEvents from './test-events.ts'
 
 const debug = debugLib('webhooks')
 
@@ -33,11 +34,11 @@ export const trigger = async (resourceType: ResourceType, resource: Resource, ev
       if (webhook.target.type === 'http') {
         let text = (resource.title || resource.id) + ' - ' + eventType.title + (event.href ? ' - ' + event.href : '')
         if (event.data) text += '\n\n' + event.data
-        await axios.post(webhook.target.params.url, {
-          text,
-          href,
-          event: event.type
-        })
+        const payload = { text, href, event: event.type }
+        await axios.post(webhook.target.params.url, payload)
+        if (process.env.NODE_ENV === 'development') {
+          testEvents.emit('webhook', payload)
+        }
       }
     } catch (err) {
       console.log('Failure to send Webhook', webhook, err)

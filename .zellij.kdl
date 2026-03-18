@@ -7,7 +7,11 @@ layout {
       }
       pane name="deps" {
         command "bash"
-        args "-ic" "npm run dev-deps && watch -n 4 \"docker compose ps --all --format 'table {{.Name}}\t{{.Status}}'\""
+        args "-ic" "npm run dev-deps"
+      }
+      pane name="mock" {
+        command "bash"
+        args "-ic" "npm run dev-mock"
       }
     }
     pane {
@@ -23,10 +27,6 @@ layout {
       pane name="api" {
         command "bash"
         args "-ic" "nvm use && npm run dev-api"
-      }
-      pane name="worker" {
-        command "bash"
-        args "-ic" "nvm use && npm run dev-worker"
       }
     }
     pane size=1 borderless=true {

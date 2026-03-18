@@ -178,13 +178,22 @@ router.patch('/:datasetId',
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
   (req, res, next) => req.body.masterData ? permissionsManageMasterData(req, res, next) : next(),
-  (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
+  (req, res, next) => {
+    if (descriptionHasBreakingChanges(req)) {
+      permissionsWriteDescriptionBreaking(req, res, next)
+    } else if (can('datasets', req.resource, 'writeDescription', reqSession(req))) {
+      permissionsWriteDescription(req, res, next)
+    } else {
+      // writeDescriptionBreaking implies writeDescription for non-breaking changes
+      permissionsWriteDescriptionBreaking(req, res, next)
+    }
+  },
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
   (req, res, next) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
   async (req, res) => {
-    // @ts-ignore
-    const dataset = req.dataset
+    // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
+    const dataset = clone(req.dataset)
 
     const locale = req.getLocale()
     const sessionState = reqSessionAuthenticated(req)
@@ -450,8 +459,8 @@ const createDatasetRoute = async (req, res) => {
 router.post('', apiKeyMiddlewareWrite, checkStorage(true, true), createDatasetRoute)
 
 const updateDatasetRoute = async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
+  // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
+  const dataset = clone(req.dataset)
 
   if (!dataset) {
     await createDatasetRoute(req, res, next)
@@ -1452,7 +1461,7 @@ router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('ge
 
 router.post('/:datasetId/_simulate-extension', readDataset({ noCache: true }), apiKeyMiddlewareWrite, permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
   const line = req.body
-  const dataset = clone(req.dataset)
+  const dataset = clone(req.dataset.__proxyTarget ?? req.dataset)
   if (!dataset.extensions?.length) throw httpError(400, 'no extension to simulate')
   await extend(dataset, dataset.extensions, undefined, undefined, undefined, line)
   const flatten = getFlatten(req.dataset, req.query.arrays === 'true')

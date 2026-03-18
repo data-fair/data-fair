@@ -30,7 +30,7 @@ export default async () => {
         // pathRewrite: { '^/data-fair': '' }
       })
     }
-  } else if (process.env.NODE_ENV === 'test') {
+  } else if (process.env.NODE_ENV === 'development') {
     // no UI during tests
     return { trackEmbed, render: (req, res, next) => next() }
   } else {

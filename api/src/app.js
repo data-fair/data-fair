@@ -154,6 +154,9 @@ export const run = async () => {
     if (config.compatODS) {
       app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./api-compat/ods/index.ts')).default)
     }
+    if (process.env.NODE_ENV === 'development') {
+      app.use('/api/v1/test-env', (await import('./misc/routers/test-env.ts')).default)
+    }
 
     app.use('/api/', (req, res) => {
       return res.status(404).send('unknown api endpoint')
@@ -266,7 +269,7 @@ export const run = async () => {
       (await import('./remote-services/utils.ts')).init(),
       (await import('./base-applications/router.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
-        if (process.env.NODE_ENV === 'test') {
+        if (process.env.NODE_ENV === 'development') {
           // TODO: remove this ugly exception, this code should be tested
           return true
         }
