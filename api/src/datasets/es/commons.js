@@ -17,6 +17,7 @@ import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
 import memoize from 'memoizee'
 import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.js'
+import { hasCapability, requiredCapability } from './operations.ts'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -144,7 +145,7 @@ const capabilitiesSuffixes = [
 function checkQuery (query, schema, esFields, currentField) {
   if (typeof query === 'string') {
     // lucene-query-parser as a bug where it doesn't accept escaped quotes inside quotes
-    if (process.env.NODE_ENV === 'test' && query === '(siret:"test \\" failure")') {
+    if (process.env.NODE_ENV === 'development' && query === '(siret:"test \\" failure")') {
       // special test case to check error management
     } else {
       query = query.replace(/\\"/g, '')
@@ -188,30 +189,7 @@ function checkQuery (query, schema, esFields, currentField) {
   if (query.right) checkQuery(query.right, schema, esFields, query.field)
 }
 
-/**
- *
- * @param {any} prop
- * @param {string} capability
- */
-export const hasCapability = (prop, capability = 'index') => {
-  const propCapabilities = prop['x-capabilities'] ?? {}
-  if (propCapabilities[capability] === false || (['wildcard', 'textAgg'].includes(capability) && propCapabilities[capability] !== true)) {
-    return false
-  }
-  return true
-}
-
-/**
- *
- * @param {any} prop
- * @param {string} filterName
- * @param {string} capability
- */
-export const requiredCapability = (prop, filterName, capability = 'index') => {
-  if (!hasCapability(prop, capability)) {
-    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
-  }
-}
+export { hasCapability, requiredCapability }
 
 export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
@@ -765,76 +743,4 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
   return res
 }
 
-// try to produce a somewhat readable error message from a structured error from elasticsearch
-/**
- *
- * @param {any} err
- * @returns {{message: String, status: Number}}
- */
-export const extractError = (err) => {
-  const status = err.status ?? err.statusCode ?? 500
-  if (typeof err === 'string') return { message: err, status }
-  let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
-  if (!errBody && !!err.reason) errBody = err
-  if (!errBody) {
-    if (err.message) return { message: err.message, status }
-    else return { message: JSON.stringify(err), status }
-  }
-  const parts = []
-  if (errBody.reason) {
-    parts.push(errBody.reason)
-  }
-  if (errBody.root_cause?.reason && !parts.includes(errBody.root_cause.reason)) {
-    parts.push(errBody.root_cause.reason)
-  }
-  if (errBody.caused_by?.reason && !parts.includes(errBody.caused_by.reason)) {
-    parts.push(errBody.caused_by.reason)
-  }
-  if (errBody.root_cause?.[0]?.reason && !parts.includes(errBody.root_cause[0].reason)) {
-    parts.push(errBody.root_cause[0].reason)
-  }
-  if (errBody.failed_shards?.[0]?.reason) {
-    const shardReason = errBody.failed_shards[0].reason
-    if (shardReason.caused_by?.reason && !parts.includes(shardReason.caused_by.reason)) {
-      parts.push(shardReason.caused_by.reason)
-    } else {
-      const reason = shardReason.reason || shardReason
-      if (!parts.includes(reason)) parts.push(reason)
-    }
-  }
-  if (parts.includes('Time exceeded')) {
-    return {
-      message: 'Cette requête est trop longue, son traitement a été interrompu.',
-      status: 504
-    }
-  }
-  return { message: parts.join(' - '), status }
-}
-
-// cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
-export const escapeFilter = (val) => {
-  if (typeof val !== 'string') return val
-  return [].map.call(val, (char) => {
-    if (char === '+' ||
-      char === '-' ||
-      char === '&' ||
-      char === '|' ||
-      char === '!' ||
-      char === '(' ||
-      char === ')' ||
-      char === '{' ||
-      char === '}' ||
-      char === '[' ||
-      char === ']' ||
-      char === '^' ||
-      char === '"' ||
-      char === '~' ||
-      char === '*' ||
-      char === '?' ||
-      char === ':' ||
-      char === '\\' ||
-      char === '/'
-    ) return '\\' + char
-    else return char
-  }).join('')
-}
+export { extractError, escapeFilter } from './operations.ts'

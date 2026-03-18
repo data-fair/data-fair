@@ -131,7 +131,7 @@ test.describe('limits', () => {
     ])
     assert.ok(dataset.file.size > 90000 && dataset.file.size < 110000, 'content should be around 100KB, got ' + dataset.file.size)
 
-    // static data access by authenticated user (400 kb/s defined in config/test.cjs)
+    // static data access by authenticated user (400 kb/s defined in config/development.cjs)
     let t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
     await ax.get(`/api/v1/datasets/${dataset.id}/full`)
@@ -140,7 +140,7 @@ test.describe('limits', () => {
     let t1 = new Date().getTime()
     assert.ok((t1 - t0 > 500) && (t1 - t0 < 1500), 'throttled download should be around 1s, got ' + (t1 - t0))
 
-    // static data access by anonymous user (200 kb/s defined in config/test.cjs)
+    // static data access by anonymous user (200 kb/s defined in config/development.cjs)
     t0 = new Date().getTime()
     await anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
     await anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
@@ -149,7 +149,7 @@ test.describe('limits', () => {
     t1 = new Date().getTime()
     assert.ok((t1 - t0 > 1200) && (t1 - t0 < 3000), 'throttled download should be around 2s, got ' + (t1 - t0))
 
-    // dynamic data access by authenticated user (200 kb/s defined in config/test.cjs)
+    // dynamic data access by authenticated user (200 kb/s defined in config/development.cjs)
     t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 500 } })
     t1 = new Date().getTime()

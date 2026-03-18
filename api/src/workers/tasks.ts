@@ -61,7 +61,7 @@ const createWorkers = () => {
       }
     })
   }
-  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development') {
     for (const worker of Object.values(workers)) {
       worker.on('message', (message) => {
         if ((message as any)?.topic?.key) _testNotifBuffer.push(message)

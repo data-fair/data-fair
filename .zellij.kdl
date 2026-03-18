@@ -7,11 +7,11 @@ layout {
       }
       pane name="deps" {
         command "bash"
-        args "-ic" "npm run dev-deps && watch -n 4 \"docker compose ps --all --format 'table {{.Name}}\t{{.Status}}'\""
+        args "-ic" "npm run dev-deps"
       }
       pane name="mock" {
         command "bash"
-        args "-ic" "nvm use && node --experimental-strip-types dev/mock-server.ts"
+        args "-ic" "npm run dev-mock"
       }
     }
     pane {

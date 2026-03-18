@@ -30,10 +30,10 @@ export default async function (dataset: DatasetInternal) {
   const debug = debugModule(`worker:indexer:${dataset.id}`)
   const debugHeap = heapUtils.debug(`worker:indexer:${dataset.id}`)
 
-  if (global.process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error') {
+  if (global.process.env.NODE_ENV === 'development' && dataset.slug === 'trigger-test-error') {
     throw new Error('This is a test error')
   }
-  if (global.process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error-400') {
+  if (global.process.env.NODE_ENV === 'development' && dataset.slug === 'trigger-test-error-400') {
     throw httpError(400, '[noretry] This is a test 400 error')
   }
 

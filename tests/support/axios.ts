@@ -2,6 +2,14 @@ import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { axiosAuth as _axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import slug from 'slugify'
 
+/**
+ * Test users and orgs are defined in:
+ *   - dev/resources/users.json — user accounts (all use password 'passwd' except superadmin which uses 'superpasswd')
+ *   - dev/resources/organizations.json — org memberships and roles
+ *
+ * These are loaded by simple-directory (see docker-compose.yaml, STORAGE_TYPE=file).
+ */
+
 export const directoryUrl = `http://localhost:${process.env.NGINX_PORT1}/simple-directory`
 export const apiUrl = `http://localhost:${process.env.DEV_API_PORT}`
 export const baseURL = `http://localhost:${process.env.NGINX_PORT1}/data-fair`

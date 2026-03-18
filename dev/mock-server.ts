@@ -219,6 +219,12 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://localhost:${port}`)
   const pathname = url.pathname
 
+  if (pathname === '/' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    res.end('ok')
+    return
+  }
+
   // Dynamic route management API
   if (pathname === '/_test/routes' && req.method === 'POST') {
     const body = JSON.parse(await readBody(req))

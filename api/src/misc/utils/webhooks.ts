@@ -36,7 +36,7 @@ export const trigger = async (resourceType: ResourceType, resource: Resource, ev
         if (event.data) text += '\n\n' + event.data
         const payload = { text, href, event: event.type }
         await axios.post(webhook.target.params.url, payload)
-        if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
           testEvents.emit('webhook', payload)
         }
       }

@@ -6,7 +6,7 @@
 
 
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { requiredCapability } from '../../datasets/es/commons.js'
+import { requiredCapability } from '../../datasets/es/operations.ts'
 import dayjs from 'dayjs'
 
 const LBRACE='{';

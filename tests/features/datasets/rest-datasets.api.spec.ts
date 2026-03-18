@@ -14,7 +14,7 @@ const ccherryholme1 = await axiosAuth('ccherryholme1@icio.us')
 const ngernier4 = await axiosAuth('ngernier4@usa.gov')
 const hlalonde3 = await axiosAuth('hlalonde3@desdev.cn')
 const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
-const superadminPersonal = await axiosAuth('superadmin@test.com')
+const superadminPersonal = await axiosAuth('superadmin@test.com', 'superpasswd')
 
 test.describe('REST datasets', () => {
   test.beforeEach(async () => {

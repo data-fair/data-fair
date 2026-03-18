@@ -5,20 +5,16 @@
   "main": "server",
   "scripts": {
     "build-types": "df-build-types ./api/",
-    "test-base": "NODE_CONFIG_DIR=./api/config/ NODE_ENV=test EVENTS_LOG_LEVEL=warn node --disable-warning=ExperimentalWarning --test --test-force-exit --test-concurrency=1",
-    "test": "npm run test-base test-it/*.ts",
-    "test-pw": "npx playwright test",
-    "test-s3": "FILES_STORAGE=s3 npm test",
-    "test-deps": "docker compose --profile test up -d --wait",
+    "test": "npx playwright test",
     "report": "nyc report --reporter=html",
     "lint": "eslint . && npm -w ui run lint && npm -w embed-ui run lint",
     "lint-fix": "eslint --fix . && npm -w ui run lint-fix && npm -w embed-ui run lint-fix",
-    "dev-deps": "docker compose --profile dev up -d --wait",
+    "dev-deps": "mkdir -p dev/logs && docker compose --profile dev up -d --wait && docker compose --profile dev logs -f 2>&1 | tee dev/logs/docker-compose.log",
     "stop-dev-deps": "docker compose --profile dev stop",
     "dev-api": "MODE=server npm -w api run dev",
     "dev-worker": "MODE=worker DEBUG=upgrade* OBSERVER_PORT=9091 npm -w api run dev-worker",
-    "dev-mock": "node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts",
-    "dev-ui": "npm -w ui run dev",
+    "dev-mock": "mkdir -p dev/logs && node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts 2>&1 | tee dev/logs/dev-mock.log",
+    "dev-ui": "mkdir -p dev/logs && npm -w ui run dev 2>&1 | tee dev/logs/dev-ui.log",
     "dev-zellij": "dotenv -- zellij --layout .zellij.kdl",
     "build": "npm -w ui run build",
     "build-parsers": "npm run build-parser-where && npm run build-parser-select && npm run build-parser-order-by && npm run build-parser-group-by && npm run build-parser-aliases && npm run build-parser-refine",
@@ -31,7 +27,7 @@
     "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc && tsc -p test-it/tsconfig.json && npm -w embed-ui run check-types",
-    "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w embed-ui run check-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm run test-s3 && npm audit --omit=dev --audit-level=critical"
+    "quality": "npm run lint && npm run build-types && npm -w embed-ui run check-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm test && npm audit --omit=dev --audit-level=critical"
   },
   "engines": {
     "node": "v24"

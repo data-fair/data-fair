@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { extractError } from '../../../api/src/datasets/es/commons.js'
+import { extractError } from '../../../api/src/datasets/es/operations.ts'
 
 test.describe('ES error extraction', () => {
   test('Extract message from another ES error', () => {

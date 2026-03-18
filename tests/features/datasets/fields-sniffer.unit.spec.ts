@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import * as sniffer from '../../../api/src/datasets/utils/fields-sniffer.js'
+import * as sniffer from '../../../api/src/datasets/utils/operations.ts'
 
 test.describe('field sniffer unit tests', () => {
   test('Work with booleans', () => {

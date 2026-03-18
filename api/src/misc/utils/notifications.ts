@@ -61,7 +61,7 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
 }
 
 export const send = async (event: PushEvent, sessionState?: SessionState) => {
-  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development') {
     if (isMainThread) {
       testEvents.emit('notification', event)
       // Also push to test notification buffer
