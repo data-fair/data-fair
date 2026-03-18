@@ -11,8 +11,8 @@ test.describe('Cache headers', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   const createDataset = async (ax: any) => {

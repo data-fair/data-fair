@@ -15,8 +15,8 @@ test.describe('Datasets with auto-initialization from another one', () => {
     await clearMockRoutes()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Create REST dataset with copied information from file dataset', async () => {

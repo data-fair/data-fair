@@ -6,7 +6,7 @@ import moment from 'moment'
 import zlib from 'zlib'
 import iconv from 'iconv-lite'
 import { axios, axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, lsAttachments } from '../../support/workers.ts'
+import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, lsAttachments } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
@@ -21,8 +21,8 @@ test.describe('REST datasets', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Create empty REST datasets', async () => {
@@ -1071,7 +1071,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
   test('Delete all lines from a rest dataset', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restdel', {
+    let res = await ax.post('/api/v1/datasets/restdel', {
       isRest: true,
       title: 'restdel',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -1095,7 +1095,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
   test('Send bulk actions as a CSV body', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restcsv', {
+    let res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [
@@ -1160,7 +1160,7 @@ patch,line1,33`, { headers: { 'content-type': 'text/csv' } })
 
   test('Send bulk actions as a CSV body with automatic adjustment of keys', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restcsv', {
+    let res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [
@@ -1183,7 +1183,7 @@ test2,test2`, { headers: { 'content-type': 'text/csv' } })
 
   test('Resend downloaded csv as bulk actions', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restcsv', {
+    let res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [
@@ -1335,7 +1335,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
 
   test('Send bulk actions as a gzipped CSV', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restgzcsv', {
+    let res = await ax.post('/api/v1/datasets/restgzcsv', {
       isRest: true,
       title: 'restgzcsv',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -1355,7 +1355,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   test('Send bulk as a .csv file', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restcsvfile', {
+    let res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
       title: 'restcsvfile',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -1379,7 +1379,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   test('Send bulk as a .csv file with other encoding', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restcsvfile', {
+    let res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
       title: 'restcsvfile',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'testé2', type: 'string' }]
@@ -1405,7 +1405,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   test('Send bulk as a .csv.gz file', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restcsvgz', {
+    let res = await ax.post('/api/v1/datasets/restcsvgz', {
       isRest: true,
       title: 'restcsvgz',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -1429,7 +1429,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   test('Send bulk as a .xlsx file', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restxlsxfile', {
+    let res = await ax.post('/api/v1/datasets/restxlsxfile', {
       isRest: true,
       title: 'restxlsxfile',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -1450,7 +1450,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   test('Send bulk as a .ods file', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restodsfile', {
+    let res = await ax.post('/api/v1/datasets/restodsfile', {
       isRest: true,
       title: 'restodsfile',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -1471,7 +1471,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   test('Send bulk as a .zip file', async () => {
     const ax = dmeadus
-    const res = await ax.post('/api/v1/datasets/restcsvzip', {
+    let res = await ax.post('/api/v1/datasets/restcsvzip', {
       isRest: true,
       title: 'restcsvzip',
       schema: [{ key: 'id', type: 'string' }, { key: 'adr', type: 'string' }, { key: 'some date', type: 'string' }, { key: 'loc', type: 'string' }]
@@ -1568,10 +1568,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.get('/api/v1/datasets/restunset')
     const storage1 = res.data.storage.size
 
-    res = await ax.patch('/api/v1/datasets/restunset', { schema: [{ key: 'attr1', type: 'string', readOnly: true }] })
-
-    await waitForFinalize(ax, 'restunset')
-    await waitForFinalize(ax, 'restunset')
+    await doAndWaitForFinalize(ax, 'restunset', () => ax.patch('/api/v1/datasets/restunset', { schema: [{ key: 'attr1', type: 'string', readOnly: true }] }))
     res = await ax.get('/api/v1/datasets/restunset')
     const storage2 = res.data.storage.size
     assert.ok(storage2 < storage1)
@@ -1592,10 +1589,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test1' })
     await waitForFinalize(ax, 'updatedby')
 
-    res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: true } })
-
-    await waitForFinalize(ax, 'updatedby')
-    await waitForFinalize(ax, 'updatedby')
+    await doAndWaitForFinalize(ax, 'updatedby', () => ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: true } }))
 
     res = await ax.get('/api/v1/datasets/updatedby/lines')
     assert.ok(res.data.results[0].attr1)

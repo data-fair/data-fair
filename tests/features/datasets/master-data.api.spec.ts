@@ -4,7 +4,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, restCollectionFindOne } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, restCollectionFindOne, waitForJournalEvent } from '../../support/workers.ts'
 import FormData from 'form-data'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
@@ -116,8 +116,8 @@ test.describe('Master data management', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('should define and use a dataset as master-data remote-service used for extensions', async () => {
@@ -216,6 +216,7 @@ test.describe('Master data management', () => {
         select: ['extra', 'extraMulti']
       }]
     })
+    await waitForJournalEvent('slave', 'extend-end')
     let slave = await waitForFinalize(ax, 'slave')
 
     assert.equal(slave.schema[0]['x-concept'].id, 'siret')
@@ -824,9 +825,7 @@ test.describe('Master data management', () => {
       }]
     })
     await cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await waitForDatasetError(cdurning2, 'slave')
-    const journal = (await cdurning2.get('/api/v1/datasets/slave/journal')).data
-    assert.ok(journal[0].data.startsWith('[noretry] permission manquante'))
+    await assert.rejects(waitForFinalize(dmeadus, 'slave'), (err: any) => err.message.startsWith('permission manquante'))
   })
 
   test('should support using master-data from other account if visibility is ok', async () => {

@@ -23,8 +23,8 @@ test.describe('limits', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Manage a user storage limit', async () => {

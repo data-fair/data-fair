@@ -19,8 +19,8 @@ test.describe('root', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Get API documentation', async () => {
@@ -73,7 +73,7 @@ test.describe('root', () => {
     await assert.rejects(superadminPersonal.get('/api/v1/admin/status'), (err: any) => err.status === 403)
     const res = await superadmin.get('/api/v1/admin/status')
     assert.equal(res.status, 200)
-    assert.equal(res.data.details.length, 6)
+    assert.equal(res.data.details.length, 5)
     // in dev mode, nuxt check fails (no nuxt-dist), so status may be 'error'
     const nonNuxtDetails = res.data.details.filter((d: any) => d.name !== 'nuxt')
     assert.ok(nonNuxtDetails.every((d: any) => d.status === 'ok'))

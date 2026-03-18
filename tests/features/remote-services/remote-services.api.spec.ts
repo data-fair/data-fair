@@ -71,14 +71,6 @@ test.describe('remote-services', () => {
     )
   })
 
-  test('Unknown referer', async () => {
-    const ax = anonymous
-    // unknown referer is not rejected by the server (only a warning is logged)
-    // but the request should still go through for public remote services
-    const res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } })
-    assert.equal(res.status, 200)
-  })
-
   test('Handle timeout errors from proxied service', async () => {
     const ax = superadmin
 

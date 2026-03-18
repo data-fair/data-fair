@@ -12,8 +12,8 @@ test.describe('REST datasets with owner specific lines', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Create empty REST dataset with activated line ownership', async () => {
@@ -62,14 +62,14 @@ test.describe('REST datasets with owner specific lines', () => {
     res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
     assert.equal(res.data.total, 0)
     await cdurning2.post(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`, { _id: 'cdurningline', col1: 'value 1' })
-    await waitForFinalize(cdurning2, dataset.id)
+    await waitForFinalize(dmeadusOrg, dataset.id)
     res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 'cdurningline')
 
     // other external user can also manage his lines
     await alone.post(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`, { _id: 'aloneline', col1: 'value 1' })
-    await waitForFinalize(alone, dataset.id)
+    await waitForFinalize(dmeadusOrg, dataset.id)
     res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 'aloneline')
@@ -80,11 +80,11 @@ test.describe('REST datasets with owner specific lines', () => {
     await assert.rejects(alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/cdurningline`), (err: any) => err.status === 404)
     // he can patch his lines but cannot change ownership
     await alone.patch(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`, { col1: 'value 2' })
-    await waitForFinalize(alone, dataset.id)
+    await waitForFinalize(dmeadusOrg, dataset.id)
     res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`)
     assert.equal(res.data.col1, 'value 2')
     await alone.patch(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`, { _owner: 'user:cdurning2', col1: 'value 3' })
-    await waitForFinalize(alone, dataset.id)
+    await waitForFinalize(dmeadusOrg, dataset.id)
     res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`)
     assert.equal(res.data.col1, 'value 3')
     assert.equal(res.data._owner, 'user:alone')
@@ -172,7 +172,7 @@ test.describe('REST datasets with owner specific lines', () => {
     ])
 
     await alone.post(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`, { col1: 'value 1', col2: 'Label 4' })
-    await waitForFinalize(alone, dataset.id)
+    await waitForFinalize(dmeadusOrg, dataset.id)
     res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
     assert.equal(res.data.total, 2)
     res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`)

@@ -5,211 +5,98 @@ import path from 'node:path'
 import { DataFairWsClient } from '@data-fair/lib-node/ws-client.js'
 import { apiUrl, anonymousAx, wsUrl, mockUrl } from './axios.ts'
 
-const log = { info: async (...args: any[]) => console.log(...args), error: console.error, debug: console.debug }
+const log = { info: async () => {}, error: console.error, debug: () => {} }
 
-/**
- * Create a WS subscriber that pre-subscribes to a dataset journal channel.
- * Buffers all messages from the moment of subscription so none are missed.
- * Use this when you need to subscribe BEFORE triggering the action that causes the event.
- */
-export const subscribeJournal = async (
-  datasetId: string
-) => {
-  const channel = `datasets/${datasetId}/journal`
-  const wsClient = new DataFairWsClient({ url: wsUrl, log })
+let _sharedWs: DataFairWsClient | null = null
 
-  // Buffer messages from the moment we subscribe
-  const buffer: any[] = []
-  wsClient.on('message', (msg: any) => {
-    if (msg.channel === channel && msg.type !== 'subscribe-confirm') {
-      buffer.push(msg.data)
-    }
-  })
+const getSharedWs = (): DataFairWsClient => {
+  if (!_sharedWs) {
+    _sharedWs = new DataFairWsClient({ url: wsUrl, log })
+  }
+  return _sharedWs
+}
 
-  await wsClient.subscribe(channel)
-
-  return {
-    waitFor: async (eventType: string, timeout = 30000) => {
-      // Check buffer first
-      const match = buffer.find((e: any) => e.type === eventType || e.type === 'error')
-      if (match) {
-        wsClient.close()
-        if (match.type === 'error') throw new Error(match.data)
-        return match
-      }
-      // Wait for new messages
-      return new Promise<any>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          wsClient.close()
-          reject(new Error(`subscribeJournal timeout after ${timeout}ms waiting for "${eventType}" on "${datasetId}"`))
-        }, timeout)
-        const check = (msg: any) => {
-          if (msg.channel !== channel) return
-          if (msg.data?.type === eventType || msg.data?.type === 'error') {
-            clearTimeout(timer)
-            wsClient.off('message', check)
-            wsClient.close()
-            if (msg.data.type === 'error') reject(new Error(msg.data.data))
-            else resolve(msg.data)
-          }
-        }
-        wsClient.on('message', check)
-        // Re-check buffer in case message arrived between first check and listener setup
-        const late = buffer.find((e: any) => e.type === eventType || e.type === 'error')
-        if (late) {
-          clearTimeout(timer)
-          wsClient.off('message', check)
-          wsClient.close()
-          if (late.type === 'error') reject(new Error(late.data))
-          else resolve(late)
-        }
-      })
-    },
-    close: () => wsClient.close()
+export const closeSharedWs = () => {
+  if (_sharedWs) {
+    _sharedWs.close()
+    _sharedWs = null
   }
 }
 
 /**
  * Wait for finalize-end on a dataset, then return the updated dataset.
  * Throws if an error event is received before finalize-end.
- * Uses WS subscription for instant notification.
  */
 export const waitForFinalize = async (
   ax: AxiosInstance,
   datasetId: string,
-  timeout = 30000
+  timeout = 4000
 ): Promise<any> => {
-  // Record current state to detect changes
-  let currentFinalizedAt: string | undefined
-  let currentDraftFinalizedAt: string | undefined
   try {
-    const current = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
-    currentFinalizedAt = current.finalizedAt
-    // Also record draft finalizedAt via raw document
-    const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
-    currentDraftFinalizedAt = raw.draft?.finalizedAt
-  } catch {
-    // dataset might not exist yet (just created)
-  }
-
-  // Subscribe to WS first, then check if already done.
-  // This avoids the race condition where the event fires between check and subscribe.
-  const wsClient = new DataFairWsClient({ url: wsUrl, log })
-  const wsPromise = wsClient.waitForJournal(datasetId, 'finalize-end', timeout)
-
-  // Check if finalization already happened while WS is listening
-  const res = await ax.get(`/api/v1/datasets/${datasetId}`)
-  if (res.data.status === 'error') { wsClient.close(); throw new Error(`Dataset ${datasetId} is in error status`) }
-  if (res.data.finalizedAt && res.data.finalizedAt !== currentFinalizedAt) { wsClient.close(); return res.data }
-  try {
-    const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${datasetId}`)).data
-    if (raw.draft?.status === 'error') { wsClient.close(); throw new Error(`Dataset ${datasetId} draft is in error status`) }
-    if (raw.draft?.finalizedAt && raw.draft.finalizedAt !== currentDraftFinalizedAt) { wsClient.close(); return res.data }
+    await getSharedWs().waitForJournal(datasetId, 'finalize-end', timeout)
   } catch (err: any) {
-    if (err.message?.includes('error status')) { wsClient.close(); throw err }
-  }
-
-  // Not yet done — wait for WS event
-  try {
-    await wsPromise
-  } finally {
-    wsClient.close()
+    // ignore some non-blocking errors
+    // TODO: these should have a different type, like "warning"
+    if (err.message.includes('le fichier contient une ou plusieurs colonnes') || err.message.includes('% des lignes')) {
+      return await waitForFinalize(ax, datasetId)
+    } else {
+      throw err
+    }
   }
   return (await ax.get(`/api/v1/datasets/${datasetId}`)).data
 }
 
 /**
  * Perform an action and wait for the dataset to be re-finalized.
- * Records finalizedAt before the action, then polls until it changes.
- * This avoids race conditions with WS events.
+ * Pre-subscribes to journal before action to avoid missing fast events.
  */
 export const doAndWaitForFinalize = async (
   ax: AxiosInstance,
   datasetId: string,
   action: () => Promise<any>,
-  timeout = 30000
+  timeout = 4000
 ): Promise<any> => {
-  const before = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
-  const previousFinalizedAt = before.finalizedAt
+  /* const sub = await subscribeJournal(datasetId)
   await action()
-  const start = Date.now()
-  while (Date.now() - start < timeout) {
-    const res = await ax.get(`/api/v1/datasets/${datasetId}`)
-    if (res.data.status === 'error') throw new Error(`Dataset ${datasetId} is in error status`)
-    if (res.data.status === 'finalized' && res.data.finalizedAt !== previousFinalizedAt) return res.data
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-  throw new Error(`doAndWaitForFinalize timeout after ${timeout}ms for dataset ${datasetId}`)
-}
-
-/**
- * Perform an action and wait for the dataset to return to finalized status.
- * Unlike doAndWaitForFinalize, this does NOT require finalizedAt to change.
- * Use for schema-only patches where the data isn't re-indexed.
- */
-export const doAndWaitForStatus = async (
-  ax: AxiosInstance,
-  datasetId: string,
-  action: () => Promise<any>,
-  status = 'finalized',
-  timeout = 30000
-): Promise<any> => {
-  await action()
-  const start = Date.now()
-  // first wait for the status to change away from finalized (the action should trigger this)
-  while (Date.now() - start < timeout) {
-    const res = await ax.get(`/api/v1/datasets/${datasetId}`)
-    if (res.data.status === 'error') throw new Error(`Dataset ${datasetId} is in error status`)
-    if (res.data.status !== status) break
-    await new Promise(resolve => setTimeout(resolve, 50))
-  }
-  // then wait for it to come back to the desired status
-  while (Date.now() - start < timeout) {
-    const res = await ax.get(`/api/v1/datasets/${datasetId}`)
-    if (res.data.status === 'error') throw new Error(`Dataset ${datasetId} is in error status`)
-    if (res.data.status === status) return res.data
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-  throw new Error(`doAndWaitForStatus timeout after ${timeout}ms for dataset ${datasetId}`)
+  await sub.waitFor('finalize-end', timeout)
+  sub.close()
+  return (await ax.get(`/api/v1/datasets/${datasetId}`)).data
+  */
+  const [data] = await Promise.all([
+    waitForFinalize(ax, datasetId, timeout),
+    action()
+  ])
+  return data
 }
 
 /**
  * Wait for a specific journal event type on a dataset.
  * For cases where you need to wait for something other than finalize-end.
  * Note: for 'error' events, use waitForDatasetError() instead since
- * DataFairWsClient.waitForJournal throws on error events.
+ * waitForJournal throws on error events.
  */
 export const waitForJournalEvent = async (
   datasetId: string,
   eventType: string,
-  timeout = 30000
+  timeout = 4000
 ): Promise<any> => {
-  const wsClient = new DataFairWsClient({ url: wsUrl, log })
-  try {
-    return await wsClient.waitForJournal(datasetId, eventType, timeout)
-  } finally {
-    wsClient.close()
-  }
+  return getSharedWs().waitForJournal(datasetId, eventType, timeout)
 }
 
 /**
- * Wait for a dataset to enter error status by polling.
- * Used when the expected outcome is an error (e.g. invalid file upload).
+ * Wait for a dataset to enter error status.
+ * Uses shared WS client to listen for error journal events.
  */
 export const waitForDatasetError = async (
   ax: AxiosInstance,
   datasetId: string,
   opts?: { timeout?: number, draft?: boolean }
 ): Promise<any> => {
-  const timeout = opts?.timeout ?? 30000
+  const timeout = opts?.timeout ?? 4000
   const params = opts?.draft ? { draft: true } : undefined
-  const start = Date.now()
-  while (Date.now() - start < timeout) {
-    const res = await ax.get(`/api/v1/datasets/${datasetId}`, { params })
-    if (res.data.status === 'error') return res.data
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-  throw new Error(`waitForDatasetError timeout after ${timeout}ms for dataset ${datasetId}`)
+  const ws = getSharedWs()
+  await ws.waitFor(`datasets/${datasetId}/journal`, (e: any) => e.type === 'error', timeout)
+  return (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
 }
 
 /**
@@ -226,9 +113,11 @@ export const sendDataset = async (
   const form = new FormData()
   form.append('file', datasetFd, fileName)
   if (body) form.append('body', JSON.stringify(body))
-  const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+  const length = form.getLengthSync()
+  const headers = { 'Content-Length': length, ...form.getHeaders() }
   const res = await ax.post('/api/v1/datasets', form, { ...opts, headers })
-  return waitForFinalize(ax, res.data.id)
+  const timeout = length > 20000 ? 30000 : 4000
+  return waitForFinalize(ax, res.data.id, timeout)
 }
 
 /**

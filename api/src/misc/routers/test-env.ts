@@ -31,6 +31,7 @@ router.delete('/', async (req, res, next) => {
       mongo.remoteServices.deleteMany({}),
       mongo.baseApplications.deleteMany({}),
       mongo.db.collection('journals').deleteMany({}),
+      mongo.db.collection('thumbnails-cache').deleteMany({}),
       filesStorage.removeDir(dataDir),
       es.client.indices.delete({ index: config.indicesPrefix + '-*', ignore_unavailable: true }).catch(() => {})
     ])

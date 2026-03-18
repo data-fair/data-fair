@@ -2,7 +2,7 @@ import { WsClient } from '@data-fair/lib-node/ws-client.js'
 import { EventEmitter } from 'node:events'
 import { wsUrl, apiUrl } from './axios.ts'
 
-const log = { info: async (...args: any[]) => console.log(...args), error: console.error, debug: console.debug }
+const log = { info: async () => {}, error: console.error, debug: () => {} }
 
 /**
  * Wait for a WebSocket message matching a filter on a given channel.

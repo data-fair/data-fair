@@ -4,25 +4,25 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { sendDataset, callWorkerFunction, waitForDatasetError } from '../../support/workers.ts'
+import { sendDataset, waitForDatasetError, setServerEnv } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
 test.describe('CSV cases', () => {
   test.beforeAll(async () => {
-    await callWorkerFunction('filesProcessor', 'setEnv', { key: 'NO_STORAGE_CHECK', value: 'true' })
+    await setServerEnv('NO_STORAGE_CHECK', 'true')
   })
 
   test.afterAll(async () => {
-    await callWorkerFunction('filesProcessor', 'setEnv', { key: 'NO_STORAGE_CHECK' })
+    await setServerEnv('NO_STORAGE_CHECK')
   })
 
   test.beforeEach(async () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Process newly uploaded CSV dataset', async () => {

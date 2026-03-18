@@ -10,8 +10,8 @@ test.describe('markdown contents management', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Get dataset description and content as HTML', async () => {

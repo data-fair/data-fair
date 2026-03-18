@@ -4,19 +4,27 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { sendDataset, waitForFinalize, waitForDatasetError, doAndWaitForFinalize, callWorkerFunction } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize, waitForDatasetError, doAndWaitForFinalize, callWorkerFunction, setServerEnv } from '../../support/workers.ts'
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
 test.describe('geo files support', () => {
+  test.beforeAll(async () => {
+    await setServerEnv('NO_STORAGE_CHECK', 'true')
+  })
+
+  test.afterAll(async () => {
+    await setServerEnv('NO_STORAGE_CHECK')
+  })
+
   test.beforeEach(async () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Process uploaded geojson dataset', async () => {
@@ -312,6 +320,7 @@ test.describe('geo files support', () => {
     })
     assert.equal(res.status, 201)
     const dataset = res.data
+    await waitForFinalize(ax, dataset.id)
 
     await doAndWaitForFinalize(ax, dataset.id, async () => {
       await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -343,6 +352,7 @@ test.describe('geo files support', () => {
     })
     assert.equal(res.status, 201)
     const dataset = res.data
+    await waitForFinalize(ax, dataset.id)
 
     await doAndWaitForFinalize(ax, dataset.id, async () => {
       await ax.patch(`/api/v1/datasets/${dataset.id}`, {

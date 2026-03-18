@@ -13,8 +13,8 @@ test.describe('Attachments', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Process newly uploaded attachments alone', async () => {
@@ -104,12 +104,13 @@ test.describe('Attachments', () => {
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
-    // This finalize should fail because attachment paths don't match
-    const errorDataset = await waitForDatasetError(ax, dataset.id)
-    assert.equal(errorDataset.status, 'error')
-    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-    const errorEvent = journal.find((e: any) => e.type === 'error')
-    assert.ok(errorEvent.data.includes('Valeurs invalides : dir1/test.pdf'))
+    await assert.rejects(
+      waitForFinalize(ax, dataset.id),
+      (err: any) => {
+        assert.ok(err.message.includes('Valeurs invalides : dir1/test.pdf'))
+        return true
+      }
+    )
     const form3 = new FormData()
     form3.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put('/api/v1/datasets/' + dataset.id, form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() } })

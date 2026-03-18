@@ -3,6 +3,11 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
 import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone.js'
+import utc from 'dayjs/plugin/utc.js'
+
+dayjs.extend(timezone)
+dayjs.extend(utc)
 }}
 
 // https://help.opendatasoft.com/apis/ods-explore-v2/#section/Opendatasoft-Query-Language-(ODSQL)/Order-by-clause

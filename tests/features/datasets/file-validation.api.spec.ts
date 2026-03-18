@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError } from '../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, waitForJournalEvent } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
@@ -44,8 +44,8 @@ test.describe('file datasets with validation rules', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('create a valid dataset with initial validation rules', async () => {
@@ -92,7 +92,8 @@ test.describe('file datasets with validation rules', () => {
     assert.equal(dataset.count, 2)
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     assert.equal(patched.status, 'validation-updated')
-    dataset = await waitForFinalize(ax, dataset.id)
+    await waitForJournalEvent(dataset.id, 'validate-end')
+    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'finalized')
   })
 

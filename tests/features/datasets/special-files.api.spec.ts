@@ -17,8 +17,8 @@ test.describe('Many case of special file datasets', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('should extract a zipped csv file', async () => {

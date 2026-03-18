@@ -174,8 +174,8 @@ test.describe('S3 multipart copy', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('should use multipart copy for files larger than threshold', async () => {

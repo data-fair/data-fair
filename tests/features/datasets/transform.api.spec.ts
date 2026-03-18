@@ -12,8 +12,8 @@ test.describe('file datasets with transformation rules', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('create a dataset and apply a simple transformation', async () => {

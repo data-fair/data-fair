@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, doAndWaitForFinalize, doAndWaitForStatus, waitForDatasetError, fileExists, setupMockRoute, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, getRawDataset, clearDatasetCache, collectNotifications } from '../../support/workers.ts'
+import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, fileExists, setupMockRoute, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, getRawDataset, clearDatasetCache, collectNotifications, waitForJournalEvent } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
@@ -16,8 +16,8 @@ test.describe('datasets in draft mode', () => {
     await clearMockRoutes()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('create new dataset in draft mode and validate it', async () => {
@@ -310,9 +310,8 @@ test.describe('datasets in draft mode', () => {
 
     const schema = dataset.schema
     schema[0].pattern = '^[a-z]+$'
-    dataset = await doAndWaitForStatus(ax, dataset.id, async () => {
-      await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
-    })
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
+    await waitForJournalEvent(dataset.id, 'validate-end')
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset1-invalid.csv')
@@ -339,9 +338,8 @@ test.describe('datasets in draft mode', () => {
 
     const schema = dataset.schema
     schema[0].pattern = '^[a-z]+$'
-    dataset = await doAndWaitForStatus(ax, dataset.id, async () => {
-      await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
-    })
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
+    await waitForJournalEvent(dataset.id, 'validate-end')
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset1-invalid.csv')
@@ -352,14 +350,9 @@ test.describe('datasets in draft mode', () => {
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
     assert.equal(dataset.draftReason.validationMode, 'compatibleOrCancel')
+    await waitForJournalEvent(dataset.id, 'validate-end')
 
-    // wait for the draft to be cancelled (poll until draftReason is gone)
-    const start = Date.now()
-    while (Date.now() - start < 30000) {
-      dataset = await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`).then(r => r.data)
-      if (!dataset.draftReason) break
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
+    dataset = await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`).then(r => r.data)
     assert.ok(!dataset.draftReason)
 
     const journal = await ax.get(`/api/v1/datasets/${dataset.id}/journal`).then(r => r.data)

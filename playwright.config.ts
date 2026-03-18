@@ -32,5 +32,9 @@ export default defineConfig({
       testMatch: /.*\.api\.spec\.ts/,
       dependencies: ['state-setup'],
     },
+    {
+      name: 'e2e',
+      testMatch: /.*\.e2e\.spec\.ts/,
+    },
   ],
 })

@@ -17,8 +17,8 @@ test.describe('publication sites', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('should fail to publish dataset on unknown site', async () => {

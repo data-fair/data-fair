@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockUrl } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getMockReceivedRequests } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getMockReceivedRequests, getRawDataset } from '../../support/workers.ts'
 import { TestEventClient, collectWsEvents } from '../../support/events.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
@@ -21,8 +21,8 @@ test.describe('datasets', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Get datasets when not authenticated', async () => {
@@ -537,6 +537,17 @@ test.describe('datasets', () => {
 
   // keep this test skipped most of the time as it depends on an outside service
   test.skip('should provide a redirect for an unsupported image format', async () => {
+    const ax = dmeadus
+    await ax.post('/api/v1/datasets/thumbnail', {
+      isRest: true,
+      title: 'thumbnail',
+      image: 'https://geocatalogue.lannion-tregor.com/geonetwork/srv/api/records/c4576973-28cd-47d5-a082-7871f96d8f14/attachments/reseau_transport_scolaire.JPG'
+    })
+    await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
+    let res = await ax.get('/api/v1/datasets/thumbnail')
+    assert.ok(res.data.thumbnail)
+    res = await ax.get(res.data.thumbnail)
+    assert.equal(res.headers['content-type'], 'image/jpg')
   })
 
   test('should create thumbnails from attachments', async () => {
@@ -546,13 +557,20 @@ test.describe('datasets', () => {
     form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
-    let dataset = await waitForFinalize(ax, res.data.id)
+    await waitForFinalize(ax, res.data.id)
+    let dataset = await getRawDataset(res.data.id)
     assert.ok(dataset.draft.schema.some((field: any) => field.key === '_attachment_url' && field['x-refersTo'] === 'http://schema.org/image'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true } })
     const thumbnail1 = res.data.results[0]._thumbnail
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err: any) => err.status === 302)
     await assert.rejects(anonymous.get(res.data.results[0]._thumbnail), (err: any) => err.status === 403)
     assert.ok(thumbnail1.startsWith(`${config.publicUrl}/api/v1/datasets/${dataset.id}/thumbnail/`))
+
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://localhost:${process.env.NGINX_PORT2}` }
+    await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `localhost:${process.env.NGINX_PORT2}` } })
+    assert.equal(thumbnail1.replace('localhost:' + process.env.NGINX_PORT1, `localhost:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
 
     // remove attachmentsAsImage
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { attachmentsAsImage: null }, { params: { draft: true } })).data

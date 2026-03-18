@@ -8,11 +8,16 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
 import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone.js'
+import utc from 'dayjs/plugin/utc.js'
 
 const LBRACE='{';
 const RBRACE='}';
 
 
+
+dayjs.extend(timezone)
+dayjs.extend(utc)
 
 function peg$subclass(child, parent) {
   function C() { this.constructor = child; }

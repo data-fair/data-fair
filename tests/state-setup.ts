@@ -27,8 +27,7 @@ If you are an agent do not try to start it. Instead check for a startup failure 
     const { existsSync, mkdirSync } = await import('node:fs')
     if (!existsSync('dev/logs')) mkdirSync('dev/logs', { recursive: true })
     const tailApi = spawn('tail', ['-n', '0', '-f', 'dev/logs/dev-api.log'], { stdio: 'inherit', detached: true })
-    const tailWorker = spawn('tail', ['-n', '0', '-f', 'dev/logs/dev-worker.log'], { stdio: 'inherit', detached: true })
-    process.env.TAIL_PIDS = [tailApi.pid, tailWorker.pid].filter(Boolean).join(',')
+    process.env.TAIL_PIDS = [tailApi.pid].filter(Boolean).join(',')
   } catch {
     // log tailing is optional
   }

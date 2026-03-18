@@ -14,8 +14,8 @@ test.describe('Elasticsearch errors management', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Extract simple message from a full ES error', async () => {

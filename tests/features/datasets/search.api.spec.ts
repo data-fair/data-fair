@@ -1,17 +1,25 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, doAndWaitForFinalize, sendDataset } from '../../support/workers.ts'
+import { waitForFinalize, doAndWaitForFinalize, sendDataset, setConfig } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
 test.describe('search', () => {
+  test.beforeAll(async () => {
+    await setConfig('cache.disabled', false)
+  })
+
+  test.afterAll(async () => {
+    await setConfig('cache.disabled', true)
+  })
+
   test.beforeEach(async () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Get lines in dataset', async () => {

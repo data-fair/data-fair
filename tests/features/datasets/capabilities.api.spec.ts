@@ -14,8 +14,8 @@ test.describe('Properties capabilities', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Disable case-sensitive sort', async () => {

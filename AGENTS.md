@@ -20,7 +20,6 @@ This shows the health of all services (nginx, API, UI, mock server, docker servi
 
 All dev processes write to `dev/logs/`:
 - `dev-api.log` — API server
-- `dev-worker.log` — background worker
 - `dev-ui.log` — UI dev server (Vite)
 - `dev-mock.log` — mock server (simple-directory, events, etc.)
 - `docker-compose.log` — all docker compose services

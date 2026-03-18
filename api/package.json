@@ -2,9 +2,7 @@
   "name": "@data-fair/data-fair-api",
   "type": "module",
   "scripts": {
-    "dev": "mkdir -p ../dev/logs && NODE_ENV=development nodemon -e js,ts,json --exec \"node --experimental-strip-types --disable-warning=ExperimentalWarning index.ts || (sleep 2 && touch index.ts)\" 2>&1 | tee ../dev/logs/dev-api.log",
-    "dev-worker": "mkdir -p ../dev/logs && NODE_ENV=development nodemon -e js,ts,json --exec \"node --experimental-strip-types --disable-warning=ExperimentalWarning index.ts || (sleep 2 && touch index.ts)\" 2>&1 | tee ../dev/logs/dev-worker.log",
-    "dev-memory": "mkdir -p ../dev/logs && DEBUG_HEAP=* NODE_ENV=development nodemon -e js,ts,json --exec \"node --expose-gc --experimental-strip-types --disable-warning=ExperimentalWarning index.ts || (sleep 2 && touch index.ts)\" 2>&1 | tee ../dev/logs/dev-api.log"
+    "dev": "mkdir -p ../dev/logs && NODE_ENV=development EVENTS_LOG_LEVEL=error nodemon -e js,ts,json --exec \"node --experimental-strip-types --disable-warning=ExperimentalWarning index.ts || (sleep 2 && touch index.ts)\" 2>&1 | tee ../dev/logs/dev-api.log"
   },
   "imports": {
     "#config": "./src/config.ts",

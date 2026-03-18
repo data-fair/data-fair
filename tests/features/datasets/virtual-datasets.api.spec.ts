@@ -16,8 +16,8 @@ test.describe('virtual datasets', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Create an empty virtual dataset', async () => {

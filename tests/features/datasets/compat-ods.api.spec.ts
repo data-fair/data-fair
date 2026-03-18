@@ -12,8 +12,8 @@ test.describe('compatibility layer for ods api', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('exposes records and exports api on 2 urls', async () => {

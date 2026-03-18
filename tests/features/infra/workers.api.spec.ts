@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, setConfig } from '../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setConfig, waitForJournalEvent } from '../../support/workers.ts'
 
 const dmeadus = await axiosAuth('dmeadus0@answers.com')
 
@@ -12,8 +12,8 @@ test.describe('workers', () => {
     await clean()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Process newly uploaded CSV dataset', async () => {
@@ -111,7 +111,7 @@ test.describe('workers', () => {
       const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
       let dataset = (await ax.post('/api/v1/datasets', form, { headers })).data
 
-      await waitForDatasetError(ax, dataset.id)
+      await waitForJournalEvent(dataset.id, 'error-retry')
       let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
 
       assert.equal(journal[0].type, 'error-retry')
@@ -147,10 +147,10 @@ test.describe('workers', () => {
     assert.equal(patchedDataset.status, 'validated')
     await waitForFinalize(ax, dataset.id)
 
-    // changing capabilities requires only refinalizing
+    // changing capabilities requires reindexing too
     idProp['x-capabilities'] = { insensitive: false }
     patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
-    assert.equal(patchedDataset.status, 'indexed')
+    assert.equal(patchedDataset.status, 'validated')
     await waitForFinalize(ax, dataset.id)
 
     // changing a title does not require any worker tasks

@@ -29,8 +29,8 @@ test.describe('Extensions', () => {
     await clearMockRoutes()
   })
 
-  test.afterEach(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('Extend dataset using remote service', async () => {
