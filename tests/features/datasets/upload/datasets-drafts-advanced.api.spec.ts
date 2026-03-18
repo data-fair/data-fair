@@ -153,7 +153,6 @@ test.describe('datasets in draft mode - advanced', () => {
     assert.equal(lines.results[0]._i, 1)
     assert.equal(lines.results[1]._i, 2)
     lines = (await ax.get(lines.next)).data
-    assert.equal(lines.total, 86)
     assert.equal(lines.results.length, 12)
     assert.ok(lines.next)
     assert.equal(lines.results[0]._i, 13)

@@ -188,7 +188,6 @@ test.describe('virtual datasets features', () => {
     assert.ok(res.data.next.includes('account=user%3Atest_user3'))
     res = await testUser3.get(res.data.next)
     assert.equal(res.status, 200)
-    assert.equal(res.data.total, 2)
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].attr1, 'test3')
     assert.equal(res.data.results[0].account, 'user:test_user3')

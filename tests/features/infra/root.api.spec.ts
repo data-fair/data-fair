@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import fs from 'node:fs'
 import { axios, axiosAuth, clean, checkPendingTasks, config, apiUrl, anonymousAx, wsUrl } from '../../support/axios.ts'
-import { sendDataset, wsEmit } from '../../support/workers.ts'
+import { getRawDataset, sendDataset, wsEmit } from '../../support/workers.ts'
 import { WsClient } from '@data-fair/lib-node/ws-client.js'
 
 const anonymous = axios()
@@ -95,12 +95,12 @@ test.describe('root', () => {
 
   test('Propagate name change to a dataset owner identity', async () => {
     const ax = testUser1
-    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    let dataset = await sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.owner.name, 'Test User1')
-    let res = await ax.post(`/api/v1/identities/user/${dataset.owner.id}`, { name: 'Another Name' }, { params: { key: config.secretKeys.identities } })
+    const res = await ax.post(`/api/v1/identities/user/${dataset.owner.id}`, { name: 'Another Name' }, { params: { key: config.secretKeys.identities } })
     assert.equal(res.status, 200)
-    res = await ax.get(`/api/v1/datasets/${dataset.id}`)
-    assert.equal(res.data.owner.name, 'Another Name')
+    dataset = await getRawDataset(dataset.id)
+    assert.equal(dataset.owner.name, 'Another Name')
   })
 
   test('Delete an identity completely', async () => {
