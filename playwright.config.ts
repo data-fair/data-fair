@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test'
 import 'dotenv/config'
 
 export default defineConfig({
@@ -35,6 +35,8 @@ export default defineConfig({
     {
       name: 'e2e',
       testMatch: /.*\.e2e\.spec\.ts/,
+      dependencies: ['state-setup'],
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
 })
