@@ -5,7 +5,7 @@ import * as xlsx from '../../../../api/src/misc/utils/xlsx.ts'
 test.describe('XLSX parsing', () => {
   test('should manage XLSX file created by excel', async () => {
     const dates: string[] = []
-    for await (const lines of xlsx.iterCSV('./test-it/resources/datasets/Les aides financières ADEME.xlsx')) {
+    for await (const lines of xlsx.iterCSV('./tests/resources/datasets/Les aides financières ADEME.xlsx')) {
       for (const line of lines.split('\n')) {
         dates.push(line.split(',')[2])
       }
@@ -16,7 +16,7 @@ test.describe('XLSX parsing', () => {
 
   test('should manage another XLSX file created by excel', async () => {
     const dates: string[] = []
-    for await (const lines of xlsx.iterCSV('./test-it/resources/datasets/date-time.xlsx')) {
+    for await (const lines of xlsx.iterCSV('./tests/resources/datasets/date-time.xlsx')) {
       for (const line of lines.split('\n')) {
         dates.push(line.split(',')[1])
       }

@@ -7,9 +7,9 @@ import { axios, axiosAuth, clean, checkPendingTasks, config } from '../../suppor
 import { sendDataset, waitForDatasetError, clearRateLimiting } from '../../support/workers.ts'
 
 const anonymous = axios()
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const alban = await axiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
-const hlalonde3 = await axiosAuth('hlalonde3@desdev.cn')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const alban = await axiosAuth('alban.mouton@koumoul.com', undefined, true)
+const testUser4 = await axiosAuth('test_user4@test.com')
 
 const baseLimit = {
   indexed_bytes: { limit: 300000, consumption: 0 },
@@ -28,7 +28,7 @@ test.describe('limits', () => {
   })
 
   test('Manage a user storage limit', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Just fill up a little
     let form = new FormData()
@@ -43,7 +43,7 @@ test.describe('limits', () => {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }), (err: any) => err.status === 429)
 
     // define a higher limit
-    res = await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
+    res = await ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key: config.secretKeys.limits } })
 
     // test storage size limit
     form = new FormData()
@@ -62,7 +62,7 @@ test.describe('limits', () => {
     }
     await assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), (err: any) => err.status === 429)
 
-    res = await ax.get('/api/v1/limits/user/dmeadus0')
+    res = await ax.get('/api/v1/limits/user/test_user1')
     assert.equal(res.status, 200)
     assert.equal(res.data.store_bytes.limit, 300000)
     assert.equal(res.data.store_bytes.consumption, 250000)
@@ -71,28 +71,28 @@ test.describe('limits', () => {
 
     // delete a dataset and check nb_datasets
     await ax.delete('/api/v1/datasets/' + lastDataset.id)
-    res = await ax.get('/api/v1/limits/user/dmeadus0')
+    res = await ax.get('/api/v1/limits/user/test_user1')
     assert.equal(res.data.nb_datasets.consumption, 9)
   })
 
   test('A user cannot change limits', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await assert.rejects(
-      ax.post('/api/v1/limits/user/dmeadus0', baseLimit),
+      ax.post('/api/v1/limits/user/test_user1', baseLimit),
       { status: 403 }
     )
   })
 
   test('A user can read his limits', async () => {
-    const ax = dmeadus
-    await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
-    const res = await ax.get('/api/v1/limits/user/dmeadus0')
+    const ax = testUser1
+    await ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key: config.secretKeys.limits } })
+    const res = await ax.get('/api/v1/limits/user/test_user1')
     assert.equal(res.status, 200)
     assert.equal(res.data.store_bytes.limit, 300000)
   })
 
   test('A user cannot read the list of limits', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await assert.rejects(
       ax.get('/api/v1/limits'),
       { status: 403 }
@@ -101,26 +101,26 @@ test.describe('limits', () => {
 
   test('A super admin can read the list of limits', async () => {
     const ax = alban
-    await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
+    await ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key: config.secretKeys.limits } })
     const res = await ax.get('/api/v1/limits')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 1)
     assert.equal(res.data.results.length, 1)
-    assert.equal(res.data.results[0].id, 'dmeadus0')
+    assert.equal(res.data.results[0].id, 'test_user1')
     assert.equal(res.data.results[0].type, 'user')
   })
 
   test('rate limiting should throttle content download', async () => {
-    const ax = hlalonde3
+    const ax = testUser4
 
     // higher storage limit first
-    await ax.post('/api/v1/limits/user/hlalonde3',
+    await ax.post('/api/v1/limits/user/test_user4',
       { store_bytes: { limit: 10000000, consumption: 0 }, lastUpdate: new Date().toISOString() },
       { params: { key: config.secretKeys.limits } })
 
     // a public dataset of about 100KB
     const tmpFile = await tmp.file({ postfix: '.csv' })
-    const csvContent = await fs.readFile('./test-it/resources/datasets/dataset1.csv')
+    const csvContent = await fs.readFile('./tests/resources/datasets/dataset1.csv')
     for (let i = 0; i < 600; i++) {
       await fs.write(tmpFile.fd, csvContent)
     }
@@ -157,7 +157,7 @@ test.describe('limits', () => {
   })
 
   test('rate limiting should block requests when there are too many', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const promises = []
     for (let i = 0; i < 200; i++) {
       promises.push(ax.get('/api/v1/datasets'))

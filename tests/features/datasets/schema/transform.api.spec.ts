@@ -5,7 +5,7 @@ import { waitForFinalize, doAndWaitForFinalize, sendDataset, waitForDatasetError
 import FormData from 'form-data'
 import fs from 'fs-extra'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('file datasets with transformation rules', () => {
   test.beforeEach(async () => {
@@ -19,7 +19,7 @@ test.describe('file datasets with transformation rules', () => {
   test('create a dataset and apply a simple transformation', async () => {
     const form = new FormData()
     form.append('file', 'id\n Test\nTest2', 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.count, 2)
@@ -39,7 +39,7 @@ test.describe('file datasets with transformation rules', () => {
   test('create a dataset and overwrite the type of 2 columns and add an extension', async () => {
     const form = new FormData()
     form.append('file', 'id,col1,col2\ntest,val,2025-04-03T18:00:00+02:00\ntest2,val,\n,val,2025-04-03T19:00:00+02:00', 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.schema[0].type, 'string')
@@ -85,8 +85,8 @@ test.describe('file datasets with transformation rules', () => {
 
   test('create a XLSX dataset and apply a transformation on a column', async () => {
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/date-time.xlsx'), 'dataset1.xlsx')
-    const ax = dmeadus
+    form.append('file', fs.readFileSync('./tests/resources/datasets/date-time.xlsx'), 'dataset1.xlsx')
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     let lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
@@ -106,7 +106,7 @@ test.describe('file datasets with transformation rules', () => {
   test('create manage transform type error', async () => {
     const form = new FormData()
     form.append('file', 'id,col1,col2\ntest,val,2025-04-03T18:00:00+02:00\ntest2,val,\n,val,2025-04-03T19:00:00+02:00', 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     const schema = dataset.schema
@@ -122,7 +122,7 @@ test.describe('file datasets with transformation rules', () => {
   test('reload file with transform_date expression', async () => {
     const form = new FormData()
     form.append('file', 'horodate\n2025-11-10 22:30', 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.schema[0].type, 'string')
@@ -170,7 +170,7 @@ test.describe('file datasets with transformation rules', () => {
   })
 
   test('Should add special calculated fields', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     assert.ok(dataset.schema.find((f: any) => f.key === '_id' && f['x-calculated'] === true))
     assert.ok(dataset.schema.find((f: any) => f.key === '_i' && f['x-calculated'] === true))
@@ -184,7 +184,7 @@ test.describe('file datasets with transformation rules', () => {
   })
 
   test('Should split by separator if specified', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/split.csv', ax)
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata' } })
     assert.equal(res.data.total, 0)

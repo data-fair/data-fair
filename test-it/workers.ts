@@ -8,7 +8,7 @@ import * as workers from '../api/src/workers/index.ts'
 import * as esUtils from '../api/src/datasets/es/index.ts'
 import es from '../api/src/es.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 describe('workers', function () {
   before(startApiServer)

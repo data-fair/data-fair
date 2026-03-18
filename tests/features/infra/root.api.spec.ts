@@ -7,12 +7,12 @@ import { sendDataset, wsEmit } from '../../support/workers.ts'
 import { WsClient } from '@data-fair/lib-node/ws-client.js'
 
 const anonymous = axios()
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const superadminPersonal = await axiosAuth('superadmin@test.com', 'superpasswd')
-const icarlens9 = await axiosAuth('icarlens9@independent.co.uk')
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testSuperadminPersonal = await axiosAuth('test_superadmin@test.com')
+const testUser10 = await axiosAuth('test_user10@test.com')
 
-const geocoderApi = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../../../test-it/resources/geocoder-api.json'), 'utf8'))
+const geocoderApi = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../../../tests/resources/geocoder-api.json'), 'utf8'))
 
 test.describe('root', () => {
   test.beforeEach(async () => {
@@ -37,14 +37,14 @@ test.describe('root', () => {
   })
 
   test('Get service info', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
     const res = await ax.get('/api/v1/admin/info')
     assert.equal(res.status, 200)
     assert.equal(res.data.version, 'development')
   })
 
   test('Check API format', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const apiDoc = { ...geocoderApi }
     const res = await ax.post('/api/v1/_check-api', apiDoc)
     assert.equal(res.status, 200)
@@ -70,8 +70,8 @@ test.describe('root', () => {
 
   test('Get status', async () => {
     await assert.rejects(anonymous.get('/api/v1/admin/status'), (err: any) => err.status === 401)
-    await assert.rejects(superadminPersonal.get('/api/v1/admin/status'), (err: any) => err.status === 403)
-    const res = await superadmin.get('/api/v1/admin/status')
+    await assert.rejects(testSuperadminPersonal.get('/api/v1/admin/status'), (err: any) => err.status === 403)
+    const res = await testSuperadmin.get('/api/v1/admin/status')
     assert.equal(res.status, 200)
     assert.equal(res.data.details.length, 5)
     // in dev mode, nuxt check fails (no nuxt-dist), so status may be 'error'
@@ -94,9 +94,9 @@ test.describe('root', () => {
   })
 
   test('Propagate name change to a dataset owner identity', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
-    assert.equal(dataset.owner.name, 'Danna Meadus')
+    assert.equal(dataset.owner.name, 'Test User1')
     let res = await ax.post(`/api/v1/identities/user/${dataset.owner.id}`, { name: 'Another Name' }, { params: { key: config.secretKeys.identities } })
     assert.equal(res.status, 200)
     res = await ax.get(`/api/v1/datasets/${dataset.id}`)
@@ -104,22 +104,22 @@ test.describe('root', () => {
   })
 
   test('Delete an identity completely', async () => {
-    const ax = icarlens9
+    const ax = testUser10
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
-    assert.equal(dataset.owner.name, 'Issie Carlens')
+    assert.equal(dataset.owner.name, 'Test User10')
 
     // check that the user directory exists via test-env endpoint
-    let fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/icarlens9' } })
+    let fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/test_user10' } })
     assert.ok(fileExistsRes.data.exists)
 
-    const res = await ax.delete('/api/v1/identities/user/icarlens9', { params: { key: config.secretKeys.identities } })
+    const res = await ax.delete('/api/v1/identities/user/test_user10', { params: { key: config.secretKeys.identities } })
     assert.equal(res.status, 200)
     await assert.rejects(
       ax.get(`/api/v1/datasets/${dataset.id}`),
       { status: 404 }
     )
 
-    fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/icarlens9' } })
+    fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/test_user10' } })
     assert.ok(!fileExistsRes.data.exists)
   })
 

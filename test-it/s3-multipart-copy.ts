@@ -10,7 +10,7 @@ import { S3Backend } from '@data-fair/data-fair-api/src/files-storage/s3.ts'
 import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
 import { Readable } from 'node:stream'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 describe('S3 multipart copy', function () {
   before(startApiServer)

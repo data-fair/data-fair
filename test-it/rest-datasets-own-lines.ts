@@ -3,9 +3,9 @@ import * as workers from '../api/src/workers/index.ts'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth } from './utils/index.ts'
 
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
-const alone = await getAxiosAuth('alone@no.org', 'passwd')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'KWqAGZ4mG')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn')
+const alone = await getAxiosAuth('alone@no.org')
 
 describe('REST datasets with owner specific lines', function () {
   before(startApiServer)

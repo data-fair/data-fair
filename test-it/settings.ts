@@ -2,9 +2,9 @@ import { strict as assert } from 'node:assert'
 import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth } from './utils/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'KWqAGZ4mG')
+const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'KWqAGZ4mG')
 
 describe('settings API', function () {
   before(startApiServer)

@@ -3,7 +3,7 @@ import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth } from './utils/index.ts'
 import * as workers from '../api/src/workers/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 describe('markdown contents management', function () {
   before(startApiServer)

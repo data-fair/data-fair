@@ -4,7 +4,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 // run this test manually with "DEBUG=workers WORKER_CONCURRENCY=4 DEFAULT_LIMITS_DATASET_STORAGE=10000000 npm test"
 
@@ -18,10 +18,10 @@ test.describe.skip('concurrency', () => {
   })
 
   test('Upload datasets in parallel', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // define a higher limit
-    await ax.post('/api/v1/limits/user/dmeadus0', {
+    await ax.post('/api/v1/limits/user/test_user1', {
       store_bytes: { limit: 100000000, consumption: 0 },
       lastUpdate: new Date().toISOString()
     }, { params: { key: config.secretKeys.limits } })

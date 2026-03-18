@@ -8,7 +8,7 @@ import 'moment-timezone'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 const localeTimeZone = moment.tz.guess()
 
@@ -22,7 +22,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('should extract a zipped csv file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.zip', ax)
     assert.equal(dataset.originalFile.name, 'dataset1.zip')
     assert.equal(dataset.file.name, 'dataset1.csv')
@@ -31,7 +31,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('should extract a zipped geojson file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('geo/geojson-example.zip', ax)
     assert.equal(dataset.originalFile.name, 'geojson-example.zip')
     assert.equal(dataset.title, 'geojson example')
@@ -40,7 +40,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('should extract a gzipped csv file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv.gz', ax)
     assert.equal(dataset.originalFile.name, 'dataset1.csv.gz')
     assert.equal(dataset.title, 'dataset1')
@@ -49,8 +49,8 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('should extract a gzipped file on PUT and replace it', async () => {
-    const ax = dmeadus
-    const gzippedContent = fs.readFileSync(path.resolve('./test-it/resources/datasets/dataset1.csv.gz'))
+    const ax = testUser1
+    const gzippedContent = fs.readFileSync(path.resolve('./tests/resources/datasets/dataset1.csv.gz'))
     const form = new FormData()
     form.append('file', gzippedContent, 'dataset1.csv.gz')
     await ax.put('/api/v1/datasets/dataset-compressed', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -61,7 +61,7 @@ test.describe('Many case of special file datasets', () => {
     const schema = dataset.schema.filter(p => !p['x-calculated'])
     const locProp = schema.find(p => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
-    const csvContent = fs.readFileSync(path.resolve('./test-it/resources/datasets/dataset1.csv'))
+    const csvContent = fs.readFileSync(path.resolve('./tests/resources/datasets/dataset1.csv'))
     const form2 = new FormData()
     form2.append('file', csvContent, 'dataset1.csv')
     form2.append('schema', JSON.stringify(schema))
@@ -73,7 +73,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('should extract a gzipped geojson file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('geo/geojson-example.geojson.gz', ax)
     assert.equal(dataset.originalFile.name, 'geojson-example.geojson.gz')
     assert.equal(dataset.title, 'geojson example')
@@ -82,7 +82,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('Upload dataset in iCalendar format', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('calendar/calendar.ics', ax)
     assert.equal(dataset.count, 1)
     assert.ok(dataset.bbox)
@@ -98,7 +98,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('Upload dataset in iCalendar format with X-WR-TIMEZONE param', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('calendar/calendar-xwr-timezone.ics', ax)
     assert.equal(dataset.count, 1)
     assert.ok(dataset.bbox)
@@ -113,7 +113,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('Upload dataset in iCalendar format with VTIMEZONE param', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('calendar/calendar-vtimezone.ics', ax)
     assert.equal(dataset.count, 1)
     assert.ok(dataset.bbox)
@@ -128,7 +128,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('Upload dataset with recurring event', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('calendar/calendar-rrule.ics', ax)
     assert.equal(dataset.count, 92)
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?sort=DTSTART`)
@@ -141,7 +141,7 @@ test.describe('Many case of special file datasets', () => {
     // Send dataset
     const form = new FormData()
     form.append('file', JSON.stringify([{ col1: 'val1', col2: 1 }, { col1: 'val2', col2: 2 }]), 'example.json')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     let dataset = res.data
@@ -169,7 +169,7 @@ test.describe('Many case of special file datasets', () => {
     // Send dataset
     const form = new FormData()
     form.append('file', [{ col1: 'val1', col2: 1 }, { col1: 'val2', col2: 2 }].map(o => JSON.stringify(o)).join('\n'), 'example.ndjson')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     let dataset = res.data
@@ -197,7 +197,7 @@ test.describe('Many case of special file datasets', () => {
   test('Fails when json root is not an array', async () => {
     const form = new FormData()
     form.append('file', JSON.stringify({ col1: 'val1' }), 'example.json')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     const dataset = res.data
@@ -212,7 +212,7 @@ test.describe('Many case of special file datasets', () => {
   test('Fails when json is invalid', async () => {
     const form = new FormData()
     form.append('file', "{ col1: 'val1' }", 'example.json')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     const dataset = res.data
@@ -225,7 +225,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   const checkDateDataset = async (ext) => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dates.' + ext, ax)
     assert.ok(dataset.schema.find(p => p.key === 'colstr'))
     const coldate = dataset.schema.find(p => p.key === 'coldate')
@@ -255,7 +255,7 @@ test.describe('Many case of special file datasets', () => {
   // XLSX date parsing tests moved to xlsx.unit.spec.ts
 
   test('should manage a sparse XLSX file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/sparse.xlsx', ax)
     assert.equal(dataset.schema.filter(p => p.key.startsWith('col')).length, 4)
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -271,7 +271,7 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('should manage a XLSX with formula and links', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/misc.xlsx', ax)
     assert.equal(dataset.schema.find(p => p.key === 'col1').type, 'integer')
     assert.equal(dataset.schema.find(p => p.key === 'col2').type, 'integer')
@@ -287,8 +287,8 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('should manage a ODS file with normalization options', async () => {
-    const ax = dmeadus
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/header.ods')
+    const ax = testUser1
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/header.ods')
     const form = new FormData()
     form.append('file', datasetFd, 'header.ods')
     form.append('file_normalizeOptions', JSON.stringify({
@@ -307,8 +307,8 @@ test.describe('Many case of special file datasets', () => {
   })
 
   test('should manage a XLSX file with normalization options', async () => {
-    const ax = dmeadus
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/header.xlsx')
+    const ax = testUser1
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/header.xlsx')
     const form = new FormData()
     form.append('file', datasetFd, 'header.ods')
     form.append('file_normalizeOptions', JSON.stringify({

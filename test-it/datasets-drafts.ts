@@ -14,7 +14,7 @@ import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 import { dataDir } from '@data-fair/data-fair-api/src/datasets/utils/files.ts'
 import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()

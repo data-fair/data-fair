@@ -8,9 +8,9 @@ import iconv from 'iconv-lite'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const ngernier4 = await axiosAuth('ngernier4@usa.gov')
-const hlalonde3 = await axiosAuth('hlalonde3@desdev.cn')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser5 = await axiosAuth('test_user5@test.com')
+const testUser4 = await axiosAuth('test_user4@test.com')
 
 test.describe('REST datasets - Bulk', () => {
   test.beforeEach(async () => {
@@ -22,7 +22,7 @@ test.describe('REST datasets - Bulk', () => {
   })
 
   test('Send bulk requests in ndjson file', async () => {
-    const ax = ngernier4
+    const ax = testUser5
     let res = await ax.post('/api/v1/datasets/restndjson', {
       isRest: true,
       title: 'restndjson',
@@ -48,7 +48,7 @@ test.describe('REST datasets - Bulk', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    form.append('actions', await fs.readFile('./test-it/resources/rest/access.log.ndjson'), 'actions.ndjson')
+    form.append('actions', await fs.readFile('./tests/resources/rest/access.log.ndjson'), 'actions.ndjson')
     res = await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbErrors, 0)
@@ -60,7 +60,7 @@ test.describe('REST datasets - Bulk', () => {
   })
 
   test('Send bulk requests in ndjson file and receive errors', async () => {
-    const ax = ngernier4
+    const ax = testUser5
     await ax.post('/api/v1/datasets/restndjson', {
       isRest: true,
       title: 'restndjson',
@@ -72,7 +72,7 @@ test.describe('REST datasets - Bulk', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    form.append('actions', await fs.readFile('./test-it/resources/rest/access.log.ndjson'), 'actions.ndjson')
+    form.append('actions', await fs.readFile('./tests/resources/rest/access.log.ndjson'), 'actions.ndjson')
     await assert.rejects(ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }), (err: any) => {
       assert.equal(err.status, 400)
       assert.equal(err.data.nbErrors, 20)
@@ -82,7 +82,7 @@ test.describe('REST datasets - Bulk', () => {
   })
 
   test('Send bulk actions as a CSV body', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
@@ -147,7 +147,7 @@ patch,line1,33`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Send bulk actions as a CSV body with automatic adjustment of keys', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
@@ -170,7 +170,7 @@ test2,test2`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Resend downloaded csv as bulk actions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
@@ -200,7 +200,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Validate bulk actions sent as csv', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
@@ -218,7 +218,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Send bulk actions as a gzipped CSV', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restgzcsv', {
       isRest: true,
       title: 'restgzcsv',
@@ -238,7 +238,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
   })
 
   test('Send bulk as a .csv file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
       title: 'restcsvfile',
@@ -262,7 +262,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
   })
 
   test('Send bulk as a .csv file with other encoding', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
       title: 'restcsvfile',
@@ -288,7 +288,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
   })
 
   test('Send bulk as a .csv.gz file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restcsvgz', {
       isRest: true,
       title: 'restcsvgz',
@@ -312,7 +312,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
   })
 
   test('Send bulk as a .xlsx file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restxlsxfile', {
       isRest: true,
       title: 'restxlsxfile',
@@ -320,7 +320,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     })
 
     const form = new FormData()
-    form.append('actions', fs.readFileSync('./test-it/resources/datasets/actions.xlsx'), 'actions.xlsx')
+    form.append('actions', fs.readFileSync('./tests/resources/datasets/actions.xlsx'), 'actions.xlsx')
     await ax.post('/api/v1/datasets/restxlsxfile/_bulk_lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     await waitForFinalize(ax, 'restxlsxfile')
     res = await ax.get('/api/v1/datasets/restxlsxfile')
@@ -333,7 +333,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
   })
 
   test('Send bulk as a .ods file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restodsfile', {
       isRest: true,
       title: 'restodsfile',
@@ -341,7 +341,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     })
 
     const form = new FormData()
-    form.append('actions', fs.readFileSync('./test-it/resources/datasets/actions.xlsx'), 'actions.ods')
+    form.append('actions', fs.readFileSync('./tests/resources/datasets/actions.xlsx'), 'actions.ods')
     await ax.post('/api/v1/datasets/restodsfile/_bulk_lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     await waitForFinalize(ax, 'restodsfile')
     res = await ax.get('/api/v1/datasets/restodsfile')
@@ -354,7 +354,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
   })
 
   test('Send bulk as a .zip file', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restcsvzip', {
       isRest: true,
       title: 'restcsvzip',
@@ -363,7 +363,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
     // Create a line with an attached file
     const form = new FormData()
-    const actionsContent = fs.readFileSync('./test-it/resources/datasets/dataset1.zip')
+    const actionsContent = fs.readFileSync('./tests/resources/datasets/dataset1.zip')
     form.append('actions', actionsContent, 'dataset1.zip')
     await ax.post('/api/v1/datasets/restcsvzip/_bulk_lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     await waitForFinalize(ax, 'restcsvzip')
@@ -375,7 +375,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
   })
 
   test('Use the primary key defined by the user', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restkey', {
       isRest: true,
       title: 'restkey',
@@ -424,7 +424,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
 
   test('Perform CRUD operations in larger bulk and keep request alive', async () => {
     // TODO: requires pump utility - simplified non-streaming version
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
       title: 'restlarge',
@@ -440,7 +440,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Use drop option to recreate all data', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restdrop', {
       isRest: true,
       title: 'restdrop',
@@ -498,7 +498,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Specify a date-time format', async () => {
-    const ax = await hlalonde3
+    const ax = await testUser4
     await ax.post('/api/v1/datasets/restdatetimeformat', {
       isRest: true,
       title: 'restdatetimeformat',
@@ -524,7 +524,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Send geometries in a column', async () => {
-    const ax = await hlalonde3
+    const ax = await testUser4
     await ax.post('/api/v1/datasets/restgeo', {
       isRest: true,
       title: 'restgeo',

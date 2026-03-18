@@ -12,7 +12,7 @@ import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
 import dayjs from 'dayjs'
 
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'KWqAGZ4mG')
 
 describe('compatibility layer for ods api', function () {
   before(startApiServer)

@@ -6,15 +6,15 @@ import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl, mockApp
 import { sendDataset } from '../../support/workers.ts'
 
 const anonymous = axios()
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const alban = await axiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const testUser1 = await axiosAuth('test_user1@test.com')
+const alban = await axiosAuth('alban.mouton@koumoul.com', undefined, true)
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
 const captureUrl = `http://localhost:${process.env.NGINX_PORT1}/capture`
 
 const sendAttachment = async (ax: any, appId: string, attachmentName: string) => {
   const attachmentForm = new FormData()
-  attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/' + attachmentName), attachmentName)
+  attachmentForm.append('attachment', fs.readFileSync('./tests/resources/' + attachmentName), attachmentName)
   await ax.post(`/api/v1/applications/${appId}/attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
   await ax.patch('/api/v1/applications/' + appId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 }
@@ -37,8 +37,8 @@ test.describe('Applications', () => {
 
   test('Get privately readable base app', async () => {
     // Only public at first
-    const ax = dmeadus
-    let res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0')
+    const ax = testUser1
+    let res = await ax.get('/api/v1/base-applications?privateAccess=user:test_user1')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 2)
     const baseApp1 = res.data.results[0]
@@ -54,17 +54,17 @@ test.describe('Applications', () => {
     assert.deepEqual(baseApp3.datasetsFilters[0].select, ['id', 'title', 'schema'])
 
     // super admin patchs the private one
-    const adminAx = superadmin
+    const adminAx = testSuperadmin
     res = await adminAx.get('/api/v1/admin/base-applications')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)
     await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, {
-      privateAccess: [{ type: 'user', id: 'dmeadus0' }, { type: 'user', id: 'another' }]
+      privateAccess: [{ type: 'user', id: 'test_user1' }, { type: 'user', id: 'another' }]
     })
     assert.equal(res.status, 200)
 
     // User sees the public and private base app
-    res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0')
+    res = await ax.get('/api/v1/base-applications?privateAccess=user:test_user1')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)
     const baseApp = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
@@ -72,11 +72,11 @@ test.describe('Applications', () => {
   })
 
   test('Get base apps completed with contextual dataset', async () => {
-    const ax = dmeadus
-    const adminAx = superadmin
-    await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, { privateAccess: [{ type: 'user', id: 'dmeadus0' }] })
+    const ax = testUser1
+    const adminAx = testSuperadmin
+    await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, { privateAccess: [{ type: 'user', id: 'test_user1' }] })
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
-    const res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0&dataset=' + dataset.id)
+    const res = await ax.get('/api/v1/base-applications?privateAccess=user:test_user1&dataset=' + dataset.id)
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)
     const app = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
@@ -101,7 +101,7 @@ test.describe('Applications', () => {
   })
 
   test('Post an application configuration, read it, update it and delete it', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     assert.equal(res.status, 201)
 
@@ -126,7 +126,7 @@ test.describe('Applications', () => {
   })
 
   test('Manage the custom configuration part of the object', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     let dataset = await sendDataset('datasets/split.csv', ax)
     const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
@@ -160,7 +160,7 @@ test.describe('Applications', () => {
   })
 
   test('Use an application through the application proxy', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const adminAx = alban
 
     const dataset = await sendDataset('datasets/split.csv', ax)
@@ -210,13 +210,13 @@ test.describe('Applications', () => {
     assert.ok(res.data.includes('<div>application embed</div>'))
 
     // no brand embed if the specific limit is defined
-    await adminAx.post('/api/v1/limits/user/dmeadus0', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+    await adminAx.post('/api/v1/limits/user/test_user1', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
     res = await ax.get('/app/' + appId)
     assert.equal(res.data.includes('<div>application embed</div>'), false)
   })
 
   test('Read base app info of an application', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     const appId = res.data.id
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
@@ -230,7 +230,7 @@ test.describe('Applications', () => {
   })
 
   test('Read capture of application', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     try {
       await ax.get(captureUrl + '/api/v1/api-docs.json')
     } catch (err: any) {
@@ -294,7 +294,7 @@ test.describe('Applications', () => {
   })
 
   test('Sort applications by title', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     await ax.post('/api/v1/applications', { title: 'aa', url: mockAppUrl('monapp1') })
     await ax.post('/api/v1/applications', { title: 'bb', url: mockAppUrl('monapp1') })
@@ -319,7 +319,7 @@ test.describe('Applications', () => {
   })
 
   test('Upload a simple attachment on an application', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
 
     await sendAttachment(ax, app.id, 'avatar.jpeg')
@@ -334,7 +334,7 @@ test.describe('Applications', () => {
     app = (await ax.get(`/api/v1/applications/${app.id}`)).data
     assert.equal(app.storage.size, 9755)
 
-    const { data: limits } = await ax.get('/api/v1/limits/user/dmeadus0')
+    const { data: limits } = await ax.get('/api/v1/limits/user/test_user1')
     assert.equal(limits.store_bytes.consumption, 9755)
   })
 })

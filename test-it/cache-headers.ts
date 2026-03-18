@@ -5,7 +5,7 @@ import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios, getAxiosAuth } from './utils/index.ts'
 
 const anonymous = getAxios()
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 describe('Cache headers', function () {
   before(startApiServer)

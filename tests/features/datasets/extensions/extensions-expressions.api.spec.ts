@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 // Helper to set up geocoder coords mock via the mock server (replaces nock-based setCoordsNock)
 const setupCoordsMock = async (latLon: number, opts?: { multiply?: boolean }) => {
@@ -25,7 +25,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Extend dataset using expression', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
@@ -44,7 +44,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Extend dataset using static value expression and x-originalName', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
@@ -63,7 +63,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Extend dataset using more complex expression', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
@@ -82,7 +82,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Extend dataset using expression referencing column from another extension', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
@@ -108,7 +108,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Manage some errors in expressions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest dataset',
@@ -144,7 +144,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Fail to add extension with duplicate key', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
@@ -157,7 +157,7 @@ test.describe('Extensions (expressions)', () => {
     assert.ok(dataset.schema.find(field => field.key === 'employees'))
 
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset2.csv'), 'dataset2.csv')
     dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })).data
 
     dataset = await waitForDatasetError(ax, dataset.id, { draft: true })
@@ -165,7 +165,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Update a single extension on file dataset should trigger full reindexing', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -184,7 +184,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Update a single extension on Rest dataset should NOT trigger full reindexing', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -221,7 +221,7 @@ test.describe('Extensions (expressions)', () => {
   })
 
   test('Manage cases where extension returns wrong type', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 

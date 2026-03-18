@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, sendDataset } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('values aggs', () => {
   test.beforeEach(async () => {
@@ -17,10 +17,10 @@ test.describe('values aggs', () => {
   })
 
   test('Get values buckets', async () => {
-    const datasetData = fs.readFileSync('./test-it/resources/datasets/dataset2.csv')
+    const datasetData = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
     const form = new FormData()
     form.append('file', datasetData, 'dataset.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     const dataset = await waitForFinalize(ax, res.data.id)
@@ -184,7 +184,7 @@ test.describe('values aggs', () => {
   })
 
   test('Get values buckets based on number values', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest values aggs',
@@ -217,7 +217,7 @@ test.describe('values aggs', () => {
   })
 
   test('Get values buckets based on boolean values', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest values aggs',
@@ -250,7 +250,7 @@ test.describe('values aggs', () => {
   })
 
   test('Get words buckets', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: [{ key: 'adr', type: 'string', 'x-capabilities': { textAgg: true } }] })
     await waitForFinalize(ax, dataset.id)
@@ -261,7 +261,7 @@ test.describe('values aggs', () => {
   })
 
   test('performs calculations on a field', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/metric-agg', {
       isRest: true,
       title: 'metric-agg',

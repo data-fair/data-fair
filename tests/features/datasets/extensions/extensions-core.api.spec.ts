@@ -5,8 +5,8 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
 // Helper to set up geocoder coords mock via the mock server (replaces nock-based setCoordsNock)
 const setupCoordsMock = async (latLon: number, opts?: { multiply?: boolean }) => {
@@ -34,7 +34,7 @@ test.describe('Extensions (core)', () => {
   })
 
   test('Extend dataset using remote service', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset-extensions.csv', ax)
 
@@ -75,7 +75,7 @@ test.describe('Extensions (core)', () => {
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.schema[0].key, '_coords.lat')
     assert.equal(dataset.schema[0].title, 'Latitude')
-    await superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
+    await testSuperadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.schema[0].key, '_coords.lat')
     assert.equal(dataset.schema[0].title, 'Latitude')
@@ -84,7 +84,7 @@ test.describe('Extensions (core)', () => {
     // Re-prepare for extension, it should only process the new line
     await setupCoordsMock(50)
     const form = new FormData()
-    let content = await fs.readFile('./test-it/resources/datasets/dataset-extensions.csv')
+    let content = await fs.readFile('./tests/resources/datasets/dataset-extensions.csv')
     content += 'me,3 les noés la chapelle caro\n'
     form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -145,7 +145,7 @@ test.describe('Extensions (core)', () => {
   })
 
   test('Extend dataset that was previouly converted', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset-extensions.xlsx', ax)
 
@@ -177,7 +177,7 @@ test.describe('Extensions (core)', () => {
   })
 
   test('Extend dataset with different csv parser opts', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset-extensions2.csv', ax)
 
@@ -201,7 +201,7 @@ test.describe('Extensions (core)', () => {
   })
 
   test('Extend dataset using another remote service', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset-siret-extensions.csv', ax)
 
@@ -255,7 +255,7 @@ koumoul,82898347800011,47.687173,-2.748514,,,KOUMOUL`)
   })
 
   test('Manage errors during extension', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -298,7 +298,7 @@ other,unknown address
   })
 
   test('Manage empty queries', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -322,7 +322,7 @@ empty,
   })
 
   test('Delete extended file when removing extensions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -368,7 +368,7 @@ koumoul,19 rue de la voie lactée saint avé
   })
 
   test('Do not add already present concept', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset-siret-extensions.csv', ax)
 
@@ -404,7 +404,7 @@ koumoul,19 rue de la voie lactée saint avé
   })
 
   test('Extend a REST dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     let dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -442,7 +442,7 @@ koumoul,19 rue de la voie lactée saint avé
   })
 
   test('Remove extensions when input properties got removed', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -476,7 +476,7 @@ other,unknown address
   })
 
   test('Preserve extension when schema is overwritten at file upload', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -510,7 +510,7 @@ other,unknown address
   })
 
   test('Extend geojson dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     // Initial dataset with addresses
     let dataset = await sendDataset('datasets/dataset-siret-extensions.geojson', ax)
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, setConfig } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('search - advanced', () => {
   test.beforeAll(async () => {
@@ -23,7 +23,7 @@ test.describe('search - advanced', () => {
   })
 
   test('Use the full power of ES query string syntax', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/qsfilters', {
       isRest: true,
       title: 'qmodes',
@@ -67,7 +67,7 @@ test.describe('search - advanced', () => {
   })
 
   test('get deeper into data', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const schema = [{ key: 'attr1', type: 'integer' }, { key: 'attr2', type: 'integer' }]
     const actions = []
     for (let i = 0; i < 100; i++) {
@@ -140,7 +140,7 @@ test.describe('search - advanced', () => {
   })
 
   test('Date match special filter on date field with date-time format', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/rest-date-match', {
       isRest: true,
       title: 'rest-date-match',
@@ -169,7 +169,7 @@ test.describe('search - advanced', () => {
   })
 
   test('Date match special filter on startDate and endDate fields with date-time format', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/rest-date-match', {
       isRest: true,
       title: 'rest-date-match',

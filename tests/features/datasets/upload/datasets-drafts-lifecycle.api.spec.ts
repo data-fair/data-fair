@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, getRawDataset, collectNotifications, waitForJournalEvent } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 // Paths passed to fileExists() are resolved relative to the server's dataDir
 const dataDir = '.'
@@ -22,10 +22,10 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
   test('create new dataset in draft mode and validate it', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     assert.equal(res.status, 201)
 
@@ -67,7 +67,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(locProp2['x-concept'].id, 'latLon')
 
     // reuploading in draft mode is not permitted
-    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/bad-format.csv')
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await assert.rejects(ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } }), (err: any) => err.status === 409)
@@ -81,14 +81,14 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(res.data.results[1].id, 'bidule')
 
     // validate the draft
-    assert.ok(await fileExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    assert.ok(await fileExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.ok(!dataset.draftReason)
     assert.equal(dataset.count, 2)
     assert.ok(dataset.bbox)
-    assert.ok(!await fileExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    assert.ok(!await fileExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
 
     // querying lines is now possible
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -110,24 +110,24 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
     assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
-    assert.ok(await fileExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
+    assert.ok(await fileExists(`${dataDir}/user/test_user1/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
-    assert.ok(!await fileExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
+    assert.ok(!await fileExists(`${dataDir}/user/test_user1/datasets/${dataset.id}`))
   })
 
   test('create a draft when updating the data file', async () => {
     const notifCollector = await collectNotifications()
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
 
     // upload a new file with incompatible schema
-    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset2.csv')
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
@@ -202,15 +202,15 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
   test('create a draft when updating the data file and cancel it', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
 
     // upload a new file with incompatible schema
-    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset2.csv')
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
@@ -255,15 +255,15 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
   test('create a draft when updating the data file and auto-validate if its schema is compatible', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
 
     // upload a new file
-    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1.csv')
     form2.append('description', 'draft description')
@@ -301,10 +301,10 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
   test('create a draft when updating the data file but do not auto-validate if there are some validation errors', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
 
@@ -314,7 +314,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     await waitForJournalEvent(dataset.id, 'validate-end')
 
     // upload a new file
-    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset1-invalid.csv')
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-invalid.csv')
     form2.append('description', 'draft description')
@@ -329,10 +329,10 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
   test('create a draft when updating the data file and cancel it if there are some validation errors', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
 
@@ -342,7 +342,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     await waitForJournalEvent(dataset.id, 'validate-end')
 
     // upload a new file
-    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset1-invalid.csv')
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-invalid.csv')
     form2.append('description', 'draft description')
@@ -361,10 +361,10 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
   test('create a draft at creation and update it with multiple follow-up uploads', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     await waitForFinalize(ax, res.data.id)
     let dataset = await getRawDataset(res.data.id)
@@ -376,7 +376,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.ok(dataset.status, 'draft')
 
     // upload a new file
-    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset2.csv')
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-draft2.csv')
     form2.append('description', 'draft description 2')
@@ -390,7 +390,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
 
     // upload a new file
-    const datasetFd3 = fs.readFileSync('./test-it/resources/datasets/dataset2.csv')
+    const datasetFd3 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
     const form3 = new FormData()
     form3.append('file', datasetFd3, 'dataset1-draft3.csv')
     form3.append('description', 'draft description 3')
@@ -413,15 +413,15 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
   test('create a draft and update it with second file upload', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
 
     // upload a new file
-    const datasetFd2 = fs.readFileSync('./test-it/resources/datasets/dataset2.csv')
+    const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset1-draft1.csv')
     form2.append('description', 'draft description')
@@ -434,7 +434,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(dataset.draft.file.name, 'dataset1-draft1.csv')
 
     // upload a third file
-    const datasetFd3 = fs.readFileSync('./test-it/resources/datasets/dataset2.csv')
+    const datasetFd3 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
     const form3 = new FormData()
     form3.append('file', datasetFd3, 'dataset1-draft2.csv')
     form3.append('description', 'draft description')
@@ -460,7 +460,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     }
     const form = new FormData()
     form.append('file', content, 'dataset.csv')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     await waitForFinalize(ax, res.data.id)
     let dataset = await getRawDataset(res.data.id)

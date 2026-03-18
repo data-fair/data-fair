@@ -4,7 +4,7 @@ import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxios
 import * as workers from '../api/src/workers/index.ts'
 import config from 'config'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 describe('search', function () {
   before(startApiServer)

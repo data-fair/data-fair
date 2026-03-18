@@ -6,8 +6,8 @@ import fs from 'node:fs'
 import * as workers from '../api/src/workers/index.ts'
 import FormData from 'form-data'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn')
 
 describe('Attachments', function () {
   before(startApiServer)

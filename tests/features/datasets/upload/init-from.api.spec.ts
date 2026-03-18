@@ -5,9 +5,9 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getRawDataset } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const ngernier4 = await axiosAuth('ngernier4@usa.gov')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const testUser5 = await axiosAuth('test_user5@test.com')
 
 test.describe('Datasets with auto-initialization from another one', () => {
   test.beforeEach(async () => {
@@ -20,14 +20,14 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Create REST dataset with copied information from file dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     const dataset = await sendDataset('datasets/date-formats.csv', ax)
     assert.equal(dataset.file.schema[2].dateFormat, 'D/M/YYYY')
     assert.equal(dataset.file.schema[3].dateTimeFormat, 'D/M/YYYY H:m')
 
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
+    attachmentForm.append('attachment', fs.readFileSync('./tests/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
@@ -73,7 +73,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Create REST and file datasets with copied information from virtual dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     const checkDatasetAttachments = async (dataset: any) => {
       let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
@@ -89,8 +89,8 @@ test.describe('Datasets with auto-initialization from another one', () => {
     }
 
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     const dataset = await waitForFinalize(ax, res.data.id)
     await checkDatasetAttachments(dataset)
@@ -133,11 +133,11 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Create file dataset with copied information from another file dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
+    attachmentForm.append('attachment', fs.readFileSync('./tests/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
@@ -168,11 +168,11 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Create draft file dataset with copied information from another file dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset-extensions.csv', ax)
 
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
+    attachmentForm.append('attachment', fs.readFileSync('./tests/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
 
     await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: 10, lon: 10, matchLevel: 'match' }, indexFields: ['matchLevel'] } })
@@ -226,11 +226,11 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Create file dataset that doesn\'t match imported schema', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset2.csv'), 'dataset2.csv')
     form.append('body', JSON.stringify({
       title: 'init from schema',
       initFrom: {
@@ -260,7 +260,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Create file dataset with copied information from a rest dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = (await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
       title: 'rest1',
@@ -270,7 +270,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     await waitForFinalize(ax, 'rest1')
 
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/avatar.jpeg'), 'avatar.jpeg')
+    attachmentForm.append('attachment', fs.readFileSync('./tests/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
 
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
@@ -301,9 +301,9 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Prevent initializing a dataset when missing permissions', async () => {
-    const dataset = await sendDataset('datasets/dataset1.csv', ngernier4)
+    const dataset = await sendDataset('datasets/dataset1.csv', testUser5)
 
-    const ax = dmeadus
+    const ax = testUser1
 
     const res = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -321,7 +321,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Initialize dataset in a department from dataset in orga', async () => {
-    const ax = dmeadusOrg
+    const ax = testUser1Org
 
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
@@ -333,8 +333,8 @@ test.describe('Datasets with auto-initialization from another one', () => {
       },
       owner: {
         type: 'organization',
-        id: 'KWqAGZ4mG',
-        name: 'Fivechat',
+        id: 'test_org1',
+        name: 'Test Org 1',
         department: 'dep1'
       }
     })

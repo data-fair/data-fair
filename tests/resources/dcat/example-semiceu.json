@@ -1,0 +1,245 @@
+{
+  "@context": {
+    "adms": "http://www.w3.org/ns/adms#",
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dcterms": "http://purl.org/dc/terms/",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "schema": "http://schema.org/",
+    "vcard": "http://www.w3.org/2006/vcard/ns#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@graph": [
+    {
+      "@id": "http://nobelprize.org/datarecords/dcat#dr1",
+      "@type": "dcat:CatalogRecord",
+      "dcterms:modified": "2014-09-25",
+      "foaf:primaryTopic": {
+        "@id": "http://nobelprize.org/datasets/dcat#ds1"
+      }
+    },
+    {
+      "@id": "_:N2a4f48da451d4602880c4d1cd8fd52b6",
+      "@type": "vcard:Address",
+      "vcard:country-name": "Sweden",
+      "vcard:locality": "Stockholm",
+      "vcard:postal-code": "11436",
+      "vcard:street-address": "Stureg. 14"
+    },
+    {
+      "@id": "http://nobelprize.org/datasets/dcat#ds1",
+      "@type": "dcat:Dataset",
+      "adms:contactPoint": {
+        "@id": "http://nobelprize.org/contacts/n1"
+      },
+      "dcat:distribution": {
+        "@id": "http://nobelprize.org/datasets/dcat#dist1"
+      },
+      "dcat:keyword": [
+        "Nobel prize",
+        "science",
+        "prize"
+      ],
+      "dcat:landingPage": {
+        "@id": "http://data.nobelprize.org/"
+      },
+      "dcat:theme": {
+        "@id": "http://eurovoc.europa.eu/100142"
+      },
+      "dcterms:accrualPeriodicity": {
+        "@id": "http://purl.org/cld/freq/daily"
+      },
+      "dcterms:conformsTo": {
+        "@id": "http://www.nobelprize.org/nobel_organizations/nobelmedia/nobelprize_org/developer/manual-linkeddata/terms.html"
+      },
+      "dcterms:description": "This dataset contains Nobel prizes, Nobel laureates and information about related media resources. ",
+      "dcterms:issued": "2014-01-15",
+      "dcterms:language": {
+        "@id": "http://publications.europa.eu/resource/authority/language/ENG"
+      },
+      "dcterms:modified": "2014-08-27",
+      "dcterms:publisher": {
+        "@id": "http://nobelprize.org/publisher/n2"
+      },
+      "dcterms:spatial": {
+        "@id": "http://sws.geonames.org/2673730"
+      },
+      "dcterms:temporal": {
+        "@id": "http://data.nobelprize.org/period"
+      },
+      "dcterms:title": {
+        "@language": "en",
+        "@value": "Linked Nobel prizes"
+      }
+    },
+    {
+      "@id": "http://nobelprize.org/datasets/dcat#ds2",
+      "@type": "dcat:Dataset",
+      "adms:contactPoint": {
+        "@id": "http://nobelprize.org/contacts/n1"
+      },
+      "dcat:distribution": {
+        "@id": "http://nobelprize.org/datasets/dcat#dist1"
+      },
+      "dcat:keyword": [
+        "Nobel prize",
+        "science",
+        "prize"
+      ],
+      "dcat:landingPage": {
+        "@id": "http://data.nobelprize.org/"
+      },
+      "dcat:theme": {
+        "@id": "http://eurovoc.europa.eu/100142"
+      },
+      "dcterms:accrualPeriodicity": {
+        "@id": "http://purl.org/cld/freq/daily"
+      },
+      "dcterms:conformsTo": {
+        "@id": "http://www.nobelprize.org/nobel_organizations/nobelmedia/nobelprize_org/developer/manual-linkeddata/terms.html"
+      },
+      "dcterms:description": "This dataset contains Nobel prizes, Nobel laureates and information about related media resources. ",
+      "dcterms:issued": "2014-01-15",
+      "dcterms:language": {
+        "@id": "http://publications.europa.eu/resource/authority/language/ENG"
+      },
+      "dcterms:modified": "2014-08-27",
+      "dcterms:publisher": {
+        "@id": "http://nobelprize.org/publisher/n2"
+      },
+      "dcterms:spatial": {
+        "@id": "http://sws.geonames.org/2673730"
+      },
+      "dcterms:temporal": {
+        "@id": "http://data.nobelprize.org/period"
+      },
+      "dcterms:title": {
+        "@language": "en",
+        "@value": "Linked Nobel prizes 2"
+      }
+    },
+    {
+      "@id": "http://nobelprize.org/datasets/dcat#catalog",
+      "@type": "dcat:Catalog",
+      "dcat:dataset": [{
+        "@id": "http://nobelprize.org/datasets/dcat#ds1"
+      }, {
+        "@id": "http://nobelprize.org/datasets/dcat#ds2"
+      }],
+      "dcat:record": {
+        "@id": "http://nobelprize.org/datarecords/dcat#dr1"
+      },
+      "dcat:themeTaxonomy": {
+        "@id": "http://eurovoc.europa.eu/"
+      },
+      "dcterms:description": "A range of datasets maintained by Nobel Media AB ",
+      "dcterms:issued": "2014-09-25",
+      "dcterms:language": {
+        "@id": "http://id.loc.gov/vocabulary/iso639-1/en"
+      },
+      "dcterms:license": {
+        "@id": "http://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "dcterms:modified": "2014-09-25",
+      "dcterms:publisher": {
+        "@id": "http://nobelprize.org/publisher/n0"
+      },
+      "dcterms:rights": {
+        "@id": "http://nobelprize.org/rights/n0"
+      },
+      "dcterms:spatial": {
+        "@id": "http://nobelprize.org/spatial/n0"
+      },
+      "dcterms:title": {
+        "@language": "en",
+        "@value": "Nobel Media Dataset catalog"
+      },
+      "foaf:homepage": {
+        "@id": "http://data.nobelprize.org/"
+      }
+    },
+    {
+      "@id": "http://nobelprize.org/publisher/n2",
+      "@type": "foaf:Agent",
+      "dcterms:type": {
+        "@id": "_:Ne69579d666ed410a9c307f188d9ffd21"
+      },
+      "foaf:name": "Nobel Media AB"
+    },
+    {
+      "@id": "http://nobelprize.org/publisher/n0",
+      "@type": "foaf:Agent",
+      "dcterms:type": {
+        "@id": "http://purl.org/adms/publishertype/Company"
+      },
+      "foaf:name": "Nobel Media AB"
+    },
+    {
+      "@id": "http://nobelprize.org/datasets/dcat#dist1",
+      "@type": "dcat:Distribution",
+      "dcat:accessURL": {
+        "@id": "http://data.nobelprize.org/"
+      },
+      "dcterms:description": {
+        "@language": "en",
+        "@value": "Provides browsable linked data and a SPARQL endpoint."
+      },
+      "dcterms:format": {
+        "@id": "http://nobelprize.org/format/rdf+xml"
+      },
+      "dcterms:license": {
+        "@id": "http://creativecommons.org/licenses/by-nc/3.0/"
+      },
+      "dcterms:title": {
+        "@language": "en",
+        "@value": "Linked Data endpoint"
+      }
+    },
+    {
+      "@id": "_:N43230c0d821748bd881b4a5178ee0e39",
+      "@type": [
+        "vcard:Work",
+        "vcard:Voice"
+      ],
+      "vcard:hasValue": {
+        "@id": "tel:086631722"
+      }
+    },
+    {
+      "@id": "_:Ne69579d666ed410a9c307f188d9ffd21",
+      "dcat:keyword": "http://purl.org/adms/publishertype/Company"
+    },
+    {
+      "@id": "http://data.nobelprize.org/period",
+      "@type": "dcterms:PeriodOfTime",
+      "schema:endDate": {
+        "@type": "xsd:date",
+        "@value": "2013-01-05"
+      },
+      "schema:startDate": {
+        "@type": "xsd:date",
+        "@value": "1905-03-01"
+      }
+    },
+    {
+      "@id": "http://nobelprize.org/contacts/n1",
+      "@type": "vcard:VCard",
+      "vcard:fn": "Nobel Media AB",
+      "vcard:hasAddress": {
+        "@id": "_:N2a4f48da451d4602880c4d1cd8fd52b6"
+      },
+      "vcard:hasEmail": {
+        "@id": "mailto:info@nobelmedia.org"
+      },
+      "vcard:hasTelephone": {
+        "@id": "_:N43230c0d821748bd881b4a5178ee0e39"
+      }
+    },
+    {
+      "@id": "http://sws.geonames.org/2673730",
+      "@type": "dcterms:Location",
+      "rdfs:label": "Stockholm"
+    }
+  ]
+}

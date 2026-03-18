@@ -6,10 +6,10 @@ import moment from 'moment'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, restCollectionCount, lsAttachments } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const hlalonde3 = await axiosAuth('hlalonde3@desdev.cn')
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
-const superadminPersonal = await axiosAuth('superadmin@test.com', 'superpasswd')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser4 = await axiosAuth('test_user4@test.com')
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testSuperadminPersonal = await axiosAuth('test_superadmin@test.com')
 
 test.describe('REST datasets - History', () => {
   test.beforeEach(async () => {
@@ -21,7 +21,7 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Use the history mode', async () => {
-    const ax = hlalonde3
+    const ax = testUser4
     let res = await ax.post('/api/v1/datasets/resthist', {
       isRest: true,
       title: 'resthist',
@@ -76,7 +76,7 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Store history with at least primary key info', async () => {
-    const ax = hlalonde3
+    const ax = testUser4
     let res = await ax.post('/api/v1/datasets/resthistprimary', {
       isRest: true,
       title: 'resthistprimary',
@@ -100,8 +100,8 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Force _updatedAt value to fill existing history', async () => {
-    const ax = superadminPersonal
-    const axAdmin = superadmin
+    const ax = testSuperadminPersonal
+    const axAdmin = testSuperadmin
     await ax.post('/api/v1/datasets/resthistfill', {
       isRest: true,
       title: 'resthistfill',
@@ -140,7 +140,7 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Define a TTL on revisions in history', async () => {
-    const ax = hlalonde3
+    const ax = testUser4
 
     let res = await ax.post('/api/v1/datasets/resthistttl', {
       isRest: true,
@@ -173,7 +173,7 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Toggle the history mode', async () => {
-    const ax = await hlalonde3
+    const ax = await testUser4
     let res = await ax.post('/api/v1/datasets/resthisttoggle', {
       isRest: true,
       title: 'resthisttoggle',
@@ -199,7 +199,7 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Use history mode with attachments', async () => {
-    const ax = await hlalonde3
+    const ax = await testUser4
     let res = await ax.post('/api/v1/datasets/resthistattach', {
       isRest: true,
       title: 'resthistattach',
@@ -213,7 +213,7 @@ test.describe('REST datasets - History', () => {
 
     // create line with an attachment
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test-it/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 'test1')
     form.append('attr2', 'test1')
@@ -227,7 +227,7 @@ test.describe('REST datasets - History', () => {
 
     // patch the attachment
     const form2 = new FormData()
-    const attachmentContent2 = fs.readFileSync('./test-it/resources/datasets/files/test.odt')
+    const attachmentContent2 = fs.readFileSync('./tests/resources/datasets/files/test.odt')
     form2.append('attachment', attachmentContent2, 'dir1/test.pdf')
     form2.append('attr2', 'test2')
     res = await ax.patch(`/api/v1/datasets/resthistattach/lines/${line._id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
@@ -257,7 +257,7 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Apply a TTL on some date-field', async () => {
-    const ax = await hlalonde3
+    const ax = await testUser4
     await ax.post('/api/v1/datasets/restttl', {
       isRest: true,
       title: 'restttl',
@@ -284,7 +284,7 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Applying the exact same data twice in history mode should not duplicate revisions', async () => {
-    const ax = await hlalonde3
+    const ax = await testUser4
     let res = await ax.post('/api/v1/datasets/resthistidem', {
       isRest: true,
       title: 'resthistidem',
@@ -327,7 +327,7 @@ test.describe('REST datasets - History', () => {
   })
 
   test('Use drop option to recreate all data and manage history', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restdrophist', {
       isRest: true,
       title: 'restdrophist',

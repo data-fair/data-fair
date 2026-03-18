@@ -6,8 +6,8 @@ import { sendDataset, waitForDatasetError } from '../../support/workers.ts'
 const esHost = `localhost:${process.env.ES_PORT}`
 const indicesPrefix = 'dataset-development'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
 test.describe('Elasticsearch errors management', () => {
   test.beforeEach(async () => {
@@ -19,7 +19,7 @@ test.describe('Elasticsearch errors management', () => {
   })
 
   test('Extract simple message from a full ES error', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
 
@@ -50,7 +50,7 @@ test.describe('Elasticsearch errors management', () => {
   })
 
   test('Manage read only index error', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     // Create an ES index template that makes any new index for this dataset read-only.
@@ -67,7 +67,7 @@ test.describe('Elasticsearch errors management', () => {
     })
 
     try {
-      await superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
+      await testSuperadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
       await waitForDatasetError(ax, dataset.id)
 
       // dataset is in error, but still queryable from previous index

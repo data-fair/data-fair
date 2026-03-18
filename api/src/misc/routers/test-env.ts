@@ -1,5 +1,6 @@
 import express from 'express'
 import fs from 'fs-extra'
+import path from 'node:path'
 import mongo from '#mongo'
 import es from '#es'
 import config from '#config'
@@ -15,28 +16,61 @@ import { capturedNotifications } from '../utils/test-notif-buffer.ts'
 
 const router = express.Router()
 
-// Full cleanup: delete all mongo collections data, clear ES indices, empty data dirs, clear caches
+// Cleanup: delete test_* owned data from mongo/ES/filesystem, clear caches
 router.delete('/', async (req, res, next) => {
   try {
     await resetPing()
 
+    const testOwnerFilter = { 'owner.id': { $regex: /^test_/ } }
+    const testIdFilter = { id: { $regex: /^test_/ } }
+
+    // collect test-owned dataset IDs before deleting them (for ES index cleanup)
+    const testDatasets = await mongo.datasets.find(testOwnerFilter, { projection: { id: 1 } }).toArray()
+
+    // delete ES indices for test-owned datasets
+    if (testDatasets.length > 0) {
+      const indexPatterns = testDatasets.flatMap(d => [
+        config.indicesPrefix + '-' + d.id + '*',
+        config.indicesPrefix + '_draft-' + d.id + '*'
+      ])
+      await es.client.indices.delete({ index: indexPatterns.join(','), ignore_unavailable: true }).catch(() => {})
+    }
+
     await Promise.all([
-      mongo.datasets.deleteMany({}),
-      mongo.applications.deleteMany({}),
+      // owner-filtered collections
+      mongo.datasets.deleteMany(testOwnerFilter),
+      mongo.applications.deleteMany(testOwnerFilter),
+      mongo.db.collection('journals').deleteMany(testOwnerFilter),
+      mongo.settings.deleteMany(testIdFilter),
+      mongo.limits.deleteMany(testIdFilter),
+      // collections without owner (blanket delete)
       mongo.applicationsKeys.deleteMany({}),
-      mongo.limits.deleteMany({}),
-      mongo.settings.deleteMany({}),
       mongo.db.collection('locks').deleteMany({}),
       mongo.db.collection('extensions-cache').deleteMany({}),
-      mongo.remoteServices.deleteMany({}),
-      mongo.baseApplications.deleteMany({}),
-      mongo.db.collection('journals').deleteMany({}),
       mongo.db.collection('thumbnails-cache').deleteMany({}),
-      filesStorage.removeDir(dataDir),
-      es.client.indices.delete({ index: config.indicesPrefix + '-*', ignore_unavailable: true }).catch(() => {})
+      mongo.remoteServices.deleteMany({}),
+      mongo.baseApplications.deleteMany({})
     ])
+
+    // selective directory deletion: only remove test_* owner dirs
+    for (const ownerType of ['user', 'organization']) {
+      const ownerTypeDir = path.join(dataDir, ownerType)
+      if (await fs.pathExists(ownerTypeDir)) {
+        const entries = await fs.readdir(ownerTypeDir)
+        for (const entry of entries) {
+          if (entry.startsWith('test_')) {
+            await filesStorage.removeDir(path.join(ownerTypeDir, entry))
+          }
+        }
+      }
+    }
+    // still clean tmpDir entirely
+    if (await fs.pathExists(tmpDir)) {
+      await fs.remove(tmpDir)
+    }
     await fs.ensureDir(dataDir)
     await fs.ensureDir(tmpDir)
+
     memoizedGetPublicationSiteSettings.clear()
     memoizedGetDataset.clear()
     rateLimiting.clear()

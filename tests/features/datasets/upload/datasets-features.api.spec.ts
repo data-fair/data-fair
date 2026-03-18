@@ -7,9 +7,9 @@ import fs from 'fs-extra'
 import FormData from 'form-data'
 
 const anonymous = axios()
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const ngernier4Org = await axiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')
 
 test.describe('datasets - features', () => {
   test.beforeEach(async () => {
@@ -21,7 +21,7 @@ test.describe('datasets - features', () => {
   })
 
   test('should create thumbnails for datasets with illustrations', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/thumbnails1', {
       isRest: true,
       title: 'thumbnails1',
@@ -37,8 +37,8 @@ test.describe('datasets - features', () => {
 
     // Setup mock routes for thumbnail images
     await setupMockRoute({ path: '/image.png', status: 200, body: '', contentType: 'image/png' })
-    await setupMockRoute({ path: '/avatar.jpg', status: 200, bodyBase64: fs.readFileSync('./test-it/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
-    await setupMockRoute({ path: '/wikipedia.gif', status: 200, bodyBase64: fs.readFileSync('./test-it/resources/wikipedia.gif').toString('base64'), contentType: 'image/gif' })
+    await setupMockRoute({ path: '/avatar.jpg', status: 200, bodyBase64: fs.readFileSync('./tests/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
+    await setupMockRoute({ path: '/wikipedia.gif', status: 200, bodyBase64: fs.readFileSync('./tests/resources/wikipedia.gif').toString('base64'), contentType: 'image/gif' })
 
     res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
     assert.equal(res.data.results.length, 3)
@@ -64,8 +64,8 @@ test.describe('datasets - features', () => {
   })
 
   test('should create thumbnail for the image metadata of a dataset', async () => {
-    const ax = dmeadus
-    await setupMockRoute({ path: '/dataset-image.jpg', status: 200, bodyBase64: fs.readFileSync('./test-it/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
+    const ax = testUser1
+    await setupMockRoute({ path: '/dataset-image.jpg', status: 200, bodyBase64: fs.readFileSync('./tests/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
 
     await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
@@ -84,7 +84,7 @@ test.describe('datasets - features', () => {
 
   // keep this test skipped most of the time as it depends on an outside service
   test.skip('should provide a redirect for an unsupported image format', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
       title: 'thumbnail',
@@ -98,11 +98,11 @@ test.describe('datasets - features', () => {
   })
 
   test('should create thumbnails from attachments', async () => {
-    const ax = dmeadusOrg
+    const ax = testUser1Org
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     await waitForFinalize(ax, res.data.id)
     let dataset = await getRawDataset(res.data.id)
@@ -114,7 +114,7 @@ test.describe('datasets - features', () => {
     assert.ok(thumbnail1.startsWith(`${config.publicUrl}/api/v1/datasets/${dataset.id}/thumbnail/`))
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://localhost:${process.env.NGINX_PORT2}` }
-    await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `localhost:${process.env.NGINX_PORT2}` } })
     assert.equal(thumbnail1.replace('localhost:' + process.env.NGINX_PORT1, `localhost:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
@@ -125,7 +125,7 @@ test.describe('datasets - features', () => {
   })
 
   test('Use an api key defined on the dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { readApiKey: { active: true, interval: 'P1W' } })).data
     assert.ok(dataset.readApiKey?.active)
@@ -145,7 +145,7 @@ test.describe('datasets - features', () => {
 
   // this test is skipped because it relies on a shared volume that cannot be mounted during docker build
   test('anitivirus reject upload of infected file in dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await assert.rejects(sendDataset('antivirus/eicar.com.csv', ax), (err: any) => {
       assert.ok(err.data.includes('malicious file detected'))
       assert.equal(err.status, 400)
@@ -160,7 +160,7 @@ test.describe('datasets - features', () => {
   })
 
   test('Calculate enum of values in data', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
       title: 'rest2',
@@ -192,7 +192,7 @@ test.describe('datasets - features', () => {
   })
 
   test('Create simple meta only datasets', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     const res = await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'a meta only dataset' })
     assert.equal(res.status, 201)
@@ -203,9 +203,9 @@ test.describe('datasets - features', () => {
   })
 
   test('relative path in dataset file name', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), '../dataset1.csv')
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), '../dataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     const dataset = await waitForFinalize(ax, res.data.id)
@@ -213,23 +213,23 @@ test.describe('datasets - features', () => {
   })
 
   test('relative path in dataset id', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset1.csv')
     form.append('id', '../dataset1')
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } }), (err: any) => err.status === 400)
 
     const form2 = new FormData()
-    form2.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form2.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset1.csv')
     await assert.rejects(ax.post('/api/v1/datasets/' + encodeURIComponent('../dataset1'), form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } }), (err: any) => err.status === 404)
   })
 
   test('relative path in attachment name', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/files.zip')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/files.zip')
     const form = new FormData()
     form.append('dataset', datasetFd, 'files.zip')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     const dataset = await waitForFinalize(ax, res.data.id)
     const attachmentRes = await ax.get(`/api/v1/datasets/${dataset.id}/attachments/test.odt`)
@@ -241,7 +241,7 @@ test.describe('datasets - features', () => {
   })
 
   test('send user notification', async () => {
-    const ax = dmeadusOrg
+    const ax = testUser1Org
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'user notif 1',
@@ -265,18 +265,18 @@ test.describe('datasets - features', () => {
       assert.ok(notifications[0].topic.key.endsWith(':topic1'))
       assert.equal(notifications[0].visibility, 'private')
 
-      await assert.rejects(ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' }), (err: any) => err.status === 403)
+      await assert.rejects(testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' }), (err: any) => err.status === 403)
       await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
-        { type: 'user', id: 'ngernier4', operations: ['sendUserNotification'] }
+        { type: 'user', id: 'test_user5', operations: ['sendUserNotification'] }
       ])
-      await ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
-      await assert.rejects(ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' }), (err: any) => err.status === 403)
+      await testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
+      await assert.rejects(testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' }), (err: any) => err.status === 403)
 
       await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
-        { type: 'user', id: 'ngernier4', operations: ['sendUserNotification', 'sendUserNotificationPublic'] }
+        { type: 'user', id: 'test_user5', operations: ['sendUserNotification', 'sendUserNotificationPublic'] }
       ])
-      await ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
-      await ngernier4Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' })
+      await testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
+      await testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' })
     } finally {
       events.close()
     }

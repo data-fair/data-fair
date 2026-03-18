@@ -29,10 +29,10 @@ const axiosOpts = { baseURL: config.publicUrl }
 
 export const getAxios = (opts = {}) => axiosBuilder({ ...axiosOpts, ...opts })
 
-export const getAxiosAuth = async (email: string, password = 'passwd', org?: string, adminMode = false, opts = {}) => {
+export const getAxiosAuth = async (email: string, org?: string, adminMode = false, opts = {}) => {
   return axiosAuth({
     email,
-    password,
+    password: 'passwd',
     directoryUrl: config.directoryUrl,
     org,
     axiosOpts: { ...axiosOpts, headers: { 'x-cache-bypass': '1' }, ...opts },

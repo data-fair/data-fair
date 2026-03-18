@@ -109,7 +109,7 @@ export const sendDataset = async (
   opts?: AxiosRequestConfig,
   body?: any
 ): Promise<any> => {
-  const datasetFd = fs.readFileSync(path.resolve('./test-it/resources/', fileName))
+  const datasetFd = fs.readFileSync(path.resolve('./tests/resources/', fileName))
   const form = new FormData()
   form.append('file', datasetFd, fileName)
   if (body) form.append('body', JSON.stringify(body))

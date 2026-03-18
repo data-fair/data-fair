@@ -1,0 +1,71 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+   {
+    "type": "Feature",
+     "geometry": {
+     "type": "Point",
+      "coordinates": [0.3932107455069119, 46.56000416368406]
+     },
+     "properties": {
+     "OBJECTID": 1602,
+     "Nom_du_jeu": "Jeu ressort voiture",
+     "Code_du_constructeur": "Vn 01 PE",
+     "Adresse": "Rue Abel Brillanceau",
+     "Emplacement": "Pâtis coulée verte",
+     "Secteur": "Beaulieu",
+     "Constructeur": "Créa Composite",
+     "Date_de_pose": "21/08/2012",
+     "Revêtement_du_sol": "Copeaux bois",
+     "Type_de_jeu": "Ressort",
+     "Date_de_controle": "null",
+     "Etat": "null",
+     "Date_d_entretien": "null",
+     "Type_d_entretien": "null",
+     "Observation": "null",
+     "Tranche_d_âge_du_jeu": "1/6",
+     "Tranche_d_âge_du_panneau": "null",
+     "Hauteur_de_chute": null,
+     "Prix_d_achat": null,
+     "Code_du_matériel_Carl": "MAT-0003470",
+     "Commune": "POITIERS",
+     "nonbre_d_enfants_simultanément": null,
+     "GLOBALID": {7E1C9E26-9767-4AE4-9CBB-F353B15B3BFE},
+     "GESTIONNAIRE": "POITIERS"
+     }
+   },
+   {
+    "type": "Feature",
+     "geometry": {
+     "type": "Point",
+      "coordinates": [0.3931617801402166, 46.56006007908399]
+     },
+     "properties": {
+     "OBJECTID": 1603,
+     "Nom_du_jeu": "Jeu dynamic",
+     "Code_du_constructeur": "TMI 12 C",
+     "Adresse": "Rue Abel Brillanceau",
+     "Emplacement": "Pâtis coulée verte",
+     "Secteur": "Beaulieu",
+     "Constructeur": "Créa Composite",
+     "Date_de_pose": "21/08/2012",
+     "Revêtement_du_sol": "Copeaux bois",
+     "Type_de_jeu": "Rotation / translation",
+     "Date_de_controle": "null",
+     "Etat": "null",
+     "Date_d_entretien": "null",
+     "Type_d_entretien": "null",
+     "Observation": "null",
+     "Tranche_d_âge_du_jeu": "6/12",
+     "Tranche_d_âge_du_panneau": "null",
+     "Hauteur_de_chute": null,
+     "Prix_d_achat": 1890,
+     "Code_du_matériel_Carl": "MAT-0003679",
+     "Commune": "POITIERS",
+     "nonbre_d_enfants_simultanément": null,
+     "GLOBALID": {7B951C7D-4CF9-4BD7-BEEF-EE249B11C846},
+     "GESTIONNAIRE": "POITIERS"
+     }
+   }
+  ]
+ }

@@ -6,7 +6,7 @@ import nock from 'nock'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()

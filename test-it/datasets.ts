@@ -14,11 +14,11 @@ import nock from 'nock'
 import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 
 const anonymous = getAxios()
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
-const alone = await getAxiosAuth('alone@no.org', 'passwd')
-const ngernier4Org = await getAxiosAuth('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'KWqAGZ4mG')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn')
+const alone = await getAxiosAuth('alone@no.org')
+const ngernier4Org = await getAxiosAuth('ngernier4@usa.gov', 'KWqAGZ4mG')
 
 const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
 

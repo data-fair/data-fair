@@ -5,9 +5,9 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'KWqAGZ4mG')
+const ngernier4 = await getAxiosAuth('ngernier4@usa.gov')
 
 describe('Datasets with auto-initialization from another one', function () {
   before(startApiServer)

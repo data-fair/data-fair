@@ -13,10 +13,10 @@ import dcatValidate from '../api/src/misc/utils/dcat/validate.js'
 import config from 'config'
 
 const anonymous = getAxios()
-const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const superadminPersonal = await getAxiosAuth('superadmin@test.com', 'superpasswd')
-const icarlens9 = await getAxiosAuth('icarlens9@independent.co.uk', 'passwd')
+const superadmin = await getAxiosAuth('superadmin@test.com', undefined, true)
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const superadminPersonal = await getAxiosAuth('superadmin@test.com')
+const icarlens9 = await getAxiosAuth('icarlens9@independent.co.uk')
 
 const geocoderApi = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '/resources/geocoder-api.json'), 'utf8'))
 const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/ods-export.rdf'), 'utf-8')

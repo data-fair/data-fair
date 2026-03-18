@@ -6,8 +6,8 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
 const initVirtualMaster = async (ax: any, schema: any, id = 'master') => {
   await ax.put('/api/v1/datasets/' + id, {
@@ -25,7 +25,7 @@ const initVirtualMaster = async (ax: any, schema: any, id = 'master') => {
   const apiDocUrl = master.href + '/api-docs.json'
   const apiDoc = (await ax.get(apiDocUrl)).data
 
-  const remoteService = (await superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
+  const remoteService = (await testSuperadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
 
   return { master, remoteService, apiDoc }
 }
@@ -40,7 +40,7 @@ test.describe('master data - Master-data interaction with virtual datasets', () 
   })
 
   test('virtual master-data management should define and use a dataset as master-data child for virtual dataset', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     const { remoteService } = await initVirtualMaster(
       ax,
@@ -48,9 +48,9 @@ test.describe('master data - Master-data interaction with virtual datasets', () 
     )
     assert.equal(remoteService.virtualDatasets.parent.id, 'master')
 
-    await superadmin.patch(`/api/v1/remote-services/${remoteService.id}`, { virtualDatasets: { ...remoteService.virtualDatasets, storageRatio: 0.5 } })
+    await testSuperadmin.patch(`/api/v1/remote-services/${remoteService.id}`, { virtualDatasets: { ...remoteService.virtualDatasets, storageRatio: 0.5 } })
 
-    const remoteServices = (await superadmin.get('/api/v1/remote-services', { params: { showAll: true, 'virtual-datasets': true } })).data
+    const remoteServices = (await testSuperadmin.get('/api/v1/remote-services', { params: { showAll: true, 'virtual-datasets': true } })).data
     assert.equal(remoteServices.count, 1)
     assert.equal(remoteServices.results[0].virtualDatasets.parent.id, 'master')
 
@@ -62,14 +62,14 @@ test.describe('master data - Master-data interaction with virtual datasets', () 
     ])
     const master = await waitForFinalize(ax, 'master')
 
-    const res = await dmeadus.post('/api/v1/datasets', {
+    const res = await testUser1.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: {
         children: ['master']
       },
       title: 'a virtual dataset'
     })
-    const virtualDataset = await waitForFinalize(dmeadus, res.data.id)
+    const virtualDataset = await waitForFinalize(testUser1, res.data.id)
     assert.equal(virtualDataset.storage.size, 0)
     assert.ok(virtualDataset.storage.indexed.size > 0)
     assert.equal(virtualDataset.storage.indexed.size, Math.round(master.storage.indexed.size / 2))

@@ -6,7 +6,7 @@ import FormData from 'form-data'
 
 import * as workers from '../api/src/workers/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 describe('values aggs', function () {
   before(startApiServer)

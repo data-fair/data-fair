@@ -5,8 +5,8 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const cdurning2 = await axiosAuth('cdurning2@desdev.cn')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser3 = await axiosAuth('test_user3@test.com')
 
 test.describe('Attachments', () => {
   test.beforeEach(async () => {
@@ -18,10 +18,10 @@ test.describe('Attachments', () => {
   })
 
   test('Process newly uploaded attachments alone', async () => {
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/files.zip')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/files.zip')
     const form = new FormData()
     form.append('dataset', datasetFd, 'files.zip')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = res.data
     assert.equal(res.status, 201)
@@ -38,10 +38,10 @@ test.describe('Attachments', () => {
   })
 
   test('Process newly uploaded attachments along with data file', async () => {
-    const ax = cdurning2
+    const ax = testUser3
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = res.data
     assert.equal(res.status, 201)
@@ -57,15 +57,15 @@ test.describe('Attachments', () => {
   })
 
   test('Keep attachments when updating data', async () => {
-    const ax = cdurning2
+    const ax = testUser3
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     const attachmentsSize = dataset.storage.attachments.size
     const form2 = new FormData()
-    form2.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form2.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.storage.attachments.size, attachmentsSize)
@@ -75,16 +75,16 @@ test.describe('Attachments', () => {
   })
 
   test('Update attachments with data', async () => {
-    const ax = cdurning2
+    const ax = testUser3
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     const attachmentsSize = dataset.storage.attachments.size
     const form2 = new FormData()
-    form2.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
-    form2.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
+    form2.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form2.append('attachments', fs.readFileSync('./tests/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
     dataset = await waitForFinalize(ax, dataset.id)
     assert.ok(dataset.storage.attachments.size < attachmentsSize, 'storage size should be reduced')
@@ -94,15 +94,15 @@ test.describe('Attachments', () => {
   })
 
   test('Update attachments only then data only', async () => {
-    const ax = cdurning2
+    const ax = testUser3
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     const attachmentsSize = dataset.storage.attachments.size
     const form2 = new FormData()
-    form2.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
+    form2.append('attachments', fs.readFileSync('./tests/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
     await assert.rejects(
       waitForFinalize(ax, dataset.id),
@@ -112,7 +112,7 @@ test.describe('Attachments', () => {
       }
     )
     const form3 = new FormData()
-    form3.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form3.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put('/api/v1/datasets/' + dataset.id, form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() } })
     dataset = await waitForFinalize(ax, dataset.id)
     assert.ok(dataset.storage.attachments.size < attachmentsSize)
@@ -122,10 +122,10 @@ test.describe('Attachments', () => {
   })
 
   test('Detect wrong attachment path', async () => {
-    const ax = cdurning2
+    const ax = testUser3
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments-wrong-paths.csv'), 'attachments-wrong-paths.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-wrong-paths.csv'), 'attachments-wrong-paths.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     const dataset = res.data
     assert.equal(res.status, 201)
@@ -138,10 +138,10 @@ test.describe('Attachments', () => {
   })
 
   test('Detect missing attachment paths', async () => {
-    const ax = cdurning2
+    const ax = testUser3
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     const dataset = res.data
     assert.equal(res.status, 201)
@@ -158,13 +158,13 @@ test.describe('Attachments', () => {
   // sendMetadataAttachment helper
   const sendMetadataAttachment = async (ax: any, datasetId: string, attachmentName: string) => {
     const attachmentForm = new FormData()
-    attachmentForm.append('attachment', fs.readFileSync('./test-it/resources/' + attachmentName), attachmentName)
+    attachmentForm.append('attachment', fs.readFileSync('./tests/resources/' + attachmentName), attachmentName)
     await ax.post(`/api/v1/datasets/${datasetId}/metadata-attachments`, attachmentForm, { headers: { 'Content-Length': attachmentForm.getLengthSync(), ...attachmentForm.getHeaders() } })
     await ax.patch('/api/v1/datasets/' + datasetId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
   }
 
   test('Upload a simple metadata attachment', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/attachments1', { isRest: true, title: 'attachments1' })
     await sendMetadataAttachment(ax, 'attachments1', 'avatar.jpeg')
     const downloadAttachmentRes = await ax.get('/api/v1/datasets/attachments1/metadata-attachments/avatar.jpeg')
@@ -176,7 +176,7 @@ test.describe('Attachments', () => {
   })
 
   test('Create a metadata attachment with a private target URL', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/attachments2', { isRest: true, title: 'attachments2' })
     const patchRes = await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: 'https://koumoul.com/static/logo-square.png' }] })
     assert.equal(patchRes.data.attachments[0].mimetype, 'image/png')
@@ -207,7 +207,7 @@ test.describe('Attachments', () => {
   })
 
   test('Metadata attachment supports Range query (used for PMTILES support)', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/attachments1', { isMetaOnly: true, title: 'attachments1' })
     await sendMetadataAttachment(ax, 'attachments1', 'avatar.jpeg')
     const res = await ax.get('/api/v1/datasets/attachments1/metadata-attachments/avatar.jpeg')

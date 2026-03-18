@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, sendDataset, setConfig } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('search - basic', () => {
   test.beforeAll(async () => {
@@ -23,7 +23,7 @@ test.describe('search - basic', () => {
   })
 
   test('Get lines in dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     const locProp = dataset.schema.find(p => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
@@ -158,7 +158,7 @@ test.describe('search - basic', () => {
   })
 
   test('Filter on line existence', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset2.csv', ax)
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 6)
@@ -171,7 +171,7 @@ test.describe('search - basic', () => {
   })
 
   test('search lines and collapse on field', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/collapsable.csv', ax)
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 10)
@@ -187,7 +187,7 @@ test.describe('search - basic', () => {
   })
 
   test('sorting can ignore case and diacritics', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/restsort1', {
       isRest: true,
       title: 'restsort1',
@@ -214,13 +214,13 @@ test.describe('search - basic', () => {
   })
 
   test('search and apply facets on topics', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset1 = await sendDataset('datasets/dataset1.csv', ax)
     const dataset2 = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.get('/api/v1/datasets', { params: { facets: 'topics' } })
     assert.equal(res.data.count, 2)
     assert.equal(res.data.facets.topics.length, 0)
-    res = await ax.put('/api/v1/settings/user/dmeadus0', { topics: [{ title: 'topics 1' }, { title: 'topics 2' }] })
+    res = await ax.put('/api/v1/settings/user/test_user1', { topics: [{ title: 'topics 1' }, { title: 'topics 2' }] })
     const topics = res.data.topics
     await ax.patch('/api/v1/datasets/' + dataset1.id, { topics: [topics[0]] })
     await ax.patch('/api/v1/datasets/' + dataset2.id, { topics })
@@ -241,7 +241,7 @@ test.describe('search - basic', () => {
   })
 
   test('Truncate results for faster previews', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/truncate1', {
       isRest: true,
       title: 'truncate1',
@@ -268,7 +268,7 @@ test.describe('search - basic', () => {
   }
 
   test('Search in dataset using a contains query on a wildcard field', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/wildcards', {
       isRest: true,
       title: 'wildcards',
@@ -294,7 +294,7 @@ test.describe('search - basic', () => {
   })
 
   test('Wildcards can be activated after first indexation', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/wildcards2', {
       isRest: true,
       title: 'wildcards2',
@@ -310,7 +310,7 @@ test.describe('search - basic', () => {
   })
 
   test('Search in dataset using all supported query modes', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = (await ax.put('/api/v1/datasets/qmodes', {
       isRest: true,
       title: 'qmodes',

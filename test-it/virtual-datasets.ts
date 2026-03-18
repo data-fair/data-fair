@@ -6,11 +6,11 @@ import { it, describe, before, after, beforeEach, afterEach } from 'node:test'
 import { startApiServer, stopApiServer, scratchData, checkPendingTasks, getAxiosAuth, sendDataset, formHeaders } from './utils/index.ts'
 import * as workers from '../api/src/workers/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
-const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
-const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
-const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn')
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn')
+const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'KWqAGZ4mG')
+const ngernier4 = await getAxiosAuth('ngernier4@usa.gov')
 
 describe('virtual datasets', function () {
   before(startApiServer)

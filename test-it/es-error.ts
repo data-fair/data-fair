@@ -5,8 +5,8 @@ import config from 'config'
 import { aliasName, extractError } from '../api/src/datasets/es/commons.js'
 import * as workers from '../api/src/workers/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const superadmin = await getAxiosAuth('superadmin@test.com', undefined, true)
 
 describe('Elasticsearch errors management', function () {
   before(startApiServer)

@@ -4,7 +4,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { sendDataset, waitForFinalize, doAndWaitForFinalize } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('field sniffer', () => {
   test.beforeEach(async () => {
@@ -16,7 +16,7 @@ test.describe('field sniffer', () => {
   })
 
   test('Detect and parse text formats', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/text-formats.csv', ax)
     const shortProp = dataset.schema.find((p: any) => p.key === 'short')
     assert.equal(shortProp.type, 'string')
@@ -29,7 +29,7 @@ test.describe('field sniffer', () => {
   })
 
   test('Detect and parse usual french date formats', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/date-formats.csv', ax)
     assert.equal(dataset.schema.filter((f: any) => !f['x-calculated']).length, 4)
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -47,7 +47,7 @@ test.describe('field sniffer', () => {
   })
 
   test('Detect ISO date in a version of the file, then update format in next version', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let form = new FormData()
     form.append('file', 'str,date\nstrval,2021-01-22', 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -78,7 +78,7 @@ test.describe('field sniffer', () => {
   })
 
   test('Detect date format while ignoring whitespace', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const form = new FormData()
     let data = 'periode;source;elec_3;elec_6;elec_tt;gaz_b0;gaz_b1;gaz_b2i;gaz_tt;propane;fod_c1;essence;ars;sp95;sp98;gazole;gplc;vap_t100;vap_t110;bois_vrac;bois_sac;brent;ipe;dollar;charbon;pet_brut_e;pet_brut_d;pet_raf_e;elec_exp;PEG_gaz_2022;PEG_gaz_2023;PEG_gaz_2024;PEG_gaz_2025;Baseload_elec_2022;Baseload_elec_2023;Baseload_elec_2024;Baseload_elec_2025;Prix_tonne_CO2'
     data += '\n\r\t01/07/2021;AAA;;;;;;;;;;;;;;;;;;;;;;;;;;;;11,11;11,11;11,11;;;;;;'
@@ -95,7 +95,7 @@ test.describe('field sniffer', () => {
   })
 
   test('Accept ISO date without Z or timezone suffix', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const form = new FormData()
     form.append('file', 'str,datetime\nstrval,2021-02-23T10:27:50', 'dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -113,7 +113,7 @@ test.describe('field sniffer', () => {
   })
 
   test('Accept date detected as ISO by JS but not by elasticsearch', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const form = new FormData()
     form.append('file', 'str,datetime\nstrval,1961-02-13 00:00:00+00:00', 'dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -127,7 +127,7 @@ test.describe('field sniffer', () => {
   })
 
   test('Accept another date-time format and configure timezone', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/date-time.csv', ax)
     const dateProp = dataset.file.schema.find((p: any) => p.key === 'horodatage')
     assert.equal(dateProp.type, 'string')
@@ -164,7 +164,7 @@ test.describe('field sniffer', () => {
         }
       ]
     }), 'geojson-example.geojson')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     const dataset = await waitForFinalize(ax, res.data.id)

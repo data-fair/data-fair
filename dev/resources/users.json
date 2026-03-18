@@ -1,110 +1,110 @@
 [{
-    "id": "dmeadus0",
-    "firstName": "Danna",
-    "lastName": "Meadus",
-    "email": "dmeadus0@answers.com",
+    "id": "test_user1",
+    "firstName": "Test",
+    "lastName": "User1",
+    "email": "test_user1@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "ccherryholme1",
-    "firstName": "Cecily",
-    "lastName": "Cherry Holme",
-    "email": "ccherryholme1@icio.us",
+    "id": "test_user2",
+    "firstName": "Test",
+    "lastName": "User2",
+    "email": "test_user2@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "cdurning2",
-    "firstName": "Christen",
-    "lastName": "Durning",
-    "email": "cdurning2@desdev.cn",
+    "id": "test_user3",
+    "firstName": "Test",
+    "lastName": "User3",
+    "email": "test_user3@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "hlalonde3",
-    "firstName": "Huntington",
-    "lastName": "Lalonde",
-    "email": "hlalonde3@desdev.cn",
+    "id": "test_user4",
+    "firstName": "Test",
+    "lastName": "User4",
+    "email": "test_user4@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "ngernier4",
-    "firstName": "Nappy",
-    "lastName": "Gernier",
-    "email": "ngernier4@usa.gov",
+    "id": "test_user5",
+    "firstName": "Test",
+    "lastName": "User5",
+    "email": "test_user5@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "ddecruce5",
-    "firstName": "Duky",
-    "lastName": "De Cruce",
-    "email": "ddecruce5@phpbb.com",
+    "id": "test_user6",
+    "firstName": "Test",
+    "lastName": "User6",
+    "email": "test_user6@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "vdulany6",
-    "firstName": "Valencia",
-    "lastName": "Dulany",
-    "email": "vdulany6@google.com.hk"
+    "id": "test_user7",
+    "firstName": "Test",
+    "lastName": "User7",
+    "email": "test_user7@test.com"
   },
   {
-    "id": "bhazeldean7",
-    "firstName": "Bevin",
-    "lastName": "Hazeldean",
-    "email": "bhazeldean7@cnbc.com",
+    "id": "test_user8",
+    "firstName": "Test",
+    "lastName": "User8",
+    "email": "test_user8@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "dhannan8",
-    "firstName": "Danielle",
-    "lastName": "Hannan",
-    "email": "dhannan8@4shared.com"
+    "id": "test_user9",
+    "firstName": "Test",
+    "lastName": "User9",
+    "email": "test_user9@test.com"
   },
   {
-    "id": "icarlens9",
-    "firstName": "Issie",
-    "lastName": "Carlens",
-    "email": "icarlens9@independent.co.uk",
+    "id": "test_user10",
+    "firstName": "Test",
+    "lastName": "User10",
+    "email": "test_user10@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "alone",
-    "firstName": "I am",
+    "id": "test_alone",
+    "firstName": "Test",
     "lastName": "Alone",
-    "email": "alone@no.org",
+    "email": "test_alone@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "user1",
-    "firstName": "User1",
-    "lastName": "",
-    "email": "user1@test.com",
+    "id": "test_user",
+    "firstName": "Test",
+    "lastName": "User",
+    "email": "test_user@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "contrib1",
-    "firstName": "Contrib1",
-    "lastName": "",
-    "email": "contrib1@test.com",
+    "id": "test_contrib",
+    "firstName": "Test",
+    "lastName": "Contrib",
+    "email": "test_contrib@test.com",
     "password": {
       "clear": "passwd"
     }
@@ -119,12 +119,12 @@
     }
   },
   {
-    "id": "superadmin",
-    "firstName": "Super",
-    "lastName": "Admin",
-    "email": "superadmin@test.com",
+    "id": "test_superadmin",
+    "firstName": "Test",
+    "lastName": "Superadmin",
+    "email": "test_superadmin@test.com",
     "password": {
-      "clear": "superpasswd"
+      "clear": "passwd"
     }
   }
 ]

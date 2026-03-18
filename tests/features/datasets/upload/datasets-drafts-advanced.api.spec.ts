@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, fileExists, setupMockRoute, clearMockRoutes, getRawDataset, clearDatasetCache } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 // Paths passed to fileExists() are resolved relative to the server's dataDir
 const dataDir = '.'
@@ -21,13 +21,13 @@ test.describe('datasets in draft mode - advanced', () => {
   })
 
   test('Create a draft with attachments', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     let dataset = res.data
     assert.equal(res.status, 201)
@@ -54,18 +54,18 @@ test.describe('datasets in draft mode - advanced', () => {
   })
 
   test('Create a draft with attachments then data uploaded separately', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
 
     // update only the attachments
     const form2 = new FormData()
-    form2.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
+    form2.append('attachments', fs.readFileSync('./tests/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })
     dataset = await waitForDatasetError(ax, dataset.id, { draft: true })
     assert.equal(dataset.status, 'error')
@@ -74,7 +74,7 @@ test.describe('datasets in draft mode - advanced', () => {
 
     // then update the data
     const form3 = new FormData()
-    form3.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form3.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() }, params: { draft: true } })
     await waitForFinalize(ax, dataset.id)
     let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
@@ -90,18 +90,18 @@ test.describe('datasets in draft mode - advanced', () => {
   })
 
   test('Create a draft with data then attachments uploaded separately', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test-it/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
 
     // update only the data (not the attachments)
     const form2 = new FormData()
-    form2.append('dataset', fs.readFileSync('./test-it/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form2.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })
     await waitForFinalize(ax, dataset.id)
     let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
@@ -110,7 +110,7 @@ test.describe('datasets in draft mode - advanced', () => {
 
     // the update the attachments
     const form3 = new FormData()
-    form3.append('attachments', fs.readFileSync('./test-it/resources/datasets/files2.zip'), 'files2.zip')
+    form3.append('attachments', fs.readFileSync('./tests/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() }, params: { draft: true } })
     await waitForFinalize(ax, dataset.id)
     lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
@@ -128,10 +128,10 @@ test.describe('datasets in draft mode - advanced', () => {
   test('Create a draft of a geo file that requires conversion', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/stations.zip')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/stations.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations.zip')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     assert.equal(res.status, 201)
 
@@ -161,7 +161,7 @@ test.describe('datasets in draft mode - advanced', () => {
   })
 
   test('Manage error status in draft mode', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -188,7 +188,7 @@ other,unknown address
   })
 
   test('Fails when draft file is missing the input properties', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Initial dataset with addresses
     const form = new FormData()
@@ -234,27 +234,27 @@ other
   })
 
   test('Delete a dataset in draft state', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     assert.equal(res.status, 201)
     const dataset = await waitForFinalize(ax, res.data.id)
 
-    assert.ok(await fileExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
-    assert.ok(!await fileExists(`${dataDir}/user/dmeadus0/datasets/${dataset.id}`))
+    assert.ok(await fileExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
+    assert.ok(!await fileExists(`${dataDir}/user/test_user1/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
-    assert.ok(!await fs.pathExists(`${dataDir}/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    assert.ok(!await fs.pathExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 404)
   })
 
   test('Accepts a new file with compatible keys but different names', async () => {
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1-names.csv'), 'dataset1.csv')
-    const ax = dmeadus
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1-names.csv'), 'dataset1.csv')
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.schema[0].key, 'id')
@@ -265,7 +265,7 @@ other
     assert.ok(csv.startsWith('"Id","Adr"'))
 
     const form2 = new FormData()
-    form2.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form2.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset1.csv')
     dataset = await doAndWaitForFinalize(ax, dataset.id, async () => {
       await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })
     })

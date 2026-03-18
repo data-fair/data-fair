@@ -4,10 +4,10 @@ import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const ccherryholme1 = await axiosAuth('ccherryholme1@icio.us')
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const testUser2 = await axiosAuth('test_user2@test.com')
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
 test.describe('REST datasets - CRUD', () => {
   test.beforeEach(async () => {
@@ -19,7 +19,7 @@ test.describe('REST datasets - CRUD', () => {
   })
 
   test('Create empty REST datasets', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
@@ -45,7 +45,7 @@ test.describe('REST datasets - CRUD', () => {
   })
 
   test('Perform CRUD operations on REST datasets', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
       title: 'rest1',
@@ -86,7 +86,7 @@ test.describe('REST datasets - CRUD', () => {
   })
 
   test('Patch with empty string and null should remove properties', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/restpatchempty', {
       isRest: true,
       title: 'restpatchempty',
@@ -122,7 +122,7 @@ test.describe('REST datasets - CRUD', () => {
   })
 
   test('Reject properly json missing content-type', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/restjson', {
       isRest: true,
       title: 'restjson',
@@ -136,7 +136,7 @@ test.describe('REST datasets - CRUD', () => {
   })
 
   test('Perform CRUD operations in bulks', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
       title: 'rest2',
@@ -176,7 +176,7 @@ test.describe('REST datasets - CRUD', () => {
 
   test('Index and finalize dataset after write', async () => {
     // Load a few lines
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/rest3', {
       isRest: true,
       title: 'rest3',
@@ -228,7 +228,7 @@ test.describe('REST datasets - CRUD', () => {
 
   test('Reindex after an error', async () => {
     // Load a few lines
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/trigger-test-error', {
       isRest: true,
       title: 'trigger test error',
@@ -241,7 +241,7 @@ test.describe('REST datasets - CRUD', () => {
       { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
     let dataset = await waitForFinalize(ax, 'trigger-test-error')
-    await superadmin.post('/api/v1/datasets/trigger-test-error/_reindex')
+    await testSuperadmin.post('/api/v1/datasets/trigger-test-error/_reindex')
     // wait for error status after reindex with trigger-test-error slug
     await waitForDatasetError(ax, 'trigger-test-error')
     dataset = await ax.get('/api/v1/datasets/trigger-test-error').then(r => r.data)
@@ -257,7 +257,7 @@ test.describe('REST datasets - CRUD', () => {
   })
 
   test('Use dataset schema to validate inputs', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
       title: 'rest4',
@@ -387,7 +387,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Use nonBlockingValidation option', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
       title: 'rest4',
@@ -414,7 +414,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
   test('The size of the mongodb collection is part of storage consumption', async () => {
     // Load a few lines
-    const ax = ccherryholme1
+    const ax = testUser2
     await ax.post('/api/v1/datasets/rest7', {
       isRest: true,
       title: 'rest7',
@@ -440,7 +440,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
 
   test('Applying the exact same data twice does not trigger indexing', async () => {
     // Load a few lines
-    const ax = dmeadus
+    const ax = testUser1
     await ax.put('/api/v1/datasets/restidem', {
       isRest: true,
       title: 'restidem',
@@ -480,7 +480,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Delete all lines from a rest dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restdel', {
       isRest: true,
       title: 'restdel',
@@ -504,7 +504,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Accept date detected as ISO by JS but not by elasticsearch', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/restdate', {
       isRest: true,
       title: 'restdate',
@@ -530,7 +530,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Ignore null values', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/restnull', {
       isRest: true,
       title: 'restnull',
@@ -548,7 +548,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     // activate temporarily to check that we manage correctly parallel insertions
     // it is also necessary to change defaultLimits.apiRate.user.nb to support this number of requests
 
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/restparallel', {
       isRest: true,
       // rest: { indiceMode: 'timestamp1' },
@@ -564,7 +564,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Accept date detected as ISO by JS but not by elasticsearch in bulk', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/restdatebulk', {
       isRest: true,
       title: 'restdatebulk',
@@ -591,7 +591,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Accept date detected as ISO by JS but not by elasticsearch in bulk CSV', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
@@ -608,7 +608,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Removing a property triggers mongo unset and reindexing', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/restunset', {
       isRest: true,
       title: 'restunset',
@@ -631,7 +631,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
   })
 
   test('Activating/deactivating storeUpdatedBy', async () => {
-    const ax = dmeadusOrg
+    const ax = testUser1Org
     let res = await ax.post('/api/v1/datasets/updatedby', {
       isRest: true,
       title: 'updatedby',
@@ -652,10 +652,10 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     await waitForFinalize(ax, 'updatedby')
     res = await ax.get('/api/v1/datasets/updatedby/lines')
     assert.ok(res.data.results[0].attr1)
-    assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
-    assert.equal(res.data.results[0]._updatedByName, 'Danna Meadus')
+    assert.equal(res.data.results[0]._updatedBy, 'test_user1')
+    assert.equal(res.data.results[0]._updatedByName, 'Test User1')
 
-    res = await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { apiKeys: [{ title: 'api key', scopes: ['datasets'] }] })
+    res = await ax.put('/api/v1/settings/organization/test_org1', { apiKeys: [{ title: 'api key', scopes: ['datasets'] }] })
     const apiKey = res.data.apiKeys[0]
     const axAPIKey = axios({ headers: { 'x-apiKey': apiKey.clearKey } })
     await axAPIKey.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test3' })
@@ -670,8 +670,8 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test2' })
     await waitForFinalize(ax, 'updatedby')
     res = await ax.get(`/api/v1/datasets/updatedby/lines/${lineId}/revisions`)
-    assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
-    assert.equal(res.data.results[0]._updatedByName, 'Danna Meadus')
+    assert.equal(res.data.results[0]._updatedBy, 'test_user1')
+    assert.equal(res.data.results[0]._updatedByName, 'Test User1')
 
     res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: false, history: true } })
     await waitForFinalize(ax, 'updatedby')

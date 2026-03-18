@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('markdown contents management', () => {
   test.beforeEach(async () => {
@@ -15,7 +15,7 @@ test.describe('markdown contents management', () => {
   })
 
   test('Get dataset description and content as HTML', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Rest dataset markdown',
@@ -55,7 +55,7 @@ test.describe('markdown contents management', () => {
   })
 
   test('Dataset description can also contain HTML tags', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Rest dataset markdown',
@@ -68,7 +68,7 @@ test.describe('markdown contents management', () => {
   })
 
   test('Get application description as HTML', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/applications', {
       title: 'app markdown',
       description: 'This is a **markdown** description.',

@@ -8,7 +8,7 @@ import { sendDataset, waitForFinalize, waitForDatasetError, doAndWaitForFinalize
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('geo files support', () => {
   test.beforeAll(async () => {
@@ -29,10 +29,10 @@ test.describe('geo files support', () => {
 
   test('Process uploaded geojson dataset', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/geojson-example.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-example.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
 
@@ -119,10 +119,10 @@ test.describe('geo files support', () => {
 
   test('Upload geojson with geometry type GeometryCollection', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/geojson-geometry-collection.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-geometry-collection.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-geometry-collection.geojson')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
 
@@ -135,10 +135,10 @@ test.describe('geo files support', () => {
   })
 
   test('Upload geojson with CRS (projection)', async () => {
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/geojson-crs.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-crs.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
 
@@ -155,7 +155,7 @@ test.describe('geo files support', () => {
 
   test('Upload geojson dataset with some schema info', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/geojson-example.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-example.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     form.append('schema', JSON.stringify([{
@@ -165,7 +165,7 @@ test.describe('geo files support', () => {
       type: 'string',
       'x-refersTo': 'http://rdf.insee.fr/def/geo#codeRegion'
     }]))
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
 
@@ -177,13 +177,13 @@ test.describe('geo files support', () => {
 
   test('Upload geojson dataset with some managed fixes', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/geojson-broken-globalid.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-broken-globalid.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken-globalid.geojson')
     form.append('extras', JSON.stringify({
       fixGeojsonGlobalId: true
     }))
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
 
@@ -194,10 +194,10 @@ test.describe('geo files support', () => {
 
   test('Log error for geojson with broken feature', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     const dataset = res.data
     assert.equal(res.status, 201)
@@ -214,10 +214,10 @@ test.describe('geo files support', () => {
 
   test('Fix some polygons', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/kinked-multipolygons.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/kinked-multipolygons.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     const dataset = res.data
     assert.equal(res.status, 201)
@@ -227,10 +227,10 @@ test.describe('geo files support', () => {
   test('Process uploaded shapefile dataset', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/stations.zip')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/stations.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations.zip')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
 
@@ -241,10 +241,10 @@ test.describe('geo files support', () => {
   test('Process shapefile dataset where zip file has different name from contents', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/stations2.zip')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/stations2.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations2.zip')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
 
@@ -253,7 +253,7 @@ test.describe('geo files support', () => {
   })
 
   test('Upload CSV file with WKT geometries', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = await sendDataset('geo/wkt.csv', ax)
     dataset = await doAndWaitForFinalize(ax, dataset.id, async () => {
       dataset.schema.find((p: any) => p.key === 'geom')['x-refersTo'] = 'https://purl.org/geojson/vocab#geometry'
@@ -272,13 +272,13 @@ test.describe('geo files support', () => {
 
   test('Process uploaded GPX dataset', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
-    const ax = dmeadus
+    const ax = testUser1
 
     // Increase storage limits for this test
     await callWorkerFunction('filesProcessor', 'setConfig', { key: 'defaultLimits', value: { totalStorage: 10000000, datasetStorage: 10000000, nbDatasets: -1, datasetIndexed: -1, nbApiKeys: -1, store_nb: { limit: -1 } } })
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/paths.gpx')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/paths.gpx')
     const form = new FormData()
     form.append('file', datasetFd, 'paths.gpx')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -294,10 +294,10 @@ test.describe('geo files support', () => {
   test('Process uploaded mapinfo dataset', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
     // Send dataset
-    const datasetFd = fs.readFileSync('./test-it/resources/geo/troncon-mapinfo.zip')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/troncon-mapinfo.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'troncon-mapinfo.zip')
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
 
@@ -309,7 +309,7 @@ test.describe('geo files support', () => {
   })
 
   test('Create REST dataset and apply specific projection to simple coords', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest projection',
@@ -342,7 +342,7 @@ test.describe('geo files support', () => {
   })
 
   test('Create REST dataset and apply specific projection to geometries', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest projection',

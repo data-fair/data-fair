@@ -7,9 +7,9 @@ import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError } from '../../../support/workers.ts'
 import FormData from 'form-data'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
-const cdurning2 = await axiosAuth('cdurning2@desdev.cn')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser3 = await axiosAuth('test_user3@test.com')
 
 const initMaster = async (ax: any, info: any, masterData: any, id = 'master') => {
   if (Array.isArray(masterData)) {
@@ -31,7 +31,7 @@ const initMaster = async (ax: any, info: any, masterData: any, id = 'master') =>
 
   await ax.post('/api/v1/_check-api', apiDoc)
 
-  const remoteService = (await superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
+  const remoteService = (await testSuperadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
 
   return { master, remoteService, apiDoc }
 }
@@ -100,7 +100,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
   })
 
   test('return multiple levels of extended properties', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -171,7 +171,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
   })
 
   test('should handle sorting to chose ambiguous result', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
     await initMaster(
       ax,
       [siretProperty, { key: 'sortKey', type: 'integer' }, { key: 'extra', type: 'string' }],
@@ -222,7 +222,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
   })
 
   test('should handle date-in-interval search type', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
     await initMaster(
       ax,
       [startProperty, endProperty, { key: 'extra', type: 'string' }],
@@ -256,7 +256,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
   })
 
   test('should handle geo-distance search type', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
     await initMaster(
       ax,
       [latlonProperty, { key: 'extra', type: 'string' }],
@@ -291,7 +291,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
 
   test('should prevent using master-data without access to remote service', async () => {
     const { remoteService } = await initMaster(
-      dmeadus,
+      testUser1,
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
         id: 'siret',
@@ -302,7 +302,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
     )
 
     // create slave dataset
-    await cdurning2.put('/api/v1/datasets/slave', {
+    await testUser3.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [siretProperty],
@@ -314,15 +314,15 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
         select: ['extra']
       }]
     })
-    await cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }])
-    await waitForDatasetError(cdurning2, 'slave')
-    const journal = (await cdurning2.get('/api/v1/datasets/slave/journal')).data
+    await testUser3.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }])
+    await waitForDatasetError(testUser3, 'slave')
+    const journal = (await testUser3.get('/api/v1/datasets/slave/journal')).data
     assert.ok(journal[0].data.startsWith('Try to apply extension'))
   })
 
   test('should prevent using master-data without permission on dataset', async () => {
     const { remoteService } = await initMaster(
-      dmeadus,
+      testUser1,
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
         id: 'siret',
@@ -333,11 +333,11 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
     )
 
     // only super admin can open remote service to public
-    await assert.rejects(dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err: any) => err.status === 403)
-    superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
+    await assert.rejects(testUser1.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err: any) => err.status === 403)
+    testSuperadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
 
     // create slave dataset
-    await cdurning2.put('/api/v1/datasets/slave', {
+    await testUser3.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [siretProperty],
@@ -349,13 +349,13 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
         select: ['extra']
       }]
     })
-    await cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await assert.rejects(waitForFinalize(dmeadus, 'slave'), (err: any) => err.message.startsWith('permission manquante'))
+    await testUser3.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    await assert.rejects(waitForFinalize(testUser1, 'slave'), (err: any) => err.message.startsWith('permission manquante'))
   })
 
   test('should support using master-data from other account if visibility is ok', async () => {
     const { remoteService, master } = await initMaster(
-      dmeadus,
+      testUser1,
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
         id: 'siret',
@@ -366,17 +366,17 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
     )
     // feed some data to the master
     const items = [{ siret: '82898347800011', extra: 'Extra information' }]
-    await dmeadus.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-    await waitForFinalize(dmeadus, 'master')
+    await testUser1.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
+    await waitForFinalize(testUser1, 'master')
 
     // only super admin can open remote service to public
-    await assert.rejects(dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err: any) => err.status === 403)
-    superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
+    await assert.rejects(testUser1.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err: any) => err.status === 403)
+    testSuperadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
     // owner of the master-data dataset can open it to public
-    await dmeadus.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
+    await testUser1.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
 
     // create slave dataset
-    await cdurning2.put('/api/v1/datasets/slave', {
+    await testUser3.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [siretProperty],
@@ -388,14 +388,14 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
         select: ['extra']
       }]
     })
-    await cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await waitForFinalize(cdurning2, 'slave')
-    const results = (await cdurning2.get('/api/v1/datasets/slave/lines')).data.results
+    await testUser3.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    await waitForFinalize(testUser3, 'slave')
+    const results = (await testUser3.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
   })
 
   test('should support chaining extensions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const { remoteService } = await initMaster(
       ax,
       [latlonProperty, countryProperty],
@@ -510,7 +510,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
   })
 
   test('should list remote services actions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const { remoteService } = await initMaster(
       ax,
       [latlonProperty, countryProperty],

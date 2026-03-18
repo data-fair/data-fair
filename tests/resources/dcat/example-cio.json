@@ -1,0 +1,85 @@
+{
+  "@context": "https://project-open-data.cio.gov/v1.1/schema/catalog.jsonld",
+  "@type": "Catalog",
+  "conformsTo": "https://project-open-data.cio.gov/v1.1/schema",
+  "describedBy": "https://project-open-data.cio.gov/v1.1/schema/catalog.json",
+  "modified": "2022-05-10T00:00:00+00:00",
+  "dataset": [
+    {
+      "@type": "Dataset",
+      "identifier": "3d1a9c4636fd4419a09eefa1f79f6291",
+      "license": "Licence Ouverte v2.0",
+      "title": "Dataset 1",
+      "description": "Description dataset 1.",
+      "keyword": [
+        "keyword1",
+        "keyword2"
+      ],
+      "temporal": "2021-01-01T00:00:00+00:00/2021-12-31T00:00:00+00:00",
+      "accrualPeriodicity": "http://purl.org/cld/freq/daily",
+      "modified": "2022-05-10T00:00:00+00:00",
+      "distribution": [
+        {
+          "@type": "Distribution",
+          "identifier": "830db87ea997498bb20d033ace3fe6dd",
+          "title": "dataset1.csv",
+          "format": "csv",
+          "mediaType": "text/csv",
+          "downloadURL": "https://test.com/dataset1.csv",
+          "modified": "2022-05-10T00:00:00+00:00"
+        }
+      ],
+      "publisher": {
+        "@type": "org:Organization",
+        "name": "Organization 1"
+      },
+      "contactPoint": {
+        "@type": "vcard:Contact",
+        "fn": "Test Contact",
+        "hasEmail": "mailto:contact@test.com"
+      },
+      "accessLevel": "non-public"
+    },
+    {
+      "@type": "Dataset",
+      "identifier": "a4566ff6dab74c6eba780ac51c22a468",
+      "license": "Licence Ouverte v2.0",
+      "title": "Dataset 2",
+      "description": "Description **dataset 2**.",
+      "keyword": [
+        "keyword1",
+        "keyword3"
+      ],
+      "accrualPeriodicity": "http://purl.org/cld/freq/triennial",
+      "modified": "2022-05-10T00:00:00+00:00",
+      "distribution": [
+        {
+          "@type": "Distribution",
+          "identifier": "ac4c77dd793d45228c7b22a8a79f9126",
+          "title": "Dataset 2 geojson",
+          "format": "geojson",
+          "mediaType": "application/geo+json",
+          "downloadURL": "https://test.com/dataset2.geojson"
+        },
+        {
+          "@type": "Distribution",
+          "identifier": "5300f12395444c92ad4a774e0c4f70ee",
+          "title": "Dataset 2 csv",
+          "format": "csv",
+          "mediaType": "text/csv",
+          "downloadURL": "https://test.com/dataset2.csv"
+        }
+      ],
+      "publisher": {
+        "@type": "org:Organization",
+        "name": "Organization 1"
+      },
+      "contactPoint": {
+        "@type": "vcard:Contact",
+        "fn": "Test Contact",
+        "hasEmail": "mailto:contact@test.com"
+      },
+      "accessLevel": "public"
+    }
+  ]
+}

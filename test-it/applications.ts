@@ -6,9 +6,9 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 
 const anonymous = getAxios()
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const alban = await getAxiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
-const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const alban = await getAxiosAuth('alban.mouton@koumoul.com', undefined, true)
+const superadmin = await getAxiosAuth('superadmin@test.com', undefined, true)
 
 const sendAttachment = async (ax, appId, attachmentName) => {
   const attachmentForm = new FormData()

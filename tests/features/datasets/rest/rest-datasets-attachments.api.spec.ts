@@ -5,8 +5,8 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, lsAttachments } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const ngernier4 = await axiosAuth('ngernier4@usa.gov')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser5 = await axiosAuth('test_user5@test.com')
 
 test.describe('REST datasets - Attachments', () => {
   test.beforeEach(async () => {
@@ -18,7 +18,7 @@ test.describe('REST datasets - Attachments', () => {
   })
 
   test('Send attachment with multipart request', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/rest5', {
       isRest: true,
       title: 'rest5',
@@ -30,7 +30,7 @@ test.describe('REST datasets - Attachments', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test-it/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 10)
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -59,7 +59,7 @@ test.describe('REST datasets - Attachments', () => {
   })
 
   test('Send attachment with multipart and special _body key', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets/rest5', {
       isRest: true,
       title: 'rest5',
@@ -71,7 +71,7 @@ test.describe('REST datasets - Attachments', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test-it/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('_body', '{"attr1":10}')
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -84,7 +84,7 @@ test.describe('REST datasets - Attachments', () => {
   })
 
   test('Send attachments with bulk request', async () => {
-    const ax = ngernier4
+    const ax = testUser5
     let res = await ax.post('/api/v1/datasets/rest6', {
       isRest: true,
       title: 'rest6',
@@ -95,7 +95,7 @@ test.describe('REST datasets - Attachments', () => {
     })
 
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync('./test-it/resources/datasets/files.zip')
+    const attachmentsContent = fs.readFileSync('./tests/resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
@@ -114,7 +114,7 @@ test.describe('REST datasets - Attachments', () => {
 
     // overwrite 1 line
     const form1 = new FormData()
-    const attachmentsContent1 = fs.readFileSync('./test-it/resources/datasets/files2.zip')
+    const attachmentsContent1 = fs.readFileSync('./tests/resources/datasets/files2.zip')
     form1.append('attachments', attachmentsContent1, 'files2.zip')
     form1.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form1, { headers: { 'Content-Length': form1.getLengthSync(), ...form1.getHeaders() } })
@@ -128,7 +128,7 @@ test.describe('REST datasets - Attachments', () => {
 
     // add 1 more line
     const form2 = new FormData()
-    const attachmentsContent2 = fs.readFileSync('./test-it/resources/datasets/files3.zip')
+    const attachmentsContent2 = fs.readFileSync('./tests/resources/datasets/files3.zip')
     form2.append('attachments', attachmentsContent2, 'files3.zip')
     form2.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line3', attr1: 'test2', attachmentPath: 'files3/test2.odt' }
@@ -146,7 +146,7 @@ test.describe('REST datasets - Attachments', () => {
 
     // 1 more time but in "drop" mode
     const form3 = new FormData()
-    const attachmentsContent3 = fs.readFileSync('./test-it/resources/datasets/files2.zip')
+    const attachmentsContent3 = fs.readFileSync('./tests/resources/datasets/files2.zip')
     form3.append('attachments', attachmentsContent3, 'files2.zip')
     form3.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line4', attr1: 'test3', attachmentPath: 'test.odt' }
@@ -164,7 +164,7 @@ test.describe('REST datasets - Attachments', () => {
 
     // with an accented filename and a missing file
     const form4 = new FormData()
-    const attachmentsContent4 = fs.readFileSync('./test-it/resources/datasets/files4.zip')
+    const attachmentsContent4 = fs.readFileSync('./tests/resources/datasets/files4.zip')
     form4.append('attachments', attachmentsContent4, 'files4.zip')
     form4.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line5', attr1: 'test5', attachmentPath: 'testé.txt' },
@@ -192,7 +192,7 @@ test.describe('REST datasets - Attachments', () => {
   })
 
   test('Synchronize all lines with the content of the attachments directory', async () => {
-    const ax = ngernier4
+    const ax = testUser5
     let res = await ax.post('/api/v1/datasets/restsync', {
       isRest: true,
       title: 'restsync',
@@ -203,7 +203,7 @@ test.describe('REST datasets - Attachments', () => {
     })
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync('./test-it/resources/datasets/files.zip')
+    const attachmentsContent = fs.readFileSync('./tests/resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
 
@@ -235,7 +235,7 @@ test.describe('REST datasets - Attachments', () => {
   })
 
   test('Send attachment with special chars', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest attachment ko',
@@ -247,7 +247,7 @@ test.describe('REST datasets - Attachments', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test-it/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'Capture d\u2019\u00e9cran du 2024-11-19 10-20-57.png')
     res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)

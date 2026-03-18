@@ -9,7 +9,7 @@ import moment from 'moment'
 import 'moment-timezone'
 import * as xlsx from '../api/src/misc/utils/xlsx.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 const localeTimeZone = moment.tz.guess()
 

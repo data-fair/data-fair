@@ -2,9 +2,9 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const hlalonde3Org = await axiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
 
 test.describe('settings API', () => {
   test.beforeEach(async () => {
@@ -17,50 +17,50 @@ test.describe('settings API', () => {
 
   test('should reject wrong account type', async () => {
     await assert.rejects(
-      dmeadus.get('/api/v1/settings/unknown/dmeadus0'),
+      testUser1.get('/api/v1/settings/unknown/test_user1'),
       { status: 400 }
     )
   })
 
   test('should reject anonymous request', async () => {
     await assert.rejects(
-      dmeadus.get('/api/v1/settings/user/hlalonde3'),
+      testUser1.get('/api/v1/settings/user/test_user4'),
       { status: 403 }
     )
   })
 
   test('should read user empty settings', async () => {
-    const res = await dmeadus.get('/api/v1/settings/user/dmeadus0')
+    const res = await testUser1.get('/api/v1/settings/user/test_user1')
     assert.equal(res.status, 200)
     assert.deepEqual(res.data, {})
   })
 
   test('should reject update with wrong format', async () => {
     await assert.rejects(
-      dmeadus.put('/api/v1/settings/user/dmeadus0', { forbiddenKey: 'not allowed' }),
+      testUser1.put('/api/v1/settings/user/test_user1', { forbiddenKey: 'not allowed' }),
       { status: 400 }
     )
   })
 
   test('should read settings as organization admin', async () => {
-    const res = await dmeadusOrg.get('/api/v1/settings/organization/KWqAGZ4mG')
+    const res = await testUser1Org.get('/api/v1/settings/organization/test_org1')
     assert.equal(res.status, 200)
     assert.deepEqual(res.data, {})
   })
 
   test('should write settings as organization admin', async () => {
-    await dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG', { topics: [{ id: 'topic1', title: 'Topic 1' }] })
-    const res = await dmeadusOrg.get('/api/v1/settings/organization/KWqAGZ4mG')
+    await testUser1Org.put('/api/v1/settings/organization/test_org1', { topics: [{ id: 'topic1', title: 'Topic 1' }] })
+    const res = await testUser1Org.get('/api/v1/settings/organization/test_org1')
     assert.equal(res.status, 200)
     assert.deepEqual(res.data.topics, [{ id: 'topic1', title: 'Topic 1' }])
   })
 
   test('should write and read settings as organization department admin', async () => {
-    await assert.rejects(hlalonde3Org.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', { topics: [{ id: 'topic1', title: 'Topic 1' }] }), (err: any) => err.status === 400)
-    await dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', { apiKeys: [{ title: 'Api key 1', scopes: [] }] })
-    const res = await hlalonde3Org.get('/api/v1/settings/organization/KWqAGZ4mG:dep1')
+    await assert.rejects(testUser4Org.put('/api/v1/settings/organization/test_org1:dep1', { topics: [{ id: 'topic1', title: 'Topic 1' }] }), (err: any) => err.status === 400)
+    await testUser1Org.put('/api/v1/settings/organization/test_org1:dep1', { apiKeys: [{ title: 'Api key 1', scopes: [] }] })
+    const res = await testUser4Org.get('/api/v1/settings/organization/test_org1:dep1')
     assert.equal(res.status, 200)
-    assert.equal(res.data.name, 'Fivechat - dep1')
+    assert.equal(res.data.name, 'Test Org 1 - dep1')
     assert.equal(res.data.department, 'dep1')
     assert.deepEqual(res.data.apiKeys[0].title, 'Api key 1')
   })

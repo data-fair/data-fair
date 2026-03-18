@@ -8,7 +8,7 @@ import * as workers from '../api/src/workers/index.ts'
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 describe('geo files support', function () {
   before(startApiServer)

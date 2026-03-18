@@ -5,11 +5,11 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks, config } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const cdurning2 = await axiosAuth('cdurning2@desdev.cn')
-const hlalonde3 = await axiosAuth('hlalonde3@desdev.cn')
-const hlalonde3Org = await axiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
-const ngernier4 = await axiosAuth('ngernier4@usa.gov')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser4 = await axiosAuth('test_user4@test.com')
+const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
+const testUser5 = await axiosAuth('test_user5@test.com')
 
 test.describe('virtual datasets features', () => {
   test.beforeEach(async () => {
@@ -21,7 +21,7 @@ test.describe('virtual datasets features', () => {
   })
 
   test('A virtual dataset has the most restrictive capabilities of its children', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const child1 = await sendDataset('datasets/dataset1.csv', ax)
     child1.schema[0]['x-capabilities'] = { text: false, values: false }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
@@ -53,7 +53,7 @@ test.describe('virtual datasets features', () => {
   })
 
   test('A virtual dataset has a merge of the labels of its children', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const child1 = await sendDataset('datasets/dataset1.csv', ax)
     child1.schema[0]['x-labels'] = { koumoul: 'Koumoul' }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
@@ -80,7 +80,7 @@ test.describe('virtual datasets features', () => {
   })
 
   test('A virtual dataset of a geo parent can serve tiles', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     // Update schema to specify geo point
@@ -131,7 +131,7 @@ test.describe('virtual datasets features', () => {
   })
 
   test('Create a virtual dataset with a filter on account concept', async () => {
-    const ax = dmeadus
+    const ax = testUser1
 
     const dataset = (await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
@@ -139,12 +139,12 @@ test.describe('virtual datasets features', () => {
       schema: [{ key: 'attr1', type: 'string' }, { key: 'account', type: 'string', 'x-refersTo': 'https://github.com/data-fair/lib/account' }]
     })).data
     const lines = [
-      { attr1: 'test1', account: 'user:ccherryholme1' },
-      { attr1: 'test2', account: 'user:cdurning2' },
-      { attr1: 'test3', account: 'user:cdurning2' },
+      { attr1: 'test1', account: 'user:test_user2' },
+      { attr1: 'test2', account: 'user:test_user3' },
+      { attr1: 'test3', account: 'user:test_user3' },
       { attr1: 'test4' },
-      { attr1: 'test5', account: 'organization:KWqAGZ4mG:dep1' },
-      { attr1: 'test6', account: 'user:hlalonde3' }
+      { attr1: 'test5', account: 'organization:test_org1:dep1' },
+      { attr1: 'test6', account: 'user:test_user4' }
     ]
     await ax.post('/api/v1/datasets/rest1/_bulk_lines', lines)
     await waitForFinalize(ax, dataset.id)
@@ -169,56 +169,56 @@ test.describe('virtual datasets features', () => {
     assert.ok(res.headers['cache-control'].includes('private'))
 
     // owner of dataset can use account filter both on virtual dataset and on child
-    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Acdurning2`)
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Atest_user3`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?account=user%3Acdurning2`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?account=user%3Atest_user3`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
 
     // user can read the lines where he is referenced
-    res = await cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines?size=1`)
+    res = await testUser3.get(`/api/v1/datasets/${virtualDataset.id}/lines?size=1`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].attr1, 'test2')
-    assert.equal(res.data.results[0].account, 'user:cdurning2')
+    assert.equal(res.data.results[0].account, 'user:test_user3')
     assert.ok(res.headers['cache-control'].includes('private'))
     assert.ok(res.data.next)
-    assert.ok(res.data.next.includes('account=user%3Acdurning2'))
-    res = await cdurning2.get(res.data.next)
+    assert.ok(res.data.next.includes('account=user%3Atest_user3'))
+    res = await testUser3.get(res.data.next)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].attr1, 'test3')
-    assert.equal(res.data.results[0].account, 'user:cdurning2')
+    assert.equal(res.data.results[0].account, 'user:test_user3')
 
     // another user cannot read the lines where he is not referenced
-    res = await ngernier4.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    res = await testUser5.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 0)
     await assert.rejects(
-      ngernier4.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Acdurning2`),
+      testUser5.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Atest_user3`),
       { status: 403 }
     )
 
     // another user can read the line where is current orga is referenced and those where he is personnally reference
-    res = await hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    res = await testUser4.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
-    res = await hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    res = await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
-    res = await hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user:hlalonde3`)
+    res = await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user:test_user4`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
-    res = await hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=organization:KWqAGZ4mG:dep1`)
+    res = await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=organization:test_org1:dep1`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
   })
 
   test('a virtual dataset of a dataset with attachments re-expose those attachments', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'childattach',
@@ -232,7 +232,7 @@ test.describe('virtual datasets features', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test-it/resources/avatar.jpeg')
+    const attachmentContent = fs.readFileSync('./tests/resources/avatar.jpeg')
     form.append('attachment', attachmentContent, 'dir1/avatar.jpeg')
     form.append('attr1', '10')
     res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -291,7 +291,7 @@ test.describe('virtual datasets features', () => {
   })
 
   test('fails to upload file on virtual data', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'child',

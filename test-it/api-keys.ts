@@ -7,13 +7,13 @@ import * as rateLimitingUtils from '../api/src/misc/utils/rate-limiting.ts'
 import config from 'config'
 
 const anonymous = getAxios()
-const bhazeldean7Org = await getAxiosAuth('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG')
-const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
-const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
-const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const bhazeldean7Org = await getAxiosAuth('bhazeldean7@cnbc.com', 'KWqAGZ4mG')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'KWqAGZ4mG')
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn')
+const hlalonde3Org = await getAxiosAuth('hlalonde3@desdev.cn', 'KWqAGZ4mG')
+const superadmin = await getAxiosAuth('superadmin@test.com', undefined, true)
 
 describe('API keys', function () {
   before(startApiServer)

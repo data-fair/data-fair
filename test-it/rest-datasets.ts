@@ -16,13 +16,13 @@ import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.t
 import pumpOg from 'pump'
 import filesStorage from '@data-fair/data-fair-api/src/files-storage/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const ccherryholme1 = await getAxiosAuth('ccherryholme1@icio.us', 'passwd')
-const ngernier4 = await getAxiosAuth('ngernier4@usa.gov', 'passwd')
-const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
-const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
-const superadminPersonal = await getAxiosAuth('superadmin@test.com', 'superpasswd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const dmeadusOrg = await getAxiosAuth('dmeadus0@answers.com', 'KWqAGZ4mG')
+const ccherryholme1 = await getAxiosAuth('ccherryholme1@icio.us')
+const ngernier4 = await getAxiosAuth('ngernier4@usa.gov')
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn')
+const superadmin = await getAxiosAuth('superadmin@test.com', undefined, true)
+const superadminPersonal = await getAxiosAuth('superadmin@test.com')
 
 const pump = promisify(pumpOg)
 

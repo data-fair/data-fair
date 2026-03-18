@@ -150,7 +150,7 @@ class TestS3Storage {
   }
 }
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('S3 multipart copy', () => {
   let storage: TestS3Storage
@@ -227,10 +227,10 @@ test.describe('S3 multipart copy', () => {
     // This test exercises the full pipeline: upload in draft, finalize, validate draft
     // The copy with small thresholds happens server-side during draft validation
     // We just verify the pipeline completes successfully
-    const datasetFd = fs.readFileSync('./test-it/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
-    const ax = dmeadus
+    const ax = testUser1
 
     const res = await ax.post('/api/v1/datasets', form, {
       headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },

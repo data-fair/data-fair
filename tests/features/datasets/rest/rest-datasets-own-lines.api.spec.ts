@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
-const cdurning2 = await axiosAuth('cdurning2@desdev.cn')
-const alone = await axiosAuth('alone@no.org')
+const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const testUser3 = await axiosAuth('test_user3@test.com')
+const testAlone = await axiosAuth('test_alone@test.com')
 
 test.describe('REST datasets with owner specific lines', () => {
   test.beforeEach(async () => {
@@ -18,7 +18,7 @@ test.describe('REST datasets with owner specific lines', () => {
 
   test('Create empty REST dataset with activated line ownership', async () => {
     // the dataset is created in an organization
-    let res = await dmeadusOrg.post('/api/v1/datasets', {
+    let res = await testUser1Org.post('/api/v1/datasets', {
       isRest: true,
       title: 'a rest dataset',
       rest: { lineOwnership: true, history: true },
@@ -31,102 +31,102 @@ test.describe('REST datasets with owner specific lines', () => {
     assert.ok(dataset.schema.find((p: any) => p.key === '_ownerName'))
     assert.equal(dataset.schema.length, 7)
 
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 0)
 
     // owner's admin can use routes to manage his own lines
-    await dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { _id: 'dmeadusline', col1: 'value 1' })
-    dataset = await waitForFinalize(dmeadusOrg, dataset.id)
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { _id: 'dmeadusline', col1: 'value 1' })
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
     assert.equal(dataset.schema.length, 7)
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`)
     assert.equal(res.data.total, 1)
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 'dmeadusline')
 
     // even owner's admin cannot use routes dedicated for other uses
-    await assert.rejects(dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`), (err: any) => err.status === 403)
+    await assert.rejects(testUser1Org.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`), (err: any) => err.status === 403)
 
     // external user cannot do anything yet
-    await assert.rejects(cdurning2.get(`/api/v1/datasets/${dataset.id}/lines`), (err: any) => err.status === 403)
-    await assert.rejects(cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`), (err: any) => err.status === 403)
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/lines`), (err: any) => err.status === 403)
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`), (err: any) => err.status === 403)
 
     // give permission to external users to manage his own lines in the dataset
-    await dmeadusOrg.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { type: 'user', id: 'cdurning2', classes: ['manageOwnLines'], operations: ['readSafeSchema'] },
-      { type: 'user', id: 'alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+    await testUser1Org.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: 'test_user3', classes: ['manageOwnLines'], operations: ['readSafeSchema'] },
+      { type: 'user', id: 'test_alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
     ])
 
     // external user cannot read all lines, but he can read his own lines
-    await assert.rejects(cdurning2.get(`/api/v1/datasets/${dataset.id}/lines`), (err: any) => err.status === 403)
-    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/lines`), (err: any) => err.status === 403)
+    res = await testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`)
     assert.equal(res.data.total, 0)
-    await cdurning2.post(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`, { _id: 'cdurningline', col1: 'value 1' })
-    await waitForFinalize(dmeadusOrg, dataset.id)
-    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
+    await testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`, { _id: 'cdurningline', col1: 'value 1' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 'cdurningline')
 
     // other external user can also manage his lines
-    await alone.post(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`, { _id: 'aloneline', col1: 'value 1' })
-    await waitForFinalize(dmeadusOrg, dataset.id)
-    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`)
+    await testAlone.post(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines`, { _id: 'aloneline', col1: 'value 1' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 'aloneline')
-    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`)
+    res = await testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines/aloneline`)
     assert.equal(res.data._id, 'aloneline')
     // he cannot see line of another user
-    await assert.rejects(alone.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`), (err: any) => err.status === 403)
-    await assert.rejects(alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/cdurningline`), (err: any) => err.status === 404)
+    await assert.rejects(testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`), (err: any) => err.status === 403)
+    await assert.rejects(testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines/cdurningline`), (err: any) => err.status === 404)
     // he can patch his lines but cannot change ownership
-    await alone.patch(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`, { col1: 'value 2' })
-    await waitForFinalize(dmeadusOrg, dataset.id)
-    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`)
+    await testAlone.patch(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines/aloneline`, { col1: 'value 2' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines/aloneline`)
     assert.equal(res.data.col1, 'value 2')
-    await alone.patch(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`, { _owner: 'user:cdurning2', col1: 'value 3' })
-    await waitForFinalize(dmeadusOrg, dataset.id)
-    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`)
+    await testAlone.patch(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines/aloneline`, { _owner: 'user:test_user3', col1: 'value 3' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines/aloneline`)
     assert.equal(res.data.col1, 'value 3')
-    assert.equal(res.data._owner, 'user:alone')
+    assert.equal(res.data._owner, 'user:test_alone')
 
     // owner's admin can see all lines
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 3)
 
     // owner's admin can change line ownership
-    await dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}/lines/aloneline`, { _owner: 'user:cdurning2', col1: 'value 4' })
-    await waitForFinalize(dmeadusOrg, dataset.id)
-    await assert.rejects(alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines/aloneline`), (err: any) => err.status === 404)
-    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines/aloneline`)
+    await testUser1Org.patch(`/api/v1/datasets/${dataset.id}/lines/aloneline`, { _owner: 'user:test_user3', col1: 'value 4' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    await assert.rejects(testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines/aloneline`), (err: any) => err.status === 404)
+    res = await testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines/aloneline`)
     assert.equal(res.data.col1, 'value 4')
-    assert.equal(res.data._owner, 'user:cdurning2')
+    assert.equal(res.data._owner, 'user:test_user3')
 
     // the revisions are also filtered on owner
-    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines/aloneline/revisions`)
+    res = await testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines/aloneline/revisions`)
     assert.equal(res.data.total, 1)
-    assert.equal(res.data.results[0]._owner, 'user:cdurning2')
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines/aloneline/revisions`)
+    assert.equal(res.data.results[0]._owner, 'user:test_user3')
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines/aloneline/revisions`)
     assert.equal(res.data.total, 4)
-    assert.equal(res.data.results[0]._owner, 'user:cdurning2')
-    assert.equal(res.data.results[1]._owner, 'user:alone')
+    assert.equal(res.data.results[0]._owner, 'user:test_user3')
+    assert.equal(res.data.results[1]._owner, 'user:test_alone')
 
     // give permission to ALL external users to manage their own lines in the dataset
-    await dmeadusOrg.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+    await testUser1Org.put('/api/v1/datasets/' + dataset.id + '/permissions', [
       { type: 'user', id: '*', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
     ])
-    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
+    res = await testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`)
 
     // safe schema for external users is purged of indices about the data
-    res = await cdurning2.get(`/api/v1/datasets/${dataset.id}/safe-schema`)
+    res = await testUser3.get(`/api/v1/datasets/${dataset.id}/safe-schema`)
     assert.equal(res.data.find((p: any) => p.key === 'col1')['x-cardinality'], undefined)
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/schema`)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/schema`)
     assert.equal(res.data.find((p: any) => p.key === 'col1')['x-cardinality'], 2)
-    await assert.rejects(cdurning2.get(`/api/v1/datasets/${dataset.id}/schema`), (err: any) => err.status === 403)
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/schema`), (err: any) => err.status === 403)
   })
 
   test('Handle a dataset with line ownership and a primary key that includes _owner', async () => {
     // the dataset is created in an organization
-    let res = await dmeadusOrg.post('/api/v1/datasets', {
+    let res = await testUser1Org.post('/api/v1/datasets', {
       isRest: true,
       title: 'a rest dataset',
       rest: { lineOwnership: true, history: true },
@@ -140,26 +140,26 @@ test.describe('REST datasets with owner specific lines', () => {
     assert.ok(dataset.schema.find((p: any) => p.key === '_ownerName'))
     assert.equal(dataset.schema.length, 8)
 
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 0)
 
     // owner's admin can use routes to post the same line multiple times
-    await dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { col1: 'value 1', col2: 'Label 1' })
-    dataset = await waitForFinalize(dmeadusOrg, dataset.id)
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { col1: 'value 1', col2: 'Label 1' })
+    dataset = await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`)
     assert.equal(res.data.total, 1)
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
     assert.ok(res.data.results[0]._id)
-    await dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { col1: 'value 1', col2: 'Label 2' })
-    await waitForFinalize(dmeadusOrg, dataset.id)
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { col1: 'value 1', col2: 'Label 2' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].col1, 'value 1')
     assert.equal(res.data.results[0].col2, 'Label 2')
-    await dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { col1: 'value 2', col2: 'Label 3' })
-    await waitForFinalize(dmeadusOrg, dataset.id)
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    await testUser1Org.post(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`, { col1: 'value 2', col2: 'Label 3' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`)
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results[1].col1, 'value 1')
     assert.equal(res.data.results[1].col2, 'Label 2')
@@ -167,18 +167,18 @@ test.describe('REST datasets with owner specific lines', () => {
     assert.equal(res.data.results[0].col2, 'Label 3')
 
     // give permission to external users to manage his own lines in the dataset
-    await dmeadusOrg.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { type: 'user', id: 'alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+    await testUser1Org.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { type: 'user', id: 'test_alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
     ])
 
-    await alone.post(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`, { col1: 'value 1', col2: 'Label 4' })
-    await waitForFinalize(dmeadusOrg, dataset.id)
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
+    await testAlone.post(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines`, { col1: 'value 1', col2: 'Label 4' })
+    await waitForFinalize(testUser1Org, dataset.id)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/own/user:test_user1/lines`)
     assert.equal(res.data.total, 2)
-    res = await alone.get(`/api/v1/datasets/${dataset.id}/own/user:alone/lines`)
+    res = await testAlone.get(`/api/v1/datasets/${dataset.id}/own/user:test_alone/lines`)
     assert.equal(res.data.total, 1)
 
-    res = await dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
+    res = await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 3)
   })
 })

@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError, waitForJournalEvent } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 const schema = [
   {
@@ -51,9 +51,9 @@ test.describe('file datasets with validation rules', () => {
   test('create a valid dataset with initial validation rules', async () => {
     // Create a valid dataset
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.count, 2)
@@ -62,9 +62,9 @@ test.describe('file datasets with validation rules', () => {
   test('create an invalid dataset with initial validation rules', async () => {
     // Create a valid dataset
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     await waitForDatasetError(ax, dataset.id)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -85,8 +85,8 @@ test.describe('file datasets with validation rules', () => {
   test('create a valid dataset then patch compatible validation rules', async () => {
     // Create a valid dataset
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1.csv'), 'dataset1.csv')
-    const ax = dmeadus
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1.csv'), 'dataset1.csv')
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.count, 2)
@@ -100,8 +100,8 @@ test.describe('file datasets with validation rules', () => {
   test('create a valid dataset then patch incompatible validation rules', async () => {
     // Create a valid dataset
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test-it/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
-    const ax = dmeadus
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.count, 2)
@@ -144,7 +144,7 @@ test.describe('file datasets with validation rules', () => {
 koumoul,"111 ; 222","test1, test2"
 bidule,123,test3`, 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.count, 2)

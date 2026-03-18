@@ -4,8 +4,9 @@ import slug from 'slugify'
 
 /**
  * Test users and orgs are defined in:
- *   - dev/resources/users.json — user accounts (all use password 'passwd' except superadmin which uses 'superpasswd')
- *   - dev/resources/organizations.json — org memberships and roles
+ *   - dev/resources/users.json — user accounts (test_user1..test_user10, test_alone, test_user, test_contrib, test_superadmin, albanm)
+ *     All use password 'passwd'.
+ *   - dev/resources/organizations.json — org memberships and roles (test_org1..test_org6, koumoul)
  *
  * These are loaded by simple-directory (see docker-compose.yaml, STORAGE_TYPE=file).
  */
@@ -27,10 +28,10 @@ const axiosOpts = { baseURL }
 export const axios = (opts = {}) => axiosBuilder({ ...axiosOpts, ...opts })
 export const anonymousAx = axios()
 
-export const axiosAuth = (email: string, password = 'passwd', org?: string, adminMode = false, opts = {}) => {
+export const axiosAuth = (email: string, org?: string, adminMode = false, opts = {}) => {
   return _axiosAuth({
     email,
-    password,
+    password: 'passwd',
     directoryUrl,
     org,
     axiosOpts: { ...axiosOpts, headers: { 'x-cache-bypass': '1' }, ...opts },

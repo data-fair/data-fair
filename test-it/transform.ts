@@ -6,7 +6,7 @@ import * as workers from '../api/src/workers/index.ts'
 import exprEval from '../shared/expr-eval.js'
 import fs from 'fs-extra'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
 
 const { parser, compile } = exprEval('Europe/Paris')
 

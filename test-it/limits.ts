@@ -8,9 +8,9 @@ import fs from 'fs-extra'
 import tmp from 'tmp-promise'
 
 const anonymous = getAxios()
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const alban = await getAxiosAuth('alban.mouton@koumoul.com', 'passwd', undefined, true)
-const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn', 'passwd')
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const alban = await getAxiosAuth('alban.mouton@koumoul.com', undefined, true)
+const hlalonde3 = await getAxiosAuth('hlalonde3@desdev.cn')
 
 const baseLimit = {
   indexed_bytes: { limit: 300000, consumption: 0 },

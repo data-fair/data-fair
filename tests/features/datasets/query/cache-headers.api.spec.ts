@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid'
 import { axios, axiosAuth, clean, checkPendingTasks, config } from '../../../support/axios.ts'
 
 const anonymous = axios()
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
+const testUser1 = await axiosAuth('test_user1@test.com')
 
 test.describe('Cache headers', () => {
   test.beforeEach(async () => {
@@ -26,12 +26,12 @@ test.describe('Cache headers', () => {
   }
 
   test('Uses private cache-control for newly created dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await createDataset(ax)
     const id = dataset.id
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'user')
-    assert.equal(dataset.owner.id, 'dmeadus0')
+    assert.equal(dataset.owner.id, 'test_user1')
 
     let res = await ax.get(`/api/v1/datasets/${id}/lines`)
     assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
@@ -48,7 +48,7 @@ test.describe('Cache headers', () => {
   })
 
   test('Supports private cache revalidation', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await createDataset(ax)
     const id = dataset.id
 
@@ -63,7 +63,7 @@ test.describe('Cache headers', () => {
   })
 
   test('Manage public cache-control header based on permissions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const axAnonymous = anonymous
     const dataset = await createDataset(ax)
     const id = dataset.id
@@ -80,7 +80,7 @@ test.describe('Cache headers', () => {
   })
 
   test('Supports public cache revalidation', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await createDataset(ax)
     const id = dataset.id
     await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read'] }])
@@ -104,7 +104,7 @@ test.describe('Cache headers', () => {
   })
 
   test('Supports caching of lists', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     await createDataset(ax)
     const dataset = await createDataset(ax)
     const id = dataset.id

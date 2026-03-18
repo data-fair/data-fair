@@ -5,9 +5,9 @@ import fs from 'fs-extra'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn', 'passwd')
-const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const cdurning2 = await getAxiosAuth('cdurning2@desdev.cn')
+const superadmin = await getAxiosAuth('superadmin@test.com', undefined, true)
 
 describe('Properties capabilities', function () {
   before(startApiServer)

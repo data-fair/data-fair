@@ -5,7 +5,7 @@ import Excel from 'exceljs'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, clearDatasetCache } from '../../../support/workers.ts'
 
-const dmeadusOrg = await axiosAuth('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG')
+const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
 
 test.describe('compatibility layer for ods api', () => {
   test.beforeEach(async () => {
@@ -17,9 +17,9 @@ test.describe('compatibility layer for ods api', () => {
   })
 
   test('exposes records and exports api on 2 urls', async () => {
-    const ax = dmeadusOrg
+    const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
 
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
@@ -298,9 +298,9 @@ bidule;1;22.2
   })
 
   test('should manage some other record list cases', async () => {
-    const ax = dmeadusOrg
+    const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
 
     const dataset = await sendDataset('datasets/dataset2.csv', ax)
 
@@ -321,9 +321,9 @@ bidule;1;22.2
   })
 
   test('should manage multi-values', async () => {
-    const ax = dmeadusOrg
+    const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -351,8 +351,8 @@ val 1;val 1, val 2
   })
 
   test('should manage date times', async () => {
-    const ax = dmeadusOrg
-    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+    const ax = testUser1Org
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -425,8 +425,8 @@ val 1;val 1, val 2
   })
 
   test('should manage corner cases of parquet export', async () => {
-    const ax = dmeadusOrg
-    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+    const ax = testUser1Org
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -474,8 +474,8 @@ val 1;val 1, val 2
   })
 
   test('manage case-sensitive sort', async () => {
-    const ax = dmeadusOrg
-    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+    const ax = testUser1Org
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
 
     let res = await ax.post('/api/v1/datasets/rest-insensitive', {
       isRest: true,
@@ -504,9 +504,9 @@ val 1;val 1, val 2
   })
 
   test('manages geo data', async () => {
-    const ax = dmeadusOrg
+    const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
 
     const dataset = await sendDataset('geo/geojson-example.geojson', ax)
 

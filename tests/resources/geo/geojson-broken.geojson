@@ -1,0 +1,16 @@
+{
+   "type": "FeatureCollection",
+   "features": [
+       {
+         "type":"Feature",
+         "geometry":{
+           "type":"MultiPolygon",
+           "coordinates":[[[[2.3644737,6.3887899],[2.3644312,6.3885919],[2.3645604,6.3885616],[2.3646087,6.3887574],[2.3645613,6.3887693],[2.364611,6.3889904],[2.3645073,6.3890169],[2.3644574,6.3887914],[2.3644737,6.3887899]]],[[[2.3644737,6.3887899],[2.3644574,6.3887914],[2.3644574,6.3887914],[2.3644737,6.3887899]]]]
+          },
+          "properties": {
+              "prop1": "value4",
+              "desc": "This is a a multi-polygons with a broken polygon (the last one has only 3 coordinates when duplicates are removed)"
+          }
+        }
+   ]
+}

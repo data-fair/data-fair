@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError } from '../../../support/workers.ts'
 
-const dmeadus = await axiosAuth('dmeadus0@answers.com')
-const cdurning2 = await axiosAuth('cdurning2@desdev.cn')
-const hlalonde3Org = await axiosAuth('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG')
+const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
 
 test.describe('virtual datasets core', () => {
   test.beforeEach(async () => {
@@ -17,7 +17,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Create an empty virtual dataset', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset' })
     await waitForDatasetError(ax, res.data.id)
     assert.equal(res.status, 201)
@@ -25,7 +25,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Create a new virtual dataset with predefined id', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
     await waitForDatasetError(ax, res.data.id)
     assert.equal(res.status, 201)
@@ -34,7 +34,7 @@ test.describe('virtual datasets core', () => {
 
   test('Create a virtual dataset with a child and query', async () => {
     // Send basic dataset
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -51,7 +51,7 @@ test.describe('virtual datasets core', () => {
 
   test('Create a virtual dataset with initFrom', async () => {
     // Send basic dataset
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'Description' })
     let res = await ax.post('/api/v1/datasets', {
@@ -74,7 +74,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Create a virtual dataset, add children and query', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset1 = await sendDataset('datasets/dataset1.csv', ax)
     const dataset2 = await sendDataset('datasets/dataset1.csv', ax)
     const dataset3 = await sendDataset('datasets/dataset1.csv', ax)
@@ -112,7 +112,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Check compatibility of schema with children', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -136,7 +136,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Compatibility is accepted for integer/number types', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const datasetNum = await sendDataset('datasets/dataset-number.csv', ax)
     let datasetInt = await sendDataset('datasets/dataset-integer.csv', ax)
     assert.equal(datasetInt.schema.find((p: any) => p.key === 'num').type, 'integer')
@@ -172,7 +172,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Check that column restriction is enforced (select, search, aggs)', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -227,7 +227,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Apply static filter', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -270,7 +270,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('Add another virtual dataset as child', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -313,7 +313,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('A virtual dataset without physical children cannot be queried', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -339,7 +339,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('A virtual dataset cannot have a child virtual dataset with filters (no way to enforce them)', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -375,7 +375,7 @@ test.describe('virtual datasets core', () => {
 
   test('A virtual dataset is updated after a child schema changes', async () => {
     // Send basic dataset
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -405,7 +405,7 @@ test.describe('virtual datasets core', () => {
   })
 
   test('A virtual dataset is updated after a child schema changes (2)', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     let dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -437,7 +437,7 @@ test.describe('virtual datasets core', () => {
 
   test('A virtual dataset is in error if children become inconsistent', async () => {
     // Send basic dataset
-    const ax = dmeadus
+    const ax = testUser1
     const dataset1 = await sendDataset('datasets/dataset1.csv', ax)
     const dataset2 = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
@@ -464,19 +464,19 @@ test.describe('virtual datasets core', () => {
   })
 
   test('A virtual dataset cannot have a private child from another owner', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    const res = await cdurning2.post('/api/v1/datasets', {
+    const res = await testUser3.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
         children: [dataset.id]
       }
     })
-    await waitForDatasetError(cdurning2, res.data.id)
+    await waitForDatasetError(testUser3, res.data.id)
 
-    await assert.rejects(cdurning2.get(`/api/v1/datasets/${res.data.id}/lines`), (err: any) => {
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${res.data.id}/lines`), (err: any) => {
       assert.equal(err.status, 501)
       assert.ok(err.data.includes('il utilise un jeu de données pour lequel ce compte n\'a pas de permission de lecture'))
       return true
@@ -484,45 +484,45 @@ test.describe('virtual datasets core', () => {
   })
 
   test('A virtual dataset can have a public child from another owner', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
       { classes: ['read'] }
     ])
 
-    const res = await cdurning2.post('/api/v1/datasets', {
+    const res = await testUser3.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
         children: [dataset.id]
       }
     })
-    const virtualDataset = await waitForFinalize(cdurning2, res.data.id)
+    const virtualDataset = await waitForFinalize(testUser3, res.data.id)
 
-    await cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    await testUser3.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 
   test('A user\'s virtual dataset can have a child from another owner with specific permissions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { classes: ['read'], type: 'user', id: 'cdurning2' }
+      { classes: ['read'], type: 'user', id: 'test_user3' }
     ])
 
-    const res = await cdurning2.post('/api/v1/datasets', {
+    const res = await testUser3.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
         children: [dataset.id]
       }
     })
-    const virtualDataset = await waitForFinalize(cdurning2, res.data.id)
+    const virtualDataset = await waitForFinalize(testUser3, res.data.id)
 
-    await cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    await testUser3.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 
   test('A user\'s virtual dataset can have a private child from another owner if an intermediate virtual dataset provides permissions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
     const res1 = await ax.post('/api/v1/datasets', {
@@ -534,37 +534,37 @@ test.describe('virtual datasets core', () => {
     })
     const virtualDataset1 = await waitForFinalize(ax, res1.data.id)
     await ax.put('/api/v1/datasets/' + virtualDataset1.id + '/permissions', [
-      { classes: ['read'], type: 'user', id: 'cdurning2' }
+      { classes: ['read'], type: 'user', id: 'test_user3' }
     ])
 
-    const res2 = await cdurning2.post('/api/v1/datasets', {
+    const res2 = await testUser3.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
         children: [virtualDataset1.id]
       }
     })
-    const virtualDataset2 = await waitForFinalize(cdurning2, res2.data.id)
+    const virtualDataset2 = await waitForFinalize(testUser3, res2.data.id)
 
-    await cdurning2.get(`/api/v1/datasets/${virtualDataset2.id}/lines`)
+    await testUser3.get(`/api/v1/datasets/${virtualDataset2.id}/lines`)
   })
 
   test('An org\'s virtual dataset can have a child from another owner with specific permissions', async () => {
-    const ax = dmeadus
+    const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { classes: ['read'], type: 'organization', id: 'KWqAGZ4mG' }
+      { classes: ['read'], type: 'organization', id: 'test_org1' }
     ])
 
-    const res = await hlalonde3Org.post('/api/v1/datasets', {
+    const res = await testUser4Org.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
         children: [dataset.id]
       }
     })
-    const virtualDataset = await waitForFinalize(hlalonde3Org, res.data.id)
+    const virtualDataset = await waitForFinalize(testUser4Org, res.data.id)
 
-    await hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
 })

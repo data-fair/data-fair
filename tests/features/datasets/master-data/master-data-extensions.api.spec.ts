@@ -7,7 +7,7 @@ import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, restCollectionFindOne, waitForJournalEvent } from '../../../support/workers.ts'
 import FormData from 'form-data'
 
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
 
 const initMaster = async (ax: any, info: any, masterData: any, id = 'master') => {
   if (Array.isArray(masterData)) {
@@ -29,7 +29,7 @@ const initMaster = async (ax: any, info: any, masterData: any, id = 'master') =>
 
   await ax.post('/api/v1/_check-api', apiDoc)
 
-  const remoteService = (await superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
+  const remoteService = (await testSuperadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
 
   return { master, remoteService, apiDoc }
 }
@@ -51,7 +51,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
   })
 
   test('should define and use a dataset as master-data remote-service used for extensions', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     const { remoteService, apiDoc, master } = await initMaster(
       ax,
@@ -286,7 +286,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     assert.equal(results[0]['siretextextra'], 'Extra information 2')
 
     // forcing a reindex has no effect
-    await superadmin.post('/api/v1/datasets/slave/_reindex')
+    await testSuperadmin.post('/api/v1/datasets/slave/_reindex')
     slave = await waitForFinalize(ax, 'slave')
     assert.equal(slave.schema.find((p: any) => p.key === '_siret.extra'), undefined)
     assert.equal(slave.schema.find((p: any) => p.key === 'siretextra'), undefined)
@@ -314,7 +314,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
   })
 
   test('accept an input with elasticsearch special chars', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -351,7 +351,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
   })
 
   test('manage query syntax errors', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -396,7 +396,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
   })
 
   test('should extend a geojson file from a master-data dataset', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     const { remoteService } = await initMaster(
       ax,
@@ -471,7 +471,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
   })
 
   test('not return calculated properties', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     const { remoteService } = await initMaster(
       ax,

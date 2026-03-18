@@ -11,8 +11,8 @@ import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import * as workers from '../api/src/workers/index.ts'
 import testEvents from '@data-fair/data-fair-api/src/misc/utils/test-events.ts'
 
-const dmeadus = await getAxiosAuth('dmeadus0@answers.com', 'passwd')
-const superadmin = await getAxiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
+const dmeadus = await getAxiosAuth('dmeadus0@answers.com')
+const superadmin = await getAxiosAuth('superadmin@test.com', undefined, true)
 
 describe('Extensions', function () {
   before(startApiServer)

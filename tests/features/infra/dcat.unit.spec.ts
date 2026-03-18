@@ -5,8 +5,8 @@ import fs from 'node:fs'
 import dcatNormalize from '../../../api/src/misc/utils/dcat/normalize.js'
 import dcatValidate from '../../../api/src/misc/utils/dcat/validate.js'
 
-const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '../../../test-it/resources/dcat/ods-export.rdf'), 'utf-8')
-const semiceuExample = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../../../test-it/resources/dcat/example-semiceu.json'), 'utf8'))
+const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '../../../tests/resources/dcat/ods-export.rdf'), 'utf-8')
+const semiceuExample = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../../../tests/resources/dcat/example-semiceu.json'), 'utf8'))
 
 test.describe('DCAT validation', () => {
   test('Read a XML+RDF DCAT export', async () => {

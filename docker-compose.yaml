@@ -70,7 +70,7 @@ services:
     environment:
       - PORT=${SD_PORT}
       - DEBUG=webhooks,auth
-      - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
+      - ADMINS=["alban.mouton@koumoul.com", "test_superadmin@test.com"]
       - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:${NGINX_PORT1}/api/v1/identities", "key": "dev_secret"}]'
       - PUBLIC_URL=http://localhost:${NGINX_PORT1}/simple-directory
       - PRIVATE_EVENTS_URL=http://events:${EVENTS_PORT}

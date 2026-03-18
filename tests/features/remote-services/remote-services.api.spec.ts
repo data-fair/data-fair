@@ -6,10 +6,10 @@ import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../su
 import { setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
 
 const anonymous = axios()
-const superadmin = await axiosAuth('superadmin@test.com', 'superpasswd', undefined, true)
-const cdurning2 = await axiosAuth('cdurning2@desdev.cn')
+const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser3 = await axiosAuth('test_user3@test.com')
 
-const geocoderApi = JSON.parse(readFileSync(path.resolve('./test-it/resources/geocoder-api.json'), 'utf8'))
+const geocoderApi = JSON.parse(readFileSync(path.resolve('./tests/resources/geocoder-api.json'), 'utf8'))
 
 test.describe('remote-services', () => {
   test.beforeEach(async () => {
@@ -29,7 +29,7 @@ test.describe('remote-services', () => {
   })
 
   test('Post a minimal external API, read it, update it and delete it', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
     geocoderApi.info['x-api-id'] = 'geocoder2'
     let res = await ax.post('/api/v1/remote-services', { apiDoc: geocoderApi, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
     assert.equal(res.status, 201)
@@ -46,7 +46,7 @@ test.describe('remote-services', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.title, 'Test external api')
     // Permissions
-    const ax1 = cdurning2
+    const ax1 = testUser3
     await assert.rejects(
       ax1.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' }),
       { status: 403 }
@@ -72,7 +72,7 @@ test.describe('remote-services', () => {
   })
 
   test('Handle timeout errors from proxied service', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     // Register a mock route with a 60s delay to trigger the proxy timeout
     await setupMockRoute({
@@ -91,7 +91,7 @@ test.describe('remote-services', () => {
   })
 
   test('Prevent abusing remote service re-exposition', async () => {
-    const ax = superadmin
+    const ax = testSuperadmin
 
     // it is necessary to create an application, only applications are allowed to use remote-services' proxies
     const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
