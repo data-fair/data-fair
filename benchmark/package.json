@@ -1,0 +1,15 @@
+{
+  "name": "@data-fair/data-fair-benchmark",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/index.ts"
+  },
+  "dependencies": {
+    "autocannon": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/autocannon": "^7.12.0"
+  }
+}

@@ -3,7 +3,8 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development node --watch --experimental-strip-types --disable-warning=ExperimentalWarning index.ts",
-    "dev-memory": "DEBUG_HEAP=* NODE_ENV=development node --expose-gc --watch --experimental-strip-types --disable-warning=ExperimentalWarning index.ts"
+    "dev-memory": "DEBUG_HEAP=* NODE_ENV=development node --expose-gc --watch --experimental-strip-types --disable-warning=ExperimentalWarning index.ts",
+    "dev-benchmark": "NODE_ENV=benchmark node --watch --experimental-strip-types --disable-warning=ExperimentalWarning index.ts"
   },
   "imports": {
     "#config": "./src/config.ts",
