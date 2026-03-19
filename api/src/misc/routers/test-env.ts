@@ -42,7 +42,7 @@ router.delete('/', async (req, res, next) => {
       mongo.applications.deleteMany(testOwnerFilter),
       mongo.db.collection('journals').deleteMany(testOwnerFilter),
       mongo.settings.deleteMany(testIdFilter),
-      mongo.limits.deleteMany(testIdFilter),
+      mongo.limits.deleteMany({}),
       // collections without owner (blanket delete)
       mongo.applicationsKeys.deleteMany({}),
       mongo.db.collection('locks').deleteMany({}),
