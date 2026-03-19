@@ -3,7 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mongo from '#mongo'
 import { reqSession, assertAccountRole } from '@data-fair/lib-express'
 import * as permissions from '../misc/utils/permissions.ts'
-import { buildPostSearchPage, extractPortalId } from './utils.ts'
+import { buildPostSearchPage, extractPortalId } from './operations.ts'
 
 const router = express.Router()
 export default router
