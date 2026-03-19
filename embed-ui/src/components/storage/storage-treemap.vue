@@ -19,7 +19,7 @@
           flat
         >
           <v-card-title
-            class="text-subtitle-1 py-0 px-2"
+            class="text-title-medium py-0 px-2"
             :title="box.data.tooltip"
           >
             <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">

@@ -2,7 +2,7 @@
   <v-container>
     <v-row>
       <v-col>
-        <h2 class="text-h6 mb-4">
+        <h2 class="text-title-large mb-4">
           Modèles d'application
         </h2>
         <v-row>
@@ -111,7 +111,7 @@
     >
       <v-card v-if="currentBaseApp && patch">
         <v-card-title primary-title>
-          <h3 class="text-h6 mb-0">
+          <h3 class="text-title-large mb-0">
             Édition de {{ currentBaseApp.title }}
           </h3>
         </v-card-title>

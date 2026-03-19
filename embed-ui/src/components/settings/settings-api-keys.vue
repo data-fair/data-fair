@@ -102,7 +102,7 @@
         rounded="0"
       >
         <v-card-title class="d-flex justify-space-between align-center">
-          <h4 class="text-h6">
+          <h4 class="text-title-large">
             {{ apiKey.title }}
           </h4>
           <settings-api-key-use-menu />

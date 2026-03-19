@@ -27,7 +27,7 @@
             flat
             style="background-color:transparent"
           >
-            <v-toolbar-title class="text-h5">
+            <v-toolbar-title class="text-title-large">
               {{ title }}
             </v-toolbar-title>
             <template #extension>

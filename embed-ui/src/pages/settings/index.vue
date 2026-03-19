@@ -10,7 +10,7 @@
           href="https://data-fair.github.io/3/user-guide-backoffice/parameters"
           persistent
         />
-        <h2 class="mb-4">
+        <h2 class="text-title-large mb-4">
           Paramètres de l'{{ settingsAccount.type ==='organization' ? ('organisation ' + settingsAccount.name): ('utilisateur ' + settingsAccount.name) }} {{ settingsAccount.department ? (' / ' + (settingsAccount.departmentName ?? settingsAccount.department)) : '' }}
         </h2>
         <p v-if="settingsAccount.type ==='organization'">

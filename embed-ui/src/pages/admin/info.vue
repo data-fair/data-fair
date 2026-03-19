@@ -15,7 +15,7 @@
       v-for="service of services"
       :key="service.name"
     >
-      <h2 class="text-h6 mt-4">
+      <h2 class="text-title-large mt-4">
         {{ t('services.' + service.name) }}
       </h2>
       <v-alert

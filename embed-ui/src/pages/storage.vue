@@ -2,7 +2,7 @@
   <v-container>
     <v-row>
       <v-col>
-        <h2 class="mb-2">
+        <h2 class="text-title-large mb-2">
           {{ t('statistics') }}
         </h2>
         <v-sheet :loading="!stats">
@@ -39,7 +39,7 @@
           </v-data-table>
         </v-sheet>
 
-        <h2 class="my-3">
+        <h2 class="text-title-large my-3">
           {{ t('details') }}
         </h2>
 

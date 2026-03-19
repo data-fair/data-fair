@@ -45,7 +45,7 @@
         <p v-safe-html="event.data" />
       </v-list-item-subtitle>
       <template #append>
-        <span class="text-caption default">
+        <span class="text-body-small default">
           {{ event.date ? dayjs(event.date).format('lll') : dayjs().format('lll') }}
         </span>
       </template>

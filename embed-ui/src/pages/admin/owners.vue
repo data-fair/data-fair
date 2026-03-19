@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container>
-    <h2 class="text-h6 mb-4">
+    <h2 class="text-title-large mb-4">
       Propriétaires
     </h2>
 
