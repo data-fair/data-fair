@@ -40,7 +40,18 @@ const isOneOf = (value: string, values: string[]): boolean => values.includes(va
 const booleanRegexp = new RegExp(`^${trimablePrefix}(0|1|-1|true|false|vrai|faux|oui|non|yes|no)${trimablePrefix}$`, 'i')
 const dateTimeSchema = ajv.compile({ type: 'string', format: 'date-time' })
 const dateSchema = ajv.compile({ type: 'string', format: 'date' })
-const hasDateFormat = (format: string) => (value: string): boolean => moment(value, format, true).isValid()
+// build an array with both the original and zero-padded variant (D->DD, M->MM, etc.)
+// to handle strict mode in moment >= 2.30 where D won't match '01' etc.
+const dateFormatsWithPadded = (format: string): string[] => {
+  const paddedFormat = format
+    .replace(/\bD\b/g, 'DD').replace(/\bM\b/g, 'MM')
+    .replace(/\bH\b/g, 'HH').replace(/\bm\b/g, 'mm').replace(/\bs\b/g, 'ss')
+  return paddedFormat !== format ? [format, paddedFormat] : [format]
+}
+const hasDateFormat = (format: string) => {
+  const formats = dateFormatsWithPadded(format)
+  return (value: string): boolean => moment(value, formats, true).isValid()
+}
 
 function checkAll (values: string[], check: (val: string, param?: any) => boolean, param?: any, throwIfAlmost?: string): boolean {
   const definedValues = values
@@ -130,7 +141,7 @@ export const format = (value: any, prop: any, fileProp?: any, ignoreSeparator?: 
   if (prop.type === 'string' && prop.format === 'date') {
     const dateFormat = (fileProp && fileProp.dateFormat) || prop.dateFormat
     if (dateFormat) {
-      const date = moment(value, dateFormat, true)
+      const date = moment(value, dateFormatsWithPadded(dateFormat), true)
       if (date.isValid()) return date.format('YYYY-MM-DD')
     }
   }
@@ -139,7 +150,7 @@ export const format = (value: any, prop: any, fileProp?: any, ignoreSeparator?: 
     const dateTimeFormat = (fileProp && fileProp.dateTimeFormat) || prop.dateTimeFormat
     if (dateTimeFormat) {
       const timeZone = prop.timeZone || defaultTimeZone
-      const date = moment.tz(value, dateTimeFormat, true, timeZone)
+      const date = moment.tz(value, dateFormatsWithPadded(dateTimeFormat), true, timeZone)
       if (date.isValid()) return date.format()
     } else {
       if (value[10] !== 'T') value = value.substring(0, 10) + 'T' + value.substring(11)
