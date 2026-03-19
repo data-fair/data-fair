@@ -83,13 +83,13 @@ RUN npm run build-types
 ##########################
 FROM installer AS builder
 
-ADD ui ui 
-RUN mkdir -p /app/ui/node_modules
+ADD ui ui
 ADD api/types api/types
 ADD api/src/config.ts api/src/config.ts
 RUN mkdir -p /app/api/node_modules
 ADD shared shared
 RUN mkdir -p /app/shared/node_modules
+RUN npm --prefix ui install --no-audit --no-fund
 ENV NODE_ENV=production
 RUN npm run build
 
