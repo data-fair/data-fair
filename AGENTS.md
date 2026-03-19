@@ -36,26 +36,38 @@ Port numbers are defined in `.env`. Do not modify port assignments.
 
 ### Testing
 
-The test suite is very long, when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
+The test suite uses Playwright as test runner with three sub-projects: `unit`, `api`, and `e2e`. Tests are organized by feature under `tests/features/`. The test suite is very long — when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
 
 ```bash
-# Start test dependencies (Mongo, ES, MinIO), these will usually already be started when an AI agent is used
-npm run test-deps        
 # Run all tests
 npm test
-# Run a specific test
-npm run test-base test-it/<test-name>.ts -t "test name"
+# Run a specific sub-project
+npm run test-unit
+npm run test-api
+npm run test-e2e
+# Run a specific test file
+npx playwright test tests/features/datasets/bulk.api.spec.ts
+# Run a specific test by name
+npx playwright test tests/features/datasets/bulk.api.spec.ts -g "test name"
 ```
 
-**Test conventions:**
-- Use `describe`, `it`, `before`, `after`, `beforeEach`, `afterEach` from `node:test`
-- Use `assert.rejects(promise, { status: XXX })` instead of try-catch blocks for error assertions
-- Import utilities from `./test-it/utils/index.ts`
-- Import workers dynamically: `const workers = await import('../api/src/workers/index.ts')`
-- Use absolute paths for resources: `path.resolve(import.meta.dirname, '../test-it/resources/...')`
-- Type annotations often needed for callback functions: `(err: any) => err.key`
+**File naming convention:**
+- `*.unit.spec.ts` — pure unit tests (no server needed)
+- `*.api.spec.ts` — API tests (HTTP-only, depend on `state-setup` project)
+- `*.e2e.spec.ts` — end-to-end browser tests (depend on `state-setup` project, use Desktop Chrome)
 
-**Note:** Some tests use large datasets and may hit storage limits. The test config sets `datasetStorage: 160000` bytes.
+**Test structure:**
+- `tests/features/` — test specs organized by feature (datasets, auth, remote-services, etc.)
+- `tests/support/` — shared utilities (axios, events, workers)
+- `tests/fixtures/` — Playwright fixtures
+- `tests/resources/` — test data files
+- `tests/state-setup.ts` / `tests/state-teardown.ts` — global state lifecycle
+
+**Test conventions:**
+- Use `test` from `@playwright/test`
+- In `e2e` tests use `expect` from `@playwright/test`, in `unit` and `api` tests use standard nodejs asserts.
+- Tests interact with the API via HTTP (no direct DB access from tests)
+- Import utilities from `tests/support/`
 
 ### Linting & Type Checking
 
