@@ -27,7 +27,7 @@
     "build-parser-group-by": "peggy --dts --format es --output api/src/api-compat/ods/group-by.peg.js api/src/api-compat/ods/group-by.pegjs api/src/api-compat/ods/lexic.pegjs && sed -i '1i // @ts-nocheck' api/src/api-compat/ods/group-by.peg.js",
     "build-parser-aliases": "peggy --dts --format es --output api/src/api-compat/ods/aliases.peg.js api/src/api-compat/ods/aliases.pegjs api/src/api-compat/ods/lexic.pegjs && sed -i '1i // @ts-nocheck' api/src/api-compat/ods/aliases.peg.js",
     "build-parser-refine": "peggy --dts --format es --output api/src/api-compat/ods/refine.peg.js api/src/api-compat/ods/refine.pegjs api/src/api-compat/ods/lexic.pegjs && sed -i '1i // @ts-nocheck' api/src/api-compat/ods/refine.peg.js",
-    "postinstall": "patch-package",
+    "postinstall": "patch-package && cp -rn node_modules/vue-server-renderer ui/node_modules/vue-server-renderer 2>/dev/null || true",
     "prepare": "husky || true",
     "check-types": "tsc && tsc -p test-it/tsconfig.json && npm -w embed-ui run check-types",
     "quality": "npm run lint && npm run build-types && npm -w embed-ui run check-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm test && npm audit --omit=dev --audit-level=critical",
