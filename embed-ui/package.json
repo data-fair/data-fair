@@ -20,10 +20,10 @@
   "devDependencies": {
     "@data-fair/frame": "^0.14.0",
     "@data-fair/lib-vue": "^1.25.3",
-    "@data-fair/lib-vuetify": "^1.13.1",
+    "@data-fair/lib-vuetify": "^2.0.0",
     "@intlify/unplugin-vue-i18n": "^6.0.5",
-    "@koumoul/vjsf": "^3.17.1",
-    "@koumoul/vjsf-markdown": "^0.4.2",
+    "@koumoul/vjsf": "^4.0.0",
+    "@koumoul/vjsf-markdown": "^0.5.0",
     "@mdi/js": "^7.4.47",
     "@turf/bbox": "^7.2.0",
     "@turf/bbox-polygon": "^7.2.0",
@@ -37,7 +37,7 @@
     "deep-object-diff": "^1.1.9",
     "dompurify": "^3.2.4",
     "dot-prop": "^9.0.0",
-    "eslint-plugin-vuetify": "^2.5.1",
+    "eslint-plugin-vuetify": "^2.7.2",
     "http-link-header": "^1.1.3",
     "maplibre-gl": "^5.11.0",
     "ofetch": "^1.4.1",
@@ -46,12 +46,12 @@
     "unplugin-auto-import": "^0.18.3",
     "unplugin-vue-components": "^0.27.4",
     "vite": "^6.3.5",
-    "vite-plugin-vuetify": "^2.1.1",
+    "vite-plugin-vuetify": "^2.1.3",
     "vue": "^3.5.13",
     "vue-component-type-helpers": "^3.2.4",
     "vue-i18n": "^11.1.2",
     "vue-router": "^5.0.0",
     "vue-tsc": "^2.1.10",
-    "vuetify": "^3.11.8"
+    "vuetify": "^4.0.0"
   }
 }

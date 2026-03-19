@@ -6,7 +6,11 @@ import dfLibRecommended from '@data-fair/lib-utils/eslint/recommended.js'
 export default [
   ...dfLibRecommended,
   ...pluginVue.configs['flat/recommended'],
-  ...pluginVuetify.configs['flat/recommended'],
+  ...pluginVuetify.configs['flat/recommended'].map(c => {
+    // remove vue plugin to avoid "Cannot redefine plugin" conflict
+    const { vue, ...otherPlugins } = c.plugins || {}
+    return { ...c, plugins: otherPlugins }
+  }),
   ...neostandard({ ts: true }),
   {
     rules: {
