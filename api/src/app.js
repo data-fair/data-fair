@@ -148,7 +148,7 @@ export const run = async () => {
     app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
     app.use('/api/v1/settings', (await import('./misc/routers/settings.ts')).default)
     app.use('/api/v1/admin', (await import('./admin/router.js')).default)
-    app.use('/api/v1/identities', (await import('./misc/routers/identities.js')).default)
+    app.use('/api/v1/identities', (await import('./identities/router.js')).default)
     app.use('/api/v1/activity', (await import('./activity/router.js')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
