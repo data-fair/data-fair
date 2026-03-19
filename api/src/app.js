@@ -149,7 +149,7 @@ export const run = async () => {
     app.use('/api/v1/settings', (await import('./misc/routers/settings.ts')).default)
     app.use('/api/v1/admin', (await import('./misc/routers/admin.js')).default)
     app.use('/api/v1/identities', (await import('./misc/routers/identities.js')).default)
-    app.use('/api/v1/activity', (await import('./misc/routers/activity.js')).default)
+    app.use('/api/v1/activity', (await import('./activity/router.js')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
       app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./api-compat/ods/index.ts')).default)

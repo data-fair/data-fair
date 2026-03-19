@@ -2,7 +2,7 @@
 // for now we create something similar based on recently updated datasets and applications
 
 import express from 'express'
-import * as findUtils from '../utils/find.js'
+import * as findUtils from '../misc/utils/find.js'
 import mongo from '#mongo'
 
 const router = express.Router()
