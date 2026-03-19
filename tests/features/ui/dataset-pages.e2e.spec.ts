@@ -25,4 +25,9 @@ test.describe('dataset detail pages', () => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/api-doc`, 'test_user1')
     await expect(page.locator('d-frame, iframe')).toBeVisible({ timeout: 10000 })
   })
+
+  test('dataset edit-metadata page loads with sections', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
+    await expect(page.getByText(/Informations|Information/)).toBeVisible({ timeout: 10000 })
+  })
 })
