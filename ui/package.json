@@ -54,6 +54,8 @@
     "vue-i18n": "^11.1.2",
     "vue-router": "^5.0.0",
     "vue-tsc": "^2.1.10",
+    "slugify": "^1.6.6",
+    "vuedraggable": "^4.1.0",
     "vuetify": "^4.0.0"
   }
 }

@@ -1,6 +1,6 @@
 import { mdiTextShort, mdiTextLong, mdiFormatText, mdiCalendar, mdiClockOutline, mdiNumeric, mdiCheckboxMarkedCircleOutline, mdiCodeBraces, mdiCodeArray } from '@mdi/js'
 
-const propertyTypes = [
+export const propertyTypes = [
   { type: 'string', title: 'Texte', icon: mdiTextShort, 'x-capabilities': { textAgg: false }, maxLength: 200 },
   { type: 'string', 'x-display': 'textarea', title: 'Texte long', icon: mdiTextLong, 'x-capabilities': { index: false, values: false, textAgg: false, insensitive: false }, maxLength: 1000 },
   { type: 'string', 'x-display': 'markdown', title: 'Texte formatté', icon: mdiFormatText, 'x-capabilities': { index: false, values: false, textAgg: false, insensitive: false }, maxLength: 1000 },
