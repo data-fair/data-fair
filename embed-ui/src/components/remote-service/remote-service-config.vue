@@ -1,7 +1,6 @@
 <template>
   <v-container
     v-if="remoteService"
-    fluid
   >
     <v-select
       v-model="remoteService.server"

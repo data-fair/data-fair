@@ -2,7 +2,6 @@
 <template lang="html">
   <v-container
     v-if="dataset"
-    fluid
     class="pa-0"
   >
     <v-row class="mx-0">

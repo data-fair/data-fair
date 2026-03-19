@@ -51,7 +51,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -79,7 +79,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -111,7 +111,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -138,7 +138,7 @@
                 Configurez des métadonnées additionnelles pour vos jeux de données.
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <settings-datasets-metadata
                     v-model="settings.datasetsMetadata"
                     @update:model-value="patch.execute({datasetsMetadata: settings.datasetsMetadata})"
@@ -161,7 +161,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <settings-api-keys
                     v-model="settings.apiKeys"
                     @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
@@ -184,7 +184,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -213,7 +213,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-alert
                     type="warning"
                     variant="outlined"
@@ -251,7 +251,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -282,7 +282,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col>
                       <v-checkbox

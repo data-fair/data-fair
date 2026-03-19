@@ -1,7 +1,6 @@
 <template>
   <v-container
     v-if="dataset && publicationSitesFetch.data.value"
-    fluid
   >
     <p
       v-if="!publicationSitesFetch.data.value.length"

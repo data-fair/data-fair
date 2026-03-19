@@ -19,13 +19,13 @@
             <template #content="{tab}">
               <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="info">
-                  <v-container fluid>
+                  <v-container>
                     <remote-service-info v-model="remoteServiceEditFetch.data.value" />
                   </v-container>
                 </v-tabs-window-item>
 
                 <v-tabs-window-item value="extensions">
-                  <v-container fluid>
+                  <v-container>
                     <remote-service-schema :remote-service="remoteServiceEditFetch.data.value" />
                   </v-container>
                 </v-tabs-window-item>
@@ -45,7 +45,7 @@
             <template #content="{tab}">
               <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="params">
-                  <v-container fluid>
+                  <v-container>
                     <remote-service-config v-model="remoteServiceEditFetch.data.value" />
                   </v-container>
                 </v-tabs-window-item>
@@ -65,7 +65,6 @@
           >
             <template #content="{tab}">
               <v-container
-                fluid
                 class="pb-0"
               >
                 <tutorial-alert
@@ -76,7 +75,7 @@
               </v-container>
               <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="permissions">
-                  <v-container fluid>
+                  <v-container>
                     <v-row>
                       <v-col
                         cols="12"
@@ -90,7 +89,7 @@
                 </v-tabs-window-item>
 
                 <v-tabs-window-item value="virtual-datasets">
-                  <v-container fluid>
+                  <v-container>
                     <remote-service-virtual-datasets v-model="remoteServiceEditFetch.data.value" />
                   </v-container>
                 </v-tabs-window-item>
