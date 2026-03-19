@@ -56,10 +56,7 @@ defineProps<{ remoteService: RemoteService }>()
   left:0;
   top:0;
 }
-.theme--light .card-desc170:before {
-  background:linear-gradient(transparent 0, transparent 70%, white);
-}
-.theme--dark .card-desc170:before {
-  background:linear-gradient(transparent 0, transparent 70%, #1E1E1E);
+.card-desc170:before {
+  background: linear-gradient(transparent 0, transparent 70%, rgb(var(--v-theme-surface)));
 }
 </style>
