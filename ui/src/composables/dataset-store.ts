@@ -59,6 +59,57 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
     dataset.value = patchedDataset
   })
 
+  const resourceUrl = computed(() => `${$apiPath}/datasets/${id}`)
+
+  const applicationsFetch = useFetch<{ results: any[], count: number }>(() => {
+    if (!dataset.value?.finalizedAt) return null
+    return `${$apiPath}/applications`
+  }, {
+    query: computed(() => ({
+      dataset: id,
+      size: 100,
+      select: 'title,id'
+    })),
+    immediate: false,
+    watch: false
+  })
+
+  const dataFiles = computed(() => {
+    if (!dataset.value) return []
+    const files: { key: string, title: string, url: string }[] = []
+    const d = dataset.value
+    if (d.originalFile) {
+      files.push({
+        key: 'original',
+        title: d.originalFile.name,
+        url: `${$apiPath}/datasets/${id}/raw`
+      })
+    }
+    if (d.file && d.file.name !== d.originalFile?.name) {
+      files.push({
+        key: 'converted',
+        title: d.file.name,
+        url: `${$apiPath}/datasets/${id}/convert`
+      })
+    }
+    if (!d.isVirtual && !d.isMetaOnly && !d.isRest && d.finalizedAt) {
+      files.push({
+        key: 'full-csv',
+        title: `${d.slug || id}.csv`,
+        url: `${$apiPath}/datasets/${id}/full`
+      })
+    }
+    return files
+  })
+
+  const remove = async () => {
+    await $fetch('/datasets/' + id, { method: 'DELETE' })
+  }
+
+  const changeOwner = async (owner: { type: string, id: string, department?: string }) => {
+    await $fetch(`/datasets/${id}/owner`, { method: 'PUT', body: owner })
+  }
+
   return {
     id,
     draft,
@@ -77,7 +128,12 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
     digitalDocumentField,
     webPageField,
     can,
-    patchDataset
+    patchDataset,
+    resourceUrl,
+    applicationsFetch,
+    dataFiles,
+    remove,
+    changeOwner,
   }
 }
 
