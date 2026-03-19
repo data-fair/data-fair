@@ -1,10 +1,10 @@
 import express from 'express'
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
-import * as status from './status.js'
-import * as findUtils from '../utils/find.js'
-import { clean as cleanBaseApp } from '../../base-applications/operations.ts'
-import * as cacheHeaders from '../utils/cache-headers.js'
+import { getStatus } from './service.ts'
+import * as findUtils from '../misc/utils/find.js'
+import { clean as cleanBaseApp } from '../base-applications/operations.ts'
+import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import mongo from '#mongo'
 import { reqAdminMode } from '@data-fair/lib-express'
 
@@ -27,8 +27,9 @@ router.get('/info', async (req, res) => {
   res.json(info)
 })
 
-router.get('/status', (req, res, next) => {
-  status.status(req, res, next)
+router.get('/status', async (req, res, next) => {
+  const result = await getStatus(req)
+  res.send(result)
 })
 
 router.get('/datasets-errors', async (req, res, next) => {
