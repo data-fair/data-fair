@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
 
-test.describe('embed-ui settings pages', () => {
+test.describe('embed settings pages', () => {
   test.beforeEach(async () => {
     await clean()
   })

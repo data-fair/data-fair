@@ -37,8 +37,8 @@ npm -w parquet-writer run build
 echo "npm run build-types"
 npm run build-types
 
-echo "npm -w embed-ui run build"
-npm -w embed-ui run build
+echo "npm -w ui run build"
+npm -w ui run build
 
 echo "npm run test-deps"
 npm run test-deps

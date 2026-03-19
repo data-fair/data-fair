@@ -16,7 +16,7 @@
     "data",
     "parquet_writer",
     "ui",
-    "embed-ui",
+    "ui",
     "test-it"
   ]
 }

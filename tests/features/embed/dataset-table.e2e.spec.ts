@@ -2,7 +2,7 @@ import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 
-test.describe('embed-ui dataset table page', () => {
+test.describe('embed dataset table page', () => {
   test.beforeEach(async () => {
     await clean()
   })

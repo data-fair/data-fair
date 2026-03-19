@@ -16,13 +16,9 @@ layout {
     }
     pane {
       split_direction "vertical"
-      pane name="embed-ui" {
-        command "bash"
-        args "-ic" "nvm use && npm -w embed-ui run dev"
-      }
       pane name="ui" {
         command "bash"
-        args "-ic" "nvm use && npm run dev-ui"
+        args "-ic" "nvm use && npm -w ui run dev"
       }
       pane name="api" {
         command "bash"
