@@ -12,10 +12,10 @@ const port = parseInt(process.env.MOCK_PORT || '8999')
 const mockOrigin = `http://localhost:${port}`
 
 // Load API docs and patch server URLs to point to this mock server
-const geocoderApi = JSON.parse(readFileSync(resolve(__dirname, '../test-it/resources/geocoder-api.json'), 'utf8'))
+const geocoderApi = JSON.parse(readFileSync(resolve(__dirname, '../tests/resources/geocoder-api.json'), 'utf8'))
 geocoderApi.servers = [{ url: `${mockOrigin}/geocoder`, description: 'Mock server' }]
 
-const sireneApi = JSON.parse(readFileSync(resolve(__dirname, '../test-it/resources/sirene-api.json'), 'utf8'))
+const sireneApi = JSON.parse(readFileSync(resolve(__dirname, '../tests/resources/sirene-api.json'), 'utf8'))
 sireneApi.servers = [{ url: `${mockOrigin}/sirene`, description: 'Mock server' }]
 
 const html = `
