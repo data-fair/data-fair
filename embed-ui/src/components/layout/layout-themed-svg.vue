@@ -7,7 +7,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useTheme } from 'vuetify/lib/composables/theme.js'
+import { useTheme } from 'vuetify'
 
 const { source, color = 'primary' } = defineProps<{ source: string, color?: string }>()
 const theme = useTheme()

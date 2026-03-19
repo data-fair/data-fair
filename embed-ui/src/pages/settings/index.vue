@@ -344,7 +344,7 @@ import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import checklist2Svg from '~/assets/svg/Checklist_Two Color2.svg?raw'
 import infoSvg from '~/assets/svg/Sending emails_Monochromatic.svg?raw'
 import compatSvg from '~/assets/svg/Team building _Two Color.svg?raw'
-import { useDisplay } from 'vuetify/lib/composables/display.mjs'
+import { useDisplay } from 'vuetify'
 
 const { t } = useI18n()
 useHead({ title: t('pageTitle') })

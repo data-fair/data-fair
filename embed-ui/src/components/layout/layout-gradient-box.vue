@@ -8,7 +8,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useTheme } from 'vuetify/lib/composables/theme.mjs'
+import { useTheme } from 'vuetify'
 import microTemplate from '@data-fair/lib-utils/micro-template.js'
 
 const {
