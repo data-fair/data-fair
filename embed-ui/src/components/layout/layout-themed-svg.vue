@@ -14,9 +14,9 @@ const theme = useTheme()
 
 const themedSource = computed(() => {
   return source
-    .replace(/#6C63FF/gi, theme.current.value.colors[color]) // default undraw color
-    .replace(/#68E1FD/gi, theme.current.value.colors[color]) // default manypixels color
-    .replace(/#FFD200/gi, theme.current.value.colors.secondary)
+    .replace(/#6C63FF/gi, theme.current.value.colors[color] as string) // default undraw color
+    .replace(/#68E1FD/gi, theme.current.value.colors[color] as string) // default manypixels color
+    .replace(/#FFD200/gi, theme.current.value.colors.secondary as string)
     .replace(/style="isolation: isolate;"/gi, 'class="isolated-svg"')
 })
 </script>

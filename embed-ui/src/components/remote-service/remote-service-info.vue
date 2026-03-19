@@ -3,7 +3,7 @@
     <v-col
       cols="12"
       md="6"
-      order-md="2"
+      class="order-md-2"
     >
       <v-sheet v-if="remoteService.apiDoc">
         <v-list density="compact">
@@ -37,7 +37,7 @@
     <v-col
       cols="12"
       md="6"
-      order-md="1"
+      class="order-md-1"
     >
       <v-text-field
         v-model="remoteService.title"

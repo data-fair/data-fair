@@ -80,7 +80,7 @@
                       <v-col
                         cols="12"
                         md="6"
-                        order-md="2"
+                        class="order-md-2"
                       >
                         <private-access v-model="remoteServiceEditFetch.data.value" />
                       </v-col>
