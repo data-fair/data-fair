@@ -14,7 +14,7 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/data-fair/embed',
+  base: '/data-fair/',
   optimizeDeps: { include: [...commonjsDeps, 'easymde'] },
   build: {
     rollupOptions: {
@@ -74,7 +74,7 @@ export default defineConfig({
   ],
   experimental: {
     renderBuiltUrl (filename, { hostType }) {
-      if (hostType === 'html') return '{SITE_PATH}/data-fair/embed/' + filename
+      if (hostType === 'html') return '{SITE_PATH}/data-fair/' + filename
       return { relative: true }
     }
   },
