@@ -39,7 +39,7 @@ export const run = async () => {
   }
 
   if (config.mode.includes('server')) {
-    const limits = await import('./misc/utils/limits.ts')
+    const limits = await import('./limits/router.ts')
     const rateLimiting = await import('./misc/utils/rate-limiting.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
     const { reqIsInternal, reqHost, createSiteMiddleware } = await import('@data-fair/lib-express/index.js')
