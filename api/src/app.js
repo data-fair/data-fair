@@ -39,7 +39,7 @@ export const run = async () => {
   }
 
   if (config.mode.includes('server')) {
-    const limits = await import('./misc/utils/limits.ts')
+    const limits = await import('./limits/router.ts')
     const rateLimiting = await import('./misc/utils/rate-limiting.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
     const { reqIsInternal, reqHost, createSiteMiddleware } = await import('@data-fair/lib-express/index.js')
@@ -140,16 +140,16 @@ export const run = async () => {
     app.use('/api/v1', (await import('./misc/routers/root.ts')).default)
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
-    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./misc/routers/catalog.js')).default)
+    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.js')).default)
     app.use('/api/v1/search-pages', (await import('./search-pages/router.js')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
     app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
-    app.use('/api/v1/stats', apiKey('stats'), (await import('./misc/routers/stats.ts')).default)
-    app.use('/api/v1/settings', (await import('./misc/routers/settings.ts')).default)
-    app.use('/api/v1/admin', (await import('./misc/routers/admin.js')).default)
-    app.use('/api/v1/identities', (await import('./misc/routers/identities.js')).default)
-    app.use('/api/v1/activity', (await import('./misc/routers/activity.js')).default)
+    app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
+    app.use('/api/v1/settings', (await import('./settings/router.ts')).default)
+    app.use('/api/v1/admin', (await import('./admin/router.js')).default)
+    app.use('/api/v1/identities', (await import('./identities/router.js')).default)
+    app.use('/api/v1/activity', (await import('./activity/router.js')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
       app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./api-compat/ods/index.ts')).default)
@@ -266,7 +266,7 @@ export const run = async () => {
     const { readApiKey } = await import('./misc/utils/api-key.ts')
     await Promise.all([
       (await import('./misc/utils/cache.js')).init(),
-      (await import('./remote-services/utils.ts')).init(),
+      (await import('./remote-services/service.ts')).init(),
       (await import('./base-applications/router.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
         if (process.env.NODE_ENV === 'development') {

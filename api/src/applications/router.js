@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid'
 import applicationAPIDocs from '../../contract/application-api-docs.js'
 import * as ajv from '../misc/utils/ajv.ts'
 import applicationKeys from '../../contract/application-keys.js'
-import * as baseAppsUtils from '../base-applications/utils.js'
+import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as usersUtils from '../misc/utils/users.ts'
 import * as findUtils from '../misc/utils/find.js'
@@ -188,7 +188,7 @@ const readApplication = async (req, res, next) => {
 const readBaseApp = async (req, res, next) => {
   req.baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url })
   if (!req.baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
-  baseAppsUtils.clean(req.publicBaseUrl, req.baseApp)
+  cleanBaseApp(req.publicBaseUrl, req.baseApp)
   next()
 }
 
@@ -557,7 +557,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
 })
 
 router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), readBaseApp, cacheHeaders.noCache, async (req, res) => {
-  res.send(baseAppsUtils.clean(req.publicBaseUrl, req.baseApp, req.publicBaseUrl, req.query.html))
+  res.send(cleanBaseApp(req.publicBaseUrl, req.baseApp, req.publicBaseUrl, req.query.html))
 })
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {

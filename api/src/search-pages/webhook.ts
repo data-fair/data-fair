@@ -1,7 +1,7 @@
 import axios from 'axios'
 import config from '#config'
 import mongo from '#mongo'
-import { buildPostSearchPage, extractPortalId } from './utils.ts'
+import { buildPostSearchPage, extractPortalId } from './operations.ts'
 import debugModule from 'debug'
 
 const debug = debugModule('search-pages-webhook')

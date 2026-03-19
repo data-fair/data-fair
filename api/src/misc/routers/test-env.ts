@@ -77,7 +77,7 @@ router.delete('/', async (req, res, next) => {
     testEvents.removeAllListeners()
 
     // re-initialize remote services and base apps from config after cleanup
-    const { init: initRemoteServices } = await import('../../remote-services/utils.ts')
+    const { init: initRemoteServices } = await import('../../remote-services/service.ts')
     await initRemoteServices()
     const { init: initBaseApps } = await import('../../base-applications/router.ts')
     await initBaseApps()
@@ -158,7 +158,7 @@ router.post('/reload-base-apps', async (req, res, next) => {
 // Re-initialize remote services from config
 router.post('/reload-remote-services', async (req, res, next) => {
   try {
-    const { init } = await import('../../remote-services/utils.ts')
+    const { init } = await import('../../remote-services/service.ts')
     await init()
     res.json({ ok: true })
   } catch (err) {

@@ -17,6 +17,14 @@ git worktree add -b "$BRANCH_NAME" "$TARGET_DIR" $SOURCE_BRANCH
 
 cd $TARGET_DIR
 
+if [ -d "$OLDPWD/.claude" ]; then
+    echo "Copy local Claude settings"
+    mkdir -p .claude
+    for f in "$OLDPWD/.claude"/*.json; do
+        [ -f "$f" ] && cp "$f" .claude/
+    done
+fi
+
 echo "Create .env file"
 ./dev/init-env.sh
 
