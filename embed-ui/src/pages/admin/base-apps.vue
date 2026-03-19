@@ -46,7 +46,7 @@
               :key="baseApp.id"
             >
               <template #prepend>
-                <v-avatar tile>
+                <v-avatar rounded="0">
                   <img :src="baseApp.thumbnail as string">
                 </v-avatar>
               </template>

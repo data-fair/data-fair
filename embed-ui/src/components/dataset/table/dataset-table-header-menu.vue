@@ -11,7 +11,7 @@
   >
     <v-sheet
       class="pa-1"
-      tile
+      rounded="0"
       style="max-width: 450px"
     >
       <v-list
@@ -48,7 +48,7 @@
           <v-alert
             v-if="showHelp"
             variant="text"
-            tile
+            rounded="0"
             class="mt-0 mb-2 pa-2 description-alert"
             v-html="header.tooltip"
           />

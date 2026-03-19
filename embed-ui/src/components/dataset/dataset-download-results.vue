@@ -2,7 +2,7 @@
   <v-sheet>
     <v-alert
       type="info"
-      tile
+      rounded="0"
       variant="text"
       :icon="false"
       class="mb-0"
@@ -55,7 +55,7 @@
     <v-alert
       v-if="total > pageSize"
       type="warning"
-      tile
+      rounded="0"
       density="compact"
       variant="text"
       :icon="false"

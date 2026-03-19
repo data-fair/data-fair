@@ -3,7 +3,7 @@
   <v-card
     :to="`/remote-services/${encodeURIComponent(remoteService.id ?? '')}`"
     border
-    tile
+    rounded="0"
     hover
   >
     <v-card-title

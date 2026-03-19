@@ -15,7 +15,7 @@
       </p>
 
       <v-card
-        tile
+        rounded="0"
         border
       >
         <v-list>

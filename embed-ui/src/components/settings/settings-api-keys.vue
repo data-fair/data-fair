@@ -99,7 +99,7 @@
     >
       <v-card
         variant="outlined"
-        tile
+        rounded="0"
       >
         <v-card-title class="d-flex justify-space-between align-center">
           <h4 class="text-h6">

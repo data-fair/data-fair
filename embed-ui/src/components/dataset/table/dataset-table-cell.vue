@@ -11,7 +11,7 @@
     <template v-if="header.key === '_thumbnail'">
       <v-avatar
         v-if="result._thumbnail"
-        tile
+        rounded="0"
         :size="lineHeight"
       >
         <img :src="result._thumbnail">

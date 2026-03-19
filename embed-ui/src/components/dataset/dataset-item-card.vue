@@ -11,7 +11,7 @@
       <v-row class="ma-0">
         <v-avatar
           v-if="result._thumbnail"
-          tile
+          rounded="0"
           style="position:relative;top:-12px;left:-12px;"
         >
           <img :src="result._thumbnail">
