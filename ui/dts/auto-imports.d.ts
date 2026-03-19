@@ -79,6 +79,7 @@ declare global {
   const permissions: typeof import('../src/utils/permissions')['default']
   const propTypeIcon: typeof import('../src/utils/dataset')['propTypeIcon']
   const propTypeTitle: typeof import('../src/utils/dataset')['propTypeTitle']
+  const propertyTypes: typeof import('../src/utils/dataset')['propertyTypes']
   const provide: typeof import('vue')['provide']
   const provideApplicationStore: typeof import('../src/composables/application-store')['provideApplicationStore']
   const provideDatasetStore: typeof import('../src/composables/dataset-store')['provideDatasetStore']
@@ -230,6 +231,7 @@ declare module 'vue' {
     readonly permissions: UnwrapRef<typeof import('../src/utils/permissions')['default']>
     readonly propTypeIcon: UnwrapRef<typeof import('../src/utils/dataset')['propTypeIcon']>
     readonly propTypeTitle: UnwrapRef<typeof import('../src/utils/dataset')['propTypeTitle']>
+    readonly propertyTypes: UnwrapRef<typeof import('../src/utils/dataset')['propertyTypes']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['provideApplicationStore']>
     readonly provideDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['provideDatasetStore']>

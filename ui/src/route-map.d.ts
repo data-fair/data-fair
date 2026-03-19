@@ -33,6 +33,118 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/admin/catalogs-plugins': RouteRecordInfo<
+      '/admin/catalogs-plugins',
+      '/admin/catalogs-plugins',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/admin/processings-plugins': RouteRecordInfo<
+      '/admin/processings-plugins',
+      '/admin/processings-plugins',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/admin-extra/[id]': RouteRecordInfo<
+      '/admin-extra/[id]',
+      '/admin-extra/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/api-doc': RouteRecordInfo<
+      '/api-doc',
+      '/api-doc',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/application/[id]/': RouteRecordInfo<
+      '/application/[id]/',
+      '/application/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/application/[id]/api-doc': RouteRecordInfo<
+      '/application/[id]/api-doc',
+      '/application/:id/api-doc',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/application/[id]/config': RouteRecordInfo<
+      '/application/[id]/config',
+      '/application/:id/config',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/applications': RouteRecordInfo<
+      '/applications',
+      '/applications',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/catalogs': RouteRecordInfo<
+      '/catalogs',
+      '/catalogs',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/dataset/[id]/': RouteRecordInfo<
+      '/dataset/[id]/',
+      '/dataset/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dataset/[id]/api-doc': RouteRecordInfo<
+      '/dataset/[id]/api-doc',
+      '/dataset/:id/api-doc',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dataset/[id]/data': RouteRecordInfo<
+      '/dataset/[id]/data',
+      '/dataset/:id/data',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dataset/[id]/edit-data': RouteRecordInfo<
+      '/dataset/[id]/edit-data',
+      '/dataset/:id/edit-data',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dataset/[id]/edit-metadata': RouteRecordInfo<
+      '/dataset/[id]/edit-metadata',
+      '/dataset/:id/edit-metadata',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/datasets': RouteRecordInfo<
+      '/datasets',
+      '/datasets',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/department': RouteRecordInfo<
+      '/department',
+      '/department',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/embed/admin/base-apps': RouteRecordInfo<
       '/embed/admin/base-apps',
       '/embed/admin/base-apps',
@@ -229,6 +341,104 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/events': RouteRecordInfo<
+      '/events',
+      '/events',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/extra/[id]': RouteRecordInfo<
+      '/extra/[id]',
+      '/extra/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/me': RouteRecordInfo<
+      '/me',
+      '/me',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/metrics': RouteRecordInfo<
+      '/metrics',
+      '/metrics',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/new-application': RouteRecordInfo<
+      '/new-application',
+      '/new-application',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/new-dataset': RouteRecordInfo<
+      '/new-dataset',
+      '/new-dataset',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/notifications': RouteRecordInfo<
+      '/notifications',
+      '/notifications',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/organization': RouteRecordInfo<
+      '/organization',
+      '/organization',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/pages': RouteRecordInfo<
+      '/pages',
+      '/pages',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/portals': RouteRecordInfo<
+      '/portals',
+      '/portals',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/processings': RouteRecordInfo<
+      '/processings',
+      '/processings',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/reuses': RouteRecordInfo<
+      '/reuses',
+      '/reuses',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/share-dataset': RouteRecordInfo<
+      '/share-dataset',
+      '/share-dataset',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/subscription': RouteRecordInfo<
+      '/subscription',
+      '/subscription',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
   }
 
   /**
@@ -245,6 +455,102 @@ declare module 'vue-router/auto-routes' {
     'src/pages/index.vue': {
       routes:
         | '/'
+      views:
+        | never
+    }
+    'src/pages/admin/catalogs-plugins.vue': {
+      routes:
+        | '/admin/catalogs-plugins'
+      views:
+        | never
+    }
+    'src/pages/admin/processings-plugins.vue': {
+      routes:
+        | '/admin/processings-plugins'
+      views:
+        | never
+    }
+    'src/pages/admin-extra/[id].vue': {
+      routes:
+        | '/admin-extra/[id]'
+      views:
+        | never
+    }
+    'src/pages/api-doc.vue': {
+      routes:
+        | '/api-doc'
+      views:
+        | never
+    }
+    'src/pages/application/[id]/index.vue': {
+      routes:
+        | '/application/[id]/'
+      views:
+        | never
+    }
+    'src/pages/application/[id]/api-doc.vue': {
+      routes:
+        | '/application/[id]/api-doc'
+      views:
+        | never
+    }
+    'src/pages/application/[id]/config.vue': {
+      routes:
+        | '/application/[id]/config'
+      views:
+        | never
+    }
+    'src/pages/applications.vue': {
+      routes:
+        | '/applications'
+      views:
+        | never
+    }
+    'src/pages/catalogs.vue': {
+      routes:
+        | '/catalogs'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/index.vue': {
+      routes:
+        | '/dataset/[id]/'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/api-doc.vue': {
+      routes:
+        | '/dataset/[id]/api-doc'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/data.vue': {
+      routes:
+        | '/dataset/[id]/data'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/edit-data.vue': {
+      routes:
+        | '/dataset/[id]/edit-data'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/edit-metadata.vue': {
+      routes:
+        | '/dataset/[id]/edit-metadata'
+      views:
+        | never
+    }
+    'src/pages/datasets.vue': {
+      routes:
+        | '/datasets'
+      views:
+        | never
+    }
+    'src/pages/department.vue': {
+      routes:
+        | '/department'
       views:
         | never
     }
@@ -413,6 +719,90 @@ declare module 'vue-router/auto-routes' {
     'src/pages/embed/workflow/update-dataset.vue': {
       routes:
         | '/embed/workflow/update-dataset'
+      views:
+        | never
+    }
+    'src/pages/events.vue': {
+      routes:
+        | '/events'
+      views:
+        | never
+    }
+    'src/pages/extra/[id].vue': {
+      routes:
+        | '/extra/[id]'
+      views:
+        | never
+    }
+    'src/pages/me.vue': {
+      routes:
+        | '/me'
+      views:
+        | never
+    }
+    'src/pages/metrics.vue': {
+      routes:
+        | '/metrics'
+      views:
+        | never
+    }
+    'src/pages/new-application.vue': {
+      routes:
+        | '/new-application'
+      views:
+        | never
+    }
+    'src/pages/new-dataset.vue': {
+      routes:
+        | '/new-dataset'
+      views:
+        | never
+    }
+    'src/pages/notifications.vue': {
+      routes:
+        | '/notifications'
+      views:
+        | never
+    }
+    'src/pages/organization.vue': {
+      routes:
+        | '/organization'
+      views:
+        | never
+    }
+    'src/pages/pages.vue': {
+      routes:
+        | '/pages'
+      views:
+        | never
+    }
+    'src/pages/portals.vue': {
+      routes:
+        | '/portals'
+      views:
+        | never
+    }
+    'src/pages/processings.vue': {
+      routes:
+        | '/processings'
+      views:
+        | never
+    }
+    'src/pages/reuses.vue': {
+      routes:
+        | '/reuses'
+      views:
+        | never
+    }
+    'src/pages/share-dataset.vue': {
+      routes:
+        | '/share-dataset'
+      views:
+        | never
+    }
+    'src/pages/subscription.vue': {
+      routes:
+        | '/subscription'
       views:
         | never
     }
