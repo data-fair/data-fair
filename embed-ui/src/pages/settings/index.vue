@@ -10,7 +10,7 @@
           href="https://data-fair.github.io/3/user-guide-backoffice/parameters"
           persistent
         />
-        <h2 class="mb-4">
+        <h2 class="text-title-large mb-4">
           Paramètres de l'{{ settingsAccount.type ==='organization' ? ('organisation ' + settingsAccount.name): ('utilisateur ' + settingsAccount.name) }} {{ settingsAccount.department ? (' / ' + (settingsAccount.departmentName ?? settingsAccount.department)) : '' }}
         </h2>
         <p v-if="settingsAccount.type ==='organization'">
@@ -51,7 +51,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -79,7 +79,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -111,7 +111,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -138,7 +138,7 @@
                 Configurez des métadonnées additionnelles pour vos jeux de données.
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <settings-datasets-metadata
                     v-model="settings.datasetsMetadata"
                     @update:model-value="patch.execute({datasetsMetadata: settings.datasetsMetadata})"
@@ -161,7 +161,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <settings-api-keys
                     v-model="settings.apiKeys"
                     @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
@@ -184,7 +184,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -213,7 +213,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-alert
                     type="warning"
                     variant="outlined"
@@ -251,7 +251,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col
                       cols="12"
@@ -282,7 +282,7 @@
                 </p>
               </template>
               <template #content>
-                <v-container fluid>
+                <v-container>
                   <v-row>
                     <v-col>
                       <v-checkbox
@@ -344,7 +344,7 @@ import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import checklist2Svg from '~/assets/svg/Checklist_Two Color2.svg?raw'
 import infoSvg from '~/assets/svg/Sending emails_Monochromatic.svg?raw'
 import compatSvg from '~/assets/svg/Team building _Two Color.svg?raw'
-import { useDisplay } from 'vuetify/lib/composables/display.mjs'
+import { useDisplay } from 'vuetify'
 
 const { t } = useI18n()
 useHead({ title: t('pageTitle') })

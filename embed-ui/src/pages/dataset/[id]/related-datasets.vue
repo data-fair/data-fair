@@ -1,6 +1,5 @@
 <template lang="html">
   <v-container
-    fluid
     data-iframe-height
     style="min-height:500px;"
     class="bg-surface"

@@ -4,7 +4,7 @@
       Aucun jeu de données en erreur
     </p>
     <template v-else-if="datasetsErrorsFetch.data.value">
-      <h3 class="text-h6">
+      <h3 class="text-title-large">
         Jeux de données en erreur
       </h3>
       <v-sheet
@@ -46,7 +46,7 @@
       Aucun jeu de données avec avertissements Elasticsearch
     </p>
     <template v-else-if="datasetsEsWarningsFetch.data.value">
-      <h3 class="text-h6">
+      <h3 class="text-title-large">
         Jeux de données avec avertissements Elasticsearch
       </h3>
       <v-sheet
@@ -88,7 +88,7 @@
       Aucune application en erreur
     </p>
     <template v-else-if="applicationsErrorsFetch.data.value">
-      <h3 class="text-h6">
+      <h3 class="text-title-large">
         Applications en erreur
       </h3>
       <v-sheet
@@ -119,7 +119,7 @@
       Aucune application avec brouillon en erreur
     </p>
     <template v-else-if="applicationsDraftErrorsFetch.data.value">
-      <h3 class="text-h6">
+      <h3 class="text-title-large">
         Applications avec brouillon en erreur
       </h3>
       <v-sheet

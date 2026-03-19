@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <h2 class="text-h4 mb-4">
+    <h2 class="text-headline-small mb-4">
       Data Fair dev
     </h2>
 

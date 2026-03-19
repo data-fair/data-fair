@@ -155,7 +155,7 @@
               </v-btn>
 
               <h3
-                class="text-h6 mt-4"
+                class="text-title-large mt-4"
               >
                 {{ t('formats') }}
               </h3>

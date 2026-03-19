@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="total !== null"
-    class="text-caption"
+    class="text-body-small"
     style="line-height: 1;"
   >
     <template v-if="!limit || total <= limit">

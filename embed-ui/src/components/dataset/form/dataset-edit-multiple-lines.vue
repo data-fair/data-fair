@@ -142,9 +142,9 @@ watch(() => lines, initPatch, { immediate: true })
 <style lang="css">
 .vjsf-property.heterogenous {
   border: 1px solid grey;
-  padding: 4px !important;
-  margin-top: 4px !important;
-  margin-bottom: 4px !important;
+  padding: 4px;
+  margin-top: 4px;
+  margin-bottom: 4px;
   border-radius: 4px;
 }
 </style>

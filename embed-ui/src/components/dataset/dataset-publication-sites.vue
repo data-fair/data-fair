@@ -1,7 +1,6 @@
 <template>
   <v-container
     v-if="dataset && publicationSitesFetch.data.value"
-    fluid
   >
     <p
       v-if="!publicationSitesFetch.data.value.length"
@@ -15,7 +14,7 @@
       </p>
 
       <v-card
-        tile
+        rounded="0"
         border
       >
         <v-list>

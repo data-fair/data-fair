@@ -11,7 +11,7 @@
       <v-row class="ma-0">
         <v-avatar
           v-if="result._thumbnail"
-          tile
+          rounded="0"
           style="position:relative;top:-12px;left:-12px;"
         >
           <img :src="result._thumbnail">
@@ -49,7 +49,7 @@
             @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key] as ExtendedResultValue))"
             @mouseleave="emit('hoverstop')"
           >
-            <div class="text-caption mt-2">
+            <div class="text-body-small mt-2">
               {{ header.title }}
             </div>
             <dataset-item-value-multiple

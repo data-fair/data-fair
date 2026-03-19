@@ -1,6 +1,6 @@
 <template>
   <v-autocomplete
-    v-model:search-input="search"
+    v-model:search="search"
     :model-value="value"
     :items="datasets"
     :loading="searchDatasets.loading.value"
@@ -17,9 +17,9 @@
     clearable
     @update:model-value="dataset => {value = dataset}"
   >
-    <template #item="{item}">
+    <template #item="{internalItem}">
       <dataset-list-item
-        :dataset="item"
+        :dataset="internalItem.raw"
         :dense="true"
         :show-topics="true"
         :no-link="true"

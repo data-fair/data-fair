@@ -54,7 +54,7 @@ const dataLayers: LayerSpecification[] = [{
   source: 'bounds',
   type: 'line',
   paint: {
-    'line-color': theme.current.value.colors.primary,
+    'line-color': theme.current.value.colors.primary as string,
     'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.5, 24, 9]
   }
 }]

@@ -27,7 +27,7 @@
             flat
             style="background-color:transparent"
           >
-            <v-toolbar-title class="text-h5">
+            <v-toolbar-title class="text-title-large">
               {{ title }}
             </v-toolbar-title>
             <template #extension>
@@ -71,8 +71,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useDisplay } from 'vuetify/lib/composables/display.js'
-import { useTheme } from 'vuetify/lib/composables/theme.mjs'
+import { useDisplay, useTheme } from 'vuetify'
 
 type TabInfo = { key: string, title: string, icon?: string, appendIcon?: string, color?: string } | null
 

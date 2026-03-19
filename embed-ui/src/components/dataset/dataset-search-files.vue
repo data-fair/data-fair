@@ -48,7 +48,7 @@
 
           <a :href="item.raw._attachment_url || item.raw[digitalDocumentField!.key]">{{ item.raw[digitalDocumentField!.key] }}</a>
           <p
-            class="text-body-1"
+            class="text-body-large"
             style="word-break:break-word;"
             v-html="item.raw._highlight['_file.content'].join('... ')"
           />

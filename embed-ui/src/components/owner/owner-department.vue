@@ -5,7 +5,7 @@
   >
     <template #activator="{props}">
       <span
-        class="text-body-2 ml-1"
+        class="text-body-medium ml-1"
         v-bind="props"
       >
         <v-avatar :size="28">

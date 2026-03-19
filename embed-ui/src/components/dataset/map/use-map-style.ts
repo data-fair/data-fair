@@ -3,8 +3,8 @@ import { useTheme } from 'vuetify'
 
 export const useMapStyle = () => {
   const theme = useTheme()
-  const primary = theme.current.value.colors.primary
-  const accent = theme.current.value.colors.accent
+  const primary = theme.current.value.colors.primary as string
+  const accent = theme.current.value.colors.accent as string
 
   const style = $uiConfig.map.style.replace('./', `${$siteUrl}/data-fair/`)
 

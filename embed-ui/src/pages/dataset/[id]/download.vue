@@ -6,7 +6,7 @@
         :cols="12"
         :sm="6"
       >
-        <h2 class="text-h4 my-4">
+        <h2 class="text-headline-small my-4">
           {{ dataset.title }}
         </h2>
         <dataset-nb-results

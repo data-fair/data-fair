@@ -1,7 +1,6 @@
 <template lang="html">
   <v-container
     data-iframe-height
-    fluid
   >
     <settings-topics
       v-if="settings"

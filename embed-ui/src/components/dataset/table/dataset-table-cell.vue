@@ -11,7 +11,7 @@
     <template v-if="header.key === '_thumbnail'">
       <v-avatar
         v-if="result._thumbnail"
-        tile
+        rounded="0"
         :size="lineHeight"
       >
         <img :src="result._thumbnail">
@@ -35,7 +35,7 @@
       >
         <template #activator="{props}">
           <span
-            class="text-body-2"
+            class="text-body-medium"
             v-bind="props"
           >
             <v-avatar :size="28">

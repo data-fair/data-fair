@@ -1,7 +1,6 @@
 <template>
   <v-container
     v-if="application"
-    :fluid="display.lgAndDown.value"
     :class="display.lgAndDown.value ? 'pa-0' : ''"
   >
     <v-row :class="display.lgAndDown.value ? 'ma-0' : ''">

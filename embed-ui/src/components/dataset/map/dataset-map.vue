@@ -102,6 +102,6 @@ useMap(tileUrl, selectable, selectedItem, noInteraction, cols, navigationPositio
 .maplibregl-popup-content {
   max-height: 300px;
   overflow-y: scroll;
-  color: rgba(0, 0, 0, 0.87) !important;
+  color: rgba(0, 0, 0, 0.87);
 }
 </style>

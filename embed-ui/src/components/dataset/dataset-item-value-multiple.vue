@@ -51,7 +51,7 @@ const emit = defineEmits<{
 
 <style>
 .v-chip-group.dense-value .v-slide-group__content {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 </style>

@@ -8,7 +8,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useTheme } from 'vuetify/lib/composables/theme.mjs'
+import { useTheme } from 'vuetify'
 import microTemplate from '@data-fair/lib-utils/micro-template.js'
 
 const {
@@ -22,7 +22,7 @@ const {
 const theme = useTheme()
 
 const style = computed(() => {
-  const rules = [`background: ${microTemplate(gradient, theme.current.value.colors)}`]
+  const rules = [`background: ${microTemplate(gradient, theme.current.value.colors as Record<string, string>)}`]
   if (sides.includes('t')) rules.push(`padding-top: ${width}px`)
   if (sides.includes('r')) rules.push(`padding-right: ${width}px`)
   if (sides.includes('b')) rules.push(`padding-bottom: ${width}px`)
