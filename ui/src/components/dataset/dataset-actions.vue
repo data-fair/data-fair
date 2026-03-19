@@ -36,6 +36,18 @@
     </v-list-item>
 
     <v-list-item
+      v-if="dataset.isRest && can('createLine').value"
+      :to="`/dataset/${dataset.id}/edit-data`"
+    >
+      <template #prepend>
+        <v-icon color="primary">
+          mdi-table-edit
+        </v-icon>
+      </template>
+      <v-list-item-title>{{ t('editData') }}</v-list-item-title>
+    </v-list-item>
+
+    <v-list-item
       v-if="can('readApiDoc').value && dataset.finalizedAt"
       :to="`/dataset/${dataset.id}/api-doc`"
     >
@@ -91,6 +103,7 @@ fr:
   downloads: TÉLÉCHARGEMENTS
   actions: ACTIONS
   viewData: Voir les données
+  editData: Éditer les données
   useAPI: Utiliser l'API
   delete: Supprimer
   deleteDataset: Suppression du jeu de données
@@ -101,6 +114,7 @@ en:
   downloads: DOWNLOADS
   actions: ACTIONS
   viewData: View data
+  editData: Edit data
   useAPI: Use the API
   delete: Delete
   deleteDataset: Dataset deletion
