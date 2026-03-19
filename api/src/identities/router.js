@@ -3,8 +3,8 @@
 
 import express from 'express'
 import config from '#config'
-import * as datasetsService from '../../datasets/service.js'
-import { ownerDir } from '../../datasets/utils/files.ts'
+import * as datasetsService from '../datasets/service.js'
+import { ownerDir } from '../datasets/utils/files.ts'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
 
