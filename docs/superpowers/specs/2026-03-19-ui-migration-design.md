@@ -113,9 +113,74 @@ Use Vue Router route meta (e.g., `layout: 'embed'`) combined with a dynamic comp
 
 ---
 
-## 4. Dataset Page Redesign
+## 4. Component Migration
 
-### 4a. Dataset Home (`dataset/[id]/index.vue`) — mostly readonly
+Many complex components from ui-legacy have no equivalent in embed-ui and need full migration. Components follow the same migration pattern as pages (`<script setup lang="ts">`, props/emits, Vuetify 4, VJSF v4) but additionally must replace Vuex store access (`mapState`, `mapActions`, `mapGetters`) with either props/emits or composables.
+
+### 4.1 Schema editing components
+
+The schema editor is one of the most complex component trees:
+
+- **`dataset-schema.vue`** (286 lines) — column CRUD, primary key config, drag-and-drop reordering. Embed-ui has a readonly `dataset-schema-view.vue` but the full editor is missing. Migrate as a v-model component for edit-metadata.
+- **`dataset-properties-slide.vue`** (532 lines) — detailed property editor with tabs for type, concept mapping, validation, labels, transform, capabilities. Uses vocabulary store for concept matching.
+- **`dataset-add-property-dialog.vue`** (107 lines) — dialog for adding properties to REST datasets.
+- **`dataset-property-capabilities.vue`** — configure indexing, text standard, facetable.
+- **`dataset-property-validation.vue`** — required, min/max, pattern rules.
+- **`dataset-property-labels.vue`** — enum values and display labels (uses VJSF).
+- **`dataset-property-transform.vue`** (150 lines) — type overrides and transformation expressions.
+
+All these currently call `patchAndCommit()` directly via Vuex. In the new architecture they must use `v-model` to edit the central `useEditFetch` state — no direct API calls from these components.
+
+### 4.2 Dataset metadata components
+
+- **`dataset-info.vue`** (733 lines) — title, description, summary, keywords, spatial/temporal coverage, license, topics, custom metadata fields. Uses facets API for keyword/spatial suggestions. Has sub-components: `markdown-editor.vue`, `dataset-edit-history.vue`, `dataset-edit-ttl.vue`, `dataset-edit-store-updated-by.vue`.
+- **`dataset-attachments.vue`** + **`dataset-attachment-dialog.vue`** — file/URL attachments with upload, delete, set as thumbnail.
+
+These also become v-model components under edit-metadata.
+
+### 4.3 Dataset configuration components
+
+- **`dataset-extensions.vue`** (470 lines) — enrichment & calculated columns. Two extension types (remoteService, exprEval), field mapping, auto-update scheduling. Needs remoteServices API. Very complex.
+- **`dataset-master-data.vue`** (135 lines) — master data source capabilities (single/bulk search, virtual datasets, standard schema). Uses VJSF.
+- **`dataset-virtual.vue`** (563 lines) — virtual dataset configuration: child dataset selection, field inheritance, filter configuration, drag-and-drop. Heavy async API usage.
+
+Same v-model pattern — no direct PATCH calls.
+
+### 4.4 Dataset home components (readonly or action-based)
+
+- **`dataset-status.vue`** (200+ lines) — processing status, error handling, retry. Partial equivalent exists in embed-ui.
+- **`dataset-publication-sites.vue`** — portal publication config. Embed-ui has a version already.
+- **`dataset-read-api-key.vue`** — read API key display/management.
+- **Permissions editor** — access control management (roles, users, organizations). Used on dataset home page.
+
+### 4.5 Application components
+
+- **`application-config.vue`** (367 lines) — already exists in embed-ui, may need updates. Split-screen preview + VJSF form with iframe postMessage communication.
+- **`application-info.vue`** (150 lines) — metadata editor (title, description, topics, image, slug).
+- **`application-facets.vue`**, **`application-list.vue`**, **`application-card.vue`** — list/display components for applications page. Follow portals resource list patterns.
+- **`application-actions.vue`**, **`application-import.vue`**, **`application-integration-dialog.vue`**, **`application-capture-dialog.vue`**, **`application-publication-sites.vue`** — specialized config features.
+
+### 4.6 Shared utility components
+
+- **`markdown-editor.vue`** — markdown editor wrapper (used by dataset-info, application-info, descriptions).
+- **`help-tooltip.vue`** — help icon with tooltip (used across schema editing).
+- **`confirm-menu.vue`** — already exists in embed-ui.
+- **`journal-view.vue`** — already exists in embed-ui.
+- **`layout-section-tabs.vue`**, **`layout-toc.vue`**, **`layout-scroll-to-top.vue`** — already exist in embed-ui.
+
+### 4.7 Key migration patterns for components
+
+- **Vuex → v-model**: components that called `patchAndCommit()` become controlled components with `v-model` editing the parent's `useEditFetch` data ref.
+- **Draggable.js**: used in schema, virtual, extensions. Migrate to Vue 3 compatible draggable library (e.g., `vuedraggable@next` or `@vueuse/integrations`).
+- **VJSF**: upgrade from v2 to v4 (different API, same concept).
+- **Vocabulary/concepts store**: currently a Vuex module. Migrate to a composable (embed-ui already has `use-store.ts` as a singleton for vocabulary).
+- **Remote services fetching**: currently via Vuex actions. Migrate to a composable or direct `useFetch` calls.
+
+---
+
+## 5. Dataset Page Redesign
+
+### 5a. Dataset Home (`dataset/[id]/index.vue`) — mostly readonly
 
 Uses `layout-section-tabs` to organize sections. Uses `df-navigation-right` for the top-right menu.
 
@@ -136,7 +201,7 @@ Uses `layout-section-tabs` to organize sections. Uses `df-navigation-right` for 
 
 Inspired by portal dataset page but oriented toward contribution and administration.
 
-### 4b. Edit Metadata (`dataset/[id]/edit-metadata.vue`)
+### 5b. Edit Metadata (`dataset/[id]/edit-metadata.vue`)
 
 Uses `useEditFetch` with `patch: true` to manage dataset metadata centrally. Uses `useLeaveGuard(hasDiff)` for unsaved changes warning. Uses `layout-section-tabs` for section organization.
 
@@ -155,13 +220,13 @@ Uses `useEditFetch` with `patch: true` to manage dataset metadata centrally. Use
 
 Components use `v-model` to edit the central `data` ref but do not PATCH themselves. Single save button PATCHes only changed fields.
 
-### 4c. Edit Data (`dataset/[id]/edit-data.vue`)
+### 5c. Edit Data (`dataset/[id]/edit-data.vue`)
 
 - Only for editable (REST) datasets
 - Reuses `dataset-table` component in edition mode
 - Redirects or shows message for non-editable datasets
 
-### 4d. Data (`dataset/[id]/data.vue`)
+### 5d. Data (`dataset/[id]/data.vue`)
 
 Tabbed view, tabs shown only when relevant to dataset type:
 - **Table** — reuses `dataset-table` (readonly)
@@ -172,7 +237,7 @@ Tabbed view, tabs shown only when relevant to dataset type:
 
 ---
 
-## 5. Server-Side Changes
+## 6. Server-Side Changes
 
 ### API server
 - Remove Nuxt SSR setup entirely
@@ -191,7 +256,7 @@ Tabbed view, tabs shown only when relevant to dataset type:
 
 ---
 
-## 6. Migration Ordering
+## 7. Migration Ordering
 
 ### Phase 1 — Workspace rename & infrastructure
 - Rename directories, update package.json, vite config, server mounts
@@ -207,11 +272,15 @@ Tabbed view, tabs shown only when relevant to dataset type:
 ### Phase 3 — Application detail pages
 - Application index, description, api-doc, config (config already migrated)
 
-### Phase 4 — Dataset pages
-- Dataset home (new readonly design)
-- Data page (tabbed view)
+### Phase 4 — Dataset pages and components
+- Shared utility components first: markdown-editor, help-tooltip
+- Dataset home page (readonly) with status, permissions, publication-sites, read-api-key, journal
+- Data page (tabbed view reusing existing embed components)
 - Edit-data page (table in edit mode)
-- Edit-metadata page (useEditFetch, layout-section-tabs, save button)
+- Schema editing components: dataset-schema, dataset-properties-slide, property sub-dialogs (capabilities, validation, labels, transform)
+- Dataset metadata components: dataset-info (with sub-components), dataset-attachments
+- Dataset configuration components: dataset-extensions, dataset-master-data, dataset-virtual
+- Edit-metadata page (useEditFetch, layout-section-tabs, wiring all the above as v-model components)
 - Dataset description, api-doc
 
 ### Phase 5 — Cleanup
@@ -222,7 +291,7 @@ Tabbed view, tabs shown only when relevant to dataset type:
 
 ---
 
-## 7. E2E Testing
+## 8. E2E Testing
 
 - Playwright tests for key user flows, kept concise
 - Focus: navigation, dataset home loads, edit-metadata save cycle, data page tabs, embed pages accessible
