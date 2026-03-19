@@ -145,7 +145,7 @@ export const run = async () => {
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
     app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
-    app.use('/api/v1/stats', apiKey('stats'), (await import('./misc/routers/stats.ts')).default)
+    app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
     app.use('/api/v1/settings', (await import('./misc/routers/settings.ts')).default)
     app.use('/api/v1/admin', (await import('./misc/routers/admin.js')).default)
     app.use('/api/v1/identities', (await import('./misc/routers/identities.js')).default)
