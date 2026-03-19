@@ -11,8 +11,11 @@ export const uiConfig = {
   disablePublicationSites: config.disablePublicationSites,
   disableApplications: config.disableApplications,
   compatODS: config.compatODS,
-  adminRole: config.adminRole,
-  contribRole: config.contribRole
+  adminRole: config.adminRole as string,
+  contribRole: config.contribRole as string,
+  subscriptionUrl: config.subscriptionUrl as string | null,
+  extraNavigationItems: config.extraNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
+  extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[]
 }
 
 export type UiConfig = typeof uiConfig
