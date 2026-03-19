@@ -1,5 +1,6 @@
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
+import { trackEmbed } from './nuxt.js'
 import express from 'express'
 import { parsePath as parseUrlPath } from 'ufo'
 import pathToRegexp from 'path-to-regexp'
@@ -189,6 +190,7 @@ export const run = async () => {
       '/settings/:type/:id/webhooks',
       '/settings/:type/:id/datasets-metadata',
     ].map(p => pathToRegexp.match(p))
+    app.use('/embed', trackEmbed)
     app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../ui/dist'), uiConfig, {
       ignoreSitePath: true,
       csp: {
@@ -216,6 +218,13 @@ export const run = async () => {
       // them in case some are still in use somewhere
       res.redirect(reqSiteUrl(req) + '/data-fair' + req.url)
     })
+
+    // main UI SPA - standard CSP, no embed-specific relaxations
+    app.use('/', await createSpaMiddleware(resolve(import.meta.dirname, '../../ui/dist'), uiConfig, {
+      ignoreSitePath: true,
+      csp: { nonce: true },
+      privateDirectoryUrl: config.privateDirectoryUrl
+    }))
 
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')
@@ -288,10 +297,6 @@ export const run = async () => {
       else next()
     })
 
-    const nuxt = await (await import('./nuxt.js')).default()
-    app.set('nuxt', nuxt.instance)
-    app.use(nuxt.trackEmbed)
-    app.use(nuxt.render)
     app.set('ui-ready', true)
 
     if (config.listenWhenReady) {
