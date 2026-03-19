@@ -17,7 +17,6 @@
   "dependencies": {
     "@aws-sdk/lib-storage": "^3.995.0",
     "@data-fair/data-fair-shared": "*",
-    "@data-fair/data-fair-ui": "*",
     "@data-fair/lib-express": "^1.20.5",
     "@data-fair/lib-node": "^2.11.0",
     "@data-fair/lib-utils": "^1.6.1",
@@ -90,7 +89,6 @@
     "ngeohash": "^0.6.3",
     "node-dir": "^0.1.17",
     "number-abbreviate": "^2.0.0",
-    "nuxt-start": "^2.18.1",
     "object-hash": "^3.0.0",
     "object-sizeof": "^2.6.5",
     "ogr2ogr": "^5.1.0",

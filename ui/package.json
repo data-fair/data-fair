@@ -16,7 +16,7 @@
     "vuetify": "^2.7.2"
   },
   "devDependencies": {
-    "@data-fair/data-fair-api": "*",
+    "@data-fair/data-fair-api": "file:../api",
     "@data-fair/frame": "^0.18.0",
     "@data-fair/sd-vue": "^4.0.0",
     "@koumoul/v-iframe": "^1.4.1",
