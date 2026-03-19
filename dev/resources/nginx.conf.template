@@ -47,35 +47,37 @@ server {
   add_header X-Cache-Status $upstream_cache_status;
   proxy_cache_bypass $http_x_cache_bypass;
   proxy_cache_bypass $cookie_cache_bypass;
-  
+
   # redirect root to /data-fair/
-  location = / {  
+  location = / {
     return 302 /data-fair/;
   }
-  location = /data-fair/embed {  
-    return 302 /data-fair/embed/dev;
-  }
-  location = /data-fair/embed/ {  
-    return 302 /data-fair/embed/dev;
-  }
 
-  location ~ /data-fair/embed/(.*)-ui-config.js {
+  # API routes served by API server (prefix match, more specific than /data-fair)
+  location /data-fair/api {
     proxy_pass http://localhost:${DEV_API_PORT};
   }
-  # comment this to test built UI served by api
-  location /data-fair/embed {
-    proxy_pass http://localhost:${DEV_UI_PORT};
+  location /data-fair/app {
+    proxy_pass http://localhost:${DEV_API_PORT};
+  }
+  location /data-fair/streamsaver {
+    proxy_pass http://localhost:${DEV_API_PORT};
   }
 
+  # ui-config served by API
+  location ~ /data-fair/(.*)-ui-config.js {
+    proxy_pass http://localhost:${DEV_API_PORT};
+  }
+
+  # comment this to test built UI served by api
   location /data-fair {
-    rewrite  ^/data-fair/(.*) /$1 break;
-    proxy_pass http://localhost:${DEV_API_PORT}/;
+    proxy_pass http://localhost:${DEV_UI_PORT};
   }
 
   location /simple-directory {
     proxy_pass http://localhost:${SD_PORT};
   }
-  
+
   location /openapi-viewer {
     proxy_pass http://localhost:${OAV_PORT};
   }
@@ -134,9 +136,9 @@ server {
   add_header X-Cache-Status $upstream_cache_status;
   proxy_cache_bypass $http_x_cache_bypass;
   proxy_cache_bypass $cookie_cache_bypass;
-  
+
   # redirect root to /data-fair/
-  location = / {  
+  location = / {
     return 302 /data-fair/;
   }
 
@@ -149,7 +151,7 @@ server {
     rewrite  ^/simple-directory/(.*) /$1 break;
     proxy_pass http://localhost:${SD_PORT}/;
   }
-  
+
   location /api-doc {
     rewrite  ^/api-doc/(.*) /$1 break;
     proxy_pass http://localhost:${OAV_PORT}/;

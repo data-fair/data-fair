@@ -14,7 +14,7 @@ import slug from 'slugify'
 export const directoryUrl = `http://localhost:${process.env.NGINX_PORT1}/simple-directory`
 export const apiUrl = `http://localhost:${process.env.DEV_API_PORT}`
 export const baseURL = `http://localhost:${process.env.NGINX_PORT1}/data-fair`
-export const wsUrl = `ws://localhost:${process.env.NGINX_PORT1}/data-fair`
+export const wsUrl = `ws://localhost:${process.env.DEV_API_PORT}`
 export const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
 
 /** Get the full URL for a mock application (e.g. mockAppUrl('monapp1') → 'http://localhost:8999/monapp1/') */
