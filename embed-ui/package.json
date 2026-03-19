@@ -31,6 +31,7 @@
     "@unhead/vue": "^1.11.10",
     "@vitejs/plugin-vue": "^5.1.2",
     "@vueuse/core": "^12.6.1",
+    "compare-versions": "^6.1.1",
     "d3-hierarchy": "^3.1.2",
     "debounce": "^2.2.0",
     "debug": "^4.4.0",
