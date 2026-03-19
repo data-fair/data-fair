@@ -1,0 +1,332 @@
+{
+  "ConfirmMenu": {
+    "description": "Auto imported from components/confirm-menu.vue"
+  },
+  "HelpTooltip": {
+    "description": "Auto imported from components/help-tooltip.vue"
+  },
+  "Journal": {
+    "description": "Auto imported from components/journal.vue"
+  },
+  "MarkdownEditor": {
+    "description": "Auto imported from components/markdown-editor.vue"
+  },
+  "MemberSelect": {
+    "description": "Auto imported from components/member-select.vue"
+  },
+  "NotificationsQueue": {
+    "description": "Auto imported from components/notifications-queue.vue"
+  },
+  "OpenApi": {
+    "description": "Auto imported from components/open-api.vue"
+  },
+  "OrganizationSelect": {
+    "description": "Auto imported from components/organization-select.vue"
+  },
+  "PermissionDialog": {
+    "description": "Auto imported from components/permission-dialog.vue"
+  },
+  "Permissions": {
+    "description": "Auto imported from components/permissions.vue"
+  },
+  "PrivateAccess": {
+    "description": "Auto imported from components/private-access.vue"
+  },
+  "TimeZoneSelect": {
+    "description": "Auto imported from components/time-zone-select.vue"
+  },
+  "VJsf": {
+    "description": "Auto imported from components/v-jsf.vue"
+  },
+  "Visibility": {
+    "description": "Auto imported from components/visibility.vue"
+  },
+  "ApplicationActions": {
+    "description": "Auto imported from components/application/application-actions.vue"
+  },
+  "ApplicationAttachmentDialog": {
+    "description": "Auto imported from components/application/application-attachment-dialog.vue"
+  },
+  "ApplicationAttachments": {
+    "description": "Auto imported from components/application/application-attachments.vue"
+  },
+  "ApplicationBaseAppsCard": {
+    "description": "Auto imported from components/application/application-base-apps-card.vue"
+  },
+  "ApplicationBaseApps": {
+    "description": "Auto imported from components/application/application-base-apps.vue"
+  },
+  "ApplicationCaptureDialog": {
+    "description": "Auto imported from components/application/application-capture-dialog.vue"
+  },
+  "ApplicationCard": {
+    "description": "Auto imported from components/application/application-card.vue"
+  },
+  "ApplicationConfig": {
+    "description": "Auto imported from components/application/application-config.vue"
+  },
+  "ApplicationFacets": {
+    "description": "Auto imported from components/application/application-facets.vue"
+  },
+  "ApplicationImport": {
+    "description": "Auto imported from components/application/application-import.vue"
+  },
+  "ApplicationInfo": {
+    "description": "Auto imported from components/application/application-info.vue"
+  },
+  "ApplicationIntegrationDialog": {
+    "description": "Auto imported from components/application/application-integration-dialog.vue"
+  },
+  "ApplicationListItemTitle": {
+    "description": "Auto imported from components/application/application-list-item-title.vue"
+  },
+  "ApplicationListItem": {
+    "description": "Auto imported from components/application/application-list-item.vue"
+  },
+  "ApplicationList": {
+    "description": "Auto imported from components/application/application-list.vue"
+  },
+  "ApplicationProtectedLinks": {
+    "description": "Auto imported from components/application/application-protected-links.vue"
+  },
+  "ApplicationPublicationSites": {
+    "description": "Auto imported from components/application/application-publication-sites.vue"
+  },
+  "ApplicationSelect": {
+    "description": "Auto imported from components/application/application-select.vue"
+  },
+  "DashboardActivity": {
+    "description": "Auto imported from components/dashboard/dashboard-activity.vue"
+  },
+  "DashboardApplicationsRequestedPublications": {
+    "description": "Auto imported from components/dashboard/dashboard-applications-requested-publications.vue"
+  },
+  "DashboardBaseApps": {
+    "description": "Auto imported from components/dashboard/dashboard-base-apps.vue"
+  },
+  "DashboardDatasetsDraft": {
+    "description": "Auto imported from components/dashboard/dashboard-datasets-draft.vue"
+  },
+  "DashboardDatasetsError": {
+    "description": "Auto imported from components/dashboard/dashboard-datasets-error.vue"
+  },
+  "DashboardDatasetsRequestedPublications": {
+    "description": "Auto imported from components/dashboard/dashboard-datasets-requested-publications.vue"
+  },
+  "DashboardMetric": {
+    "description": "Auto imported from components/dashboard/dashboard-metric.vue"
+  },
+  "DashboardSvgLink": {
+    "description": "Auto imported from components/dashboard/dashboard-svg-link.vue"
+  },
+  "DatasetActions": {
+    "description": "Auto imported from components/dataset/dataset-actions.vue"
+  },
+  "DatasetAddPropertyDialog": {
+    "description": "Auto imported from components/dataset/dataset-add-property-dialog.vue"
+  },
+  "DatasetApplications": {
+    "description": "Auto imported from components/dataset/dataset-applications.vue"
+  },
+  "DatasetAttachmentDialog": {
+    "description": "Auto imported from components/dataset/dataset-attachment-dialog.vue"
+  },
+  "DatasetAttachments": {
+    "description": "Auto imported from components/dataset/dataset-attachments.vue"
+  },
+  "DatasetBtnTable": {
+    "description": "Auto imported from components/dataset/dataset-btn-table.vue"
+  },
+  "DatasetCalendar": {
+    "description": "Auto imported from components/dataset/dataset-calendar.vue"
+  },
+  "DatasetCard": {
+    "description": "Auto imported from components/dataset/dataset-card.vue"
+  },
+  "DatasetConflicts": {
+    "description": "Auto imported from components/dataset/dataset-conflicts.vue"
+  },
+  "DatasetEditHistory": {
+    "description": "Auto imported from components/dataset/dataset-edit-history.vue"
+  },
+  "DatasetEditStoreUpdatedBy": {
+    "description": "Auto imported from components/dataset/dataset-edit-store-updated-by.vue"
+  },
+  "DatasetEditTtl": {
+    "description": "Auto imported from components/dataset/dataset-edit-ttl.vue"
+  },
+  "DatasetExprEvalDoc": {
+    "description": "Auto imported from components/dataset/dataset-expr-eval-doc.vue"
+  },
+  "DatasetExtensionDetailsDialog": {
+    "description": "Auto imported from components/dataset/dataset-extension-details-dialog.vue"
+  },
+  "DatasetExtensionDetails": {
+    "description": "Auto imported from components/dataset/dataset-extension-details.vue"
+  },
+  "DatasetExtensionExprEvalPreviewDialog": {
+    "description": "Auto imported from components/dataset/dataset-extension-expr-eval-preview-dialog.vue"
+  },
+  "DatasetExtensionExprEvalPreview": {
+    "description": "Auto imported from components/dataset/dataset-extension-expr-eval-preview.vue"
+  },
+  "DatasetExtensions": {
+    "description": "Auto imported from components/dataset/dataset-extensions.vue"
+  },
+  "DatasetFacets": {
+    "description": "Auto imported from components/dataset/dataset-facets.vue"
+  },
+  "DatasetFileFormats": {
+    "description": "Auto imported from components/dataset/dataset-file-formats.vue"
+  },
+  "DatasetHistory": {
+    "description": "Auto imported from components/dataset/dataset-history.vue"
+  },
+  "DatasetImportFile": {
+    "description": "Auto imported from components/dataset/dataset-import-file.vue"
+  },
+  "DatasetInfo": {
+    "description": "Auto imported from components/dataset/dataset-info.vue"
+  },
+  "DatasetInitFrom": {
+    "description": "Auto imported from components/dataset/dataset-init-from.vue"
+  },
+  "DatasetIntegrationDialog": {
+    "description": "Auto imported from components/dataset/dataset-integration-dialog.vue"
+  },
+  "DatasetItemCard": {
+    "description": "Auto imported from components/dataset/dataset-item-card.vue"
+  },
+  "DatasetItemDetailDialog": {
+    "description": "Auto imported from components/dataset/dataset-item-detail-dialog.vue"
+  },
+  "DatasetItemValue": {
+    "description": "Auto imported from components/dataset/dataset-item-value.vue"
+  },
+  "DatasetListActions": {
+    "description": "Auto imported from components/dataset/dataset-list-actions.vue"
+  },
+  "DatasetListItemSubtitle": {
+    "description": "Auto imported from components/dataset/dataset-list-item-subtitle.vue"
+  },
+  "DatasetListItemTitle": {
+    "description": "Auto imported from components/dataset/dataset-list-item-title.vue"
+  },
+  "DatasetListItem": {
+    "description": "Auto imported from components/dataset/dataset-list-item.vue"
+  },
+  "DatasetList": {
+    "description": "Auto imported from components/dataset/dataset-list.vue"
+  },
+  "DatasetMasterData": {
+    "description": "Auto imported from components/dataset/dataset-master-data.vue"
+  },
+  "DatasetNbResults": {
+    "description": "Auto imported from components/dataset/dataset-nb-results.vue"
+  },
+  "DatasetNormalizeOptions": {
+    "description": "Auto imported from components/dataset/dataset-normalize-options.vue"
+  },
+  "DatasetPropertiesSlide": {
+    "description": "Auto imported from components/dataset/dataset-properties-slide.vue"
+  },
+  "DatasetPropertyCapabilities": {
+    "description": "Auto imported from components/dataset/dataset-property-capabilities.vue"
+  },
+  "DatasetPropertyLabels": {
+    "description": "Auto imported from components/dataset/dataset-property-labels.vue"
+  },
+  "DatasetPropertyTransform": {
+    "description": "Auto imported from components/dataset/dataset-property-transform.vue"
+  },
+  "DatasetPropertyValidation": {
+    "description": "Auto imported from components/dataset/dataset-property-validation.vue"
+  },
+  "DatasetPublicationSites": {
+    "description": "Auto imported from components/dataset/dataset-publication-sites.vue"
+  },
+  "DatasetReadApiKey": {
+    "description": "Auto imported from components/dataset/dataset-read-api-key.vue"
+  },
+  "DatasetRestUploadActions": {
+    "description": "Auto imported from components/dataset/dataset-rest-upload-actions.vue"
+  },
+  "DatasetSchema": {
+    "description": "Auto imported from components/dataset/dataset-schema.vue"
+  },
+  "DatasetSelect": {
+    "description": "Auto imported from components/dataset/dataset-select.vue"
+  },
+  "DatasetStatus": {
+    "description": "Auto imported from components/dataset/dataset-status.vue"
+  },
+  "DatasetThumbnailsOpts": {
+    "description": "Auto imported from components/dataset/dataset-thumbnails-opts.vue"
+  },
+  "DatasetTtl": {
+    "description": "Auto imported from components/dataset/dataset-ttl.vue"
+  },
+  "DatasetVirtualChildCompat": {
+    "description": "Auto imported from components/dataset/dataset-virtual-child-compat.vue"
+  },
+  "DatasetVirtual": {
+    "description": "Auto imported from components/dataset/dataset-virtual.vue"
+  },
+  "LayoutActionsButton": {
+    "description": "Auto imported from components/layout/layout-actions-button.vue"
+  },
+  "LayoutBrandTitle": {
+    "description": "Auto imported from components/layout/layout-brand-title.vue"
+  },
+  "LayoutNavigationLeft": {
+    "description": "Auto imported from components/layout/layout-navigation-left.vue"
+  },
+  "LayoutNavigationRight": {
+    "description": "Auto imported from components/layout/layout-navigation-right.vue"
+  },
+  "LayoutNavigationTop": {
+    "description": "Auto imported from components/layout/layout-navigation-top.vue"
+  },
+  "LayoutNotAuthorized": {
+    "description": "Auto imported from components/layout/layout-not-authorized.vue"
+  },
+  "LayoutNotifications": {
+    "description": "Auto imported from components/layout/layout-notifications.vue"
+  },
+  "LayoutPersonalMenu": {
+    "description": "Auto imported from components/layout/layout-personal-menu.vue"
+  },
+  "LayoutScrollToTop": {
+    "description": "Auto imported from components/layout/layout-scroll-to-top.vue"
+  },
+  "LayoutSectionTabs": {
+    "description": "Auto imported from components/layout/layout-section-tabs.vue"
+  },
+  "LayoutToc": {
+    "description": "Auto imported from components/layout/layout-toc.vue"
+  },
+  "LayoutWrapSvg": {
+    "description": "Auto imported from components/layout/layout-wrap-svg.vue"
+  },
+  "OwnerDepartment": {
+    "description": "Auto imported from components/owner/owner-department.vue"
+  },
+  "OwnerListItem": {
+    "description": "Auto imported from components/owner/owner-list-item.vue"
+  },
+  "OwnerPick": {
+    "description": "Auto imported from components/owner/owner-pick.vue"
+  },
+  "OwnerShort": {
+    "description": "Auto imported from components/owner/owner-short.vue"
+  },
+  "SearchFilters": {
+    "description": "Auto imported from components/search/search-filters.vue"
+  },
+  "SearchProgress": {
+    "description": "Auto imported from components/search/search-progress.vue"
+  },
+  "TutorialAlert": {
+    "description": "Auto imported from components/tutorial/tutorial-alert.vue"
+  }
+}

@@ -10,8 +10,8 @@
     "test-api": "playwright test --project api --max-failures=1",
     "test-e2e": "playwright test --project e2e --max-failures=1",
     "report": "nyc report --reporter=html",
-    "lint": "eslint . && npm --prefix ui run lint && npm -w embed-ui run lint",
-    "lint-fix": "eslint --fix . && npm --prefix ui run lint-fix && npm -w embed-ui run lint-fix",
+    "lint": "eslint . && npm -w ui run lint",
+    "lint-fix": "eslint --fix . && npm -w ui run lint-fix",
     "dev-deps": "mkdir -p dev/logs && docker compose --profile dev up -d --wait && docker compose --profile dev logs -f 2>&1 | tee dev/logs/docker-compose.log",
     "stop-dev-deps": "docker compose --profile dev stop",
     "dev-api": "MODE=server_worker npm -w api run dev",
@@ -29,8 +29,8 @@
     "build-parser-refine": "peggy --dts --format es --output api/src/api-compat/ods/refine.peg.js api/src/api-compat/ods/refine.pegjs api/src/api-compat/ods/lexic.pegjs && sed -i '1i // @ts-nocheck' api/src/api-compat/ods/refine.peg.js",
     "postinstall": "patch-package",
     "prepare": "husky || true",
-    "check-types": "tsc && tsc -p test-it/tsconfig.json && npm -w embed-ui run check-types",
-    "quality": "npm run lint && npm run build-types && npm -w embed-ui run check-types && npm -w embed-ui run build && npm -w parquet-writer run build && npm test && npm audit --omit=dev --audit-level=critical",
+    "check-types": "tsc && tsc -p test-it/tsconfig.json && npm -w ui run check-types",
+    "quality": "npm run lint && npm run build-types && npm -w ui run check-types && npm -w ui run build && npm -w parquet-writer run build && npm test && npm audit --omit=dev --audit-level=critical",
     "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning benchmark/src/index.ts"
   },
   "engines": {
@@ -74,7 +74,7 @@
   },
   "workspaces": [
     "api",
-    "embed-ui",
+    "ui",
     "shared",
     "parquet-writer",
     "benchmark"

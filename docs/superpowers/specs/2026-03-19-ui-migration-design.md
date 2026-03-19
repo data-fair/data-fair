@@ -317,3 +317,4 @@ Tabbed view, tabs shown only when relevant to dataset type:
 | Icons | `@mdi/js` |
 | i18n | `vue-i18n` with per-component `<i18n>` blocks (fr/en) |
 | Resource lists | Follow data-fair/portals patterns |
+| Vuetify | Use the vuetify MCP tools to guide your work |
