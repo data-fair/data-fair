@@ -6,7 +6,7 @@ import i18n from 'i18n'
 import Extractor from 'html-extractor'
 import slug from 'slugify'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { clean, prepareQuery, getFragmentFetchUrl } from './operations.js'
+import { clean, prepareQuery, getFragmentFetchUrl } from './operations.ts'
 import type { BaseApp } from '#types'
 
 const htmlExtractor = new Extractor()

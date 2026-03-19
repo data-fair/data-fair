@@ -4,13 +4,13 @@ import express from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import * as i18nUtils from '../../i18n/utils.ts'
 import * as findUtils from '../misc/utils/find.js'
-import { clean } from './operations.js'
+import { clean } from './operations.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession } from '@data-fair/lib-express'
 import type { BaseAppWithContext, Request } from '#types'
-import { initBaseApp, syncBaseApp } from './service.js'
-export { init } from './service.js'
+import { initBaseApp, syncBaseApp } from './service.ts'
+export { init } from './service.ts'
 
 export const router = express.Router()
 
