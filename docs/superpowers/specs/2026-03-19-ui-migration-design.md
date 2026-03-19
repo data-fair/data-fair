@@ -23,21 +23,36 @@ Big bang rename followed by incremental page migration. The old `ui/` is kept as
 
 ### Vite config
 - Change `base` from `'/data-fair/embed'` to `'/data-fair/'`
+- Update `renderBuiltUrl` to use `'/data-fair/'` instead of `'/data-fair/embed/'`
+- Update `index.html` template path references
 
-### Vue Router
-- `createWebHistory($sitePath + '/data-fair/')` as base
-- Embed pages live in `src/pages/embed/` — file-based routing produces `/embed/` prefix naturally
+### Context (`src/context.ts`)
+- Update router base: `createWebHistory($sitePath + '/data-fair/')`
+- `$apiPath` stays `$sitePath + '/data-fair/api/v1'` (no change needed)
+
+### Embed page file move
+- Move all existing pages from `src/pages/` into `src/pages/embed/` to preserve `/embed/` prefix URLs for external consumers
+- New main pages are created at `src/pages/` root level
+- File-based routing produces `/embed/` prefix naturally
+- External embed URLs (e.g., `/data-fair/embed/dataset/{id}/table`) remain unchanged
+- API-generated preview URLs (`api/src/datasets/utils/index.js`) remain valid
+
+### Root package.json scripts
+- Update `lint`, `check-types`, `quality`, `build` scripts that reference `embed-ui`
+- Update `dev-ui` script for the renamed workspace
 
 ### API server (`api/src/app.js`)
 - Mount `ui/dist` as static SPA at `/data-fair/` with index.html fallback
 - Remove Nuxt SSR setup (`nuxt.render` fallback, `proxyNuxt` dev mode)
 - Remove `nuxt-server` require/import
-- Keep embed CSP handling for `/embed/` routes
-- Keep `trackEmbed` middleware for external embed consumers
+- CSP handling: path-based logic within the SPA middleware — relaxed CSP (frame-ancestors, unsafe-eval) for `/embed/` paths, standard CSP for other paths
+- `trackEmbed` middleware: mount before SPA static middleware for `/embed/` routes
+- Remove `nuxtStatus` health check in `api/src/admin/service.ts`, replace with simple check that `ui/dist/index.html` exists
 
 ### Dev server
 - Vite dev server proxied at `/data-fair/` instead of `/data-fair/embed/`
 - Remove Nuxt dev proxy
+- Note: HMR port 7200 remains unchanged
 
 ---
 
@@ -54,6 +69,9 @@ Navigation items (conditional on permissions/config): Home, Datasets, Applicatio
 
 ### Embed layout
 Minimal layout, already exists. Kept as-is for pages under `/embed/`.
+
+### Layout switching mechanism
+Use Vue Router route meta (e.g., `layout: 'embed'`) combined with a dynamic component in `App.vue`. Embed routes set `meta.layout = 'embed'` via a route-level `definePage` or a file-based convention. `App.vue` reads `route.meta.layout` and renders the appropriate layout wrapper around `<RouterView />`.
 
 ---
 
@@ -73,12 +91,15 @@ Minimal layout, already exists. Kept as-is for pages under `/embed/`.
 - `datasets.vue` — dataset list
 - `applications.vue` — application list
 - `dataset/[id]/` — dataset pages (see Section 4)
+- `dataset/[id]/events.vue` — dataset events (d-frame to events service)
 - `application/[id]/index.vue`, `description.vue`, `api-doc.vue`
 - `new-dataset.vue`, `new-application.vue`
-- `catalogs.vue`, `processings.vue`, `portals.vue`, `events.vue` — module integration pages (d-frame to external services)
+- `catalogs.vue`, `processings.vue`, `portals.vue`, `events.vue` — module integration pages (d-frame to external services, use `[...path].vue` catch-all for deep iframe path syncing)
 - `notifications.vue`, `me.vue`, `organization.vue`, `department.vue`
 - `metrics.vue`, `subscription.vue`, `reuses.vue`, `pages.vue`
 - `share-dataset.vue`, `api-doc.vue`
+- `extra/[id].vue`, `admin-extra/[id].vue` — dynamic extra navigation pages (configurable external iframes)
+- `admin/processings-plugins.vue`, `admin/catalogs-plugins.vue` — admin plugin management
 
 ### Migration pattern per page
 - Vue 3 `<script setup lang="ts">` with `<i18n>` blocks (fr/en)
@@ -128,6 +149,7 @@ Uses `useEditFetch` with `patch: true` to manage dataset metadata centrally. Use
 - **Schema** — field types, labels, descriptions, concepts (editing mode)
 - **Extensions** — enrichment configuration
 - **Master data** — reference data settings
+- **Virtual dataset** — configuration for virtual datasets (if applicable)
 - **Attachments** — additional files
 
 Components use `v-model` to edit the central `data` ref but do not PATCH themselves. Single save button PATCHes only changed fields.
@@ -142,6 +164,7 @@ Components use `v-model` to edit the central `data` ref but do not PATCH themsel
 
 Tabbed view, tabs shown only when relevant to dataset type:
 - **Table** — reuses `dataset-table` (readonly)
+- **Revisions** — edit history (if REST dataset with history enabled)
 - **Map** — reuses `dataset-map` (if geo data)
 - **Files** — reuses `dataset-search-files` (if file dataset)
 - **Thumbnails** — reuses `dataset-thumbnails` (if image fields)
