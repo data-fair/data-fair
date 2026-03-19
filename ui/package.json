@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@koumoul/nuxt-config-inject": "^0.4.12",
+    "vue": "^2.7.16",
+    "vue-server-renderer": "^2.7.16",
     "vuetify": "^2.7.2"
   },
   "devDependencies": {
