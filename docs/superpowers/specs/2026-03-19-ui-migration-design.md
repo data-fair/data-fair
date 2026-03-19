@@ -119,11 +119,11 @@ Use Vue Router route meta (e.g., `layout: 'embed'`) combined with a dynamic comp
 
 Uses `layout-section-tabs` to organize sections. Uses `df-navigation-right` for the top-right menu.
 
-**Top-right menu** (`df-navigation-right` with `v-list`):
-- Navigation links: edit-metadata, edit-data (if editable), data
-- Actions: delete, change owner, re-index, etc.
+**Right panel** (`df-navigation-right`):
+- Actions menu: navigation links (edit-metadata, edit-data if editable, data) and actions (delete, change owner, re-index, etc.)
+- `layout-toc` below the actions — auto-generated table of contents from `layout-section-tabs`
 
-**Sections:**
+**Sections** (organized with `layout-section-tabs`):
 - **Description** — rendered markdown, image if present
 - **Metadata** — owner, license, keywords, temporal/spatial coverage, update frequency, last modified, record count, storage size
 - **Schema** — readonly field list (reusing `dataset-schema-view.vue`)
@@ -140,9 +140,10 @@ Inspired by portal dataset page but oriented toward contribution and administrat
 
 Uses `useEditFetch` with `patch: true` to manage dataset metadata centrally. Uses `useLeaveGuard(hasDiff)` for unsaved changes warning. Uses `layout-section-tabs` for section organization.
 
-**Top-right menu** (`df-navigation-right`):
+**Right panel** (`df-navigation-right`):
 - Save button shown only when `hasDiff` is true (following agents settings page pattern)
 - Navigation links back to home/data
+- `layout-toc` below — auto-generated from `layout-section-tabs`
 
 **Sections with v-model components editing central state:**
 - **Info** — title, description, keywords, license, origin, etc.
@@ -241,6 +242,8 @@ Tabbed view, tabs shown only when relevant to dataset type:
 | Efficient reactivity | `computedDeepDiff` from `@data-fair/lib-vue` |
 | Forms | `@koumoul/vjsf@4` |
 | Right-side menu | `df-navigation-right` from `@data-fair/lib-vuetify` |
+| Page section organization | `layout-section-tabs` — tabbed sections within pages |
+| Table of contents | `layout-toc` — rendered below right actions menu in `df-navigation-right` |
 | External service embeds | `@data-fair/frame` (d-frame) |
 | Icons | `@mdi/js` |
 | i18n | `vue-i18n` with per-component `<i18n>` blocks (fr/en) |
