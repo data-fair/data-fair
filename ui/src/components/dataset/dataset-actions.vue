@@ -24,6 +24,18 @@
     <v-list-subheader>{{ t('actions') }}</v-list-subheader>
 
     <v-list-item
+      v-if="can('writeDescription').value"
+      :to="`/dataset/${dataset.id}/edit-metadata`"
+    >
+      <template #prepend>
+        <v-icon color="primary">
+          mdi-pencil
+        </v-icon>
+      </template>
+      <v-list-item-title>{{ t('editMetadata') }}</v-list-item-title>
+    </v-list-item>
+
+    <v-list-item
       v-if="can('readLines').value && dataset.finalizedAt && !dataset.isMetaOnly"
       :to="`/dataset/${dataset.id}/data`"
     >
@@ -102,6 +114,7 @@
 fr:
   downloads: TÉLÉCHARGEMENTS
   actions: ACTIONS
+  editMetadata: Éditer les métadonnées
   viewData: Voir les données
   editData: Éditer les données
   useAPI: Utiliser l'API
@@ -113,6 +126,7 @@ fr:
 en:
   downloads: DOWNLOADS
   actions: ACTIONS
+  editMetadata: Edit metadata
   viewData: View data
   editData: Edit data
   useAPI: Use the API
