@@ -12,7 +12,7 @@
 
 <script setup lang="ts">
 
-const route = useRoute<'/settings/[type]/[id]/webhooks'>()
+const route = useRoute<'/embed/settings/[type]/[id]/webhooks'>()
 const { patch, settings } = useSettingsStore(route.params.type, route.params.id)
 
 </script>

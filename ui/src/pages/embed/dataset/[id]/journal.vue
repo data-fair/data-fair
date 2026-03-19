@@ -11,7 +11,7 @@
 <script setup lang="ts">
 import { provideDatasetStore } from '~/composables/dataset-store'
 
-const route = useRoute<'/dataset/[id]/journal'>()
+const route = useRoute<'/embed/dataset/[id]/journal'>()
 
 const datasetStore = provideDatasetStore(route.params.id)
 const { journal, journalFetch, taskProgress, taskProgressFetch } = datasetStore

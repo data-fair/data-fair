@@ -8,7 +8,7 @@
 </template>
 
 <script lang="ts" setup>
-const route = useRoute<'/workflow/update-dataset'>()
+const route = useRoute<'/embed/workflow/update-dataset'>()
 const { account } = useSessionAuthenticated()
 
 const updated = useStringSearchParam('updated')

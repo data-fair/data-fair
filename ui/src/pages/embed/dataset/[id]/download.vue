@@ -42,7 +42,7 @@
 import { withQuery } from 'ufo'
 import { provideDatasetStore } from '~/composables/dataset-store'
 
-const route = useRoute<'/dataset/[id]/fields'>()
+const route = useRoute<'/embed/dataset/[id]/fields'>()
 
 const { dataset } = provideDatasetStore(route.params.id, false, false)
 

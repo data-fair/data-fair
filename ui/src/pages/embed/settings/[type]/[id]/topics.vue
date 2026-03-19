@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-const route = useRoute<'/settings/[type]/[id]/topics'>()
+const route = useRoute<'/embed/settings/[type]/[id]/topics'>()
 const { patch, settings } = useSettingsStore(route.params.type, route.params.id)
 
 </script>

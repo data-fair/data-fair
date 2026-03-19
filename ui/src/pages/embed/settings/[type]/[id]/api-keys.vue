@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-const route = useRoute<'/settings/[type]/[id]/api-keys'>()
+const route = useRoute<'/embed/settings/[type]/[id]/api-keys'>()
 const { patch, settings } = useSettingsStore(route.params.type, route.params.id)
 
 const scopes = computed(() => {

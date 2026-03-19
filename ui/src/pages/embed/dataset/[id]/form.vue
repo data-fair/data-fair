@@ -48,7 +48,7 @@
 import { VForm } from 'vuetify/components'
 import { provideDatasetStore } from '~/composables/dataset-store'
 
-const route = useRoute<'/dataset/[id]/form'>()
+const route = useRoute<'/embed/dataset/[id]/form'>()
 const session = useSession()
 
 const { dataset, restDataset, jsonSchemaFetch } = provideDatasetStore(route.params.id, false, true)

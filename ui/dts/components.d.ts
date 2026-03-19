@@ -44,6 +44,8 @@ declare module 'vue' {
     DatasetThumbnails: typeof import('./../src/components/dataset/dataset-thumbnails.vue')['default']
     JournalView: typeof import('./../src/components/journal-view.vue')['default']
     LayoutGradientBox: typeof import('./../src/components/layout/layout-gradient-box.vue')['default']
+    LayoutNavigationLeft: typeof import('./../src/components/layout/layout-navigation-left.vue')['default']
+    LayoutNavigationTop: typeof import('./../src/components/layout/layout-navigation-top.vue')['default']
     LayoutScrollToTop: typeof import('./../src/components/layout/layout-scroll-to-top.vue')['default']
     LayoutSectionTabs: typeof import('./../src/components/layout/layout-section-tabs.vue')['default']
     LayoutThemedSvg: typeof import('./../src/components/layout/layout-themed-svg.vue')['default']

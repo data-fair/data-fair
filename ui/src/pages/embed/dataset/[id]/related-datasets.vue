@@ -14,7 +14,7 @@
 <script setup lang="ts">
 import { provideDatasetStore } from '~/composables/dataset-store'
 
-const route = useRoute<'/dataset/[id]/related-datasets'>()
+const route = useRoute<'/embed/dataset/[id]/related-datasets'>()
 
 const relatedDatasets = ref<{ id: string, title: string }[]>([])
 const datasetStore = provideDatasetStore(route.params.id)

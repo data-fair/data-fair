@@ -23,7 +23,7 @@ import { provideDatasetStore } from '~/composables/dataset-store'
 
 const { height: windowHeight } = useWindowSize()
 
-const route = useRoute<'/dataset/[id]/map'>()
+const route = useRoute<'/embed/dataset/[id]/map'>()
 const draft = useBooleanSearchParam('draft')
 
 provideDatasetStore(route.params.id, draft.value ?? undefined)

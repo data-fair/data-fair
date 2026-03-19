@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { provideDatasetStore } from '~/composables/dataset-store'
 
-const route = useRoute<'/dataset/[id]/fields'>()
+const route = useRoute<'/embed/dataset/[id]/fields'>()
 
 provideDatasetStore(route.params.id, false, true)
 </script>
