@@ -58,6 +58,19 @@
       </template>
     </integration-dialog>
 
+    <application-capture-dialog>
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="primary">
+              mdi-camera
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('capture') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </application-capture-dialog>
+
     <notifications-dialog
       v-if="$uiConfig.eventsIntegration"
       :resource="application"
@@ -207,6 +220,7 @@
 <i18n lang="yaml">
 fr:
   actions: ACTIONS
+  capture: Capture d'écran
   fullPage: Ouvrir en pleine page
   editConfig: Éditer la configuration
   useAPI: Utiliser l'API
@@ -226,6 +240,7 @@ fr:
   no: Non
 en:
   actions: ACTIONS
+  capture: Screenshot
   fullPage: Open in a fullscreen
   editConfig: Edit configuration
   useAPI: Use the API
