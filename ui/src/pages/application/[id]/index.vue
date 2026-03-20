@@ -124,6 +124,10 @@
                     </v-row>
                   </v-container>
                 </v-tabs-window-item>
+
+                <v-tabs-window-item value="attachments">
+                  <application-attachments />
+                </v-tabs-window-item>
               </v-tabs-window>
             </template>
           </layout-section-tabs>
@@ -241,6 +245,7 @@ fr:
   datasets: Jeux de données
   noDatasets: Aucun jeu de données utilisé.
   childrenApps: Applications utilisées
+  attachments: Pièces jointes
   metadata: Métadonnées
   render: Rendu
   config: Configuration
@@ -258,6 +263,7 @@ en:
   datasets: Datasets
   noDatasets: No datasets used.
   childrenApps: Used applications
+  attachments: Attachments
   metadata: Metadata
   render: Render
   config: Configuration
@@ -273,7 +279,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiInformation, mdiDatabase, mdiImageMultiple, mdiSquareEditOutline, mdiSecurity, mdiPresentation, mdiCalendarText } from '@mdi/js'
+import { mdiInformation, mdiDatabase, mdiImageMultiple, mdiSquareEditOutline, mdiSecurity, mdiPresentation, mdiCalendarText, mdiPaperclip } from '@mdi/js'
 import { provideApplicationStore } from '~/composables/application-store'
 import { useApplicationWatch } from '~/composables/application-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
@@ -323,6 +329,7 @@ const sections = computedDeepDiff(() => {
   if (childrenApps.value.length) {
     metadataTabs.push({ key: 'children-apps', title: t('childrenApps'), icon: mdiImageMultiple })
   }
+  metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiPaperclip })
 
   const result: any[] = [
     { title: t('metadata'), id: 'metadata', tabs: metadataTabs },
