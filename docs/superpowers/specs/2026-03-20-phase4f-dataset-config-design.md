@@ -8,7 +8,6 @@ Migrates three legacy Vue 2 dataset configuration components to Vue 3/Vuetify 4 
 - `dataset-extensions.vue` — remote service enrichments + calculated columns
 - `dataset-virtual.vue` — virtual dataset config (children, columns, filters)
 - `dataset-virtual-child-compat.vue` — schema compatibility checker
-- `confirm-menu.vue` — small shared utility
 - `useRemoteServices` composable
 - Integration into `edit-metadata.vue`
 
@@ -30,7 +29,7 @@ edit-metadata.vue
        └─ datasetEditFetch.save        →  single save button in df-navigation-right
 ```
 
-Each component receives the full dataset via `defineModel<any>()` and mutates sub-properties directly. No component makes its own API PATCH calls.
+Each component receives the full dataset via `defineModel<any>()` and mutates sub-properties directly. No component makes its own API PATCH calls, with one exception: `dataset-extensions.vue` needs an immediate PATCH for the "refresh extension" action (`needsUpdate: true`) — this is a server-side trigger, not a metadata edit, so it emits a `refresh` event that the parent handles via the dataset store's `patchDataset` action.
 
 ## Component Designs
 
@@ -38,13 +37,13 @@ Each component receives the full dataset via `defineModel<any>()` and mutates su
 
 **Location:** `ui/src/components/dataset/dataset-master-data.vue`
 
-**v-model:** `dataset.masterData` (object)
+**v-model:** Full dataset object via `defineModel<any>()`. Edits `dataset.masterData` sub-property.
 
 **Template:**
 - Descriptive text explaining master data capabilities
 - `<vjsf>` component bound to `dataset.masterData`
 - Schema sourced from `datasetSchema.properties.masterData` (API types import)
-- VJSF options: locale, readOnly based on `can('writeDescription')`
+- VJSF options: locale, readOnly based on `can('writeDescription')` (from injected dataset store)
 
 **VJSF context object:**
 - `dataset` — current dataset object
@@ -57,13 +56,15 @@ Each component receives the full dataset via `defineModel<any>()` and mutates su
 
 All property lists derived from `dataset.schema`.
 
-**Visibility:** `!dataset.draftReason && !dataset.isMetaOnly && userOwnerRole === 'admin'`
+**Visibility:** `!dataset.draftReason && !dataset.isMetaOnly && accountRole === 'admin'`
+
+`accountRole` is obtained from `useSessionAuthenticated()` which returns `{ account, accountRole }`. This replaces the legacy `userOwnerRole` Vuex getter.
 
 ### 2. `dataset-extensions.vue`
 
 **Location:** `ui/src/components/dataset/dataset-extensions.vue`
 
-**v-model:** `dataset.extensions` (array)
+**v-model:** Full dataset object via `defineModel<any>()`. Edits `dataset.extensions` sub-property (array).
 
 **Template:**
 1. **Add extension menu** — `v-menu` dropdown listing available remote service actions (filtered to exclude already-added ones), plus "Add calculated column" button
@@ -73,7 +74,10 @@ All property lists derived from `dataset.schema`.
 
 **Sub-components:**
 - `dataset-add-property-dialog` (existing from Phase 4c) — for adding calculated columns
-- `confirm-menu` (new) — for refresh/delete confirmation
+- `confirm-menu` (existing at `ui/src/components/confirm-menu.vue`) — for refresh/delete confirmation
+
+**Emits:**
+- `refresh(extension)` — emitted when user clicks "refresh extension". The parent (`edit-metadata.vue`) handles this by calling `store.patchDataset` with `{ extensions: [{ ...ext, needsUpdate: true }] }` to trigger server-side re-enrichment immediately.
 
 **New composable — `useRemoteServices`:**
 
@@ -96,7 +100,7 @@ Simple `useFetch` wrapper:
 
 **Location:** `ui/src/components/dataset/dataset-virtual.vue`
 
-**v-model:** `dataset.virtual` (object with `children`, `filters`) and `dataset.schema` (array — column list)
+**v-model:** Full dataset object via `defineModel<any>()`. Edits `dataset.virtual` (object with `children`, `filters`) and `dataset.schema` (array — column list) sub-properties.
 
 **Template — three sections:**
 
@@ -122,6 +126,8 @@ Simple `useFetch` wrapper:
 - `fetchChildSchemas` — fetches each child's schema when children change, for compatibility checking and column enumeration
 - `valuesByKey` — computed from child schemas to populate filter value comboboxes
 
+**Session dependency:** Uses `account` from `useSessionAuthenticated()` for the active account filter and for owner-scoped dataset search.
+
 **Visibility:** `dataset.isVirtual`
 
 ### 4. `dataset-virtual-child-compat.vue`
@@ -130,18 +136,16 @@ Simple `useFetch` wrapper:
 
 **Props:** `child` (object, required), `parentSchema` (array, required)
 
-**Pure computed validation** — no API calls, no store deps. Compares child schema against parent schema and reports categorized messages:
+**Pure computed validation** — no API calls. Compares child schema against parent schema and reports categorized messages:
 - **Info:** additional fields in child not in parent
 - **Warning:** missing fields, disabled/active capability mismatches
 - **Error:** dataset in error status, type mismatches, concept mismatches
 
-Uses `propertyTypes` from API schema import and `capabilitiesSchema` for capability defaults.
+Uses `propertyTypes` from API schema import, `capabilitiesSchema` for capability defaults, and `vocabulary` from `useStore()` composable (singleton, already exists) for concept title resolution in mismatch messages.
 
-### 5. `confirm-menu.vue`
+### 5. `confirm-menu.vue` (existing)
 
-**Location:** `ui/src/components/common/confirm-menu.vue`
-
-Small utility (~30 lines). A `v-menu` wrapping a confirmation prompt with cancel/confirm buttons. Props: `label` (string), `color` (string, default 'warning'). Emits: `confirm`. Activator via default slot.
+**Location:** `ui/src/components/confirm-menu.vue` (already exists, used by `dataset-properties-slide.vue` and `settings-api-keys.vue`). No changes needed.
 
 ## Integration into `edit-metadata.vue`
 
@@ -171,10 +175,24 @@ Note: `virtualHasDiff` includes schema changes because virtual dataset column ma
 Added to the `computedDeepDiff` sections array:
 
 - **Extensions** — after schema section. Condition: `!d.isVirtual && !d.isMetaOnly`. Icon: `mdiPuzzle`.
-- **Master data** — after extensions. Condition: `!d.draftReason && !d.isMetaOnly && userOwnerRole === 'admin'`. Icon: `mdiDatabase`.
+- **Master data** — after extensions. Condition: `!d.draftReason && !d.isMetaOnly && accountRole === 'admin'`. Icon: `mdiDatabase`.
 - **Virtual** — after schema section (replaces extensions/master-data position for virtual datasets). Condition: `d.isVirtual`. Icon: `mdiSetAll`.
 
 Each uses `layout-section-tabs` with accent coloring when its diff computed is true.
+
+All new sections are positioned before the attachments section in the sections array.
+
+### i18n
+
+New translation keys needed in `edit-metadata.vue`:
+- `extensions` / `Extensions` / `Enrichissements`
+- `masterData` / `Master data` / `Données de référence`
+- `virtual` / `Virtual dataset` / `Jeu de données virtuel`
+- `children` / `Children datasets` / `Jeux de données enfants`
+- `columns` / `Columns` / `Colonnes`
+- `filters` / `Filters` / `Filtres`
+
+Each new component includes its own `<i18n>` block for component-level translations.
 
 ## Dependencies
 
@@ -192,7 +210,6 @@ Each uses `layout-section-tabs` with accent coloring when its diff computed is t
 - `ui/src/components/dataset/dataset-extensions.vue`
 - `ui/src/components/dataset/dataset-virtual.vue`
 - `ui/src/components/dataset/dataset-virtual-child-compat.vue`
-- `ui/src/components/common/confirm-menu.vue`
 - `ui/src/composables/use-remote-services.ts`
 
 **Modified files:**
