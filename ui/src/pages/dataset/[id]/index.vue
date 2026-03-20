@@ -307,7 +307,8 @@ watch(dataset, (d) => {
 
 const applications = computed(() => applicationsFetch.data.value?.results ?? [])
 
-const formatDate = (dateStr: string) => {
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString(locale.value, { dateStyle: 'medium' })
 }
 

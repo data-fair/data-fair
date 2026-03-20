@@ -78,7 +78,7 @@ const createApplicationStore = (id: string) => {
 
   const session = useSessionAuthenticated()
   const can = (operation: string) => {
-    if (session.state.value.user?.adminMode) return true
+    if (session.state.user?.adminMode) return true
     return application.value?.userPermissions?.includes(operation) ?? false
   }
 
@@ -88,7 +88,7 @@ const createApplicationStore = (id: string) => {
 
   const datasetsFetch = useFetch<{ results: any[] }>(() => {
     const conf = config.value
-    const datasetsIds = ((conf?.datasets) || [])
+    const datasetsIds = ((conf?.datasets as any[]) || [])
       .map((d: any) => d.id || d.href?.split('/').pop())
       .filter(Boolean)
     if (!datasetsIds.length) return null
@@ -96,7 +96,7 @@ const createApplicationStore = (id: string) => {
   }, {
     query: computed(() => {
       const conf = config.value
-      const datasetsIds = ((conf?.datasets) || [])
+      const datasetsIds = ((conf?.datasets as any[]) || [])
         .map((d: any) => d.id || d.href?.split('/').pop())
         .filter(Boolean)
       return {
@@ -112,7 +112,7 @@ const createApplicationStore = (id: string) => {
 
   const childrenAppsFetch = useFetch<{ results: any[] }>(() => {
     const conf = config.value
-    const appIds = ((conf?.applications) || [])
+    const appIds = ((conf?.applications as any[]) || [])
       .map((d: any) => d.id || d.href?.split('/').pop())
       .filter(Boolean)
     if (!appIds.length) return null
@@ -120,7 +120,7 @@ const createApplicationStore = (id: string) => {
   }, {
     query: computed(() => {
       const conf = config.value
-      const appIds = ((conf?.applications) || [])
+      const appIds = ((conf?.applications as any[]) || [])
         .map((d: any) => d.id || d.href?.split('/').pop())
         .filter(Boolean)
       return {

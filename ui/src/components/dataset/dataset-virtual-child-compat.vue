@@ -37,8 +37,9 @@ const props = defineProps<{
 const { t } = useI18n()
 const { vocabulary } = useStore()
 
-const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties)
-  .filter((key: string) => capabilitiesSchema.properties[key].default === false)
+const capabilitiesProperties = capabilitiesSchema.properties as Record<string, { type: string, default: boolean, 'x-display': string, title: string, description: string }>
+const capabilitiesDefaultFalse = Object.keys(capabilitiesProperties)
+  .filter((key: string) => capabilitiesProperties[key].default === false)
 
 function matchPropertyType (p: any) {
   return propertyTypes.find(pt =>
@@ -106,7 +107,7 @@ const messages = computed(() => {
       if (!childHasCapability && parentHasCapability) {
         messages.warning.push(t('disabledConfig', {
           field: field.title || field['x-originalName'] || field.key,
-          param: capabilitiesSchema.properties[key]?.title ?? key
+          param: capabilitiesProperties[key]?.title ?? key
         }))
       }
     }
@@ -114,7 +115,7 @@ const messages = computed(() => {
       if (parentCapabilities[key] === false && childCapabilities[key] !== false) {
         messages.warning.push(t('unusedConfig', {
           field: field.title || field['x-originalName'] || field.key,
-          param: capabilitiesSchema.properties[key]?.title ?? key
+          param: capabilitiesProperties[key]?.title ?? key
         }))
       }
     }

@@ -36,7 +36,7 @@ en:
 
 <script lang="ts" setup>
 
-const modelValue = defineModel<{ public?: boolean, privateAccess?: { type: string, id: string, name: string }[] }>()
+const modelValue = defineModel<Record<string, any> & { public?: boolean, privateAccess?: { type: string, id: string, name: string }[] }>()
 
 const { t } = useI18n()
 

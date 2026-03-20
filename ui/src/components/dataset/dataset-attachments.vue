@@ -37,7 +37,7 @@
             >{{ attachment.title || attachment.name }}</a>
           </v-card-title>
           <v-card-text v-if="attachment.type === 'file'">
-            <div>{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</div>
+            <div>{{ attachment.name }} ({{ ((attachment.size || 0) / 1000).toFixed(2) }} ko)</div>
             <div v-if="attachment.updatedAt">
               {{ new Date(attachment.updatedAt).toLocaleString() }}
             </div>
@@ -145,7 +145,7 @@ function canBeThumbnail (attachment: any) {
 }
 
 async function setAsThumbnail (attachment: any) {
-  await patchDataset.action({ image: attachmentUrl(attachment) })
+  await patchDataset.execute({ image: attachmentUrl(attachment) })
 }
 
 async function uploadFile () {
@@ -165,7 +165,7 @@ async function uploadFile () {
     const updatedAttachments = [...attachments.value]
     const existingIndex = updatedAttachments.findIndex(a => a.type === 'file' && a.name === selectedFile.name)
     const newAttachment = {
-      type: 'file',
+      type: 'file' as const,
       name: selectedFile.name,
       title: selectedFile.name,
       size: selectedFile.size,
@@ -177,7 +177,7 @@ async function uploadFile () {
     } else {
       updatedAttachments.push(newAttachment)
     }
-    await patchDataset.action({ attachments: updatedAttachments })
+    await patchDataset.execute({ attachments: updatedAttachments })
   } catch (error) {
     console.error('Error uploading attachment', error)
   }
@@ -197,7 +197,7 @@ async function deleteAttachment () {
   }
   const updatedAttachments = [...attachments.value]
   updatedAttachments.splice(i, 1)
-  await patchDataset.action({ attachments: updatedAttachments })
+  await patchDataset.execute({ attachments: updatedAttachments })
   confirmDelete.value = null
 }
 </script>

@@ -5,23 +5,25 @@ let storeSingleton: ReturnType<typeof createStore>
 
 function createStore () {
   const vocabulary = ref<Record<string, Vocabulary>>({})
+  const vocabularyArrayData = ref<Vocabulary[]>([])
 
   const vocabularyArray = useAsyncAction(
     async () => {
-      const vocabularyArray = await $fetch<Vocabulary[]>('/vocabulary', { method: 'GET' })
+      const result = await $fetch<Vocabulary[]>('/vocabulary', { method: 'GET' })
 
-      vocabularyArray.forEach(term => {
+      result.forEach(term => {
         term.identifiers.forEach(id => { vocabulary.value[id] = term })
       })
 
-      return vocabularyArray
+      vocabularyArrayData.value = result
+      return result
     }
   )
   vocabularyArray.execute()
 
   return {
     vocabulary,
-    vocabularyArray
+    vocabularyArray: { ...vocabularyArray, data: vocabularyArrayData }
   }
 }
 

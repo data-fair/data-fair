@@ -52,7 +52,7 @@
           cols="12"
           md="6"
           lg="7"
-          order-md="1"
+          class="order-md-1"
         >
           <v-text-field
             v-model="activeProp.title"
@@ -89,7 +89,7 @@
           cols="12"
           md="6"
           lg="5"
-          order-md="2"
+          class="order-md-2"
         >
           <!-- Action buttons row -->
           <div
@@ -169,10 +169,10 @@
             item-title="text"
             item-value="value"
           >
-            <template #item="{ item, props: itemProps }">
+            <template #item="{ internalItem, props: itemProps }">
               <v-list-item v-bind="itemProps">
-                <v-list-item-subtitle v-if="item.raw.description">
-                  {{ item.raw.description }}
+                <v-list-item-subtitle v-if="(internalItem.raw as any).description">
+                  {{ (internalItem.raw as any).description }}
                 </v-list-item-subtitle>
               </v-list-item>
             </template>

@@ -79,8 +79,9 @@ const props = defineProps<{
   editable?: boolean
 }>()
 
-const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(
-  (key: string) => capabilitiesSchema.properties[key].default === false
+const capabilitiesProperties = capabilitiesSchema.properties as Record<string, { type: string, default: boolean, 'x-display': string, title: string, description: string }>
+const capabilitiesDefaultFalse = Object.keys(capabilitiesProperties).filter(
+  (key: string) => capabilitiesProperties[key].default === false
 )
 
 const dialog = ref(false)

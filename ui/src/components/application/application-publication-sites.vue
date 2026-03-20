@@ -33,7 +33,7 @@
                 color="primary"
                 hide-details
                 density="compact"
-                @update:model-value="(val: boolean) => togglePublish(site, val)"
+                @update:model-value="(val: boolean | null) => togglePublish(site, !!val)"
               />
             </template>
           </v-list-item>

@@ -24,7 +24,7 @@
 <script lang="ts" setup>
 withDefaults(defineProps<{
   small?: boolean
-  location?: string
+  location?: 'top' | 'bottom' | 'start' | 'end' | 'left' | 'right'
 }>(), {
   small: false,
   location: 'start'

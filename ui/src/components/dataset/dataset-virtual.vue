@@ -25,11 +25,11 @@
         return-object
         @update:model-value="addChild"
       >
-        <template #item="{ item, props: itemProps }">
+        <template #item="{ internalItem, props: itemProps }">
           <v-list-item
             v-bind="itemProps"
-            :title="item.raw.title"
-            :subtitle="item.raw.id"
+            :title="(internalItem.raw as any).title"
+            :subtitle="(internalItem.raw as any).id"
           />
         </template>
       </v-autocomplete>
@@ -229,7 +229,7 @@
                     size="small"
                     closable
                   >
-                    {{ item.title }}
+                    {{ (item as any).title ?? item }}
                   </v-chip>
                 </template>
               </v-combobox>

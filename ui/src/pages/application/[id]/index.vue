@@ -308,7 +308,8 @@ watch(() => store.config.value, (conf) => {
 const datasets = computed(() => datasetsFetch.data.value?.results ?? [])
 const childrenApps = computed(() => childrenAppsFetch.data.value?.results ?? [])
 
-const formatDate = (dateStr: string) => {
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString(locale.value, { dateStyle: 'medium' })
 }
 
