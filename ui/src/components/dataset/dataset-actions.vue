@@ -36,6 +36,21 @@
       </template>
     </dataset-upload-dialog>
 
+    <dataset-rest-upload-actions
+      v-if="dataset.isRest && can('createLine').value"
+    >
+      <template #activator="{ props: activatorProps, title }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="primary">
+              mdi-upload
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ title }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </dataset-rest-upload-actions>
+
     <v-list-subheader>{{ t('actions') }}</v-list-subheader>
 
     <v-list-item

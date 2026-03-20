@@ -106,21 +106,6 @@
               </li>
             </ul>
           </v-alert>
-          <v-alert
-            v-if="result.warnings?.length"
-            type="warning"
-            :value="true"
-            variant="outlined"
-          >
-            <ul>
-              <li
-                v-for="(warning, i) in result.warnings"
-                :key="i"
-              >
-                {{ warning }}
-              </li>
-            </ul>
-          </v-alert>
         </template>
         <v-form
           v-else
@@ -241,6 +226,7 @@ fr:
   resultCreated: "{nb} ligne(s) créée(s)"
   resultDeleted: "{nb} ligne(s) supprimées(s)"
   separator: séparateur
+  line: ligne
   drop: Cochez pour supprimer toutes les lignes existantes avant d'importer les nouvelles
   dropped: "Toutes les lignes existantes ont été supprimées"
   cancelled: "Suppression des lignes existantes et autres opérations annulées à cause des erreurs"
@@ -261,6 +247,7 @@ en:
   resultCreated: "{nb} created line(s)"
   resultDeleted: "{nb} deleted line(s)"
   separator: separator
+  line: line
   drop: Check to delete all existing lines before importing new ones
   dropped: "All existing lines have been deleted"
   cancelled: "Deletion of existing lines and other operations cancelled because of errors"
