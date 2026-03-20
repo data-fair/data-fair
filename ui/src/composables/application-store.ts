@@ -4,13 +4,16 @@ import debugModule from 'debug'
 
 const debug = debugModule('application-store')
 
+// Runtime properties added by the API but not in the schema
+type ApplicationRuntime = Application & { userPermissions: string[], fullUpdatedAt?: string }
+
 // we do not use SSR, so we can use a simple module level singleton
 export type ApplicationStore = ReturnType<typeof createApplicationStore>
 const applicationStoreKey = Symbol('application-store')
 
 const createApplicationStore = (id: string) => {
-  const applicationFetch = useFetch<Application & { userPermissions: string[] }>($apiPath + `/applications/${id}`)
-  const application = ref<(Application & { userPermissions: string[] }) | null>(null)
+  const applicationFetch = useFetch<ApplicationRuntime>($apiPath + `/applications/${id}`)
+  const application = ref<ApplicationRuntime | null>(null)
   watch(applicationFetch.data, () => { application.value = applicationFetch.data.value })
 
   const baseAppDraft = computed(() => {
@@ -20,7 +23,7 @@ const createApplicationStore = (id: string) => {
       : application.value.baseApp
   })
 
-  const patch = async (patch: Partial<Application>) => {
+  const patch = async (patch: Partial<ApplicationRuntime>) => {
     await $fetch<Application>('/applications/' + id, { method: 'PATCH', body: patch })
     if (applicationFetch.data.value) Object.assign(applicationFetch.data.value, patch)
   }
@@ -48,7 +51,7 @@ const createApplicationStore = (id: string) => {
   watch(configDraftFetch.data, () => { configDraft.value = configDraftFetch.data.value })
   const writeConfigDraft = async (newConfigDraft: AppConfig) => {
     debug('writeConfigDraft', newConfigDraft)
-    await $fetch<AppConfig>('applications/' + id + '/configuration-draft', {
+    await $fetch<AppConfig>('/applications/' + id + '/configuration-draft', {
       method: 'PUT',
       body: newConfigDraft,
       headers: {
@@ -62,7 +65,7 @@ const createApplicationStore = (id: string) => {
     }
   }
   const cancelConfigDraft = async () => {
-    await $fetch('applications/' + id + '/configuration-draft', { method: 'DELETE' })
+    await $fetch('/applications/' + id + '/configuration-draft', { method: 'DELETE' })
     configDraft.value = config.value
     if (application.value) application.value.status = 'configured'
   }

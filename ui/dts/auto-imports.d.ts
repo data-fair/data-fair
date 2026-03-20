@@ -24,6 +24,7 @@ declare global {
   const computedDeepDiff: typeof import('@data-fair/lib-vue/deep-diff.js')['computedDeepDiff']
   const createApp: typeof import('vue')['createApp']
   const createApplicationStore: typeof import('../src/composables/application-store')['createApplicationStore']
+  const createBreadcrumbs: typeof import('../src/composables/use-breadcrumbs')['createBreadcrumbs']
   const createDatasetStore: typeof import('../src/composables/dataset-store')['createDatasetStore']
   const customRef: typeof import('vue')['customRef']
   const datasetLines: typeof import('../src/composables/dataset-lines')['default']
@@ -44,6 +45,7 @@ declare global {
   const dfUiNotifAlert: typeof import('@data-fair/lib-vuetify/ui-notif-alert.vue')['default']
   const dfUserAvatar: typeof import('@data-fair/lib-vuetify/ui-user-avatar.vue')['default']
   const effectScope: typeof import('vue')['effectScope']
+  const escapeKey: typeof import('../src/utils/escape-key')['escapeKey']
   const findEqFilter: typeof import('../src/composables/dataset-filters')['findEqFilter']
   const formatBytes: typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']
   const formatValue: typeof import('../src/composables/dataset-lines')['formatValue']
@@ -82,6 +84,7 @@ declare global {
   const propertyTypes: typeof import('../src/utils/dataset')['propertyTypes']
   const provide: typeof import('vue')['provide']
   const provideApplicationStore: typeof import('../src/composables/application-store')['provideApplicationStore']
+  const provideBreadcrumbs: typeof import('../src/composables/use-breadcrumbs')['provideBreadcrumbs']
   const provideDatasetStore: typeof import('../src/composables/dataset-store')['provideDatasetStore']
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
@@ -103,9 +106,12 @@ declare global {
   const useAsyncAction: typeof import('@data-fair/lib-vue/async-action.js')['useAsyncAction']
   const useAttrs: typeof import('vue')['useAttrs']
   const useBooleanSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useBooleanSearchParam']
+  const useBreadcrumbs: typeof import('../src/composables/use-breadcrumbs')['useBreadcrumbs']
+  const useCatalogList: typeof import('../src/composables/use-catalog-list')['useCatalogList']
   const useConceptFilters: typeof import('@data-fair/lib-vue/concept-filters.js')['useConceptFilters']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVars: typeof import('vue')['useCssVars']
+  const useDFramePage: typeof import('../src/composables/use-d-frame-page')['useDFramePage']
   const useDatasetStore: typeof import('../src/composables/dataset-store')['useDatasetStore']
   const useDatasetWatch: typeof import('../src/composables/dataset-watch')['useDatasetWatch']
   const useEditFetch: typeof import('@data-fair/lib-vue/edit-fetch.js')['useEditFetch']
@@ -123,7 +129,9 @@ declare global {
   const useLocaleDayjs: typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']
   const useModel: typeof import('vue')['useModel']
   const useNumberSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']
+  const usePermissions: typeof import('../src/composables/use-permissions')['usePermissions']
   const useReactiveSearchParams: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useReactiveSearchParams']
+  const useRemoteServices: typeof import('../src/composables/use-remote-services')['useRemoteServices']
   const useRoute: typeof import('vue-router')['useRoute']
   const useRouter: typeof import('vue-router')['useRouter']
   const useSeoMeta: typeof import('@unhead/vue')['useSeoMeta']
@@ -176,6 +184,7 @@ declare module 'vue' {
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedDeepDiff: UnwrapRef<typeof import('@data-fair/lib-vue/deep-diff.js')['computedDeepDiff']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
+    readonly createBreadcrumbs: UnwrapRef<typeof import('../src/composables/use-breadcrumbs')['createBreadcrumbs']>
     readonly createDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['createDatasetStore']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly datasetLines: UnwrapRef<typeof import('../src/composables/dataset-lines')['default']>
@@ -196,6 +205,7 @@ declare module 'vue' {
     readonly dfUiNotifAlert: UnwrapRef<typeof import('@data-fair/lib-vuetify/ui-notif-alert.vue')['default']>
     readonly dfUserAvatar: UnwrapRef<typeof import('@data-fair/lib-vuetify/ui-user-avatar.vue')['default']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly escapeKey: UnwrapRef<typeof import('../src/utils/escape-key')['escapeKey']>
     readonly findEqFilter: UnwrapRef<typeof import('../src/composables/dataset-filters')['findEqFilter']>
     readonly formatBytes: UnwrapRef<typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']>
     readonly formatValue: UnwrapRef<typeof import('../src/composables/dataset-lines')['formatValue']>
@@ -234,6 +244,7 @@ declare module 'vue' {
     readonly propertyTypes: UnwrapRef<typeof import('../src/utils/dataset')['propertyTypes']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['provideApplicationStore']>
+    readonly provideBreadcrumbs: UnwrapRef<typeof import('../src/composables/use-breadcrumbs')['provideBreadcrumbs']>
     readonly provideDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['provideDatasetStore']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
@@ -255,9 +266,12 @@ declare module 'vue' {
     readonly useAsyncAction: UnwrapRef<typeof import('@data-fair/lib-vue/async-action.js')['useAsyncAction']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useBooleanSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useBooleanSearchParam']>
+    readonly useBreadcrumbs: UnwrapRef<typeof import('../src/composables/use-breadcrumbs')['useBreadcrumbs']>
+    readonly useCatalogList: UnwrapRef<typeof import('../src/composables/use-catalog-list')['useCatalogList']>
     readonly useConceptFilters: UnwrapRef<typeof import('@data-fair/lib-vue/concept-filters.js')['useConceptFilters']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
+    readonly useDFramePage: UnwrapRef<typeof import('../src/composables/use-d-frame-page')['useDFramePage']>
     readonly useDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['useDatasetStore']>
     readonly useDatasetWatch: UnwrapRef<typeof import('../src/composables/dataset-watch')['useDatasetWatch']>
     readonly useEditFetch: UnwrapRef<typeof import('@data-fair/lib-vue/edit-fetch.js')['useEditFetch']>
@@ -273,7 +287,9 @@ declare module 'vue' {
     readonly useLocaleDayjs: UnwrapRef<typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNumberSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']>
+    readonly usePermissions: UnwrapRef<typeof import('../src/composables/use-permissions')['usePermissions']>
     readonly useReactiveSearchParams: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useReactiveSearchParams']>
+    readonly useRemoteServices: UnwrapRef<typeof import('../src/composables/use-remote-services')['useRemoteServices']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
     readonly useSeoMeta: UnwrapRef<typeof import('@unhead/vue')['useSeoMeta']>

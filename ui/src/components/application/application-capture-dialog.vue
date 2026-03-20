@@ -113,13 +113,13 @@ const stateSrc = ref<string | null>(null)
 const downloading = ref(false)
 
 const syncState = computed(() => {
-  const meta = baseAppFetch.data.value?.meta
+  const meta = baseAppFetch.data.value?.meta as Record<string, string> | undefined
   return meta?.['df:sync-state'] && meta['df:sync-state'] !== 'false'
 })
 
 watch(showDialog, (val) => {
   if (val) {
-    const meta = baseAppFetch.data.value?.meta
+    const meta = baseAppFetch.data.value?.meta as Record<string, string> | undefined
     width.value = Number(meta?.['df:capture-width'] || 800)
     height.value = Number(meta?.['df:capture-height'] || 450)
     stateSrc.value = null

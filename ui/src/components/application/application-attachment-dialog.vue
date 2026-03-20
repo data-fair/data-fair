@@ -117,6 +117,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import type { Application } from '#api/types'
 import useApplicationStore from '~/composables/application-store'
 
 interface Attachment {
@@ -224,7 +225,7 @@ const save = async () => {
     const attachments = [...(application.value.attachments || [])] as Attachment[]
     if (props.index === -1) attachments.push(attachment)
     else attachments[props.index] = attachment
-    await patch({ attachments })
+    await patch({ attachments: attachments as Application['attachments'] })
     showDialog.value = false
     emit('saved')
   } catch (error: any) {

@@ -242,6 +242,10 @@
                   </v-container>
                 </v-tabs-window-item>
 
+                <v-tabs-window-item value="protected-links">
+                  <application-protected-links />
+                </v-tabs-window-item>
+
                 <v-tabs-window-item value="publication-sites">
                   <application-publication-sites />
                 </v-tabs-window-item>
@@ -300,6 +304,7 @@ fr:
   validatedError: "Erreur dans la <b>version validée</b>"
   share: Partage
   permissions: Permissions
+  protectedLink: Lien protege
   publicationSites: Portails
   activity: Activité
   journal: Journal
@@ -324,6 +329,7 @@ en:
   validatedError: "Error in the <b>validated version</b>"
   share: Share
   permissions: Permissions
+  protectedLink: Protected link
   publicationSites: Portals
   activity: Activity
   journal: Journal
@@ -338,11 +344,12 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiInformation, mdiDatabase, mdiImageMultiple, mdiSquareEditOutline, mdiSecurity, mdiPresentation, mdiCalendarText, mdiPaperclip } from '@mdi/js'
+import { mdiInformation, mdiDatabase, mdiImageMultiple, mdiSquareEditOutline, mdiSecurity, mdiPresentation, mdiCalendarText, mdiPaperclip, mdiCloudKey } from '@mdi/js'
 import { provideApplicationStore } from '~/composables/application-store'
 import { useApplicationVersions } from '~/composables/application-versions'
 import { useApplicationWatch } from '~/composables/application-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
+import { $uiConfig } from '~/context'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/application/[id]/'>()
@@ -426,7 +433,12 @@ const sections = computedDeepDiff(() => {
   if (can('getPermissions')) {
     shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
   }
-  shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
+  if (can('getKeys')) {
+    shareTabs.push({ key: 'protected-links', title: t('protectedLink'), icon: mdiCloudKey })
+  }
+  if (!$uiConfig.disablePublicationSites) {
+    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
+  }
   if (shareTabs.length) {
     result.push({ title: t('share'), id: 'share', tabs: shareTabs })
   }

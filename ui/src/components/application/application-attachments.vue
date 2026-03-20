@@ -114,6 +114,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import type { Application } from '#api/types'
 import useApplicationStore from '~/composables/application-store'
 
 interface Attachment {
@@ -174,7 +175,7 @@ const deleteAttachment = async () => {
   }
   const newAttachments = [...attachments.value]
   newAttachments.splice(deleteIndex.value, 1)
-  await patch({ attachments: newAttachments })
+  await patch({ attachments: newAttachments as Application['attachments'] })
   showDeleteDialog.value = false
 }
 </script>
