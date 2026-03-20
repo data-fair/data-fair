@@ -199,6 +199,7 @@
 
 <script lang="ts" setup>
 import { mdiAlert } from '@mdi/js'
+import { usePermissions } from '~/composables/use-permissions'
 import dataSvg from '~/assets/svg/Data Arranging_Two Color.svg?raw'
 import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
