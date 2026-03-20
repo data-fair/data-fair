@@ -152,7 +152,7 @@
           <div class="pa-4">
             <v-form
               v-if="dataset && publicationSite"
-              v-model="metadataValid"
+              v-model="metadataFormValid"
             >
               <v-text-field
                 v-model="datasetTitle"
@@ -266,7 +266,7 @@ const currentStep = ref(1)
 const publicationSite = ref<Record<string, any> | null>(null)
 const selectedDataset = ref<ListedDataset | undefined>()
 const dataset = ref<Record<string, any> | null>(null)
-const metadataValid = ref(false)
+const metadataFormValid = ref(false)
 const datasetTitle = ref('')
 const datasetDescription = ref('')
 
@@ -296,6 +296,17 @@ const datasetOwner = computed(() => {
   }
 })
 
+// Fetch publication site settings to get required metadata fields
+const settingsFetch = useFetch<any>(() => {
+  if (!dataset.value || !publicationSite.value) return null
+  const o = dataset.value.owner
+  return `${$apiPath}/settings/${o.type}/${o.id}`
+})
+
+const requiredMetadata = computed(() => {
+  return settingsFetch.data.value?.publicationSite?.settings?.datasetsRequiredMetadata ?? []
+})
+
 // Publication site key for comparing
 const publicationSiteKey = computed(() => {
   if (!publicationSite.value) return null
@@ -315,6 +326,22 @@ const canPublishDirectly = computed(() => {
   if (!canAdmin.value) return false
   // If user has a department, it must match the publication site department
   if (account.value?.department && account.value.department !== publicationSite.value.department) return false
+  return true
+})
+
+// Validate that all required metadata fields are filled
+const metadataValid = computed(() => {
+  // First check form validity
+  if (!metadataFormValid.value) return false
+
+  // Then check required metadata fields
+  if (!dataset.value || !requiredMetadata.value.length) return true
+  for (const field of requiredMetadata.value) {
+    if (field.startsWith('custom.')) {
+      const key = field.replace('custom.', '')
+      if (!dataset.value.customMetadata?.[key]) return false
+    } else if (!dataset.value[field]) return false
+  }
   return true
 })
 
