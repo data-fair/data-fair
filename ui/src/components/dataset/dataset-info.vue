@@ -46,6 +46,15 @@
             <span>{{ t('lines', dataset.count) }}</span>
           </v-list-item>
 
+          <v-list-item
+            v-if="nbVirtualDatasets > 0"
+            :prepend-icon="mdiDatabaseArrowRight"
+          >
+            <router-link :to="`/datasets?children=${dataset.id}`">
+              {{ t('nbVirtualDatasets', nbVirtualDatasets) }}
+            </router-link>
+          </v-list-item>
+
           <!-- REST dataset indicators -->
           <template v-if="dataset.isRest">
             <v-list-item :prepend-icon="mdiAllInclusive">
@@ -409,6 +418,7 @@ fr:
   updatedAt: derniere mise a jour des metadonnees
   dataUpdatedAt: derniere mise a jour des donnees
   lines: aucune ligne | 1 ligne | {count} lignes
+  nbVirtualDatasets: aucun jeu virtuel | 1 jeu de données virtuel | {count} jeux de données virtuels
   restDataset: Jeu de donnees editable
   ttl: Supprimer automatiquement les lignes dont la colonne {col} contient une date depassee de {days} jours.
   noTTL: pas de politique d'expiration des lignes configuree
@@ -449,6 +459,7 @@ en:
   updatedAt: last update of metadata
   dataUpdatedAt: last update of data
   lines: no line | 1 line | {count} lines
+  nbVirtualDatasets: no virtual dataset | 1 virtual dataset | {count} virtual datasets
   restDataset: Editable dataset
   ttl: Automatically delete lines whose column {col} contains a date exceeded by {days} days.
   noTTL: no automatic expiration of lines configured
@@ -492,6 +503,7 @@ import {
   mdiAccount,
   mdiAccountDetails,
   mdiAllInclusive,
+  mdiDatabaseArrowRight,
   mdiDeleteClock,
   mdiDeleteRestore,
   mdiFile,
@@ -505,8 +517,16 @@ import {
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import formatBytes from '@data-fair/lib-vue/format/bytes'
 import { useDatasetsMetadata } from '~/composables/use-datasets-metadata'
+import useDatasetStore from '~/composables/dataset-store'
 
 const dataset = defineModel<any>({ required: true })
+
+// Wrap in try/catch since dataset-info may be used outside store context (share-dataset)
+let nbVirtualDatasets = ref(0)
+try {
+  const store = useDatasetStore()
+  nbVirtualDatasets = store.nbVirtualDatasets
+} catch {}
 
 const { t, locale } = useI18n()
 

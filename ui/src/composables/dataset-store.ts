@@ -74,6 +74,14 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
     watch: false
   })
 
+  const nbVirtualDatasetsFetch = useFetch<{ count: number }>(() => {
+    if (!dataset.value?.finalizedAt) return null
+    return `${$apiPath}/datasets`
+  }, {
+    query: computed(() => ({ children: id, size: 0 }))
+  })
+  const nbVirtualDatasets = computed(() => nbVirtualDatasetsFetch.data.value?.count ?? 0)
+
   const dataFiles = computed(() => {
     if (!dataset.value) return []
     const files: { key: string, title: string, url: string }[] = []
@@ -131,6 +139,8 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
     patchDataset,
     resourceUrl,
     applicationsFetch,
+    nbVirtualDatasetsFetch,
+    nbVirtualDatasets,
     dataFiles,
     remove,
     changeOwner,
