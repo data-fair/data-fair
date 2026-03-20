@@ -333,7 +333,7 @@ import useDatasetStore from '~/composables/dataset-store'
 const { t } = useI18n()
 const router = useRouter()
 const { dataset, dataFiles, can, remove, id, resourceUrl } = useDatasetStore()
-const { session } = useSession()
+const session = useSession()
 const user = computed(() => session.state.user)
 
 const showDeleteDialog = ref(false)

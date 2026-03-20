@@ -12,7 +12,7 @@
 import { usePermissions } from '~/composables/use-permissions'
 
 const router = useRouter()
-const { session } = useSession()
+const session = useSession()
 
 const iframeHeight = ref('600px')
 

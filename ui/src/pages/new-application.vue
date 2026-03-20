@@ -248,7 +248,7 @@ async function searchApps (q: string) {
 function openCopyDialog () {
   if (!sourceApp.value) return
   selectedBaseApp.value = null
-  appTitle.value = `${sourceApp.value.title} (copie)`
+  appTitle.value = `${sourceApp.value.title} (${t('copySuffix')})`
   showCreateDialog.value = true
 }
 
@@ -295,6 +295,7 @@ fr:
   copyExisting: Copier une application existante
   searchApp: Rechercher une application à copier
   copy: Copier
+  copySuffix: copie
 en:
   newApplication: Configure a new application
   chooseBaseApp: Choose an application template to create your visualization.
@@ -307,4 +308,5 @@ en:
   copyExisting: Copy an existing application
   searchApp: Search for an application to copy
   copy: Copy
+  copySuffix: copy
 </i18n>
