@@ -21,6 +21,19 @@
       </v-list-item>
     </template>
 
+    <v-list-item
+      v-if="dataset.isRest && user?.adminMode"
+      :href="resourceUrl + '/raw'"
+    >
+      <template #prepend>
+        <v-icon color="admin">
+          mdi-progress-download
+        </v-icon>
+      </template>
+      <v-list-item-title>{{ t('downloadRawRest') }}</v-list-item-title>
+      <v-list-item-subtitle>{{ t('downloadRawRestSubtitle') }}</v-list-item-subtitle>
+    </v-list-item>
+
     <dataset-upload-dialog
       v-if="can('writeData').value && !dataset.isRest && !dataset.isVirtual && !dataset.isMetaOnly"
     >
@@ -269,6 +282,8 @@
 fr:
   downloads: TÉLÉCHARGEMENTS
   updateFile: Mettre à jour le fichier
+  downloadRawRest: Export brut
+  downloadRawRestSubtitle: Téléchargement de l'export brut des données originales (admin)
   actions: ACTIONS
   editMetadata: Éditer les métadonnées
   viewData: Voir les données
@@ -290,6 +305,8 @@ fr:
 en:
   downloads: DOWNLOADS
   updateFile: Update data file
+  downloadRawRest: Raw export
+  downloadRawRestSubtitle: Download the raw export of original data (admin)
   actions: ACTIONS
   editMetadata: Edit metadata
   viewData: View data
@@ -315,7 +332,9 @@ import useDatasetStore from '~/composables/dataset-store'
 
 const { t } = useI18n()
 const router = useRouter()
-const { dataset, dataFiles, can, remove, id } = useDatasetStore()
+const { dataset, dataFiles, can, remove, id, resourceUrl } = useDatasetStore()
+const { session } = useSession()
+const user = computed(() => session.state.user)
 
 const showDeleteDialog = ref(false)
 const showDeleteAllLinesDialog = ref(false)
