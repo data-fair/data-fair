@@ -24,7 +24,11 @@ Parameters:
 - `query: ComputedRef<Record<string, any>>` — reactive query params (includes search, sort, facets, filters, owner, select, size)
 - `pageSize: number` — defaults to 20
 
-Uses `useFetch` with manual refresh, same pattern as portals: `v-intersect` on sentinel div triggers `loadMore()`.
+Uses `useFetch` with `{ watch: false, immediate: false }` (manual mode, matching portals pattern). Initial load triggered in `onMounted`. `v-intersect` on sentinel div triggers `loadMore()`.
+
+**Facets optimization:** The `facets` query param is only included on initial/reset fetches (page 1), not on `loadMore()` increments, since facet aggregation is expensive and counts don't change within an infinite scroll session.
+
+**Search debounce:** The search `q` param should be debounced (300ms) before triggering API calls to avoid excessive requests on keystrokes. Use `watchDebounced` or a debounced computed for the search-to-query path.
 
 ### Datasets page (`datasets.vue`)
 
@@ -41,11 +45,12 @@ Uses `useFetch` with manual refresh, same pattern as portals: `v-intersect` on s
 **Sort options:**
 - `createdAt:-1` / `createdAt:1`
 - `updatedAt:-1` / `updatedAt:1`
+- `dataUpdatedAt:-1` / `dataUpdatedAt:1`
 - `title:1` / `title:-1`
 
 **API params:**
 ```
-select: title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason
+select: title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason
 facets: status,visibility,topics,publicationSites,requestedPublicationSites,services,concepts,owner,draftStatus
 size: 20
 page: <currentPage>
@@ -76,7 +81,7 @@ Same layout as datasets but:
 - Grid only (no list view toggle, matching legacy)
 - Different facets (see below)
 - Different API select fields: `title,description,status,updatedAt,publicationSites,topics,visibility,owner,url`
-- Different facets request: `status,visibility,topics,publicationSites,requestedPublicationSites,base-application,owner`
+- Different facets request: `visibility,topics,publicationSites,requestedPublicationSites,base-application,owner`
 - "New application" button links to `/new-application`
 
 ### Dataset facets component (`dataset-facets.vue`)
@@ -114,7 +119,8 @@ Props: `dataset`, `showTopics?: boolean`, `showOwner?: boolean`
 Content:
 - **Title** with text overflow ellipsis
 - **Type badges** (chips): virtual, REST-editable, draft (with draftReason), metadata-only
-- **File info**: original file name + human-readable size
+- **Visibility indicator** (public/private/protected icon)
+- **File info**: original file name + human-readable size (falls back to `draft.originalFile`/`draft.file` when dataset is in draft)
 - **Record count** (formatted with locale)
 - **Topic chips** with custom background colors
 - **Owner** name (when `showOwner`)
@@ -148,9 +154,17 @@ Content:
 
 Clicking navigates to `/application/<id>`.
 
+## Owner filter behavior
+
+By default, the list is scoped to the current account (`type:id` or `type:id:department`). The owner facet allows filtering within departments of the current organization. Admin/superadmin users can use a "show shared" toggle to see datasets from other accounts (sets `shared=true` API param instead of `owner`). This matches the legacy behavior.
+
+## Permission checks
+
+The "New dataset" and "New application" buttons are only shown when `canContribDep` (from `usePermissions` composable). This matches the legacy behavior.
+
 ## URL query parameters
 
-All filter state is synced to URL query params for bookmarking/sharing:
+All filter state is synced to URL query params for bookmarking/sharing. Multi-value facet filters use `useStringsArraySearchParam` from `@data-fair/lib-vue/reactive-search-params.js`:
 - `q` — text search
 - `sort` — sort field and direction
 - `owner` — owner filter
