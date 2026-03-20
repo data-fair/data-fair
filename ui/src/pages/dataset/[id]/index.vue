@@ -99,6 +99,37 @@
                         </template>
                         <v-list-item-title>{{ dataset.count.toLocaleString(locale) }} {{ t('records') }}</v-list-item-title>
                       </v-list-item>
+
+                      <!-- REST dataset indicators -->
+                      <template v-if="dataset.isRest">
+                        <v-list-item>
+                          <template #prepend>
+                            <v-icon>{{ mdiAllInclusive }}</v-icon>
+                          </template>
+                          <v-list-item-title>{{ t('restDataset') }}</v-list-item-title>
+                        </v-list-item>
+
+                        <v-list-item>
+                          <template #prepend>
+                            <v-icon :color="dataset.rest?.history ? undefined : 'grey'">
+                              {{ mdiHistory }}
+                            </v-icon>
+                          </template>
+                          <v-list-item-title v-if="dataset.rest?.history">
+                            {{ t('history') }}
+                          </v-list-item-title>
+                          <v-list-item-title v-else>
+                            {{ t('noHistory') }}
+                          </v-list-item-title>
+                          <template #append>
+                            <dataset-edit-history
+                              v-if="can('writeDescriptionBreaking').value"
+                              :history="dataset.rest?.history"
+                              @change="onHistoryChange"
+                            />
+                          </template>
+                        </v-list-item>
+                      </template>
                     </v-list>
                     <div class="d-flex flex-wrap ga-1 mt-2">
                       <v-chip
@@ -277,6 +308,9 @@ fr:
   permissions: Permissions
   publicationSites: Portails
   relatedDatasets: Voir aussi
+  restDataset: Jeu de données éditable
+  history: Historisation (conserve les révisions des lignes)
+  noHistory: Pas d'historisation (ne conserve pas les révisions des lignes)
   readApiKey: Clé d'API en lecture
   activity: Activité
   journal: Journal
@@ -293,6 +327,9 @@ en:
   permissions: Permissions
   publicationSites: Portals
   relatedDatasets: See also
+  restDataset: Editable dataset
+  history: History (store revisions of lines)
+  noHistory: No history configured (do not store revisions of lines)
   readApiKey: Read API key
   activity: Activity
   journal: Journal
@@ -301,7 +338,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiInformation, mdiTableCog, mdiImageMultiple, mdiSecurity, mdiPresentation, mdiEyeArrowRight, mdiCalendarText, mdiKey } from '@mdi/js'
+import { mdiInformation, mdiTableCog, mdiImageMultiple, mdiSecurity, mdiPresentation, mdiEyeArrowRight, mdiCalendarText, mdiKey, mdiHistory, mdiAllInclusive } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
@@ -310,7 +347,7 @@ const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
 
 const store = provideDatasetStore(route.params.id, true)
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, can } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, can, patchDataset } = store
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 
@@ -331,6 +368,10 @@ const applications = computed(() => applicationsFetch.data.value?.results ?? [])
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString(locale.value, { dateStyle: 'medium' })
+}
+
+async function onHistoryChange (history: boolean) {
+  await patchDataset.action({ rest: { ...dataset.value?.rest, history } })
 }
 
 const sections = computedDeepDiff(() => {
