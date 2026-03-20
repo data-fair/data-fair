@@ -62,9 +62,7 @@ All ~15 d-frame wrapper pages are missing two features from the legacy UI:
 
 5. **E2e smoke test** — one test verifying a d-frame page loads and renders its iframe.
 
-### Notifications queue gap
-
-The legacy `layout-navigation-top.vue` includes a `<notifications-queue>` component showing real-time notification alerts (when `user && env.eventsUrl`). The new top bar does not have this. This is noted as a known gap but not in scope for this audit — it requires the events service integration which is external.
+6. **Notifications queue** — the legacy `layout-navigation-top.vue` includes a `<notifications-queue>` component showing real-time notification alerts (when `user && env.eventsUrl`). The new top bar does not have this. Add a notifications indicator to the top bar, connecting to the events service via the existing `eventsUrl` from session/config.
 
 ---
 
@@ -99,8 +97,8 @@ The legacy `layout-navigation-top.vue` includes a `<notifications-queue>` compon
 **Pages:** dataset/[id]/index, data, edit-data, edit-metadata
 
 **Scope:**
-- Intentionally redesigned (single legacy page → 4 pages), so parity check is against the design spec not legacy 1:1
-- Verify all sections from spec are present and wired
+- Intentionally redesigned (single legacy page → 4 pages). Parity check is against the **legacy page directly** — verify that all functionalities from the single legacy `dataset/_id/index.vue` (and its sub-pages description, events, api-doc) are covered across the 4 new pages. The design spec is a reference but not the sole authority.
+- Inventory all legacy tabs, actions, dialogs, and features; map each to its location in the new pages; flag anything missing
 - Check `dataset-store.ts` typing against `api/types/dataset`
 - Already 14 e2e tests — check for gaps in edit-data and data page interactions
 
