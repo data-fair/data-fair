@@ -8,6 +8,18 @@
 
 Features are grouped by shared patterns (Approach B) to maximize component reuse and minimize duplication. Within each group, features are ordered by user impact.
 
+## Prerequisites
+
+**P1. Normalize `can()` API across stores:** `dataset-store.ts` returns `ComputedRef<boolean>` while `application-store.ts` returns raw `boolean`. Shared components (owner-change, notifications, webhooks) must not call `can()` directly — instead, receive a pre-resolved boolean prop (e.g., `:can-admin="can('admin').value"` for datasets, `:can-admin="can('admin')"` for applications).
+
+**P2. Events URL convention:** The legacy UI derives `eventsUrl` as `window.location.origin + '/events'` (set in `ui-legacy/public/plugins/session.js`). The new UI should use the same convention. The `$uiConfig.eventsIntegration` boolean (from `api/src/ui-config.ts`) gates whether to show events-related actions. No new ui-config field needed.
+
+**P3. New dependency: `js-file-download`** — add to `ui/package.json` for capture dialog PNG download. Alternative: use native `URL.createObjectURL` + anchor click to avoid the dependency.
+
+**P4. Use `d-frame` instead of `v-iframe`** — the legacy capture dialog uses `@koumoul/v-iframe` which is not in the new UI. `d-frame` from `@data-fair/frame` (already installed) is the replacement. Verify `d-frame` supports `sync-state` prop for the capture preview; if not, add `@koumoul/v-iframe` as dependency.
+
+**P5. i18n convention:** All components use `<i18n lang="yaml">` blocks with both `fr` and `en` translations. New components must follow this pattern.
+
 ---
 
 ## Group 1 — Shared Dialogs
@@ -16,15 +28,15 @@ Features are grouped by shared patterns (Approach B) to maximize component reuse
 
 Shared component used by both datasets and applications.
 
-**Props:** `resource` (dataset/application object), `resourceType` ('datasets' | 'applications')
+**Props:** `resource` (dataset/application object), `resourceType` ('datasets' | 'applications'), `canAdmin` (boolean)
 
 **Behavior:**
-- Uses `owner-pick` from `@data-fair/lib-vuetify` for owner selection
+- Uses `owner-pick` from `@data-fair/lib-vuetify` for owner selection. `owner-pick` requires the current `activeAccount` from session state.
 - Warning checklist before confirmation (permissions, apps, portals, catalogs, API keys, processings)
 - API: `PUT /api/v1/{resourceType}/{id}/owner` with new owner object
 - On success: redirect to resource detail page under new owner context
 
-**Wiring:** Added to both `dataset-actions.vue` and `application-actions.vue`.
+**Wiring:** Added to both `dataset-actions.vue` and `application-actions.vue`. Guarded by `canAdmin` prop.
 
 ### 1.2 Integration Dialog — `integration-dialog.vue`
 
@@ -34,7 +46,7 @@ Shared component for generating embed code snippets.
 
 **Behavior:**
 - Two modes: `iframe` (simple HTML snippet) and `d-frame` (advanced, with optional "sync params" toggle)
-- d-frame mode includes live preview panel
+- d-frame mode generates a `<d-frame>` HTML snippet (code generation only, no live preview embedding)
 - For datasets: uses `dataset.previews` array, defaults to 'table' preview
 - For applications: uses application URL directly
 - Copy-to-clipboard button for generated code
@@ -64,18 +76,16 @@ For updating data files on existing file-based datasets.
 
 **Wiring:** Added to `dataset-actions.vue`, visible only for file-based datasets.
 
-### 2.2 REST Bulk Upload Dialog — `dataset-bulk-upload-dialog.vue`
+### 2.2 REST Bulk Upload — refactor existing `dataset-rest-upload-actions.vue`
 
-For bulk importing lines into REST datasets.
-
-**Behavior:**
+The component already exists in the new UI at `ui/src/components/dataset/dataset-rest-upload-actions.vue`. Review and complete it to match legacy behavior:
 - File picker accepting CSV, GeoJSON, XLSX, ODS
 - Separator selection (for CSV)
 - "Drop all lines" checkbox for destructive replace
 - API: `POST /api/v1/datasets/{id}/_bulk_lines` with file
 - Results summary: nbOk, nbCreated, nbModified, nbDeleted, nbErrors, nbWarnings with line numbers
 
-**Wiring:** Added to `dataset-actions.vue`, visible only for REST datasets.
+**Wiring:** Verify it's properly wired into `dataset-actions.vue`, visible only for REST datasets.
 
 ---
 
@@ -85,12 +95,14 @@ For bulk importing lines into REST datasets.
 
 Shared component embedding the external events service UI.
 
-**Props:** `resource`, `resourceType`
+**Props:** `resource`, `resourceType`, `canSubscribe` (boolean)
 
 **Behavior:**
-- Constructs iframe URL from `$uiConfig.eventsUrl` with query params: event keys filtered by resource type, title, URL template, sender info
+- Events URL derived as `window.location.origin + '/events'` (same convention as legacy)
+- Constructs iframe URL: `{eventsUrl}/embed/subscribe?key={keys}&title={titles}&url-template={urlTemplate}&sender={sender}&register=false`
+- Event keys filtered by resource type (e.g., `data-fair:dataset-{id}-*` for datasets)
 - Wrapped in `v-dialog` with responsive sizing
-- Only shown if `$uiConfig.eventsUrl` is configured
+- Only shown if `$uiConfig.eventsIntegration` is true
 
 **Wiring:** Added to both `dataset-actions.vue` and `application-actions.vue`.
 
@@ -99,9 +111,9 @@ Shared component embedding the external events service UI.
 Same pattern as notifications but for the webhooks endpoint.
 
 **Behavior:**
-- Iframe embed to events service webhooks endpoint
+- Iframe URL: `{eventsUrl}/embed/subscribe-webhooks?key={keys}&title={titles}&sender={sender}`
 - Same URL construction with sender and event filtering
-- Admin-only: guarded by admin permission check
+- Admin-only: guarded by `canAdmin` prop
 
 **Wiring:** Added to both `dataset-actions.vue` and `application-actions.vue`, admin-only.
 
@@ -117,26 +129,27 @@ Full rewrite of the creation page as a stepper matching legacy behavior.
 
 **Step 2 — Init from (optional, skippable):** `dataset-init-from.vue` component:
 - Select existing dataset as template via autocomplete search
+- API: `GET /api/v1/datasets?q={search}&owner={owner}&select=title,id,schema,description` for search
 - Choose parts to copy: data, schema, extensions, metadataAttachments, description
 - If copying data, schema is auto-included
-- Can only copy data from queryable datasets
+- Can only copy data from queryable datasets (filter by `status: 'finalized'`)
 
 **Steps 3+ — Type-specific parameters:**
-- **File:** file upload + advanced options (encoding, escapeKeyAlgorithm, normalize) + optional attachments zip
+- **File:** file upload + advanced options (encoding, escapeKeyAlgorithm slug|compat-ods, normalize) + optional attachments zip
 - **REST:** title + history toggle + line ownership (admin only) + attachments toggle
 - **Virtual:** title + children dataset selector (autocomplete search of owned datasets) + auto-fill schema from children + initialize description/attachments from first child
 - **MetaOnly:** just title
 
 **Final step — Action:**
-- Owner selection via `owner-pick`
-- Conflict detection via `dataset-conflicts.vue` (checks duplicate titles and filenames, displays list with links)
+- Owner selection via `owner-pick` from `@data-fair/lib-vuetify` (receives `activeAccount` from session)
+- Conflict detection via `dataset-conflicts.vue`: queries `GET /api/v1/datasets?title={title}` and `GET /api/v1/datasets?filename={filename}` to check for duplicates, displays list with links
 - Create button with progress tracking
-- API: `POST /api/v1/datasets` with appropriate body (FormData for file, JSON for REST/virtual/metaOnly)
+- API: `POST /api/v1/datasets` with appropriate body (FormData for file, JSON for REST/virtual/metaOnly). Query param `draft=true` for large files or schema initialization.
 
 ### 4.2 Read API Key — `dataset-read-api-key.vue`
 
 **Behavior:**
-- VJSF v4 form using readApiKey schema from API (active toggle, interval dropdown)
+- VJSF v4 form. Schema fetched at runtime from `GET /api/v1/datasets/{id}/schema?type=readApiKey` or hardcoded based on legacy `api/types/dataset/schema` definition (to be determined during implementation — check what endpoint exposes the readApiKey sub-schema)
 - Displays current key with expiration date and example URL
 - API: `GET {resourceUrl}/read-api-key` for current key, `PATCH` for updates
 
@@ -152,13 +165,13 @@ Full rewrite of the creation page as a stepper matching legacy behavior.
 
 ### 5.1 Application Capture Dialog — `application-capture-dialog.vue`
 
-Server-side screenshot via the application service's `/capture` endpoint.
+Server-side screenshot via the capture service. The application object has `captureUrl` set by the API proxy (`api/src/applications/proxy.js:201`).
 
 **Behavior:**
 - Width/height inputs (defaults from `prodBaseApp.meta['df:capture-width']` / `['df:capture-height']`, or 800x450)
-- If base app supports `df:sync-state`: shows `v-iframe` preview where user navigates to choose capture state, state params forwarded as `app_*` query params
-- Download button: `GET {application.href}/capture?width=&height=&updatedAt=&app_*=`
-- Saves PNG blob via `js-file-download`
+- If base app supports `df:sync-state` (check `prodBaseApp.meta['df:sync-state']`): shows `d-frame` preview (or `v-iframe` if `d-frame` lacks sync-state support) where user navigates to choose capture state, state params forwarded as `app_*` query params
+- Download button constructs URL: `{application.href}/capture?width={w}&height={h}&updatedAt={fullUpdatedAt}&app_*={stateParams}`
+- Fetches PNG blob via `GET` with `responseType: 'blob'`, saves via `js-file-download` (or native `URL.createObjectURL` + anchor click)
 
 **Wiring:** Added to `application-actions.vue`.
 
@@ -170,21 +183,24 @@ Two components:
 - Download links for each attachment
 - Set-as-thumbnail option
 - Delete with confirmation
+- API: `GET/DELETE /api/v1/applications/{id}/metadata-attachments/{name}`
 
 **`application-attachment-dialog.vue`** — upload dialog:
 - Name input, file select, upload progress
 - Duplicate name warning
+- API: `POST /api/v1/applications/{id}/metadata-attachments` with multipart FormData
 
 **Wiring:** Added as a section/tab on `application/[id]/index.vue`.
 
 ### 5.3 Version Upgrade Notifications
 
 **Behavior:**
-- Check available versions for the base application
-- Show alert/banner on application detail page when newer version exists
-- Action button to trigger upgrade
+- Uses or creates `application-versions` composable to compute available versions from base application registry
+- Shows alert/banner on application detail page when a newer version of the base application exists
+- Action button to trigger upgrade: `PATCH /api/v1/applications/{id}` with `{ url: newVersion.url }` (updates the base app URL to the newer version)
+- Confirmation dialog before upgrade (can break existing config)
 
-**Wiring:** Added to `application/[id]/index.vue`, uses or creates `application-versions` composable.
+**Wiring:** Added to `application/[id]/index.vue`.
 
 ---
 
@@ -193,19 +209,20 @@ Two components:
 Full rewrite of `share-dataset.vue` as a 5-step publication workflow stepper.
 
 **Step 1 — Portal selection:**
-- List available publication sites from owner's settings (fetched from API)
-- Scoped by department if applicable (`department: '*'` for org-level)
+- Fetch publication sites: `GET /api/v1/settings/{ownerType}/{ownerId}` → `settings.publicationSites` array
+- For org-level accounts without department, use `department: '*'` to get all department-scoped sites
 - Warning if no publication sites configured
 
 **Step 2 — Dataset selection:**
 - `dataset-select` autocomplete scoped to owner + portal department
-- Warning if dataset already published on selected portal
-- Loads dataset into store on selection
+- API: `GET /api/v1/datasets?owner={owner}&q={search}` for search
+- Warning if dataset already published on selected portal (check `dataset.publicationSites` array)
+- Loads full dataset on selection: `GET /api/v1/datasets/{id}`
 
 **Step 3 — Permissions:**
 - Embedded `permissions` component in simple mode
 - Gated by `can('getPermissions')`, disabled if `!can('setPermissions')`
-- Shows dependency warning if dataset has public applications
+- Shows dependency warning if dataset has public applications (`hasPublicApplications` getter)
 
 **Step 4 — Metadata:**
 - `dataset-info` in simple mode with required fields from `publicationSite.settings.datasetsRequiredMetadata`
@@ -214,9 +231,9 @@ Full rewrite of `share-dataset.vue` as a 5-step publication workflow stepper.
 **Step 5 — Action:**
 - "Publish" button if `can('writePublicationSites')` or staging mode, and department matches
 - Otherwise "Request publication" button (submits to admin)
-- Publish: `PATCH` dataset with updated `publicationSites` array
-- Request: `PATCH` dataset with updated `requestedPublicationSites` array
-- On success: redirect to portal URL template (if available) or dataset detail page
+- Publish: `PATCH /api/v1/datasets/{id}` with updated `publicationSites` array
+- Request: `PATCH /api/v1/datasets/{id}` with updated `requestedPublicationSites` array
+- On success: redirect to portal URL template `publicationSite.datasetUrlTemplate` (replacing `{id}` and `{slug}`) or dataset detail page
 
 ---
 
@@ -233,17 +250,19 @@ Full rewrite of `share-dataset.vue` as a 5-step publication workflow stepper.
 **Audit d-frame pages:**
 - Check all Phase 2 d-frame wrapper pages — any pointing to legacy routes need URL updates or native replacements
 - Verify all iframe URLs still work after legacy removal
+- Target pages to audit: catalogs, processings, portals, events, reuses, pages, metrics, admin plugins, me, organization, department, subscription, extra, admin-extra
 
 ---
 
 ## Implementation Order
 
-1. **Group 1** (shared dialogs) — builds reusable components needed by Groups 4-6
-2. **Group 2** (dataset file ops) — high user impact
-3. **Group 3** (external service dialogs) — shared iframe pattern, quick to build
-4. **Group 4** (dataset-specific) — largest group, new-dataset rewrite is the most complex single feature
-5. **Group 5** (application-specific) — capture + attachments + versions
-6. **Group 6** (share dataset) — full stepper, depends on dataset-info and permissions components
-7. **Group 7** (cleanup) — only after all features confirmed working
+1. **Prerequisites** (P1-P5) — resolve before starting any group
+2. **Group 1** (shared dialogs) — builds reusable components needed by Groups 4-6
+3. **Group 2** (dataset file ops) — high user impact
+4. **Group 3** (external service dialogs) — shared iframe pattern, quick to build
+5. **Group 4** (dataset-specific) — largest group; new-dataset rewrite is the most complex single feature, with `dataset-init-from.vue` and `dataset-conflicts.vue` as significant sub-components
+6. **Group 5** (application-specific) — capture + attachments + versions
+7. **Group 6** (share dataset) — full stepper, depends on dataset-info and permissions components
+8. **Group 7** (cleanup) — only after all features confirmed working
 
-Groups 4 and 5 can be partially parallelized since they target different domains.
+Groups 4 and 5 can be partially parallelized since they target different stores, components, and pages.
