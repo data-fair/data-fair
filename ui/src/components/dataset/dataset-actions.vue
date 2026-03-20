@@ -21,6 +21,21 @@
       </v-list-item>
     </template>
 
+    <dataset-upload-dialog
+      v-if="can('writeData').value && !dataset.isRest && !dataset.isVirtual && !dataset.isMetaOnly"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="primary">
+              mdi-file-upload
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('updateFile') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </dataset-upload-dialog>
+
     <v-list-subheader>{{ t('actions') }}</v-list-subheader>
 
     <v-list-item
@@ -148,6 +163,7 @@
 <i18n lang="yaml">
 fr:
   downloads: TÉLÉCHARGEMENTS
+  updateFile: Mettre à jour le fichier
   actions: ACTIONS
   editMetadata: Éditer les métadonnées
   viewData: Voir les données
@@ -162,6 +178,7 @@ fr:
   no: Non
 en:
   downloads: DOWNLOADS
+  updateFile: Update data file
   actions: ACTIONS
   editMetadata: Edit metadata
   viewData: View data
