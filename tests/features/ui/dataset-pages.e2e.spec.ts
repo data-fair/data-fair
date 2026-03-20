@@ -83,4 +83,45 @@ test.describe('dataset detail pages', () => {
     const adrProp = res.data.schema.find((p: any) => p.key === 'adr')
     expect(adrProp.title).toBe('Adresse complète')
   })
+
+  test('edit-metadata: leave guard warns when navigating away with unsaved changes', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
+    await expect(page.getByText(/Informations|Information/)).toBeVisible({ timeout: 10000 })
+    const titleInput = page.locator('#info').getByLabel(/Titre|Title/)
+    await titleInput.click()
+    await titleInput.fill('Unsaved Change E2E')
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
+    page.on('dialog', async dialog => {
+      await dialog.dismiss()
+    })
+    await page.getByText(/Retour à la fiche|Back to home/).click()
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 5000 })
+    await expect(page.getByText(/Informations|Information/)).toBeVisible()
+  })
+
+  test('dataset home page shows description, metadata, schema and activity sections', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('.text-h6').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#description')).toBeVisible()
+    await expect(page.locator('#metadata')).toBeVisible()
+    await expect(page.locator('#schema')).toBeVisible()
+    await expect(page.locator('#share')).toBeVisible()
+    await expect(page.locator('#activity')).toBeVisible()
+  })
+
+  test('dataset home page displays record count', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/enregistrements|records/)).toBeVisible()
+  })
+
+  test('dataset home page action links navigate to edit-metadata and data pages', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('.text-h6').first()).toBeVisible({ timeout: 10000 })
+    await page.getByText(/Éditer les métadonnées|Edit metadata/).click()
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 10000 })
+    await expect(page.getByText(/Informations|Information/)).toBeVisible({ timeout: 10000 })
+    await page.getByText(/Retour à la fiche|Back to home/).click()
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}$`), { timeout: 10000 })
+  })
 })
