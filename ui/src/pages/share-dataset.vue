@@ -128,22 +128,23 @@
         <!-- Step 3: Permissions -->
         <v-stepper-window-item :value="3">
           <div class="pa-4">
-            <v-alert
-              type="info"
-              variant="tonal"
-              style="max-width: 600px;"
-            >
-              {{ t('permissionsNote') }}
-            </v-alert>
-
+            <permissions-editor
+              v-if="dataset"
+              :resource="dataset"
+              resource-type="datasets"
+              :can-get-permissions="dataset.userPermissions?.includes('getPermissions')"
+              :can-set-permissions="dataset.userPermissions?.includes('setPermissions')"
+            />
+          </div>
+          <v-card-actions>
+            <v-spacer />
             <v-btn
               color="primary"
-              class="mt-4"
               @click="currentStep = 4"
             >
-              {{ t('continue') }}
+              {{ t('next') }}
             </v-btn>
-          </div>
+          </v-card-actions>
         </v-stepper-window-item>
 
         <!-- Step 4: Metadata -->
@@ -219,6 +220,7 @@ fr:
   stepMetadata: Métadonnées
   stepAction: Confirmation
   continue: Continuer
+  next: Suivant
   publish: Publier le jeu de données
   requestPublication: Demander la publication de ce jeu de données à un administrateur
   publicationRequested: La publication sera soumise à un administrateur pour validation.
@@ -238,6 +240,7 @@ en:
   stepMetadata: Metadata
   stepAction: Confirmation
   continue: Continue
+  next: Next
   publish: Publish the dataset
   requestPublication: Submit the publication of this dataset to an admin for approval
   publicationRequested: The publication will be submitted to an admin for validation.
