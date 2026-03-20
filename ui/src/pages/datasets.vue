@@ -229,6 +229,8 @@
 </template>
 
 <script lang="ts" setup>
+import type { Dataset } from '#api/types'
+
 const { t } = useI18n()
 const session = useSession()
 const account = session.account
@@ -291,7 +293,7 @@ const datasetsQuery = computed(() => {
   return params
 })
 
-const catalog = useCatalogList<any>({
+const catalog = useCatalogList<Dataset>({
   fetchUrl: computed(() => $apiPath + '/datasets'),
   query: datasetsQuery,
   facetsFields: 'status,visibility,topics,publicationSites,requestedPublicationSites,services,concepts,owner,draftStatus',

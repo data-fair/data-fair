@@ -29,10 +29,12 @@
 </template>
 
 <script lang="ts" setup>
+import type { Application } from '#api/types'
+
 const { t, locale } = useI18n()
 
 const props = withDefaults(defineProps<{
-  application: any
+  application: Application
   showTopics?: boolean
   showOwner?: boolean
 }>(), {
@@ -47,7 +49,7 @@ const statusColor = computed(() => {
     stopped: 'warning',
     configured: 'info',
   }
-  return colors[props.application.status] ?? 'default'
+  return (props.application.status && colors[props.application.status]) ?? 'default'
 })
 
 const ownerName = computed(() => {

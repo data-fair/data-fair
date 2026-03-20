@@ -193,6 +193,8 @@
 </template>
 
 <script lang="ts" setup>
+import type { Application } from '#api/types'
+
 const { t } = useI18n()
 const session = useSession()
 const account = session.account
@@ -245,7 +247,7 @@ const applicationsQuery = computed(() => {
   return params
 })
 
-const catalog = useCatalogList<any>({
+const catalog = useCatalogList<Application>({
   fetchUrl: computed(() => $apiPath + '/applications'),
   query: applicationsQuery,
   facetsFields: 'visibility,topics,publicationSites,requestedPublicationSites,base-application,owner',

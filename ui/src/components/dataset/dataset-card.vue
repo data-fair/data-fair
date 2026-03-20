@@ -29,10 +29,12 @@
 </template>
 
 <script lang="ts" setup>
+import type { Dataset } from '#api/types'
+
 const { t, locale } = useI18n()
 
 const props = withDefaults(defineProps<{
-  dataset: any
+  dataset: Dataset
   showTopics?: boolean
   showOwner?: boolean
 }>(), {
