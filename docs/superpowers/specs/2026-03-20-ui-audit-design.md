@@ -10,6 +10,8 @@
 
 Hybrid: fix cross-cutting infrastructure gaps first, then audit pages by group.
 
+**Group ordering rationale:** infrastructure first (unblocks all d-frame pages), then simplest pages (d-frame wrappers) to most complex (workflows), ending with embed pages (light check only). This ensures systemic fixes are in place before per-page review, and groups that share context are audited together.
+
 ## Audit Dimensions
 
 Every audited page/component is checked against:
@@ -18,7 +20,8 @@ Every audited page/component is checked against:
 2. **Component sharing** — duplication across pages, missed reuse of existing components, embed pages sharing components with main pages.
 3. **TypeScript** — use `api/types/` imports for API responses and store state. Eliminate `any` on props, emits, composable return values, API responses, v-model bindings. Do not create new type definitions — only use what `api/types/` provides.
 4. **Vuetify usage** — use Vuetify components with minimal CSS overrides, proper slot usage, no reimplemented Vuetify features.
-5. **Tests** — proportional coverage: simple d-frame wrappers get a smoke test, complex native pages get smoke + interaction tests.
+5. **Responsive/mobile** — verify breakpoint usage migrated from `$vuetify.breakpoint` to `useDisplay()`, check mobile-specific behaviors (filter dialogs, breadcrumb hiding, layout adjustments).
+6. **Tests** — proportional coverage: simple d-frame wrappers get a smoke test, complex native pages get smoke + interaction tests.
 
 ## Fix Boundaries
 
@@ -30,7 +33,8 @@ Every audited page/component is checked against:
 
 ## Commit Strategy
 
-- One commit per infrastructure fix (d-frame sync)
+- Part 1 breadcrumbs (composable + rendering): one commit
+- Part 1 adapter + catch-all routes: one commit (separate from breadcrumbs in case adapter needs a compatibility shim)
 - One commit per group audit (fixes + tests together)
 
 ---
@@ -52,9 +56,15 @@ All ~15 d-frame wrapper pages are missing two features from the legacy UI:
 
 3. **State change adapter** — each d-frame page gets `:adapter` prop bound to `createStateChangeAdapter(router)` (from `@data-fair/frame/lib/vue-router/state-change-adapter`), plus `@message` handler feeding breadcrumbs into the composable.
 
-4. **Catch-all routes** — add `[...page].vue` under each d-frame page's directory (e.g., `pages/catalogs/[...page].vue`) rendering an empty `<div>`, mirroring legacy `_page.vue`. Lets Vue Router capture deep URL segments for adapter sync.
+   > **Risk:** The adapter was written for Vue Router 3. Vue Router 4 has API differences (`router.currentRoute` is a ref, different `push` return behavior). Verify compatibility first; if incompatible, write a thin shim or fork the adapter function.
+
+4. **Catch-all routes** — add `[...page].vue` under each d-frame page's directory (e.g., `pages/catalogs/[...page].vue`) rendering an empty `<div>`. This is a simplification from the legacy's 5-level nested `_page.vue` approach — Vue Router 4's `[...param]` catch-all natively captures arbitrarily deep paths in a single file, achieving the same URL pattern matching.
 
 5. **E2e smoke test** — one test verifying a d-frame page loads and renders its iframe.
+
+### Notifications queue gap
+
+The legacy `layout-navigation-top.vue` includes a `<notifications-queue>` component showing real-time notification alerts (when `user && env.eventsUrl`). The new top bar does not have this. This is noted as a known gap but not in scope for this audit — it requires the events service integration which is external.
 
 ---
 
@@ -62,12 +72,17 @@ All ~15 d-frame wrapper pages are missing two features from the legacy UI:
 
 ### Group 1 — D-frame wrapper pages
 
-**Pages:** catalogs, processings, portals, events, reuses, pages, metrics, me, organization, department, subscription, extra, admin-extra, admin/processings-plugins, admin/catalogs-plugins
+**D-frame pages:** catalogs, processings, portals, events, reuses, pages, metrics, notifications, api-doc, admin/processings-plugins, admin/catalogs-plugins
 
-**Scope:**
-- Light audit after infra fix: verify each page has correct `src`, `sync-path`, `:adapter`, `@message` handler
-- Check `me.vue` (plain iframe), `organization.vue`, `department.vue` — used `v-iframe` in legacy
+**Plain iframe pages:** me, organization, department, subscription, extra, admin-extra
+
+**Scope — d-frame pages:**
+- Verify each has correct `src`, `sync-path`, `:adapter`, `@message` handler after infra fix
 - Smoke test: one shared test hitting 2-3 representative d-frame pages
+
+**Scope — plain iframe pages:**
+- Verify correct `src` URL, authorization guards, height/resize behavior
+- These do not get adapter/sync/breadcrumbs — they are cross-origin iframes to simple-directory or external services
 
 ### Group 2 — List pages
 
