@@ -208,6 +208,25 @@
             </template>
           </layout-section-tabs>
 
+          <!-- Read API key section -->
+          <layout-section-tabs
+            v-if="section.id === 'readApiKey'"
+            :id="section.id"
+            :min-height="200"
+            :title="section.title"
+            :tabs="section.tabs"
+          >
+            <template #content="{ tab }">
+              <v-tabs-window :model-value="tab">
+                <v-tabs-window-item value="readApiKey">
+                  <v-container fluid>
+                    <dataset-read-api-key />
+                  </v-container>
+                </v-tabs-window-item>
+              </v-tabs-window>
+            </template>
+          </layout-section-tabs>
+
           <!-- Activity section -->
           <layout-section-tabs
             v-if="section.id === 'activity'"
@@ -258,6 +277,7 @@ fr:
   permissions: Permissions
   publicationSites: Portails
   relatedDatasets: Voir aussi
+  readApiKey: Clé d'API en lecture
   activity: Activité
   journal: Journal
   records: enregistrements
@@ -273,6 +293,7 @@ en:
   permissions: Permissions
   publicationSites: Portals
   relatedDatasets: See also
+  readApiKey: Read API key
   activity: Activity
   journal: Journal
   records: records
@@ -280,7 +301,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiInformation, mdiTableCog, mdiImageMultiple, mdiSecurity, mdiPresentation, mdiEyeArrowRight, mdiCalendarText } from '@mdi/js'
+import { mdiInformation, mdiTableCog, mdiImageMultiple, mdiSecurity, mdiPresentation, mdiEyeArrowRight, mdiCalendarText, mdiKey } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
@@ -355,6 +376,14 @@ const sections = computedDeepDiff(() => {
   shareTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
   if (shareTabs.length) {
     result.push({ title: t('share'), id: 'share', tabs: shareTabs })
+  }
+
+  if (can('getReadApiKey').value) {
+    result.push({
+      title: t('readApiKey'),
+      id: 'readApiKey',
+      tabs: [{ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey }]
+    })
   }
 
   if (can('readJournal').value && !d.isMetaOnly) {
