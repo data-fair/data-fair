@@ -63,6 +63,10 @@ server {
   location /data-fair/streamsaver {
     proxy_pass http://localhost:${DEV_API_PORT};
   }
+  # built assets served by API (necessary because /data-fair/app catches /data-fair/applications)
+  location /data-fair/assets {
+    proxy_pass http://localhost:${DEV_API_PORT};
+  }
 
   # ui-config served by API
   location ~ /data-fair/(.*)-ui-config.js {
