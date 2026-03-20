@@ -12,6 +12,7 @@
     @iframe-message="onMessage"
     @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
   />
+  <RouterView />
 </template>
 
 <script lang="ts" setup>

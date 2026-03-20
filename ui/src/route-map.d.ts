@@ -94,6 +94,13 @@ declare module 'vue-router/auto-routes' {
       '/catalogs',
       Record<never, never>,
       Record<never, never>,
+      | '/catalogs/[...page]'
+    >,
+    '/catalogs/[...page]': RouteRecordInfo<
+      '/catalogs/[...page]',
+      '/catalogs/:page(.*)',
+      { page: ParamValue<true> },
+      { page: ParamValue<false> },
       | never
     >,
     '/dataset/[id]/': RouteRecordInfo<
@@ -346,6 +353,13 @@ declare module 'vue-router/auto-routes' {
       '/events',
       Record<never, never>,
       Record<never, never>,
+      | '/events/[...page]'
+    >,
+    '/events/[...page]': RouteRecordInfo<
+      '/events/[...page]',
+      '/events/:page(.*)',
+      { page: ParamValue<true> },
+      { page: ParamValue<false> },
       | never
     >,
     '/extra/[id]': RouteRecordInfo<
@@ -402,6 +416,13 @@ declare module 'vue-router/auto-routes' {
       '/pages',
       Record<never, never>,
       Record<never, never>,
+      | '/pages/[...page]'
+    >,
+    '/pages/[...page]': RouteRecordInfo<
+      '/pages/[...page]',
+      '/pages/:page(.*)',
+      { page: ParamValue<true> },
+      { page: ParamValue<false> },
       | never
     >,
     '/portals': RouteRecordInfo<
@@ -409,6 +430,13 @@ declare module 'vue-router/auto-routes' {
       '/portals',
       Record<never, never>,
       Record<never, never>,
+      | '/portals/[...page]'
+    >,
+    '/portals/[...page]': RouteRecordInfo<
+      '/portals/[...page]',
+      '/portals/:page(.*)',
+      { page: ParamValue<true> },
+      { page: ParamValue<false> },
       | never
     >,
     '/processings': RouteRecordInfo<
@@ -416,6 +444,13 @@ declare module 'vue-router/auto-routes' {
       '/processings',
       Record<never, never>,
       Record<never, never>,
+      | '/processings/[...page]'
+    >,
+    '/processings/[...page]': RouteRecordInfo<
+      '/processings/[...page]',
+      '/processings/:page(.*)',
+      { page: ParamValue<true> },
+      { page: ParamValue<false> },
       | never
     >,
     '/reuses': RouteRecordInfo<
@@ -423,6 +458,13 @@ declare module 'vue-router/auto-routes' {
       '/reuses',
       Record<never, never>,
       Record<never, never>,
+      | '/reuses/[...page]'
+    >,
+    '/reuses/[...page]': RouteRecordInfo<
+      '/reuses/[...page]',
+      '/reuses/:page(.*)',
+      { page: ParamValue<true> },
+      { page: ParamValue<false> },
       | never
     >,
     '/share-dataset': RouteRecordInfo<
@@ -509,6 +551,13 @@ declare module 'vue-router/auto-routes' {
     'src/pages/catalogs.vue': {
       routes:
         | '/catalogs'
+        | '/catalogs/[...page]'
+      views:
+        | 'default'
+    }
+    'src/pages/catalogs/[...page].vue': {
+      routes:
+        | '/catalogs/[...page]'
       views:
         | never
     }
@@ -725,6 +774,13 @@ declare module 'vue-router/auto-routes' {
     'src/pages/events.vue': {
       routes:
         | '/events'
+        | '/events/[...page]'
+      views:
+        | 'default'
+    }
+    'src/pages/events/[...page].vue': {
+      routes:
+        | '/events/[...page]'
       views:
         | never
     }
@@ -773,24 +829,52 @@ declare module 'vue-router/auto-routes' {
     'src/pages/pages.vue': {
       routes:
         | '/pages'
+        | '/pages/[...page]'
+      views:
+        | 'default'
+    }
+    'src/pages/pages/[...page].vue': {
+      routes:
+        | '/pages/[...page]'
       views:
         | never
     }
     'src/pages/portals.vue': {
       routes:
         | '/portals'
+        | '/portals/[...page]'
+      views:
+        | 'default'
+    }
+    'src/pages/portals/[...page].vue': {
+      routes:
+        | '/portals/[...page]'
       views:
         | never
     }
     'src/pages/processings.vue': {
       routes:
         | '/processings'
+        | '/processings/[...page]'
+      views:
+        | 'default'
+    }
+    'src/pages/processings/[...page].vue': {
+      routes:
+        | '/processings/[...page]'
       views:
         | never
     }
     'src/pages/reuses.vue': {
       routes:
         | '/reuses'
+        | '/reuses/[...page]'
+      views:
+        | 'default'
+    }
+    'src/pages/reuses/[...page].vue': {
+      routes:
+        | '/reuses/[...page]'
       views:
         | never
     }
