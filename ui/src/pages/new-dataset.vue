@@ -174,6 +174,11 @@
                 :label="t('attachmentsAsImage')"
               />
 
+              <dataset-normalize-options
+                v-if="isSpreadsheet"
+                v-model="normalizeOptions"
+              />
+
               <!-- Advanced options -->
               <div
                 class="text-subtitle-1 mt-5 mb-3 d-flex align-center"
@@ -502,6 +507,14 @@ const isTextFile = computed(() => {
   return name.endsWith('.csv') || name.endsWith('.tsv') || name.endsWith('.txt')
 })
 
+const isSpreadsheet = computed(() => {
+  if (!file.value) return false
+  const name = file.value.name.toLowerCase()
+  return name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.ods') || name.endsWith('.fods')
+})
+
+const normalizeOptions = ref<Record<string, any>>({})
+
 function onFileChange (val: File | File[]) {
   if (Array.isArray(val)) {
     file.value = val[0] ?? null
@@ -647,6 +660,10 @@ async function createFileDataset () {
 
   if (isTextFile.value && fileEncoding.value) {
     formData.append('dataset_encoding', fileEncoding.value)
+  }
+
+  for (const [key, val] of Object.entries(normalizeOptions.value)) {
+    if (val !== undefined) formData.append(key, String(val))
   }
 
   const body: Record<string, any> = {}
