@@ -107,7 +107,7 @@ Simple `useFetch` wrapper:
 1. **Children management**
    - `v-autocomplete` with custom async search (fetches `/api/v1/datasets` + `/api/v1/remote-services` for master-data parents)
    - Results grouped: "master data" header + "your datasets" header
-   - Draggable `v-list` of selected children (vuedraggable v4)
+   - `v-list` of selected children
    - Per child: expandable field selector (autocomplete for picking inherited fields), delete action
    - `dataset-virtual-child-compat` inline per child for schema compatibility
 
