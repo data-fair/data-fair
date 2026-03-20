@@ -17,6 +17,8 @@
 </template>
 
 <script lang="ts" setup>
+import setBreadcrumbs from '~/utils/breadcrumbs'
+
 const { t } = useI18n()
 const route = useRoute<'/extra/[id]'>()
 
@@ -38,6 +40,37 @@ function onLoad (e: Event) {
     if (height) iframeHeight.value = height + 'px'
   } catch {}
 }
+
+function getBreadcrumbPath (iframePath: string) {
+  if (!extra.value?.iframe) return null
+  const base = new URL(extra.value.iframe, window.location.href).pathname
+  const relative = iframePath.startsWith(base) ? iframePath.slice(base.length) : iframePath
+  return `/extra/${route.params.id}?p=${encodeURIComponent(relative)}`
+}
+
+function handleMessage (event: MessageEvent) {
+  if (!event.data?.breadcrumbs) return
+  const crumbs = event.data.breadcrumbs.map((b: any) => ({
+    text: b.text,
+    to: b.to ? getBreadcrumbPath(b.to) : undefined
+  }))
+  setBreadcrumbs([
+    { text: extra.value?.title || route.params.id as string },
+    ...crumbs
+  ])
+}
+
+onMounted(() => {
+  window.addEventListener('message', handleMessage)
+  // Set initial breadcrumb
+  if (extra.value) {
+    setBreadcrumbs([{ text: extra.value.title || route.params.id as string }])
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('message', handleMessage)
+})
 </script>
 
 <i18n lang="yaml">
