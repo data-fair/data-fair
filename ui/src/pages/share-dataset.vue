@@ -70,7 +70,7 @@
                   <v-list-item
                     v-for="(site, i) in publicationSites"
                     :key="i"
-                    :active="publicationSite && site.type === publicationSite.type && site.id === publicationSite.id"
+                    :active="!!(publicationSite && site.type === publicationSite.type && site.id === publicationSite.id)"
                     color="primary"
                     @click="selectSite(site)"
                   >
@@ -252,6 +252,7 @@ en:
 
 <script lang="ts" setup>
 import { $fetch, $apiPath } from '~/context'
+import type { ListedDataset } from '~/components/dataset/select/utils'
 
 const { t } = useI18n()
 const { account } = useSessionAuthenticated()
@@ -260,7 +261,7 @@ const router = useRouter()
 
 const currentStep = ref(1)
 const publicationSite = ref<Record<string, any> | null>(null)
-const selectedDataset = ref<Record<string, any> | null>(null)
+const selectedDataset = ref<ListedDataset | undefined>()
 const dataset = ref<Record<string, any> | null>(null)
 const metadataValid = ref(false)
 const datasetTitle = ref('')
@@ -322,12 +323,12 @@ function truncate (str: string | undefined, len: number): string {
 function selectSite (site: Record<string, any>) {
   publicationSite.value = site
   // Reset dataset selection when portal changes
-  selectedDataset.value = null
+  selectedDataset.value = undefined
   dataset.value = null
   currentStep.value = 2
 }
 
-async function onDatasetSelected (selected: Record<string, any> | null) {
+async function onDatasetSelected (selected: ListedDataset | undefined) {
   if (!selected) {
     dataset.value = null
     return

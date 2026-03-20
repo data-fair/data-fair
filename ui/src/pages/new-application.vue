@@ -69,7 +69,7 @@
             class="w-100"
             :loading="createAction.loading.value && selectedBaseApp?.id === baseApp.id"
             hover
-            @click="onCreate(baseApp)"
+            @click="openCreateDialog(baseApp)"
           >
             <template
               v-if="baseApp.thumbnail"
@@ -130,6 +130,47 @@
         </v-col>
       </v-row>
     </template>
+
+    <!-- Create dialog with title and owner -->
+    <v-dialog
+      v-model="showCreateDialog"
+      max-width="500"
+    >
+      <v-card>
+        <v-card-title>{{ t('info') }}</v-card-title>
+        <v-card-text>
+          <df-owner-pick
+            v-model="owner"
+            hide-single
+          />
+          <v-text-field
+            v-model="appTitle"
+            :label="t('title')"
+            variant="outlined"
+            density="compact"
+            class="mt-2"
+            autofocus
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="showCreateDialog = false"
+          >
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            :loading="createAction.loading.value"
+            :disabled="!appTitle"
+            @click="confirmCreate"
+          >
+            {{ t('save') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -138,20 +179,38 @@ import type { BaseApp } from '#api/types'
 
 const { t } = useI18n()
 const router = useRouter()
+const { account } = useSessionAuthenticated()
 
 const baseAppsFetch = useFetch<{ results: BaseApp[], count: number }>($apiPath + '/base-applications')
 
 const selectedBaseApp = ref<BaseApp | null>(null)
+const showCreateDialog = ref(false)
+const appTitle = ref('')
+const owner = ref(account.value ? { type: account.value.type, id: account.value.id, ...(account.value.department ? { department: account.value.department } : {}) } : null)
 
-const createAction = useAsyncAction(async (baseApp: BaseApp) => {
+function openCreateDialog (baseApp: BaseApp) {
+  if (createAction.loading.value) return
   selectedBaseApp.value = baseApp
-  const application = await $fetch('applications', { method: 'POST', body: { url: baseApp.url } })
-  router.push(`/application/${(application as any).id}`)
+  appTitle.value = baseApp.title || ''
+  showCreateDialog.value = true
+}
+
+const createAction = useAsyncAction(async () => {
+  if (!selectedBaseApp.value) return
+  const body: Record<string, any> = {
+    url: selectedBaseApp.value.url,
+    title: appTitle.value
+  }
+  if (owner.value) {
+    body.owner = owner.value
+  }
+  const application = await $fetch<{ id: string }>('applications', { method: 'POST', body })
+  showCreateDialog.value = false
+  router.push(`/application/${application.id}`)
 })
 
-function onCreate (baseApp: BaseApp) {
-  if (createAction.loading.value) return
-  createAction.execute(baseApp)
+function confirmCreate () {
+  createAction.execute()
 }
 </script>
 
@@ -160,8 +219,16 @@ fr:
   newApplication: Configurer une nouvelle application
   chooseBaseApp: Choisissez un modèle d'application pour créer votre visualisation.
   noBaseApp: Aucun modèle d'application disponible.
+  info: Informations
+  title: Titre de la nouvelle application
+  save: Enregistrer
+  cancel: Annuler
 en:
   newApplication: Configure a new application
   chooseBaseApp: Choose an application template to create your visualization.
   noBaseApp: No application template available.
+  info: Information
+  title: Title of the new application
+  save: Save
+  cancel: Cancel
 </i18n>

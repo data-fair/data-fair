@@ -229,6 +229,12 @@
                 :label="t('history')"
               />
               <v-checkbox
+                v-if="session.state.user?.adminMode"
+                v-model="restLineOwnership"
+                hide-details
+                :label="t('lineOwnership')"
+              />
+              <v-checkbox
                 v-model="restAttachments"
                 hide-details
                 :label="t('attachments')"
@@ -419,7 +425,8 @@ import { withQuery } from 'ufo'
 
 const { t, locale } = useI18n()
 const router = useRouter()
-const { account } = useSessionAuthenticated()
+const session = useSessionAuthenticated()
+const { account } = session
 
 // ---- Types ----
 type DatasetType = 'file' | 'rest' | 'virtual' | 'metaOnly'
@@ -506,6 +513,7 @@ function onFileChange (val: File | File[]) {
 // ---- REST params ----
 const restTitle = ref('')
 const restHistory = ref(false)
+const restLineOwnership = ref(false)
 const restAttachments = ref(false)
 const restAttachmentsAsImage = ref(false)
 
@@ -690,7 +698,7 @@ async function createRestDataset () {
     title: restTitle.value,
     rest: {
       history: restHistory.value,
-      lineOwnership: false
+      lineOwnership: restLineOwnership.value
     },
     schema: [] as any[]
   }
@@ -815,6 +823,7 @@ fr:
   encoding: Encodage du fichier
   encodingHint: Laissez vide pour utiliser un algorithme de détection automatique de l'encodage.
   history: Conserver un historique complet des révisions des lignes du jeu de données
+  lineOwnership: Permet de donner la propriété d'une ligne à des utilisateurs (scénarios collaboratifs)
   attachments: Accepter des pièces jointes
   attachment: Document numérique attaché
   children: Jeux enfants
@@ -861,6 +870,7 @@ en:
   encoding: File encoding
   encodingHint: Leave empty to use automatic encoding detection.
   history: Keep a full history of the revisions of the lines of the dataset
+  lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
   attachments: Accept attachments
   attachment: Attachment
   children: Children datasets
