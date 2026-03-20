@@ -58,6 +58,40 @@
       </template>
     </integration-dialog>
 
+    <notifications-dialog
+      v-if="$uiConfig.eventsIntegration"
+      :resource="application"
+      resource-type="application"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="primary">
+              mdi-bell
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('notifications') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </notifications-dialog>
+
+    <webhooks-dialog
+      v-if="$uiConfig.eventsIntegration && can('setPermissions')"
+      :resource="application"
+      resource-type="application"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="admin">
+              mdi-webhook
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('webhooks') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </webhooks-dialog>
+
     <owner-change-dialog
       v-if="can('setOwner')"
       :resource="application"
@@ -177,6 +211,8 @@ fr:
   editConfig: Éditer la configuration
   useAPI: Utiliser l'API
   integration: Intégrer dans un site
+  notifications: Notifications
+  webhooks: Webhooks
   changeOwner: Changer le propriétaire
   editSlug: Modifier l'identifiant
   slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
@@ -194,6 +230,8 @@ en:
   editConfig: Edit configuration
   useAPI: Use the API
   integration: Embed in a website
+  notifications: Notifications
+  webhooks: Webhooks
   changeOwner: Change owner
   editSlug: Edit slug
   slugWarning: "This unique and readable id is used in portal pages URLs, data APIs, etc. Warning: if you modify it you can break existing links and applications."

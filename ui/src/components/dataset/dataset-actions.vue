@@ -118,6 +118,40 @@
       </template>
     </integration-dialog>
 
+    <notifications-dialog
+      v-if="$uiConfig.eventsIntegration"
+      :resource="dataset"
+      resource-type="dataset"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="primary">
+              mdi-bell
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('notifications') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </notifications-dialog>
+
+    <webhooks-dialog
+      v-if="$uiConfig.eventsIntegration && can('setPermissions').value"
+      :resource="dataset"
+      resource-type="dataset"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="admin">
+              mdi-webhook
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('webhooks') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </webhooks-dialog>
+
     <owner-change-dialog
       v-if="can('setOwner').value"
       :resource="dataset"
@@ -185,6 +219,8 @@ fr:
   editData: Éditer les données
   useAPI: Utiliser l'API
   integration: Intégrer dans un site
+  notifications: Notifications
+  webhooks: Webhooks
   changeOwner: Changer le propriétaire
   delete: Supprimer
   deleteDataset: Suppression du jeu de données
@@ -200,6 +236,8 @@ en:
   editData: Edit data
   useAPI: Use the API
   integration: Embed in a website
+  notifications: Notifications
+  webhooks: Webhooks
   changeOwner: Change owner
   delete: Delete
   deleteDataset: Dataset deletion
