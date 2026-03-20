@@ -15,7 +15,7 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/data-fair/',
-  optimizeDeps: { include: [...commonjsDeps, 'easymde'] },
+  optimizeDeps: { include: [...commonjsDeps, 'easymde', 'vuedraggable'] },
   build: {
     rollupOptions: {
       output: {
