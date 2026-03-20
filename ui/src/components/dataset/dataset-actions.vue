@@ -71,6 +71,24 @@
       <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
     </v-list-item>
 
+    <owner-change-dialog
+      v-if="can('setOwner').value"
+      :resource="dataset"
+      resource-type="datasets"
+      @changed="router.push('/datasets')"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="admin">
+              mdi-account-switch
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('changeOwner') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </owner-change-dialog>
+
     <v-list-item
       v-if="can('delete').value"
       @click="showDeleteDialog = true"
@@ -118,6 +136,7 @@ fr:
   viewData: Voir les données
   editData: Éditer les données
   useAPI: Utiliser l'API
+  changeOwner: Changer le propriétaire
   delete: Supprimer
   deleteDataset: Suppression du jeu de données
   deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
@@ -130,6 +149,7 @@ en:
   viewData: View data
   editData: Edit data
   useAPI: Use the API
+  changeOwner: Change owner
   delete: Delete
   deleteDataset: Dataset deletion
   deleteMsg: Do you really want to delete the dataset "{title}" ? Deletion is definitive and data will not be recoverable.

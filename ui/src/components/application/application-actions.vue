@@ -42,6 +42,24 @@
       <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
     </v-list-item>
 
+    <owner-change-dialog
+      v-if="can('setOwner')"
+      :resource="application"
+      resource-type="applications"
+      @changed="router.push('/applications')"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="admin">
+              mdi-account-switch
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('changeOwner') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </owner-change-dialog>
+
     <v-list-item
       v-if="can('delete')"
       @click="showDeleteDialog = true"
@@ -87,6 +105,7 @@ fr:
   fullPage: Ouvrir en pleine page
   editConfig: Éditer la configuration
   useAPI: Utiliser l'API
+  changeOwner: Changer le propriétaire
   delete: Supprimer
   deleteApp: Suppression de l'application
   deleteMsg: Voulez vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
@@ -97,6 +116,7 @@ en:
   fullPage: Open in a fullscreen
   editConfig: Edit configuration
   useAPI: Use the API
+  changeOwner: Change owner
   delete: Delete
   deleteApp: Deletion of the application
   deleteMsg: Do you really want to delete the application "{title}" ? Deletion is definitive and application configuration will not be recoverable.
