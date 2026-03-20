@@ -156,6 +156,16 @@
                 :label="t('filenameTitle')"
                 class="mt-2"
               />
+
+              <v-alert
+                v-if="suggestArchive"
+                type="info"
+                variant="outlined"
+                class="mt-2 mb-2"
+              >
+                {{ t('suggestArchive', { name: file?.name }) }}
+              </v-alert>
+
               <v-text-field
                 v-if="initFromData || !filenameTitle || !file"
                 v-model="fileTitle"
@@ -513,6 +523,11 @@ const isSpreadsheet = computed(() => {
   return name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.ods') || name.endsWith('.fods')
 })
 
+const suggestArchive = computed(() => {
+  if (!file.value) return false
+  return file.value.size > 50_000_000 && /\.(csv|tsv|txt|geojson)$/i.test(file.value.name)
+})
+
 const normalizeOptions = ref<Record<string, any>>({})
 
 function onFileChange (val: File | File[]) {
@@ -858,6 +873,7 @@ fr:
   cancelled: Chargement annulé par l'utilisateur
   fileTooLarge: Le fichier est trop volumineux pour être importé
   creationError: "Erreur pendant la création du jeu de données"
+  suggestArchive: Le fichier "{name}" est volumineux. Pensez à le compresser en .gz ou .zip avant l'envoi pour réduire le temps de transfert.
 en:
   newDataset: Create a dataset
   choseType: Choose the type of dataset you wish to create.
@@ -905,4 +921,5 @@ en:
   cancelled: Loading cancelled by user
   fileTooLarge: The file is too large to be imported
   creationError: "Error while creating the dataset"
+  suggestArchive: The file "{name}" is large. Consider compressing it to .gz or .zip before uploading to reduce transfer time.
 </i18n>
