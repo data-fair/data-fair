@@ -44,25 +44,35 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
         }
       }
 
-      // TODO
-      // // refresh dataset with relevant parts when receiving journal event
-      // if (state.eventStates[event.type] && state.dataset) {
-      //   commit('patch', { status: state.eventStates[event.type] })
-      // }
-      // if (event.type === 'analyze-end' || event.type === 'extend-start') {
-      //   const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,projection,file,originalFile', draft: 'true' } })
-      //   commit('patch', { schema: dataset.schema, projection: dataset.projection, file: dataset.file, originalFile: dataset.originalFile })
-      // }
-      // if (event.type === 'finalize-end') {
-      //   const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox,timePeriod', draft: 'true' } })
-      //   commit('patch', { schema: dataset.schema, bbox: dataset.bbox, timePeriod: dataset.timePeriod, finalizedAt: dataset.finalizedAt })
-      //   if (state.jsonSchema) dispatch('fetchJsonSchema')
-      // }
-      // if (event.type === 'publication') {
-      //   const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications', draft: 'true' } })
-      //   commit('patch', { publications: dataset.publications })
-      // }
-      // if (state.api) dispatch('fetchApiDoc')
+      // Update dataset status based on journal events for real-time progress
+      const eventStates: Record<string, string> = {
+        'data-updated': 'loaded',
+        'store-start': 'loaded',
+        'store-end': 'stored',
+        'normalize-start': 'stored',
+        'normalize-end': 'normalized',
+        'analyze-start': 'normalized',
+        'analyze-end': 'analyzed',
+        'validate-start': 'analyzed',
+        'validate-end': 'validated',
+        'extend-start': 'validated',
+        'extend-end': 'extended',
+        'index-start': 'extended',
+        'index-end': 'indexed',
+        'finalize-start': 'indexed',
+        error: 'error'
+      }
+
+      if (keys.includes('info')) {
+        const newStatus = eventStates[event.type]
+        if (newStatus && dataset.value) {
+          dataset.value = { ...dataset.value, status: newStatus }
+        }
+        // Refresh schema after analyze-end or extend-start (schema may have changed)
+        if (event.type === 'analyze-end' || event.type === 'extend-start') {
+          datasetFetch.refresh()
+        }
+      }
     })
   }
 }
