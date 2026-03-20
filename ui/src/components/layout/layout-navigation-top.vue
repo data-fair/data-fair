@@ -10,6 +10,10 @@
       Data Fair
     </v-app-bar-title>
     <v-spacer />
+    <layout-notifications-queue
+      v-if="$uiConfig.eventsIntegration && user"
+      :events-url="$sitePath + '/events'"
+    />
     <df-personal-menu />
   </v-app-bar>
 </template>
@@ -18,6 +22,7 @@
 import DfPersonalMenu from '@data-fair/lib-vuetify/personal-menu.vue'
 
 const drawer = defineModel<boolean>('drawer', { required: true })
+const { user } = useSession()
 </script>
 
 <i18n lang="yaml">
