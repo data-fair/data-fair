@@ -55,8 +55,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { mdiBell } from '@mdi/js'
+import { useNotificationsWS } from '~/composables/use-notifications-ws'
 
 const props = defineProps<{
   eventsUrl: string
@@ -118,6 +119,15 @@ watch(menuOpen, async (open) => {
 })
 
 fetchCount()
+
+// Real-time WebSocket subscription
+const userId = computed(() => session.state.user?.id)
+if (userId.value) {
+  useNotificationsWS(props.eventsUrl, userId.value, (notif) => {
+    notifications.value.unshift(notif)
+    unreadCount.value++
+  })
+}
 </script>
 
 <i18n lang="yaml">
