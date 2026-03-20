@@ -44,6 +44,15 @@
         </v-icon>
         {{ t('thumbnails') }}
       </v-tab>
+      <v-tab
+        v-if="dataset.rest?.history"
+        value="revisions"
+      >
+        <v-icon start>
+          mdi-history
+        </v-icon>
+        {{ t('revisions') }}
+      </v-tab>
     </v-tabs>
 
     <v-tabs-window
@@ -82,6 +91,13 @@
           :height="contentHeight"
         />
       </v-tabs-window-item>
+
+      <v-tabs-window-item
+        v-if="dataset.rest?.history"
+        value="revisions"
+      >
+        <dataset-history />
+      </v-tabs-window-item>
     </v-tabs-window>
   </v-container>
 </template>
@@ -93,12 +109,14 @@ fr:
   map: Carte
   files: Fichiers
   thumbnails: Vignettes
+  revisions: Révisions
 en:
   datasets: Datasets
   table: Table
   map: Map
   files: Files
   thumbnails: Thumbnails
+  revisions: Revisions
 </i18n>
 
 <script lang="ts" setup>
