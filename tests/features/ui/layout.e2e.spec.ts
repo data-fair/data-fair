@@ -22,4 +22,12 @@ test.describe('main UI layout', () => {
     await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
     await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
   })
+
+  test('d-frame page loads and renders iframe element', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/catalogs', 'test_user1')
+    const dFrame = page.locator('d-frame#catalogs')
+    await expect(dFrame).toBeAttached({ timeout: 10000 })
+    const src = await dFrame.getAttribute('src')
+    expect(src).toContain('/catalogs/catalogs/')
+  })
 })
