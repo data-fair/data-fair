@@ -6,7 +6,7 @@
 
 **Architecture:** A `useBreadcrumbs()` composable manages breadcrumb state via provide/inject. Each d-frame page gets the `:adapter` prop and a `@message` handler. Catch-all `[...page].vue` routes enable deep URL sync. A `notifications-queue.vue` component connects to the events service API.
 
-**Tech Stack:** Vue 3, Vue Router 4, Vuetify 4, `@data-fair/frame` (state-change-adapter), `@data-fair/lib-vue` (session, useFetch)
+**Tech Stack:** Vue 3, Vue Router 5 (with `vue-router/vite` file-based routing), Vuetify 4, `@data-fair/frame` (state-change-adapter), `@data-fair/lib-vue` (session, useFetch)
 
 **Spec:** `docs/superpowers/specs/2026-03-20-ui-audit-design.md` — Part 1
 
@@ -135,11 +135,10 @@ import type { BreadcrumbItem } from '~/composables/use-breadcrumbs'
 
 const drawer = defineModel<boolean>('drawer', { required: true })
 
+import type { createBreadcrumbs } from '~/composables/use-breadcrumbs'
+
 const props = defineProps<{
-  breadcrumbs?: {
-    items: { value: BreadcrumbItem[] }
-    routeName: { value: string | null }
-  }
+  breadcrumbs?: ReturnType<typeof createBreadcrumbs>
 }>()
 
 const route = useRoute()
@@ -183,7 +182,9 @@ git commit -m "feat: render breadcrumbs in top navigation bar"
 - Create: `ui/src/components/layout/layout-notifications-queue.vue`
 - Modify: `ui/src/components/layout/layout-navigation-top.vue`
 
-The legacy component (`ui-legacy/public/components/notifications-queue.vue`) fetches from `{eventsUrl}/api/v1/notifications` and subscribes to real-time updates via an event bus channel `user:{userId}:notifications`. The new version uses `useFetch` and plain `fetch` instead of Vuex/axios.
+The legacy component (`ui-legacy/public/components/notifications-queue.vue`) fetches from `{eventsUrl}/api/v1/notifications` and subscribes to real-time updates via an event bus channel `user:{userId}:notifications`. The new version uses plain `fetch` instead of Vuex/axios.
+
+**Note:** The legacy also subscribes to a WebSocket channel for real-time push updates. This version only polls on mount and menu open/close. Real-time WebSocket subscription is deferred — it requires integrating with the events service's WebSocket protocol, which is a larger scope.
 
 - [ ] **Step 1: Create the notifications queue component**
 
@@ -350,7 +351,7 @@ const eventsUrl = computed(() => {
 })
 ```
 
-Note: Check if `$uiConfig.eventsUrl` or a similar config exists. If so, use that instead of the hardcoded path. The legacy used `env.eventsUrl` from Vuex state.
+Use `$uiConfig.eventsIntegration` (boolean) for the conditional, and `$sitePath + '/events'` for the URL (consistent with existing components like `webhooks-dialog.vue` and `notifications-dialog.vue` which use the same pattern).
 
 - [ ] **Step 3: Verify build**
 
@@ -403,7 +404,7 @@ Create `ui/src/composables/use-d-frame-page.ts` to avoid repeating the same code
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWindowSize } from '@vueuse/core'
-import VueRouterDFrameStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
+import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
 import { useBreadcrumbs } from './use-breadcrumbs'
 
 export function useDFramePage () {
@@ -411,7 +412,9 @@ export function useDFramePage () {
   const breadcrumbs = useBreadcrumbs()
   const { height: windowHeight } = useWindowSize()
 
-  const stateChangeAdapter = computed(() => new VueRouterDFrameStateChangeAdapter(router))
+  // Create adapter once — do NOT use computed(), as each instance registers
+  // a router.afterEach() listener. Recreating would leak listeners.
+  const stateChangeAdapter = createStateChangeAdapter(router)
 
   const frameHeight = computed(() => (windowHeight.value - 48) + 'px')
 
@@ -426,7 +429,7 @@ export function useDFramePage () {
 }
 ```
 
-Note: Check if `@vueuse/core` is already a dependency. If not, add it with `npm --prefix ui install @vueuse/core`. Alternatively, use a simple `ref` + `resize` event listener.
+`@vueuse/core` is already a dependency (v12.6.1 in `ui/package.json`).
 
 - [ ] **Step 2: Update catalogs.vue as the reference implementation**
 
@@ -489,55 +492,21 @@ git commit -m "feat: wire state-change-adapter and breadcrumb handlers on all d-
 ### Task 5: Add catch-all routes for deep URL sync
 
 **Files:**
+- Modify: `ui/src/pages/catalogs.vue` (add `<RouterView />`)
 - Create: `ui/src/pages/catalogs/[...page].vue`
-- Create: `ui/src/pages/processings/[...page].vue`
-- Create: `ui/src/pages/portals/[...page].vue`
-- Create: `ui/src/pages/events/[...page].vue`
-- Create: `ui/src/pages/reuses/[...page].vue`
-- Create: `ui/src/pages/pages/[...page].vue`
-- Move: `ui/src/pages/catalogs.vue` → `ui/src/pages/catalogs/index.vue` (and similarly for others)
+- Same pattern for: processings, portals, events, reuses, pages
 
-**Important:** For the catch-all route to work, each d-frame page needs to be moved from `pages/X.vue` to `pages/X/index.vue` — otherwise the `[...page].vue` file would be a sibling, not a child route.
+**How it works with `vue-router/vite`:** When both `pages/catalogs.vue` and `pages/catalogs/` directory exist, `catalogs.vue` becomes the parent layout for all child routes. It must include a `<RouterView />` to render children. The catch-all child `[...page].vue` is empty — it exists only so Vue Router captures deep URL segments for the state-change-adapter.
 
-However, Vue Router's file-based routing with `unplugin-vue-router` may handle this differently. Check the routing plugin config in `vite.config.ts`. The catch-all route needs to render the **same** d-frame component, not an empty div — because the d-frame's `sync-path` attribute is what syncs the deep URL to the iframe.
+**Important:** Do NOT create `pages/catalogs/index.vue` — the d-frame is already in the parent `catalogs.vue`. An index child would cause double-rendering.
 
-- [ ] **Step 1: Move catalogs.vue to catalogs/index.vue**
+**Fallback:** If `vue-router/vite` does not produce the expected parent-child route tree, define catch-all routes manually in the router config instead of using file-based routing.
 
-```bash
-mkdir -p ui/src/pages/catalogs
-git mv ui/src/pages/catalogs.vue ui/src/pages/catalogs/index.vue
-```
+- [ ] **Step 1: Add `<RouterView />` to catalogs.vue**
 
-- [ ] **Step 2: Create catch-all route for catalogs**
-
-Create `ui/src/pages/catalogs/[...page].vue`:
+Add `<RouterView />` after the `<d-frame>` element in `catalogs.vue`:
 
 ```vue
-<template>
-  <!-- Rendered by parent layout; the d-frame in index.vue handles the actual content via sync-path -->
-</template>
-
-<script lang="ts" setup>
-// This catch-all route exists solely to let Vue Router capture deep URL segments
-// (e.g., /catalogs/browse/detail/123) for the d-frame state-change-adapter to sync.
-// The actual d-frame rendering happens in the sibling index.vue.
-</script>
-```
-
-Wait — this won't work. The catch-all child route would replace the parent's `<RouterView>`, not coexist with the index.vue. The legacy used Nuxt's nested layouts where `<nuxt-child />` rendered children inside the parent. In Vue Router 4 file-based routing, we need a different approach.
-
-**Correct approach:** The d-frame page should become a layout-like parent that includes `<RouterView>` (which will be empty for catch-all children), and the d-frame renders regardless.
-
-- [ ] **Step 1 (revised): Restructure catalogs as parent route with nested catch-all**
-
-Move `ui/src/pages/catalogs.vue` to `ui/src/pages/catalogs.vue` (keep as parent) and create `ui/src/pages/catalogs/[...page].vue`:
-
-Actually, with `unplugin-vue-router`, if `pages/catalogs.vue` exists AND `pages/catalogs/` directory exists, `catalogs.vue` becomes the parent layout for all routes under `catalogs/`. This means `catalogs.vue` needs a `<RouterView>` to render children.
-
-Restructure:
-
-```vue
-<!-- ui/src/pages/catalogs.vue (becomes parent layout) -->
 <template>
   <d-frame
     id="catalogs"
@@ -552,7 +521,6 @@ Restructure:
     @iframe-message="onMessage"
     @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
   />
-  <!-- RouterView for catch-all children (renders nothing visible) -->
   <RouterView />
 </template>
 
@@ -564,7 +532,9 @@ const { stateChangeAdapter, frameHeight, onMessage } = useDFramePage()
 </script>
 ```
 
-Then create `ui/src/pages/catalogs/[...page].vue`:
+- [ ] **Step 2: Create catch-all route for catalogs**
+
+Create `ui/src/pages/catalogs/[...page].vue`:
 
 ```vue
 <template>
@@ -572,9 +542,9 @@ Then create `ui/src/pages/catalogs/[...page].vue`:
 </template>
 ```
 
-- [ ] **Step 2: Repeat for all d-frame pages with sync-path**
+- [ ] **Step 3: Repeat for all d-frame pages with sync-path**
 
-Create catch-all routes and add `<RouterView />` for:
+Add `<RouterView />` and create catch-all routes for:
 - `processings.vue` + `processings/[...page].vue`
 - `portals.vue` + `portals/[...page].vue`
 - `events.vue` + `events/[...page].vue`
@@ -583,12 +553,14 @@ Create catch-all routes and add `<RouterView />` for:
 
 Pages without `sync-path` (metrics, api-doc, admin plugins) do NOT need catch-all routes.
 
-- [ ] **Step 3: Verify routing works**
+- [ ] **Step 4: Verify routing works**
 
 Run: `npm --prefix ui run build`
-Expected: Build succeeds. Routes like `/catalogs/some/deep/path` should resolve to the catalogs page.
+Then manually test: navigate to `/catalogs/some/deep/path` and verify it resolves to the catalogs page with the d-frame visible.
 
-- [ ] **Step 4: Commit**
+If the file-based routing does not produce the expected route tree, fall back to manual route definitions.
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add ui/src/pages/catalogs.vue ui/src/pages/catalogs/ ui/src/pages/processings.vue ui/src/pages/processings/ ui/src/pages/portals.vue ui/src/pages/portals/ ui/src/pages/events.vue ui/src/pages/events/ ui/src/pages/reuses.vue ui/src/pages/reuses/ ui/src/pages/pages.vue ui/src/pages/pages/
@@ -668,10 +640,10 @@ git commit -m "test: add d-frame page smoke test"
 
 ### Implementation Notes
 
-**@vueuse/core dependency:** Task 4 uses `useWindowSize` from `@vueuse/core`. Check if it's already in `ui/package.json`. If not, install it: `npm --prefix ui install @vueuse/core`. Alternative: use a simple composable with `window.innerHeight` + `resize` event listener to avoid the dependency.
+**d-frame `.prop` modifier:** The legacy uses `:adapter.prop="stateChangeAdapter"` — the `.prop` modifier ensures the value is set as a DOM property, not an HTML attribute. This is critical because d-frame is a custom element. Vue 3 supports `.prop` modifier on custom elements.
 
-**Events URL:** Task 3 hardcodes `$sitePath + '/events'` for the events service URL. Verify this matches the actual deployment. Check if `$uiConfig` exposes an `eventsUrl` — if so, use that instead.
+**d-frame custom element registration:** The `d-frame` custom element is registered by the `@data-fair/frame` package. The import `import dFrameContent from '@data-fair/frame/lib/vue-router/d-frame-content.js'` in `main.ts` has a side effect that registers the element. No additional import is needed in page components.
 
-**d-frame `.prop` modifier:** The legacy uses `:adapter.prop="stateChangeAdapter"` — the `.prop` modifier ensures the value is set as a DOM property, not an HTML attribute. This is critical because d-frame is a custom element. Verify this syntax works in Vue 3 (it should — Vue 3 supports `.prop` modifier on custom elements).
+**`notifications.vue` is NOT a d-frame page:** Despite being listed as a d-frame page in the spec's Group 1, `notifications.vue` is a native Vue page with multiple `<d-frame>` elements (for subscription management). It does not need the adapter/breadcrumbs/catch-all treatment. It will be audited in Group 1 Task 1 for correct d-frame attributes on its individual frames.
 
-**unplugin-vue-router behavior:** Verify that having both `pages/catalogs.vue` and `pages/catalogs/[...page].vue` creates the expected parent-child route structure. If the routing plugin doesn't support this pattern, an alternative is to define the catch-all routes manually in the router config.
+**vue-router/vite (not unplugin-vue-router):** The project uses `vue-router/vite` (Vue Router 5.0's integrated file-based routing), not the separate `unplugin-vue-router` package. The behavior is similar but documentation references should use `vue-router/vite`.
