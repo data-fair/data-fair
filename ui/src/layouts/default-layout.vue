@@ -1,6 +1,9 @@
 <template>
   <layout-navigation-top v-model:drawer="drawer" />
-  <layout-navigation-left v-model="drawer" />
+  <layout-navigation-left
+    v-if="user"
+    v-model="drawer"
+  />
   <v-main>
     <slot />
   </v-main>
@@ -14,4 +17,5 @@ import LayoutNavigationLeft from '~/components/layout/layout-navigation-left.vue
 
 const { lgAndUp } = useDisplay()
 const drawer = ref(lgAndUp.value)
+const { user } = useSession()
 </script>

@@ -23,7 +23,7 @@ test.describe('home dashboard', () => {
     // Metric cards render (even if counts are 0)
     await expect(page.getByText(/en erreur/)).toBeVisible({ timeout: 10000 })
     await expect(page.getByText(/brouillon/)).toBeVisible()
-    await expect(page.getByText(/publication à valider/)).toBeVisible()
+    await expect(page.getByText(/publication à valider/).first()).toBeVisible()
   })
 
   test('shows manage applications section', async ({ page, goToWithAuth }) => {
