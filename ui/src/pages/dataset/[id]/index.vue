@@ -230,6 +230,23 @@
                   <dataset-publication-sites />
                 </v-tabs-window-item>
 
+                <!-- Catalog publications -->
+                <v-tabs-window-item
+                  v-if="$uiConfig.catalogsIntegration && can('admin').value"
+                  value="catalog-publications"
+                >
+                  <v-container fluid>
+                    <h3 class="text-subtitle-1 font-weight-bold mt-4">
+                      {{ t('catalogPublications') }}
+                    </h3>
+                    <d-frame
+                      :src="`${window.location.origin}/catalogs/dataset-publications?dataset-id=${dataset.id}`"
+                      sync-params
+                      @notif="msg => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+                    />
+                  </v-container>
+                </v-tabs-window-item>
+
                 <v-tabs-window-item value="related-datasets">
                   <v-container fluid>
                     <dataset-related-datasets />
@@ -307,6 +324,7 @@ fr:
   share: Partage
   permissions: Permissions
   publicationSites: Portails
+  catalogPublications: Publications dans les catalogues
   relatedDatasets: Voir aussi
   restDataset: Jeu de données éditable
   history: Historisation (conserve les révisions des lignes)
@@ -326,6 +344,7 @@ en:
   share: Share
   permissions: Permissions
   publicationSites: Portals
+  catalogPublications: Catalog publications
   relatedDatasets: See also
   restDataset: Editable dataset
   history: History (store revisions of lines)
@@ -345,6 +364,7 @@ import setBreadcrumbs from '~/utils/breadcrumbs'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
+const { sendUiNotif } = useUiNotif()
 
 const store = provideDatasetStore(route.params.id, true)
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, can, patchDataset } = store
@@ -414,6 +434,9 @@ const sections = computedDeepDiff(() => {
     shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
   }
   shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
+  if ($uiConfig.catalogsIntegration && can('admin').value) {
+    shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiPresentation })
+  }
   shareTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
   if (shareTabs.length) {
     result.push({ title: t('share'), id: 'share', tabs: shareTabs })
