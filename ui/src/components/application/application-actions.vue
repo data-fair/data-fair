@@ -42,6 +42,22 @@
       <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
     </v-list-item>
 
+    <integration-dialog
+      resource-type="applications"
+      :resource="application"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="primary">
+              mdi-code-tags
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('integration') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </integration-dialog>
+
     <owner-change-dialog
       v-if="can('setOwner')"
       :resource="application"
@@ -105,6 +121,7 @@ fr:
   fullPage: Ouvrir en pleine page
   editConfig: Éditer la configuration
   useAPI: Utiliser l'API
+  integration: Intégrer dans un site
   changeOwner: Changer le propriétaire
   delete: Supprimer
   deleteApp: Suppression de l'application
@@ -116,6 +133,7 @@ en:
   fullPage: Open in a fullscreen
   editConfig: Edit configuration
   useAPI: Use the API
+  integration: Embed in a website
   changeOwner: Change owner
   delete: Delete
   deleteApp: Deletion of the application

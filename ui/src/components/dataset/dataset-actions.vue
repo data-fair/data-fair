@@ -71,6 +71,23 @@
       <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
     </v-list-item>
 
+    <integration-dialog
+      v-if="dataset.finalizedAt"
+      resource-type="datasets"
+      :resource="dataset"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-list-item v-bind="activatorProps">
+          <template #prepend>
+            <v-icon color="primary">
+              mdi-code-tags
+            </v-icon>
+          </template>
+          <v-list-item-title>{{ t('integration') }}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </integration-dialog>
+
     <owner-change-dialog
       v-if="can('setOwner').value"
       :resource="dataset"
@@ -136,6 +153,7 @@ fr:
   viewData: Voir les données
   editData: Éditer les données
   useAPI: Utiliser l'API
+  integration: Intégrer dans un site
   changeOwner: Changer le propriétaire
   delete: Supprimer
   deleteDataset: Suppression du jeu de données
@@ -149,6 +167,7 @@ en:
   viewData: View data
   editData: Edit data
   useAPI: Use the API
+  integration: Embed in a website
   changeOwner: Change owner
   delete: Delete
   deleteDataset: Dataset deletion
