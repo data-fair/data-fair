@@ -50,6 +50,66 @@
           </layout-section-tabs>
 
           <layout-section-tabs
+            v-if="section.id === 'extensions'"
+            :id="section.id"
+            :min-height="300"
+            :title="section.title"
+            :tabs="section.tabs"
+            :color="section.color"
+          >
+            <template #content="{ tab }">
+              <v-tabs-window :model-value="tab">
+                <v-tabs-window-item value="extensions">
+                  <v-container fluid>
+                    <dataset-extensions
+                      v-model="datasetEditFetch.data.value"
+                      @refresh="onRefreshExtension"
+                    />
+                  </v-container>
+                </v-tabs-window-item>
+              </v-tabs-window>
+            </template>
+          </layout-section-tabs>
+
+          <layout-section-tabs
+            v-if="section.id === 'master-data'"
+            :id="section.id"
+            :min-height="300"
+            :title="section.title"
+            :tabs="section.tabs"
+            :color="section.color"
+          >
+            <template #content="{ tab }">
+              <v-tabs-window :model-value="tab">
+                <v-tabs-window-item value="master-data">
+                  <v-container fluid>
+                    <dataset-master-data v-model="datasetEditFetch.data.value" />
+                  </v-container>
+                </v-tabs-window-item>
+              </v-tabs-window>
+            </template>
+          </layout-section-tabs>
+
+          <layout-section-tabs
+            v-if="section.id === 'virtual'"
+            :id="section.id"
+            :min-height="300"
+            :title="section.title"
+            :tabs="section.tabs"
+            :color="section.color"
+          >
+            <template #content="{ tab }">
+              <v-tabs-window :model-value="tab">
+                <v-tabs-window-item value="virtual">
+                  <v-container fluid>
+                    <dataset-virtual v-model="datasetEditFetch.data.value" />
+                  </v-container>
+                </v-tabs-window-item>
+              </v-tabs-window>
+            </template>
+          </layout-section-tabs>
+
+          <layout-section-tabs
             v-if="section.id === 'attachments'"
             :id="section.id"
             :min-height="200"
@@ -118,6 +178,9 @@ fr:
   info: Informations
   schema: Schéma
   attachments: Pièces jointes
+  extensions: Enrichissements
+  masterData: Données de référence
+  virtual: Jeu de données virtuel
   save: Enregistrer
   saved: Les modifications ont été enregistrées
   navigation: NAVIGATION
@@ -129,6 +192,9 @@ en:
   info: Information
   schema: Schema
   attachments: Attachments
+  extensions: Extensions
+  masterData: Master data
+  virtual: Virtual dataset
   save: Save
   saved: Changes were saved
   navigation: NAVIGATION
@@ -138,13 +204,14 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiInformation, mdiTableCog, mdiAttachment, mdiAlert } from '@mdi/js'
+import { mdiInformation, mdiTableCog, mdiAttachment, mdiAlert, mdiPuzzle, mdiDatabase, mdiSetAll } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
 import equal from 'fast-deep-equal'
 
 const { t, locale } = useI18n()
+const { accountRole } = useSessionAuthenticated()
 const route = useRoute<'/dataset/[id]/edit-metadata'>()
 
 // Provide dataset store for child components that need it (dataset-attachments, dataset-status)
@@ -160,6 +227,12 @@ const datasetEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.
   }
 })
 useLeaveGuard(datasetEditFetch.hasDiff, { locale })
+
+const onRefreshExtension = async (extension: any) => {
+  await store.patchDataset.execute({ extensions: [{ ...extension, needsUpdate: true }] })
+  // Refresh editFetch to sync serverData after the server-side patch
+  await datasetEditFetch.fetch.refresh()
+}
 
 watch(datasetEditFetch.data, (d) => {
   if (!d) return
@@ -194,6 +267,27 @@ const schemaHasDiff = computed(() => {
   return !equal(d.schema, s.schema) || !equal(d.primaryKey, s.primaryKey)
 })
 
+const extensionsHasDiff = computed(() => {
+  const d = datasetEditFetch.data.value
+  const s = datasetEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.extensions, s.extensions)
+})
+
+const masterDataHasDiff = computed(() => {
+  const d = datasetEditFetch.data.value
+  const s = datasetEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.masterData, s.masterData)
+})
+
+const virtualHasDiff = computed(() => {
+  const d = datasetEditFetch.data.value
+  const s = datasetEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.virtual, s.virtual) || !equal(d.schema, s.schema)
+})
+
 const sections = computedDeepDiff(() => {
   const d = datasetEditFetch.data.value
   if (!d) return []
@@ -224,6 +318,54 @@ const sections = computedDeepDiff(() => {
       }]
     }
   ]
+
+  // Extensions section (non-virtual, non-meta-only datasets)
+  if (!d.isVirtual && !d.isMetaOnly) {
+    result.push({
+      title: t('extensions'),
+      id: 'extensions',
+      color: extensionsHasDiff.value ? 'accent' : undefined,
+      tabs: [{
+        key: 'extensions',
+        title: t('extensions'),
+        icon: mdiPuzzle,
+        appendIcon: extensionsHasDiff.value ? mdiAlert : undefined,
+        color: extensionsHasDiff.value ? 'accent' : undefined
+      }]
+    })
+  }
+
+  // Master data section (admin only, finalized, non-meta-only)
+  if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+    result.push({
+      title: t('masterData'),
+      id: 'master-data',
+      color: masterDataHasDiff.value ? 'accent' : undefined,
+      tabs: [{
+        key: 'master-data',
+        title: t('masterData'),
+        icon: mdiDatabase,
+        appendIcon: masterDataHasDiff.value ? mdiAlert : undefined,
+        color: masterDataHasDiff.value ? 'accent' : undefined
+      }]
+    })
+  }
+
+  // Virtual dataset section
+  if (d.isVirtual) {
+    result.push({
+      title: t('virtual'),
+      id: 'virtual',
+      color: virtualHasDiff.value ? 'accent' : undefined,
+      tabs: [{
+        key: 'virtual',
+        title: t('virtual'),
+        icon: mdiSetAll,
+        appendIcon: virtualHasDiff.value ? mdiAlert : undefined,
+        color: virtualHasDiff.value ? 'accent' : undefined
+      }]
+    })
+  }
 
   if (!d.draftReason) {
     result.push({
