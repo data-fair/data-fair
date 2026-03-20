@@ -152,6 +152,18 @@
       </template>
     </webhooks-dialog>
 
+    <v-list-item
+      v-if="can('changeOwner').value && $uiConfig.eventsIntegration"
+      :to="`/dataset/${dataset.id}/events`"
+    >
+      <template #prepend>
+        <v-icon color="primary">
+          mdi-clipboard-text-clock
+        </v-icon>
+      </template>
+      <v-list-item-title>{{ t('events') }}</v-list-item-title>
+    </v-list-item>
+
     <owner-change-dialog
       v-if="can('setOwner').value"
       :resource="dataset"
@@ -265,6 +277,7 @@ fr:
   integration: Intégrer dans un site
   notifications: Notifications
   webhooks: Webhooks
+  events: Traçabilité
   changeOwner: Changer le propriétaire
   delete: Supprimer
   deleteAllLines: Supprimer toutes les lignes
@@ -285,6 +298,7 @@ en:
   integration: Embed in a website
   notifications: Notifications
   webhooks: Webhooks
+  events: Traceability
   changeOwner: Change owner
   delete: Delete
   deleteAllLines: Delete all lines
