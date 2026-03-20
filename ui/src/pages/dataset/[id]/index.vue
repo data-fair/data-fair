@@ -124,7 +124,7 @@
                           <template #append>
                             <dataset-edit-history
                               v-if="can('writeDescriptionBreaking').value"
-                              :history="dataset.rest?.history"
+                              :history="dataset.rest?.history ?? false"
                               @change="onHistoryChange"
                             />
                           </template>
@@ -371,7 +371,7 @@ const formatDate = (dateStr?: string) => {
 }
 
 async function onHistoryChange (history: boolean) {
-  await patchDataset.action({ rest: { ...dataset.value?.rest, history } })
+  await patchDataset.execute({ rest: { ...dataset.value?.rest, history } })
 }
 
 const sections = computedDeepDiff(() => {

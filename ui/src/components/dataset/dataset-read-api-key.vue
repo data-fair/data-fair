@@ -28,7 +28,7 @@
       <template v-if="actualReadApiKey?.current">
         <p class="text-body-2 mt-2">
           {{ t('key') }}: <code>{{ actualReadApiKey.current }}</code>
-          <span v-if="dataset.readApiKey?.expiresAt">
+          <span v-if="dataset?.readApiKey?.expiresAt">
             ({{ t('expiresAt') }} {{ formatDate(dataset.readApiKey.expiresAt) }})
           </span>
         </p>
@@ -134,7 +134,7 @@ async function fetchReadApiKey () {
 async function save () {
   saving.value = true
   try {
-    await patchDataset.action({ readApiKey: editReadApiKey.value })
+    await patchDataset.execute({ readApiKey: editReadApiKey.value })
     if (editReadApiKey.value?.active) {
       await fetchReadApiKey()
     } else {

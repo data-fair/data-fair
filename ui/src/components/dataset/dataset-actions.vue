@@ -181,6 +181,18 @@
       </template>
       <v-list-item-title>{{ t('delete') }}</v-list-item-title>
     </v-list-item>
+
+    <v-list-item
+      v-if="dataset.isRest && can('deleteLine').value"
+      @click="showDeleteAllLinesDialog = true"
+    >
+      <template #prepend>
+        <v-icon color="warning">
+          mdi-delete-sweep
+        </v-icon>
+      </template>
+      <v-list-item-title>{{ t('deleteAllLines') }}</v-list-item-title>
+    </v-list-item>
   </v-list>
 
   <v-dialog
@@ -207,6 +219,38 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <v-dialog
+    v-model="showDeleteAllLinesDialog"
+    max-width="500"
+  >
+    <v-card>
+      <v-card-title>{{ t('deleteAllLinesTitle') }}</v-card-title>
+      <v-card-text>
+        <v-alert
+          type="error"
+          variant="outlined"
+        >
+          {{ t('deleteAllLinesWarning', { title: dataset?.title }) }}
+        </v-alert>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn
+          variant="text"
+          @click="showDeleteAllLinesDialog = false"
+        >
+          {{ t('no') }}
+        </v-btn>
+        <v-btn
+          color="warning"
+          @click="confirmDeleteAllLines"
+        >
+          {{ t('yes') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <i18n lang="yaml">
@@ -223,6 +267,9 @@ fr:
   webhooks: Webhooks
   changeOwner: Changer le propriétaire
   delete: Supprimer
+  deleteAllLines: Supprimer toutes les lignes
+  deleteAllLinesTitle: Suppression des lignes du jeu de données
+  deleteAllLinesWarning: Voulez vous vraiment supprimer toutes les lignes du jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   deleteDataset: Suppression du jeu de données
   deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   yes: Oui
@@ -240,6 +287,9 @@ en:
   webhooks: Webhooks
   changeOwner: Change owner
   delete: Delete
+  deleteAllLines: Delete all lines
+  deleteAllLinesTitle: Delete all the lines of the dataset
+  deleteAllLinesWarning: Do you really want to delete all the lines of the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
   deleteDataset: Dataset deletion
   deleteMsg: Do you really want to delete the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
   yes: Yes
@@ -251,13 +301,19 @@ import useDatasetStore from '~/composables/dataset-store'
 
 const { t } = useI18n()
 const router = useRouter()
-const { dataset, dataFiles, can, remove } = useDatasetStore()
+const { dataset, dataFiles, can, remove, id } = useDatasetStore()
 
 const showDeleteDialog = ref(false)
+const showDeleteAllLinesDialog = ref(false)
 
 const confirmRemove = async () => {
   showDeleteDialog.value = false
   await remove()
   router.push('/datasets')
+}
+
+const confirmDeleteAllLines = async () => {
+  showDeleteAllLinesDialog.value = false
+  await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
 }
 </script>

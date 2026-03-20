@@ -110,7 +110,7 @@
                     {{ t('draftUpdated2') }}
                   </span>
                   <span
-                    v-if="can('validateDraft')"
+                    v-if="can('validateDraft').value"
                   >
                     {{ t('draftValidateCan') }}
                   </span>
@@ -125,7 +125,7 @@
             <v-col class="shrink text-center">
               <v-btn
                 v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
-                :disabled="!can('cancelDraft')"
+                :disabled="!can('cancelDraft').value"
                 :color="(draftError || draftValidationError) ? 'default' : 'warning'"
                 class="ma-1"
                 elevation="0"
@@ -135,7 +135,7 @@
               </v-btn>
               <v-btn
                 v-if="dataset.status === 'finalized'"
-                :disabled="!can('validateDraft')"
+                :disabled="!can('validateDraft').value"
                 :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
                 class="ma-1"
                 @click="validateDraft"
@@ -181,7 +181,7 @@ const events = allEvents.dataset as Record<string, { icon: string, color?: strin
 const { t, locale } = useI18n()
 
 const datasetStore = useDatasetStore()
-const { dataset, journal, journalFetch, can } = datasetStore
+const { dataset, journal, journalFetch, can, patchDataset } = datasetStore
 if (!journalFetch.initialized.value) {
   journalFetch.refresh()
   useDatasetWatch(datasetStore, 'journal')
@@ -219,8 +219,8 @@ const validateDraft = useAsyncAction(async () => {
   await $fetch(`datasets/${dataset.value.id}/draft`, { method: 'post' })
 })
 
-const patch = (patch: any) => {
-  console.log('TODO', patch)
+const patch = (p: any) => {
+  patchDataset.execute(p)
 }
 
 </script>

@@ -230,7 +230,7 @@ const toggleRequestedPublicationSites = (site: PublicationSite) => {
 }
 
 const canPublish = (site: PublicationSite) => {
-  return can('writeDescription') && (can('writePublicationSites') || site.settings?.staging) && (!account.value.department || account.value.department === site.department)
+  return can('writeDescription').value && (can('writePublicationSites').value || site.settings?.staging) && (!account.value.department || account.value.department === site.department)
 }
 
 const togglePublicationSitesStatus = (site: PublicationSite) => {
@@ -252,9 +252,9 @@ const toggleRequestedPublicationSitesStatus = (site: PublicationSite) => {
 
   if (dataset.value?.requestedPublicationSites?.includes(`${site.type}:${site.id}`)) {
     if (canTogglePs) return 'disabled'
-    if (can('writeDescription')) return 'visible'
+    if (can('writeDescription').value) return 'visible'
   } else {
-    if (!canTogglePs && can('writeDescription')) return 'visible'
+    if (!canTogglePs && can('writeDescription').value) return 'visible'
     return 'hidden'
   }
 }
