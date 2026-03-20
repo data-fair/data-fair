@@ -14,8 +14,10 @@ export const uiConfig = {
   adminRole: config.adminRole as string,
   contribRole: config.contribRole as string,
   subscriptionUrl: config.subscriptionUrl as string | null,
+  metricsIntegration: !!config.privateMetricsUrl || (config.extraNavigationItems as any[]).some((e: any) => e.iframe?.startsWith('/metrics/')),
   extraNavigationItems: config.extraNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
-  extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[]
+  extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
+  extraDocLinks: config.extraDocLinks as { icon?: string, href: string, title: string | Record<string, string> }[]
 }
 
 export type UiConfig = typeof uiConfig
