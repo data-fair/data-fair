@@ -9,7 +9,20 @@
 </template>
 
 <script lang="ts" setup>
+import { usePermissions } from '~/composables/use-permissions'
+
+const router = useRouter()
+const { session } = useSession()
+
 const iframeHeight = ref('600px')
+
+const { missingSubscription } = usePermissions()
+
+onMounted(() => {
+  if (missingSubscription.value && session.state.account?.type === 'organization') {
+    router.replace('/subscription')
+  }
+})
 
 function onLoad (e: Event) {
   const iframe = e.target as HTMLIFrameElement
