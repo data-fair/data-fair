@@ -1,5 +1,52 @@
 <template>
   <v-container v-if="application">
+    <v-alert
+      v-if="upgradeAvailable && can('writeConfig')"
+      type="info"
+      variant="tonal"
+      class="mb-4"
+      closable
+    >
+      {{ t('upgradeAvailable', { version: upgradeAvailable.version }) }}
+      <v-btn
+        color="accent"
+        variant="text"
+        size="small"
+        class="ml-2"
+        @click="showUpgradeDialog = true"
+      >
+        {{ t('upgradeAction') }}
+      </v-btn>
+    </v-alert>
+
+    <v-dialog
+      v-model="showUpgradeDialog"
+      max-width="500"
+    >
+      <v-card>
+        <v-card-title>{{ t('upgradeTitle') }}</v-card-title>
+        <v-card-text>
+          {{ t('upgradeConfirm', { version: upgradeAvailable?.version }) }}
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="showUpgradeDialog = false"
+          >
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            :loading="upgrading"
+            @click="confirmUpgrade"
+          >
+            {{ t('upgrade') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-row class="application">
       <v-col>
         <template
@@ -257,6 +304,12 @@ fr:
   activity: Activité
   journal: Journal
   version: version
+  upgradeAvailable: "Version {version} disponible"
+  upgradeAction: Mettre à jour
+  upgradeTitle: Mise à jour de version
+  upgradeConfirm: "Voulez-vous mettre à jour l'application vers la version {version} ? L'application sera reconfigurée avec la nouvelle version."
+  cancel: Annuler
+  upgrade: Mettre à jour
 en:
   applications: Applications
   info: Information
@@ -275,20 +328,29 @@ en:
   activity: Activity
   journal: Journal
   version: version
+  upgradeAvailable: "Version {version} available"
+  upgradeAction: Upgrade
+  upgradeTitle: Version upgrade
+  upgradeConfirm: "Do you want to upgrade the application to version {version}? The application will be reconfigured with the new version."
+  cancel: Cancel
+  upgrade: Upgrade
 </i18n>
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiInformation, mdiDatabase, mdiImageMultiple, mdiSquareEditOutline, mdiSecurity, mdiPresentation, mdiCalendarText, mdiPaperclip } from '@mdi/js'
 import { provideApplicationStore } from '~/composables/application-store'
+import { useApplicationVersions } from '~/composables/application-versions'
 import { useApplicationWatch } from '~/composables/application-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/application/[id]/'>()
+const router = useRouter()
 
 const store = provideApplicationStore(route.params.id)
-const { application, applicationLink, can, journal, journalFetch, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
+const { application, applicationLink, can, patch, journal, journalFetch, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
+const { availableVersions } = useApplicationVersions()
 
 useApplicationWatch(['journal', 'draft-error'])
 
@@ -313,6 +375,30 @@ watch(() => store.config.value, (conf) => {
 
 const datasets = computed(() => datasetsFetch.data.value?.results ?? [])
 const childrenApps = computed(() => childrenAppsFetch.data.value?.results ?? [])
+
+const upgradeAvailable = computed(() => {
+  if (!availableVersions.value?.length) return null
+  const currentVersion = baseAppFetch.data.value?.version
+  if (!currentVersion) return null
+  const latest = availableVersions.value[0]
+  if (latest.version === currentVersion) return null
+  return latest
+})
+
+const showUpgradeDialog = ref(false)
+const upgrading = ref(false)
+
+const confirmUpgrade = async () => {
+  if (!upgradeAvailable.value) return
+  upgrading.value = true
+  try {
+    await patch({ urlDraft: upgradeAvailable.value.url })
+    showUpgradeDialog.value = false
+    router.push(`/application/${route.params.id}/config`)
+  } finally {
+    upgrading.value = false
+  }
+}
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''
