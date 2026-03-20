@@ -38,6 +38,8 @@ Imitate the legacy codebase (`ui-legacy/`) for all features. No redesign — mat
 - Emits incoming notifications to a callback
 - Handles reconnection via the `useWS` built-in mechanism
 
+**Note:** `useWS` is currently used for resource-scoped channels (`datasets/{id}/journal`). Verify it supports arbitrary channel patterns (user-scoped `user:{id}:notifications`). If `useWS` requires a resource prefix, add a `channel` override parameter or use the underlying WebSocket directly with the same reconnection logic.
+
 **Legacy reference:** `ui-legacy/public/plugins/ws.js` (ReconnectingWebSocket + eventBus), `ui-legacy/public/components/notifications-queue.vue` (subscription pattern).
 
 ### 1c. `permissions-editor.vue` component
@@ -60,6 +62,8 @@ Native Vue 3 recreation of legacy `ui-legacy/public/components/permissions.vue`.
 - Warning for public apps with private dataset dependencies
 
 **API:** `GET/PUT /api/v1/{resourceType}/{id}/permissions`
+
+**i18n:** Extract all translated strings from legacy `ui-legacy/public/components/permissions.vue` — visibility labels, role names, scope labels, warning messages. Create `<i18n lang="yaml">` block with `fr` and `en` translations matching legacy keys.
 
 ---
 
@@ -111,11 +115,15 @@ Add list item in dataset-actions.
 - **Icon:** `mdi-clipboard-text-clock`
 - **Label:** i18n key `events`
 
+**Note:** The target route `/dataset/{id}/events` does not currently exist. This is a d-frame page pointing to the external events service at `{window.location.origin}/events/embed/traceability?resource=...`. Create a new `ui/src/pages/dataset/[id]/events.vue` d-frame wrapper page (same pattern as `api-doc.vue`) with the events service iframe URL.
+
 **Legacy reference:** `ui-legacy/public/components/dataset/dataset-actions.vue` lines 108-120.
 
 ### 2e. WebSocket progress updates in `dataset-watch.ts` (Gap 5)
 
-Extend the existing `useDatasetWatch` composable with the full event-state mapping from legacy. Currently only handles `finalize-end` and `draft-cancelled`.
+**File:** `ui/src/composables/dataset-watch.ts`
+
+Uncomment and adapt the existing TODO block (lines 47-65) in `useDatasetWatch`. The composable already has the event-state mapping scaffolded as comments. Currently only handles `finalize-end` and `draft-cancelled`.
 
 **Event-state mapping to add:**
 ```
@@ -142,7 +150,7 @@ On each state change, update `dataset.status` in the store reactively so the UI 
 
 ### 2f. nbVirtualDatasets in dataset home (Gap 6)
 
-**Store addition:** In `dataset-store.ts`, add `nbVirtualDatasets` state + fetch via `GET /api/v1/datasets?children={id}&size=0` → store `result.count`.
+**Store addition:** In `dataset-store.ts` (`ui/src/composables/dataset-store.ts`), add a `nbVirtualDatasets` ref + `useFetch` call for `GET /api/v1/datasets?children={id}&size=0` → store `result.count`. Add the ref to the `createDatasetStore` return object (around line 113-137) so consuming components can access it via `useDatasetStore()`.
 
 **Display:** In dataset info section, show count as a link to `/datasets?children={id}` (filtered dataset list showing virtual datasets derived from this one).
 
@@ -240,18 +248,21 @@ Replace polling with `useNotificationsWS` composable from Phase 1 (1b).
 
 ### 4b. Extra page breadcrumb relay (Gap 14)
 
-Extend `useBreadcrumbs` composable's `receiveBreadcrumbs` to handle breadcrumbs from extra/iframe pages.
+Extend `useBreadcrumbs` composable (`ui/src/composables/use-breadcrumbs.ts`) `receiveBreadcrumbs` to handle breadcrumbs from extra/iframe pages.
 
-**Mapping:** iframe breadcrumb paths → parent route query params (`?p={path}`), matching legacy `extra-page.js` mixin pattern.
+**Mapping:** iframe breadcrumb paths → parent route query params (`?p={path}`). The legacy `extra-page.js` mixin uses `getBreadcrumbPath(b.to)` to strip the iframe pathname prefix and encode the sub-path as a `p` query param. Replicate this logic: extract the path relative to the iframe base URL, encode as query param on the parent route.
 
-**Wiring:** Add `@message` handler on `extra.vue` and `admin-extra.vue` d-frame pages to feed breadcrumbs through.
+**Prerequisite:** `extra/[id].vue` and `admin-extra/[id].vue` currently use raw `<iframe>`, not `<d-frame>`. Convert them to use `window.addEventListener('message', handler)` to receive postMessage breadcrumbs from the iframe, since raw iframes don't support `@message` events. The handler should filter for messages with a `breadcrumbs` array property and feed them into `useBreadcrumbs`.
 
 **Legacy reference:** `ui-legacy/public/mixins/extra-page.js` lines 20-27.
 
 ### 4c. `me.vue` missingSubscription redirect (Gap 15)
 
+**Note:** `me.vue` (`ui/src/pages/me.vue`) is currently a thin iframe wrapper to Simple Directory. It has no composition logic. Add the redirect check directly to this page's `<script setup>` block — it's lightweight enough to coexist with the iframe.
+
 In `me.vue` `onMounted`:
-- Check `missingSubscription` from `usePermissions` composable (condition: `limits?.defaults && $uiConfig.subscriptionUrl`)
+- Import `usePermissions` and `useRouter`
+- Check `missingSubscription` (condition: `limits?.defaults && $uiConfig.subscriptionUrl`)
 - If true and `activeAccount.type === 'organization'`, `router.replace('/subscription')`
 
 **Legacy reference:** `ui-legacy/public/pages/me.vue` lines 18-23, `ui-legacy/public/store/index.js` `missingSubscription` getter.
