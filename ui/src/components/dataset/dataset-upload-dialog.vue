@@ -51,7 +51,7 @@
                   hide-details
                   style="max-width: 500px;"
                   prepend-icon=""
-                  prepend-inner-icon="mdi-paperclip"
+                  :prepend-inner-icon="mdiPaperclip"
                   @update:model-value="onFileChange"
                 />
                 <v-file-input
@@ -64,7 +64,7 @@
                   class="mt-4"
                   style="max-width: 500px;"
                   prepend-icon=""
-                  prepend-inner-icon="mdi-zip-box"
+                  :prepend-inner-icon="mdiZipBox"
                   clearable
                 />
                 <div class="mt-6">
@@ -139,14 +139,14 @@
                 >
                   <v-list-item>
                     <template #prepend>
-                      <v-icon icon="mdi-file" />
+                      <v-icon :icon="mdiFile" />
                     </template>
                     <v-list-item-title>{{ file.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ formatBytes(file.size, locale) }}</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item v-if="attachments">
                     <template #prepend>
-                      <v-icon icon="mdi-zip-box" />
+                      <v-icon :icon="mdiZipBox" />
                     </template>
                     <v-list-item-title>{{ attachments.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ formatBytes(attachments.size, locale) }}</v-list-item-subtitle>
@@ -170,7 +170,7 @@
                     </template>
                   </v-progress-linear>
                   <v-btn
-                    icon="mdi-cancel"
+                    :icon="mdiCancel"
                     color="warning"
                     density="compact"
                     variant="text"
@@ -259,6 +259,12 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import {
+  mdiCancel,
+  mdiFile,
+  mdiPaperclip,
+  mdiZipBox
+} from '@mdi/js'
 import axios, { type AxiosRequestConfig, type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import useDatasetStore from '~/composables/dataset-store'

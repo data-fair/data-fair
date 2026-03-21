@@ -17,7 +17,7 @@
         <v-toolbar-title>{{ t('title') }}</v-toolbar-title>
         <v-spacer />
         <v-btn
-          icon="mdi-close"
+          :icon="mdiClose"
           @click="showDialog = false"
         />
       </v-toolbar>
@@ -66,7 +66,7 @@
           color="primary"
           variant="tonal"
           size="small"
-          :prepend-icon="copied ? 'mdi-check' : 'mdi-content-copy'"
+          :prepend-icon="copied ? mdiCheck : mdiContentCopy"
           @click="copyToClipboard"
         >
           {{ copied ? t('copied') : t('copy') }}
@@ -98,6 +98,8 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { mdiCheck, mdiClose, mdiContentCopy } from '@mdi/js'
+
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
   resource: { id: string, slug?: string, href?: string, previews?: { id: string, href: string, title: string }[] }

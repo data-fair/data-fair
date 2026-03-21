@@ -250,9 +250,7 @@
             :close-on-content-click="false"
           >
             <template #activator="{ props: menuProps }">
-              <v-icon v-bind="menuProps">
-                mdi-calendar
-              </v-icon>
+              <v-icon :icon="mdiCalendar" v-bind="menuProps" />
             </template>
             <v-date-picker
               :model-value="temporalDates"
@@ -279,9 +277,7 @@
             :close-on-content-click="false"
           >
             <template #activator="{ props: menuProps }">
-              <v-icon v-bind="menuProps">
-                mdi-calendar
-              </v-icon>
+              <v-icon :icon="mdiCalendar" v-bind="menuProps" />
             </template>
             <v-date-picker
               :model-value="dataset.modified ? [dataset.modified] : []"
@@ -503,6 +499,7 @@ import {
   mdiAccount,
   mdiAccountDetails,
   mdiAllInclusive,
+  mdiCalendar,
   mdiDatabaseArrowRight,
   mdiDeleteClock,
   mdiDeleteRestore,

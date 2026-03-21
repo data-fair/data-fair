@@ -11,7 +11,7 @@
         color="warning"
         v-bind="activatorProps"
       >
-        <v-icon icon="mdi-pencil" />
+        <v-icon :icon="mdiPencil" />
       </v-btn>
     </template>
     <v-card>
@@ -64,6 +64,8 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiPencil } from '@mdi/js'
+
 const messages = {
   fr: {
     alert: 'Si vous configurez l\'expiration automatique, les lignes supprimées ne pourront pas être récupérées.',

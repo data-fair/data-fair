@@ -11,9 +11,7 @@
       target="_blank"
     >
       <template #prepend>
-        <v-icon color="primary">
-          mdi-exit-to-app
-        </v-icon>
+        <v-icon color="primary" :icon="mdiExitToApp" />
       </template>
       <v-list-item-title>{{ t('fullPage') }}</v-list-item-title>
     </v-list-item>
@@ -23,9 +21,7 @@
       :to="`/application/${application.id}/config`"
     >
       <template #prepend>
-        <v-icon color="primary">
-          mdi-square-edit-outline
-        </v-icon>
+        <v-icon color="primary" :icon="mdiSquareEditOutline" />
       </template>
       <v-list-item-title>{{ t('editConfig') }}</v-list-item-title>
     </v-list-item>
@@ -35,9 +31,7 @@
       :to="`/application/${application.id}/api-doc`"
     >
       <template #prepend>
-        <v-icon color="primary">
-          mdi-cloud
-        </v-icon>
+        <v-icon color="primary" :icon="mdiCloud" />
       </template>
       <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
     </v-list-item>
@@ -49,9 +43,7 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon color="primary">
-              mdi-code-tags
-            </v-icon>
+            <v-icon color="primary" :icon="mdiCodeTags" />
           </template>
           <v-list-item-title>{{ t('integration') }}</v-list-item-title>
         </v-list-item>
@@ -62,9 +54,7 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon color="primary">
-              mdi-camera
-            </v-icon>
+            <v-icon color="primary" :icon="mdiCamera" />
           </template>
           <v-list-item-title>{{ t('capture') }}</v-list-item-title>
         </v-list-item>
@@ -79,9 +69,7 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon color="primary">
-              mdi-bell
-            </v-icon>
+            <v-icon color="primary" :icon="mdiBell" />
           </template>
           <v-list-item-title>{{ t('notifications') }}</v-list-item-title>
         </v-list-item>
@@ -96,9 +84,7 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon color="admin">
-              mdi-webhook
-            </v-icon>
+            <v-icon color="admin" :icon="mdiWebhook" />
           </template>
           <v-list-item-title>{{ t('webhooks') }}</v-list-item-title>
         </v-list-item>
@@ -114,9 +100,7 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon color="admin">
-              mdi-account-switch
-            </v-icon>
+            <v-icon color="admin" :icon="mdiAccountSwitch" />
           </template>
           <v-list-item-title>{{ t('changeOwner') }}</v-list-item-title>
         </v-list-item>
@@ -128,9 +112,7 @@
       @click="showSlugDialog = true"
     >
       <template #prepend>
-        <v-icon color="primary">
-          mdi-pencil
-        </v-icon>
+        <v-icon color="primary" :icon="mdiPencil" />
       </template>
       <v-list-item-title>{{ t('editSlug') }}</v-list-item-title>
     </v-list-item>
@@ -140,9 +122,7 @@
       @click="showDeleteDialog = true"
     >
       <template #prepend>
-        <v-icon color="warning">
-          mdi-delete
-        </v-icon>
+        <v-icon color="warning" :icon="mdiDelete" />
       </template>
       <v-list-item-title>{{ t('delete') }}</v-list-item-title>
     </v-list-item>
@@ -261,6 +241,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { mdiAccountSwitch, mdiBell, mdiCamera, mdiCloud, mdiCodeTags, mdiDelete, mdiExitToApp, mdiPencil, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import useApplicationStore from '~/composables/application-store'
 
 const { t } = useI18n()

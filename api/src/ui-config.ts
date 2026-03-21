@@ -14,6 +14,7 @@ export const uiConfig = {
   adminRole: config.adminRole as string,
   contribRole: config.contribRole as string,
   subscriptionUrl: config.subscriptionUrl as string | null,
+  agentsIntegration: !!config.privateAgentsUrl,
   metricsIntegration: !!config.privateMetricsUrl || (config.extraNavigationItems as any[]).some((e: any) => e.iframe?.startsWith('/metrics/')),
   extraNavigationItems: config.extraNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
   extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[],

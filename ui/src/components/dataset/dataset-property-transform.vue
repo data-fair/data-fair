@@ -13,7 +13,7 @@
         :color="hasTransform ? 'success' : undefined"
         :title="t('transform')"
       >
-        <v-icon>mdi-database-cog</v-icon>
+        <v-icon :icon="mdiDatabaseCog" />
       </v-btn>
     </template>
     <v-card v-if="dialog">
@@ -27,7 +27,7 @@
           icon
           @click="dialog = false"
         >
-          <v-icon>mdi-close</v-icon>
+          <v-icon :icon="mdiClose" />
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3">
@@ -99,6 +99,7 @@ en:
 
 <script lang="ts" setup>
 /* eslint-disable vue/no-mutating-props */
+import { mdiClose, mdiDatabaseCog } from '@mdi/js'
 import { propertyTypes } from '~/utils/dataset'
 
 const { t } = useI18n({ useScope: 'local' })

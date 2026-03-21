@@ -490,6 +490,12 @@ export default {
       title: 'Compatibilité ODS',
       description: 'Active la compatibilité avec l\'API ODS',
       default: false
+    },
+    agentChat: {
+      type: 'boolean',
+      title: 'Chat agent',
+      description: 'Active le chat agent',
+      default: false
     }
   }
 }

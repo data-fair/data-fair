@@ -12,45 +12,50 @@
         v-if="can('readLines')"
         value="table"
       >
-        <v-icon start>
-          mdi-table
-        </v-icon>
+        <v-icon
+          start
+          :icon="mdiTable"
+        />
         {{ t('table') }}
       </v-tab>
       <v-tab
         v-if="dataset.bbox"
         value="map"
       >
-        <v-icon start>
-          mdi-map
-        </v-icon>
+        <v-icon
+          start
+          :icon="mdiMap"
+        />
         {{ t('map') }}
       </v-tab>
       <v-tab
         v-if="digitalDocumentField"
         value="files"
       >
-        <v-icon start>
-          mdi-content-copy
-        </v-icon>
+        <v-icon
+          start
+          :icon="mdiContentCopy"
+        />
         {{ t('files') }}
       </v-tab>
       <v-tab
         v-if="imageField"
         value="thumbnails"
       >
-        <v-icon start>
-          mdi-image
-        </v-icon>
+        <v-icon
+          start
+          :icon="mdiImage"
+        />
         {{ t('thumbnails') }}
       </v-tab>
       <v-tab
         v-if="dataset.rest?.history"
         value="revisions"
       >
-        <v-icon start>
-          mdi-history
-        </v-icon>
+        <v-icon
+          start
+          :icon="mdiHistory"
+        />
         {{ t('revisions') }}
       </v-tab>
     </v-tabs>
@@ -120,6 +125,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { mdiContentCopy, mdiHistory, mdiImage, mdiMap, mdiTable } from '@mdi/js'
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'

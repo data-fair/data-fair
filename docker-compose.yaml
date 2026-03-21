@@ -13,6 +13,7 @@ services:
       - OAV_PORT=${OAV_PORT}
       - EVENTS_PORT=${EVENTS_PORT}
       - CATALOGS_PORT=${CATALOGS_PORT}
+      - AGENTS_PORT=${AGENTS_PORT}
     volumes:
       - ./dev/resources/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
 
@@ -163,6 +164,18 @@ services:
   #     - DATA_DIR=/data
   #   volumes:
   #     - ./data/catalogs:/data
+
+  agents:
+    profiles:
+      - dev
+    image: ghcr.io/data-fair/agents:main
+    network_mode: host
+    depends_on:
+      - mongodb
+    environment:
+      - PORT=${AGENTS_PORT}
+      - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
+      - MONGO_URL=mongodb://localhost:${MONGO_PORT}/agents
 
   clamav:
     image: clamav/clamav:1.5.1

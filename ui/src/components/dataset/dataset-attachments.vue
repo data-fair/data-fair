@@ -61,7 +61,7 @@
               :title="t('delete')"
               @click="confirmDelete = i"
             >
-              <v-icon icon="mdi-delete" />
+              <v-icon :icon="mdiDelete" />
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -96,6 +96,7 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiDelete } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset-store'
 
 const messages = {

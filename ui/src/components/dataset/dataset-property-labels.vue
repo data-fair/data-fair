@@ -12,7 +12,7 @@
         variant="flat"
         :title="t('labels')"
       >
-        <v-icon>mdi-tag-text-outline</v-icon>
+        <v-icon :icon="mdiTagTextOutline" />
       </v-btn>
     </template>
     <v-card v-if="dialog">
@@ -26,7 +26,7 @@
           icon
           @click="dialog = false"
         >
-          <v-icon>mdi-close</v-icon>
+          <v-icon :icon="mdiClose" />
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3">
@@ -63,6 +63,7 @@ en:
 
 <script lang="ts" setup>
 /* eslint-disable vue/no-mutating-props */
+import { mdiClose, mdiTagTextOutline } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
 const { t } = useI18n({ useScope: 'local' })

@@ -10,7 +10,7 @@
         color="warning"
         v-bind="activatorProps"
       >
-        <v-icon icon="mdi-pencil" />
+        <v-icon :icon="mdiPencil" />
       </v-btn>
     </template>
     <v-card>
@@ -50,6 +50,8 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiPencil } from '@mdi/js'
+
 const messages = {
   fr: {
     alertActivate: 'Si vous activez l\'historisation le volume de données consommé sera augmenté de manière importante. En fonction du nombre de lignes du jeu de données cette opération peut prendre du temps.',

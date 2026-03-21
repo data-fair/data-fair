@@ -10,9 +10,7 @@
         :size="small ? 'small' : 'default'"
         variant="text"
       >
-        <v-icon :size="small ? 'small' : 'default'">
-          mdi-information
-        </v-icon>
+        <v-icon :size="small ? 'small' : 'default'" :icon="mdiInformation" />
       </v-btn>
     </template>
     <div class="help-tooltip-content">
@@ -22,6 +20,8 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiInformation } from '@mdi/js'
+
 withDefaults(defineProps<{
   small?: boolean
   location?: 'top' | 'bottom' | 'start' | 'end' | 'left' | 'right'

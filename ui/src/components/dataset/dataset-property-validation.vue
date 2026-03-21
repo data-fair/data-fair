@@ -12,7 +12,7 @@
         variant="flat"
         :title="t('validationConfig')"
       >
-        <v-icon>mdi-check-decagram</v-icon>
+        <v-icon :icon="mdiCheckDecagram" />
       </v-btn>
     </template>
     <v-card v-if="dialog">
@@ -26,7 +26,7 @@
           icon
           @click="dialog = false"
         >
-          <v-icon>mdi-close</v-icon>
+          <v-icon :icon="mdiClose" />
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3">
@@ -229,6 +229,8 @@ en:
 
 <script lang="ts" setup>
 /* eslint-disable vue/no-mutating-props */
+import { mdiCheckDecagram, mdiClose } from '@mdi/js'
+
 const { t } = useI18n({ useScope: 'local' })
 
 const props = defineProps<{

@@ -352,6 +352,13 @@ router.get('/:type/:id/datasets-metadata', isOwnerMember, async (req, res) => {
   res.status(200).send(result && isMainSettings(result) && result.datasetsMetadata ? result.datasetsMetadata : {})
 })
 
+// Get agent chat setting as member
+router.get('/:type/:id/agent-chat', isOwnerMember, cacheHeaders.noCache, async (req, res) => {
+  assertSettingsRequest(req)
+  const result = await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0, agentChat: 1 } })
+  res.status(200).send({ agentChat: !!(result && isMainSettings(result) && result.agentChat) })
+})
+
 // Get publication sites as owner
 router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
   assertSettingsRequest(req)

@@ -17,7 +17,7 @@
         <v-toolbar-title>{{ t('capture') }}</v-toolbar-title>
         <v-spacer />
         <v-btn
-          icon="mdi-close"
+          :icon="mdiClose"
           @click="showDialog = false"
         />
       </v-toolbar>
@@ -71,7 +71,7 @@
         <v-btn
           color="primary"
           :loading="downloading"
-          icon="mdi-camera"
+          :icon="mdiCamera"
           size="small"
           :title="t('downloadCapture')"
           @click="download"
@@ -100,6 +100,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { mdiCamera, mdiClose } from '@mdi/js'
 import '@data-fair/frame/lib/d-frame.js'
 import useApplicationStore from '~/composables/application-store'
 

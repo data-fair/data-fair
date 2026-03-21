@@ -21,6 +21,7 @@
     "@data-fair/frame": "^0.14.0",
     "@data-fair/lib-vue": "^1.25.3",
     "@data-fair/lib-vuetify": "^2.0.0",
+    "@data-fair/lib-vuetify-agents": "^0.1.0",
     "@intlify/unplugin-vue-i18n": "^6.0.5",
     "@koumoul/vjsf": "^4.0.0",
     "@koumoul/vjsf-markdown": "^0.5.0",
@@ -44,6 +45,7 @@
     "ofetch": "^1.4.1",
     "reconnecting-websocket": "^4.4.0",
     "sass-embedded": "^1.79.4",
+    "slugify": "^1.6.6",
     "ufo": "^1.5.4",
     "unplugin-auto-import": "^0.18.3",
     "unplugin-vue-components": "^0.27.4",
@@ -54,7 +56,6 @@
     "vue-i18n": "^11.1.2",
     "vue-router": "^5.0.0",
     "vue-tsc": "^2.1.10",
-    "slugify": "^1.6.6",
     "vuedraggable": "^4.1.0",
     "vuetify": "^4.0.0"
   }

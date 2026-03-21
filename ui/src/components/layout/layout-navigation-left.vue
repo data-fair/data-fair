@@ -17,12 +17,14 @@
         href="/"
         :prepend-icon="mdiHome"
         :title="t('homePortal')"
+        class="rounded-te-xl"
       />
       <!-- Dashboard -->
       <v-list-item
         to="/"
         :prepend-icon="mdiMonitorDashboard"
         :title="t('home')"
+        :class="(site && site.main === false) ? '' : 'rounded-te-xl'"
       />
     </v-list>
 
@@ -81,8 +83,8 @@
       <div class="pa-1 text-center">
         <a
           href="https://data-fair.github.io/4/"
-          class="text-caption"
-          style="color: inherit; text-decoration: none; opacity: 0.6; font-size: 0.65rem !important;"
+          class="text-label-small"
+          style="color: inherit; text-decoration: none; opacity: 0.9;"
         >Powered by Data Fair</a>
       </div>
     </template>

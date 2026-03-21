@@ -20,7 +20,7 @@
         color="primary"
         @click="refresh"
       >
-        <v-icon>mdi-refresh</v-icon>
+        <v-icon :icon="mdiRefresh" />
       </v-btn>
     </v-row>
 
@@ -34,24 +34,21 @@
       <template #item._action="{ item, index }">
         <v-icon
           v-if="item._action === 'delete'"
+          :icon="mdiDeleteCircle"
           color="warning"
           :title="t('deleted')"
-        >
-          mdi-delete-circle
-        </v-icon>
+        />
         <v-icon
           v-else-if="item._action === 'create' || (item._action === 'createOrUpdate' && history && index === history.results.length - 1)"
+          :icon="mdiPlusCircle"
           color="success"
           :title="t('created')"
-        >
-          mdi-plus-circle
-        </v-icon>
+        />
         <v-icon
           v-else
+          :icon="mdiPencilCircle"
           :title="t('edited')"
-        >
-          mdi-pencil-circle
-        </v-icon>
+        />
       </template>
       <template #item._updatedAt="{ item }">
         {{ new Date(item._updatedAt).toLocaleString() }}
@@ -93,6 +90,12 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import {
+  mdiDeleteCircle,
+  mdiPencilCircle,
+  mdiPlusCircle,
+  mdiRefresh
+} from '@mdi/js'
 import useDatasetStore from '~/composables/dataset-store'
 
 const { t } = useI18n()

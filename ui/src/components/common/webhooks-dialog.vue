@@ -17,7 +17,7 @@
         <v-toolbar-title>{{ t('title') }}</v-toolbar-title>
         <v-spacer />
         <v-btn
-          icon="mdi-close"
+          :icon="mdiClose"
           @click="showDialog = false"
         />
       </v-toolbar>
@@ -40,6 +40,8 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { mdiClose } from '@mdi/js'
+
 const props = defineProps<{
   resource: { id: string, slug?: string, title: string, owner: { type: string, id: string, department?: string } }
   resourceType: 'dataset' | 'application'

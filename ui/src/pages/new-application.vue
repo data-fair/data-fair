@@ -110,7 +110,7 @@
                   size="48"
                   color="primary"
                 >
-                  <v-icon icon="mdi-application" />
+                  <v-icon :icon="mdiApplication" />
                 </v-avatar>
               </template>
 
@@ -216,6 +216,7 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiApplication } from '@mdi/js'
 import type { BaseApp } from '#api/types'
 
 const { t } = useI18n()

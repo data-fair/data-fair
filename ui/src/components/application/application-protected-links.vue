@@ -17,7 +17,7 @@
           <a :href="protectedLink">{{ protectedLink }}</a>
           <v-btn
             v-if="can('setKeys')"
-            icon="mdi-delete"
+            :icon="mdiDelete"
             variant="text"
             size="small"
             color="warning"
@@ -56,6 +56,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { mdiDelete } from '@mdi/js'
 import useApplicationStore from '~/composables/application-store'
 import { $siteUrl, $fetch } from '~/context'
 

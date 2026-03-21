@@ -10,7 +10,7 @@
         color="warning"
         v-bind="activatorProps"
       >
-        <v-icon icon="mdi-pencil" />
+        <v-icon :icon="mdiPencil" />
       </v-btn>
     </template>
     <v-card>
@@ -50,6 +50,8 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiPencil } from '@mdi/js'
+
 const messages = {
   fr: {
     alertActivate: 'Si vous activez le stockage des utilisateurs qui font des modifications de ligne tous les utilisateurs ayant accès en lecture à ce jeu de données pourront consulter cette information.',

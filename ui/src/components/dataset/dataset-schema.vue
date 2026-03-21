@@ -14,7 +14,7 @@
         v-if="dataset.isRest"
         color="primary"
         size="small"
-        icon="mdi-plus"
+        :icon="mdiPlus"
         @click="addPropertyDialog = true"
       />
       <v-text-field
@@ -25,7 +25,7 @@
         density="compact"
         rounded
         style="max-width: 200px;"
-        append-inner-icon="mdi-magnify"
+        :append-inner-icon="mdiMagnify"
         hide-details
       />
       <v-spacer />
@@ -89,6 +89,11 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import {
+  mdiMagnify,
+  mdiPlus
+} from '@mdi/js'
+
 const props = defineProps<{
   modelValue: any[]
   dataset: any

@@ -8,7 +8,7 @@
       <v-btn
         v-if="index === -1"
         color="primary"
-        icon="mdi-plus"
+        :icon="mdiPlus"
         size="small"
         :title="t('addAttachment')"
         v-bind="activatorProps"
@@ -16,7 +16,7 @@
       <v-btn
         v-else
         color="primary"
-        icon="mdi-pencil"
+        :icon="mdiPencil"
         variant="text"
         size="small"
         :title="t('editAttachment')"
@@ -31,7 +31,7 @@
         <v-toolbar-title>{{ index === -1 ? t('addAttachment') : t('editAttachment') }}</v-toolbar-title>
         <v-spacer />
         <v-btn
-          icon="mdi-close"
+          :icon="mdiClose"
           @click="showDialog = false"
         />
       </v-toolbar>
@@ -117,6 +117,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { mdiClose, mdiPencil, mdiPlus } from '@mdi/js'
 import type { Application } from '#api/types'
 import useApplicationStore from '~/composables/application-store'
 

@@ -11,7 +11,7 @@
     />
     <div
       class="d-flex align-center"
-      style="min-width: 256px;"
+      style="min-width: 256px"
     >
       <img
         :src="logoUrl"
@@ -19,7 +19,7 @@
         class="ml-3 mr-2"
         style="height: 28px; width: 28px;"
       >
-      <span class="text-title-large font-weight-bold text-no-wrap ml-2 mr-6">
+      <span class="text-title-large text-primary font-weight-bold text-no-wrap ml-2 mr-6">
         {{ $uiConfig.brand.title || 'Data Fair' }}
       </span>
     </div>

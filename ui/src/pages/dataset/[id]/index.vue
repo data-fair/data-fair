@@ -67,19 +67,19 @@
                     <v-list density="compact">
                       <v-list-item v-if="dataset.owner">
                         <template #prepend>
-                          <v-icon>mdi-account</v-icon>
+                          <v-icon :icon="mdiAccount" />
                         </template>
                         <v-list-item-title>{{ dataset.owner.name }}</v-list-item-title>
                       </v-list-item>
                       <v-list-item v-if="dataset.license">
                         <template #prepend>
-                          <v-icon>mdi-license</v-icon>
+                          <v-icon :icon="mdiLicense" />
                         </template>
                         <v-list-item-title>{{ dataset.license.title || dataset.license.href }}</v-list-item-title>
                       </v-list-item>
                       <v-list-item v-if="dataset.updatedAt">
                         <template #prepend>
-                          <v-icon>mdi-pencil</v-icon>
+                          <v-icon :icon="mdiPencil" />
                         </template>
                         <v-list-item-title>
                           {{ dataset.updatedBy?.name }} {{ formatDate(dataset.updatedAt) }}
@@ -87,7 +87,7 @@
                       </v-list-item>
                       <v-list-item>
                         <template #prepend>
-                          <v-icon>mdi-plus-circle-outline</v-icon>
+                          <v-icon :icon="mdiPlusCircleOutline" />
                         </template>
                         <v-list-item-title>
                           {{ dataset.createdBy?.name }} {{ formatDate(dataset.createdAt) }}
@@ -95,7 +95,7 @@
                       </v-list-item>
                       <v-list-item v-if="dataset.count != null">
                         <template #prepend>
-                          <v-icon>mdi-counter</v-icon>
+                          <v-icon :icon="mdiCounter" />
                         </template>
                         <v-list-item-title>{{ dataset.count.toLocaleString(locale) }} {{ t('records') }}</v-list-item-title>
                       </v-list-item>
@@ -104,16 +104,17 @@
                       <template v-if="dataset.isRest">
                         <v-list-item>
                           <template #prepend>
-                            <v-icon>{{ mdiAllInclusive }}</v-icon>
+                            <v-icon :icon="mdiAllInclusive" />
                           </template>
                           <v-list-item-title>{{ t('restDataset') }}</v-list-item-title>
                         </v-list-item>
 
                         <v-list-item>
                           <template #prepend>
-                            <v-icon :color="dataset.rest?.history ? undefined : 'grey'">
-                              {{ mdiHistory }}
-                            </v-icon>
+                            <v-icon
+                              :color="dataset.rest?.history ? undefined : 'grey'"
+                              :icon="mdiHistory"
+                            />
                           </template>
                           <v-list-item-title v-if="dataset.rest?.history">
                             {{ t('history') }}
@@ -357,7 +358,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiInformation, mdiTableCog, mdiImageMultiple, mdiSecurity, mdiPresentation, mdiEyeArrowRight, mdiCalendarText, mdiKey, mdiHistory, mdiAllInclusive } from '@mdi/js'
+import { mdiAccount, mdiAllInclusive, mdiCalendarText, mdiCounter, mdiEyeArrowRight, mdiHistory, mdiImageMultiple, mdiInformation, mdiKey, mdiLicense, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiTableCog } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'

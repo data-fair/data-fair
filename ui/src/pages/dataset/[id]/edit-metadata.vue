@@ -151,17 +151,19 @@
         <v-list-subheader>{{ t('navigation') }}</v-list-subheader>
         <v-list-item :to="`/dataset/${route.params.id}`">
           <template #prepend>
-            <v-icon color="primary">
-              mdi-home
-            </v-icon>
+            <v-icon
+              color="primary"
+              :icon="mdiHome"
+            />
           </template>
           <v-list-item-title>{{ t('backToHome') }}</v-list-item-title>
         </v-list-item>
         <v-list-item :to="`/dataset/${route.params.id}/data`">
           <template #prepend>
-            <v-icon color="primary">
-              mdi-table
-            </v-icon>
+            <v-icon
+              color="primary"
+              :icon="mdiTable"
+            />
           </template>
           <v-list-item-title>{{ t('viewData') }}</v-list-item-title>
         </v-list-item>
@@ -204,7 +206,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiInformation, mdiTableCog, mdiAttachment, mdiAlert, mdiPuzzle, mdiDatabase, mdiSetAll } from '@mdi/js'
+import { mdiAlert, mdiAttachment, mdiDatabase, mdiHome, mdiInformation, mdiPuzzle, mdiSetAll, mdiTable, mdiTableCog } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'

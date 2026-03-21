@@ -61,9 +61,8 @@
                     <v-icon
                       color="primary"
                       class="mr-2"
-                    >
-                      {{ datasetTypeIcons[type] }}
-                    </v-icon>
+                      :icon="datasetTypeIcons[type]"
+                    />
                     {{ t('type_' + type) }}
                   </v-card-title>
                   <v-card-text>
@@ -129,7 +128,7 @@
                 hide-details
                 style="max-width: 500px;"
                 prepend-icon=""
-                prepend-inner-icon="mdi-paperclip"
+                :prepend-inner-icon="mdiPaperclip"
                 :disabled="initFromData"
                 @update:model-value="onFileChange"
               />
@@ -145,7 +144,7 @@
                 class="mt-4"
                 style="max-width: 500px;"
                 prepend-icon=""
-                prepend-inner-icon="mdi-zip-box"
+                :prepend-inner-icon="mdiZipBox"
                 clearable
               />
 
@@ -196,9 +195,10 @@
                 @click="showAdvanced = !showAdvanced"
               >
                 {{ t('advancedOptions') }}
-                <v-icon class="ml-1">
-                  {{ showAdvanced ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
-                </v-icon>
+                <v-icon
+                  class="ml-1"
+                  :icon="showAdvanced ? mdiChevronUp : mdiChevronDown"
+                />
               </div>
               <template v-if="showAdvanced">
                 <v-select
@@ -399,7 +399,7 @@
                 </template>
               </v-progress-linear>
               <v-btn
-                icon="mdi-cancel"
+                :icon="mdiCancel"
                 color="warning"
                 density="compact"
                 variant="text"
@@ -434,6 +434,7 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiAllInclusive, mdiCancel, mdiChevronDown, mdiChevronUp, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { withQuery } from 'ufo'
@@ -454,10 +455,10 @@ interface InitFrom {
 // ---- Constants ----
 const datasetTypes: DatasetType[] = ['file', 'rest', 'virtual', 'metaOnly']
 const datasetTypeIcons: Record<DatasetType, string> = {
-  file: 'mdi-file-upload',
-  rest: 'mdi-all-inclusive',
-  virtual: 'mdi-picture-in-picture-bottom-right-outline',
-  metaOnly: 'mdi-information-variant'
+  file: mdiFileUpload,
+  rest: mdiAllInclusive,
+  virtual: mdiPictureInPictureBottomRightOutline,
+  metaOnly: mdiInformationVariant
 }
 
 const commonEncodings = ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'ISO-8859-15', 'US-ASCII']

@@ -269,6 +269,34 @@
             </layout-section-tabs>
 
             <layout-section-tabs
+              v-if="section.id === 'agentChat'"
+              :id="section.id"
+              :svg="compatSvg"
+              svg-no-margin
+              color="admin"
+              :title="section.title"
+            >
+              <template #extension>
+                <p>
+                  {{ t('agentChatDesc') }}
+                </p>
+              </template>
+              <template #content>
+                <v-container>
+                  <v-row>
+                    <v-col>
+                      <v-checkbox
+                        v-model="settings.agentChat"
+                        :label="t('agentChatToggle')"
+                        @update:model-value="patch.execute({agentChat: settings.agentChat})"
+                      />
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </template>
+            </layout-section-tabs>
+
+            <layout-section-tabs
               v-if="section.id === 'compat'"
               :id="section.id"
               :svg="compatSvg"
@@ -317,6 +345,9 @@ fr:
   privateVocab: Vocabulaire privé
   publicationSites: Portails
   info: Informations de contact
+  agentChat: Chat agent
+  agentChatDesc: Activez ou désactivez le chat agent pour cette organisation.
+  agentChatToggle: Activer le chat agent
   compat: Gestion des compatibilités
   compatODS: Activer la compatibilité ODS
 en:
@@ -329,6 +360,9 @@ en:
   privateVocab: Private vocabulary
   publicationSites: Portals
   info: Contact information
+  agentChat: Agent chat
+  agentChatDesc: Enable or disable the agent chat for this organization.
+  agentChatToggle: Enable agent chat
   compat: Compatibility management
   compatODS: Enable ODS compatibility
 </i18n>
@@ -411,6 +445,12 @@ const sections = computed(() => {
     id: 'webhooks',
     title: t('webhooks')
   })
+  if ($uiConfig.agentsIntegration && session.user.value.adminMode) {
+    sections.push({
+      id: 'agentChat',
+      title: t('agentChat')
+    })
+  }
   if ($uiConfig.compatODS && session.user.value.adminMode) {
     sections.push({
       id: 'compat',

@@ -32,6 +32,7 @@ module.exports = {
   captureUrl: `http://localhost:${process.env.NGINX_PORT1}/capture`,
   privateCaptureUrl: `http://localhost:${process.env.CAPTURE_PORT}`,
   privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
+  privateAgentsUrl: `http://localhost:${process.env.AGENTS_PORT}`,
   brand: {
     embed: '<div>application embed</div>'
   },

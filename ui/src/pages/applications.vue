@@ -33,7 +33,7 @@
             <v-text-field
               v-model="searchInput"
               :label="t('search')"
-              prepend-inner-icon="mdi-magnify"
+              :prepend-inner-icon="mdiMagnify"
               clearable
               hide-details
               density="compact"
@@ -61,7 +61,7 @@
             cols="auto"
           >
             <v-btn
-              icon="mdi-filter-variant"
+              :icon="mdiFilterVariant"
               variant="text"
               @click="showFilters = true"
             />
@@ -72,7 +72,7 @@
           >
             <v-btn
               color="primary"
-              prepend-icon="mdi-plus"
+              :prepend-icon="mdiPlus"
               to="/new-application"
             >
               {{ t('newApplication') }}
@@ -193,6 +193,7 @@
 </template>
 
 <script lang="ts" setup>
+import { mdiFilterVariant, mdiMagnify, mdiPlus } from '@mdi/js'
 import type { Application } from '#api/types'
 
 const { t } = useI18n()

@@ -98,6 +98,10 @@ server {
   location /catalogs {
     proxy_pass http://localhost:${CATALOGS_PORT};
   }
+
+  location /agents {
+    proxy_pass http://localhost:${AGENTS_PORT};
+  }
 }
 
 # secondary exposition to simulate a publication site

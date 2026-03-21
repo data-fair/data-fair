@@ -87,7 +87,7 @@
                         <v-list density="compact">
                           <v-list-item v-if="baseAppFetch.data.value">
                             <template #prepend>
-                              <v-icon>mdi-image</v-icon>
+                              <v-icon :icon="mdiImage" />
                             </template>
                             <v-list-item-title>
                               {{ baseAppFetch.data.value.title || application.url }}
@@ -98,7 +98,7 @@
                           </v-list-item>
                           <v-list-item v-if="application.updatedAt">
                             <template #prepend>
-                              <v-icon>mdi-pencil</v-icon>
+                              <v-icon :icon="mdiPencil" />
                             </template>
                             <v-list-item-title>
                               {{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}
@@ -106,7 +106,7 @@
                           </v-list-item>
                           <v-list-item>
                             <template #prepend>
-                              <v-icon>mdi-plus-circle-outline</v-icon>
+                              <v-icon :icon="mdiPlusCircleOutline" />
                             </template>
                             <v-list-item-title>
                               {{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}
@@ -344,7 +344,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiInformation, mdiDatabase, mdiImageMultiple, mdiSquareEditOutline, mdiSecurity, mdiPresentation, mdiCalendarText, mdiPaperclip, mdiCloudKey } from '@mdi/js'
+import { mdiCalendarText, mdiCloudKey, mdiDatabase, mdiImage, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline } from '@mdi/js'
 import { provideApplicationStore } from '~/composables/application-store'
 import { useApplicationVersions } from '~/composables/application-versions'
 import { useApplicationWatch } from '~/composables/application-watch'

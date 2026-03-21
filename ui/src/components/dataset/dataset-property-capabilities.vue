@@ -13,7 +13,7 @@
         variant="flat"
         :title="t('technicalConfig')"
       >
-        <v-icon>mdi-tune</v-icon>
+        <v-icon :icon="mdiTune" />
       </v-btn>
     </template>
     <v-card v-if="dialog">
@@ -27,7 +27,7 @@
           icon
           @click="dialog = false"
         >
-          <v-icon>mdi-close</v-icon>
+          <v-icon :icon="mdiClose" />
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3 pb-0">
@@ -69,6 +69,7 @@ en:
 
 <script lang="ts" setup>
 /* eslint-disable vue/no-mutating-props */
+import { mdiClose, mdiTune } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import capabilitiesSchema from '~/../../api/contract/capabilities.js'
 
