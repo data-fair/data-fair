@@ -15,10 +15,28 @@
         {{ application.description }}
       </p>
       <div class="d-flex flex-wrap ga-1">
-        <v-chip v-if="application.status" size="x-small" :color="statusColor" variant="tonal">{{ t('status.' + application.status) }}</v-chip>
+        <v-chip
+          v-if="application.status"
+          size="x-small"
+          :color="statusColor"
+          variant="tonal"
+        >
+          {{ t('status.' + application.status) }}
+        </v-chip>
       </div>
-      <div v-if="showTopics && application.topics?.length" class="d-flex flex-wrap ga-1 mt-2">
-        <v-chip v-for="topic in application.topics" :key="topic.id" size="x-small" :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}" variant="flat">{{ topic.title }}</v-chip>
+      <div
+        v-if="showTopics && application.topics?.length"
+        class="d-flex flex-wrap ga-1 mt-2"
+      >
+        <v-chip
+          v-for="topic in application.topics"
+          :key="topic.id"
+          size="x-small"
+          :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}"
+          variant="flat"
+        >
+          {{ topic.title }}
+        </v-chip>
       </div>
     </v-card-text>
     <v-card-subtitle class="text-caption pb-3">

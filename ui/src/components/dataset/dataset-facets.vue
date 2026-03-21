@@ -1,14 +1,104 @@
 <template>
   <div class="d-flex flex-column ga-3">
-    <v-autocomplete v-if="ownerItems.length > 1" v-model="owner" :items="ownerItems" :label="t('owner')" density="compact" variant="outlined" hide-details clearable multiple />
-    <v-select v-if="statusItems.length" v-model="status" :items="statusItems" :label="t('status')" density="compact" variant="outlined" hide-details clearable multiple />
-    <v-select v-if="draftStatusItems.length" v-model="draftStatus" :items="draftStatusItems" :label="t('draftStatus')" density="compact" variant="outlined" hide-details clearable multiple />
-    <v-select v-if="visibilityItems.length" v-model="visibility" :items="visibilityItems" :label="t('visibility')" density="compact" variant="outlined" hide-details clearable multiple />
-    <v-select v-if="topicsItems.length" v-model="topics" :items="topicsItems" :label="t('topics')" density="compact" variant="outlined" hide-details clearable multiple />
-    <v-select v-if="publicationSitesItems.length" v-model="publicationSites" :items="publicationSitesItems" :label="t('publicationSites')" density="compact" variant="outlined" hide-details clearable multiple />
-    <v-select v-if="requestedPublicationSitesItems.length" v-model="requestedPublicationSites" :items="requestedPublicationSitesItems" :label="t('requestedPublicationSites')" density="compact" variant="outlined" hide-details clearable multiple />
-    <v-select v-if="servicesItems.length" v-model="services" :items="servicesItems" :label="t('services')" density="compact" variant="outlined" hide-details clearable multiple />
-    <v-select v-if="conceptsItems.length" v-model="concepts" :items="conceptsItems" :label="t('concepts')" density="compact" variant="outlined" hide-details clearable multiple />
+    <v-autocomplete
+      v-if="ownerItems.length > 1"
+      v-model="owner"
+      :items="ownerItems"
+      :label="t('owner')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-select
+      v-if="statusItems.length"
+      v-model="status"
+      :items="statusItems"
+      :label="t('status')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-select
+      v-if="draftStatusItems.length"
+      v-model="draftStatus"
+      :items="draftStatusItems"
+      :label="t('draftStatus')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-select
+      v-if="visibilityItems.length"
+      v-model="visibility"
+      :items="visibilityItems"
+      :label="t('visibility')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-select
+      v-if="topicsItems.length"
+      v-model="topics"
+      :items="topicsItems"
+      :label="t('topics')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-select
+      v-if="publicationSitesItems.length"
+      v-model="publicationSites"
+      :items="publicationSitesItems"
+      :label="t('publicationSites')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-select
+      v-if="requestedPublicationSitesItems.length"
+      v-model="requestedPublicationSites"
+      :items="requestedPublicationSitesItems"
+      :label="t('requestedPublicationSites')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-select
+      v-if="servicesItems.length"
+      v-model="services"
+      :items="servicesItems"
+      :label="t('services')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-select
+      v-if="conceptsItems.length"
+      v-model="concepts"
+      :items="conceptsItems"
+      :label="t('concepts')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
   </div>
 </template>
 

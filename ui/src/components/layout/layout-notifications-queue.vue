@@ -40,7 +40,10 @@
           <v-list-item-title class="text-body-2">
             {{ resolveText(notif.title) }}
           </v-list-item-title>
-          <v-list-item-subtitle v-if="notif.body" class="text-caption">
+          <v-list-item-subtitle
+            v-if="notif.body"
+            class="text-caption"
+          >
             {{ resolveText(notif.body) }}
           </v-list-item-subtitle>
           <template #append>

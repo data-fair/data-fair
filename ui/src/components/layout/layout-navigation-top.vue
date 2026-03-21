@@ -1,19 +1,32 @@
 <template>
   <v-app-bar
-    color="primary"
+    color="background"
     density="compact"
+    scroll-behavior="elevate"
+    flat
   >
     <v-app-bar-nav-icon
+      v-if="user && !lgAndUp"
       @click="drawer = !drawer"
     />
-    <v-app-bar-title class="text-body-1">
-      Data Fair
-    </v-app-bar-title>
+    <div
+      class="d-flex align-center"
+      style="min-width: 256px;"
+    >
+      <img
+        :src="logoUrl"
+        alt="Logo"
+        class="ml-3 mr-2"
+        style="height: 28px; width: 28px;"
+      >
+      <span class="text-title-large font-weight-bold text-no-wrap ml-2 mr-6">
+        {{ $uiConfig.brand.title || 'Data Fair' }}
+      </span>
+    </div>
     <v-breadcrumbs
       v-if="showBreadcrumbs"
       :items="breadcrumbItems"
       density="compact"
-      class="pa-0"
     />
     <v-spacer />
     <layout-notifications-queue
@@ -30,6 +43,8 @@ import { useDisplay } from 'vuetify'
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 import type { createBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { $uiConfig } from '~/context'
+import defaultLogo from '~/assets/logo.svg'
 
 const props = defineProps<{
   breadcrumbs?: ReturnType<typeof createBreadcrumbs>
@@ -37,8 +52,10 @@ const props = defineProps<{
 
 const drawer = defineModel<boolean>('drawer', { required: true })
 const { user } = useSession()
-const { mdAndUp } = useDisplay()
+const { mdAndUp, lgAndUp } = useDisplay()
 const route = useRoute()
+
+const logoUrl = $uiConfig.brand.logo || defaultLogo
 
 const showBreadcrumbs = computed(() => {
   if (!mdAndUp.value) return false

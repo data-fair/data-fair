@@ -1,4 +1,4 @@
-import type { Ref, ComputedRef } from 'vue'
+import type { Ref, ComputedRef, MaybeRefOrGetter } from 'vue'
 
 type FacetValue = { count: number, value: string, [key: string]: any }
 type CatalogResponse<T> = { count: number, results: T[], facets?: Record<string, FacetValue[]> }
@@ -7,7 +7,7 @@ interface UseCatalogListOptions {
   fetchUrl: ComputedRef<string>
   query: ComputedRef<Record<string, any>>
   facetsFields: string
-  pageSize?: number
+  pageSize?: MaybeRefOrGetter<number>
 }
 
 export function useCatalogList<T> (options: UseCatalogListOptions) {
@@ -26,7 +26,7 @@ export function useCatalogList<T> (options: UseCatalogListOptions) {
   const fullQuery = computed(() => {
     const q: Record<string, any> = {
       ...query.value,
-      size: pageSize,
+      size: toValue(pageSize),
       page: currentPage.value,
     }
     if (currentPage.value === 1) {
@@ -36,6 +36,17 @@ export function useCatalogList<T> (options: UseCatalogListOptions) {
   })
 
   const catalogFetch = useFetch<CatalogResponse<T>>(fetchUrl, { query: fullQuery, watch: false, immediate: false })
+
+  // Auto-fill: if the viewport isn't filled after loading, load more
+  const autoFillPage = async () => {
+    await nextTick()
+    await nextTick()
+    const el = document.documentElement
+    if (el.clientHeight >= el.scrollHeight - 200 && hasMore.value && !loading.value) {
+      await loadMore()
+      await autoFillPage()
+    }
+  }
 
   const reset = async () => {
     const version = ++resetVersion
@@ -49,6 +60,7 @@ export function useCatalogList<T> (options: UseCatalogListOptions) {
         facets.value = catalogFetch.data.value.facets
       }
     }
+    await autoFillPage()
   }
 
   const loadMore = async () => {

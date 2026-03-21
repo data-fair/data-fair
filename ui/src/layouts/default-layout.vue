@@ -1,5 +1,8 @@
 <template>
-  <layout-navigation-top v-model:drawer="drawer" :breadcrumbs="breadcrumbs" />
+  <layout-navigation-top
+    v-model:drawer="drawer"
+    :breadcrumbs="breadcrumbs"
+  />
   <layout-navigation-left
     v-if="user"
     v-model="drawer"

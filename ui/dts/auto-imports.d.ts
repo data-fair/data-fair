@@ -114,6 +114,7 @@ declare global {
   const useDFramePage: typeof import('../src/composables/use-d-frame-page')['useDFramePage']
   const useDatasetStore: typeof import('../src/composables/dataset-store')['useDatasetStore']
   const useDatasetWatch: typeof import('../src/composables/dataset-watch')['useDatasetWatch']
+  const useDatasetsMetadata: typeof import('../src/composables/use-datasets-metadata')['useDatasetsMetadata']
   const useEditFetch: typeof import('@data-fair/lib-vue/edit-fetch.js')['useEditFetch']
   const useFetch: typeof import('@data-fair/lib-vue/fetch.js')['useFetch']
   const useFilters: typeof import('../src/composables/dataset-filters')['useFilters']
@@ -128,6 +129,7 @@ declare global {
   const useLink: typeof import('vue-router')['useLink']
   const useLocaleDayjs: typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']
   const useModel: typeof import('vue')['useModel']
+  const useNotificationsWS: typeof import('../src/composables/use-notifications-ws')['useNotificationsWS']
   const useNumberSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']
   const usePermissions: typeof import('../src/composables/use-permissions')['usePermissions']
   const useReactiveSearchParams: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useReactiveSearchParams']
@@ -274,6 +276,7 @@ declare module 'vue' {
     readonly useDFramePage: UnwrapRef<typeof import('../src/composables/use-d-frame-page')['useDFramePage']>
     readonly useDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['useDatasetStore']>
     readonly useDatasetWatch: UnwrapRef<typeof import('../src/composables/dataset-watch')['useDatasetWatch']>
+    readonly useDatasetsMetadata: UnwrapRef<typeof import('../src/composables/use-datasets-metadata')['useDatasetsMetadata']>
     readonly useEditFetch: UnwrapRef<typeof import('@data-fair/lib-vue/edit-fetch.js')['useEditFetch']>
     readonly useFetch: UnwrapRef<typeof import('@data-fair/lib-vue/fetch.js')['useFetch']>
     readonly useFilters: UnwrapRef<typeof import('../src/composables/dataset-filters')['useFilters']>
@@ -286,6 +289,7 @@ declare module 'vue' {
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useLocaleDayjs: UnwrapRef<typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
+    readonly useNotificationsWS: UnwrapRef<typeof import('../src/composables/use-notifications-ws')['useNotificationsWS']>
     readonly useNumberSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']>
     readonly usePermissions: UnwrapRef<typeof import('../src/composables/use-permissions')['usePermissions']>
     readonly useReactiveSearchParams: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useReactiveSearchParams']>

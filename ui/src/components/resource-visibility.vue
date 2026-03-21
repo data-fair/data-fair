@@ -3,6 +3,7 @@
     <template #activator="{props}">
       <v-icon
         :color="visibility === 'public' ? 'primary' : 'warning'"
+        :size="size"
         v-bind="props"
       >
         {{ visibility === 'public' ? mdiLockOpen : mdiLock }}
@@ -26,7 +27,10 @@ en:
 <script lang="ts" setup>
 import { mdiLockOpen, mdiLock } from '@mdi/js'
 
-defineProps({ visibility: { type: String as () => 'public' | 'private' | 'protected', required: true } })
+defineProps({
+  visibility: { type: String as () => 'public' | 'private' | 'protected', required: true },
+  size: { type: String, default: undefined },
+})
 const { t } = useI18n()
 </script>
 

@@ -8,13 +8,13 @@
         class="pr-4"
       >
         <application-facets
-          :facets="catalog.facets.value"
           v-model:owner="facetOwner"
           v-model:base-application="facetBaseApplication"
           v-model:visibility="facetVisibility"
           v-model:topics="facetTopics"
           v-model:publication-sites="facetPublicationSites"
           v-model:requested-publication-sites="facetRequestedPublicationSites"
+          :facets="catalog.facets.value"
         />
       </v-col>
 
@@ -172,13 +172,13 @@
         <v-card-title>{{ t('filters') }}</v-card-title>
         <v-card-text>
           <application-facets
-            :facets="catalog.facets.value"
             v-model:owner="facetOwner"
             v-model:base-application="facetBaseApplication"
             v-model:visibility="facetVisibility"
             v-model:topics="facetTopics"
             v-model:publication-sites="facetPublicationSites"
             v-model:requested-publication-sites="facetRequestedPublicationSites"
+            :facets="catalog.facets.value"
           />
         </v-card-text>
         <v-card-actions>

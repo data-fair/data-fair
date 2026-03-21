@@ -1,8 +1,29 @@
 <template>
-  <v-list-item :to="`/dataset/${dataset.id}`" lines="two">
+  <v-list-item
+    :to="`/dataset/${dataset.id}`"
+    lines="two"
+  >
+    <template
+      v-if="dataset.visibility"
+      #prepend
+    >
+      <resource-visibility
+        :visibility="dataset.visibility"
+        class="mr-2"
+        size="small"
+      />
+    </template>
     <v-list-item-title>
       {{ dataset.title || dataset.id }}
-      <v-chip v-if="dataset.status === 'error'" size="x-small" color="error" variant="tonal" class="ml-1">{{ t('error') }}</v-chip>
+      <v-chip
+        v-if="dataset.status === 'error'"
+        size="x-small"
+        color="error"
+        variant="tonal"
+        class="ml-1"
+      >
+        {{ t('error') }}
+      </v-chip>
     </v-list-item-title>
     <v-list-item-subtitle>
       <span v-if="showOwner && dataset.owner">{{ ownerName }} · </span>
@@ -14,9 +35,20 @@
       <span v-if="dataset.count != null">{{ dataset.count.toLocaleString() }} {{ t('lines') }} · </span>
       <span v-if="dataset.updatedAt">{{ formatDate(dataset.updatedAt) }}</span>
     </v-list-item-subtitle>
-    <template v-if="showTopics && dataset.topics?.length" #append>
+    <template
+      v-if="showTopics && dataset.topics?.length"
+      #append
+    >
       <div class="d-flex ga-1">
-        <v-chip v-for="topic in dataset.topics" :key="topic.id" size="x-small" :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}" variant="flat">{{ topic.title }}</v-chip>
+        <v-chip
+          v-for="topic in dataset.topics"
+          :key="topic.id"
+          size="x-small"
+          :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}"
+          variant="flat"
+        >
+          {{ topic.title }}
+        </v-chip>
       </div>
     </template>
   </v-list-item>

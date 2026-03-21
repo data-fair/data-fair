@@ -2,10 +2,14 @@
   <v-navigation-drawer
     v-model="drawer"
     color="primary"
+    class="rounded-te-xl"
+    elevation="4"
   >
     <v-list
       density="compact"
       nav
+      bg-color="primary"
+      class="rounded-te-xl"
     >
       <!-- Portal home link (when not main site) -->
       <v-list-item
@@ -27,6 +31,7 @@
       v-if="missingSubscription && canAdmin && $uiConfig.subscriptionUrl"
       density="compact"
       nav
+      bg-color="primary"
     >
       <v-list-item
         to="/subscription"
@@ -42,6 +47,7 @@
       open-strategy="multiple"
       density="compact"
       nav
+      bg-color="primary"
     >
       <template
         v-for="group of navigationGroups"
@@ -72,13 +78,12 @@
     </v-list>
 
     <template #append>
-      <div class="pa-2 text-center">
-        <span class="text-caption">
-          <a
-            href="https://data-fair.github.io/4/"
-            style="color: inherit; text-decoration: none;"
-          >Powered by Data Fair</a>
-        </span>
+      <div class="pa-1 text-center">
+        <a
+          href="https://data-fair.github.io/4/"
+          class="text-caption"
+          style="color: inherit; text-decoration: none; opacity: 0.6; font-size: 0.65rem !important;"
+        >Powered by Data Fair</a>
       </div>
     </template>
   </v-navigation-drawer>
@@ -368,3 +373,9 @@ en:
     help: Help
     admin: Administration
 </i18n>
+
+<style scoped>
+:deep(.v-list-group__items .v-list-item) {
+  padding-inline-start: 8px !important;
+}
+</style>

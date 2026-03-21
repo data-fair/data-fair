@@ -9,19 +9,81 @@
     <v-card-text class="flex-grow-1">
       <!-- Type badges -->
       <div class="d-flex flex-wrap ga-1 mb-2">
-        <v-chip v-if="dataset.isVirtual" size="x-small" color="primary" variant="tonal">{{ t('virtual') }}</v-chip>
-        <v-chip v-if="dataset.isRest" size="x-small" color="primary" variant="tonal">{{ t('editable') }}</v-chip>
-        <v-chip v-if="dataset.isMetaOnly" size="x-small" color="primary" variant="tonal">{{ t('metaOnly') }}</v-chip>
-        <v-chip v-if="dataset.status === 'draft'" size="x-small" color="warning" variant="tonal">{{ t('draft') }}</v-chip>
-        <v-chip v-if="dataset.status === 'error'" size="x-small" color="error" variant="tonal">{{ t('error') }}</v-chip>
+        <v-chip
+          v-if="dataset.isVirtual"
+          size="x-small"
+          color="primary"
+          variant="tonal"
+        >
+          {{ t('virtual') }}
+        </v-chip>
+        <v-chip
+          v-if="dataset.isRest"
+          size="x-small"
+          color="primary"
+          variant="tonal"
+        >
+          {{ t('editable') }}
+        </v-chip>
+        <v-chip
+          v-if="dataset.isMetaOnly"
+          size="x-small"
+          color="primary"
+          variant="tonal"
+        >
+          {{ t('metaOnly') }}
+        </v-chip>
+        <v-chip
+          v-if="dataset.status === 'draft'"
+          size="x-small"
+          color="warning"
+          variant="tonal"
+        >
+          {{ t('draft') }}
+        </v-chip>
+        <v-chip
+          v-if="dataset.status === 'error'"
+          size="x-small"
+          color="error"
+          variant="tonal"
+        >
+          {{ t('error') }}
+        </v-chip>
       </div>
-      <div v-if="fileInfo" class="text-body-2 text-medium-emphasis mb-1">{{ fileInfo }}</div>
-      <div v-if="dataset.count != null" class="text-body-2 text-medium-emphasis mb-1">{{ t('records', { count: dataset.count.toLocaleString() }) }}</div>
-      <div v-if="showTopics && dataset.topics?.length" class="d-flex flex-wrap ga-1 mt-1">
-        <v-chip v-for="topic in dataset.topics" :key="topic.id" size="x-small" :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}" variant="flat">{{ topic.title }}</v-chip>
+      <div
+        v-if="fileInfo"
+        class="text-body-2 text-medium-emphasis mb-1"
+      >
+        {{ fileInfo }}
+      </div>
+      <div
+        v-if="dataset.count != null"
+        class="text-body-2 text-medium-emphasis mb-1"
+      >
+        {{ t('records', { count: dataset.count.toLocaleString() }) }}
+      </div>
+      <div
+        v-if="showTopics && dataset.topics?.length"
+        class="d-flex flex-wrap ga-1 mt-1"
+      >
+        <v-chip
+          v-for="topic in dataset.topics"
+          :key="topic.id"
+          size="x-small"
+          :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}"
+          variant="flat"
+        >
+          {{ topic.title }}
+        </v-chip>
       </div>
     </v-card-text>
-    <v-card-subtitle class="text-caption pb-3">
+    <v-card-subtitle class="text-caption pb-3 d-flex align-center">
+      <resource-visibility
+        v-if="dataset.visibility"
+        :visibility="dataset.visibility"
+        class="mr-1"
+        size="x-small"
+      />
       <span v-if="showOwner && dataset.owner">{{ ownerName }} · </span>
       <span v-if="dataset.updatedAt">{{ t('updatedAt', { date: formatDate(dataset.updatedAt) }) }}</span>
     </v-card-subtitle>

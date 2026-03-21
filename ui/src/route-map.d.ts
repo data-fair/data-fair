@@ -138,6 +138,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/dataset/[id]/events': RouteRecordInfo<
+      '/dataset/[id]/events',
+      '/dataset/:id/events',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
     '/datasets': RouteRecordInfo<
       '/datasets',
       '/datasets',
@@ -588,6 +595,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/dataset/[id]/edit-metadata.vue': {
       routes:
         | '/dataset/[id]/edit-metadata'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/events.vue': {
+      routes:
+        | '/dataset/[id]/events'
       views:
         | never
     }

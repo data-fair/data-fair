@@ -17,7 +17,8 @@ export const uiConfig = {
   metricsIntegration: !!config.privateMetricsUrl || (config.extraNavigationItems as any[]).some((e: any) => e.iframe?.startsWith('/metrics/')),
   extraNavigationItems: config.extraNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
   extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
-  extraDocLinks: config.extraDocLinks as { icon?: string, href: string, title: string | Record<string, string> }[]
+  extraDocLinks: config.extraDocLinks as { icon?: string, href: string, title: string | Record<string, string> }[],
+  brand: config.brand as { logo: string | null, title: string, description: string, url: string | null }
 }
 
 export type UiConfig = typeof uiConfig
