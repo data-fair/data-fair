@@ -20,11 +20,12 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watchEffect, effectScope, onScopeDispose } from 'vue'
 import { useDisplay } from 'vuetify'
 import LayoutNavigationTop from '~/components/layout/layout-navigation-top.vue'
 import LayoutNavigationLeft from '~/components/layout/layout-navigation-left.vue'
 import { provideBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { useAgentNavigationTools } from '~/composables/use-agent-navigation-tools'
 import { $uiConfig, $apiPath } from '~/context'
 import DfAgentChatDrawer from '@data-fair/lib-vuetify-agents/DfAgentChatDrawer.vue'
 
@@ -38,6 +39,20 @@ const agentChatFetch = ($uiConfig.agentsIntegration && session.account.value)
   ? useFetch<{ agentChat: boolean }>(`${$apiPath}/settings/${session.account.value.type}/${session.account.value.id}/agent-chat`)
   : null
 const showAgentChat = computed(() => !!agentChatFetch?.data.value?.agentChat)
+
+let toolsScope: ReturnType<typeof effectScope> | null = null
+watchEffect(() => {
+  if (showAgentChat.value && !toolsScope) {
+    toolsScope = effectScope()
+    toolsScope.run(() => {
+      useAgentNavigationTools()
+    })
+  } else if (!showAgentChat.value && toolsScope) {
+    toolsScope.stop()
+    toolsScope = null
+  }
+})
+onScopeDispose(() => { toolsScope?.stop() })
 
 const agentChatDrawerProps = computed(() => {
   return {
