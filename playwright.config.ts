@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: 'list',
 
   use: {
-    baseURL: `http://localhost:${process.env.NGINX_PORT1}/data-fair`,
+    baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
   },
 
   projects: [

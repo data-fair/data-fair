@@ -58,5 +58,9 @@
     "vue-tsc": "^2.1.10",
     "vuedraggable": "^4.1.0",
     "vuetify": "^4.0.0"
+  },
+  "dependencies": {
+    "@data-fair/lib-vue-agents": "^0.2.0",
+    "zod-to-json-schema": "^3.25.1"
   }
 }

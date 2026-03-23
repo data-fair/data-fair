@@ -18,7 +18,7 @@ else
   exit 1
 fi
 
-NGINX1="http://localhost:${NGINX_PORT1}"
+NGINX1="http://${DEV_HOST}:${NGINX_PORT1}"
 
 # Colors (disabled if not a terminal)
 if [ -t 1 ]; then

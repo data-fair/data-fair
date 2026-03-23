@@ -15,8 +15,8 @@ module.exports = {
     singleLineOpRefresh: true
   },
   filesStorage: 'fs',
-  publicUrl: `http://localhost:${process.env.NGINX_PORT1}/data-fair`,
-  wsPublicUrl: `ws://localhost:${process.env.NGINX_PORT1}/data-fair`,
+  publicUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
+  wsPublicUrl: `ws://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
   s3: {
     region: 'us-east-1',
     endpoint: `http://localhost:${process.env.S3_PORT}`,
@@ -27,9 +27,9 @@ module.exports = {
     },
     forcePathStyle: true
   },
-  directoryUrl: `http://localhost:${process.env.NGINX_PORT1}/simple-directory`,
+  directoryUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`,
   privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
-  captureUrl: `http://localhost:${process.env.NGINX_PORT1}/capture`,
+  captureUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/capture`,
   privateCaptureUrl: `http://localhost:${process.env.CAPTURE_PORT}`,
   privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
   privateAgentsUrl: `http://localhost:${process.env.AGENTS_PORT}`,
@@ -149,7 +149,7 @@ module.exports = {
     {
       id: 'test',
       title: { fr: 'Test', en: 'Test en' },
-      iframe: `http://localhost:${process.env.NGINX_PORT1}/data-fair/_dev/extra`,
+      iframe: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair/_dev/extra`,
       basePath: '/data-fair',
       icon: 'mdi-link',
       group: 'help'

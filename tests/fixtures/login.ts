@@ -12,7 +12,7 @@ export const test = base.extend<{
   goToWithAuth: (url: string, user: string) => Promise<void>
 }>({
       page: async ({ page }, use) => {
-        const baseUrl = `http://localhost:${process.env.NGINX_PORT1}`
+        const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
         await page.context().addCookies([{
           name: 'i18n_lang',
           value: 'fr',
@@ -22,7 +22,7 @@ export const test = base.extend<{
       },
 
       goToWithAuth: async ({ page }, use) => {
-        const baseUrl = `http://localhost:${process.env.NGINX_PORT1}`
+        const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
         const goToWithAuth = async (url: string, user: string) => {
           const fullUrl = `${baseUrl}${url}`
           const loginUrl = `${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}`

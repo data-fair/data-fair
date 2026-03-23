@@ -3,7 +3,12 @@
 RANDOM_NB=$((1024 + RANDOM % 48000))
 echo "Use random base port $RANDOM_NB"
 
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | sed 's/[^a-zA-Z0-9-]/-/g')
+DEV_HOST="${BRANCH:-df}.localhost"
+
 cat <<EOF > ".env"
+DEV_HOST=${DEV_HOST}
+
 NGINX_PORT1=$((RANDOM_NB))
 NGINX_PORT2=$((RANDOM_NB + 1))
 

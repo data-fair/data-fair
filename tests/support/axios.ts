@@ -11,9 +11,9 @@ import slug from 'slugify'
  * These are loaded by simple-directory (see docker-compose.yaml, STORAGE_TYPE=file).
  */
 
-export const directoryUrl = `http://localhost:${process.env.NGINX_PORT1}/simple-directory`
+export const directoryUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`
 export const apiUrl = `http://localhost:${process.env.DEV_API_PORT}`
-export const baseURL = `http://localhost:${process.env.NGINX_PORT1}/data-fair`
+export const baseURL = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`
 export const wsUrl = `ws://localhost:${process.env.DEV_API_PORT}`
 export const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
 

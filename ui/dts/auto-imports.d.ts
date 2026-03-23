@@ -100,6 +100,7 @@ declare global {
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
+  const useAgentNavigationTools: typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']
   const useApplicationStore: typeof import('../src/composables/application-store')['useApplicationStore']
   const useApplicationVersions: typeof import('../src/composables/application-versions')['useApplicationVersions']
   const useApplicationWatch: typeof import('../src/composables/application-watch')['useApplicationWatch']
@@ -129,6 +130,7 @@ declare global {
   const useLink: typeof import('vue-router')['useLink']
   const useLocaleDayjs: typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']
   const useModel: typeof import('vue')['useModel']
+  const useNavigationItems: typeof import('../src/composables/use-navigation-items')['useNavigationItems']
   const useNotificationsWS: typeof import('../src/composables/use-notifications-ws')['useNotificationsWS']
   const useNumberSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']
   const usePermissions: typeof import('../src/composables/use-permissions')['usePermissions']
@@ -262,6 +264,7 @@ declare module 'vue' {
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
+    readonly useAgentNavigationTools: UnwrapRef<typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['useApplicationStore']>
     readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['useApplicationVersions']>
     readonly useApplicationWatch: UnwrapRef<typeof import('../src/composables/application-watch')['useApplicationWatch']>
@@ -289,6 +292,7 @@ declare module 'vue' {
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useLocaleDayjs: UnwrapRef<typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
+    readonly useNavigationItems: UnwrapRef<typeof import('../src/composables/use-navigation-items')['useNavigationItems']>
     readonly useNotificationsWS: UnwrapRef<typeof import('../src/composables/use-notifications-ws')['useNotificationsWS']>
     readonly useNumberSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']>
     readonly usePermissions: UnwrapRef<typeof import('../src/composables/use-permissions')['usePermissions']>
