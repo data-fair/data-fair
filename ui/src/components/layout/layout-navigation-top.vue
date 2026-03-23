@@ -33,12 +33,19 @@
       v-if="$uiConfig.eventsIntegration && user"
       :events-url="$sitePath + '/events'"
     />
+    <df-theme-switcher />
     <df-personal-menu />
+    <df-agent-chat-toggle
+      v-if="showAgentChat"
+      size="small"
+    />
   </v-app-bar>
 </template>
 
 <script lang="ts" setup>
 import DfPersonalMenu from '@data-fair/lib-vuetify/personal-menu.vue'
+import DfThemeSwitcher from '@data-fair/lib-vuetify/theme-switcher.vue'
+import DfAgentChatToggle from '@data-fair/lib-vuetify-agents/DfAgentChatToggle.vue'
 import { useDisplay } from 'vuetify'
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
@@ -48,6 +55,7 @@ import defaultLogo from '~/assets/logo.svg'
 
 const props = defineProps<{
   breadcrumbs?: ReturnType<typeof createBreadcrumbs>
+  showAgentChat?: boolean
 }>()
 
 const drawer = defineModel<boolean>('drawer', { required: true })

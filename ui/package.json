@@ -18,10 +18,10 @@
     "#shared/*": "../shared/*"
   },
   "devDependencies": {
-    "@data-fair/frame": "^0.14.0",
+    "@data-fair/frame": "^0.18.0",
     "@data-fair/lib-vue": "^1.25.3",
     "@data-fair/lib-vuetify": "^2.0.0",
-    "@data-fair/lib-vuetify-agents": "^0.1.0",
+    "@data-fair/lib-vuetify-agents": "^0.2.0",
     "@intlify/unplugin-vue-i18n": "^6.0.5",
     "@koumoul/vjsf": "^4.0.0",
     "@koumoul/vjsf-markdown": "^0.5.0",

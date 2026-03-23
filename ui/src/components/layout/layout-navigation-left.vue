@@ -117,6 +117,7 @@ import {
   mdiViewDashboardEdit,
   mdiPageNext,
   mdiAccountSupervisor,
+  mdiRobotOutline,
 } from '@mdi/js'
 
 const { t, locale } = useI18n()
@@ -196,6 +197,9 @@ const navigationGroups = computed<NavGroup[]>(() => {
   }
   if (canAdminDep.value && $uiConfig.portalsIntegration) {
     management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })
+  }
+  if (canAdminDep.value && $uiConfig.agentsIntegration) {
+    management.push({ to: '/agents', icon: mdiRobotOutline, title: t('agents') })
   }
   groups.push({ key: 'management', title: t('group.management'), items: management })
 
@@ -319,6 +323,7 @@ fr:
   paramsSub: Licences, thématiques ...
   catalogs: Catalogues distants
   processings: Traitements périodiques
+  agents: Agents
   portals: Portails
   portalPages: Pages de portails
   reuses: Réutilisations
@@ -352,6 +357,7 @@ en:
   paramsSub: Licenses, topics ...
   catalogs: Remote catalogs
   processings: Periodic processings
+  agents: Agents
   portals: Portals
   portalPages: Portal pages
   reuses: Reuses

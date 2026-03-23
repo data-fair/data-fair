@@ -54,6 +54,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/agents': RouteRecordInfo<
+      '/agents',
+      '/agents',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/api-doc': RouteRecordInfo<
       '/api-doc',
       '/api-doc',
@@ -299,13 +306,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/embed/settings/': RouteRecordInfo<
-      '/embed/settings/',
-      '/embed/settings',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/embed/settings/[type]/[id]/api-keys': RouteRecordInfo<
       '/embed/settings/[type]/[id]/api-keys',
       '/embed/settings/:type/:id/api-keys',
@@ -339,13 +339,6 @@ declare module 'vue-router/auto-routes' {
       '/embed/settings/:type/:id/webhooks',
       { type: ParamValue<true>, id: ParamValue<true> },
       { type: ParamValue<false>, id: ParamValue<false> },
-      | never
-    >,
-    '/embed/storage': RouteRecordInfo<
-      '/embed/storage',
-      '/embed/storage',
-      Record<never, never>,
-      Record<never, never>,
       | never
     >,
     '/embed/workflow/update-dataset': RouteRecordInfo<
@@ -474,9 +467,23 @@ declare module 'vue-router/auto-routes' {
       { page: ParamValue<false> },
       | never
     >,
+    '/settings/': RouteRecordInfo<
+      '/settings/',
+      '/settings',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/share-dataset': RouteRecordInfo<
       '/share-dataset',
       '/share-dataset',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/storage': RouteRecordInfo<
+      '/storage',
+      '/storage',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -522,6 +529,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/admin-extra/[id].vue': {
       routes:
         | '/admin-extra/[id]'
+      views:
+        | never
+    }
+    'src/pages/agents.vue': {
+      routes:
+        | '/agents'
       views:
         | never
     }
@@ -736,12 +749,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/embed/settings/index.vue': {
-      routes:
-        | '/embed/settings/'
-      views:
-        | never
-    }
     'src/pages/embed/settings/[type]/[id]/api-keys.vue': {
       routes:
         | '/embed/settings/[type]/[id]/api-keys'
@@ -769,12 +776,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/embed/settings/[type]/[id]/webhooks.vue': {
       routes:
         | '/embed/settings/[type]/[id]/webhooks'
-      views:
-        | never
-    }
-    'src/pages/embed/storage.vue': {
-      routes:
-        | '/embed/storage'
       views:
         | never
     }
@@ -891,9 +892,21 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/settings/index.vue': {
+      routes:
+        | '/settings/'
+      views:
+        | never
+    }
     'src/pages/share-dataset.vue': {
       routes:
         | '/share-dataset'
+      views:
+        | never
+    }
+    'src/pages/storage.vue': {
+      routes:
+        | '/storage'
       views:
         | never
     }

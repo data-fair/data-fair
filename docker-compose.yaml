@@ -176,6 +176,8 @@ services:
       - PORT=${AGENTS_PORT}
       - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
       - MONGO_URL=mongodb://localhost:${MONGO_PORT}/agents
+      - CIPHER_PASSWORD=test
+      - OBSERVER_ACTIVE=false
 
   clamav:
     image: clamav/clamav:1.5.1
