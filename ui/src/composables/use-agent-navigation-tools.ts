@@ -1,14 +1,17 @@
-import { useRoute, useRouter } from 'vue-router'
+import type { ComputedRef, Ref } from 'vue'
+import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
-import { useNavigationItems } from '~/composables/use-navigation-items'
-import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
+import type { NavGroup } from '~/composables/use-navigation-items'
+import type { BreadcrumbItem } from '~/composables/use-breadcrumbs'
 
-export function useAgentNavigationTools () {
-  const route = useRoute()
-  const router = useRouter()
-  const { navigationGroups } = useNavigationItems()
-  const breadcrumbs = useBreadcrumbs()
+interface AgentNavigationToolsDeps {
+  route: RouteLocationNormalizedLoaded
+  router: Router
+  navigationGroups: ComputedRef<NavGroup[]>
+  breadcrumbItems: Ref<BreadcrumbItem[]>
+}
 
+export function useAgentNavigationTools ({ route, router, navigationGroups, breadcrumbItems }: AgentNavigationToolsDeps) {
   useAgentTool({
     name: 'get_current_location',
     description: 'Get the current page location in the application, including route path, name, parameters, and breadcrumbs.',
@@ -22,7 +25,7 @@ export function useAgentNavigationTools () {
             name: route.name,
             params: route.params,
             query: route.query,
-            breadcrumbs: breadcrumbs.items.value.map(b => ({
+            breadcrumbs: breadcrumbItems.value.map(b => ({
               text: b.text,
               to: b.to
             }))
