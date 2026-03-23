@@ -28,7 +28,7 @@
       class="d-flex flex-column align-center justify-center mt-6"
     >
       <template v-if="q">
-        <div class="text-h6">
+        <div class="text-title-medium">
           {{ t('noResult') }}
         </div>
       </template>
@@ -40,7 +40,7 @@
         >
           {{ mdiDatabaseOff }}
         </v-icon>
-        <div class="text-h6">
+        <div class="text-title-medium">
           {{ t('noDataset') }}
         </div>
         <v-btn
@@ -58,7 +58,7 @@
     <!-- Content: results count + grid/list -->
     <template v-else>
       <!-- Results count -->
-      <div class="text-body-2 text-medium-emphasis mb-3">
+      <div class="text-body-medium text-medium-emphasis mb-3">
         {{ t('datasets', { count: catalog.totalCount.value }) }}
       </div>
 

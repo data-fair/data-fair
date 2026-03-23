@@ -1,6 +1,6 @@
 <template>
   <v-container style="max-width: 800px;">
-    <h1 class="text-h5 mb-4">
+    <h1 class="text-title-large mb-4">
       {{ t('shareDataset') }}
     </h1>
 
@@ -59,7 +59,7 @@
               {{ t('noPublicationSite') }}
             </v-alert>
             <template v-if="publicationSites.length">
-              <p class="text-body-1 mb-2">
+              <p class="text-body-large mb-2">
                 {{ t('selectPortal') }}
               </p>
               <v-card

@@ -1,10 +1,10 @@
 <template>
   <v-container>
-    <h1 class="text-h5 mb-6">
+    <h1 class="text-title-large mb-6">
       {{ t('newApplication') }}
     </h1>
 
-    <p class="text-body-1 mb-6">
+    <p class="text-body-large mb-6">
       {{ t('chooseBaseApp') }}
     </p>
 
@@ -55,7 +55,7 @@
           cols="auto"
           class="text-center"
         >
-          <div class="text-h6">
+          <div class="text-title-medium">
             {{ t('noBaseApp') }}
           </div>
         </v-col>
@@ -114,14 +114,14 @@
                 </v-avatar>
               </template>
 
-              <v-card-title class="text-body-1 font-weight-bold">
+              <v-card-title class="text-body-large font-weight-bold">
                 {{ baseApp.title || baseApp.applicationName }}
               </v-card-title>
 
               <v-card-text>
                 <p
                   v-if="baseApp.description"
-                  class="text-body-2 text-medium-emphasis mb-2"
+                  class="text-body-medium text-medium-emphasis mb-2"
                   style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
                 >
                   {{ baseApp.description }}

@@ -1,6 +1,6 @@
 <template>
   <v-container style="max-width: 900px;">
-    <h1 class="text-h5 mb-6">
+    <h1 class="text-title-large mb-6">
       {{ t('newDataset') }}
     </h1>
 
@@ -40,7 +40,7 @@
         <!-- Step 1: Type selection -->
         <v-stepper-window-item :value="1">
           <div class="pa-4">
-            <p class="text-body-1 mb-4">
+            <p class="text-body-large mb-4">
               {{ t('choseType') }}
             </p>
             <v-row dense>
@@ -117,7 +117,7 @@
           <div class="pa-4">
             <!-- FILE params -->
             <template v-if="datasetType === 'file'">
-              <p class="text-body-1 mb-4">
+              <p class="text-body-large mb-4">
                 {{ t('loadMainFile') }}
               </p>
               <v-file-input
@@ -190,7 +190,7 @@
 
               <!-- Advanced options -->
               <div
-                class="text-subtitle-1 mt-5 mb-3 d-flex align-center"
+                class="text-title-small mt-5 mb-3 d-flex align-center"
                 style="cursor: pointer"
                 @click="showAdvanced = !showAdvanced"
               >

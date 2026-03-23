@@ -83,7 +83,7 @@
         <!-- Results count -->
         <div
           v-if="catalog.totalCount.value > 0"
-          class="text-body-2 text-medium-emphasis mb-3"
+          class="text-body-medium text-medium-emphasis mb-3"
         >
           {{ t('resultsCount', { count: catalog.totalCount.value }) }}
         </div>
@@ -119,7 +119,7 @@
             cols="auto"
             class="text-center"
           >
-            <div class="text-h6">
+            <div class="text-title-medium">
               {{ q ? t('noResult') : t('noApplication') }}
             </div>
           </v-col>

@@ -25,12 +25,12 @@
                         cols="12"
                         :md="dataset.image ? 8 : 12"
                       >
-                        <div class="text-h6 mb-2">
+                        <div class="text-title-medium mb-2">
                           {{ dataset.title }}
                         </div>
                         <p
                           v-if="dataset.description"
-                          class="text-body-2"
+                          class="text-body-medium"
                           v-html="dataset.description"
                         />
                       </v-col>
@@ -196,7 +196,7 @@
                         lg="4"
                       >
                         <v-card :to="`/application/${app.id}`">
-                          <v-card-title class="text-body-1 font-weight-bold">
+                          <v-card-title class="text-body-large font-weight-bold">
                             {{ app.title || app.id }}
                           </v-card-title>
                         </v-card>
@@ -237,7 +237,7 @@
                   value="catalog-publications"
                 >
                   <v-container fluid>
-                    <h3 class="text-subtitle-1 font-weight-bold mt-4">
+                    <h3 class="text-title-small font-weight-bold mt-4">
                       {{ t('catalogPublications') }}
                     </h3>
                     <d-frame

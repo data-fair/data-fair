@@ -25,20 +25,20 @@
           md="6"
           class="text-center"
         >
-          <h1 class="text-h4 mb-3 mt-5">
+          <h1 class="text-headline-large text-primary mb-3 mt-5">
             Data Fair
           </h1>
           <layout-themed-svg
             :source="dataProcessSvg"
-            style="max-width: 400px; margin: 0 auto;"
+            style="max-width: 400px; max-height: 250px; width: 100%; margin: 0 auto;"
           />
           <p
             v-if="!$uiConfig.disableApplications"
-            class="text-h6"
+            class="text-title-medium"
           >
             {{ t('description') }}
           </p>
-          <p class="text-h6 mt-5">
+          <p class="text-title-medium mt-5">
             {{ t('authRequired') }}
           </p>
           <v-btn
@@ -55,7 +55,7 @@
     <template v-else>
       <v-row>
         <v-col cols="12">
-          <h2 class="mb-4 text-h4">
+          <h2 class="mb-4 text-headline-small">
             <template v-if="account && account.type === 'organization' && account.department">
               {{ t('departmentSpace', { name: account.name, departmentName: account.departmentName || account.department }) }}
             </template>
@@ -111,8 +111,8 @@
 
       <!-- Contribute section -->
       <template v-if="canContribDep">
-        <v-row class="mx-0 mt-4">
-          <h2 class="text-h5">
+        <v-row class="mx-0 mt-4 mb-1">
+          <h2 class="text-title-large">
             {{ t('contribute') }}
           </h2>
         </v-row>
@@ -152,8 +152,8 @@
 
       <!-- Manage datasets section -->
       <template v-if="canAdminDep">
-        <v-row class="mx-0 mt-6">
-          <h2 class="text-h5">
+        <v-row class="mx-0 mt-6 mb-1">
+          <h2 class="text-title-large">
             {{ t('manageDatasets') }}
           </h2>
         </v-row>
@@ -179,8 +179,8 @@
         </v-row>
 
         <!-- Manage applications section -->
-        <v-row class="mx-0 mt-6">
-          <h2 class="text-h5">
+        <v-row class="mx-0 mt-6 mb-1">
+          <h2 class="text-title-large">
             {{ t('manageApplications') }}
           </h2>
         </v-row>

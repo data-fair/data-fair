@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <h2 class="mt-8 mb-2 text-h5">
+    <h2 class="mt-8 mb-2 text-title-large">
       {{ t('devices') }}
     </h2>
     <d-frame
@@ -9,7 +9,7 @@
       @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
 
-    <h2 class="mt-8 mb-2 text-h5">
+    <h2 class="mt-8 mb-2 text-title-large">
       {{ account.type === 'organization'
         ? t('datasetsOrgEvents', { name: account.name + (account.department ? ' / ' + (account.departmentName || account.department) : '') })
         : t('datasetsUserEvents') }}
@@ -20,7 +20,7 @@
       @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
 
-    <h2 class="mt-8 mb-2 text-h5">
+    <h2 class="mt-8 mb-2 text-title-large">
       {{ account.type === 'organization'
         ? t('appsOrgEvents', { name: account.name + (account.department ? ' / ' + (account.departmentName || account.department) : '') })
         : t('appsUserEvents') }}
@@ -32,7 +32,7 @@
     />
 
     <template v-if="$uiConfig.portalsIntegration">
-      <h2 class="mt-8 mb-2 text-h5">
+      <h2 class="mt-8 mb-2 text-title-large">
         {{ t('sites', { name: account.name }) }}
       </h2>
       <v-select

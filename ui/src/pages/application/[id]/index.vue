@@ -70,12 +70,12 @@
                         cols="12"
                         md="6"
                       >
-                        <div class="text-h6 mb-2">
+                        <div class="text-title-medium mb-2">
                           {{ application.title }}
                         </div>
                         <p
                           v-if="application.description"
-                          class="text-body-2"
+                          class="text-body-medium"
                         >
                           {{ application.description }}
                         </p>
@@ -137,7 +137,7 @@
                         lg="4"
                       >
                         <v-card :to="`/dataset/${dataset.id}`">
-                          <v-card-title class="text-body-1 font-weight-bold">
+                          <v-card-title class="text-body-large font-weight-bold">
                             {{ dataset.title || dataset.id }}
                           </v-card-title>
                         </v-card>
@@ -163,7 +163,7 @@
                         lg="4"
                       >
                         <v-card :to="`/application/${app.id}`">
-                          <v-card-title class="text-body-1 font-weight-bold">
+                          <v-card-title class="text-body-large font-weight-bold">
                             {{ app.title || app.id }}
                           </v-card-title>
                         </v-card>
