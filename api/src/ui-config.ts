@@ -1,5 +1,6 @@
 import config from '#config'
 
+// ui configuration exported to the frontend SPA
 export const uiConfig = {
   map: config.map as { style: string, beforeLayer: string },
   apiKeysMaxDuration: config.apiKeysMaxDuration as number,

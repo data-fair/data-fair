@@ -1,7 +1,9 @@
+import type { ApplicationStore } from './application-store'
+
 type WatchKey = 'draft-error' | 'journal'
 
-export const useApplicationWatch = (keys: WatchKey | WatchKey[]) => {
-  const { id, application, journal } = useApplicationStore()
+export const useApplicationWatch = (keys: WatchKey | WatchKey[], storeOverride?: ApplicationStore) => {
+  const { id, application, journal } = storeOverride ?? useApplicationStore()
   if (!Array.isArray(keys)) keys = [keys]
   const ws = useWS('/data-fair/')
 

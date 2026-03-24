@@ -8,9 +8,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: 'list',
+  timeout: 30_000,
+  expect: { timeout: 5_000 },
 
   use: {
     baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
+    actionTimeout: 5_000,
+    navigationTimeout: 5_000,
   },
 
   projects: [

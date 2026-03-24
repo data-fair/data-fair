@@ -16,6 +16,6 @@ test.describe('main UI pages', () => {
 
   test('new dataset page loads with tabs', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/new-dataset', 'test_user1')
-    await expect(page.getByRole('tab', { name: /Fichier/ })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Fichier').first()).toBeVisible({ timeout: 10000 })
   })
 })

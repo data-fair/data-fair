@@ -17,6 +17,10 @@ export const test = base.extend<{
           name: 'i18n_lang',
           value: 'fr',
           url: baseUrl
+        }, {
+          name: 'cache_bypass',
+          value: '1',
+          url: baseUrl
         }])
         await use(page)
       },

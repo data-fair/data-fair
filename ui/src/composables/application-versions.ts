@@ -1,8 +1,8 @@
-import useApplicationStore from './application-store'
+import useApplicationStore, { type ApplicationStore } from './application-store'
 import { compare as compareVersions, validate as validateVersion } from 'compare-versions'
 
-export const useApplicationVersions = () => {
-  const { baseAppFetch, baseAppsFetch } = useApplicationStore()
+export const useApplicationVersions = (storeOverride?: ApplicationStore) => {
+  const { baseAppFetch, baseAppsFetch } = storeOverride ?? useApplicationStore()
   if (!baseAppFetch.initialized.value) baseAppFetch.refresh()
   if (!baseAppsFetch.initialized.value) baseAppsFetch.refresh()
 

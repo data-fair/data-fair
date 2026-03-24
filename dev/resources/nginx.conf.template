@@ -57,13 +57,13 @@ server {
   location /data-fair/api {
     proxy_pass http://localhost:${DEV_API_PORT};
   }
-  location /data-fair/app {
+  # use regex to match /data-fair/app/ and /data-fair/app? but not /data-fair/applications
+  location ~ ^/data-fair/app(/|$|\?) {
     proxy_pass http://localhost:${DEV_API_PORT};
   }
   location /data-fair/streamsaver {
     proxy_pass http://localhost:${DEV_API_PORT};
   }
-  # built assets served by API (necessary because /data-fair/app catches /data-fair/applications)
   location /data-fair/assets {
     proxy_pass http://localhost:${DEV_API_PORT};
   }

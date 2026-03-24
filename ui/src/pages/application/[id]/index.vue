@@ -357,9 +357,9 @@ const router = useRouter()
 
 const store = provideApplicationStore(route.params.id)
 const { application, applicationLink, can, patch, journal, journalFetch, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
-const { availableVersions } = useApplicationVersions()
+const { availableVersions } = useApplicationVersions(store)
 
-useApplicationWatch(['journal', 'draft-error'])
+useApplicationWatch(['journal', 'draft-error'], store)
 
 // Fetch additional data once application is loaded
 watch(application, (app) => {

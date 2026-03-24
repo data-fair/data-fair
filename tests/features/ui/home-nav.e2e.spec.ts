@@ -38,13 +38,13 @@ test.describe('home dashboard', () => {
   })
 
   test('unauthenticated home shows login button', async ({ page }) => {
-    const baseUrl = `http://localhost:${process.env.NGINX_PORT1}`
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
     await page.goto(`${baseUrl}/data-fair/`)
     await expect(page.getByRole('button', { name: /Se connecter/ })).toBeVisible({ timeout: 10000 })
   })
 
   test('unauthenticated home shows description and SVG', async ({ page }) => {
-    const baseUrl = `http://localhost:${process.env.NGINX_PORT1}`
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
     await page.goto(`${baseUrl}/data-fair/`)
     await expect(page.getByText(/Enrichissez et publiez/)).toBeVisible({ timeout: 10000 })
     // SVG is rendered (check for themed SVG container)

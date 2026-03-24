@@ -80,12 +80,13 @@ test.describe('applications list page', () => {
 
   test('"Nouvelle application" button is visible for contributors', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/applications', 'test_user1')
-    await expect(page.getByRole('link', { name: /Nouvelle application/ })).toBeVisible({ timeout: 10000 })
+    // There may be two "Nouvelle application" links: one in the empty state and one in the right navigation
+    await expect(page.getByRole('link', { name: /Nouvelle application/ }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('"Nouvelle application" button navigates to new-application page', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/applications', 'test_user1')
-    await page.getByRole('link', { name: /Nouvelle application/ }).click()
+    await page.getByRole('link', { name: /Nouvelle application/ }).first().click()
     await page.waitForURL(/new-application/, { timeout: 10000 })
   })
 

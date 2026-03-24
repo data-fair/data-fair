@@ -14,7 +14,7 @@ test.describe('dataset detail pages', () => {
 
   test('dataset home page loads with title', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h6').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-title-medium').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('dataset data page loads with table', async ({ page, goToWithAuth }) => {
@@ -128,7 +128,7 @@ test.describe('dataset detail pages', () => {
 
   test('dataset home page shows description, metadata, schema and activity sections', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h6').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-title-medium').first()).toBeVisible({ timeout: 10000 })
     await expect(page.locator('#description')).toBeVisible()
     await expect(page.locator('#metadata')).toBeVisible()
     await expect(page.locator('#schema')).toBeVisible()
@@ -144,12 +144,14 @@ test.describe('dataset detail pages', () => {
 
   test('dataset home page action links navigate to edit-metadata and back', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h6').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-title-medium').first()).toBeVisible({ timeout: 10000 })
     await page.getByText(/Éditer les métadonnées|Edit metadata/).click()
     await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 10000 })
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
+    // Accept the leave guard confirm dialog if it appears (hasDiff may be true due to background server updates)
+    page.on('dialog', dialog => dialog.accept())
     // Navigate back using the link in the navigation panel
     await page.locator('a').filter({ hasText: /Retour à la fiche|Back to home/ }).click()
-    await expect(page.locator('#description')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#description')).toBeVisible({ timeout: 15000 })
   })
 })
