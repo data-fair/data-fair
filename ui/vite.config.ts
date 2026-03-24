@@ -17,9 +17,9 @@ export default defineConfig({
   base: '/data-fair/',
   optimizeDeps: { include: [...commonjsDeps, 'easymde', 'vuedraggable', 'fast-deep-equal'] },
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        experimentalMinChunkSize: 2000
+        minChunkSize: 2000
       }
     }
   },
@@ -56,7 +56,19 @@ export default defineConfig({
         'src/composables'
       ]
     }),
-    Components({ dts: './dts/components.d.ts' }),
+    Components({
+      dts: './dts/components.d.ts',
+      resolvers: [
+        // resolve <df-*> components from @data-fair/lib-vuetify
+        (componentName) => {
+          if (componentName.startsWith('Df')) {
+            const kebab = componentName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
+            const file = kebab.replace(/^df-/, '')
+            return { name: 'default', from: `@data-fair/lib-vuetify/${file}.vue` }
+          }
+        }
+      ]
+    }),
     {
       name: 'inject-site-context',
       async transformIndexHtml (html) {

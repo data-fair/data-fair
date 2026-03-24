@@ -82,6 +82,7 @@ declare module 'vue' {
     DatasetUploadDialog: typeof import('./../src/components/dataset/dataset-upload-dialog.vue')['default']
     DatasetVirtual: typeof import('./../src/components/dataset/dataset-virtual.vue')['default']
     DatasetVirtualChildCompat: typeof import('./../src/components/dataset/dataset-virtual-child-compat.vue')['default']
+    DfOwnerPick: typeof import('@data-fair/lib-vuetify/owner-pick.vue')['default']
     HelpTooltip: typeof import('./../src/components/help-tooltip.vue')['default']
     IntegrationDialog: typeof import('./../src/components/common/integration-dialog.vue')['default']
     JournalView: typeof import('./../src/components/journal-view.vue')['default']
