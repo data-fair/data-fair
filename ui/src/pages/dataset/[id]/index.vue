@@ -223,7 +223,12 @@
               <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="permissions">
                   <v-container fluid>
-                    <private-access v-model="dataset" />
+                    <permissions
+                      v-if="dataset"
+                      :resource="dataset"
+                      resource-type="datasets"
+                      :disabled="!can('setPermissions').value"
+                    />
                   </v-container>
                 </v-tabs-window-item>
 
@@ -358,6 +363,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
+import Permissions from '~/components/permissions/permissions.vue'
 import { mdiAccount, mdiAllInclusive, mdiCalendarText, mdiCounter, mdiEyeArrowRight, mdiHistory, mdiImageMultiple, mdiInformation, mdiKey, mdiLicense, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiTableCog } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
