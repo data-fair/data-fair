@@ -58,7 +58,7 @@ export const findApplications = async (locale, publicationSite, publicBaseUrl, r
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters)
 
-  const sort = findUtils.sort(reqQuery.sort, reqQuery.q)
+  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
   const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft'], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 

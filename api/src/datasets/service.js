@@ -68,7 +68,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
-export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
+export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState, options = {}) => {
   const explain = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
@@ -95,11 +95,15 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
-    extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
+    if (options.catalogMode) {
+      extraFilters.push({ publicationSites: `${publicationSite.type}:${publicationSite.id}` })
+    } else {
+      extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
+    }
   }
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
-  const sort = findUtils.sort(reqQuery.sort, reqQuery.q)
+  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
   const project = findUtils.project(reqQuery.select, [], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
