@@ -1,9 +1,8 @@
 <template>
-  <v-container style="max-width: 800px;">
-    <h1 class="text-title-large mb-4">
-      {{ t('shareDataset') }}
-    </h1>
-
+  <v-container
+    fluid
+    class="pa-0"
+  >
     <v-stepper
       v-model="currentStep"
       flat
@@ -212,6 +211,7 @@
 
 <i18n lang="yaml">
 fr:
+  datasets: Jeux de données
   shareDataset: Publier un jeu de données
   selectPortal: "Choisissez un portail :"
   stepDataset: Jeu de données
@@ -232,6 +232,7 @@ fr:
   datasetDescription: Description
   required: Ce champ est requis
 en:
+  datasets: Datasets
   shareDataset: Share a dataset
   selectPortal: "Select a portal:"
   stepDataset: Dataset
@@ -261,6 +262,8 @@ const { t } = useI18n()
 const { account } = useSessionAuthenticated()
 const { canAdmin } = usePermissions()
 const router = useRouter()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('datasets'), to: '/datasets' }, { text: t('shareDataset') }] })
 
 const currentStep = ref(1)
 const publicationSite = ref<Record<string, any> | null>(null)

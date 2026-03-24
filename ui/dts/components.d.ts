@@ -27,6 +27,7 @@ declare module 'vue' {
     DatasetAddPropertyDialog: typeof import('./../src/components/dataset/dataset-add-property-dialog.vue')['default']
     DatasetAttachments: typeof import('./../src/components/dataset/dataset-attachments.vue')['default']
     DatasetCard: typeof import('./../src/components/dataset/dataset-card.vue')['default']
+    DatasetChildrenSelect: typeof import('./../src/components/dataset/dataset-children-select.vue')['default']
     DatasetConflicts: typeof import('./../src/components/dataset/dataset-conflicts.vue')['default']
     DatasetDownloadCsvOptions: typeof import('./../src/components/dataset/dataset-download-csv-options.vue')['default']
     DatasetDownloadResults: typeof import('./../src/components/dataset/dataset-download-results.vue')['default']

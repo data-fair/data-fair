@@ -13,7 +13,10 @@
         :href="dataFile.url"
       >
         <template #prepend>
-          <v-icon :icon="mdiFileDownload" color="primary" />
+          <v-icon
+            :icon="mdiFileDownload"
+            color="primary"
+          />
         </template>
         <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
       </v-list-item>
@@ -24,7 +27,10 @@
       :href="resourceUrl + '/raw'"
     >
       <template #prepend>
-        <v-icon :icon="mdiProgressDownload" color="admin" />
+        <v-icon
+          :icon="mdiProgressDownload"
+          color="admin"
+        />
       </template>
       <v-list-item-title>{{ t('downloadRawRest') }}</v-list-item-title>
       <v-list-item-subtitle>{{ t('downloadRawRestSubtitle') }}</v-list-item-subtitle>
@@ -36,7 +42,10 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon :icon="mdiFileUpload" color="primary" />
+            <v-icon
+              :icon="mdiFileUpload"
+              color="primary"
+            />
           </template>
           <v-list-item-title>{{ t('updateFile') }}</v-list-item-title>
         </v-list-item>
@@ -49,7 +58,10 @@
       <template #activator="{ props: activatorProps, title }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon :icon="mdiUpload" color="primary" />
+            <v-icon
+              :icon="mdiUpload"
+              color="primary"
+            />
           </template>
           <v-list-item-title>{{ title }}</v-list-item-title>
         </v-list-item>
@@ -63,7 +75,10 @@
       :to="`/dataset/${dataset.id}/edit-metadata`"
     >
       <template #prepend>
-        <v-icon :icon="mdiPencil" color="primary" />
+        <v-icon
+          :icon="mdiPencil"
+          color="primary"
+        />
       </template>
       <v-list-item-title>{{ t('editMetadata') }}</v-list-item-title>
     </v-list-item>
@@ -73,7 +88,10 @@
       :to="`/dataset/${dataset.id}/data`"
     >
       <template #prepend>
-        <v-icon :icon="mdiTable" color="primary" />
+        <v-icon
+          :icon="mdiTable"
+          color="primary"
+        />
       </template>
       <v-list-item-title>{{ t('viewData') }}</v-list-item-title>
     </v-list-item>
@@ -83,7 +101,10 @@
       :to="`/dataset/${dataset.id}/edit-data`"
     >
       <template #prepend>
-        <v-icon :icon="mdiTableEdit" color="primary" />
+        <v-icon
+          :icon="mdiTableEdit"
+          color="primary"
+        />
       </template>
       <v-list-item-title>{{ t('editData') }}</v-list-item-title>
     </v-list-item>
@@ -93,7 +114,10 @@
       :to="`/dataset/${dataset.id}/api-doc`"
     >
       <template #prepend>
-        <v-icon :icon="mdiCloud" color="primary" />
+        <v-icon
+          :icon="mdiCloud"
+          color="primary"
+        />
       </template>
       <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
     </v-list-item>
@@ -106,7 +130,10 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon :icon="mdiCodeTags" color="primary" />
+            <v-icon
+              :icon="mdiCodeTags"
+              color="primary"
+            />
           </template>
           <v-list-item-title>{{ t('integration') }}</v-list-item-title>
         </v-list-item>
@@ -121,7 +148,10 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon :icon="mdiBell" color="primary" />
+            <v-icon
+              :icon="mdiBell"
+              color="primary"
+            />
           </template>
           <v-list-item-title>{{ t('notifications') }}</v-list-item-title>
         </v-list-item>
@@ -136,7 +166,10 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon :icon="mdiWebhook" color="admin" />
+            <v-icon
+              :icon="mdiWebhook"
+              color="admin"
+            />
           </template>
           <v-list-item-title>{{ t('webhooks') }}</v-list-item-title>
         </v-list-item>
@@ -148,7 +181,10 @@
       :to="`/dataset/${dataset.id}/events`"
     >
       <template #prepend>
-        <v-icon :icon="mdiClipboardTextClock" color="primary" />
+        <v-icon
+          :icon="mdiClipboardTextClock"
+          color="primary"
+        />
       </template>
       <v-list-item-title>{{ t('events') }}</v-list-item-title>
     </v-list-item>
@@ -162,7 +198,10 @@
       <template #activator="{ props: activatorProps }">
         <v-list-item v-bind="activatorProps">
           <template #prepend>
-            <v-icon :icon="mdiAccountSwitch" color="admin" />
+            <v-icon
+              :icon="mdiAccountSwitch"
+              color="admin"
+            />
           </template>
           <v-list-item-title>{{ t('changeOwner') }}</v-list-item-title>
         </v-list-item>
@@ -174,7 +213,10 @@
       @click="showDeleteDialog = true"
     >
       <template #prepend>
-        <v-icon :icon="mdiDelete" color="warning" />
+        <v-icon
+          :icon="mdiDelete"
+          color="warning"
+        />
       </template>
       <v-list-item-title>{{ t('delete') }}</v-list-item-title>
     </v-list-item>
@@ -184,7 +226,10 @@
       @click="showDeleteAllLinesDialog = true"
     >
       <template #prepend>
-        <v-icon :icon="mdiDeleteSweep" color="warning" />
+        <v-icon
+          :icon="mdiDeleteSweep"
+          color="warning"
+        />
       </template>
       <v-list-item-title>{{ t('deleteAllLines') }}</v-list-item-title>
     </v-list-item>

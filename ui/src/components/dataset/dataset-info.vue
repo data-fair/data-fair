@@ -250,7 +250,10 @@
             :close-on-content-click="false"
           >
             <template #activator="{ props: menuProps }">
-              <v-icon :icon="mdiCalendar" v-bind="menuProps" />
+              <v-icon
+                :icon="mdiCalendar"
+                v-bind="menuProps"
+              />
             </template>
             <v-date-picker
               :model-value="temporalDates"
@@ -277,7 +280,10 @@
             :close-on-content-click="false"
           >
             <template #activator="{ props: menuProps }">
-              <v-icon :icon="mdiCalendar" v-bind="menuProps" />
+              <v-icon
+                :icon="mdiCalendar"
+                v-bind="menuProps"
+              />
             </template>
             <v-date-picker
               :model-value="dataset.modified ? [dataset.modified] : []"

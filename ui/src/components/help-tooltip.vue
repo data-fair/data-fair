@@ -10,7 +10,10 @@
         :size="small ? 'small' : 'default'"
         variant="text"
       >
-        <v-icon :size="small ? 'small' : 'default'" :icon="mdiInformation" />
+        <v-icon
+          :size="small ? 'small' : 'default'"
+          :icon="mdiInformation"
+        />
       </v-btn>
     </template>
     <div class="help-tooltip-content">

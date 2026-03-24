@@ -100,6 +100,8 @@ declare global {
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
+  const useAgentDatasetDataTools: typeof import('../src/composables/use-agent-dataset-data-tools')['useAgentDatasetDataTools']
+  const useAgentDatasetTools: typeof import('../src/composables/use-agent-dataset-tools')['useAgentDatasetTools']
   const useAgentNavigationTools: typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']
   const useApplicationStore: typeof import('../src/composables/application-store')['useApplicationStore']
   const useApplicationVersions: typeof import('../src/composables/application-versions')['useApplicationVersions']
@@ -264,6 +266,8 @@ declare module 'vue' {
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
+    readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/use-agent-dataset-data-tools')['useAgentDatasetDataTools']>
+    readonly useAgentDatasetTools: UnwrapRef<typeof import('../src/composables/use-agent-dataset-tools')['useAgentDatasetTools']>
     readonly useAgentNavigationTools: UnwrapRef<typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['useApplicationStore']>
     readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['useApplicationVersions']>

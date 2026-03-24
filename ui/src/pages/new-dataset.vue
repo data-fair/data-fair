@@ -1,10 +1,8 @@
 <template>
-  <v-container style="max-width: 900px;">
-    <h1 class="text-title-large mb-6">
-      {{ t('newDataset') }}
-    </h1>
-
-    <!-- Step indicator -->
+  <v-container
+    fluid
+    class="pa-0"
+  >
     <v-stepper
       v-model="step"
       flat
@@ -13,25 +11,32 @@
         <v-stepper-item
           :value="1"
           :complete="!!datasetType"
+          :editable="!!datasetType"
           :title="t('stepType')"
+          :subtitle="datasetType ? t('type_' + datasetType) : undefined"
         />
         <template v-if="hasInitFromStep">
           <v-divider />
           <v-stepper-item
             :value="2"
             :complete="step > 2"
+            :editable="step > 2"
             :title="t('stepInit')"
+            :subtitle="initFrom ? t('completed') : undefined"
           />
         </template>
         <v-divider />
         <v-stepper-item
           :value="paramsStep"
           :complete="step > paramsStep"
+          :editable="paramsValid"
           :title="t('stepParams')"
+          :subtitle="paramsSubtitle"
         />
         <v-divider />
         <v-stepper-item
           :value="actionStep"
+          :editable="paramsValid"
           :title="t('stepAction')"
         />
       </v-stepper-header>
@@ -134,7 +139,7 @@
               />
 
               <v-file-input
-                v-if="!initFromData"
+                v-if="!initFromData && !isSimple"
                 v-model="attachmentsInputValue"
                 :label="t('selectAttachments')"
                 variant="outlined"
@@ -226,6 +231,13 @@
                   style="max-width: 500px;"
                 />
               </template>
+
+              <h3
+                class="text-title-small mt-5 mb-3"
+              >
+                {{ t('formats') }}
+              </h3>
+              <dataset-file-formats condensed />
             </template>
 
             <!-- REST params -->
@@ -273,40 +285,7 @@
                 :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
                 class="mb-2"
               />
-              <v-autocomplete
-                v-model:search="childrenSearch"
-                :model-value="null"
-                :items="childrenItems"
-                :loading="searchChildrenAction.loading.value"
-                no-filter
-                hide-no-data
-                item-title="title"
-                item-value="id"
-                :label="t('children')"
-                :placeholder="t('search')"
-                variant="outlined"
-                density="compact"
-                return-object
-                hide-details
-                style="max-width: 500px;"
-                @update:model-value="addVirtualChild"
-              />
-
-              <!-- Selected children chips -->
-              <div
-                v-if="virtualChildren.length"
-                class="d-flex flex-wrap gap-1 mt-2"
-              >
-                <v-chip
-                  v-for="(child, i) in virtualChildren"
-                  :key="child.id"
-                  closable
-                  size="small"
-                  @click:close="virtualChildren.splice(i, 1)"
-                >
-                  {{ child.title }}
-                </v-chip>
-              </div>
+              <dataset-children-select v-model="virtualChildren" />
 
               <v-checkbox
                 v-model="virtualFillSchema"
@@ -437,12 +416,21 @@
 import { mdiAllInclusive, mdiCancel, mdiChevronDown, mdiChevronUp, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
-import { withQuery } from 'ufo'
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const session = useSessionAuthenticated()
+const breadcrumbs = useBreadcrumbs()
 const { account } = session
+
+const isSimple = computed(() => route.query.simple === 'true')
+
+breadcrumbs.receive({
+  breadcrumbs: isSimple.value
+    ? [{ text: t('home'), to: '/' }, { text: t('newDataset') }]
+    : [{ text: t('datasets'), to: '/datasets' }, { text: t('newDataset') }]
+})
 
 // ---- Types ----
 type DatasetType = 'file' | 'rest' | 'virtual' | 'metaOnly'
@@ -453,7 +441,8 @@ interface InitFrom {
 }
 
 // ---- Constants ----
-const datasetTypes: DatasetType[] = ['file', 'rest', 'virtual', 'metaOnly']
+const allDatasetTypes: DatasetType[] = ['file', 'rest', 'virtual', 'metaOnly']
+const datasetTypes = computed(() => isSimple.value ? allDatasetTypes.filter(dt => dt !== 'virtual') : allDatasetTypes)
 const datasetTypeIcons: Record<DatasetType, string> = {
   file: mdiFileUpload,
   rest: mdiAllInclusive,
@@ -552,35 +541,6 @@ const virtualChildren = ref<Array<{ id: string, title: string }>>([])
 const virtualFillSchema = ref(false)
 const virtualInitFromDesc = ref(false)
 const virtualInitFromAttachments = ref(false)
-const childrenSearch = ref('')
-const childrenDatasets = ref<any[]>([])
-
-const childrenItems = computed(() => {
-  return childrenDatasets.value.filter(
-    (d: any) => !virtualChildren.value.find(c => c.id === d.id)
-  )
-})
-
-const searchChildrenAction = useAsyncAction(async () => {
-  if (!account.value) return
-  const select = 'id,title,schema,status,attachmentsAsImage'
-  const datasetsRes = await $fetch<{ results: any[] }>(withQuery(`${$apiPath}/datasets`, {
-    q: childrenSearch.value,
-    size: 20,
-    select,
-    owner: `${account.value.type}:${account.value.id}`,
-    queryable: true
-  }))
-  childrenDatasets.value = datasetsRes.results
-})
-
-watch(childrenSearch, () => searchChildrenAction.execute())
-
-function addVirtualChild (child: any) {
-  if (!child?.id) return
-  virtualChildren.value.push({ id: child.id, title: child.title })
-  childrenSearch.value = ''
-}
 
 // ---- Meta only params ----
 const metaOnlyTitle = ref('')
@@ -600,6 +560,14 @@ const effectiveTitle = computed(() => {
   if (datasetType.value === 'rest') return restTitle.value || undefined
   if (datasetType.value === 'virtual') return virtualTitle.value || undefined
   if (datasetType.value === 'metaOnly') return metaOnlyTitle.value || undefined
+  return undefined
+})
+
+const paramsSubtitle = computed(() => {
+  if (datasetType.value === 'file' && file.value) {
+    return file.value.name.length > 30 ? file.value.name.slice(0, 27) + '...' : file.value.name
+  }
+  if (paramsValid.value) return t('completed')
   return undefined
 })
 
@@ -783,13 +751,19 @@ async function createVirtualDataset () {
 
   // Fill schema from children if requested
   if (virtualFillSchema.value) {
+    let allChildrenHaveAttachmentsAsImage = virtualChildren.value.length > 0
     for (const child of virtualChildren.value) {
-      const schema = await $fetch<any[]>(`${$apiPath}/datasets/${child.id}/schema`)
+      const childDataset = await $fetch<any>(`${$apiPath}/datasets/${child.id}`)
+      if (!childDataset.attachmentsAsImage) allChildrenHaveAttachmentsAsImage = false
+      const schema = childDataset.schema || []
       for (const property of schema) {
         if (!body.schema.find((p: any) => p.key === property.key)) {
           body.schema.push(property)
         }
       }
+    }
+    if (allChildrenHaveAttachmentsAsImage) {
+      body.attachmentsAsImage = true
     }
   }
 
@@ -828,6 +802,8 @@ async function createMetaOnlyDataset () {
 
 <i18n lang="yaml">
 fr:
+  home: Accueil
+  datasets: Jeux de données
   newDataset: Créer un jeu de données
   choseType: Choisissez le type de jeu de données que vous souhaitez créer.
   stepType: Type de jeu de données
@@ -850,6 +826,7 @@ fr:
   titleTooShort: Le titre doit contenir au moins 4 caractères
   filenameTitle: Utiliser le nom du fichier pour construire le titre du jeu de données
   attachmentsAsImage: Traiter les pièces jointes comme des images
+  formats: Formats supportés
   advancedOptions: Paramètres avancés
   escapeKeyAlgorithm: Algorithme de normalisation des clés
   escapeKeyAlgorithmHint: Paramètre utile uniquement pour une gestion avancée de la rétro-compatibilité d'API.
@@ -859,11 +836,10 @@ fr:
   lineOwnership: Permet de donner la propriété d'une ligne à des utilisateurs (scénarios collaboratifs)
   attachments: Accepter des pièces jointes
   attachment: Document numérique attaché
-  children: Jeux enfants
-  search: Rechercher
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
   virtualDatasetInitFromDesc: Copier la description du 1er jeu enfant
   virtualDatasetInitFromAttachments: Copier les pièces jointes du 1er jeu enfant
+  completed: complétés
   continue: Continuer
   ignore: Ignorer
   back: Retour
@@ -876,6 +852,8 @@ fr:
   creationError: "Erreur pendant la création du jeu de données"
   suggestArchive: Le fichier "{name}" est volumineux. Pensez à le compresser en .gz ou .zip avant l'envoi pour réduire le temps de transfert.
 en:
+  home: Home
+  datasets: Datasets
   newDataset: Create a dataset
   choseType: Choose the type of dataset you wish to create.
   stepType: Dataset type
@@ -898,6 +876,7 @@ en:
   titleTooShort: Title must be at least 4 characters
   filenameTitle: Use the file name to create the title of the dataset
   attachmentsAsImage: Process the attachments as images
+  formats: Supported formats
   advancedOptions: Advanced options
   escapeKeyAlgorithm: Key normalization algorithm
   escapeKeyAlgorithmHint: Only useful for advanced API backward-compatibility management.
@@ -907,11 +886,10 @@ en:
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
   attachments: Accept attachments
   attachment: Attachment
-  children: Children datasets
-  search: Search
   virtualDatasetFill: Initialize the schema with all columns from children
   virtualDatasetInitFromDesc: Copy the description of the first child
   virtualDatasetInitFromAttachments: Copy the attachments of the first child
+  completed: completed
   continue: Continue
   ignore: Ignore
   back: Back

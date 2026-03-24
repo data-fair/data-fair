@@ -22,12 +22,15 @@
 <script lang="ts" setup>
 import { ref, computed, watchEffect, effectScope, onScopeDispose } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import LayoutNavigationTop from '~/components/layout/layout-navigation-top.vue'
 import LayoutNavigationLeft from '~/components/layout/layout-navigation-left.vue'
 import { provideBreadcrumbs } from '~/composables/use-breadcrumbs'
 import { useNavigationItems } from '~/composables/use-navigation-items'
 import { useAgentNavigationTools } from '~/composables/use-agent-navigation-tools'
+import { useAgentDatasetTools } from '~/composables/use-agent-dataset-tools'
+import { useAgentDatasetDataTools } from '~/composables/use-agent-dataset-data-tools'
 import { $uiConfig, $apiPath } from '~/context'
 import DfAgentChatDrawer from '@data-fair/lib-vuetify-agents/DfAgentChatDrawer.vue'
 
@@ -39,6 +42,7 @@ const breadcrumbs = provideBreadcrumbs()
 const route = useRoute()
 const router = useRouter()
 const { navigationGroups } = useNavigationItems()
+const { locale } = useI18n()
 
 const agentChatFetch = ($uiConfig.agentsIntegration && session.account.value)
   ? useFetch<{ agentChat: boolean }>(`${$apiPath}/settings/${session.account.value.type}/${session.account.value.id}/agent-chat`)
@@ -50,7 +54,9 @@ watchEffect(() => {
   if (showAgentChat.value && !toolsScope) {
     toolsScope = effectScope()
     toolsScope.run(() => {
-      useAgentNavigationTools({ route, router, navigationGroups, breadcrumbItems: breadcrumbs.items })
+      useAgentNavigationTools({ route, router, navigationGroups, breadcrumbItems: breadcrumbs.items, locale })
+      useAgentDatasetTools(locale)
+      useAgentDatasetDataTools(locale)
     })
   } else if (!showAgentChat.value && toolsScope) {
     toolsScope.stop()

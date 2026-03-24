@@ -1,11 +1,10 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import type { NavGroup } from '~/composables/use-navigation-items'
 import type { BreadcrumbItem } from '~/composables/use-breadcrumbs'
 
-const messages = {
+const messages: Record<string, Record<string, string>> = {
   fr: {
     getCurrentLocation: 'Obtenir la localisation actuelle',
     listPages: 'Lister les pages',
@@ -23,10 +22,11 @@ interface AgentNavigationToolsDeps {
   router: Router
   navigationGroups: ComputedRef<NavGroup[]>
   breadcrumbItems: Ref<BreadcrumbItem[]>
+  locale: Ref<string>
 }
 
-export function useAgentNavigationTools ({ route, router, navigationGroups, breadcrumbItems }: AgentNavigationToolsDeps) {
-  const { t } = useI18n({ messages })
+export function useAgentNavigationTools ({ route, router, navigationGroups, breadcrumbItems, locale }: AgentNavigationToolsDeps) {
+  const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
 
   useAgentTool({
     name: 'get_current_location',
