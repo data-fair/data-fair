@@ -63,6 +63,11 @@ git add dev/resources/organizations.json
 git commit -m "test: add partners to test_org1 for permissions e2e tests"
 ```
 
+- [ ] **Step 3: STOP — alert the user**
+
+**BLOCKING:** After modifying `organizations.json`, the auth service (simple-directory) must be manually restarted in the dev environment for the changes to take effect. Alert the user and wait for confirmation before proceeding to Task 2.
+```
+
 ---
 
 ### Task 2: Create member-select.vue component
