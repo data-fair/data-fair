@@ -238,7 +238,12 @@
               <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="permissions">
                   <v-container fluid>
-                    <private-access v-model="application" />
+                    <permissions
+                      v-if="application"
+                      :resource="application"
+                      resource-type="applications"
+                      :disabled="!can('setPermissions')"
+                    />
                   </v-container>
                 </v-tabs-window-item>
 
@@ -344,6 +349,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
+import Permissions from '~/components/permissions/permissions.vue'
 import { mdiCalendarText, mdiCloudKey, mdiDatabase, mdiImage, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline } from '@mdi/js'
 import { provideApplicationStore } from '~/composables/application-store'
 import { useApplicationVersions } from '~/composables/application-versions'
