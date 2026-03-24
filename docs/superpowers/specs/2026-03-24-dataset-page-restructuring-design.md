@@ -25,7 +25,9 @@ Existing "Schéma" section gains a second tab:
 - Tab 1: "Schéma" — existing `dataset-schema-view` (unchanged)
 - Tab 2: "Enrichissements" — existing `dataset-extensions.vue` in readonly mode (editable in edit-metadata)
 
-SVG: **Team building_Two Color.svg**
+SVG: **Team building _Two Color.svg** (note space before underscore in filename)
+
+Note: The current code guards the schema section behind `d.finalizedAt`. This guard must be relaxed so schema is also visible in draft mode.
 
 ### 3. "CONSULTER LA DONNEE" section
 
@@ -39,7 +41,7 @@ New `layout-section-tabs` section with two tabs:
 - `/dataset/[id]/thumbnails` — shown if schema has image property
 - `/dataset/[id]/revisions` — shown if REST dataset with history
 
-Each card shows a title and icon. The old `/data` route is removed (or redirects to `/table`).
+Each card shows a title and icon. The old `/data` route is removed (or redirects to `/table`). The standalone "Applications" `layout-section-tabs` section is also removed (merged here as tab 2).
 
 Each individual route page embeds the corresponding d-frame visualization with proper breadcrumbs.
 
@@ -56,7 +58,7 @@ Restructured with additional tabs:
 - Tab 3: "Clé d'API en lecture" — moved from its own standalone section
 - Tab 4: "Sites de publication" — existing tab
 - Tab 5: "Catalogues" — existing tab (conditional)
-- Tab 6: "Jeux liés" — existing tab
+- Tab 6: "Voir aussi" — existing related datasets tab
 
 SVG: **Share_Two Color.svg**
 
@@ -66,8 +68,8 @@ Restructured with additional tabs:
 
 - Tab 1: "Journal" — existing `journal-view` (unchanged)
 - Tab 2: "Traçabilité" — moved from standalone `/events` page, embedded d-frame inline
-- Tab 3: "Notifications" — moved from actions dialog, rendered inline. **Review against legacy UI for feature parity.**
-- Tab 4: "Webhooks" — moved from actions dialog, rendered inline (conditional on admin). **Review against legacy UI for feature parity.**
+- Tab 3: "Notifications" — moved from actions dialog, converted from dialog-wrapped iframe to inline `d-frame` tab content. **Review against legacy UI for feature parity.**
+- Tab 4: "Webhooks" — moved from actions dialog, converted from dialog-wrapped iframe to inline `d-frame` tab content (conditional on admin). **Review against legacy UI for feature parity.**
 
 The standalone `/events` route is removed (or redirects to main page with Activité focus).
 
@@ -96,7 +98,7 @@ Hidden in draft mode:
 - Consulter la donnée section (with Applications tab)
 - Partage section
 - Activité section
-- "Edit metadata" link in actions menu
+- "Edit metadata" link in actions menu (route itself remains accessible if navigated to directly)
 
 ### 8. "Valider le brouillon" fix
 
@@ -113,13 +115,13 @@ Hidden in draft mode:
 
 When clicking "Save":
 
-1. A confirmation dialog appears: "Are you sure you want to save these changes?"
+1. A confirmation dialog always appears (regardless of AI configuration): "Are you sure you want to save these changes?"
 2. Dialog contains:
-   - "Summarize changes" button (only visible when AI assistant is configured)
+   - "Summarize changes" button (only visible when AI assistant is configured via `agentsIntegration`)
    - "Cancel" and "Save" action buttons
 3. "Summarize changes" behavior:
    - Compute jsdiff between stable serialization of `serverData` and `data`
-   - Send diff to agents service `/summary` endpoint
+   - Send diff to agents service `/summary` endpoint (endpoint exists externally — frontend work only)
    - Display AI-generated summary in the dialog
 4. User can then confirm or cancel
 
@@ -131,7 +133,7 @@ Remove `dataset-rest-upload-actions` from `dataset-actions.vue` on the main data
 
 | Section | SVG |
 |---------|-----|
-| Schema | Team building_Two Color.svg |
+| Schema | Team building _Two Color.svg |
 | Consulter la donnée | Data storage_Two Color.svg |
 | Partage | Share_Two Color.svg |
 | Activité | Settings_Monochromatic.svg (svgNoMargin) |
