@@ -37,7 +37,7 @@ Main permissions component, direct port of `ui-legacy/public/components/permissi
 {
   resource: any              // dataset or application object
   resourceType: 'datasets' | 'applications'
-  resourceUrl: string        // full API path e.g. $apiPath + '/datasets/' + id
+  resourceUrl: string        // full API path, always passed by parent (e.g. `${$apiPath}/datasets/${id}`)
   api: any | null            // fetched API doc (openapi JSON) for permission classes, null if not loaded
   disabled: boolean          // true if user lacks setPermissions
   hasPublicDeps?: boolean    // dataset is used in public apps
@@ -45,15 +45,28 @@ Main permissions component, direct port of `ui-legacy/public/components/permissi
 }
 ```
 
+Note: The legacy `simple` prop is dropped. The share-dataset wizard uses the separate `permissions-editor.vue` component for its simplified flow. This component always shows the full editor with the detailed mode toggle.
+
 **Emits:** `permissions` (array) — emitted after fetch and after every save.
 
 **Key implementation details:**
 - Fetches permissions from `GET {resourceUrl}/permissions` on mount
 - Saves via `PUT {resourceUrl}/permissions`
-- Fetches owner details from `$sdUrl/api/{ownerType}s/{ownerId}` when detailed mode is activated (to get departments, roles, partners)
-- Permission class map built from `api.paths[path][method]['x-permissionClass']` — same logic as legacy
-- All permission type checker functions ported: `isPublicPermission`, `isSharedInOrgPermission`, `isPrivateOrgContribPermission`, `isManageOwnLinesPermission`, `isContribWriteAllPermission`, `isContribWriteDataPermission`, `isContribWriteNoBreakingPermission`, `isInDepartmentPermission`
+- Fetches owner details from `${$sdUrl}/api/${resource.owner.type}s/${resource.owner.id}` when detailed mode is activated (to get departments, roles, partners). `$sdUrl` is imported from `~/context` (equals `$sitePath + '/simple-directory'`).
+- Permission class map built from `api.paths[path][method]['x-permissionClass']` AND `x-altPermissions` — same logic as legacy (lines 317-327 of legacy permissions.vue)
+- All permission type checker functions ported with exact semantics:
+  - `isPublicPermission`: `!p.type && p.classes?.includes('read') && p.classes?.includes('list')`
+  - `isSharedInOrgPermission`: org match + `!p.department` + read+list classes + `!p.roles` (must be falsy, not just empty array)
+  - `isPrivateOrgContribPermission`: org match + `isInDepartmentPermission(p)` + read+list classes + `p.roles?.includes('contrib')`
+  - `isManageOwnLinesPermission`: `p.type === 'user' && p.id === '*' && p.classes?.includes('manageOwnLines')`
+  - `isContribWriteDataPermission`: org match + dept match + contrib role + operations check — **REST datasets check `createLine`, non-REST check `writeData`** (dual check in both getter and setter)
+  - `isContribWriteNoBreakingPermission`: org match + dept match + contrib role + `includes('writeDescription') && !includes('writeDescriptionBreaking')`
+  - `isContribWriteAllPermission`: org match + dept match + contrib role + `classes.includes('write') && operations.includes('delete')`
+  - `isInDepartmentPermission(p)`: `!p.department || (!resource.owner.department && p.department === '-') || p.department === resource.owner.department`
 - `contribProfileItems` conditional on `resource.isRest`, `resource.file`, `resource.isVirtual`
+- Warning conditions (matching legacy exactly):
+  - `hasPrivateParents && !isPublic` → "warningPublicApp" (app uses private datasets)
+  - `hasPublicDeps && isPublic` → "warningPrivateDataset" (dataset used in public apps — note: `&& isPublic` is required, unlike the current buggy `permissions-editor.vue` which omits it)
 - Visibility items disable private options when `hasPublicDeps && isPublic`
 - Visibility items disable public when `hasPrivateParents && !isPublic`
 
@@ -130,8 +143,8 @@ With:
 ```
 
 The dataset page needs to:
-- Fetch `datasetApi` from `GET datasets/{id}/private-api-docs.json`
-- Compute `hasPublicDeps` — check if any applications using this dataset are public (use existing `applicationsFetch` from the store, check for `visibility === 'public'` or equivalent)
+- Fetch `datasetApi` from `GET datasets/{id}/private-api-docs.json` (lazy, only when detailed mode is activated — passed as null until then)
+- Compute `hasPublicDeps`: use the existing `applicationsFetch` from the dataset store (fetches apps that reference this dataset). An application is "public" if it has a public permission entry (no `type`, classes include `read`+`list`). Alternatively, check if any returned applications have `visibility === 'public'` if the API returns that field. The parent page computes this and passes it as a boolean prop.
 
 ### Application page (`ui/src/pages/application/[id]/index.vue`)
 
@@ -193,50 +206,66 @@ All tests use the `goToWithAuth` fixture from `tests/fixtures/login.ts`.
    - Open Share > Permissions tab
    - Verify visibility dropdown shows "uniquement les administrateurs de l'organisation Test Org 1"
 
-2. **Change visibility to sharedInOrg**
+2. **Change visibility to privateOrgContrib**
+   - Select "les administrateurs et contributeurs de l'organisation Test Org 1"
+   - Verify via API: permissions include org permission with contrib role + read+list+readAdvanced classes
+
+3. **Change visibility to sharedInOrg**
    - Select "tous les utilisateurs de l'organisation Test Org 1"
    - Verify selection persists after page reload
-   - Verify via API that permissions include org-wide read+list permission
+   - Verify via API that permissions include org-wide read+list permission (no roles filter)
 
-3. **Change visibility to public**
+4. **Change visibility to public**
    - Select "tout le monde"
    - Verify via API that public read+list permission exists
 
-4. **Change visibility back to privateOrg**
+5. **Change visibility back to privateOrg**
    - Select "uniquement les administrateurs"
    - Verify public permission removed via API
 
 #### Test Group 2: Contributor Profiles (Dataset)
 
-5. **Default contrib profile is adminOnly**
+6. **Default contrib profile is adminOnly**
    - Verify contrib profile dropdown shows "uniquement les administrateurs"
 
-6. **Set contribWriteData profile**
+7. **Set contribWriteData profile**
    - Select "les contributeurs peuvent modifier les données compatibles"
    - Verify via API: org permission with contrib role + writeData operations
 
-7. **Set contribWriteAll profile**
+8. **Set contribWriteNoBreaking profile**
+   - Select "les contributeurs peuvent tout modifier sauf les changements incompatibles"
+   - Verify via API: org permission with contrib role + writeData ops + writeDescription + postMetadataAttachment + deleteMetadataAttachment
+
+9. **Set contribWriteAll profile**
    - Select "les contributeurs peuvent tout modifier et supprimer"
    - Verify via API: org permission with contrib role + write class + delete operation
 
-#### Test Group 3: Detailed Mode (Dataset)
+#### Test Group 3: Contributor Profile Availability
 
-8. **Enable detailed mode**
-   - Toggle "Édition détaillée des permissions"
-   - Verify permissions data table appears
-   - Verify "Ajouter des permissions" button appears
+10. **contribWriteData option absent for virtual-only dataset**
+    - Create a virtual dataset via API (no file, not REST)
+    - Navigate to its permissions page
+    - Verify contribWriteData option is NOT in the dropdown
+    - Verify contribWriteNoBreaking IS available (virtual datasets support it)
 
-9. **Add a user permission by email**
-   - Click add permission
-   - Select scope "Utilisateur"
-   - Select "Utilisateur désigné par son adresse email"
-   - Enter "test_user2@test.com"
-   - Select classes: read, list
-   - Click validate
-   - Verify new row in table shows "Utilisateur test_user2@test.com"
-   - Verify via API
+#### Test Group 4: Detailed Mode (Dataset)
 
-10. **Add an organization member permission**
+11. **Enable detailed mode**
+    - Toggle "Édition détaillée des permissions"
+    - Verify permissions data table appears
+    - Verify "Ajouter des permissions" button appears
+
+12. **Add a user permission by email**
+    - Click add permission
+    - Select scope "Utilisateur"
+    - Select "Utilisateur désigné par son adresse email"
+    - Enter "test_user2@test.com"
+    - Select classes: read, list
+    - Click validate
+    - Verify new row in table shows "Utilisateur test_user2@test.com"
+    - Verify via API
+
+13. **Add an organization member permission**
     - Click add permission
     - Select scope "Utilisateur"
     - Select "Parmi les membres de Test Org 1"
@@ -245,7 +274,7 @@ All tests use the `goToWithAuth` fixture from `tests/fixtures/login.ts`.
     - Click validate
     - Verify new row in table
 
-11. **Add an all-users permission**
+14. **Add an all-users permission**
     - Click add permission
     - Select scope "Utilisateur"
     - Select "Tous les utilisateurs de la plateforme non anonymes"
@@ -253,7 +282,7 @@ All tests use the `goToWithAuth` fixture from `tests/fixtures/login.ts`.
     - Click validate
     - Verify via API: `{type:'user', id:'*', classes:['read','list']}`
 
-12. **Add a partner organization permission**
+15. **Add a partner organization permission**
     - Click add permission
     - Select scope "Organisation"
     - Select "Parmi les organisations partenaires"
@@ -263,7 +292,7 @@ All tests use the `goToWithAuth` fixture from `tests/fixtures/login.ts`.
     - Verify new row shows "Organisation Test Org 2"
     - Verify via API
 
-13. **Add owner org permission with department filter**
+16. **Add owner org permission with department filter**
     - Click add permission
     - Select scope "Organisation"
     - Select "Organisation propriétaire"
@@ -273,21 +302,21 @@ All tests use the `goToWithAuth` fixture from `tests/fixtures/login.ts`.
     - Click validate
     - Verify row shows department info
 
-14. **Edit a permission**
+17. **Edit a permission**
     - Click edit icon on an existing permission row
     - Change classes (add write)
     - Click validate
     - Verify table updates
     - Verify via API
 
-15. **Delete a permission**
+18. **Delete a permission**
     - Click delete icon on a permission row
     - Verify row disappears
     - Verify via API
 
-#### Test Group 4: Expert Mode (Dialog)
+#### Test Group 5: Expert Mode (Dialog)
 
-16. **Toggle expert mode in permission dialog**
+19. **Toggle expert mode in permission dialog**
     - Open add permission dialog
     - Toggle "Mode expert"
     - Verify operations dropdown appears with grouped operations
@@ -295,49 +324,61 @@ All tests use the `goToWithAuth` fixture from `tests/fixtures/login.ts`.
     - Click validate
     - Verify via API: permission has `operations` array
 
-#### Test Group 5: Manage Own Lines (REST Dataset)
+#### Test Group 6: Manage Own Lines (REST Dataset)
 
-17. **Toggle manage own lines**
+20. **Toggle manage own lines**
     - Create a REST dataset with `lineOwnership` enabled via API
     - Navigate to its permissions page
     - Toggle "Permettre à tous les utilisateurs externes..."
     - Verify via API: `{type:'user', id:'*', classes:['manageOwnLines'], operations:['readSafeSchema']}`
 
-#### Test Group 6: Application Permissions
+#### Test Group 7: Application Permissions
 
-18. **Application visibility and contrib profiles work identically**
+21. **Application visibility and contrib profiles work identically**
     - Navigate to application page as test_user1
     - Verify visibility dropdown works
     - Verify contrib profile dropdown works (for org-owned app)
 
-19. **Application detailed permissions**
+22. **Application detailed permissions**
     - Enable detailed mode
     - Add a user permission
     - Verify via API
 
-#### Test Group 7: Warnings
+#### Test Group 8: Warnings
 
-20. **Warning when making dataset private while used in public app**
+23. **Warning when making dataset private while used in public app**
     - Make dataset public, configure an application that uses it, make app public
     - Navigate to dataset permissions
     - Attempt to set visibility to private
     - Verify warning message appears
 
-21. **Warning when making app public while using private datasets**
+24. **Warning when making app public while using private datasets**
     - Make a dataset private
     - Configure an application using that dataset
     - Navigate to app permissions
     - Verify warning about private datasets
 
-#### Test Group 8: Auto-validation Rules
+#### Test Group 9: Auto-validation Rules
 
-22. **Selecting list class auto-adds read**
+25. **Selecting list class auto-adds read**
     - In permission dialog, select only "list" class
     - Verify "read" is automatically selected
 
-#### Test Group 9: Access Control
+26. **Selecting list operation auto-adds readDescription**
+    - In permission dialog expert mode, select only "list" operation
+    - Verify "readDescription" is automatically added
 
-23. **Non-admin cannot edit permissions**
+#### Test Group 10: Auto-detailed-mode Activation
+
+27. **Detailed mode auto-enables for non-standard permissions**
+    - Via API, add a non-standard permission to the dataset (e.g., user permission with email + specific operations that don't match any simple preset)
+    - Navigate to dataset permissions page
+    - Verify detailed mode toggle is automatically enabled
+    - Verify the permission table shows the non-standard permission
+
+#### Test Group 11: Access Control
+
+28. **Non-admin cannot edit permissions**
     - Log in as test_user5 (contrib of test_org1)
     - Navigate to org-owned dataset
     - Verify permission controls are disabled
@@ -350,6 +391,8 @@ All translations ported from legacy `permissions.vue` and `permission-dialog.vue
 - Permission class names (list, read, readAdvanced, write, admin, use, manageOwnLines)
 - Table labels (scope, actions, allRoles, restrictedRoles)
 - Detailed mode, add/edit/cancel/validate
+
+**Bug fix:** The legacy English i18n has `cancel: Annuler` (French). Fix this to `cancel: Cancel` in the new component.
 
 ## Out of Scope
 
