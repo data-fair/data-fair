@@ -26,7 +26,7 @@
         class="pb-0 pt-2"
       >
         <p>{{ t('captureMsg') }}</p>
-        <v-row dense>
+        <v-row density="comfortable">
           <v-col>
             <v-text-field
               v-model.number="width"

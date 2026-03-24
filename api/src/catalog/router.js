@@ -7,9 +7,9 @@ import catalogApiDocs from '../../contract/site-catalog-api-docs.js'
 import dcatContext from '../misc/utils/dcat/context.js'
 import mongo from '#mongo'
 import { reqSession } from '@data-fair/lib-express'
-import { findDatasets } from '../../datasets/service.js'
-import * as apiKeyUtils from '../utils/api-key.ts'
-import * as cacheHeaders from '../utils/cache-headers.js'
+import { findDatasets } from '../datasets/service.js'
+import * as apiKeyUtils from '../misc/utils/api-key.ts'
+import * as cacheHeaders from '../misc/utils/cache-headers.js'
 
 const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
 

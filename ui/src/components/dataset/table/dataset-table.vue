@@ -203,7 +203,7 @@
 
       <v-row
         class="ma-0"
-        dense
+        density="comfortable"
       >
         <v-col
           v-for="result in results"

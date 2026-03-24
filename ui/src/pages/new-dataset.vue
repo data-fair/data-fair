@@ -48,7 +48,7 @@
             <p class="text-body-large mb-4">
               {{ t('choseType') }}
             </p>
-            <v-row dense>
+            <v-row density="comfortable">
               <v-col
                 v-for="type of datasetTypes"
                 :key="type"
@@ -416,6 +416,7 @@
 import { mdiAllInclusive, mdiCancel, mdiChevronDown, mdiChevronUp, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
+import { $apiPath } from '~/context'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -546,7 +547,7 @@ const virtualInitFromAttachments = ref(false)
 const metaOnlyTitle = ref('')
 
 // ---- Owner ----
-const owner = ref(account.value ? { type: account.value.type, id: account.value.id, ...(account.value.department ? { department: account.value.department } : {}) } : null)
+const owner = ref(account.value ? { type: account.value.type, id: account.value.id, name: account.value.name, ...(account.value.department ? { department: account.value.department } : {}) } : null)
 
 // ---- Conflicts ----
 const conflictsOk = ref(false)
