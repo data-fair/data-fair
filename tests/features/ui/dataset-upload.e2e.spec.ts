@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth } from '../../support/axios.ts'
+import { axiosAuth, clean } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 import path from 'path'
 
@@ -8,7 +8,8 @@ const testFile = path.resolve('tests/resources/datasets/dataset1.csv')
 test.describe('dataset upload dialog stepper', () => {
   let datasetId: string
 
-  test.beforeAll(async () => {
+  test.beforeEach(async () => {
+    await clean()
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id

@@ -1,10 +1,11 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth } from '../../support/axios.ts'
+import { axiosAuth, clean } from '../../support/axios.ts'
 
 test.describe('application detail pages', () => {
   let applicationId: string
 
-  test.beforeAll(async () => {
+  test.beforeEach(async () => {
+    await clean()
     const ax = await axiosAuth('test_user1@test.com')
 
     // Create a base application first (use an existing one or create)
@@ -20,26 +21,20 @@ test.describe('application detail pages', () => {
     applicationId = res.data.id
   })
 
-  test.afterAll(async () => {
-    if (!applicationId) return
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.delete(`api/v1/applications/${applicationId}`).catch(() => {})
-  })
-
   test('application index page loads with sections', async ({ page, goToWithAuth }) => {
-    test.skip(!applicationId, 'No application created')
+    test.skip(!applicationId, 'No base application available')
     await goToWithAuth(`/data-fair/application/${applicationId}`, 'test_user1')
     await expect(page.getByText('Test Application E2E')).toBeVisible({ timeout: 10000 })
   })
 
   test('application config page loads', async ({ page, goToWithAuth }) => {
-    test.skip(!applicationId, 'No application created')
+    test.skip(!applicationId, 'No base application available')
     await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_user1')
     await expect(page.locator('d-frame, iframe')).toBeVisible({ timeout: 10000 })
   })
 
   test('application api-doc page loads', async ({ page, goToWithAuth }) => {
-    test.skip(!applicationId, 'No application created')
+    test.skip(!applicationId, 'No base application available')
     await goToWithAuth(`/data-fair/application/${applicationId}/api-doc`, 'test_user1')
     await expect(page.locator('d-frame, iframe')).toBeVisible({ timeout: 10000 })
   })

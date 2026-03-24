@@ -1,12 +1,12 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth } from '../../support/axios.ts'
+import { axiosAuth, clean } from '../../support/axios.ts'
 
 test.describe('applications list page', () => {
   let applicationId: string
 
-  test.beforeAll(async () => {
+  test.beforeEach(async () => {
+    await clean()
     const ax = await axiosAuth('test_user1@test.com')
-    // Use an existing base application if available, otherwise skip
     const baseApps = await ax.get('/api/v1/base-applications', { params: { size: 1 } })
     if (!baseApps.data.results?.length) return
     const baseApp = baseApps.data.results[0]
@@ -15,13 +15,6 @@ test.describe('applications list page', () => {
       title: 'Test Application E2E List',
     })
     applicationId = res.data.id
-  })
-
-  test.afterAll(async () => {
-    if (applicationId) {
-      const ax = await axiosAuth('test_user1@test.com')
-      await ax.delete(`/api/v1/applications/${applicationId}`).catch(() => {})
-    }
   })
 
   test('page loads and shows search and sort controls', async ({ page, goToWithAuth }) => {
@@ -33,20 +26,20 @@ test.describe('applications list page', () => {
   })
 
   test('page loads and displays application cards when applications exist', async ({ page, goToWithAuth }) => {
-    test.skip(!applicationId, 'No application created in beforeAll')
+    test.skip(!applicationId, 'No base application available')
     await goToWithAuth('/data-fair/applications', 'test_user1')
     // At least one application card should appear
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('results count is displayed when applications exist', async ({ page, goToWithAuth }) => {
-    test.skip(!applicationId, 'No application created in beforeAll')
+    test.skip(!applicationId, 'No base application available')
     await goToWithAuth('/data-fair/applications', 'test_user1')
     await expect(page.getByText(/applications/)).toBeVisible({ timeout: 10000 })
   })
 
   test('search filters results (q param appears in URL)', async ({ page, goToWithAuth }) => {
-    test.skip(!applicationId, 'No application created in beforeAll')
+    test.skip(!applicationId, 'No base application available')
     await goToWithAuth('/data-fair/applications', 'test_user1')
     const searchField = page.getByRole('textbox', { name: 'Rechercher' })
     await expect(searchField).toBeVisible({ timeout: 10000 })

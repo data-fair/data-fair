@@ -3,18 +3,17 @@ import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 
 test.describe('datasets list page', () => {
-  test.beforeAll(async () => {
+  test.beforeEach(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
     // Seed 3 datasets with distinct titles for search/sort testing
     await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'Alpha Dataset' })
     await sendDataset('datasets/dataset2.csv', ax, {}, { title: 'Beta Dataset' })
     await sendDataset('datasets/dates.csv', ax, {}, { title: 'Gamma Dataset' })
-    await checkPendingTasks()
   })
 
-  test.afterAll(async () => {
-    await checkPendingTasks()
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
   test('page loads and shows search and sort controls in right navigation', async ({ page, goToWithAuth }) => {

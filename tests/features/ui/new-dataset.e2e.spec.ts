@@ -6,7 +6,7 @@ import path from 'path'
 const testFile = path.resolve('tests/resources/datasets/dataset1.csv')
 
 test.describe('new dataset stepper', () => {
-  test.beforeAll(async () => {
+  test.beforeEach(async () => {
     await clean()
   })
 
