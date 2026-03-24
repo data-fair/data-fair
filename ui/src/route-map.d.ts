@@ -495,6 +495,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/update-dataset': RouteRecordInfo<
+      '/update-dataset',
+      '/update-dataset',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
   }
 
   /**
@@ -913,6 +920,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/subscription.vue': {
       routes:
         | '/subscription'
+      views:
+        | never
+    }
+    'src/pages/update-dataset.vue': {
+      routes:
+        | '/update-dataset'
       views:
         | never
     }

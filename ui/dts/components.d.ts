@@ -14,6 +14,7 @@ declare module 'vue' {
     ApplicationCard: typeof import('./../src/components/application/application-card.vue')['default']
     ApplicationConfig: typeof import('./../src/components/application/application-config.vue')['default']
     ApplicationFacets: typeof import('./../src/components/application/application-facets.vue')['default']
+    ApplicationListItem: typeof import('./../src/components/application/application-list-item.vue')['default']
     ApplicationProtectedLinks: typeof import('./../src/components/application/application-protected-links.vue')['default']
     ApplicationPublicationSites: typeof import('./../src/components/application/application-publication-sites.vue')['default']
     CharsMeasurer: typeof import('./../src/components/dataset/table/chars-measurer.vue')['default']

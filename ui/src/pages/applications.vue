@@ -1,205 +1,198 @@
 <template>
-  <v-container fluid>
-    <v-row>
-      <!-- Sidebar: facets (desktop only) -->
+  <v-container data-iframe-height>
+    <!-- Skeleton loader (initial load) -->
+    <v-row
+      v-if="catalog.loading.value && !catalog.initialized.value"
+      class="d-flex align-stretch"
+    >
       <v-col
-        v-if="$vuetify.display.mdAndUp"
-        style="max-width: 256px; min-width: 256px;"
-        class="pr-4"
+        v-for="i in 12"
+        :key="i"
+        cols="12"
+        sm="6"
+        md="4"
+        xl="3"
+        class="d-flex"
       >
-        <application-facets
-          v-model:owner="facetOwner"
-          v-model:base-application="facetBaseApplication"
-          v-model:visibility="facetVisibility"
-          v-model:topics="facetTopics"
-          v-model:publication-sites="facetPublicationSites"
-          v-model:requested-publication-sites="facetRequestedPublicationSites"
-          :facets="catalog.facets.value"
-        />
-      </v-col>
-
-      <!-- Main content -->
-      <v-col>
-        <!-- Toolbar -->
-        <v-row
-          align="center"
-          class="mb-4"
-        >
-          <v-col
-            cols="12"
-            sm="5"
-            md="4"
-          >
-            <v-text-field
-              v-model="searchInput"
-              :label="t('search')"
-              :prepend-inner-icon="mdiMagnify"
-              clearable
-              hide-details
-              density="compact"
-              variant="outlined"
-            />
-          </v-col>
-          <v-col
-            cols="12"
-            sm="4"
-            md="3"
-          >
-            <v-select
-              v-model="sort"
-              :label="t('sort')"
-              :items="sortItems"
-              hide-details
-              density="compact"
-              variant="outlined"
-            />
-          </v-col>
-          <v-spacer />
-          <!-- Filter button (mobile) -->
-          <v-col
-            v-if="$vuetify.display.smAndDown"
-            cols="auto"
-          >
-            <v-btn
-              :icon="mdiFilterVariant"
-              variant="text"
-              @click="showFilters = true"
-            />
-          </v-col>
-          <v-col
-            v-if="canContribDep"
-            cols="auto"
-          >
-            <v-btn
-              color="primary"
-              :prepend-icon="mdiPlus"
-              to="/new-application"
-            >
-              {{ t('newApplication') }}
-            </v-btn>
-          </v-col>
-        </v-row>
-
-        <!-- Results count -->
-        <div
-          v-if="catalog.totalCount.value > 0"
-          class="text-body-medium text-medium-emphasis mb-3"
-        >
-          {{ t('resultsCount', { count: catalog.totalCount.value }) }}
-        </div>
-
-        <!-- Skeleton loader -->
-        <v-row
-          v-if="catalog.loading.value && !catalog.initialized.value"
-          class="d-flex align-stretch"
-        >
-          <v-col
-            v-for="i in 12"
-            :key="i"
-            cols="12"
-            sm="6"
-            md="4"
-            class="d-flex"
-          >
-            <v-skeleton-loader
-              class="w-100"
-              height="200"
-              type="article"
-            />
-          </v-col>
-        </v-row>
-
-        <!-- Empty state -->
-        <v-row
-          v-else-if="catalog.initialized.value && !catalog.totalCount.value"
-          justify="center"
-          class="mt-6"
-        >
-          <v-col
-            cols="auto"
-            class="text-center"
-          >
-            <div class="text-title-medium">
-              {{ q ? t('noResult') : t('noApplication') }}
-            </div>
-          </v-col>
-        </v-row>
-
-        <!-- Grid view -->
-        <template v-else>
-          <v-row class="d-flex align-stretch">
-            <v-col
-              v-for="application in catalog.displayedItems.value"
-              :key="application.id"
-              cols="12"
-              sm="6"
-              md="4"
-              class="d-flex"
-            >
-              <application-card
-                :application="application"
-                :show-owner="showOwner"
-              />
-            </v-col>
-          </v-row>
-        </template>
-
-        <!-- Loading spinner -->
-        <div
-          v-if="catalog.loading.value && catalog.initialized.value"
-          class="d-flex justify-center my-4"
-        >
-          <v-progress-circular
-            indeterminate
-            color="primary"
-          />
-        </div>
-
-        <!-- Infinite scroll sentinel -->
-        <div
-          v-if="catalog.hasMore.value && !catalog.loading.value"
-          v-intersect:quiet="(isIntersecting: boolean) => isIntersecting && catalog.loadMore()"
+        <v-skeleton-loader
+          class="w-100"
+          height="200"
+          type="article"
         />
       </v-col>
     </v-row>
 
-    <!-- Mobile filters dialog -->
-    <v-dialog
-      v-model="showFilters"
-      max-width="400"
+    <!-- Empty state -->
+    <div
+      v-else-if="catalog.initialized.value && !catalog.totalCount.value"
+      class="d-flex flex-column align-center justify-center mt-6"
     >
-      <v-card>
-        <v-card-title>{{ t('filters') }}</v-card-title>
-        <v-card-text>
-          <application-facets
-            v-model:owner="facetOwner"
-            v-model:base-application="facetBaseApplication"
-            v-model:visibility="facetVisibility"
-            v-model:topics="facetTopics"
-            v-model:publication-sites="facetPublicationSites"
-            v-model:requested-publication-sites="facetRequestedPublicationSites"
-            :facets="catalog.facets.value"
+      <template v-if="q">
+        <div class="text-title-medium">
+          {{ t('noResult') }}
+        </div>
+      </template>
+      <template v-else>
+        <v-icon
+          size="64"
+          color="grey"
+          class="mb-4"
+        >
+          {{ mdiImageMultiple }}
+        </v-icon>
+        <div class="text-title-medium">
+          {{ t('noApplication') }}
+        </div>
+        <v-btn
+          v-if="canContribDep"
+          color="primary"
+          :prepend-icon="mdiPlus"
+          to="/new-application"
+          class="mt-4"
+        >
+          {{ t('newApplication') }}
+        </v-btn>
+      </template>
+    </div>
+
+    <!-- Content: results count + grid/list -->
+    <template v-else>
+      <!-- Results count -->
+      <div class="text-body-medium text-medium-emphasis mb-3">
+        {{ t('applications', { count: catalog.totalCount.value }) }}
+      </div>
+
+      <!-- Grid view -->
+      <v-row
+        v-if="viewMode === 'grid'"
+        class="d-flex align-stretch"
+      >
+        <v-col
+          v-for="application in catalog.displayedItems.value"
+          :key="application.id"
+          cols="12"
+          sm="6"
+          md="4"
+          xl="3"
+          class="d-flex"
+        >
+          <application-card
+            :application="application"
+            :show-owner="showOwner"
           />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="showFilters = false">
-            {{ t('close') }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+        </v-col>
+      </v-row>
+
+      <!-- List view -->
+      <v-list
+        v-else
+        lines="two"
+      >
+        <application-list-item
+          v-for="application in catalog.displayedItems.value"
+          :key="application.id"
+          :application="application"
+          :show-owner="showOwner"
+        />
+      </v-list>
+    </template>
+
+    <!-- Loading spinner (infinite scroll) -->
+    <div
+      v-if="catalog.loading.value && catalog.initialized.value"
+      class="d-flex justify-center my-4"
+    >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+      />
+    </div>
+
+    <!-- Infinite scroll sentinel -->
+    <div
+      v-if="catalog.hasMore.value && !catalog.loading.value"
+      v-intersect:quiet="(isIntersecting: boolean) => isIntersecting && catalog.loadMore()"
+    />
+
+    <!-- Right navigation: actions, search, sort, facets, view toggle -->
+    <df-navigation-right v-if="catalog.initialized.value">
+      <!-- New application action -->
+      <v-list-item
+        v-if="canContribDep"
+        to="/new-application"
+        link
+      >
+        <template #prepend>
+          <v-icon
+            color="primary"
+            :icon="mdiPlusCircle"
+          />
+        </template>
+        {{ t('newApplication') }}
+      </v-list-item>
+
+      <!-- Search field -->
+      <df-search-field
+        v-model="searchInput"
+        class="mt-4"
+      />
+
+      <!-- Sort select -->
+      <v-select
+        v-model="sort"
+        :label="t('sort')"
+        :items="sortItems"
+        class="mt-4 mx-4"
+        :rounded="false"
+      />
+
+      <!-- Facets -->
+      <application-facets
+        v-model:owner="facetOwner"
+        v-model:base-application="facetBaseApplication"
+        v-model:visibility="facetVisibility"
+        v-model:topics="facetTopics"
+        v-model:publication-sites="facetPublicationSites"
+        v-model:requested-publication-sites="facetRequestedPublicationSites"
+        :facets="catalog.facets.value"
+        class="mt-4 mx-4"
+      />
+
+      <!-- View toggle -->
+      <div class="d-flex justify-end mx-4 mt-4">
+        <v-btn-toggle
+          v-model="viewMode"
+          density="compact"
+          mandatory
+        >
+          <v-btn
+            value="grid"
+            :icon="mdiViewGrid"
+          />
+          <v-btn
+            value="list"
+            :icon="mdiViewList"
+          />
+        </v-btn-toggle>
+      </div>
+    </df-navigation-right>
   </v-container>
 </template>
 
 <script lang="ts" setup>
-import { mdiFilterVariant, mdiMagnify, mdiPlus } from '@mdi/js'
 import type { Application } from '#api/types'
+import { useDisplay } from 'vuetify'
+import { mdiImageMultiple, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
+import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
+import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
+import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
 
 const { t } = useI18n()
+const { name: breakpointName } = useDisplay()
 const session = useSession()
 const account = session.account
 const { canContribDep } = usePermissions()
+const breadcrumbs = useBreadcrumbs()
 
 // Search with debounce
 const q = useStringSearchParam('q')
@@ -212,7 +205,17 @@ watch(searchInput, (val) => {
 watch(q, (val) => { if (val !== searchInput.value) searchInput.value = val || '' })
 
 const sort = useStringSearchParam('sort', 'createdAt:-1')
-const showFilters = ref(false)
+
+// View mode persisted per user
+const viewModeKey = computed(() => {
+  const a = account.value
+  return a ? `${a.type}:${a.id}:applications:render-mode` : 'df-applications-view'
+})
+const viewMode = ref(localStorage.getItem(viewModeKey.value) || 'grid')
+watch(viewMode, (v) => { localStorage.setItem(viewModeKey.value, v) })
+
+// Responsive page size matching legacy breakpoints
+const pageSize = computed(() => ({ xs: 12, sm: 12, md: 12, lg: 15, xl: 24, xxl: 24 }[breakpointName.value] || 12))
 
 // Facet filter URL params
 const facetOwner = useStringsArraySearchParam('owner')
@@ -222,6 +225,7 @@ const facetTopics = useStringsArraySearchParam('topics')
 const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
 
+// Owner scoping: default to current account unless facet overrides
 const ownerParam = computed(() => {
   if (facetOwner.value?.length) return facetOwner.value.join(',')
   const a = account.value
@@ -252,7 +256,13 @@ const catalog = useCatalogList<Application>({
   fetchUrl: computed(() => $apiPath + '/applications'),
   query: applicationsQuery,
   facetsFields: 'visibility,topics,publicationSites,requestedPublicationSites,base-application,owner',
+  pageSize,
 })
+
+// Breadcrumb updates
+watch(() => catalog.totalCount.value, (count) => {
+  breadcrumbs.receive({ breadcrumbs: [{ text: t('applications', { count }) }] })
+}, { immediate: true })
 
 const sortItems = computed(() => [
   { title: t('sortCreatedAtDesc'), value: 'createdAt:-1' },
@@ -266,14 +276,11 @@ const sortItems = computed(() => [
 
 <i18n lang="yaml">
 fr:
-  search: Rechercher
   sort: Trier par
-  filters: Filtres
-  close: Fermer
   newApplication: Nouvelle application
   noApplication: Vous n'avez pas encore configuré d'application.
   noResult: Aucun résultat ne correspond à la recherche.
-  resultsCount: "{count} applications"
+  applications: "{count} applications"
   sortCreatedAtDesc: Création (plus récent)
   sortCreatedAtAsc: Création (plus ancien)
   sortUpdatedAtDesc: Mise à jour (plus récente)
@@ -281,14 +288,11 @@ fr:
   sortTitleAsc: Titre (A → Z)
   sortTitleDesc: Titre (Z → A)
 en:
-  search: Search
   sort: Sort by
-  filters: Filters
-  close: Close
   newApplication: New application
   noApplication: You haven't configured any application yet.
   noResult: No result matches the search.
-  resultsCount: "{count} applications"
+  applications: "{count} applications"
   sortCreatedAtDesc: Creation (newest)
   sortCreatedAtAsc: Creation (oldest)
   sortUpdatedAtDesc: Update (newest)

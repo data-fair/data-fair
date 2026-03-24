@@ -41,7 +41,7 @@ export interface NavGroup {
 
 export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[]> } {
   const { t, locale } = useI18n()
-  const session = useSessionAuthenticated()
+  const session = useSession()
   const org = session.organization
   const { canContrib, canAdmin, canContribDep, canAdminDep } = usePermissions()
 
