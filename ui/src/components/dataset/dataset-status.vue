@@ -122,28 +122,27 @@
                 </p>
               </template>
             </v-col>
-            <v-col class="shrink text-center">
-              <v-btn
-                v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
-                :disabled="!can('cancelDraft').value"
-                :color="(draftError || draftValidationError) ? 'default' : 'warning'"
-                class="ma-1"
-                elevation="0"
-                @click="cancelDraft"
-              >
-                {{ t('cancelDraft') }}
-              </v-btn>
-              <v-btn
-                v-if="dataset.status === 'finalized'"
-                :disabled="!can('validateDraft').value"
-                :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
-                class="ma-1"
-                @click="validateDraft"
-              >
-                {{ t('validateDraft') }}
-              </v-btn>
+            <v-col cols="12">
+              <div class="d-flex justify-end ga-2 mt-4">
+                <v-btn
+                  v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
+                  :disabled="!can('cancelDraft').value"
+                  :color="(draftError || draftValidationError) ? 'default' : 'warning'"
+                  elevation="0"
+                  @click="cancelDraft.execute()"
+                >
+                  {{ t('cancelDraft') }}
+                </v-btn>
+                <v-btn
+                  v-if="dataset.status === 'finalized'"
+                  :disabled="!can('validateDraft').value"
+                  :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
+                  @click="validateDraft.execute()"
+                >
+                  {{ t('validateDraft') }}
+                </v-btn>
+              </div>
             </v-col>
-            <v-col class="shrink" />
           </v-row>
         </v-alert>
       </v-col>
