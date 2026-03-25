@@ -144,30 +144,6 @@
           </v-btn>
         </v-list-item>
       </v-list>
-      <v-list
-        density="compact"
-        bg-color="background"
-      >
-        <v-list-subheader>{{ t('navigation') }}</v-list-subheader>
-        <v-list-item :to="`/dataset/${route.params.id}`">
-          <template #prepend>
-            <v-icon
-              color="primary"
-              :icon="mdiHome"
-            />
-          </template>
-          <v-list-item-title>{{ t('backToHome') }}</v-list-item-title>
-        </v-list-item>
-        <v-list-item :to="`/dataset/${route.params.id}/data`">
-          <template #prepend>
-            <v-icon
-              color="primary"
-              :icon="mdiTable"
-            />
-          </template>
-          <v-list-item-title>{{ t('viewData') }}</v-list-item-title>
-        </v-list-item>
-      </v-list>
       <layout-toc :sections="sections" />
     </df-navigation-right>
   </v-container>
@@ -185,9 +161,6 @@ fr:
   virtual: Jeu de données virtuel
   save: Enregistrer
   saved: Les modifications ont été enregistrées
-  navigation: NAVIGATION
-  backToHome: Retour à la fiche
-  viewData: Voir les données
 en:
   datasets: Datasets
   editMetadata: Edit metadata
@@ -199,14 +172,11 @@ en:
   virtual: Virtual dataset
   save: Save
   saved: Changes were saved
-  navigation: NAVIGATION
-  backToHome: Back to home
-  viewData: View data
 </i18n>
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiAlert, mdiAttachment, mdiDatabase, mdiHome, mdiInformation, mdiPuzzle, mdiSetAll, mdiTable, mdiTableCog } from '@mdi/js'
+import { mdiAlert, mdiAttachment, mdiDatabase, mdiInformation, mdiPuzzle, mdiSetAll, mdiTableCog } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'

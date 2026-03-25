@@ -52,22 +52,6 @@
       </template>
     </dataset-upload-dialog>
 
-    <dataset-rest-upload-actions
-      v-if="dataset.isRest && can('createLine').value"
-    >
-      <template #activator="{ props: activatorProps, title }">
-        <v-list-item v-bind="activatorProps">
-          <template #prepend>
-            <v-icon
-              :icon="mdiUpload"
-              color="primary"
-            />
-          </template>
-          <v-list-item-title>{{ title }}</v-list-item-title>
-        </v-list-item>
-      </template>
-    </dataset-rest-upload-actions>
-
     <v-list-subheader>{{ t('actions') }}</v-list-subheader>
 
     <v-list-item
@@ -81,19 +65,6 @@
         />
       </template>
       <v-list-item-title>{{ t('editMetadata') }}</v-list-item-title>
-    </v-list-item>
-
-    <v-list-item
-      v-if="can('readLines').value && dataset.finalizedAt && !dataset.isMetaOnly"
-      :to="`/dataset/${dataset.id}/table`"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiTable"
-          color="primary"
-        />
-      </template>
-      <v-list-item-title>{{ t('viewData') }}</v-list-item-title>
     </v-list-item>
 
     <v-list-item
@@ -120,73 +91,6 @@
         />
       </template>
       <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
-    </v-list-item>
-
-    <integration-dialog
-      v-if="dataset.finalizedAt"
-      resource-type="datasets"
-      :resource="dataset"
-    >
-      <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
-          <template #prepend>
-            <v-icon
-              :icon="mdiCodeTags"
-              color="primary"
-            />
-          </template>
-          <v-list-item-title>{{ t('integration') }}</v-list-item-title>
-        </v-list-item>
-      </template>
-    </integration-dialog>
-
-    <notifications-dialog
-      v-if="$uiConfig.eventsIntegration"
-      :resource="dataset"
-      resource-type="dataset"
-    >
-      <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
-          <template #prepend>
-            <v-icon
-              :icon="mdiBell"
-              color="primary"
-            />
-          </template>
-          <v-list-item-title>{{ t('notifications') }}</v-list-item-title>
-        </v-list-item>
-      </template>
-    </notifications-dialog>
-
-    <webhooks-dialog
-      v-if="$uiConfig.eventsIntegration && can('setPermissions').value"
-      :resource="dataset"
-      resource-type="dataset"
-    >
-      <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
-          <template #prepend>
-            <v-icon
-              :icon="mdiWebhook"
-              color="admin"
-            />
-          </template>
-          <v-list-item-title>{{ t('webhooks') }}</v-list-item-title>
-        </v-list-item>
-      </template>
-    </webhooks-dialog>
-
-    <v-list-item
-      v-if="can('changeOwner').value && $uiConfig.eventsIntegration"
-      :to="`/dataset/${dataset.id}/events`"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiClipboardTextClock"
-          color="primary"
-        />
-      </template>
-      <v-list-item-title>{{ t('events') }}</v-list-item-title>
     </v-list-item>
 
     <owner-change-dialog
@@ -301,13 +205,8 @@ fr:
   downloadRawRestSubtitle: Téléchargement de l'export brut des données originales (admin)
   actions: ACTIONS
   editMetadata: Éditer les métadonnées
-  viewData: Voir les données
   editData: Éditer les données
   useAPI: Utiliser l'API
-  integration: Intégrer dans un site
-  notifications: Notifications
-  webhooks: Webhooks
-  events: Traçabilité
   changeOwner: Changer le propriétaire
   delete: Supprimer
   deleteAllLines: Supprimer toutes les lignes
@@ -324,13 +223,8 @@ en:
   downloadRawRestSubtitle: Download the raw export of original data (admin)
   actions: ACTIONS
   editMetadata: Edit metadata
-  viewData: View data
   editData: Edit data
   useAPI: Use the API
-  integration: Embed in a website
-  notifications: Notifications
-  webhooks: Webhooks
-  events: Traceability
   changeOwner: Change owner
   delete: Delete
   deleteAllLines: Delete all lines
@@ -345,20 +239,14 @@ en:
 <script lang="ts" setup>
 import {
   mdiAccountSwitch,
-  mdiBell,
-  mdiClipboardTextClock,
   mdiCloud,
-  mdiCodeTags,
   mdiDelete,
   mdiDeleteSweep,
   mdiFileDownload,
   mdiFileUpload,
   mdiPencil,
   mdiProgressDownload,
-  mdiTable,
-  mdiTableEdit,
-  mdiUpload,
-  mdiWebhook
+  mdiTableEdit
 } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset-store'
 
