@@ -34,9 +34,37 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/admin/base-apps': RouteRecordInfo<
+      '/admin/base-apps',
+      '/admin/base-apps',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/admin/catalogs-plugins': RouteRecordInfo<
       '/admin/catalogs-plugins',
       '/admin/catalogs-plugins',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/admin/errors': RouteRecordInfo<
+      '/admin/errors',
+      '/admin/errors',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/admin/info': RouteRecordInfo<
+      '/admin/info',
+      '/admin/info',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/admin/owners': RouteRecordInfo<
+      '/admin/owners',
+      '/admin/owners',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -195,34 +223,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/embed/admin/base-apps': RouteRecordInfo<
-      '/embed/admin/base-apps',
-      '/embed/admin/base-apps',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/embed/admin/errors': RouteRecordInfo<
-      '/embed/admin/errors',
-      '/embed/admin/errors',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/embed/admin/info': RouteRecordInfo<
-      '/embed/admin/info',
-      '/embed/admin/info',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/embed/admin/owners': RouteRecordInfo<
-      '/embed/admin/owners',
-      '/embed/admin/owners',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/embed/application/[id]/config': RouteRecordInfo<
       '/embed/application/[id]/config',
       '/embed/application/:id/config',
@@ -310,27 +310,6 @@ declare module 'vue-router/auto-routes' {
     '/embed/dataset/[id]/thumbnails': RouteRecordInfo<
       '/embed/dataset/[id]/thumbnails',
       '/embed/dataset/:id/thumbnails',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/embed/dev': RouteRecordInfo<
-      '/embed/dev',
-      '/embed/dev',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/embed/remote-services/': RouteRecordInfo<
-      '/embed/remote-services/',
-      '/embed/remote-services',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/embed/remote-services/[id]/': RouteRecordInfo<
-      '/embed/remote-services/[id]/',
-      '/embed/remote-services/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
       | never
@@ -482,6 +461,20 @@ declare module 'vue-router/auto-routes' {
       { page: ParamValue<false> },
       | never
     >,
+    '/remote-services/': RouteRecordInfo<
+      '/remote-services/',
+      '/remote-services',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/remote-services/[id]/': RouteRecordInfo<
+      '/remote-services/[id]/',
+      '/remote-services/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
     '/reuses': RouteRecordInfo<
       '/reuses',
       '/reuses',
@@ -550,9 +543,33 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/admin/base-apps.vue': {
+      routes:
+        | '/admin/base-apps'
+      views:
+        | never
+    }
     'src/pages/admin/catalogs-plugins.vue': {
       routes:
         | '/admin/catalogs-plugins'
+      views:
+        | never
+    }
+    'src/pages/admin/errors.vue': {
+      routes:
+        | '/admin/errors'
+      views:
+        | never
+    }
+    'src/pages/admin/info.vue': {
+      routes:
+        | '/admin/info'
+      views:
+        | never
+    }
+    'src/pages/admin/owners.vue': {
+      routes:
+        | '/admin/owners'
       views:
         | never
     }
@@ -689,30 +706,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/embed/admin/base-apps.vue': {
-      routes:
-        | '/embed/admin/base-apps'
-      views:
-        | never
-    }
-    'src/pages/embed/admin/errors.vue': {
-      routes:
-        | '/embed/admin/errors'
-      views:
-        | never
-    }
-    'src/pages/embed/admin/info.vue': {
-      routes:
-        | '/embed/admin/info'
-      views:
-        | never
-    }
-    'src/pages/embed/admin/owners.vue': {
-      routes:
-        | '/embed/admin/owners'
-      views:
-        | never
-    }
     'src/pages/embed/application/[id]/config.vue': {
       routes:
         | '/embed/application/[id]/config'
@@ -788,24 +781,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/embed/dataset/[id]/thumbnails.vue': {
       routes:
         | '/embed/dataset/[id]/thumbnails'
-      views:
-        | never
-    }
-    'src/pages/embed/dev.vue': {
-      routes:
-        | '/embed/dev'
-      views:
-        | never
-    }
-    'src/pages/embed/remote-services/index.vue': {
-      routes:
-        | '/embed/remote-services/'
-      views:
-        | never
-    }
-    'src/pages/embed/remote-services/[id]/index.vue': {
-      routes:
-        | '/embed/remote-services/[id]/'
       views:
         | never
     }
@@ -936,6 +911,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/processings/[...page].vue': {
       routes:
         | '/processings/[...page]'
+      views:
+        | never
+    }
+    'src/pages/remote-services/index.vue': {
+      routes:
+        | '/remote-services/'
+      views:
+        | never
+    }
+    'src/pages/remote-services/[id]/index.vue': {
+      routes:
+        | '/remote-services/[id]/'
       views:
         | never
     }

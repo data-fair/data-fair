@@ -2,12 +2,14 @@
   <v-navigation-drawer
     v-model="drawer"
     color="primary"
-    elevation="4"
+    elevation="2"
+    class="rounded-te-md"
   >
     <v-list
       density="compact"
       nav
       bg-color="primary"
+      class="rounded-te-md"
     >
       <!-- Portal home link (when not main site) -->
       <v-list-item

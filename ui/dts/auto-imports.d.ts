@@ -86,6 +86,7 @@ declare global {
   const provideApplicationStore: typeof import('../src/composables/application-store')['provideApplicationStore']
   const provideBreadcrumbs: typeof import('../src/composables/use-breadcrumbs')['provideBreadcrumbs']
   const provideDatasetStore: typeof import('../src/composables/dataset-store')['provideDatasetStore']
+  const provideShowAgentChat: typeof import('../src/composables/use-show-agent-chat')['provideShowAgentChat']
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
   const ref: typeof import('vue')['ref']
@@ -149,6 +150,7 @@ declare global {
   const useSession: typeof import('@data-fair/lib-vue/session.js')['useSession']
   const useSessionAuthenticated: typeof import('@data-fair/lib-vue/session.js')['useSessionAuthenticated']
   const useSettingsStore: typeof import('../src/composables/settings-store')['useSettingsStore']
+  const useShowAgentChat: typeof import('../src/composables/use-show-agent-chat')['useShowAgentChat']
   const useSlots: typeof import('vue')['useSlots']
   const useStore: typeof import('../src/composables/use-store')['default']
   const useStringSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringSearchParam']
@@ -254,6 +256,7 @@ declare module 'vue' {
     readonly provideApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['provideApplicationStore']>
     readonly provideBreadcrumbs: UnwrapRef<typeof import('../src/composables/use-breadcrumbs')['provideBreadcrumbs']>
     readonly provideDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['provideDatasetStore']>
+    readonly provideShowAgentChat: UnwrapRef<typeof import('../src/composables/use-show-agent-chat')['provideShowAgentChat']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
@@ -315,6 +318,7 @@ declare module 'vue' {
     readonly useSession: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSession']>
     readonly useSessionAuthenticated: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSessionAuthenticated']>
     readonly useSettingsStore: UnwrapRef<typeof import('../src/composables/settings-store')['useSettingsStore']>
+    readonly useShowAgentChat: UnwrapRef<typeof import('../src/composables/use-show-agent-chat')['useShowAgentChat']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useStore: UnwrapRef<typeof import('../src/composables/use-store')['default']>
     readonly useStringSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringSearchParam']>

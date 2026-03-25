@@ -96,7 +96,6 @@
               </v-tabs-window>
             </template>
           </layout-section-tabs>
-
         </template>
       </v-col>
     </v-row>

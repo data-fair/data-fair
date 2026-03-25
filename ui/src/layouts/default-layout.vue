@@ -64,7 +64,7 @@ onScopeDispose(() => { toolsScope?.stop() })
 
 const agentChatDrawerProps = computed(() => {
   return {
-    class: 'border-secondary border-t-sm border-s-sm border-opacity-100 elevation-4',
+    class: 'border-secondary border-t-md border-s-md border-opacity-100 elevation-2 rounded-ts-md',
     style: 'overflow: hidden'
   }
 })

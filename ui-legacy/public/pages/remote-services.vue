@@ -2,7 +2,7 @@
   <div>
     <nuxt-child />
     <d-frame
-      :src="`/data-fair/embed/remote-services/`"
+      :src="`/data-fair/remote-services/`"
       :height="(windowHeight - 48) + 'px'"
       resize="no"
       emit-iframe-messages
