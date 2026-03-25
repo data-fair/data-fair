@@ -26,6 +26,25 @@
           </layout-section-tabs>
 
           <layout-section-tabs
+            v-if="section.id === 'metadata'"
+            :id="section.id"
+            :min-height="300"
+            :title="section.title"
+            :tabs="section.tabs"
+            :color="section.color"
+          >
+            <template #content="{ tab }">
+              <v-tabs-window :model-value="tab">
+                <v-tabs-window-item value="metadata">
+                  <v-container fluid>
+                    <dataset-metadata-form v-model="datasetEditFetch.data.value" />
+                  </v-container>
+                </v-tabs-window-item>
+              </v-tabs-window>
+            </template>
+          </layout-section-tabs>
+
+          <layout-section-tabs
             v-if="section.id === 'schema'"
             :id="section.id"
             :min-height="300"
@@ -138,7 +157,7 @@
             width="100%"
             color="accent"
             :loading="datasetEditFetch.save.loading.value"
-            @click="datasetEditFetch.save.execute()"
+            @click="showSaveDialog = true"
           >
             {{ t('save') }}
           </v-btn>
@@ -146,6 +165,13 @@
       </v-list>
       <layout-toc :sections="sections" />
     </df-navigation-right>
+
+    <dataset-save-dialog
+      v-model="showSaveDialog"
+      :data="datasetEditFetch.data.value"
+      :server-data="datasetEditFetch.serverData.value"
+      @confirm="datasetEditFetch.save.execute()"
+    />
   </v-container>
 </template>
 
@@ -154,6 +180,7 @@ fr:
   datasets: Jeux de données
   editMetadata: Éditer les métadonnées
   info: Informations
+  metadata: Métadonnées
   schema: Schéma
   attachments: Pièces jointes
   extensions: Enrichissements
@@ -165,6 +192,7 @@ en:
   datasets: Datasets
   editMetadata: Edit metadata
   info: Information
+  metadata: Metadata
   schema: Schema
   attachments: Attachments
   extensions: Extensions
@@ -176,7 +204,7 @@ en:
 
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiAlert, mdiAttachment, mdiDatabase, mdiInformation, mdiPuzzle, mdiSetAll, mdiTableCog } from '@mdi/js'
+import { mdiAlert, mdiAttachment, mdiDatabase, mdiInformation, mdiPuzzle, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
@@ -199,6 +227,8 @@ const datasetEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.
   }
 })
 useLeaveGuard(datasetEditFetch.hasDiff, { locale })
+
+const showSaveDialog = ref(false)
 
 const onRefreshExtension = async (extension: any) => {
   await store.patchDataset.execute({ extensions: [{ ...extension, needsUpdate: true }] })
@@ -223,13 +253,27 @@ const infoHasDiff = computed(() => {
   return d.title !== s.title ||
     d.description !== s.description ||
     d.summary !== s.summary ||
-    d.origin !== s.origin ||
-    d.image !== s.image ||
     d.slug !== s.slug ||
-    !equal(d.license, s.license) ||
+    !equal(d.rest, s.rest)
+})
+
+const metadataHasDiff = computed(() => {
+  const d = datasetEditFetch.data.value
+  const s = datasetEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.license, s.license) ||
     !equal(d.topics, s.topics) ||
     !equal(d.keywords, s.keywords) ||
-    !equal(d.rest, s.rest)
+    d.origin !== s.origin ||
+    d.image !== s.image ||
+    d.creator !== s.creator ||
+    d.frequency !== s.frequency ||
+    d.spatial !== s.spatial ||
+    !equal(d.temporal, s.temporal) ||
+    d.modified !== s.modified ||
+    d.projection !== s.projection ||
+    d.attachmentsAsImage !== s.attachmentsAsImage ||
+    !equal(d.customMetadata, s.customMetadata)
 })
 
 const schemaHasDiff = computed(() => {
@@ -275,6 +319,18 @@ const sections = computedDeepDiff(() => {
         icon: mdiInformation,
         appendIcon: infoHasDiff.value ? mdiAlert : undefined,
         color: infoHasDiff.value ? 'accent' : undefined
+      }]
+    },
+    {
+      title: t('metadata'),
+      id: 'metadata',
+      color: metadataHasDiff.value ? 'accent' : undefined,
+      tabs: [{
+        key: 'metadata',
+        title: t('metadata'),
+        icon: mdiTag,
+        appendIcon: metadataHasDiff.value ? mdiAlert : undefined,
+        color: metadataHasDiff.value ? 'accent' : undefined
       }]
     },
     {
