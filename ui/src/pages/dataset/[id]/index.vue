@@ -4,158 +4,12 @@
 
     <v-row class="dataset">
       <v-col>
+        <dataset-metadata-view />
+
         <template
           v-for="section in sections"
           :key="section.id"
         >
-          <!-- Description section -->
-          <layout-section-tabs
-            v-if="section.id === 'description'"
-            :id="section.id"
-            :min-height="200"
-            :title="section.title"
-            :tabs="section.tabs"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="description">
-                  <v-container fluid>
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        :md="dataset.image ? 8 : 12"
-                      >
-                        <div class="text-title-medium mb-2">
-                          {{ dataset.title }}
-                        </div>
-                        <p
-                          v-if="dataset.description"
-                          class="text-body-medium"
-                          v-html="dataset.description"
-                        />
-                      </v-col>
-                      <v-col
-                        v-if="dataset.image"
-                        cols="12"
-                        md="4"
-                      >
-                        <v-img
-                          :src="dataset.image"
-                          max-height="200"
-                          cover
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </layout-section-tabs>
-
-          <!-- Metadata section -->
-          <layout-section-tabs
-            v-if="section.id === 'metadata'"
-            :id="section.id"
-            :min-height="200"
-            :title="section.title"
-            :tabs="section.tabs"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="info">
-                  <v-container fluid>
-                    <v-list density="compact">
-                      <v-list-item v-if="dataset.owner">
-                        <template #prepend>
-                          <v-icon :icon="mdiAccount" />
-                        </template>
-                        <v-list-item-title>{{ dataset.owner.name }}</v-list-item-title>
-                      </v-list-item>
-                      <v-list-item v-if="dataset.license">
-                        <template #prepend>
-                          <v-icon :icon="mdiLicense" />
-                        </template>
-                        <v-list-item-title>{{ dataset.license.title || dataset.license.href }}</v-list-item-title>
-                      </v-list-item>
-                      <v-list-item v-if="dataset.updatedAt">
-                        <template #prepend>
-                          <v-icon :icon="mdiPencil" />
-                        </template>
-                        <v-list-item-title>
-                          {{ dataset.updatedBy?.name }} {{ formatDate(dataset.updatedAt) }}
-                        </v-list-item-title>
-                      </v-list-item>
-                      <v-list-item>
-                        <template #prepend>
-                          <v-icon :icon="mdiPlusCircleOutline" />
-                        </template>
-                        <v-list-item-title>
-                          {{ dataset.createdBy?.name }} {{ formatDate(dataset.createdAt) }}
-                        </v-list-item-title>
-                      </v-list-item>
-                      <v-list-item v-if="dataset.count != null">
-                        <template #prepend>
-                          <v-icon :icon="mdiCounter" />
-                        </template>
-                        <v-list-item-title>{{ dataset.count.toLocaleString(locale) }} {{ t('records') }}</v-list-item-title>
-                      </v-list-item>
-
-                      <!-- REST dataset indicators -->
-                      <template v-if="dataset.isRest">
-                        <v-list-item>
-                          <template #prepend>
-                            <v-icon :icon="mdiAllInclusive" />
-                          </template>
-                          <v-list-item-title>{{ t('restDataset') }}</v-list-item-title>
-                        </v-list-item>
-
-                        <v-list-item>
-                          <template #prepend>
-                            <v-icon
-                              :color="dataset.rest?.history ? undefined : 'grey'"
-                              :icon="mdiHistory"
-                            />
-                          </template>
-                          <v-list-item-title v-if="dataset.rest?.history">
-                            {{ t('history') }}
-                          </v-list-item-title>
-                          <v-list-item-title v-else>
-                            {{ t('noHistory') }}
-                          </v-list-item-title>
-                          <template #append>
-                            <dataset-edit-history
-                              v-if="can('writeDescriptionBreaking').value"
-                              :history="dataset.rest?.history ?? false"
-                              @change="onHistoryChange"
-                            />
-                          </template>
-                        </v-list-item>
-                      </template>
-                    </v-list>
-                    <div class="d-flex flex-wrap ga-1 mt-2">
-                      <v-chip
-                        v-for="keyword in (dataset.keywords || [])"
-                        :key="keyword"
-                        size="small"
-                      >
-                        {{ keyword }}
-                      </v-chip>
-                      <v-chip
-                        v-for="topic in (dataset.topics || [])"
-                        :key="topic.id"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      >
-                        {{ topic.title }}
-                      </v-chip>
-                    </div>
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </layout-section-tabs>
-
           <!-- Schema section -->
           <layout-section-tabs
             v-if="section.id === 'schema'"
@@ -325,9 +179,6 @@
 <i18n lang="yaml">
 fr:
   datasets: Jeux de données
-  description: Description
-  metadata: Métadonnées
-  info: Informations
   schema: Schéma
   applications: Applications
   noApplications: Aucune application n'utilise ce jeu de données.
@@ -336,18 +187,11 @@ fr:
   publicationSites: Portails
   catalogPublications: Publications dans les catalogues
   relatedDatasets: Voir aussi
-  restDataset: Jeu de données éditable
-  history: Historisation (conserve les révisions des lignes)
-  noHistory: Pas d'historisation (ne conserve pas les révisions des lignes)
   readApiKey: Clé d'API en lecture
   activity: Activité
   journal: Journal
-  records: enregistrements
 en:
   datasets: Datasets
-  description: Description
-  metadata: Metadata
-  info: Information
   schema: Schema
   applications: Applications
   noApplications: No application uses this dataset.
@@ -356,13 +200,9 @@ en:
   publicationSites: Portals
   catalogPublications: Catalog publications
   relatedDatasets: See also
-  restDataset: Editable dataset
-  history: History (store revisions of lines)
-  noHistory: No history configured (do not store revisions of lines)
   readApiKey: Read API key
   activity: Activity
   journal: Journal
-  records: records
 </i18n>
 
 <script lang="ts" setup>
@@ -371,17 +211,17 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiAccount, mdiAllInclusive, mdiCalendarText, mdiCounter, mdiEyeArrowRight, mdiHistory, mdiImageMultiple, mdiInformation, mdiKey, mdiLicense, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiTableCog } from '@mdi/js'
+import { mdiCalendarText, mdiEyeArrowRight, mdiImageMultiple, mdiKey, mdiPresentation, mdiSecurity, mdiTableCog } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
 const { sendUiNotif } = useUiNotif()
 
 const store = provideDatasetStore(route.params.id, true)
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, can, patchDataset } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, can } = store
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 
@@ -399,33 +239,10 @@ watch(dataset, (d) => {
 
 const applications = computed(() => applicationsFetch.data.value?.results ?? [])
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString(locale.value, { dateStyle: 'medium' })
-}
-
-async function onHistoryChange (history: boolean) {
-  await patchDataset.execute({ rest: { ...dataset.value?.rest, history } })
-}
-
 const sections = computedDeepDiff(() => {
   if (!dataset.value) return []
   const d = dataset.value
   const result: any[] = []
-
-  result.push({
-    title: t('description'),
-    id: 'description',
-    tabs: [{ key: 'description', title: t('description'), icon: mdiInformation }]
-  })
-
-  if (d.finalizedAt || d.isMetaOnly) {
-    result.push({
-      title: t('metadata'),
-      id: 'metadata',
-      tabs: [{ key: 'info', title: t('info'), icon: mdiInformation }]
-    })
-  }
 
   if (d.finalizedAt) {
     result.push({
