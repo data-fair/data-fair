@@ -163,6 +163,7 @@
             :min-height="200"
             :title="section.title"
             :tabs="section.tabs"
+            :svg="buildingSvg"
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
@@ -218,6 +219,7 @@
             :min-height="200"
             :title="section.title"
             :tabs="section.tabs"
+            :svg="shareSvg"
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
@@ -288,6 +290,8 @@
             :min-height="550"
             :title="section.title"
             :tabs="section.tabs"
+            :svg="settingsSvg"
+            svg-no-margin
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
@@ -362,6 +366,9 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
+import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
+import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import { mdiAccount, mdiAllInclusive, mdiCalendarText, mdiCounter, mdiEyeArrowRight, mdiHistory, mdiImageMultiple, mdiInformation, mdiKey, mdiLicense, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiTableCog } from '@mdi/js'
