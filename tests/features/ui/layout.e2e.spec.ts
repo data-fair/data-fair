@@ -11,8 +11,8 @@ test.describe('main UI layout', () => {
   })
 
   test('embed pages use minimal layout without nav drawer', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/embed/dev', 'test_user1')
-    await expect(page.getByText('Data Fair dev')).toBeVisible({ timeout: 10000 })
+    await goToWithAuth('/data-fair/embed/settings/user/test_user1/api-keys', 'test_user1')
+    await expect(page.locator('.bg-surface')).toBeVisible({ timeout: 10000 })
     await expect(page.locator('nav')).not.toBeVisible()
   })
 
