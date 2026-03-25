@@ -90,6 +90,7 @@ declare global {
   const readonly: typeof import('vue')['readonly']
   const ref: typeof import('vue')['ref']
   const resolveComponent: typeof import('vue')['resolveComponent']
+  const serializeDatasetInfo: typeof import('../src/composables/use-agent-dataset-tools')['serializeDatasetInfo']
   const setBreadcrumbs: typeof import('../src/utils/breadcrumbs')['setBreadcrumbs']
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
@@ -256,6 +257,7 @@ declare module 'vue' {
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
+    readonly serializeDatasetInfo: UnwrapRef<typeof import('../src/composables/use-agent-dataset-tools')['serializeDatasetInfo']>
     readonly setBreadcrumbs: UnwrapRef<typeof import('../src/utils/breadcrumbs')['setBreadcrumbs']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>

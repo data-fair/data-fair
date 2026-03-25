@@ -10,6 +10,12 @@ test.describe('new application stepper', () => {
     await anonymousAx.post(`${apiUrl}/api/v1/test-env/reload-base-apps`)
   })
 
+  test.afterAll(async () => {
+    // Restore monapp2 to non-public
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'applications.1.public', value: false })
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/reload-base-apps`)
+  })
+
   test('base app creation: full stepper flow', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/new-application', 'test_user1')
 

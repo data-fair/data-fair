@@ -10,16 +10,25 @@
       class="mb-3"
     />
 
-    <v-textarea
-      v-model="dataset.summary"
-      :disabled="!can('writeDescription')"
-      :label="t('summary')"
-      rows="3"
-      variant="outlined"
-      density="compact"
-      hide-details
-      class="mb-3"
-    />
+    <div class="d-flex align-start gap-1 mb-3">
+      <v-textarea
+        v-model="dataset.summary"
+        :disabled="!can('writeDescription')"
+        :label="t('summary')"
+        rows="3"
+        variant="outlined"
+        density="compact"
+        hide-details
+        class="flex-grow-1"
+      />
+      <df-agent-chat-action
+        v-if="can('writeDescription')"
+        action-id="summarize-dataset"
+        :visible-prompt="t('summarizePrompt')"
+        :hidden-context="summarizeContext"
+        :btn-props="{ class: 'mt-1' }"
+      />
+    </div>
 
     <markdown-editor
       v-model="dataset.description"
@@ -98,6 +107,7 @@ fr:
   newSlug: Nouvel identifiant de publication
   title: Titre
   summary: Resume
+  summarizePrompt: Aide-moi à rédiger un résumé pour ce jeu de données
   description: Description
   cancel: Annuler
   validate: Valider
@@ -107,6 +117,7 @@ en:
   newSlug: New publication identifier
   title: Title
   summary: Summary
+  summarizePrompt: Help me write a summary for this dataset
   description: Description
   cancel: Cancel
   validate: Validate
@@ -114,6 +125,7 @@ en:
 
 <script lang="ts" setup>
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 
 const dataset = defineModel<any>({ required: true })
 
@@ -124,4 +136,8 @@ const slugMenu = ref(false)
 const newSlug = ref('')
 
 const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? false
+
+const summarizeContext = computed(() => {
+  return `Use the subagent_summarizer tool to read the dataset information and produce a summary. Then use the set_dataset_summary tool to set the summary on the form. The dataset ID is "${dataset.value?.id}".`
+})
 </script>

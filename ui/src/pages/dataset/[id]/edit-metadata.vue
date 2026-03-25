@@ -164,6 +164,7 @@ import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiAlert, mdiAttachment, mdiDatabase, mdiInformation, mdiPuzzle, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
+import { useAgentSummaryTools } from '~/composables/use-agent-summary-tools'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
@@ -186,6 +187,10 @@ const datasetEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.
   }
 })
 useLeaveGuard(datasetEditFetch.hasDiff, { locale })
+
+useAgentSummaryTools(locale, route.params.id, (s) => {
+  if (datasetEditFetch.data.value) datasetEditFetch.data.value.summary = s
+})
 
 const breadcrumbs = useBreadcrumbs()
 const showSaveDialog = ref(false)
