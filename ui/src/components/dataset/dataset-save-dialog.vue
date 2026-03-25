@@ -69,6 +69,7 @@ const showDialog = defineModel<boolean>({ default: false })
 const emit = defineEmits<{ confirm: [] }>()
 const { t } = useI18n()
 
+const { account } = useSessionAuthenticated()
 const summaryLoading = ref(false)
 const summary = ref('')
 
@@ -77,9 +78,10 @@ const requestSummary = async () => {
   try {
     const oldJson = JSON.stringify(props.serverData, null, 2)
     const newJson = JSON.stringify(props.data, null, 2)
-    const result = await $fetch<{ summary: string }>(`${window.location.origin}/agents/summary`, {
+    const content = `Old version:\n${oldJson}\n\nNew version:\n${newJson}`
+    const result = await $fetch<{ summary: string }>(`${window.location.origin}/agents/api/summary/${account.value.type}/${account.value.id}`, {
       method: 'POST',
-      body: { old: oldJson, new: newJson }
+      body: { content, prompt: 'Compare the old and new versions and summarize the changes concisely:' }
     })
     summary.value = result.summary
   } catch (err) {

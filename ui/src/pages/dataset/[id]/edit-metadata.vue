@@ -9,10 +9,12 @@
           <layout-section-tabs
             v-if="section.id === 'info'"
             :id="section.id"
+            v-model="infoTab"
             :min-height="300"
             :title="section.title"
             :tabs="section.tabs"
             :color="section.color"
+            :svg="infoSvg"
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
@@ -21,36 +23,30 @@
                     <dataset-info v-model="datasetEditFetch.data.value" />
                   </v-container>
                 </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </layout-section-tabs>
-
-          <layout-section-tabs
-            v-if="section.id === 'metadata'"
-            :id="section.id"
-            :min-height="300"
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="metadata">
                   <v-container fluid>
                     <dataset-metadata-form v-model="datasetEditFetch.data.value" />
                   </v-container>
+                </v-tabs-window-item>
+                <v-tabs-window-item
+                  v-if="!datasetEditFetch.data.value?.draftReason"
+                  value="attachments"
+                >
+                  <dataset-attachments />
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
           </layout-section-tabs>
 
           <layout-section-tabs
-            v-if="section.id === 'schema'"
+            v-if="section.id === 'structure'"
             :id="section.id"
+            v-model="structureTab"
             :min-height="300"
             :title="section.title"
             :tabs="section.tabs"
             :color="section.color"
+            :svg="buildingSvg"
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
@@ -64,20 +60,6 @@
                     />
                   </v-container>
                 </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </layout-section-tabs>
-
-          <layout-section-tabs
-            v-if="section.id === 'extensions'"
-            :id="section.id"
-            :min-height="300"
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="extensions">
                   <v-container fluid>
                     <dataset-extensions
@@ -86,20 +68,6 @@
                     />
                   </v-container>
                 </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </layout-section-tabs>
-
-          <layout-section-tabs
-            v-if="section.id === 'master-data'"
-            :id="section.id"
-            :min-height="300"
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="master-data">
                   <v-container fluid>
                     <dataset-master-data v-model="datasetEditFetch.data.value" />
@@ -116,6 +84,7 @@
             :title="section.title"
             :tabs="section.tabs"
             :color="section.color"
+            :svg="dataSvg"
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
@@ -128,21 +97,6 @@
             </template>
           </layout-section-tabs>
 
-          <layout-section-tabs
-            v-if="section.id === 'attachments'"
-            :id="section.id"
-            :min-height="200"
-            :title="section.title"
-            :tabs="section.tabs"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="attachments">
-                  <dataset-attachments />
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </layout-section-tabs>
         </template>
       </v-col>
     </v-row>
@@ -181,6 +135,7 @@ fr:
   editMetadata: Éditer les métadonnées
   info: Informations
   metadata: Métadonnées
+  structure: Structure
   schema: Schéma
   attachments: Pièces jointes
   extensions: Enrichissements
@@ -193,6 +148,7 @@ en:
   editMetadata: Edit metadata
   info: Information
   metadata: Metadata
+  structure: Structure
   schema: Schema
   attachments: Attachments
   extensions: Extensions
@@ -203,6 +159,9 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import infoSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
+import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
+import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiAlert, mdiAttachment, mdiDatabase, mdiInformation, mdiPuzzle, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
@@ -230,6 +189,8 @@ useLeaveGuard(datasetEditFetch.hasDiff, { locale })
 
 const breadcrumbs = useBreadcrumbs()
 const showSaveDialog = ref(false)
+const infoTab = ref('info')
+const structureTab = ref('schema')
 
 const onRefreshExtension = async (extension: any) => {
   await store.patchDataset.execute({ extensions: [{ ...extension, needsUpdate: true }] })
@@ -311,76 +272,73 @@ const sections = computedDeepDiff(() => {
   const d = datasetEditFetch.data.value
   if (!d) return []
 
+  const infoOrMetaDiff = infoHasDiff.value || metadataHasDiff.value
+  const structureDiff = schemaHasDiff.value || extensionsHasDiff.value || masterDataHasDiff.value
+
+  const infoTabs: any[] = [
+    {
+      key: 'info',
+      title: t('info'),
+      icon: mdiInformation,
+      appendIcon: infoHasDiff.value ? mdiAlert : undefined,
+      color: infoHasDiff.value ? 'accent' : undefined
+    },
+    {
+      key: 'metadata',
+      title: t('metadata'),
+      icon: mdiTag,
+      appendIcon: metadataHasDiff.value ? mdiAlert : undefined,
+      color: metadataHasDiff.value ? 'accent' : undefined
+    }
+  ]
+  if (!d.draftReason) {
+    infoTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment })
+  }
+
+  const structureTabs: any[] = [{
+    key: 'schema',
+    title: t('schema'),
+    icon: mdiTableCog,
+    appendIcon: schemaHasDiff.value ? mdiAlert : undefined,
+    color: schemaHasDiff.value ? 'accent' : undefined
+  }]
+
+  // Extensions tab (non-virtual, non-meta-only datasets)
+  if (!d.isVirtual && !d.isMetaOnly) {
+    structureTabs.push({
+      key: 'extensions',
+      title: t('extensions'),
+      icon: mdiPuzzle,
+      appendIcon: extensionsHasDiff.value ? mdiAlert : undefined,
+      color: extensionsHasDiff.value ? 'accent' : undefined
+    })
+  }
+
+  // Master data tab (admin only, finalized, non-meta-only)
+  if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+    structureTabs.push({
+      key: 'master-data',
+      title: t('masterData'),
+      icon: mdiDatabase,
+      appendIcon: masterDataHasDiff.value ? mdiAlert : undefined,
+      color: masterDataHasDiff.value ? 'accent' : undefined
+    })
+  }
+
   const result: any[] = [
     {
       title: t('info'),
       id: 'info',
-      color: infoHasDiff.value ? 'accent' : undefined,
-      tabs: [{
-        key: 'info',
-        title: t('info'),
-        icon: mdiInformation,
-        appendIcon: infoHasDiff.value ? mdiAlert : undefined,
-        color: infoHasDiff.value ? 'accent' : undefined
-      }]
+      color: infoOrMetaDiff ? 'accent' : undefined,
+      tabs: infoTabs
     },
     {
-      title: t('metadata'),
-      id: 'metadata',
-      color: metadataHasDiff.value ? 'accent' : undefined,
-      tabs: [{
-        key: 'metadata',
-        title: t('metadata'),
-        icon: mdiTag,
-        appendIcon: metadataHasDiff.value ? mdiAlert : undefined,
-        color: metadataHasDiff.value ? 'accent' : undefined
-      }]
-    },
-    {
-      title: t('schema'),
-      id: 'schema',
-      color: schemaHasDiff.value ? 'accent' : undefined,
-      tabs: [{
-        key: 'schema',
-        title: t('schema'),
-        icon: mdiTableCog,
-        appendIcon: schemaHasDiff.value ? mdiAlert : undefined,
-        color: schemaHasDiff.value ? 'accent' : undefined
-      }]
+      title: t('structure'),
+      id: 'structure',
+      color: structureDiff ? 'accent' : undefined,
+      tabs: structureTabs
     }
   ]
-
-  // Extensions section (non-virtual, non-meta-only datasets)
-  if (!d.isVirtual && !d.isMetaOnly) {
-    result.push({
-      title: t('extensions'),
-      id: 'extensions',
-      color: extensionsHasDiff.value ? 'accent' : undefined,
-      tabs: [{
-        key: 'extensions',
-        title: t('extensions'),
-        icon: mdiPuzzle,
-        appendIcon: extensionsHasDiff.value ? mdiAlert : undefined,
-        color: extensionsHasDiff.value ? 'accent' : undefined
-      }]
-    })
-  }
-
-  // Master data section (admin only, finalized, non-meta-only)
-  if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
-    result.push({
-      title: t('masterData'),
-      id: 'master-data',
-      color: masterDataHasDiff.value ? 'accent' : undefined,
-      tabs: [{
-        key: 'master-data',
-        title: t('masterData'),
-        icon: mdiDatabase,
-        appendIcon: masterDataHasDiff.value ? mdiAlert : undefined,
-        color: masterDataHasDiff.value ? 'accent' : undefined
-      }]
-    })
-  }
 
   // Virtual dataset section
   if (d.isVirtual) {
@@ -395,14 +353,6 @@ const sections = computedDeepDiff(() => {
         appendIcon: virtualHasDiff.value ? mdiAlert : undefined,
         color: virtualHasDiff.value ? 'accent' : undefined
       }]
-    })
-  }
-
-  if (!d.draftReason) {
-    result.push({
-      title: t('attachments'),
-      id: 'attachments',
-      tabs: [{ key: 'attachments', title: t('attachments'), icon: mdiAttachment }]
     })
   }
 
