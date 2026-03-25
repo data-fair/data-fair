@@ -145,9 +145,37 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/dataset/[id]/events': RouteRecordInfo<
-      '/dataset/[id]/events',
-      '/dataset/:id/events',
+    '/dataset/[id]/files': RouteRecordInfo<
+      '/dataset/[id]/files',
+      '/dataset/:id/files',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dataset/[id]/map': RouteRecordInfo<
+      '/dataset/[id]/map',
+      '/dataset/:id/map',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dataset/[id]/revisions': RouteRecordInfo<
+      '/dataset/[id]/revisions',
+      '/dataset/:id/revisions',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dataset/[id]/table': RouteRecordInfo<
+      '/dataset/[id]/table',
+      '/dataset/:id/table',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/dataset/[id]/thumbnails': RouteRecordInfo<
+      '/dataset/[id]/thumbnails',
+      '/dataset/:id/thumbnails',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
       | never
@@ -618,9 +646,33 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/dataset/[id]/events.vue': {
+    'src/pages/dataset/[id]/files.vue': {
       routes:
-        | '/dataset/[id]/events'
+        | '/dataset/[id]/files'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/map.vue': {
+      routes:
+        | '/dataset/[id]/map'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/revisions.vue': {
+      routes:
+        | '/dataset/[id]/revisions'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/table.vue': {
+      routes:
+        | '/dataset/[id]/table'
+      views:
+        | never
+    }
+    'src/pages/dataset/[id]/thumbnails.vue': {
+      routes:
+        | '/dataset/[id]/thumbnails'
       views:
         | never
     }
