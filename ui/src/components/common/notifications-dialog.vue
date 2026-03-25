@@ -1,5 +1,10 @@
 <template>
+  <d-frame
+    v-if="inline"
+    :src="iframeUrl"
+  />
   <v-dialog
+    v-else
     v-model="showDialog"
     max-width="500"
   >
@@ -45,6 +50,7 @@ import { mdiClose } from '@mdi/js'
 const props = defineProps<{
   resource: { id: string, slug?: string, title: string, owner: { type: string, id: string, department?: string } }
   resourceType: 'dataset' | 'application'
+  inline?: boolean
 }>()
 
 const { t } = useI18n()

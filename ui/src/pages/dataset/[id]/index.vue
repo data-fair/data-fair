@@ -192,6 +192,7 @@
           <layout-section-tabs
             v-if="section.id === 'activity'"
             :id="section.id"
+            v-model="activityTab"
             :min-height="550"
             :title="section.title"
             :tabs="section.tabs"
@@ -210,6 +211,37 @@
                       :journal="journal"
                       :task-progress="taskProgress"
                       type="dataset"
+                    />
+                  </v-container>
+                </v-tabs-window-item>
+                <v-tabs-window-item value="traceability">
+                  <d-frame
+                    :src="traceabilityUrl"
+                    sync-params
+                    @notif="msg => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+                  />
+                </v-tabs-window-item>
+                <v-tabs-window-item
+                  v-if="$uiConfig.eventsIntegration"
+                  value="notifications"
+                >
+                  <v-container fluid>
+                    <notifications-dialog
+                      inline
+                      :resource="dataset"
+                      resource-type="dataset"
+                    />
+                  </v-container>
+                </v-tabs-window-item>
+                <v-tabs-window-item
+                  v-if="$uiConfig.eventsIntegration && can('setPermissions').value"
+                  value="webhooks"
+                >
+                  <v-container fluid>
+                    <webhooks-dialog
+                      inline
+                      :resource="dataset"
+                      resource-type="dataset"
                     />
                   </v-container>
                 </v-tabs-window-item>
@@ -250,6 +282,9 @@ fr:
   readApiKey: Clé d'API en lecture
   activity: Activité
   journal: Journal
+  traceability: Traçabilité
+  notifications: Notifications
+  webhooks: Webhooks
 en:
   datasets: Datasets
   schema: Schema
@@ -272,6 +307,9 @@ en:
   readApiKey: Read API key
   activity: Activity
   journal: Journal
+  traceability: Traceability
+  notifications: Notifications
+  webhooks: Webhooks
 </i18n>
 
 <script lang="ts" setup>
@@ -281,7 +319,7 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiCalendarText, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTable, mdiTableCog } from '@mdi/js'
+import { mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTable, mdiTableCog, mdiWebhook } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
@@ -292,6 +330,7 @@ const { sendUiNotif } = useUiNotif()
 
 const schemaTab = ref('schema')
 const dataTab = ref('data')
+const activityTab = ref('journal')
 
 const store = provideDatasetStore(route.params.id, true)
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, digitalDocumentField, imageField, can } = store
@@ -311,6 +350,11 @@ watch(dataset, (d) => {
 }, { immediate: true })
 
 const applications = computed(() => applicationsFetch.data.value?.results ?? [])
+
+const traceabilityUrl = computed(() => {
+  if (!dataset.value) return ''
+  return `${window.location.origin}/events/embed/traceability?resource=${encodeURIComponent($apiPath + '/datasets/' + dataset.value.id)}`
+})
 
 const sections = computedDeepDiff(() => {
   if (!dataset.value) return []
@@ -360,10 +404,22 @@ const sections = computedDeepDiff(() => {
   }
 
   if (can('readJournal').value && !d.isMetaOnly) {
+    const activityTabs = [
+      { key: 'journal', title: t('journal'), icon: mdiCalendarText }
+    ]
+    if ($uiConfig.eventsIntegration) {
+      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
+    }
+    if ($uiConfig.eventsIntegration) {
+      activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    }
+    if ($uiConfig.eventsIntegration && can('setPermissions').value) {
+      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
+    }
     result.push({
       title: t('activity'),
       id: 'activity',
-      tabs: [{ key: 'journal', title: t('journal'), icon: mdiCalendarText }]
+      tabs: activityTabs
     })
   }
 
