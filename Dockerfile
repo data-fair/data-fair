@@ -142,8 +142,6 @@ COPY --from=parquet-writer-builder /app/parquet-writer/*.js parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.d.ts parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.mts parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.node parquet-writer/
-ADD ui/nuxt.config.js ui/nuxt.config.js
-ADD ui/public/static ui/public/static
 ADD /api api
 ADD /shared shared
 
