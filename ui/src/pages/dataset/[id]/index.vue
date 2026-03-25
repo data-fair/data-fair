@@ -13,8 +13,8 @@
           <!-- Schema section -->
           <layout-section-tabs
             v-if="section.id === 'schema'"
-            v-model="schemaTab"
             :id="section.id"
+            v-model="schemaTab"
             :min-height="200"
             :title="section.title"
             :tabs="section.tabs"
