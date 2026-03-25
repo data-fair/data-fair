@@ -35,7 +35,7 @@ test.describe('dataset page restructuring', () => {
   test('table visualization route loads', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
     // Page should load (dataset-table component renders)
-    await expect(page.locator('table, .v-data-table, [class*="dataset-table"]')).toBeAttached({ timeout: 15000 })
+    await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
 
   test('schema section has extensions tab', async ({ page, goToWithAuth }) => {
