@@ -361,7 +361,7 @@ const sections = computedDeepDiff(() => {
   const d = dataset.value
   const result: any[] = []
 
-  if (d.finalizedAt) {
+  if (d.finalizedAt || d.draftReason) {
     result.push({
       title: t('schema'),
       id: 'schema',
@@ -384,26 +384,28 @@ const sections = computedDeepDiff(() => {
     })
   }
 
-  const shareTabs = []
-  if (can('getPermissions').value) {
-    shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
-  }
-  if (d.finalizedAt) {
-    shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
-  }
-  if (can('getReadApiKey').value) {
-    shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
-  }
-  shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
-  if ($uiConfig.catalogsIntegration && can('admin').value) {
-    shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiPresentation })
-  }
-  shareTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
-  if (shareTabs.length) {
-    result.push({ title: t('share'), id: 'share', tabs: shareTabs })
+  if (!d.draftReason) {
+    const shareTabs = []
+    if (can('getPermissions').value) {
+      shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
+    }
+    if (d.finalizedAt) {
+      shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
+    }
+    if (can('getReadApiKey').value) {
+      shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
+    }
+    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
+    if ($uiConfig.catalogsIntegration && can('admin').value) {
+      shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiPresentation })
+    }
+    shareTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
+    if (shareTabs.length) {
+      result.push({ title: t('share'), id: 'share', tabs: shareTabs })
+    }
   }
 
-  if (can('readJournal').value && !d.isMetaOnly) {
+  if (can('readJournal').value && !d.isMetaOnly && !d.draftReason) {
     const activityTabs = [
       { key: 'journal', title: t('journal'), icon: mdiCalendarText }
     ]
