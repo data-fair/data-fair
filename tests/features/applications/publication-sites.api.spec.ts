@@ -10,7 +10,7 @@ const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
 const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')
 const testUser6Org = await axiosAuth('test_user6@test.com', 'test_org1')
 
-const publicUrl2 = `http://localhost:${process.env.NGINX_PORT2}/data-fair`
+const publicUrl2 = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}/data-fair`
 
 test.describe('publication sites', () => {
   test.beforeEach(async () => {
@@ -69,7 +69,7 @@ test.describe('publication sites', () => {
       return true
     })
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:' + process.env.NGINX_PORT2 }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT2 }
     await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 
@@ -111,7 +111,7 @@ test.describe('publication sites', () => {
   test('should publish application on a org site', async () => {
     const ax = testUser1Org
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:' + process.env.NGINX_PORT2 }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT2 }
     await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 

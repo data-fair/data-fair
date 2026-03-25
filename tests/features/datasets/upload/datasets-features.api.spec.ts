@@ -113,11 +113,11 @@ test.describe('datasets - features', () => {
     await assert.rejects(anonymous.get(res.data.results[0]._thumbnail), (err: any) => err.status === 403)
     assert.ok(thumbnail1.startsWith(`${config.publicUrl}/api/v1/datasets/${dataset.id}/thumbnail/`))
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://localhost:${process.env.NGINX_PORT2}` }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` }
     await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `localhost:${process.env.NGINX_PORT2}` } })
-    assert.equal(thumbnail1.replace('localhost:' + process.env.NGINX_PORT1, `localhost:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` } })
+    assert.equal(thumbnail1.replace(process.env.DEV_HOST + ':' + process.env.NGINX_PORT1, `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
 
     // remove attachmentsAsImage
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { attachmentsAsImage: null }, { params: { draft: true } })).data

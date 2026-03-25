@@ -85,7 +85,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     assert.ok(bulkSearchDoc.post)
     assert.equal(bulkSearchDoc.post.operationId, 'masterData_bulkSearch_siret')
     assert.equal(bulkSearchDoc.post.summary, 'Fetch extra info from siret')
-    assert.equal(remoteService.apiDoc.info['x-api-id'], 'localhost-dataset-master')
+    assert.equal(remoteService.apiDoc.info['x-api-id'], process.env.DEV_HOST!.replace(/\./g, '-') + '-dataset-master')
     assert.equal(remoteService.id, 'dataset:master')
     assert.equal(remoteService.actions.length, 1)
     assert.equal(remoteService.actions[0].id, 'masterData_bulkSearch_siret')
