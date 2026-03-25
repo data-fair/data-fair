@@ -1,313 +1,454 @@
 <template>
-  <v-container>
-    <h1 class="text-title-large mb-6">
-      {{ t('newApplication') }}
-    </h1>
-
-    <p class="text-body-large mb-6">
-      {{ t('chooseBaseApp') }}
-    </p>
-
-    <!-- Creation type toggle -->
-    <v-btn-toggle
-      v-model="creationType"
-      mandatory
-      color="primary"
-      class="mb-4"
+  <v-container
+    fluid
+    class="pa-0"
+  >
+    <v-stepper
+      v-model="step"
+      flat
     >
-      <v-btn value="template">
-        {{ t('fromTemplate') }}
-      </v-btn>
-      <v-btn value="copy">
-        {{ t('copyExisting') }}
-      </v-btn>
-    </v-btn-toggle>
+      <v-stepper-header>
+        <v-stepper-item
+          v-if="!datasetId"
+          :value="1"
+          :complete="!!creationType"
+          :editable="!!creationType"
+          :title="t('selectCreationType')"
+          :subtitle="creationType ? t('type_' + creationType) : undefined"
+        />
+        <v-divider v-if="!datasetId" />
+        <v-stepper-item
+          :value="2"
+          :complete="!!(creationType === 'copy' ? copyApp : selectedBaseApp)"
+          :editable="!!(creationType === 'copy' ? copyApp : selectedBaseApp)"
+          :title="creationType === 'copy' ? t('selectApp') : t('selectBaseApp')"
+        />
+        <v-divider />
+        <v-stepper-item
+          :value="3"
+          :complete="!!appTitle"
+          :editable="!!(creationType === 'copy' ? copyApp : selectedBaseApp)"
+          :title="t('info')"
+        />
+      </v-stepper-header>
 
-    <template v-if="creationType === 'template'">
-      <!-- Skeleton loader -->
-      <v-row
-        v-if="baseAppsFetch.loading.value && !baseAppsFetch.data.value"
-        class="d-flex align-stretch"
-      >
-        <v-col
-          v-for="i in 6"
-          :key="i"
-          cols="12"
-          sm="6"
-          md="4"
-          class="d-flex"
-        >
-          <v-skeleton-loader
-            class="w-100"
-            height="200"
-            type="article"
-          />
-        </v-col>
-      </v-row>
-
-      <!-- Empty state -->
-      <v-row
-        v-else-if="baseAppsFetch.data.value && !baseAppsFetch.data.value.count"
-        justify="center"
-        class="mt-6"
-      >
-        <v-col
-          cols="auto"
-          class="text-center"
-        >
-          <div class="text-title-medium">
-            {{ t('noBaseApp') }}
+      <v-stepper-window>
+        <!-- Step 1: Type selection -->
+        <v-stepper-window-item :value="1">
+          <div class="pa-4">
+            <p class="text-body-large mb-4">
+              {{ t('choseType') }}
+            </p>
+            <v-row density="comfortable">
+              <v-col
+                v-for="type of creationTypes"
+                :key="type"
+                cols="12"
+                sm="6"
+              >
+                <v-card
+                  hover
+                  variant="outlined"
+                  class="h-100"
+                  :color="creationType === type ? 'primary' : undefined"
+                  @click="selectCreationType(type)"
+                >
+                  <v-card-title class="text-primary">
+                    <v-icon
+                      color="primary"
+                      class="mr-2"
+                      :icon="creationTypeIcons[type]"
+                    />
+                    {{ t('type_' + type) }}
+                  </v-card-title>
+                  <v-card-text>
+                    {{ t('type_desc_' + type) }}
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
           </div>
-        </v-col>
-      </v-row>
+        </v-stepper-window-item>
 
-      <!-- Error state -->
-      <v-alert
-        v-if="createAction.error.value"
-        type="error"
-        class="mb-4"
-      >
-        {{ createAction.error.value }}
-      </v-alert>
+        <!-- Step 2: Selection -->
+        <v-stepper-window-item :value="2">
+          <div class="pa-4">
+            <!-- Copy mode -->
+            <template v-if="creationType === 'copy'">
+              <v-autocomplete
+                v-model="copyApp"
+                v-model:search="copySearch"
+                :items="appSearchResults"
+                :loading="appSearchLoading"
+                item-title="title"
+                item-value="id"
+                return-object
+                no-filter
+                :label="t('searchApp')"
+                :placeholder="t('search')"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="max-width: 600px;"
+                clearable
+                @update:model-value="onCopyAppSelected"
+              >
+                <template #item="{ props: itemProps }">
+                  <v-list-item v-bind="itemProps" />
+                </template>
+              </v-autocomplete>
+            </template>
 
-      <!-- Base app cards -->
-      <template v-if="baseAppsFetch.data.value && baseAppsFetch.data.value.count">
-        <v-row class="d-flex align-stretch">
-          <v-col
-            v-for="baseApp in baseAppsFetch.data.value.results"
-            :key="baseApp.id"
-            cols="12"
-            sm="6"
-            md="4"
-            class="d-flex"
-          >
-            <v-card
-              class="w-100"
-              :loading="createAction.loading.value && selectedBaseApp?.id === baseApp.id"
-              hover
-              @click="openCreateDialog(baseApp)"
+            <!-- Base app mode -->
+            <template v-if="creationType === 'baseApp'">
+              <p
+                class="mb-4"
+                v-html="t('customApp')"
+              />
+
+              <v-progress-linear
+                v-if="baseAppsFetch.loading.value && !baseAppsFetch.data.value"
+                indeterminate
+                color="primary"
+                height="2"
+              />
+
+              <v-alert
+                v-if="baseAppsFetch.error.value"
+                type="error"
+                class="mb-4"
+              >
+                {{ baseAppsFetch.error.value }}
+              </v-alert>
+
+              <template v-if="baseAppsFetch.data.value">
+                <template
+                  v-for="category in categories"
+                  :key="category"
+                >
+                  <h3 class="text-h6">
+                    {{ t('appType', { category }) }}
+                  </h3>
+                  <v-row class="mt-0 mb-1">
+                    <v-col
+                      v-for="baseApp in baseAppsByCategory(category)"
+                      :key="baseApp.id"
+                      md="3"
+                      sm="4"
+                      cols="6"
+                    >
+                      <v-card
+                        :color="selectedBaseApp && selectedBaseApp.id === baseApp.id ? 'primary' : ''"
+                        :style="baseApp.disabled?.length ? 'cursor:default' : 'cursor:pointer'"
+                        variant="outlined"
+                        hover
+                        @click="!baseApp.disabled?.length && selectBaseApp(baseApp)"
+                      >
+                        <v-img
+                          v-if="baseApp.image"
+                          :src="baseApp.image"
+                          :alt="baseApp.title"
+                          aspect-ratio="2.5"
+                        />
+                        <v-card-title :class="{ 'text-error': baseApp.disabled?.length }">
+                          <v-icon
+                            v-if="!baseApp.public"
+                            :icon="mdiSecurity"
+                            :title="t('restrictedAccess')"
+                            class="mr-1"
+                            size="small"
+                          />
+                          {{ baseApp.title }}
+                        </v-card-title>
+                        <v-card-text
+                          v-if="baseApp.description"
+                          class="text-body-small text-medium-emphasis"
+                        >
+                          {{ baseApp.description }}
+                        </v-card-text>
+                        <v-card-text v-if="baseApp.disabled?.length">
+                          <v-alert
+                            v-for="(disabled, i) in baseApp.disabled"
+                            :key="'disabled-' + i"
+                            type="error"
+                            density="compact"
+                            border="start"
+                            class="my-1"
+                          >
+                            {{ disabled }}
+                          </v-alert>
+                        </v-card-text>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                </template>
+              </template>
+            </template>
+          </div>
+        </v-stepper-window-item>
+
+        <!-- Step 3: Info -->
+        <v-stepper-window-item :value="3">
+          <div class="pa-4">
+            <df-owner-pick
+              v-model="owner"
+              hide-single
+              :current-owner="dataset?.owner"
+            />
+            <v-text-field
+              v-model="appTitle"
+              style="max-width: 500px;"
+              name="title"
+              :label="t('title')"
+              variant="outlined"
+              density="compact"
+            />
+
+            <v-alert
+              v-if="createError"
+              type="error"
+              class="mt-4 mb-4"
+              style="max-width: 500px;"
             >
-              <template
-                v-if="baseApp.thumbnail"
-                #prepend
+              {{ createError }}
+            </v-alert>
+
+            <div class="d-flex gap-2 mt-4">
+              <v-btn
+                variant="text"
+                @click="step = 1"
               >
-                <v-avatar
-                  rounded="0"
-                  size="48"
-                >
-                  <v-img
-                    :src="baseApp.thumbnail"
-                    :alt="baseApp.title"
-                  />
-                </v-avatar>
-              </template>
-              <template
-                v-else
-                #prepend
+                {{ t('back') }}
+              </v-btn>
+              <v-btn
+                color="primary"
+                :disabled="!appTitle"
+                :loading="importing"
+                @click="createApplication"
               >
-                <v-avatar
-                  rounded="0"
-                  size="48"
-                  color="primary"
-                >
-                  <v-icon :icon="mdiApplication" />
-                </v-avatar>
-              </template>
-
-              <v-card-title class="text-body-large font-weight-bold">
-                {{ baseApp.title || baseApp.applicationName }}
-              </v-card-title>
-
-              <v-card-text>
-                <p
-                  v-if="baseApp.description"
-                  class="text-body-medium text-medium-emphasis mb-2"
-                  style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
-                >
-                  {{ baseApp.description }}
-                </p>
-                <v-chip
-                  v-if="baseApp.category"
-                  size="small"
-                  variant="tonal"
-                  class="mr-1"
-                >
-                  {{ baseApp.category }}
-                </v-chip>
-                <v-chip
-                  v-if="baseApp.version"
-                  size="small"
-                  variant="tonal"
-                >
-                  v{{ baseApp.version }}
-                </v-chip>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
-      </template>
-    </template>
-
-    <template v-if="creationType === 'copy'">
-      <v-autocomplete
-        v-model="sourceApp"
-        :items="appSearchResults"
-        :loading="appSearchLoading"
-        item-title="title"
-        item-value="id"
-        return-object
-        :label="t('searchApp')"
-        variant="outlined"
-        density="compact"
-        style="max-width: 500px;"
-        @update:search="searchApps"
-      />
-      <v-btn
-        v-if="sourceApp"
-        color="primary"
-        class="mt-4"
-        @click="openCopyDialog"
-      >
-        {{ t('copy') }}
-      </v-btn>
-    </template>
-
-    <!-- Create dialog with title and owner -->
-    <v-dialog
-      v-model="showCreateDialog"
-      max-width="500"
-    >
-      <v-card>
-        <v-card-title>{{ t('info') }}</v-card-title>
-        <v-card-text>
-          <df-owner-pick
-            v-model="owner"
-            hide-single
-          />
-          <v-text-field
-            v-model="appTitle"
-            :label="t('title')"
-            variant="outlined"
-            density="compact"
-            class="mt-2"
-            autofocus
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            variant="text"
-            @click="showCreateDialog = false"
-          >
-            {{ t('cancel') }}
-          </v-btn>
-          <v-btn
-            color="primary"
-            :loading="createAction.loading.value"
-            :disabled="!appTitle"
-            @click="confirmCreate"
-          >
-            {{ t('save') }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+                {{ t('save') }}
+              </v-btn>
+            </div>
+          </div>
+        </v-stepper-window-item>
+      </v-stepper-window>
+    </v-stepper>
   </v-container>
 </template>
 
 <script lang="ts" setup>
-import { mdiApplication } from '@mdi/js'
+import { mdiContentCopy, mdiApps, mdiSecurity } from '@mdi/js'
+import { $apiPath, $uiConfig } from '~/context'
+import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
 import type { BaseApp } from '#api/types'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const { account } = useSessionAuthenticated()
+const breadcrumbs = useBreadcrumbs()
 
-const baseAppsFetch = useFetch<{ results: BaseApp[], count: number }>($apiPath + '/base-applications')
+breadcrumbs.receive({
+  breadcrumbs: [{ text: t('apps'), to: '/applications' }, { text: t('breadcrumb') }]
+})
 
-const selectedBaseApp = ref<BaseApp | null>(null)
-const showCreateDialog = ref(false)
-const appTitle = ref('')
-const owner = ref(account.value ? { type: account.value.type, id: account.value.id, ...(account.value.department ? { department: account.value.department } : {}) } : null)
+// ---- Types ----
+type CreationType = 'copy' | 'baseApp'
 
-const creationType = ref<'template' | 'copy'>('template')
-const sourceApp = ref<any>(null)
+interface BaseAppWithContext extends BaseApp {
+  disabled?: string[]
+  public?: boolean
+  image?: string
+  category?: string
+}
+
+// ---- Step management ----
+const step = ref(1)
+const creationType = ref<CreationType | null>(null)
+const creationTypes: CreationType[] = ['copy', 'baseApp']
+const creationTypeIcons: Record<CreationType, string> = {
+  copy: mdiContentCopy,
+  baseApp: mdiApps
+}
+
+function selectCreationType (type: CreationType) {
+  creationType.value = type
+  step.value = 2
+}
+
+// ---- Owner ----
+const owner = ref(account.value ? { type: account.value.type, id: account.value.id, name: account.value.name, ...(account.value.department ? { department: account.value.department } : {}) } : null)
+
+const ownerFilter = computed(() => {
+  const a = account.value
+  if (!a) return ''
+  let f = `${a.type}:${a.id}`
+  if (a.department) f += `:${a.department}`
+  return f
+})
+
+// ---- Dataset context (?dataset=ID) ----
+const datasetId = computed(() => route.query.dataset as string | undefined)
+const dataset = ref<any>(null)
+
+onMounted(async () => {
+  if (datasetId.value) {
+    creationType.value = 'baseApp'
+    dataset.value = await $fetch(`${$apiPath}/datasets/${datasetId.value}`)
+    step.value = 2
+  }
+})
+
+// ---- Copy mode ----
+const copyApp = ref<any>(null)
+const copySearch = ref('')
 const appSearchResults = ref<any[]>([])
 const appSearchLoading = ref(false)
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-async function searchApps (q: string) {
+watch(copySearch, (q) => {
+  if (searchTimeout) clearTimeout(searchTimeout)
   if (!q || q.length < 2) { appSearchResults.value = []; return }
+  searchTimeout = setTimeout(() => {
+    searchApplications()
+  }, 300)
+})
+
+async function searchApplications () {
   appSearchLoading.value = true
   try {
-    const data = await $fetch<{ results: any[] }>(`applications?q=${encodeURIComponent(q)}&size=20&select=title,id,url`)
+    const data = await $fetch<{ results: any[] }>(`${$apiPath}/applications?q=${encodeURIComponent(copySearch.value)}&size=20&select=id,title,url,-userPermissions,-links,-owner&owner=${ownerFilter.value}`)
     appSearchResults.value = data.results
   } finally {
     appSearchLoading.value = false
   }
 }
 
-function openCopyDialog () {
-  if (!sourceApp.value) return
-  selectedBaseApp.value = null
-  appTitle.value = `${sourceApp.value.title} (${t('copySuffix')})`
-  showCreateDialog.value = true
+function onCopyAppSelected (app: any) {
+  if (!app) return
+  appTitle.value = `${app.title} (${t('copy')})`
+  step.value = 3
 }
 
-function openCreateDialog (baseApp: BaseApp) {
-  if (createAction.loading.value) return
-  selectedBaseApp.value = baseApp
-  appTitle.value = baseApp.title || ''
-  showCreateDialog.value = true
-}
+// ---- Base app mode ----
+const selectedBaseApp = ref<BaseAppWithContext | null>(null)
 
-const createAction = useAsyncAction(async () => {
-  const body: Record<string, any> = {
-    title: appTitle.value
-  }
-  if (owner.value) body.owner = owner.value
+const baseAppsQuery = computed(() => ({
+  size: 1000,
+  privateAccess: ownerFilter.value,
+  dataset: datasetId.value || 'any'
+}))
 
-  if (creationType.value === 'copy' && sourceApp.value) {
-    body.url = sourceApp.value.url
-    body.initFrom = { application: sourceApp.value.id }
-  } else if (selectedBaseApp.value) {
-    body.url = selectedBaseApp.value.url
-  }
+const baseAppsFetch = useFetch<{ results: BaseAppWithContext[], count: number }>(
+  () => creationType.value === 'baseApp' ? `${$apiPath}/base-applications` : null,
+  { query: baseAppsQuery }
+)
 
-  const application = await $fetch<{ id: string }>('applications', { method: 'POST', body })
-  showCreateDialog.value = false
-  router.push(`/application/${application.id}`)
+const categories = computed(() => {
+  const apps = baseAppsFetch.data.value?.results
+  if (!apps) return []
+  const configCategories = ($uiConfig as any).baseAppsCategories || []
+  return [...configCategories, 'autre']
+    .filter((c: string) => apps.some(a => (a.category || 'autre') === c))
 })
 
-function confirmCreate () {
-  createAction.execute()
+function baseAppsByCategory (category: string) {
+  return baseAppsFetch.data.value?.results?.filter(a => (a.category || 'autre') === category) || []
+}
+
+function selectBaseApp (baseApp: BaseAppWithContext) {
+  selectedBaseApp.value = baseApp
+  if (dataset.value) {
+    appTitle.value = `${dataset.value.title} - ${baseApp.title}`
+  } else {
+    appTitle.value = baseApp.title || ''
+  }
+  step.value = 3
+}
+
+// ---- Info ----
+const appTitle = ref('')
+const importing = ref(false)
+const createError = ref<string | null>(null)
+
+// ---- Create ----
+async function createApplication () {
+  importing.value = true
+  createError.value = null
+  try {
+    const body: Record<string, any> = {
+      title: appTitle.value
+    }
+    if (owner.value) body.owner = owner.value
+
+    if (creationType.value === 'copy' && copyApp.value) {
+      body.url = copyApp.value.url
+      body.initFrom = { application: copyApp.value.id }
+    } else if (selectedBaseApp.value) {
+      body.url = selectedBaseApp.value.url
+      body.configurationDraft = {}
+      if (dataset.value) {
+        body.configurationDraft.datasets = [{
+          href: dataset.value.href,
+          title: dataset.value.title,
+          id: dataset.value.id,
+          schema: dataset.value.schema
+        }]
+      }
+    }
+
+    const application = await $fetch<{ id: string }>(`${$apiPath}/applications`, { method: 'POST', body })
+    router.push(`/application/${application.id}`)
+  } catch (error: any) {
+    createError.value = error.response?.data?.message || error.data?.message || error.message || t('creationError')
+    importing.value = false
+  }
 }
 </script>
 
 <i18n lang="yaml">
 fr:
-  newApplication: Configurer une nouvelle application
-  chooseBaseApp: Choisissez un modèle d'application pour créer votre visualisation.
-  noBaseApp: Aucun modèle d'application disponible.
+  apps: Applications
+  breadcrumb: Configurer une application
+  selectCreationType: Type d'initialisation
+  choseType: Choisissez la manière dont vous souhaitez initialiser une nouvelle application.
+  selectBaseApp: Sélection du modèle d'application
+  selectApp: Sélection de l'application à copier
   info: Informations
+  customApp: 'Koumoul réalise aussi des <span class="text-accent">applications personnalisées</span> sur demande. N''hésitez pas à <a href="https://koumoul.com/contact">nous contacter</a> !'
   title: Titre de la nouvelle application
   save: Enregistrer
-  cancel: Annuler
-  fromTemplate: Depuis un modèle
-  copyExisting: Copier une application existante
-  searchApp: Rechercher une application à copier
-  copy: Copier
-  copySuffix: copie
+  back: Retour
+  creationError: Erreur pendant la création de l'application
+  copy: copie
+  type_copy: Copie d'application
+  type_desc_copy: Copiez une configuration complète depuis une application existante.
+  type_baseApp: Nouvelle configuration
+  type_desc_baseApp: Créez une configuration vierge à partir d'un modèle d'application.
+  appType: "Application de type {category}"
+  searchApp: Choisissez une application
+  search: Rechercher
+  restrictedAccess: Application à accès restreint
 en:
-  newApplication: Configure a new application
-  chooseBaseApp: Choose an application template to create your visualization.
-  noBaseApp: No application template available.
+  apps: Applications
+  breadcrumb: Configure an application
+  selectCreationType: Initialization type
+  choseType: Choose how you would like to initialize a new application.
+  selectBaseApp: Application model selection
+  selectApp: Application to copy
   info: Information
+  customApp: 'Koumoul also creates <span class="text-accent">custom applications</span> on demand. Do not hesitate <a href="https://koumoul.com/contact">contacting us</a> !'
   title: Title of the new application
   save: Save
-  cancel: Cancel
-  fromTemplate: From a template
-  copyExisting: Copy an existing application
-  searchApp: Search for an application to copy
-  copy: Copy
-  copySuffix: copy
+  back: Back
+  creationError: Error while creating the application
+  copy: copy
+  type_copy: Application copy
+  type_desc_copy: Copy a complete configuration from an existing application.
+  type_baseApp: New configuration
+  type_desc_baseApp: Create a blank configuration from an application model.
+  appType: "Application of type {category}"
+  searchApp: Choose an application
+  search: Search
+  restrictedAccess: Application with restricted access
 </i18n>

@@ -1,6 +1,6 @@
 <template>
   <v-list-item
-    :to="`/application/${application.id}`"
+    :to="noLink ? undefined : `/application/${application.id}`"
     lines="two"
   >
     <v-list-item-title>
@@ -48,9 +48,11 @@ const props = withDefaults(defineProps<{
   application: Application
   showTopics?: boolean
   showOwner?: boolean
+  noLink?: boolean
 }>(), {
   showTopics: true,
   showOwner: false,
+  noLink: false,
 })
 
 const ownerName = computed(() => {
