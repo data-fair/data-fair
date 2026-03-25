@@ -1,6 +1,7 @@
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { axiosAuth as _axiosAuth } from '@data-fair/lib-node/axios-auth.js'
-import slug from 'slugify'
+import _slug from 'slugify'
+const slug = _slug as unknown as (str: string, opts?: Record<string, any>) => string
 
 /**
  * Test users and orgs are defined in:

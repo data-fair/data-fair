@@ -412,8 +412,8 @@ test.describe('datasets - upload', () => {
     let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     await waitForFinalize(ax, 'dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
-    const schema = res.data.schema.filter(f => !f['x-calculated'])
-    schema.forEach(f => {
+    const schema = res.data.schema.filter((f: any) => !f['x-calculated'])
+    schema.forEach((f: any) => {
       delete f.enum
       delete f['x-cardinality']
       f['x-transform'] = { type: 'string' }
@@ -426,7 +426,7 @@ test.describe('datasets - upload', () => {
     res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
     await waitForFinalize(ax, 'dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
-    assert.equal(res.data.schema.filter(f => f['x-transform']).length, 6)
+    assert.equal(res.data.schema.filter((f: any) => f['x-transform']).length, 6)
   })
 
   test('Sort datasets by title', async () => {
@@ -437,9 +437,9 @@ test.describe('datasets - upload', () => {
     }
 
     let res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:1' } })
-    assert.deepEqual(res.data.results.map(d => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])
+    assert.deepEqual(res.data.results.map((d: any) => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])
     res = await ax.get('/api/v1/datasets', { params: { select: 'id,title', raw: true, sort: 'title:-1' } })
-    assert.deepEqual(res.data.results.map(d => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
+    assert.deepEqual(res.data.results.map((d: any) => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
 
     // manage slug unicity
     await ax.patch('/api/v1/datasets/' + res.data.results[0].id, { slug: 'test-slug' })

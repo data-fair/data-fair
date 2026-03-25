@@ -51,43 +51,107 @@
                 <v-tabs-window-item value="data">
                   <v-container fluid>
                     <v-row class="pa-4">
-                      <v-col cols="6" md="4" lg="3">
-                        <v-card :to="`/dataset/${dataset.id}/table`" variant="outlined">
+                      <v-col
+                        cols="6"
+                        md="4"
+                        lg="3"
+                      >
+                        <v-card
+                          :to="`/dataset/${dataset.id}/table`"
+                          variant="outlined"
+                        >
                           <v-card-text class="text-center">
-                            <v-icon size="48" :icon="mdiTable" />
-                            <div class="mt-2">{{ t('table') }}</div>
+                            <v-icon
+                              size="48"
+                              :icon="mdiTable"
+                            />
+                            <div class="mt-2">
+                              {{ t('table') }}
+                            </div>
                           </v-card-text>
                         </v-card>
                       </v-col>
-                      <v-col v-if="dataset.bbox" cols="6" md="4" lg="3">
-                        <v-card :to="`/dataset/${dataset.id}/map`" variant="outlined">
+                      <v-col
+                        v-if="dataset.bbox"
+                        cols="6"
+                        md="4"
+                        lg="3"
+                      >
+                        <v-card
+                          :to="`/dataset/${dataset.id}/map`"
+                          variant="outlined"
+                        >
                           <v-card-text class="text-center">
-                            <v-icon size="48" :icon="mdiMap" />
-                            <div class="mt-2">{{ t('map') }}</div>
+                            <v-icon
+                              size="48"
+                              :icon="mdiMap"
+                            />
+                            <div class="mt-2">
+                              {{ t('map') }}
+                            </div>
                           </v-card-text>
                         </v-card>
                       </v-col>
-                      <v-col v-if="digitalDocumentField" cols="6" md="4" lg="3">
-                        <v-card :to="`/dataset/${dataset.id}/files`" variant="outlined">
+                      <v-col
+                        v-if="digitalDocumentField"
+                        cols="6"
+                        md="4"
+                        lg="3"
+                      >
+                        <v-card
+                          :to="`/dataset/${dataset.id}/files`"
+                          variant="outlined"
+                        >
                           <v-card-text class="text-center">
-                            <v-icon size="48" :icon="mdiContentCopy" />
-                            <div class="mt-2">{{ t('files') }}</div>
+                            <v-icon
+                              size="48"
+                              :icon="mdiContentCopy"
+                            />
+                            <div class="mt-2">
+                              {{ t('files') }}
+                            </div>
                           </v-card-text>
                         </v-card>
                       </v-col>
-                      <v-col v-if="imageField" cols="6" md="4" lg="3">
-                        <v-card :to="`/dataset/${dataset.id}/thumbnails`" variant="outlined">
+                      <v-col
+                        v-if="imageField"
+                        cols="6"
+                        md="4"
+                        lg="3"
+                      >
+                        <v-card
+                          :to="`/dataset/${dataset.id}/thumbnails`"
+                          variant="outlined"
+                        >
                           <v-card-text class="text-center">
-                            <v-icon size="48" :icon="mdiImage" />
-                            <div class="mt-2">{{ t('thumbnails') }}</div>
+                            <v-icon
+                              size="48"
+                              :icon="mdiImage"
+                            />
+                            <div class="mt-2">
+                              {{ t('thumbnails') }}
+                            </div>
                           </v-card-text>
                         </v-card>
                       </v-col>
-                      <v-col v-if="dataset.rest?.history" cols="6" md="4" lg="3">
-                        <v-card :to="`/dataset/${dataset.id}/revisions`" variant="outlined">
+                      <v-col
+                        v-if="dataset.rest?.history"
+                        cols="6"
+                        md="4"
+                        lg="3"
+                      >
+                        <v-card
+                          :to="`/dataset/${dataset.id}/revisions`"
+                          variant="outlined"
+                        >
                           <v-card-text class="text-center">
-                            <v-icon size="48" :icon="mdiHistory" />
-                            <div class="mt-2">{{ t('revisions') }}</div>
+                            <v-icon
+                              size="48"
+                              :icon="mdiHistory"
+                            />
+                            <div class="mt-2">
+                              {{ t('revisions') }}
+                            </div>
                           </v-card-text>
                         </v-card>
                       </v-col>

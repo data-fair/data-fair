@@ -198,7 +198,7 @@ test.describe('Applications', () => {
     assert.ok(res.data.includes('window.APPLICATION={'))
     const application = JSON.parse(/>window\.APPLICATION=(.*);</.exec(res.data)![1])
     assert.ok(application.configuration)
-    assert.ok(application.configuration.datasets?.length, 1)
+    assert.ok(application.configuration.datasets?.length, '1')
     assert.deepEqual(Object.keys(application.configuration.datasets[0]).sort(), ['finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
     assert.deepEqual(Object.keys(application.configuration.datasets[1]).sort(), ['applicationKeyPermissions', 'finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
 

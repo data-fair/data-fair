@@ -1,3 +1,4 @@
+/** @param {any} extension */
 export const getExtensionKey = (extension) => {
   if (extension.propertyPrefix) return extension.propertyPrefix
   // deprecated

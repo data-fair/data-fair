@@ -24,11 +24,11 @@ test.describe('expression evaluation unit tests', () => {
     assert.equal(parser.parse('GET(JSON_PARSE(a), "prop2")').evaluate({ a: '' }), undefined)
 
     assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: 'A', a: 'aAb' }), 1)
-    assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: 'A', a: null }), -1)
-    assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: true, a: 'aAb' }), -1)
+    assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: 'A', a: null } as any), -1)
+    assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: true, a: 'aAb' } as any), -1)
 
     assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: 'b' }), '86bfbbec238b3cb49c45ba78b02cd940')
-    assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: null }), '60921ff7863149ffa56c3947807e17e6')
+    assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: null } as any), '60921ff7863149ffa56c3947807e17e6')
     assert.equal(parser.parse('JOIN(SPLIT(a, "-"), "_")').evaluate({ a: 'a-b-c' }), 'a_b_c')
     assert.equal(parser.parse('JOIN(SPLIT(a, "-"), "\n")').evaluate({ a: 'a-b-c' }), `a
 b
@@ -41,10 +41,10 @@ c`)
     assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: 1715076817 }), '2024-05-07T12:13:37+02:00')
     assert.equal(parser.parse('TRANSFORM_DATE(a, "x")').evaluate({ a: 1715076817000 }), '2024-05-07T12:13:37+02:00')
     assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: '1715076817' }), '2024-05-07T12:13:37+02:00')
-    assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: null }), null)
+    assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: null } as any), null)
     assert.equal(parser.parse('join("-", filter(f(item) = item, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
     assert.equal(parser.parse('join("-", filter(TRUTHY, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
-    assert.equal(parser.parse('join("-", filter(DEFINED, [a, b, c]))').evaluate({ a: true, b: null, c: false }), 'true-false')
+    assert.equal(parser.parse('join("-", filter(DEFINED, [a, b, c]))').evaluate({ a: true, b: null, c: false } as any), 'true-false')
 
     assert.equal(parser.parse('EXTRACT(a, "<", ">")').evaluate({ a: 'Hello <world>' }), 'world')
     assert.equal(parser.parse('EXTRACT(a, "statut: ", "\n")').evaluate({

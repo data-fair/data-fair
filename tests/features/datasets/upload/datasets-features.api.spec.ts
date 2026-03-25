@@ -180,14 +180,14 @@ test.describe('datasets - features', () => {
       { attr1: '', attr2: 'test10' }
     ])
     const dataset = await waitForFinalize(ax, 'rest2')
-    const attr1 = dataset.schema.find(p => p.key === 'attr1')
+    const attr1 = dataset.schema.find((p: any) => p.key === 'attr1')
     assert.deepEqual(attr1.enum, ['test2', 'test1'])
 
     // cardinality too close to line count
-    const attr2 = dataset.schema.find(p => p.key === 'attr2')
+    const attr2 = dataset.schema.find((p: any) => p.key === 'attr2')
     assert.equal(attr2.enum, undefined)
     // too sparse
-    const attr3 = dataset.schema.find(p => p.key === 'attr3')
+    const attr3 = dataset.schema.find((p: any) => p.key === 'attr3')
     assert.equal(attr3.enum, undefined)
   })
 

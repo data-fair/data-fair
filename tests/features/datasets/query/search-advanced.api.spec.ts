@@ -40,7 +40,7 @@ test.describe('search - advanced', () => {
       { _id: 'line3', str1: 'special " char' },
       { _id: 'line4', str1: 'special , char' }
     ]
-    let res = await ax.post('/api/v1/datasets/qsfilters/_bulk_lines', items)
+    let res: any = await ax.post('/api/v1/datasets/qsfilters/_bulk_lines', items)
     await waitForFinalize(ax, 'qsfilters')
     res = await ax.get('/api/v1/datasets/qsfilters/lines')
     assert.equal(res.data.total, items.length)
@@ -75,7 +75,7 @@ test.describe('search - advanced', () => {
     }
     for (let i = 0; i < 3; i++) {
       await ax.put('/api/v1/datasets/rest-page' + i, { isRest: true, title: 'rest pagination ' + i, schema })
-      const res = await ax.post(`/api/v1/datasets/rest-page${i}/_bulk_lines`, actions)
+      const res: any = await ax.post(`/api/v1/datasets/rest-page${i}/_bulk_lines`, actions)
       await waitForFinalize(ax, 'rest-page' + i)
       assert.equal(res.data.nbOk, 100)
       assert.equal(res.data.nbCreated, 100)
@@ -87,7 +87,7 @@ test.describe('search - advanced', () => {
       title: 'a virtual dataset'
     })
     await waitForFinalize(ax, 'virtual-page')
-    let res = await ax.get('/api/v1/datasets/rest-page0/lines')
+    let res: any = await ax.get('/api/v1/datasets/rest-page0/lines')
     assert.equal(res.data.total, 100)
     assert.equal(res.data.results.length, 12)
     assert.equal(res.data.results[0].attr1, 99)
@@ -138,7 +138,7 @@ test.describe('search - advanced', () => {
 
   test('Date match special filter on date field with date-time format', async () => {
     const ax = testUser1
-    let res = await ax.post('/api/v1/datasets/rest-date-match', {
+    let res: any = await ax.post('/api/v1/datasets/rest-date-match', {
       isRest: true,
       title: 'rest-date-match',
       schema: [{ key: 'date1', type: 'string', format: 'date-time', 'x-refersTo': 'http://schema.org/Date' }]
@@ -152,22 +152,22 @@ test.describe('search - advanced', () => {
     ])
     await waitForFinalize(ax, 'rest-date-match')
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', _c_date_match: '2023-11-21' } })
-    assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z'])
+    assert.deepEqual(res.data.results.map((result: any) => result.date1), ['2023-11-20T23:00:00.000Z'])
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', _c_date_match: '2023-11-21,2023-11-22' } })
-    assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
+    assert.deepEqual(res.data.results.map((result: any) => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', date1_gte: '2023-11-21', date1_lte: '2023-11-22' } })
-    assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
+    assert.deepEqual(res.data.results.map((result: any) => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', date1_gt: '2023-11-20', date1_lt: '2023-11-22' } })
-    assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z'])
+    assert.deepEqual(res.data.results.map((result: any) => result.date1), ['2023-11-20T23:00:00.000Z'])
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', _c_date_match: '2023-11-10,2023-11-28' } })
     assert.equal(res.data.results.length, 5)
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', _c_date_match: '2023-11-20T23:00:00.000Z,2023-11-22T08:00:00.000Z' } })
-    assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
+    assert.deepEqual(res.data.results.map((result: any) => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
   })
 
   test('Date match special filter on startDate and endDate fields with date-time format', async () => {
     const ax = testUser1
-    let res = await ax.post('/api/v1/datasets/rest-date-match', {
+    let res: any = await ax.post('/api/v1/datasets/rest-date-match', {
       isRest: true,
       title: 'rest-date-match',
       schema: [
@@ -183,8 +183,8 @@ test.describe('search - advanced', () => {
     ])
     await waitForFinalize(ax, 'rest-date-match')
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'start', _c_date_match: '2023-11-21' } })
-    assert.deepEqual(res.data.results.map(result => result.start), ['2023-11-18T23:00:00.000Z', '2023-11-20T23:00:00.000Z'])
+    assert.deepEqual(res.data.results.map((result: any) => result.start), ['2023-11-18T23:00:00.000Z', '2023-11-20T23:00:00.000Z'])
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'start', _c_date_match: '2023-11-20,2023-11-21' } })
-    assert.deepEqual(res.data.results.map(result => result.start), ['2023-11-18T23:00:00.000Z', '2023-11-19T23:00:00.000Z', '2023-11-20T23:00:00.000Z'])
+    assert.deepEqual(res.data.results.map((result: any) => result.start), ['2023-11-18T23:00:00.000Z', '2023-11-19T23:00:00.000Z', '2023-11-20T23:00:00.000Z'])
   })
 })

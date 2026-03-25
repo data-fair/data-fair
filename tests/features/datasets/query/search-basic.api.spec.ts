@@ -25,7 +25,7 @@ test.describe('search - basic', () => {
   test('Get lines in dataset', async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
-    const locProp = dataset.schema.find(p => p.key === 'loc')
+    const locProp = dataset.schema.find((p: any) => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
     let res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     assert.equal(res.status, 200)
@@ -177,7 +177,7 @@ test.describe('search - basic', () => {
     assert.equal(res.data.total, 10)
     assert.equal(res.data.results[0].group, 'group3')
     assert.equal(res.data.results[0].grouplabel, 'group 3')
-    const rolesProp = dataset.schema.find(p => p.key === 'roles')
+    const rolesProp = dataset.schema.find((p: any) => p.key === 'roles')
     rolesProp.separator = ' ; '
     await doAndWaitForFinalize(ax, dataset.id, () => ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema }))
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?collapse=roles`), { status: 400 })
@@ -201,13 +201,13 @@ test.describe('search - basic', () => {
     ])
     await waitForFinalize(ax, 'restsort1')
     let lines = await ax.get('/api/v1/datasets/restsort1/lines', { params: { sort: 'attr1' } })
-    assert.deepEqual(lines.data.results.map(r => r.attr1), ['AAA', 'aaa', 'BBB', 'bbb', 'eee', 'ééé', 'zzz'])
+    assert.deepEqual(lines.data.results.map((r: any) => r.attr1), ['AAA', 'aaa', 'BBB', 'bbb', 'eee', 'ééé', 'zzz'])
     lines = await ax.get('/api/v1/datasets/restsort1/lines', { params: { sort: '-attr2' } })
-    assert.deepEqual(lines.data.results.map(r => r.attr1), ['ééé', 'eee', 'zzz', 'BBB', 'AAA', 'bbb', 'aaa'])
+    assert.deepEqual(lines.data.results.map((r: any) => r.attr1), ['ééé', 'eee', 'zzz', 'BBB', 'AAA', 'bbb', 'aaa'])
     lines = await ax.get('/api/v1/datasets/restsort1/lines', { params: { q: 'aaa', sort: 'attr2' } })
-    assert.deepEqual(lines.data.results.map(r => r.attr1), ['aaa', 'AAA'])
+    assert.deepEqual(lines.data.results.map((r: any) => r.attr1), ['aaa', 'AAA'])
     lines = await ax.get('/api/v1/datasets/restsort1/lines', { params: { q: 'aaa', sort: '-attr2' } })
-    assert.deepEqual(lines.data.results.map(r => r.attr1), ['AAA', 'aaa'])
+    assert.deepEqual(lines.data.results.map((r: any) => r.attr1), ['AAA', 'aaa'])
   })
 
   test('search and apply facets on topics', async () => {
@@ -255,7 +255,7 @@ test.describe('search - basic', () => {
     assert.equal(res.data.results[1].str, 'blab...')
   })
 
-  const wildCarditems = {
+  const wildCarditems: Record<string, string> = {
     t1: 'prefix',
     t2: 'prefixsuite',
     t3: 'configurations Lorem ipsum...',
@@ -313,7 +313,7 @@ test.describe('search - basic', () => {
       title: 'qmodes',
       schema: [{ key: 'content', type: 'string' }]
     })).data
-    const items = {
+    const items: Record<string, string> = {
       t1: 'prefix',
       t2: 'prefixsuite',
       t3: 'configurations Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt configurations ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit configurer anim id est laborum.',
@@ -322,8 +322,8 @@ test.describe('search - basic', () => {
     }
     let res = await ax.post('/api/v1/datasets/qmodes/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
     dataset = await waitForFinalize(ax, 'qmodes')
-    assert.ok(dataset.schema.find(f => f.key === '_id'))
-    assert.ok(dataset.schema.find(f => f.key === '_updatedAt'))
+    assert.ok(dataset.schema.find((f: any) => f.key === '_id'))
+    assert.ok(dataset.schema.find((f: any) => f.key === '_updatedAt'))
     res = await ax.get('/api/v1/datasets/qmodes/lines')
     assert.equal(res.data.total, Object.keys(items).length)
     res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'prefix', q_mode: 'simple' } })

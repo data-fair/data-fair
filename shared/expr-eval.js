@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Parser } from 'expr-eval'
 import md5 from 'md5'
 import dayjs from 'dayjs'
@@ -192,20 +193,24 @@ export default (defaultTimezone) => {
     return date.format(outputFormat)
   }
 
+  /** @param {any} arg */
   parser.functions.TRUTHY = function (arg) {
     return !!arg
   }
 
+  /** @param {any} arg */
   parser.functions.DEFINED = function (arg) {
     return arg !== undefined && arg !== null
   }
 
+  /** @param {any} arg */
   parser.functions.JSON_PARSE = function (arg) {
     if (typeof arg !== 'string') return arg
     if (!arg) return undefined
     return JSON.parse(arg)
   }
 
+  /** @param {any} arg @param {any} key @param {any} def */
   parser.functions.GET = function (arg, key, def) {
     if (typeof arg !== 'object') return arg
     return arg[key] ?? def
@@ -213,6 +218,7 @@ export default (defaultTimezone) => {
 
   return {
     parser,
+    /** @param {string} expr @param {any[]} schema @param {any[]} fullSchema */
     check: (expr, schema, fullSchema) => {
       try {
         const parsedExpression = parser.parse(expr)
@@ -228,7 +234,7 @@ export default (defaultTimezone) => {
             // return `colonne ${variable} inconnue`
           }
         }
-      } catch (err) {
+      } catch (/** @type {any} */ err) {
         return err.message
       }
     },
@@ -269,7 +275,7 @@ export default (defaultTimezone) => {
         const validateData = {}
         if (result !== null && result !== undefined) validateData[property.key] = result
         if (!validate(validateData)) {
-          (localize[locale] || localize.fr)(validate.errors)
+          ((/** @type {any} */ (localize))[locale] || (/** @type {any} */ (localize)).fr)(validate.errors)
           let message = errorsText(validate.errors)
           if (result !== undefined) message += ` (résultat : ${JSON.stringify(result)})`
           throw new Error(message)

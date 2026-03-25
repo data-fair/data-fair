@@ -1,3 +1,4 @@
+/** @param {any} p @param {string} defaultPublicUrl @param {string} publicBaseUrl */
 export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flatArrays = false) => {
   const cleanProp = { ...p }
   // we badly named enum from the start, too bad, now we accept this semantic difference with json schema

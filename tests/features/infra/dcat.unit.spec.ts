@@ -17,7 +17,7 @@ test.describe('DCAT validation', () => {
   })
 
   test('Validate a DCAT example with different serialization', async () => {
-    const normalizedDcat = await dcatNormalize(semiceuExample)
+    const normalizedDcat = await dcatNormalize(semiceuExample, '')
     const valid = dcatValidate(normalizedDcat)
     if (!valid) console.error('DCAT validation failed', (dcatValidate as any).errors)
     assert.ok(valid)
