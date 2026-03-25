@@ -2,14 +2,12 @@
   <v-navigation-drawer
     v-model="drawer"
     color="primary"
-    class="rounded-te-xl"
     elevation="4"
   >
     <v-list
       density="compact"
       nav
       bg-color="primary"
-      class="rounded-te-xl"
     >
       <!-- Portal home link (when not main site) -->
       <v-list-item
@@ -17,14 +15,12 @@
         href="/"
         :prepend-icon="mdiHome"
         :title="t('homePortal')"
-        class="rounded-te-xl"
       />
       <!-- Dashboard -->
       <v-list-item
         to="/"
         :prepend-icon="mdiMonitorDashboard"
         :title="t('home')"
-        :class="(site && site.main === false) ? '' : 'rounded-te-xl'"
       />
     </v-list>
 
