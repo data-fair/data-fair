@@ -1,5 +1,6 @@
 <template>
   <v-dialog
+    v-if="!inline"
     v-model="showDialog"
     max-width="800"
   >
@@ -74,6 +75,57 @@
       </v-card-text>
     </v-card>
   </v-dialog>
+  <div v-else>
+    <p class="mb-4">
+      {{ resourceType === 'datasets' ? t('integrationMsgDataset') : t('integrationMsgApp') }}
+    </p>
+
+    <v-select
+      v-model="mode"
+      :label="t('integrationMode')"
+      :items="['iframe', 'd-frame']"
+      variant="outlined"
+      density="compact"
+      hide-details
+      class="mb-4"
+      style="max-width: 300px;"
+    />
+
+    <template v-if="mode === 'd-frame'">
+      <p
+        class="mb-2"
+        v-html="t('dFrameIntro')"
+      />
+      <v-checkbox
+        v-model="syncParams"
+        :label="t('syncParams')"
+        density="compact"
+        hide-details
+        class="mb-4"
+      />
+    </template>
+
+    <v-textarea
+      :model-value="snippet"
+      readonly
+      variant="outlined"
+      rows="4"
+      auto-grow
+      hide-details
+      class="mb-2"
+      style="font-family: monospace;"
+    />
+
+    <v-btn
+      color="primary"
+      variant="tonal"
+      size="small"
+      :prepend-icon="copied ? mdiCheck : mdiContentCopy"
+      @click="copyToClipboard"
+    >
+      {{ copied ? t('copied') : t('copy') }}
+    </v-btn>
+  </div>
 </template>
 
 <i18n lang="yaml">
@@ -103,6 +155,7 @@ import { mdiCheck, mdiClose, mdiContentCopy } from '@mdi/js'
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
   resource: { id: string, slug?: string, href?: string, previews?: { id: string, href: string, title: string }[] }
+  inline?: boolean
 }>()
 
 const { t } = useI18n()

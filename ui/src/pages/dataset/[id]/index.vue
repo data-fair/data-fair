@@ -142,6 +142,22 @@
                   </v-container>
                 </v-tabs-window-item>
 
+                <v-tabs-window-item value="integration">
+                  <v-container fluid>
+                    <integration-dialog
+                      inline
+                      resource-type="datasets"
+                      :resource="dataset"
+                    />
+                  </v-container>
+                </v-tabs-window-item>
+
+                <v-tabs-window-item value="readApiKey">
+                  <v-container fluid>
+                    <dataset-read-api-key />
+                  </v-container>
+                </v-tabs-window-item>
+
                 <v-tabs-window-item value="publication-sites">
                   <dataset-publication-sites />
                 </v-tabs-window-item>
@@ -166,25 +182,6 @@
                 <v-tabs-window-item value="related-datasets">
                   <v-container fluid>
                     <dataset-related-datasets />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </layout-section-tabs>
-
-          <!-- Read API key section -->
-          <layout-section-tabs
-            v-if="section.id === 'readApiKey'"
-            :id="section.id"
-            :min-height="200"
-            :title="section.title"
-            :tabs="section.tabs"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="readApiKey">
-                  <v-container fluid>
-                    <dataset-read-api-key />
                   </v-container>
                 </v-tabs-window-item>
               </v-tabs-window>
@@ -249,6 +246,7 @@ fr:
   publicationSites: Portails
   catalogPublications: Publications dans les catalogues
   relatedDatasets: Voir aussi
+  integration: Intégrer dans un site
   readApiKey: Clé d'API en lecture
   activity: Activité
   journal: Journal
@@ -270,6 +268,7 @@ en:
   publicationSites: Portals
   catalogPublications: Catalog publications
   relatedDatasets: See also
+  integration: Embed in a website
   readApiKey: Read API key
   activity: Activity
   journal: Journal
@@ -282,7 +281,7 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiCalendarText, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTable, mdiTableCog } from '@mdi/js'
+import { mdiCalendarText, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTable, mdiTableCog } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
@@ -345,6 +344,12 @@ const sections = computedDeepDiff(() => {
   if (can('getPermissions').value) {
     shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
   }
+  if (d.finalizedAt) {
+    shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
+  }
+  if (can('getReadApiKey').value) {
+    shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
+  }
   shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
   if ($uiConfig.catalogsIntegration && can('admin').value) {
     shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiPresentation })
@@ -352,14 +357,6 @@ const sections = computedDeepDiff(() => {
   shareTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
   if (shareTabs.length) {
     result.push({ title: t('share'), id: 'share', tabs: shareTabs })
-  }
-
-  if (can('getReadApiKey').value) {
-    result.push({
-      title: t('readApiKey'),
-      id: 'readApiKey',
-      tabs: [{ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey }]
-    })
   }
 
   if (can('readJournal').value && !d.isMetaOnly) {
