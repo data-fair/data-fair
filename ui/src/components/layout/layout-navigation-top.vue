@@ -27,7 +27,18 @@
       v-if="showBreadcrumbs"
       :items="breadcrumbItems"
       density="compact"
-    />
+    >
+      <template #item="{ item }">
+        <v-breadcrumbs-item
+          :to="item.to"
+          :disabled="!item.to"
+          :class="item.to ? 'text-primary' : 'text-on-surface'"
+          :style="!item.to ? 'opacity: 1' : undefined"
+        >
+          {{ item.title }}
+        </v-breadcrumbs-item>
+      </template>
+    </v-breadcrumbs>
     <v-spacer />
     <layout-notifications-queue
       v-if="$uiConfig.eventsIntegration && user"
@@ -73,10 +84,14 @@ const showBreadcrumbs = computed(() => {
   return true
 })
 
+function truncate (str: string, maxLen: number): string {
+  return str.length > maxLen ? str.slice(0, maxLen) + '…' : str
+}
+
 const breadcrumbItems = computed(() => {
   if (!props.breadcrumbs) return []
   return props.breadcrumbs.items.value.map(item => ({
-    title: item.text,
+    title: truncate(item.text, 50),
     to: item.to
   }))
 })

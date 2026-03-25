@@ -555,8 +555,7 @@ router.put('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['final
 // validate the draft
 // TODO: apply different permission if draft has breaking changes or not
 router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), apiKeyMiddlewareWrite, permissions.middleware('validateDraft', 'write'), lockDataset(), async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
+  const dataset = clone(req.dataset)
   const sessionState = reqSession(req)
 
   if (!req.datasetFull.draft) {
@@ -574,11 +573,9 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 
 // cancel the draft
 router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'finalized', 'error'], alwaysDraft: true }), apiKeyMiddlewareWrite, permissions.middleware('cancelDraft', 'write'), lockDataset(), async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
+  const dataset = clone(req.dataset)
   const sessionState = reqSession(req)
-  // @ts-ignore
-  const datasetFull = req.datasetFull
+  const datasetFull = clone(req.datasetFull)
 
   if (datasetFull.status === 'draft') {
     return res.status(409).send('Impossible d\'annuler un brouillon si aucune version du jeu de données n\'a été validée.')

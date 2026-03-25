@@ -21,25 +21,28 @@ en:
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
-import setBreadcrumbs from '~/utils/breadcrumbs'
+import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/thumbnails'>()
 const { height: windowHeight } = useWindowSize()
+const breadcrumbs = useBreadcrumbs()
 
 const store = provideDatasetStore(route.params.id, true, true)
 const { dataset } = store
 
 useDatasetWatch(store, ['info'])
 
-const contentHeight = computed(() => windowHeight.value - 120)
+const contentHeight = computed(() => windowHeight.value - 48)
 
 watch(dataset, (d) => {
   if (!d) return
-  setBreadcrumbs([
-    { text: t('datasets'), to: '/datasets' },
-    { text: d.title || d.id, to: `/dataset/${d.id}` },
-    { text: t('thumbnails') }
-  ])
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: t('datasets'), to: '/datasets' },
+      { text: d.title || d.id, to: `/dataset/${d.id}` },
+      { text: t('thumbnails') }
+    ]
+  })
 }, { immediate: true })
 </script>

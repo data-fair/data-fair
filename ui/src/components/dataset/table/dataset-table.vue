@@ -52,7 +52,7 @@
       />
     </v-btn-group>
   </v-toolbar>
-  <v-sheet class="pa-0">
+  <div class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
       fixed-header
@@ -244,7 +244,7 @@
       </v-row>
       <layout-scroll-to-top selector=".dataset-table-list-wrapper" />
     </div>
-  </v-sheet>
+  </div>
 
   <v-dialog
     :model-value="!!showMapPreview"
@@ -536,6 +536,9 @@ const deleteLine = useAsyncAction(async () => {
 </script>
 
 <style>
+.dataset-table {
+  background: transparent;
+}
 .dataset-table th {
   z-index: 2;
 }

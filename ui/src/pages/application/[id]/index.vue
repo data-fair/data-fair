@@ -354,13 +354,14 @@ import { mdiCalendarText, mdiCloudKey, mdiDatabase, mdiImage, mdiImageMultiple, 
 import { provideApplicationStore } from '~/composables/application-store'
 import { useApplicationVersions } from '~/composables/application-versions'
 import { useApplicationWatch } from '~/composables/application-watch'
-import setBreadcrumbs from '~/utils/breadcrumbs'
+import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
 import { $uiConfig } from '~/context'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/application/[id]/'>()
 const router = useRouter()
 
+const breadcrumbs = useBreadcrumbs()
 const store = provideApplicationStore(route.params.id)
 const { application, applicationLink, can, patch, journal, journalFetch, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
 const { availableVersions } = useApplicationVersions(store)
@@ -370,10 +371,12 @@ useApplicationWatch(['journal', 'draft-error'], store)
 // Fetch additional data once application is loaded
 watch(application, (app) => {
   if (!app) return
-  setBreadcrumbs([
-    { text: t('applications'), to: '/applications' },
-    { text: app.title || app.id }
-  ])
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: t('applications'), to: '/applications' },
+      { text: app.title || app.id }
+    ]
+  })
   if (!configFetch.initialized.value) configFetch.refresh()
   if (can('readJournal') && !journalFetch.initialized.value) journalFetch.refresh()
   if (!baseAppFetch.initialized.value) baseAppFetch.refresh()

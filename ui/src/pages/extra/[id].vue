@@ -17,10 +17,11 @@
 </template>
 
 <script lang="ts" setup>
-import setBreadcrumbs from '~/utils/breadcrumbs'
+import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/extra/[id]'>()
+const breadcrumbs = useBreadcrumbs()
 
 const extra = computed(() => {
   return $uiConfig.extraNavigationItems.find(e => e.id === route.params.id)
@@ -54,17 +55,19 @@ function handleMessage (event: MessageEvent) {
     text: b.text,
     to: b.to ? getBreadcrumbPath(b.to) : undefined
   }))
-  setBreadcrumbs([
-    { text: extra.value?.title || route.params.id as string },
-    ...crumbs
-  ])
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: extra.value?.title || route.params.id as string },
+      ...crumbs
+    ]
+  })
 }
 
 onMounted(() => {
   window.addEventListener('message', handleMessage)
   // Set initial breadcrumb
   if (extra.value) {
-    setBreadcrumbs([{ text: extra.value.title || route.params.id as string }])
+    breadcrumbs.receive({ breadcrumbs: [{ text: extra.value.title || route.params.id as string }] })
   }
 })
 

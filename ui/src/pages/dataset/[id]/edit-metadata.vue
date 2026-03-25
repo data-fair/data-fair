@@ -207,7 +207,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiAlert, mdiAttachment, mdiDatabase, mdiInformation, mdiPuzzle, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
-import setBreadcrumbs from '~/utils/breadcrumbs'
+import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
 import equal from 'fast-deep-equal'
 
 const { t, locale } = useI18n()
@@ -228,6 +228,7 @@ const datasetEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.
 })
 useLeaveGuard(datasetEditFetch.hasDiff, { locale })
 
+const breadcrumbs = useBreadcrumbs()
 const showSaveDialog = ref(false)
 
 const onRefreshExtension = async (extension: any) => {
@@ -238,11 +239,13 @@ const onRefreshExtension = async (extension: any) => {
 
 watch(datasetEditFetch.data, (d) => {
   if (!d) return
-  setBreadcrumbs([
-    { text: t('datasets'), to: '/datasets' },
-    { text: d.title || d.id, to: `/dataset/${d.id}` },
-    { text: t('editMetadata') }
-  ])
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: t('datasets'), to: '/datasets' },
+      { text: d.title || d.id, to: `/dataset/${d.id}` },
+      { text: t('editMetadata') }
+    ]
+  })
 }, { immediate: true })
 
 // Diff detection per section

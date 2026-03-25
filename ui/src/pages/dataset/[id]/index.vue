@@ -386,12 +386,13 @@ import Permissions from '~/components/permissions/permissions.vue'
 import { mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTable, mdiTableCog, mdiWebhook } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
-import setBreadcrumbs from '~/utils/breadcrumbs'
+import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
 const { sendUiNotif } = useUiNotif()
 
+const breadcrumbs = useBreadcrumbs()
 const schemaTab = ref('schema')
 const dataTab = ref('data')
 const activityTab = ref('journal')
@@ -404,10 +405,12 @@ useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 // Fetch additional data once dataset is loaded
 watch(dataset, (d) => {
   if (!d) return
-  setBreadcrumbs([
-    { text: t('datasets'), to: '/datasets' },
-    { text: d.title || d.id }
-  ])
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: t('datasets'), to: '/datasets' },
+      { text: d.title || d.id }
+    ]
+  })
   if (can('readJournal').value && !journalFetch.initialized.value) journalFetch.refresh()
   if (!taskProgressFetch.initialized.value) taskProgressFetch.refresh()
   if (d.finalizedAt && !applicationsFetch.initialized.value) applicationsFetch.refresh()
