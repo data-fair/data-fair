@@ -85,7 +85,7 @@
 
     <v-list-item
       v-if="can('readLines').value && dataset.finalizedAt && !dataset.isMetaOnly"
-      :to="`/dataset/${dataset.id}/data`"
+      :to="`/dataset/${dataset.id}/table`"
     >
       <template #prepend>
         <v-icon
