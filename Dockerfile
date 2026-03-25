@@ -1,8 +1,9 @@
-FROM node:24.11.1-alpine3.22 AS base
+FROM node:24.14.0-alpine3.22 AS base
 
 # RUN npm install -g npm@11.1.0
 
 WORKDIR /app
+ENV NODE_ENV=production
 
 ##########################
 FROM base AS geodeps
@@ -72,7 +73,7 @@ ADD ui/package.json ui/package.json
 ADD patches patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
-RUN npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund --include dev
 
 ADD /api/config api/config
 ADD /api/types api/types
@@ -90,7 +91,6 @@ RUN mkdir -p /app/api/node_modules
 ADD shared shared
 RUN mkdir -p /app/shared/node_modules
 RUN npm --prefix ui install --no-audit --no-fund
-ENV NODE_ENV=production
 RUN npm run build
 
 ##########################
@@ -150,7 +150,6 @@ ADD package.json README.md LICENSE BUILD.json* ./
 WORKDIR /app/api
 
 # configure node webapp environment
-ENV NODE_ENV=production
 ENV DEBUG db,upgrade*
 
 # TODO: activate this line on next major release

@@ -104,6 +104,7 @@ declare global {
   const useAgentDatasetDataTools: typeof import('../src/composables/use-agent-dataset-data-tools')['useAgentDatasetDataTools']
   const useAgentDatasetTools: typeof import('../src/composables/use-agent-dataset-tools')['useAgentDatasetTools']
   const useAgentNavigationTools: typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']
+  const useAgentSummaryTools: typeof import('../src/composables/use-agent-summary-tools')['useAgentSummaryTools']
   const useApplicationStore: typeof import('../src/composables/application-store')['useApplicationStore']
   const useApplicationVersions: typeof import('../src/composables/application-versions')['useApplicationVersions']
   const useApplicationWatch: typeof import('../src/composables/application-watch')['useApplicationWatch']
@@ -271,6 +272,7 @@ declare module 'vue' {
     readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/use-agent-dataset-data-tools')['useAgentDatasetDataTools']>
     readonly useAgentDatasetTools: UnwrapRef<typeof import('../src/composables/use-agent-dataset-tools')['useAgentDatasetTools']>
     readonly useAgentNavigationTools: UnwrapRef<typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']>
+    readonly useAgentSummaryTools: UnwrapRef<typeof import('../src/composables/use-agent-summary-tools')['useAgentSummaryTools']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['useApplicationStore']>
     readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['useApplicationVersions']>
     readonly useApplicationWatch: UnwrapRef<typeof import('../src/composables/application-watch')['useApplicationWatch']>
