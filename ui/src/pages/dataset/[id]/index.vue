@@ -36,16 +36,64 @@
             </template>
           </layout-section-tabs>
 
-          <!-- Applications section -->
+          <!-- Data section -->
           <layout-section-tabs
-            v-if="section.id === 'applications'"
+            v-if="section.id === 'data'"
             :id="section.id"
+            v-model="dataTab"
             :min-height="140"
             :title="section.title"
             :tabs="section.tabs"
+            :svg="dataSvg"
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
+                <v-tabs-window-item value="data">
+                  <v-container fluid>
+                    <v-row class="pa-4">
+                      <v-col cols="6" md="4" lg="3">
+                        <v-card :to="`/dataset/${dataset.id}/table`" variant="outlined">
+                          <v-card-text class="text-center">
+                            <v-icon size="48" :icon="mdiTable" />
+                            <div class="mt-2">{{ t('table') }}</div>
+                          </v-card-text>
+                        </v-card>
+                      </v-col>
+                      <v-col v-if="dataset.bbox" cols="6" md="4" lg="3">
+                        <v-card :to="`/dataset/${dataset.id}/map`" variant="outlined">
+                          <v-card-text class="text-center">
+                            <v-icon size="48" :icon="mdiMap" />
+                            <div class="mt-2">{{ t('map') }}</div>
+                          </v-card-text>
+                        </v-card>
+                      </v-col>
+                      <v-col v-if="digitalDocumentField" cols="6" md="4" lg="3">
+                        <v-card :to="`/dataset/${dataset.id}/files`" variant="outlined">
+                          <v-card-text class="text-center">
+                            <v-icon size="48" :icon="mdiContentCopy" />
+                            <div class="mt-2">{{ t('files') }}</div>
+                          </v-card-text>
+                        </v-card>
+                      </v-col>
+                      <v-col v-if="imageField" cols="6" md="4" lg="3">
+                        <v-card :to="`/dataset/${dataset.id}/thumbnails`" variant="outlined">
+                          <v-card-text class="text-center">
+                            <v-icon size="48" :icon="mdiImage" />
+                            <div class="mt-2">{{ t('thumbnails') }}</div>
+                          </v-card-text>
+                        </v-card>
+                      </v-col>
+                      <v-col v-if="dataset.rest?.history" cols="6" md="4" lg="3">
+                        <v-card :to="`/dataset/${dataset.id}/revisions`" variant="outlined">
+                          <v-card-text class="text-center">
+                            <v-icon size="48" :icon="mdiHistory" />
+                            <div class="mt-2">{{ t('revisions') }}</div>
+                          </v-card-text>
+                        </v-card>
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </v-tabs-window-item>
                 <v-tabs-window-item value="applications">
                   <v-container fluid>
                     <v-row v-if="applications.length">
@@ -187,6 +235,13 @@ fr:
   datasets: Jeux de données
   schema: Schéma
   extensions: Enrichissements
+  consultData: Consulter la donnée
+  data: Données
+  table: Tableau
+  map: Carte
+  files: Fichiers
+  thumbnails: Vignettes
+  revisions: Révisions
   applications: Applications
   noApplications: Aucune application n'utilise ce jeu de données.
   share: Partage
@@ -201,6 +256,13 @@ en:
   datasets: Datasets
   schema: Schema
   extensions: Extensions
+  consultData: View data
+  data: Data
+  table: Table
+  map: Map
+  files: Files
+  thumbnails: Thumbnails
+  revisions: Revisions
   applications: Applications
   noApplications: No application uses this dataset.
   share: Share
@@ -215,11 +277,12 @@ en:
 
 <script lang="ts" setup>
 import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
+import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiCalendarText, mdiEyeArrowRight, mdiImageMultiple, mdiKey, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTableCog } from '@mdi/js'
+import { mdiCalendarText, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTable, mdiTableCog } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
@@ -229,9 +292,10 @@ const route = useRoute<'/dataset/[id]/'>()
 const { sendUiNotif } = useUiNotif()
 
 const schemaTab = ref('schema')
+const dataTab = ref('data')
 
 const store = provideDatasetStore(route.params.id, true)
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, can } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, digitalDocumentField, imageField, can } = store
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 
@@ -265,11 +329,15 @@ const sections = computedDeepDiff(() => {
     })
   }
 
-  if (d.finalizedAt && !d.draftReason) {
+  if (d.finalizedAt && !d.isMetaOnly && !d.draftReason) {
+    const dataTabs = [
+      { key: 'data', title: t('data'), icon: mdiTable }
+    ]
+    dataTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
     result.push({
-      title: t('applications'),
-      id: 'applications',
-      tabs: [{ key: 'applications', title: t('applications'), icon: mdiImageMultiple }]
+      title: t('consultData'),
+      id: 'data',
+      tabs: dataTabs
     })
   }
 
