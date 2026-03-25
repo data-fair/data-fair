@@ -66,7 +66,7 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
       if (keys.includes('info')) {
         const newStatus = eventStates[event.type]
         if (newStatus && dataset.value) {
-          dataset.value = { ...dataset.value, status: newStatus }
+          dataset.value = { ...dataset.value, status: newStatus as typeof dataset.value.status }
         }
         // Refresh schema after analyze-end or extend-start (schema may have changed)
         if (event.type === 'analyze-end' || event.type === 'extend-start') {

@@ -165,8 +165,8 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
         field: params.groupByColumns.join(';')
       }
       if (params.metric && params.metric.type !== 'count') {
-        query.metric = params.metric.type
-        query.metric_field = params.metric.column
+        query.metric = params.metric.type!
+        query.metric_field = params.metric.column!
       }
       if (params.sort) query.sort = params.sort
       if (params.filters) {

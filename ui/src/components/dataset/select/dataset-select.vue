@@ -19,7 +19,7 @@
   >
     <template #item="{internalItem}">
       <dataset-list-item
-        :dataset="internalItem.raw"
+        :dataset="(internalItem.raw as any)"
         :dense="true"
         :show-topics="true"
         :no-link="true"

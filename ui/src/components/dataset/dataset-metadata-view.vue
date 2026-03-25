@@ -155,11 +155,11 @@
           <!-- Custom metadata fields -->
           <template v-if="datasetsMetadata?.custom?.length">
             <v-list-item
-              v-for="cm of datasetsMetadata.custom.filter((c: any) => dataset.customMetadata?.[c.key])"
+              v-for="cm of datasetsMetadata.custom.filter((c: any) => dataset?.customMetadata?.[c.key])"
               :key="cm.key"
               :prepend-icon="mdiTag"
             >
-              <v-list-item-title>{{ cm.title }}: {{ dataset.customMetadata[cm.key] }}</v-list-item-title>
+              <v-list-item-title>{{ cm.title }}: {{ dataset?.customMetadata?.[cm.key] }}</v-list-item-title>
             </v-list-item>
           </template>
         </v-list>

@@ -361,7 +361,7 @@ function selectSite (site: Record<string, any>) {
   currentStep.value = 2
 }
 
-async function onDatasetSelected (selected: ListedDataset | undefined) {
+async function onDatasetSelected (selected: Record<string, any> | null) {
   if (!selected) {
     dataset.value = null
     return

@@ -154,7 +154,7 @@ import { mdiCheck, mdiClose, mdiContentCopy } from '@mdi/js'
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
-  resource: { id: string, slug?: string, href?: string, previews?: { id: string, href: string, title: string }[] }
+  resource: { id: string, slug?: string, href?: string, previews?: { id?: string, href?: string, title?: string }[] }
   inline?: boolean
 }>()
 

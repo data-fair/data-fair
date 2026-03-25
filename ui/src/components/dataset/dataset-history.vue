@@ -114,7 +114,7 @@ const headers = computed(() => {
   if (!(dataset.value.primaryKey?.length)) {
     h.push({ title: t('id'), key: '_id', sortable: false })
   }
-  for (const field of dataset.value.schema.filter((f: any) => !f['x-calculated'])) {
+  for (const field of (dataset.value.schema ?? []).filter((f: any) => !f['x-calculated'])) {
     h.push({
       title: field.title || field['x-originalName'] || field.key,
       key: field.key,

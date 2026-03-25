@@ -23,9 +23,9 @@ import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
 
 const { t } = useI18n()
-const route = useRoute()
+const route = useRoute<'/dataset/[id]/revisions'>()
 
-const store = provideDatasetStore(route.params.id as string, true, true)
+const store = provideDatasetStore(route.params.id, true, true)
 const { dataset } = store
 
 useDatasetWatch(store, ['info'])

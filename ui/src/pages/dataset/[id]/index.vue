@@ -29,7 +29,7 @@
                 </v-tabs-window-item>
                 <v-tabs-window-item value="extensions">
                   <v-container fluid>
-                    <dataset-extensions />
+                    <dataset-extensions v-model="dataset" />
                   </v-container>
                 </v-tabs-window-item>
               </v-tabs-window>
@@ -172,9 +172,9 @@
                       {{ t('catalogPublications') }}
                     </h3>
                     <d-frame
-                      :src="`${window.location.origin}/catalogs/dataset-publications?dataset-id=${dataset.id}`"
+                      :src="catalogPublicationsUrl"
                       sync-params
-                      @notif="msg => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+                      @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
                     />
                   </v-container>
                 </v-tabs-window-item>
@@ -218,7 +218,7 @@
                   <d-frame
                     :src="traceabilityUrl"
                     sync-params
-                    @notif="msg => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+                    @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
                   />
                 </v-tabs-window-item>
                 <v-tabs-window-item
@@ -350,6 +350,11 @@ watch(dataset, (d) => {
 }, { immediate: true })
 
 const applications = computed(() => applicationsFetch.data.value?.results ?? [])
+
+const catalogPublicationsUrl = computed(() => {
+  if (!dataset.value) return ''
+  return `${window.location.origin}/catalogs/dataset-publications?dataset-id=${dataset.value.id}`
+})
 
 const traceabilityUrl = computed(() => {
   if (!dataset.value) return ''
