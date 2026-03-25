@@ -13,12 +13,12 @@
           <!-- Schema section -->
           <layout-section-tabs
             v-if="section.id === 'schema'"
+            v-model="schemaTab"
             :id="section.id"
             :min-height="200"
             :title="section.title"
             :tabs="section.tabs"
             :svg="buildingSvg"
-            v-model="schemaTab"
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
