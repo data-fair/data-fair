@@ -31,7 +31,7 @@ import { useNavigationItems } from '~/composables/use-navigation-items'
 import { useAgentNavigationTools } from '~/composables/use-agent-navigation-tools'
 import { useAgentDatasetTools } from '~/composables/use-agent-dataset-tools'
 import { useAgentDatasetDataTools } from '~/composables/use-agent-dataset-data-tools'
-import { $uiConfig, $apiPath } from '~/context'
+import { provideShowAgentChat } from '~/composables/use-show-agent-chat'
 import DfAgentChatDrawer from '@data-fair/lib-vuetify-agents/DfAgentChatDrawer.vue'
 
 const { lgAndUp } = useDisplay()
@@ -44,10 +44,7 @@ const router = useRouter()
 const { navigationGroups } = useNavigationItems()
 const { locale } = useI18n()
 
-const agentChatFetch = ($uiConfig.agentsIntegration && session.account.value)
-  ? useFetch<{ agentChat: boolean }>(`${$apiPath}/settings/${session.account.value.type}/${session.account.value.id}/agent-chat`)
-  : null
-const showAgentChat = computed(() => !!agentChatFetch?.data.value?.agentChat)
+const showAgentChat = provideShowAgentChat(session)
 
 let toolsScope: ReturnType<typeof effectScope> | null = null
 watchEffect(() => {

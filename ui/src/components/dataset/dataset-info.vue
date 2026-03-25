@@ -22,7 +22,7 @@
         class="flex-grow-1"
       />
       <df-agent-chat-action
-        v-if="can('writeDescription')"
+        v-if="showAgentChat && can('writeDescription')"
         action-id="summarize-dataset"
         :visible-prompt="t('summarizePrompt')"
         :hidden-context="summarizeContext"
@@ -126,6 +126,9 @@ en:
 <script lang="ts" setup>
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useShowAgentChat } from '~/composables/use-show-agent-chat'
+
+const showAgentChat = useShowAgentChat()
 
 const dataset = defineModel<any>({ required: true })
 

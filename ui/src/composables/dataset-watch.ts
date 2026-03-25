@@ -8,7 +8,7 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
   const { id, dataset, journal, datasetFetch, draft, taskProgress } = datasetStore
 
   if (!Array.isArray(keys)) keys = [keys]
-  const ws = useWS('/data-fair/')
+  const ws = useWS('/data-fair/api/')
 
   if (keys.includes('taskProgress')) {
     ws?.subscribe(`datasets/${id}/task-progress`, async (newTaskProgress: TaskProgress) => {

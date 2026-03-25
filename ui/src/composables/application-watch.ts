@@ -5,7 +5,7 @@ type WatchKey = 'draft-error' | 'journal'
 export const useApplicationWatch = (keys: WatchKey | WatchKey[], storeOverride?: ApplicationStore) => {
   const { id, application, journal } = storeOverride ?? useApplicationStore()
   if (!Array.isArray(keys)) keys = [keys]
-  const ws = useWS('/data-fair/')
+  const ws = useWS('/data-fair/api/')
 
   if (keys.includes('draft-error')) {
     ws?.subscribe(`applications/${id}/draft-error`, (message) => {
