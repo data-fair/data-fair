@@ -18,12 +18,18 @@
             :title="section.title"
             :tabs="section.tabs"
             :svg="buildingSvg"
+            v-model="schemaTab"
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
                 <v-tabs-window-item value="schema">
                   <v-container fluid>
                     <dataset-schema-view />
+                  </v-container>
+                </v-tabs-window-item>
+                <v-tabs-window-item value="extensions">
+                  <v-container fluid>
+                    <dataset-extensions />
                   </v-container>
                 </v-tabs-window-item>
               </v-tabs-window>
@@ -180,6 +186,7 @@
 fr:
   datasets: Jeux de données
   schema: Schéma
+  extensions: Enrichissements
   applications: Applications
   noApplications: Aucune application n'utilise ce jeu de données.
   share: Partage
@@ -193,6 +200,7 @@ fr:
 en:
   datasets: Datasets
   schema: Schema
+  extensions: Extensions
   applications: Applications
   noApplications: No application uses this dataset.
   share: Share
@@ -211,7 +219,7 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiCalendarText, mdiEyeArrowRight, mdiImageMultiple, mdiKey, mdiPresentation, mdiSecurity, mdiTableCog } from '@mdi/js'
+import { mdiCalendarText, mdiEyeArrowRight, mdiImageMultiple, mdiKey, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTableCog } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import setBreadcrumbs from '~/utils/breadcrumbs'
@@ -219,6 +227,8 @@ import setBreadcrumbs from '~/utils/breadcrumbs'
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
 const { sendUiNotif } = useUiNotif()
+
+const schemaTab = ref('schema')
 
 const store = provideDatasetStore(route.params.id, true)
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, can } = store
@@ -248,7 +258,10 @@ const sections = computedDeepDiff(() => {
     result.push({
       title: t('schema'),
       id: 'schema',
-      tabs: [{ key: 'schema', title: t('schema'), icon: mdiTableCog }]
+      tabs: [
+        { key: 'schema', title: t('schema'), icon: mdiTableCog },
+        { key: 'extensions', title: t('extensions'), icon: mdiPuzzle }
+      ]
     })
   }
 
