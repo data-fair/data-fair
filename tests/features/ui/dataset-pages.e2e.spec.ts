@@ -33,13 +33,17 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
   })
 
-  test('edit-metadata page shows info, metadata, schema, extensions and attachments sections', async ({ page, goToWithAuth }) => {
+  test('edit-metadata page shows info and structure sections with their tabs', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#metadata')).toBeVisible()
-    await expect(page.locator('#schema')).toBeVisible()
-    await expect(page.locator('#extensions')).toBeVisible()
-    await expect(page.locator('#attachments')).toBeVisible()
+    await expect(page.locator('#structure')).toBeVisible()
+    // Info section has info, metadata and attachments tabs
+    await expect(page.locator('#info').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
+    await expect(page.locator('#info').getByRole('tab', { name: /Métadonnées|Metadata/ })).toBeVisible()
+    await expect(page.locator('#info').getByRole('tab', { name: /Pièces jointes|Attachments/ })).toBeVisible()
+    // Structure section has schema and extensions tabs
+    await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
+    await expect(page.locator('#structure').getByRole('tab', { name: /Enrichissements|Extensions/ })).toBeVisible()
   })
 
   test('edit-metadata: editing title shows save button and persists changes', async ({ page, goToWithAuth }) => {
@@ -76,26 +80,26 @@ test.describe('dataset detail pages', () => {
 
   test('edit-metadata: schema section shows dataset properties', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
-    await expect(page.locator('#schema')).toBeVisible({ timeout: 10000 })
-    const schemaSection = page.locator('#schema')
-    await expect(schemaSection.getByRole('heading', { name: /colonne|column/i })).toBeVisible()
+    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
+    const structureSection = page.locator('#structure')
+    await expect(structureSection.getByRole('heading', { name: /colonne|column/i })).toBeVisible()
     // Click on one of the property buttons (use key name which is stable)
-    const adrButton = schemaSection.getByRole('button').filter({ hasText: /adr/ })
+    const adrButton = structureSection.getByRole('button').filter({ hasText: /adr/ })
     await adrButton.click()
-    await expect(schemaSection.getByText(/Cl[eé] dans la source|Key in the source/i)).toBeVisible({ timeout: 5000 })
+    await expect(structureSection.getByText(/Cl[eé] dans la source|Key in the source/i)).toBeVisible({ timeout: 5000 })
   })
 
   test('edit-metadata: editing a schema property label triggers diff and saves', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
-    await expect(page.locator('#schema')).toBeVisible({ timeout: 10000 })
-    const schemaSection = page.locator('#schema')
+    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
+    const structureSection = page.locator('#structure')
     // Click on the "adr" property button
-    const adrButton = schemaSection.getByRole('button').filter({ hasText: /adr/ })
+    const adrButton = structureSection.getByRole('button').filter({ hasText: /adr/ })
     await adrButton.click()
 
     // Vuetify text fields don't use standard label association; use placeholder to find the input
     // The title field shows the x-originalName or key as placeholder
-    const labelField = schemaSection.getByPlaceholder(/adr/i)
+    const labelField = structureSection.getByPlaceholder(/adr/i)
     await expect(labelField).toBeVisible({ timeout: 5000 })
     await labelField.click()
     await labelField.fill('Adresse complète')
@@ -125,8 +129,10 @@ test.describe('dataset detail pages', () => {
     page.on('dialog', async dialog => {
       await dialog.dismiss()
     })
-    // Try navigating away using breadcrumb or browser back
-    await page.goBack()
+    // Try navigating away using browser back - goBack will trigger beforeunload dialog
+    // which we dismiss, so navigation doesn't complete. Use a short timeout to avoid hanging.
+    await page.goBack({ timeout: 3000 }).catch(() => {})
+    // Should still be on the same page after dismissing the dialog
     await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 5000 })
     await expect(page.locator('#info')).toBeVisible()
   })

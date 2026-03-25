@@ -17,7 +17,7 @@ test.describe('dataset upload dialog stepper', () => {
 
   test('update file flow: open dialog, select file, configure options, upload', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-title-medium').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
 
     // Open the upload dialog via the actions menu
     await page.getByText('Mettre à jour le fichier').click()
@@ -46,7 +46,7 @@ test.describe('dataset upload dialog stepper', () => {
 
   test('dialog can be closed without uploading', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-title-medium').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
 
     // Open the upload dialog
     await page.getByText('Mettre à jour le fichier').click()

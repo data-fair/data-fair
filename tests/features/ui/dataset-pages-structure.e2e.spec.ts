@@ -59,13 +59,14 @@ test.describe('dataset page restructuring', () => {
 
   test('actions menu does not contain moved items', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
-    // Edit metadata should be visible (when not in draft)
-    await expect(page.getByText(/Éditer les métadonnées|Edit metadata/)).toBeVisible()
-    // These should NOT be visible (moved to inline tabs)
-    await expect(page.getByText(/Intégrer dans un site|Embed in a website/).first()).not.toBeVisible()
-    // Notifications and webhooks should not be in the action list
-    const actionsList = page.locator('.df-navigation-right')
+    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 15000 })
+    // The right navigation drawer contains the actions menu (second nav on the page)
+    const actionsList = page.locator('nav').filter({ hasText: 'ACTIONS' })
+    await expect(actionsList).toBeVisible({ timeout: 5000 })
+    // Edit metadata should be visible in the actions menu
+    await expect(actionsList.getByText(/Éditer les métadonnées|Edit metadata/)).toBeVisible()
+    // These should NOT be in the actions list (moved to inline tabs in the page)
+    await expect(actionsList.getByText(/Intégrer dans un site|Embed in a website/)).not.toBeVisible()
     await expect(actionsList.getByText('Notifications')).not.toBeVisible()
     await expect(actionsList.getByText('Webhooks')).not.toBeVisible()
   })
@@ -73,7 +74,7 @@ test.describe('dataset page restructuring', () => {
   test('edit-metadata has metadata tab', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#metadata')).toBeVisible()
+    await expect(page.locator('#info').getByRole('tab', { name: /Métadonnées|Metadata/ })).toBeVisible()
   })
 
   test('edit-metadata save shows confirmation dialog', async ({ page, goToWithAuth }) => {

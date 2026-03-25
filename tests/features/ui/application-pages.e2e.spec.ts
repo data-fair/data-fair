@@ -24,7 +24,9 @@ test.describe('application detail pages', () => {
   test('application index page loads with sections', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
     await goToWithAuth(`/data-fair/application/${applicationId}`, 'test_user1')
-    await expect(page.getByText('Test Application E2E')).toBeVisible({ timeout: 10000 })
+    // Wait for the metadata section which contains the title
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('#metadata').getByText('Test Application E2E')).toBeVisible()
   })
 
   test('application config page loads', async ({ page, goToWithAuth }) => {
