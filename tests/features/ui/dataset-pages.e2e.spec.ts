@@ -14,12 +14,12 @@ test.describe('dataset detail pages', () => {
 
   test('dataset home page loads with title', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-title-medium').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
   })
 
-  test('dataset data page loads with table', async ({ page, goToWithAuth }) => {
+  test('dataset /data redirects to /table', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/data`, 'test_user1')
-    await expect(page.getByRole('tab', { name: /Tableau/ })).toBeVisible({ timeout: 10000 })
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/table`), { timeout: 10000 })
   })
 
   test('dataset api-doc page loads', async ({ page, goToWithAuth }) => {
@@ -33,14 +33,13 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
   })
 
-  test('edit-metadata page shows info, schema, extensions and attachments sections', async ({ page, goToWithAuth }) => {
+  test('edit-metadata page shows info, metadata, schema, extensions and attachments sections', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#metadata')).toBeVisible()
     await expect(page.locator('#schema')).toBeVisible()
     await expect(page.locator('#extensions')).toBeVisible()
     await expect(page.locator('#attachments')).toBeVisible()
-    await expect(page.getByText(/Retour à la fiche|Back to home/)).toBeVisible()
-    await expect(page.getByText(/Voir les données|View data/)).toBeVisible()
   })
 
   test('edit-metadata: editing title shows save button and persists changes', async ({ page, goToWithAuth }) => {
@@ -56,8 +55,12 @@ test.describe('dataset detail pages', () => {
     // Save button should now be visible (diff detected)
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
 
-    // Click save
+    // Click save — opens confirmation dialog
     await page.getByRole('button', { name: /Enregistrer|Save/ }).click()
+
+    // Confirm in the dialog
+    await expect(page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
+    await page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ }).click()
 
     // Save button should disappear after successful save (no more diff)
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 10000 })
@@ -100,8 +103,9 @@ test.describe('dataset detail pages', () => {
     // Save button should appear
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
 
-    // Save
+    // Save — opens confirmation dialog
     await page.getByRole('button', { name: /Enregistrer|Save/ }).click()
+    await page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ }).click()
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 10000 })
 
     // Verify via API
@@ -121,37 +125,32 @@ test.describe('dataset detail pages', () => {
     page.on('dialog', async dialog => {
       await dialog.dismiss()
     })
-    await page.getByText(/Retour à la fiche|Back to home/).click()
+    // Try navigating away using breadcrumb or browser back
+    await page.goBack()
     await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 5000 })
     await expect(page.locator('#info')).toBeVisible()
   })
 
-  test('dataset home page shows description, metadata, schema and activity sections', async ({ page, goToWithAuth }) => {
+  test('dataset home page shows metadata-view, schema, data, share and activity sections', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-title-medium').first()).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#description')).toBeVisible()
-    await expect(page.locator('#metadata')).toBeVisible()
+    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
     await expect(page.locator('#schema')).toBeVisible()
+    await expect(page.locator('#data')).toBeVisible()
     await expect(page.locator('#share')).toBeVisible()
     await expect(page.locator('#activity')).toBeVisible()
   })
 
   test('dataset home page displays record count', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
     await expect(page.getByText(/enregistrements|records/)).toBeVisible()
   })
 
-  test('dataset home page action links navigate to edit-metadata and back', async ({ page, goToWithAuth }) => {
+  test('dataset home page action links navigate to edit-metadata', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-title-medium').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
     await page.getByText(/Éditer les métadonnées|Edit metadata/).click()
     await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 10000 })
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
-    // Accept the leave guard confirm dialog if it appears (hasDiff may be true due to background server updates)
-    page.on('dialog', dialog => dialog.accept())
-    // Navigate back using the link in the navigation panel
-    await page.locator('a').filter({ hasText: /Retour à la fiche|Back to home/ }).click()
-    await expect(page.locator('#description')).toBeVisible({ timeout: 15000 })
   })
 })
