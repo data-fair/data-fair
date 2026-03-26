@@ -21,7 +21,7 @@
         <d-frame
           v-else
           ref="frame"
-          :height="frameHeight - 16"
+          :height="windowHeight - 64"
           resize="no"
           :src="applicationLink + '?embed=true&draft=true'"
           :reload="draftPreviewInc"
@@ -196,7 +196,7 @@ const display = useDisplay()
 const showAgentChat = useShowAgentChat()
 const { sendUiNotif } = useUiNotif()
 const { t } = useI18n()
-const { frameHeight } = useDFramePage()
+const { height: windowHeight } = useWindowSize()
 
 const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
@@ -235,8 +235,6 @@ const hasModification = computed(() => {
   return false
 })
 const hasDraft = computed(() => application.value?.status === 'configured-draft')
-
-const { height: windowHeight } = useWindowSize()
 
 const showForm = ref(false)
 const draftSchema = ref<any>()
