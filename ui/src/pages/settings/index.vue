@@ -345,9 +345,9 @@ fr:
   privateVocab: Vocabulaire privé
   publicationSites: Portails
   info: Informations de contact
-  agentChat: Chat agent
-  agentChatDesc: Activez ou désactivez le chat agent pour cette organisation.
-  agentChatToggle: Activer le chat agent
+  agentChat: AI assistant
+  agentChatDesc: Activez ou désactivez l'assistant IA pour cette organisation.
+  agentChatToggle: Activer l'assistant IA
   compat: Gestion des compatibilités
   compatODS: Activer la compatibilité ODS
 en:

@@ -493,8 +493,8 @@ export default {
     },
     agentChat: {
       type: 'boolean',
-      title: 'Chat agent',
-      description: 'Active le chat agent',
+      title: 'AI assistant',
+      description: 'Active l\'assistant IA',
       default: false
     }
   }
