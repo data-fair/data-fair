@@ -102,8 +102,11 @@ declare global {
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
+  const useAgentApplicationTools: typeof import('../src/composables/use-agent-application-tools')['useAgentApplicationTools']
+  const useAgentConnectorTools: typeof import('../src/composables/use-agent-connector-tools')['useAgentConnectorTools']
   const useAgentDatasetDataTools: typeof import('../src/composables/use-agent-dataset-data-tools')['useAgentDatasetDataTools']
   const useAgentDatasetTools: typeof import('../src/composables/use-agent-dataset-tools')['useAgentDatasetTools']
+  const useAgentGeoTools: typeof import('../src/composables/use-agent-geo-tools')['useAgentGeoTools']
   const useAgentNavigationTools: typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']
   const useAgentSummaryTools: typeof import('../src/composables/use-agent-summary-tools')['useAgentSummaryTools']
   const useApplicationStore: typeof import('../src/composables/application-store')['useApplicationStore']
@@ -272,8 +275,11 @@ declare module 'vue' {
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
+    readonly useAgentApplicationTools: UnwrapRef<typeof import('../src/composables/use-agent-application-tools')['useAgentApplicationTools']>
+    readonly useAgentConnectorTools: UnwrapRef<typeof import('../src/composables/use-agent-connector-tools')['useAgentConnectorTools']>
     readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/use-agent-dataset-data-tools')['useAgentDatasetDataTools']>
     readonly useAgentDatasetTools: UnwrapRef<typeof import('../src/composables/use-agent-dataset-tools')['useAgentDatasetTools']>
+    readonly useAgentGeoTools: UnwrapRef<typeof import('../src/composables/use-agent-geo-tools')['useAgentGeoTools']>
     readonly useAgentNavigationTools: UnwrapRef<typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']>
     readonly useAgentSummaryTools: UnwrapRef<typeof import('../src/composables/use-agent-summary-tools')['useAgentSummaryTools']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['useApplicationStore']>

@@ -63,6 +63,41 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
         }
         return acc
       }, [] as string[])
+
+      pagesByGroup.push(
+        '**Workflow pages**:\n' +
+        '- Create new dataset: /new-dataset\n' +
+        '- Update existing dataset: /update-dataset\n' +
+        '- Share/publish dataset: /share-dataset\n' +
+        '- Create new application: /new-application'
+      )
+
+      pagesByGroup.push(
+        '**Detail pages** (require an ID, use list_datasets or list_applications to find IDs):\n' +
+        '- Dataset overview: /dataset/{id}\n' +
+        '- Dataset data: /dataset/{id}/data\n' +
+        '- Dataset table: /dataset/{id}/table\n' +
+        '- Dataset map: /dataset/{id}/map\n' +
+        '- Dataset files: /dataset/{id}/files\n' +
+        '- Edit dataset data: /dataset/{id}/edit-data\n' +
+        '- Edit dataset metadata: /dataset/{id}/edit-metadata\n' +
+        '- Dataset thumbnails: /dataset/{id}/thumbnails\n' +
+        '- Dataset revisions: /dataset/{id}/revisions\n' +
+        '- Dataset API doc: /dataset/{id}/api-doc\n' +
+        '- Application overview: /application/{id}\n' +
+        '- Application config: /application/{id}/config\n' +
+        '- Application API doc: /application/{id}/api-doc\n' +
+        '- Remote service detail: /remote-services/{id}'
+      )
+
+      pagesByGroup.push(
+        '**D-frame pages** (processings/catalogs, use list_processings or list_catalogs to find IDs):\n' +
+        '- Processings list: /processings\n' +
+        '- Processing detail: /processings/{id}\n' +
+        '- Catalogs list: /catalogs\n' +
+        '- Catalog detail: /catalogs/{id}'
+      )
+
       return {
         content: [{
           type: 'text' as const,
@@ -74,7 +109,7 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
 
   useAgentTool({
     name: 'navigate',
-    description: 'Navigate to a page in the application. Use list_pages to discover available paths.',
+    description: 'Navigate to a page in the application. Use list_pages to discover available paths, and list_datasets, list_applications, list_processings, or list_catalogs to find resource IDs.',
     annotations: { title: t('navigateToPage') },
     inputSchema: {
       type: 'object' as const,
