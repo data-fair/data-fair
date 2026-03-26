@@ -2,11 +2,10 @@
   <d-frame
     id="portals-manager"
     :src="$sitePath + '/portals-manager/portals/'"
-    :height="frameHeight"
     sync-params
     :sync-path="$sitePath + '/data-fair/portals/'"
     emit-iframe-messages
-    resize="no"
+    resize="yes"
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"
@@ -19,5 +18,5 @@
 import { useDFramePage } from '~/composables/use-d-frame-page'
 
 const { sendUiNotif } = useUiNotif()
-const { stateChangeAdapter, frameHeight, onMessage } = useDFramePage()
+const { stateChangeAdapter, onMessage } = useDFramePage()
 </script>

@@ -2,9 +2,8 @@
   <d-frame
     id="processings"
     :src="$sitePath + '/processings/admin/plugins/'"
-    :height="frameHeight"
     sync-params
-    resize="no"
+    resize="yes"
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"
@@ -16,5 +15,5 @@
 import { useDFramePage } from '~/composables/use-d-frame-page'
 
 const { sendUiNotif } = useUiNotif()
-const { stateChangeAdapter, frameHeight, onMessage } = useDFramePage()
+const { stateChangeAdapter, onMessage } = useDFramePage()
 </script>

@@ -3,7 +3,7 @@
     id="application-api-doc"
     :src="`${$sitePath}/openapi-viewer?drawerLocation=right&urlType=application&id=${route.params.id}`"
     sync-params
-    resize="no"
+    resize="yes"
     @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
   />
 </template>

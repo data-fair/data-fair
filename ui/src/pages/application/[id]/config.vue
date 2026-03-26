@@ -1,14 +1,11 @@
 <template>
-  <d-frame
-    id="application-config"
-    :src="`${$sitePath}/data-fair/embed/application/${route.params.id}/config`"
-    resize="no"
-    sync-params
-    @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
-  />
+  <application-config />
 </template>
 
 <script lang="ts" setup>
+import { provideApplicationStore } from '~/composables/application-store'
+
 const route = useRoute<'/application/[id]/config'>()
-const { sendUiNotif } = useUiNotif()
+
+provideApplicationStore(route.params.id)
 </script>
