@@ -75,6 +75,7 @@
               v-model="editConfig"
               :schema="draftSchema"
               :options="vjsfOptions"
+              :data-title="t('appConfig')"
               @update:model-value="saveDraft()"
             />
           </v-sheet>
@@ -148,6 +149,7 @@ fr:
   confirm: Confirmer
   removeDraft: Effacer le brouillon
   removeDraftWarning: Attention ! Le brouillon sera perdu et l'application reviendra à son état validé précédent.
+  appConfig: Configuration d'application
 en:
   changeVersion: Change version
   validate: Validate
@@ -155,13 +157,15 @@ en:
   confirm: Confirm
   removeDraft: Remove draft
   removeDraftWarning: Warning ! The draft will be lost and the application will get back to its previously validated state.
+  appConfig: Application configuration
 </i18n>
 
 <script lang="ts" setup>
 import { useWindowSize } from '@vueuse/core'
 import { useDisplay } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'
-import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
+import { type Options as VjsfOptions } from '@koumoul/vjsf'
+import Vjsf from '@koumoul/vjsf/webmcp'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
