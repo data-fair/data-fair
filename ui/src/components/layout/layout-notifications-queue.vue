@@ -89,10 +89,10 @@ function resolveText (text: string | Record<string, string>): string {
 
 async function fetchCount () {
   try {
-    const res = await fetch(`${props.eventsUrl}/api/v1/notifications?size=0`, { credentials: 'include' })
+    const res = await fetch(`${props.eventsUrl}/api/v1/notifications?size=0&count=false`, { credentials: 'include' })
     if (!res.ok) return
     const data = await res.json()
-    unreadCount.value = data.count ?? 0
+    unreadCount.value = data.countNew ?? 0
   } catch {
     // silently ignore - events service may not be available
   }
