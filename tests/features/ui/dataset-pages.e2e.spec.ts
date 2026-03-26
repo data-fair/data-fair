@@ -14,7 +14,7 @@ test.describe('dataset detail pages', () => {
 
   test('dataset home page loads with title', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('dataset /data redirects to /table', async ({ page, goToWithAuth }) => {
@@ -139,8 +139,8 @@ test.describe('dataset detail pages', () => {
 
   test('dataset home page shows metadata-view, schema, data, share and activity sections', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#schema')).toBeVisible()
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
+    // Schema is a tab within #data, not a separate section
     await expect(page.locator('#data')).toBeVisible()
     await expect(page.locator('#share')).toBeVisible()
     await expect(page.locator('#activity')).toBeVisible()
@@ -148,13 +148,13 @@ test.describe('dataset detail pages', () => {
 
   test('dataset home page displays record count', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
     await expect(page.getByText(/enregistrements|records/)).toBeVisible()
   })
 
   test('dataset home page action links navigate to edit-metadata', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
     await page.getByText(/Éditer les métadonnées|Edit metadata/).click()
     await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 10000 })
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })

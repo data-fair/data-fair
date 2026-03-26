@@ -126,14 +126,14 @@ test.describe('datasets list page', () => {
     const searchField = page.locator('.v-navigation-drawer--right').getByRole('textbox', { name: 'Rechercher' })
     await searchField.fill('Alpha')
     await page.waitForURL(/[?&]q=Alpha/, { timeout: 5000 })
-    // Wait for results to update
-    await expect(page.locator('.v-main').getByText('1 jeux de données')).toBeVisible({ timeout: 10000 })
+    // Wait for results to update (count is in breadcrumbs)
+    await expect(page.getByText('1 jeux de données')).toBeVisible({ timeout: 10000 })
 
     // Clear the search
     await searchField.clear()
     await page.waitForURL((url) => !url.searchParams.has('q') || url.searchParams.get('q') === '', { timeout: 5000 })
     // All datasets should be back
-    await expect(page.locator('.v-main').getByText('3 jeux de données')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('3 jeux de données')).toBeVisible({ timeout: 10000 })
   })
 
   test('sort by title orders correctly', async ({ page, goToWithAuth }) => {
@@ -155,15 +155,15 @@ test.describe('datasets list page', () => {
 
   test('results count updates after search', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    // Initially should show all datasets
-    await expect(page.locator('.v-main').getByText('3 jeux de données')).toBeVisible({ timeout: 10000 })
+    // Initially should show all datasets (count is in breadcrumbs)
+    await expect(page.getByText('3 jeux de données')).toBeVisible({ timeout: 10000 })
 
     const searchField = page.locator('.v-navigation-drawer--right').getByRole('textbox', { name: 'Rechercher' })
     await searchField.fill('Beta')
     await page.waitForURL(/[?&]q=Beta/, { timeout: 5000 })
 
     // Count should update
-    await expect(page.locator('.v-main').getByText('1 jeux de données')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('1 jeux de données')).toBeVisible({ timeout: 10000 })
   })
 
   test('empty state without search shows database icon', async ({ page, goToWithAuth }) => {

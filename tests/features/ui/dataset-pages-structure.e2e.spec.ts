@@ -14,10 +14,9 @@ test.describe('dataset page restructuring', () => {
 
   test('main page shows metadata-view, schema, data, share and activity sections', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    // Metadata view shows title in text-h4
-    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 10000 })
-    // Sections are visible
-    await expect(page.locator('#schema')).toBeVisible()
+    // Metadata view shows title in text-headline-large
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
+    // Sections are visible (schema is a tab within #data, not a separate section)
     await expect(page.locator('#data')).toBeVisible()
     await expect(page.locator('#share')).toBeVisible()
     await expect(page.locator('#activity')).toBeVisible()
@@ -26,8 +25,8 @@ test.describe('dataset page restructuring', () => {
   test('data section has data and applications tabs', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     await expect(page.locator('#data')).toBeVisible({ timeout: 10000 })
-    // Data tab should show table card link
-    await expect(page.locator('#data').getByText(/Tableau|Table/)).toBeVisible()
+    // Data tab (Données) should be present
+    await expect(page.locator('#data').getByRole('tab', { name: /Données|Data/ })).toBeVisible()
     // Applications tab should be visible
     await expect(page.locator('#data').getByRole('tab', { name: /Applications/ })).toBeVisible()
   })
@@ -38,10 +37,11 @@ test.describe('dataset page restructuring', () => {
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
 
-  test('schema section has extensions tab', async ({ page, goToWithAuth }) => {
+  test('data section has schema tab', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#schema')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#schema').getByRole('tab', { name: /Enrichissements|Extensions/ })).toBeVisible()
+    await expect(page.locator('#data')).toBeVisible({ timeout: 10000 })
+    // Schema is a tab within the data section
+    await expect(page.locator('#data').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
   })
 
   test('share section has integration and API key tabs', async ({ page, goToWithAuth }) => {
@@ -59,7 +59,7 @@ test.describe('dataset page restructuring', () => {
 
   test('actions menu does not contain moved items', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-h4').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 15000 })
     // The right navigation drawer contains the actions menu (second nav on the page)
     const actionsList = page.locator('nav').filter({ hasText: 'ACTIONS' })
     await expect(actionsList).toBeVisible({ timeout: 5000 })
