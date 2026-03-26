@@ -49,7 +49,10 @@
       >
         <template v-if="group.items.length">
           <v-divider class="my-1" />
-          <v-list-group :value="group.key">
+          <v-list-group
+            :value="group.key"
+            :class="group.key === 'admin' ? 'border-admin border-md border-opacity-100 rounded-md' : ''"
+          >
             <template #activator="{ props: activatorProps }">
               <v-list-item
                 v-bind="activatorProps"
