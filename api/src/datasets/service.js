@@ -217,7 +217,7 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
   const cached = await memoizedGetDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   if (!cached.dataset) {
     // cache says not found — but is the cache stale? Do a lightweight check
-    const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection: { updatedAt: 1, _id: 0 } })
+    const fresh = await db.collection('datasets').findOne({ _uniqueRefs: datasetId }, { projection: { updatedAt: 1, _id: 0 } })
     if (!fresh) return cached // dataset really doesn't exist
     // dataset exists but cache missed it — do a full read
     return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
@@ -226,7 +226,7 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
   // cache has a result — check if it's still fresh via a lightweight query
   const projection = { updatedAt: 1, finalizedAt: 1, status: 1, errorStatus: 1, errorRetry: 1, _id: 0 }
   if (useDraft) projection['draft.updatedAt'] = 1
-  const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection })
+  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection })
   if (!fresh) return {} // dataset was deleted
 
   // check top-level updatedAt, finalizedAt and status
