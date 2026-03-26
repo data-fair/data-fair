@@ -11,7 +11,7 @@
         cols="12"
         sm="6"
         md="4"
-        xl="3"
+        xxl="3"
         class="d-flex"
       >
         <v-skeleton-loader
@@ -73,7 +73,7 @@
           cols="12"
           sm="6"
           md="4"
-          xl="3"
+          xxl="3"
           class="d-flex"
         >
           <dataset-card

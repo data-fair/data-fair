@@ -37,7 +37,7 @@ import { useAgentConnectorTools } from '~/composables/use-agent-connector-tools'
 import { provideShowAgentChat } from '~/composables/use-show-agent-chat'
 import DfAgentChatDrawer from '@data-fair/lib-vuetify-agents/DfAgentChatDrawer.vue'
 
-const { lgAndUp } = useDisplay()
+const { lgAndUp, xlAndUp, xxl } = useDisplay()
 const drawer = ref(lgAndUp.value)
 const session = useSession()
 const { user } = session
@@ -69,9 +69,22 @@ watchEffect(() => {
 onScopeDispose(() => { toolsScope?.stop() })
 
 const agentChatDrawerProps = computed(() => {
+  let width = 350
+  let temporary = true
+  if (lgAndUp.value) {
+    if (xlAndUp.value) {
+      temporary = false
+      if (xxl.value) {
+        width = 450
+      }
+    }
+  }
+
   return {
     class: 'border-secondary border-t-md border-s-md border-opacity-100 elevation-2 rounded-ts-md',
-    style: 'overflow: hidden'
+    style: 'overflow: hidden',
+    width,
+    temporary
   }
 })
 </script>
