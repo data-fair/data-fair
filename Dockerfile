@@ -69,12 +69,16 @@ COPY --from=package-strip /app/package-lock.json package-lock.json
 ADD ui/package.json ui/package.json
 ADD api/package.json api/package.json
 ADD shared/package.json shared/package.json
-ADD ui/package.json ui/package.json
 ADD patches patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
-RUN npm ci --no-audit --no-fund --include dev
-
+# install all deps including devDependencies needed for ui build
+ENV NODE_ENV=development
+RUN npm ci --no-audit --no-fund
+RUN mkdir -p /app/shared/node_modules
+RUN mkdir -p /app/api/node_modules
+RUN mkdir -p /app/ui/node_modules
+ENV NODE_ENV=production
 ADD /api/config api/config
 ADD /api/types api/types
 ADD /api/doc api/doc
@@ -84,23 +88,16 @@ RUN npm run build-types
 ##########################
 FROM installer AS builder
 
+ENV NODE_ENV=development
 ADD ui ui
+COPY --from=installer /app/ui/node_modules /app/ui/node_modules
 ADD api/types api/types
 ADD api/src/config.ts api/src/config.ts
-RUN mkdir -p /app/api/node_modules
-ADD shared shared
-RUN mkdir -p /app/shared/node_modules
-RUN npm --prefix ui install --no-audit --no-fund
-RUN npm run build
-
-##########################
-FROM installer AS ui-builder
-
-ADD /api/src/config.ts api/src/config.ts
 ADD /api/src/ui-config.ts api/src/ui-config.ts
-ADD /shared shared
-ADD /ui ui
-RUN npm -w ui run build
+ADD shared shared
+COPY --from=installer /app/shared/node_modules /app/shared/node_modules
+ENV NODE_ENV=production
+RUN npm run build
 
 ##########################
 FROM installer AS api-installer
@@ -135,8 +132,7 @@ COPY --from=api-installer /app/api/types /app/api/types
 COPY --from=api-installer /app/api/doc /app/api/doc
 COPY --from=api-installer /app/api/config /app/api/config
 COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
-COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
-COPY --from=ui-builder /app/ui/dist ui/dist
+COPY --from=builder /app/ui/dist /app/ui/dist
 COPY --from=parquet-writer-builder /app/parquet-writer/package.json parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.js parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.d.ts parquet-writer/
