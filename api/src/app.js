@@ -179,17 +179,11 @@ export const run = async () => {
 
     const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
 
-    const unsafePaths = [
+    const embedUnsafePaths = [
       '/embed/dataset/:id/table-edit',
-      '/dataset/:id',
-      '/dataset/:id/table-edit',
-      '/dataset/:id/metadata-edit',
       '/embed/dataset/:id/form',
       '/embed/application/:id/config',
-      '/application/:id/config',
       '/embed/workflow/update-dataset',
-      '/workflow/update-dataset',
-      '/settings',
       '/embed/settings/:type/:id/licenses',
       '/embed/settings/:type/:id/topics',
       '/embed/settings/:type/:id/webhooks',
@@ -211,14 +205,21 @@ export const run = async () => {
         header: (req) => {
           const urlPath = parseUrlPath(req.url).pathname
           const directives = { ...defaultNonceCSPDirectives }
-          for (const p of unsafePaths) {
-            if (p(urlPath)) {
-              directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
-              directives['connect-src'] = "'self' https:"
+          if (urlPath.startsWith('/embed')) {
+            for (const p of embedUnsafePaths) {
+              if (p(urlPath)) {
+                directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+                directives['connect-src'] = "'self' https:"
+              }
             }
+            // all embed pages allow cross domain iframe integration
+            directives['frame-ancestors'] = "'self' http: https:"
+          } else {
+            // many back-office pages use vjsf
+            directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+            directives['connect-src'] = "'self' https:"
           }
-          // all embed pages allow cross domain iframe integration
-          directives['frame-ancestors'] = "'self' http: https:"
+
           return directives
         }
       },
