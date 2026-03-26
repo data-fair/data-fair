@@ -31,6 +31,7 @@ import { useNavigationItems } from '~/composables/use-navigation-items'
 import { useAgentNavigationTools } from '~/composables/use-agent-navigation-tools'
 import { useAgentDatasetTools } from '~/composables/use-agent-dataset-tools'
 import { useAgentDatasetDataTools } from '~/composables/use-agent-dataset-data-tools'
+import { useAgentGeoTools } from '~/composables/use-agent-geo-tools'
 import { provideShowAgentChat } from '~/composables/use-show-agent-chat'
 import DfAgentChatDrawer from '@data-fair/lib-vuetify-agents/DfAgentChatDrawer.vue'
 
@@ -54,6 +55,7 @@ watchEffect(() => {
       useAgentNavigationTools({ route, router, navigationGroups, breadcrumbItems: breadcrumbs.items, locale })
       useAgentDatasetTools(locale)
       useAgentDatasetDataTools(locale)
+      useAgentGeoTools(locale)
     })
   } else if (!showAgentChat.value && toolsScope) {
     toolsScope.stop()
