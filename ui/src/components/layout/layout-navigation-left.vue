@@ -9,7 +9,7 @@
       density="compact"
       nav
       bg-color="primary"
-      class="rounded-te-md"
+      class="rounded-te-md pb-0"
     >
       <!-- Portal home link (when not main site) -->
       <v-list-item
@@ -24,16 +24,10 @@
         :prepend-icon="mdiMonitorDashboard"
         :title="t('home')"
       />
-    </v-list>
 
-    <!-- Subscription link when missing -->
-    <v-list
-      v-if="missingSubscription && canAdmin && $uiConfig.subscriptionUrl"
-      density="compact"
-      nav
-      bg-color="primary"
-    >
+      <!-- Subscription link when missing -->
       <v-list-item
+        v-if="missingSubscription && canAdmin && $uiConfig.subscriptionUrl"
         to="/subscription"
         :prepend-icon="mdiCardAccountDetails"
         :title="t('subscription')"
@@ -54,7 +48,7 @@
         :key="group.key"
       >
         <template v-if="group.items.length">
-          <v-divider class="mb-1" />
+          <v-divider class="my-1" />
           <v-list-group :value="group.key">
             <template #activator="{ props: activatorProps }">
               <v-list-item
