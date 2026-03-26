@@ -21,7 +21,7 @@
         <d-frame
           v-else
           ref="frame"
-          :height="frameHeight"
+          :height="frameHeight - 16"
           resize="no"
           :src="applicationLink + '?embed=true&draft=true'"
           :reload="draftPreviewInc"
