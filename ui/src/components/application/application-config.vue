@@ -76,6 +76,8 @@
               :schema="draftSchema"
               :options="vjsfOptions"
               :data-title="t('appConfig')"
+              prefix-name="appConfig_"
+              :sub-agent="true"
               @update:model-value="saveDraft()"
             />
           </v-sheet>
