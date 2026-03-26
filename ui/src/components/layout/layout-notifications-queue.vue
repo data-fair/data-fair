@@ -23,12 +23,12 @@
 
     <v-list density="compact">
       <v-list-item v-if="loading">
-        <v-list-item-title class="text-body-2 text-medium-emphasis">
+        <v-list-item-title class="text-body-medium text-medium-emphasis">
           {{ t('loading') }}
         </v-list-item-title>
       </v-list-item>
       <v-list-item v-else-if="!notifications.length">
-        <v-list-item-title class="text-body-2 text-medium-emphasis">
+        <v-list-item-title class="text-body-medium text-medium-emphasis">
           {{ t('noNotification') }}
         </v-list-item-title>
       </v-list-item>
@@ -37,17 +37,17 @@
           v-for="notif in notifications"
           :key="notif._id"
         >
-          <v-list-item-title class="text-body-2">
+          <v-list-item-title class="text-body-medium">
             {{ resolveText(notif.title) }}
           </v-list-item-title>
           <v-list-item-subtitle
             v-if="notif.body"
-            class="text-caption"
+            class="text-body-small"
           >
             {{ resolveText(notif.body) }}
           </v-list-item-subtitle>
           <template #append>
-            <span class="text-caption text-medium-emphasis ml-2">
+            <span class="text-body-small text-medium-emphasis ml-2">
               {{ dayjs(notif.date).format('lll') }}
             </span>
           </template>

@@ -3,13 +3,13 @@
     :to="`/application/${application.id}`"
     class="w-100 h-100 d-flex flex-column"
   >
-    <v-card-title class="text-body-1 font-weight-bold text-truncate">
+    <v-card-title class="text-body-large font-weight-bold text-truncate">
       {{ application.title || application.id }}
     </v-card-title>
     <v-card-text class="flex-grow-1">
       <p
         v-if="application.description"
-        class="text-body-2 text-medium-emphasis mb-2"
+        class="text-body-medium text-medium-emphasis mb-2"
         style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
       >
         {{ application.description }}
@@ -39,7 +39,7 @@
         </v-chip>
       </div>
     </v-card-text>
-    <v-card-subtitle class="text-caption pb-3">
+    <v-card-subtitle class="text-body-small pb-3">
       <span v-if="showOwner && application.owner">{{ ownerName }} · </span>
       <span v-if="application.updatedAt">{{ t('updatedAt', { date: formatDate(application.updatedAt) }) }}</span>
     </v-card-subtitle>

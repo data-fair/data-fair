@@ -1,10 +1,10 @@
 <template>
   <v-card variant="outlined">
-    <v-card-title class="text-subtitle-1">
+    <v-card-title class="text-body-large">
       {{ t('title') }}
     </v-card-title>
     <v-card-text>
-      <p class="text-body-2 mb-2">
+      <p class="text-body-medium mb-2">
         {{ t('description') }}
       </p>
       <v-alert
@@ -26,13 +26,13 @@
       </v-form>
 
       <template v-if="actualReadApiKey?.current">
-        <p class="text-body-2 mt-2">
+        <p class="text-body-medium mt-2">
           {{ t('key') }}: <code>{{ actualReadApiKey.current }}</code>
           <span v-if="dataset?.readApiKey?.expiresAt">
             ({{ t('expiresAt') }} {{ formatDate(dataset.readApiKey.expiresAt) }})
           </span>
         </p>
-        <p class="text-body-2">
+        <p class="text-body-medium">
           {{ t('exampleUsage') }}:
           <a :href="exampleUrl">{{ exampleUrl }}</a>
         </p>

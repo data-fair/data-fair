@@ -36,7 +36,7 @@
 
     <div
       v-if="!activeKey"
-      class="text-body-2 text-medium-emphasis mt-2"
+      class="text-body-medium text-medium-emphasis mt-2"
     >
       {{ t('detailedInfo') }}
     </div>

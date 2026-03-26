@@ -40,7 +40,7 @@
             <!-- Step 1: File selection -->
             <v-stepper-window-item :value="1">
               <div class="pa-4">
-                <p class="text-body-1 mb-4">
+                <p class="text-body-large mb-4">
                   {{ t('selectFileMsg') }}
                 </p>
                 <v-file-input
@@ -82,7 +82,7 @@
             <!-- Step 2: Options -->
             <v-stepper-window-item :value="2">
               <div class="pa-4">
-                <p class="text-body-1 mb-4">
+                <p class="text-body-large mb-4">
                   {{ t('optionsMsg') }}
                 </p>
                 <v-select

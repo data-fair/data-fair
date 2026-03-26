@@ -6,7 +6,7 @@
     <div class="d-flex align-center flex-wrap ga-2 mb-2">
       <h3
         v-if="editableProperties.length"
-        class="text-h6"
+        class="text-headline-small"
       >
         {{ editableProperties.length.toLocaleString() }} {{ t('column', editableProperties.length) }}
       </h3>
@@ -48,7 +48,7 @@
 
     <p
       v-if="dataset.isRest"
-      class="text-body-2 text-medium-emphasis mb-2"
+      class="text-body-medium text-medium-emphasis mb-2"
     >
       {{ t('sortProperties') }}
     </p>

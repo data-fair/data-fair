@@ -126,7 +126,7 @@
                   v-for="category in categories"
                   :key="category"
                 >
-                  <h3 class="text-h6">
+                  <h3 class="text-headline-small">
                     {{ t('appType', { category }) }}
                   </h3>
                   <v-row class="mt-0 mb-1">

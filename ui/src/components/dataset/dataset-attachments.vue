@@ -17,7 +17,7 @@
     />
     <p
       v-if="!attachments.length"
-      class="text-body-2"
+      class="text-body-medium"
     >
       {{ t('noAttachment') }}
     </p>

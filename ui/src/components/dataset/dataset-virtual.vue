@@ -1,7 +1,7 @@
 <template>
   <v-row class="dataset-virtual">
     <v-col>
-      <h2 class="text-h6">
+      <h2 class="text-headline-small">
         {{ t('children') }}
       </h2>
 
@@ -51,7 +51,7 @@
         <!-- Children list -->
         <p
           v-if="!dataset.virtual.children.length"
-          class="text-caption mt-3"
+          class="text-body-small mt-3"
         >
           {{ t('noChild') }}
         </p>
@@ -109,13 +109,13 @@
         </v-card>
 
         <!-- Selected columns -->
-        <h2 class="text-h6 mt-4">
+        <h2 class="text-headline-small mt-4">
           {{ t('selectedColumns') }}
         </h2>
 
         <p
           v-if="dataset.schema.filter((f: any) => !f['x-calculated']).length === 0"
-          class="text-caption mt-3"
+          class="text-body-small mt-3"
         >
           {{ t('noColumn') }}
         </p>
@@ -159,7 +159,7 @@
         </v-card>
 
         <!-- Filters -->
-        <h2 class="text-h6 mt-4">
+        <h2 class="text-headline-small mt-4">
           {{ t('filters') }}
         </h2>
 
@@ -185,7 +185,7 @@
 
         <p
           v-if="!dataset.virtual.filters?.length"
-          class="text-caption mt-3"
+          class="text-body-small mt-3"
         >
           {{ t('noFilter') }}
         </p>

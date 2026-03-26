@@ -57,11 +57,6 @@
 
     <!-- Content: results count + grid/list -->
     <template v-else>
-      <!-- Results count -->
-      <div class="text-body-medium text-medium-emphasis mb-3">
-        {{ t('datasets', { count: catalog.totalCount.value }) }}
-      </div>
-
       <!-- Grid view -->
       <v-row
         v-if="viewMode === 'grid'"

@@ -10,32 +10,6 @@
           v-for="section in sections"
           :key="section.id"
         >
-          <!-- Schema section -->
-          <layout-section-tabs
-            v-if="section.id === 'schema'"
-            :id="section.id"
-            v-model="schemaTab"
-            :min-height="200"
-            :title="section.title"
-            :tabs="section.tabs"
-            :svg="buildingSvg"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="schema">
-                  <v-container fluid>
-                    <dataset-schema-view />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="extensions">
-                  <v-container fluid>
-                    <dataset-extensions v-model="dataset" />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </layout-section-tabs>
-
           <!-- Data section -->
           <layout-section-tabs
             v-if="section.id === 'data'"
@@ -48,6 +22,11 @@
           >
             <template #content="{ tab }">
               <v-tabs-window :model-value="tab">
+                <v-tabs-window-item value="schema">
+                  <v-container fluid>
+                    <dataset-schema-view />
+                  </v-container>
+                </v-tabs-window-item>
                 <v-tabs-window-item value="data">
                   <v-container fluid>
                     <v-row class="pa-4">
@@ -327,8 +306,7 @@
 fr:
   datasets: Jeux de données
   schema: Schéma
-  extensions: Enrichissements
-  consultData: Consulter la donnée
+  content: Contenu
   data: Données
   table: Tableau
   map: Carte
@@ -352,9 +330,8 @@ fr:
 en:
   datasets: Datasets
   schema: Schema
-  extensions: Extensions
-  consultData: View data
-  data: Data
+  content: View data
+  data: Content
   table: Table
   map: Map
   files: Files
@@ -377,13 +354,12 @@ en:
 </i18n>
 
 <script lang="ts" setup>
-import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiTable, mdiTableCog, mdiWebhook } from '@mdi/js'
+import { mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiWebhook } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset-watch'
 import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
@@ -393,8 +369,7 @@ const route = useRoute<'/dataset/[id]/'>()
 const { sendUiNotif } = useUiNotif()
 
 const breadcrumbs = useBreadcrumbs()
-const schemaTab = ref('schema')
-const dataTab = ref('data')
+const dataTab = ref('schema')
 const activityTab = ref('journal')
 
 const store = provideDatasetStore(route.params.id, true)
@@ -434,26 +409,19 @@ const sections = computedDeepDiff(() => {
   const result: any[] = []
 
   if (d.finalizedAt || d.draftReason) {
-    result.push({
-      title: t('schema'),
-      id: 'schema',
-      tabs: [
-        { key: 'schema', title: t('schema'), icon: mdiTableCog },
-        { key: 'extensions', title: t('extensions'), icon: mdiPuzzle }
-      ]
-    })
-  }
-
-  if (d.finalizedAt && !d.isMetaOnly && !d.draftReason) {
-    const dataTabs = [
-      { key: 'data', title: t('data'), icon: mdiTable }
-    ]
-    dataTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
-    result.push({
-      title: t('consultData'),
-      id: 'data',
-      tabs: dataTabs
-    })
+    const dataTabs = []
+    if (d.finalizedAt && !d.isMetaOnly && !d.draftReason) {
+      dataTabs.push({ key: 'data', title: t('data'), icon: mdiTable })
+      dataTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
+      dataTabs.push({ key: 'schema', title: t('schema'), icon: mdiTableCog })
+    }
+    if (dataTabs.length) {
+      result.push({
+        title: t('content'),
+        id: 'data',
+        tabs: dataTabs
+      })
+    }
   }
 
   if (!d.draftReason) {

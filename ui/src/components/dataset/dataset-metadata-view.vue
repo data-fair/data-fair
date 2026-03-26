@@ -9,7 +9,7 @@
         cols="12"
         :md="dataset.image ? 8 : 12"
       >
-        <div class="text-h4 mb-2">
+        <div class="text-headline-large mb-2">
           {{ dataset.title }}
         </div>
         <p

@@ -18,7 +18,7 @@
         lg="4"
       >
         <v-card variant="outlined">
-          <v-card-title class="text-body-1 font-weight-bold">
+          <v-card-title class="text-body-large font-weight-bold">
             <a
               :href="attachmentUrl(attachment)"
               download
@@ -64,7 +64,7 @@
     </v-row>
     <p
       v-else
-      class="mt-2 text-body-2"
+      class="mt-2 text-body-medium"
     >
       {{ t('noAttachment') }}
     </p>

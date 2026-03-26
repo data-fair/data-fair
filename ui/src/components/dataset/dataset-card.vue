@@ -3,7 +3,7 @@
     :to="`/dataset/${dataset.id}`"
     class="w-100 h-100 d-flex flex-column"
   >
-    <v-card-title class="text-body-1 font-weight-bold text-truncate">
+    <v-card-title class="text-body-large font-weight-bold text-truncate">
       {{ dataset.title || dataset.id }}
     </v-card-title>
     <v-card-text class="flex-grow-1">
@@ -52,13 +52,13 @@
       </div>
       <div
         v-if="fileInfo"
-        class="text-body-2 text-medium-emphasis mb-1"
+        class="text-body-medium text-medium-emphasis mb-1"
       >
         {{ fileInfo }}
       </div>
       <div
         v-if="dataset.count != null"
-        class="text-body-2 text-medium-emphasis mb-1"
+        class="text-body-medium text-medium-emphasis mb-1"
       >
         {{ t('records', { count: dataset.count.toLocaleString() }) }}
       </div>
@@ -77,7 +77,7 @@
         </v-chip>
       </div>
     </v-card-text>
-    <v-card-subtitle class="text-caption pb-3 d-flex align-center">
+    <v-card-subtitle class="text-body-small pb-3 d-flex align-center">
       <resource-visibility
         v-if="dataset.visibility"
         :visibility="dataset.visibility"
