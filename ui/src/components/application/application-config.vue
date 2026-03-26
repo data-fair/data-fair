@@ -21,7 +21,7 @@
         <d-frame
           v-else
           ref="frame"
-          height="100vh"
+          :height="frameHeight"
           resize="no"
           :src="applicationLink + '?embed=true&draft=true'"
           :reload="draftPreviewInc"
@@ -69,6 +69,12 @@
               v-if="application.owner?.department"
               v-model="showFullOrg"
               :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
+            />
+            <df-agent-chat-action
+              v-if="showAgentChat && canWriteConfig"
+              action-id="configure-application"
+              :visible-prompt="t('configurePrompt')"
+              :hidden-context="configureContext"
             />
             <vjsf
               v-if="vjsfOptions"
@@ -152,6 +158,7 @@ fr:
   removeDraft: Effacer le brouillon
   removeDraftWarning: Attention ! Le brouillon sera perdu et l'application reviendra à son état validé précédent.
   appConfig: Configuration d'application
+  configurePrompt: Aidez-moi à configurer cette application
 en:
   changeVersion: Change version
   validate: Validate
@@ -160,12 +167,15 @@ en:
   removeDraft: Remove draft
   removeDraftWarning: Warning ! The draft will be lost and the application will get back to its previously validated state.
   appConfig: Application configuration
+  configurePrompt: Help me configure this application
 </i18n>
 
 <script lang="ts" setup>
 import { useWindowSize } from '@vueuse/core'
 import { useDisplay } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useShowAgentChat } from '~/composables/use-show-agent-chat'
 import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import Vjsf from '@koumoul/vjsf/webmcp'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
@@ -179,8 +189,10 @@ import Debug from 'debug'
 const debug = Debug('application-config')
 
 const display = useDisplay()
+const showAgentChat = useShowAgentChat()
 const { sendUiNotif } = useUiNotif()
 const { t } = useI18n()
+const { frameHeight } = useDFramePage()
 
 const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
@@ -192,6 +204,19 @@ useApplicationWatch('draft-error')
 
 if (!configFetch.initialized.value) configFetch.refresh()
 if (!configDraftFetch.initialized.value) configDraftFetch.refresh()
+
+const configureContext = computed(() => {
+  const baseApp = baseAppDraft.value
+  const lines = [
+    'Use the subagent tool appConfig_form to help the user configure the current application.',
+    'Start the session by asking the user what they want to achieve.',
+  ]
+  if (baseApp?.title) lines.push(`The base application type is "${baseApp.title}".`)
+  if (baseApp?.description) lines.push(`Description of the base application: ${baseApp.description}`)
+  if (baseApp?.category) lines.push(`Category: ${baseApp.category}`)
+  if (application.value?.title) lines.push(`The application title is "${application.value.title}".`)
+  return lines.join(' ')
+})
 
 const editUrl = computed(() => application.value?.urlDraft || application.value?.url)
 const editConfig = ref<AppConfig | null>(null)
