@@ -181,7 +181,7 @@ export const run = async () => {
 
     const unsafeEmbedPaths = [
       '/embed/dataset/:id/table-edit',
-      '/dataset/:id/table-edit',
+      '/dataset/:id',
       '/dataset/:id/table-edit',
       '/dataset/:id/metadata-edit',
       '/embed/dataset/:id/form',
