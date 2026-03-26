@@ -108,7 +108,7 @@ module.exports = {
   }, {
     title: 'App test2',
     url: `http://localhost:${process.env.MOCK_PORT}/monapp2`,
-    public: true
+    public: false
   }, {
     title: 'App test3',
     url: `http://localhost:${process.env.MOCK_PORT}/monapp3`,
