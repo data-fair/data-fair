@@ -179,7 +179,7 @@ export const run = async () => {
 
     const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
 
-    const unsafeEmbedPaths = [
+    const unsafePaths = [
       '/embed/dataset/:id/table-edit',
       '/dataset/:id',
       '/dataset/:id/table-edit',
@@ -211,7 +211,7 @@ export const run = async () => {
         header: (req) => {
           const urlPath = parseUrlPath(req.url).pathname
           const directives = { ...defaultNonceCSPDirectives }
-          for (const p of unsafeEmbedPaths) {
+          for (const p of unsafePaths) {
             if (p(urlPath)) {
               directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
               directives['connect-src'] = "'self' https:"
