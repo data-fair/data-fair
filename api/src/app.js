@@ -209,16 +209,14 @@ export const run = async () => {
         header: (req) => {
           const urlPath = parseUrlPath(req.url).pathname
           const directives = { ...defaultNonceCSPDirectives }
-          if (urlPath.startsWith('/embed/')) {
-            for (const p of unsafeEmbedPaths) {
-              if (p(urlPath)) {
-                directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
-                directives['connect-src'] = "'self' https:"
-              }
+          for (const p of unsafeEmbedPaths) {
+            if (p(urlPath)) {
+              directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+              directives['connect-src'] = "'self' https:"
             }
-            // all embed pages allow cross domain iframe integration
-            directives['frame-ancestors'] = "'self' http: https:"
           }
+          // all embed pages allow cross domain iframe integration
+          directives['frame-ancestors'] = "'self' http: https:"
           return directives
         }
       },
