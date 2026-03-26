@@ -31,6 +31,12 @@ export function serializeDatasetInfo (dataset: any): string {
   if (dataset.frequency) meta.push(`- **Frequency:** ${dataset.frequency}`)
   if (dataset.spatial) meta.push(`- **Spatial:** ${typeof dataset.spatial === 'string' ? dataset.spatial : JSON.stringify(dataset.spatial)}`)
   if (dataset.temporal) meta.push(`- **Temporal:** ${JSON.stringify(dataset.temporal)}`)
+  if (Array.isArray(dataset.bbox) && dataset.bbox.length > 0) {
+    meta.push(`- **Geolocalized:** yes (bbox: [${dataset.bbox.join(', ')}]). Geo filters (bbox, geoDistance) are available in search_data, aggregate_data, and calculate_metric.`)
+  }
+  if (dataset.timePeriod) {
+    meta.push(`- **Temporal dataset:** yes (${dataset.timePeriod.startDate} to ${dataset.timePeriod.endDate}). The dateMatch filter is available in search_data, aggregate_data, and calculate_metric.`)
+  }
   if (dataset.page) meta.push(`- **Link:** ${dataset.page}`)
 
   const schema = dataset.schema

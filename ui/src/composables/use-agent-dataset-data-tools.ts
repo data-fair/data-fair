@@ -40,6 +40,28 @@ function cleanRow (row: any): any {
   return clean
 }
 
+function applyGeoParams (query: Record<string, string>, bbox?: string, geoDistance?: string) {
+  if (bbox) query.bbox = bbox
+  if (geoDistance) query.geo_distance = geoDistance
+}
+
+function applyDateMatchParam (query: Record<string, string>, dateMatch?: string) {
+  if (dateMatch) query.date_match = dateMatch
+}
+
+/**
+ * Drop incomplete _geo_distance sort entries (without :lon:lat suffix).
+ * LLMs sometimes write sort: "_geo_distance" redundantly when a geoDistance filter is already present.
+ * The API already auto-sorts by distance when a geo_distance filter is set.
+ */
+function normalizeSort (sort: string): string {
+  return sort.split(',').map(part => {
+    const trimmed = part.trim()
+    if (/^-?_geo_distance$/.test(trimmed)) return null
+    return trimmed
+  }).filter(Boolean).join(',')
+}
+
 export function useAgentDatasetDataTools (locale: Ref<string>) {
   const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
 
@@ -78,7 +100,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
           return `| \`${col.key}\` | ${col.type} | ${col.title || ''} | ${notes.join(' — ')} |`
         })
 
-      const samples = linesData.results.map(cleanRow)
+      const samples = (linesData.results ?? []).map(cleanRow)
 
       const sections = [
         `# Schema: ${dataset.title}`,
@@ -104,33 +126,53 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
         q: { type: 'string' as const, description: 'Full-text search keywords (optional)' },
         filters: { type: 'object' as const, description: filtersDescription, properties: {} },
         select: { type: 'string' as const, description: 'Comma-separated column keys to return (optional, defaults to all)' },
-        sort: { type: 'string' as const, description: 'Sort order: column keys, prefix with - for desc. Special: _score, _i, _updatedAt, _rand' },
+        sort: { type: 'string' as const, description: 'Sort order: column keys, prefix with - for desc. Special: _score, _i, _updatedAt, _rand, _geo_distance:lon:lat (distance from point, for geolocalized datasets)' },
         size: { type: 'number' as const, description: 'Page size (default 10, max 50)' },
-        page: { type: 'number' as const, description: 'Page number (default 1)' }
+        page: { type: 'number' as const, description: 'Page number (default 1)' },
+        bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax". Example: "-2.5,43,3,47"' },
+        geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Format: "lon,lat,distance". Example: "2.35,48.85,10km". Use distance "0" for point-in-polygon containment.' },
+        dateMatch: { type: 'string' as const, description: 'Temporal filter (only for temporal datasets). Single date "YYYY-MM-DD" or date range "YYYY-MM-DD,YYYY-MM-DD". ISO datetimes also accepted.' },
+        next: { type: 'string' as const, description: 'URL from a previous search_data response to fetch the next page. When provided, all other parameters are ignored.' }
       },
       required: ['datasetId'] as const
     },
     execute: async (params) => {
-      const size = Math.min(Math.max(params.size || 10, 1), 50)
-      const query: Record<string, string> = { size: String(size) }
-      if (params.q) { query.q = params.q; query.q_mode = 'complete' }
-      if (params.select) query.select = params.select
-      if (params.sort) query.sort = params.sort
-      if (params.page) query.page = String(params.page)
-      if (params.filters) {
-        for (const [key, value] of Object.entries(params.filters)) {
-          query[key] = String(value)
+      let data: any
+
+      if (params.next) {
+        data = await $fetch<any>(params.next)
+      } else {
+        const size = Math.min(Math.max(params.size || 10, 1), 50)
+        const query: Record<string, string> = { size: String(size) }
+        if (params.q) { query.q = params.q; query.q_mode = 'complete' }
+        if (params.select) query.select = params.select
+        if (params.sort) {
+          const normalized = normalizeSort(params.sort)
+          if (normalized) query.sort = normalized
         }
+        if (params.page) query.page = String(params.page)
+        if (params.filters) {
+          for (const [key, value] of Object.entries(params.filters)) {
+            query[key] = String(value)
+          }
+        }
+        applyGeoParams(query, params.bbox, params.geoDistance)
+        applyDateMatchParam(query, params.dateMatch)
+
+        data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/lines`, { query })
       }
 
-      const data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/lines`, { query })
-      const rows = data.results.map(cleanRow)
+      const rows = (data.results ?? []).map(cleanRow)
 
-      return [
+      const lines = [
         `**${data.total}** rows found (showing ${rows.length}, page ${params.page || 1})`,
         '',
         toCsv(rows)
-      ].join('\n')
+      ]
+      if (data.next) {
+        lines.push('', 'Next page available.')
+      }
+      return lines.join('\n')
     }
   })
 
@@ -156,6 +198,9 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
           description: 'Optional metric to compute on each group'
         },
         filters: { type: 'object' as const, description: filtersDescription, properties: {} },
+        bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax"' },
+        geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Format: "lon,lat,distance". Example: "2.35,48.85,10km"' },
+        dateMatch: { type: 'string' as const, description: 'Temporal filter (only for temporal datasets). Single date "YYYY-MM-DD" or date range "YYYY-MM-DD,YYYY-MM-DD"' },
         sort: { type: 'string' as const, description: 'Sort: count/-count, key/-key, metric/-metric' }
       },
       required: ['datasetId', 'groupByColumns'] as const
@@ -174,6 +219,8 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
           query[key] = String(value)
         }
       }
+      applyGeoParams(query, params.bbox, params.geoDistance)
+      applyDateMatchParam(query, params.dateMatch)
 
       const data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/values_agg`, { query })
 
@@ -191,7 +238,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       return [
         `**${data.total}** total rows, **${data.total_values}** groups shown, **${data.total_other}** rows not represented`,
         '',
-        ...data.aggs.map((agg: any) => formatAgg(agg, ''))
+        ...(data.aggs ?? []).map((agg: any) => formatAgg(agg, ''))
       ].join('\n')
     }
   })
@@ -207,7 +254,10 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
         fieldKey: { type: 'string' as const, description: 'Column key to compute the metric on' },
         metric: { type: 'string' as const, description: 'One of: avg, sum, min, max, stats, value_count, cardinality, percentiles' },
         percents: { type: 'string' as const, description: 'For percentiles: comma-separated percentages (default "1,5,25,50,75,95,99")' },
-        filters: { type: 'object' as const, description: filtersDescription, properties: {} }
+        filters: { type: 'object' as const, description: filtersDescription, properties: {} },
+        bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax"' },
+        geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Format: "lon,lat,distance". Example: "2.35,48.85,10km"' },
+        dateMatch: { type: 'string' as const, description: 'Temporal filter (only for temporal datasets). Single date "YYYY-MM-DD" or date range "YYYY-MM-DD,YYYY-MM-DD"' }
       },
       required: ['datasetId', 'fieldKey', 'metric'] as const
     },
@@ -222,6 +272,8 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
           query[key] = String(value)
         }
       }
+      applyGeoParams(query, params.bbox, params.geoDistance)
+      applyDateMatchParam(query, params.dateMatch)
 
       const data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/metric_agg`, { query })
 

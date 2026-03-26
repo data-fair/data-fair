@@ -1,6 +1,5 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
-import { $fetch } from '~/context'
 import { serializeDatasetInfo } from './use-agent-dataset-tools'
 
 const messages: Record<string, Record<string, string>> = {
@@ -16,7 +15,7 @@ const messages: Record<string, Record<string, string>> = {
   }
 }
 
-export function useAgentSummaryTools (locale: Ref<string>, datasetId: string, setSummary: (summary: string) => void) {
+export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: Ref<any>, setSummary: (summary: string) => void) {
   const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
 
   useAgentTool({
@@ -28,8 +27,7 @@ export function useAgentSummaryTools (locale: Ref<string>, datasetId: string, se
       properties: {}
     },
     execute: async () => {
-      const dataset = await $fetch<any>(`datasets/${encodeURIComponent(datasetId)}`)
-      return serializeDatasetInfo(dataset)
+      return serializeDatasetInfo(datasetData.value)
     }
   })
 
@@ -51,10 +49,11 @@ export function useAgentSummaryTools (locale: Ref<string>, datasetId: string, se
   })
 
   useAgentSubAgent({
-    name: 'summarizer',
+    name: 'dataset_summarizer',
+    title: t('summarizerSubAgent'),
     description: t('summarizerSubAgent') + '. Read the dataset metadata and schema, then produce a concise summary.',
     model: 'summarizer',
-    prompt: 'You are a dataset summarization assistant. First call read_dataset_info to get the full metadata and schema of the dataset. Then write a concise, informative summary (2-4 sentences) that describes the content and purpose of the dataset based on its title, description, columns, and other metadata. The summary should be in the same language as the dataset title and description.',
+    prompt: 'You are a dataset summarization assistant. First call read_dataset_info to get the full metadata and schema of the dataset. Then write a summary that describes the content and purpose of the dataset based on its title, description, columns, and other metadata. The summary MUST be between 200 and 300 characters long, plain text only with no formatting, no markdown, no line breaks. The summary should be in the same language as the dataset title and description.',
     tools: ['read_dataset_info']
   })
 }
