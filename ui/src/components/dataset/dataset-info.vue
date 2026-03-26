@@ -26,7 +26,7 @@
         action-id="summarize-dataset"
         :visible-prompt="t('summarizePrompt')"
         :hidden-context="summarizeContext"
-        :btn-props="{ class: 'mt-1' }"
+        :btn-props="{ class: 'ml-1 mt-1' }"
       />
     </div>
 

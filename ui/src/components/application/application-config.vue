@@ -70,12 +70,16 @@
               v-model="showFullOrg"
               :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
             />
-            <df-agent-chat-action
+            <div
               v-if="showAgentChat && canWriteConfig"
-              action-id="configure-application"
-              :visible-prompt="t('configurePrompt')"
-              :hidden-context="configureContext"
-            />
+              class="d-flex justify-end mb-1"
+            >
+              <df-agent-chat-action
+                action-id="configure-application"
+                :visible-prompt="t('configurePrompt')"
+                :hidden-context="configureContext"
+              />
+            </div>
             <vjsf
               v-if="vjsfOptions"
               v-model="editConfig"
