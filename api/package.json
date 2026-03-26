@@ -78,6 +78,7 @@
     "md5": "^2.3.0",
     "md5-file": "^5.0.0",
     "memoizee": "^0.4.17",
+    "mime": "^1.6.0",
     "mime-type-stream": "^0.1.4",
     "mime-types": "^2.1.35",
     "moment": "2.29.4",
