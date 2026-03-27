@@ -671,8 +671,8 @@ en:
 <script lang="ts" setup>
 import { mdiEyeOffOutline, mdiFormatHorizontalAlignLeft, mdiSortAscending, mdiSortDescending, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiCheck, mdiMenuDown, mdiMenuUp, mdiFilterVariant, mdiInformation } from '@mdi/js'
 import { type TableHeaderWithProperty } from './use-headers'
-import { type DatasetFilter } from '~/composables/dataset-filters'
-import { formatValue } from '~/composables/dataset-lines'
+import { type DatasetFilter } from '~/composables/dataset/filters'
+import { formatValue } from '~/composables/dataset/lines'
 import useHeaderFilters from './use-header-filters'
 
 const { header, localEnum, filters, closeOnFilter } = defineProps({

@@ -391,10 +391,10 @@ en:
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import { mdiBell, mdiCalendarText, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImage, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
-import { provideApplicationStore } from '~/composables/application-store'
-import { useApplicationVersions } from '~/composables/application-versions'
-import { useApplicationWatch } from '~/composables/application-watch'
-import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { provideApplicationStore } from '~/composables/application/store'
+import { useApplicationVersions } from '~/composables/application/versions'
+import { useApplicationWatch } from '~/composables/application/watch'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { $uiConfig } from '~/context'
 
 const { t, locale } = useI18n()

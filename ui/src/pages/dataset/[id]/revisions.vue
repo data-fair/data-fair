@@ -18,9 +18,9 @@ en:
 </i18n>
 
 <script lang="ts" setup>
-import { provideDatasetStore } from '~/composables/dataset-store'
-import { useDatasetWatch } from '~/composables/dataset-watch'
-import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { provideDatasetStore } from '~/composables/dataset/store'
+import { useDatasetWatch } from '~/composables/dataset/watch'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/revisions'>()

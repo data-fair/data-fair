@@ -267,7 +267,7 @@ import {
 } from '@mdi/js'
 import axios, { type AxiosRequestConfig, type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
-import useDatasetStore from '~/composables/dataset-store'
+import useDatasetStore from '~/composables/dataset/store'
 
 const { t, locale } = useI18n()
 const { sendUiNotif } = useUiNotif()

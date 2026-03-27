@@ -1,8 +1,8 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
-import type { NavGroup } from '~/composables/use-navigation-items'
-import type { BreadcrumbItem } from '~/composables/use-breadcrumbs'
+import type { NavGroup } from '~/composables/layout/use-navigation-items'
+import type { BreadcrumbItem } from '~/composables/layout/use-breadcrumbs'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {

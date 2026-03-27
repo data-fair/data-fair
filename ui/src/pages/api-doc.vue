@@ -12,7 +12,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useDFramePage } from '~/composables/use-d-frame-page'
+import { useDFramePage } from '~/composables/layout/use-d-frame-page'
 
 const { sendUiNotif } = useUiNotif()
 const { stateChangeAdapter, onMessage } = useDFramePage()

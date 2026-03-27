@@ -116,7 +116,7 @@ en:
 <script lang="ts" setup>
 import { mdiDelete } from '@mdi/js'
 import type { Application } from '#api/types'
-import useApplicationStore from '~/composables/application-store'
+import useApplicationStore from '~/composables/application/store'
 
 interface Attachment {
   name: string

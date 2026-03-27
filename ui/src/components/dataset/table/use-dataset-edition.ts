@@ -1,4 +1,4 @@
-import { ExtendedResult } from '~/composables/dataset-lines'
+import { ExtendedResult } from '~/composables/dataset/lines'
 
 export type DatasetEdition = ReturnType<typeof createDatasetEdition>
 const datasetEditionKey = Symbol('dataset-edition')

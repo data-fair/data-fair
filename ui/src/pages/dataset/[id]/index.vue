@@ -360,9 +360,9 @@ import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import { mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiWebhook } from '@mdi/js'
-import { provideDatasetStore } from '~/composables/dataset-store'
-import { useDatasetWatch } from '~/composables/dataset-watch'
-import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { provideDatasetStore } from '~/composables/dataset/store'
+import { useDatasetWatch } from '~/composables/dataset/watch'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()

@@ -126,7 +126,7 @@ en:
 <script lang="ts" setup>
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { useShowAgentChat } from '~/composables/use-show-agent-chat'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 
 const showAgentChat = useShowAgentChat()
 

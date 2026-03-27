@@ -1,5 +1,5 @@
 import type { Event } from '#api/types'
-import { type TaskProgress, type DatasetStore } from './dataset-store'
+import { type TaskProgress, type DatasetStore } from './store'
 
 export type WatchKey = 'journal' | 'info' | 'taskProgress'
 

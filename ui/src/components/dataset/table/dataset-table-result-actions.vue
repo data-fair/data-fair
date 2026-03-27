@@ -60,7 +60,7 @@
 
 <script lang="ts" setup>
 import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline } from '@mdi/js'
-import { type ExtendedResult } from '~/composables/dataset-lines'
+import { type ExtendedResult } from '~/composables/dataset/lines'
 import useDatasetEdition from './use-dataset-edition'
 
 defineProps({

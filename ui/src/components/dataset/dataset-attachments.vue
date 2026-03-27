@@ -97,7 +97,7 @@
 
 <script lang="ts" setup>
 import { mdiDelete } from '@mdi/js'
-import useDatasetStore from '~/composables/dataset-store'
+import useDatasetStore from '~/composables/dataset/store'
 
 const messages = {
   fr: {

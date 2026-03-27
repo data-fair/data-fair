@@ -1,4 +1,4 @@
-// ui/src/composables/use-datasets-metadata.ts
+// ui/src/composables/dataset/use-metadata.ts
 import { $apiPath } from '~/context'
 
 const cache = new Map<string, Ref<any>>()

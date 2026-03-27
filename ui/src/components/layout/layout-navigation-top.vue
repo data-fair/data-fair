@@ -60,7 +60,7 @@ import DfAgentChatToggle from '@data-fair/lib-vuetify-agents/DfAgentChatToggle.v
 import { useDisplay } from 'vuetify'
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
-import type { createBreadcrumbs } from '~/composables/use-breadcrumbs'
+import type { createBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { $uiConfig } from '~/context'
 import defaultLogo from '~/assets/logo.svg'
 

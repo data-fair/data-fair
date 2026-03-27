@@ -122,10 +122,10 @@
   </i18n>
 
 <script lang="ts" setup>
-import { type DatasetFilter } from '~/composables/dataset-filters'
-import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset-lines'
+import { type DatasetFilter } from '~/composables/dataset/filters'
+import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset/lines'
 import { type TableHeaderWithProperty } from './table/use-headers'
-import { findEqFilter } from '~/composables/dataset-filters'
+import { findEqFilter } from '~/composables/dataset/filters'
 import { mdiSortAscending, mdiSortDescending, mdiMenuDown, mdiMagnifyPlus } from '@mdi/js'
 
 const { headers } = defineProps({

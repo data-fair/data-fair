@@ -52,7 +52,7 @@
 
 <script lang="ts" setup>
 import { useCurrentElement, useElementSize } from '@vueuse/core'
-import { type DatasetFilter } from '~/composables/dataset-filters'
+import { type DatasetFilter } from '~/composables/dataset/filters'
 
 const filters = defineModel<DatasetFilter[]>({ default: [] })
 const { width: maxWidth } = useElementSize(useCurrentElement())

@@ -239,7 +239,7 @@
 <script lang="ts" setup>
 import { mdiContentCopy, mdiApps, mdiSecurity } from '@mdi/js'
 import { $apiPath, $uiConfig } from '~/context'
-import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import type { BaseApp } from '#api/types'
 
 const { t } = useI18n()

@@ -33,9 +33,9 @@ en:
 
 <script lang="ts" setup>
 import { useWindowSize } from '@vueuse/core'
-import { provideDatasetStore } from '~/composables/dataset-store'
-import { useDatasetWatch } from '~/composables/dataset-watch'
-import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { provideDatasetStore } from '~/composables/dataset/store'
+import { useDatasetWatch } from '~/composables/dataset/watch'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/edit-data'>()

@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { type WatchKey } from '~/composables/dataset-watch'
+import { type WatchKey } from '~/composables/dataset/watch'
 
 const { id, draft, html, journal, taskProgress, watch: shouldWatch } = defineProps({
   id: { type: String, required: true },

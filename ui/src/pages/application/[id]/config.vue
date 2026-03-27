@@ -3,7 +3,7 @@
 </template>
 
 <script lang="ts" setup>
-import { provideApplicationStore } from '~/composables/application-store'
+import { provideApplicationStore } from '~/composables/application/store'
 
 const route = useRoute<'/application/[id]/config'>()
 

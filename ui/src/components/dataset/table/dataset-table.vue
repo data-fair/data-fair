@@ -376,12 +376,12 @@
 
 <script lang="ts" setup>
 import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose } from '@mdi/js'
-import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset-lines'
+import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
-import { useFilters, findEqFilter } from '../../../composables/dataset-filters'
+import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
 import { type VVirtualScroll, type VForm } from 'vuetify/components'
 
 const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))

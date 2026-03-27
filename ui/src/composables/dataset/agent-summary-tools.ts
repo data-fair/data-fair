@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
-import { serializeDatasetInfo } from './use-agent-dataset-tools'
+import { serializeDatasetInfo } from './agent-tools'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {

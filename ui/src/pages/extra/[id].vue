@@ -17,7 +17,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/extra/[id]'>()

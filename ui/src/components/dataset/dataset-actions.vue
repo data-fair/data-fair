@@ -315,7 +315,7 @@ import {
   mdiProgressDownload,
   mdiTableEdit
 } from '@mdi/js'
-import useDatasetStore from '~/composables/dataset-store'
+import useDatasetStore from '~/composables/dataset/store'
 
 const { t } = useI18n()
 const router = useRouter()

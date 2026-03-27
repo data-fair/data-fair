@@ -78,7 +78,7 @@ en:
 import { mdiMagnify } from '@mdi/js'
 import { type VVirtualScroll } from 'vuetify/components'
 import { useElementSize } from '@vueuse/core'
-import { ExtendedResult } from '~/composables/dataset-lines'
+import { ExtendedResult } from '~/composables/dataset/lines'
 
 const { height } = defineProps({ height: { type: Number, required: true } })
 const q = defineModel<string>('q', { default: '' })

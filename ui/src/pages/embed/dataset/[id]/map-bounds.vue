@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
-import { provideDatasetStore } from '~/composables/dataset-store'
+import { provideDatasetStore } from '~/composables/dataset/store'
 
 const { height: windowHeight } = useWindowSize()
 

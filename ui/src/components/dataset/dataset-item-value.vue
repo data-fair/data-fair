@@ -88,7 +88,7 @@ en:
 <script lang="ts" setup>
 import { type SchemaProperty } from '#api/types'
 import { useTheme } from 'vuetify'
-import type { ExtendedResultValue } from '../../composables/dataset-lines'
+import type { ExtendedResultValue } from '../../composables/dataset/lines'
 import { mdiFilterVariant, mdiLoupe, mdiMagnifyMinus } from '@mdi/js'
 
 const { value: extendedValue, property } = defineProps({

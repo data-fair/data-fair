@@ -183,7 +183,7 @@ import { useDisplay } from 'vuetify'
 import { mdiDatabaseOff, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
-import { useBreadcrumbs } from '~/composables/use-breadcrumbs'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const { name: breakpointName } = useDisplay()

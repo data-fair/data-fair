@@ -1,6 +1,6 @@
 import { type SchemaProperty } from '#api/types'
-import { type ExtendedResult, type ExtendedResultValue } from './dataset-lines'
-import type { ExtendedDataset } from './dataset-store'
+import { type ExtendedResult, type ExtendedResultValue } from './lines'
+import type { ExtendedDataset } from './store'
 
 export type Operator = 'in' | 'nin' | 'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'search' | 'contains' | 'starts' | 'exists' | 'nexists'
 

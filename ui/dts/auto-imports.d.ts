@@ -192,18 +192,11 @@ declare module 'vue' {
     readonly $wsUrl: UnwrapRef<typeof import('~/context')['$wsUrl']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly accepted: UnwrapRef<typeof import('../src/utils/dataset')['accepted']>
-    readonly applicationStore: UnwrapRef<typeof import('../src/composables/application-store')['default']>
-    readonly applicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['default']>
     readonly breadcrumbs: UnwrapRef<typeof import('../src/utils/breadcrumbs')['default']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedDeepDiff: UnwrapRef<typeof import('@data-fair/lib-vue/deep-diff.js')['computedDeepDiff']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
-    readonly createBreadcrumbs: UnwrapRef<typeof import('../src/composables/use-breadcrumbs')['createBreadcrumbs']>
-    readonly createDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['createDatasetStore']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
-    readonly datasetLines: UnwrapRef<typeof import('../src/composables/dataset-lines')['default']>
-    readonly datasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['default']>
-    readonly datasetStoreKey: UnwrapRef<typeof import('../src/composables/dataset-store')['datasetStoreKey']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly dfDateMatchFilter: UnwrapRef<typeof import('@data-fair/lib-vuetify/date-match-filter.vue')['default']>
@@ -220,9 +213,7 @@ declare module 'vue' {
     readonly dfUserAvatar: UnwrapRef<typeof import('@data-fair/lib-vuetify/ui-user-avatar.vue')['default']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly escapeKey: UnwrapRef<typeof import('../src/utils/escape-key')['escapeKey']>
-    readonly findEqFilter: UnwrapRef<typeof import('../src/composables/dataset-filters')['findEqFilter']>
     readonly formatBytes: UnwrapRef<typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']>
-    readonly formatValue: UnwrapRef<typeof import('../src/composables/dataset-lines')['formatValue']>
     readonly getActiveHead: UnwrapRef<typeof import('@unhead/vue')['getActiveHead']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
@@ -251,21 +242,15 @@ declare module 'vue' {
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
-    readonly operators: UnwrapRef<typeof import('../src/composables/dataset-filters')['operators']>
     readonly permissions: UnwrapRef<typeof import('../src/utils/permissions')['default']>
     readonly propTypeIcon: UnwrapRef<typeof import('../src/utils/dataset')['propTypeIcon']>
     readonly propTypeTitle: UnwrapRef<typeof import('../src/utils/dataset')['propTypeTitle']>
     readonly propertyTypes: UnwrapRef<typeof import('../src/utils/dataset')['propertyTypes']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
-    readonly provideApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['provideApplicationStore']>
-    readonly provideBreadcrumbs: UnwrapRef<typeof import('../src/composables/use-breadcrumbs')['provideBreadcrumbs']>
-    readonly provideDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['provideDatasetStore']>
-    readonly provideShowAgentChat: UnwrapRef<typeof import('../src/composables/use-show-agent-chat')['provideShowAgentChat']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
-    readonly serializeDatasetInfo: UnwrapRef<typeof import('../src/composables/use-agent-dataset-tools')['serializeDatasetInfo']>
     readonly setBreadcrumbs: UnwrapRef<typeof import('../src/utils/breadcrumbs')['setBreadcrumbs']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
@@ -276,41 +261,23 @@ declare module 'vue' {
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
-    readonly useAgentApplicationTools: UnwrapRef<typeof import('../src/composables/use-agent-application-tools')['useAgentApplicationTools']>
-    readonly useAgentConnectorTools: UnwrapRef<typeof import('../src/composables/use-agent-connector-tools')['useAgentConnectorTools']>
-    readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/use-agent-dataset-data-tools')['useAgentDatasetDataTools']>
-    readonly useAgentDatasetSummaryTools: UnwrapRef<typeof import('../src/composables/use-agent-summary-tools')['useAgentDatasetSummaryTools']>
-    readonly useAgentDatasetTools: UnwrapRef<typeof import('../src/composables/use-agent-dataset-tools')['useAgentDatasetTools']>
-    readonly useAgentGeoTools: UnwrapRef<typeof import('../src/composables/use-agent-geo-tools')['useAgentGeoTools']>
-    readonly useAgentNavigationTools: UnwrapRef<typeof import('../src/composables/use-agent-navigation-tools')['useAgentNavigationTools']>
-    readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['useApplicationStore']>
-    readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['useApplicationVersions']>
-    readonly useApplicationWatch: UnwrapRef<typeof import('../src/composables/application-watch')['useApplicationWatch']>
     readonly useAsyncAction: UnwrapRef<typeof import('@data-fair/lib-vue/async-action.js')['useAsyncAction']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useBooleanSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useBooleanSearchParam']>
-    readonly useBreadcrumbs: UnwrapRef<typeof import('../src/composables/use-breadcrumbs')['useBreadcrumbs']>
     readonly useCatalogList: UnwrapRef<typeof import('../src/composables/use-catalog-list')['useCatalogList']>
     readonly useConceptFilters: UnwrapRef<typeof import('@data-fair/lib-vue/concept-filters.js')['useConceptFilters']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
-    readonly useDFramePage: UnwrapRef<typeof import('../src/composables/use-d-frame-page')['useDFramePage']>
-    readonly useDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['useDatasetStore']>
-    readonly useDatasetWatch: UnwrapRef<typeof import('../src/composables/dataset-watch')['useDatasetWatch']>
-    readonly useDatasetsMetadata: UnwrapRef<typeof import('../src/composables/use-datasets-metadata')['useDatasetsMetadata']>
     readonly useEditFetch: UnwrapRef<typeof import('@data-fair/lib-vue/edit-fetch.js')['useEditFetch']>
     readonly useFetch: UnwrapRef<typeof import('@data-fair/lib-vue/fetch.js')['useFetch']>
-    readonly useFilters: UnwrapRef<typeof import('../src/composables/dataset-filters')['useFilters']>
     readonly useHead: UnwrapRef<typeof import('@unhead/vue')['useHead']>
     readonly useHeadSafe: UnwrapRef<typeof import('@unhead/vue')['useHeadSafe']>
     readonly useI18n: UnwrapRef<typeof import('vue-i18n')['useI18n']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useLeaveGuard: UnwrapRef<typeof import('@data-fair/lib-vue/leave-guard.js')['useLeaveGuard']>
-    readonly useLines: UnwrapRef<typeof import('../src/composables/dataset-lines')['useLines']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useLocaleDayjs: UnwrapRef<typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
-    readonly useNavigationItems: UnwrapRef<typeof import('../src/composables/use-navigation-items')['useNavigationItems']>
     readonly useNotificationsWS: UnwrapRef<typeof import('../src/composables/use-notifications-ws')['useNotificationsWS']>
     readonly useNumberSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']>
     readonly usePermissions: UnwrapRef<typeof import('../src/composables/use-permissions')['usePermissions']>
@@ -324,8 +291,6 @@ declare module 'vue' {
     readonly useServerSeoMeta: UnwrapRef<typeof import('@unhead/vue')['useServerSeoMeta']>
     readonly useSession: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSession']>
     readonly useSessionAuthenticated: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSessionAuthenticated']>
-    readonly useSettingsStore: UnwrapRef<typeof import('../src/composables/settings-store')['useSettingsStore']>
-    readonly useShowAgentChat: UnwrapRef<typeof import('../src/composables/use-show-agent-chat')['useShowAgentChat']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useStore: UnwrapRef<typeof import('../src/composables/use-store')['default']>
     readonly useStringSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringSearchParam']>

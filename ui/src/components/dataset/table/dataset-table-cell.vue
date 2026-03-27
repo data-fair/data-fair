@@ -117,8 +117,8 @@
 <script lang="ts" setup>
 import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiMap } from '@mdi/js'
 import { type TableHeader } from './use-headers'
-import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset-lines'
-import { type DatasetFilter } from '../../../composables/dataset-filters'
+import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset/lines'
+import { type DatasetFilter } from '../../../composables/dataset/filters'
 
 defineProps({
   result: { type: Object as () => ExtendedResult, required: true },

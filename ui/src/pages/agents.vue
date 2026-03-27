@@ -15,7 +15,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useDFramePage } from '~/composables/use-d-frame-page'
+import { useDFramePage } from '~/composables/layout/use-d-frame-page'
 
 const session = useSessionAuthenticated()
 const { sendUiNotif } = useUiNotif()

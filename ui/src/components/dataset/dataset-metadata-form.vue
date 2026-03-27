@@ -228,7 +228,7 @@ en:
 
 <script lang="ts" setup>
 import { mdiCalendar } from '@mdi/js'
-import { useDatasetsMetadata } from '~/composables/use-datasets-metadata'
+import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 
 const dataset = defineModel<any>({ required: true })
 

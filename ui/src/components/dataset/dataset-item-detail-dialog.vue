@@ -39,7 +39,7 @@
 
 <script lang="ts" setup>
 import { type SchemaProperty } from '#api/types'
-import type { ExtendedResult } from '../../composables/dataset-lines'
+import type { ExtendedResult } from '../../composables/dataset/lines'
 import { mdiClose } from '@mdi/js'
 
 const { extendedResult, property } = defineProps({

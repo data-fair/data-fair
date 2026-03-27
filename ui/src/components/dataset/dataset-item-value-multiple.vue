@@ -28,8 +28,8 @@
 
 <script lang="ts" setup>
 import { type SchemaProperty } from '#api/types'
-import { type DatasetFilter } from '../../composables/dataset-filters'
-import { type ExtendedResultValue } from '../../composables/dataset-lines'
+import { type DatasetFilter } from '../../composables/dataset/filters'
+import { type ExtendedResultValue } from '../../composables/dataset/lines'
 import { mdiFilterVariant } from '@mdi/js'
 
 const { values: extendedValues } = defineProps({

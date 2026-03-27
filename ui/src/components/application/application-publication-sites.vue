@@ -77,7 +77,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
-import useApplicationStore from '~/composables/application-store'
+import useApplicationStore from '~/composables/application/store'
 
 const { t } = useI18n()
 const { application, can, patch } = useApplicationStore()

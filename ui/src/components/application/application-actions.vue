@@ -213,7 +213,7 @@ en:
 
 <script lang="ts" setup>
 import { mdiAccountSwitch, mdiCamera, mdiCloud, mdiDelete, mdiExitToApp, mdiPencil, mdiSquareEditOutline } from '@mdi/js'
-import useApplicationStore from '~/composables/application-store'
+import useApplicationStore from '~/composables/application/store'
 
 const { t } = useI18n()
 const router = useRouter()
