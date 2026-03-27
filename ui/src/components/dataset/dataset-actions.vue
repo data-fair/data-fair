@@ -55,7 +55,7 @@
     <v-list-subheader>{{ t('actions') }}</v-list-subheader>
 
     <v-list-item
-      v-if="can('writeDescription').value && !dataset.draftReason"
+      v-if="can('writeDescription').value"
       :to="`/dataset/${dataset.id}/edit-metadata`"
     >
       <template #prepend>

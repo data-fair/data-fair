@@ -373,7 +373,7 @@ const dataTab = ref('data')
 const activityTab = ref('journal')
 
 const store = provideDatasetStore(route.params.id, true)
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, digitalDocumentField, imageField, can } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can } = store
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 
@@ -389,6 +389,7 @@ watch(dataset, (d) => {
   if (can('readJournal').value && !journalFetch.initialized.value) journalFetch.refresh()
   if (!taskProgressFetch.initialized.value) taskProgressFetch.refresh()
   if (d.finalizedAt && !applicationsFetch.initialized.value) applicationsFetch.refresh()
+  if (d.draftReason?.key === 'file-updated' && !publishedDatasetFetch.initialized.value) publishedDatasetFetch.refresh()
 }, { immediate: true })
 
 const applications = computed(() => applicationsFetch.data.value?.results ?? [])
@@ -410,9 +411,11 @@ const sections = computedDeepDiff(() => {
 
   if (d.finalizedAt || d.draftReason) {
     const dataTabs = []
-    if (d.finalizedAt && !d.isMetaOnly && !d.draftReason) {
+    if (d.finalizedAt && !d.isMetaOnly) {
       dataTabs.push({ key: 'data', title: t('data'), icon: mdiTable })
-      dataTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
+      if (!d.draftReason || d.draftReason.key === 'file-updated') {
+        dataTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
+      }
       dataTabs.push({ key: 'schema', title: t('schema'), icon: mdiTableCog })
     }
     if (dataTabs.length) {
@@ -424,7 +427,7 @@ const sections = computedDeepDiff(() => {
     }
   }
 
-  if (!d.draftReason) {
+  if (!d.draftReason || d.draftReason.key === 'file-updated') {
     const shareTabs = []
     if (can('getPermissions').value) {
       shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
@@ -445,7 +448,7 @@ const sections = computedDeepDiff(() => {
     }
   }
 
-  if (can('readJournal').value && !d.isMetaOnly && !d.draftReason) {
+  if (can('readJournal').value && !d.isMetaOnly) {
     const activityTabs = [
       { key: 'journal', title: t('journal'), icon: mdiCalendarText }
     ]

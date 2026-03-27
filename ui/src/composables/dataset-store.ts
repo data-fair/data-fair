@@ -3,7 +3,7 @@ import type { Event, Dataset } from '#api/types'
 import { isRestDataset } from '#shared/types-utils'
 import type { PatchDatasetReq } from '#api-doc/datasets/patch-req/index.js'
 
-export type ExtendedDataset = Dataset & { userPermissions: string[], draftReason?: string }
+export type ExtendedDataset = Dataset & { userPermissions: string[] }
 export type TaskProgress = { task: string, progress: number, error?: string }
 
 export type DatasetStore = ReturnType<typeof createDatasetStore>
@@ -110,6 +110,13 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
     return files
   })
 
+  const publishedDatasetFetch = useFetch<ExtendedDataset>(() => {
+    if (dataset.value?.draftReason?.key !== 'file-updated') return null
+    return $apiPath + `/datasets/${id}`
+  }, { immediate: false, watch: false })
+  const publishedDataset = ref<ExtendedDataset | null>(null)
+  watch(publishedDatasetFetch.data, () => { publishedDataset.value = publishedDatasetFetch.data.value })
+
   const remove = async () => {
     await $fetch('/datasets/' + id, { method: 'DELETE' })
   }
@@ -141,6 +148,8 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
     applicationsFetch,
     nbVirtualDatasetsFetch,
     nbVirtualDatasets,
+    publishedDatasetFetch,
+    publishedDataset,
     dataFiles,
     remove,
     changeOwner,
