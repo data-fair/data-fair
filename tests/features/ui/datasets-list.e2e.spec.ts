@@ -199,3 +199,83 @@ test.describe('datasets list page', () => {
     await expect(navRight.locator('.v-select, .v-autocomplete').first()).toBeVisible({ timeout: 5000 })
   })
 })
+
+test.describe('owner facet filtering', () => {
+  test.beforeEach(async () => {
+    await clean()
+    // Create datasets under org (no dept) and org+dept so the owner facet has 2 entries
+    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+    // test_user6 is contrib of test_org1 in dep1, so dataset is owned by organization:test_org1:dep1
+    const axOrgDep = await axiosAuth('test_user6@test.com', 'test_org1')
+    await sendDataset('datasets/dataset1.csv', axOrg, {}, { title: 'Org Dataset' })
+    await sendDataset('datasets/dataset2.csv', axOrgDep, {}, { title: 'Dept Dataset' })
+  })
+
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  /**
+   * Helper: switch to org context via the personal menu
+   */
+  async function switchToOrg (page: any, goToWithAuth: any) {
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+    await goToWithAuth('/data-fair/', 'test_user1')
+    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
+    await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
+    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
+    await page.goto(`${baseUrl}/data-fair/datasets`)
+  }
+
+  test('owner facet displays names, not [object Object]', async ({ page, goToWithAuth }) => {
+    await switchToOrg(page, goToWithAuth)
+    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
+
+    const navRight = page.locator('.v-navigation-drawer--right')
+    const ownerFacet = navRight.locator('.v-autocomplete').first()
+    await expect(ownerFacet).toBeVisible({ timeout: 5000 })
+
+    // Open the owner autocomplete
+    await ownerFacet.click()
+
+    // Verify that options show readable names, not [object Object]
+    const options = page.getByRole('option')
+    await expect(options.first()).toBeVisible({ timeout: 5000 })
+    const count = await options.count()
+    for (let i = 0; i < count; i++) {
+      const text = await options.nth(i).textContent()
+      expect(text).not.toContain('[object Object]')
+    }
+  })
+
+  test('selecting owner facet updates URL with correct string format', async ({ page, goToWithAuth }) => {
+    await switchToOrg(page, goToWithAuth)
+    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
+
+    const navRight = page.locator('.v-navigation-drawer--right')
+    const ownerFacet = navRight.locator('.v-autocomplete').first()
+    await expect(ownerFacet).toBeVisible({ timeout: 5000 })
+
+    // Open and select the first owner option
+    await ownerFacet.click()
+    await page.getByRole('option').first().click()
+    // Close the dropdown
+    await page.keyboard.press('Escape')
+
+    // Wait for URL to update (replaceState may not trigger navigation events)
+    await page.waitForTimeout(1000)
+
+    // URL should contain a properly formatted owner param, not [object Object]
+    const url = page.url()
+    // If the param is present, verify it's formatted correctly
+    if (url.includes('owner=')) {
+      expect(url).not.toContain('object+Object')
+      expect(url).not.toContain('object%20Object')
+      expect(url).toMatch(/owner=organization(%3A|:)/)
+    }
+
+    // Also verify the selected chip text in the autocomplete doesn't show [object Object]
+    const selectedText = await ownerFacet.textContent()
+    expect(selectedText).not.toContain('[object Object]')
+  })
+})

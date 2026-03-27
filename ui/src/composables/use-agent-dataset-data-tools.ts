@@ -331,6 +331,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
 
   useAgentSubAgent({
     name: 'dataset_data',
+    title: t('datasetDataSubAgent'),
     description: t('datasetDataSubAgent') + '. Query dataset rows, compute aggregations, and explore field values. Provide the dataset ID and describe what data you need.',
     prompt: 'You are a data querying assistant. Always call get_dataset_schema first to understand the dataset columns and sample data before using other tools. Return results concisely.',
     tools: ['get_dataset_schema', 'search_data', 'aggregate_data', 'calculate_metric', 'get_field_values']

@@ -119,18 +119,19 @@ const requestedPublicationSites = defineModel<string[]>('requestedPublicationSit
 const services = defineModel<string[]>('services', { default: () => [] })
 const concepts = defineModel<string[]>('concepts', { default: () => [] })
 
-const facetToItems = (key: string, labelFn?: (v: any) => string) => {
+const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: any) => string) => {
   return computed(() => {
     const values = props.facets[key]
     if (!values?.length) return []
     return values.map(f => ({
       title: (labelFn ? labelFn(f) : f.value) + ` (${f.count})`,
-      value: f.value,
+      value: valueFn ? valueFn(f) : f.value,
     }))
   })
 }
 
-const ownerItems = facetToItems('owner', (f) => f.departmentName || f.name || f.value)
+const ownerValueFn = (f: any) => `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
+const ownerItems = facetToItems('owner', (f) => f.value.departmentName || f.value.name || f.value.id, ownerValueFn)
 const statusItems = facetToItems('status', (f) => t('statusValues.' + f.value))
 const draftStatusItems = facetToItems('draftStatus', (f) => t('draftStatusValues.' + f.value))
 const visibilityItems = facetToItems('visibility', (f) => t('visibilityValues.' + f.value))
