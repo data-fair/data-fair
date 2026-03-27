@@ -15,9 +15,9 @@ export function useDFramePage () {
 
   const frameHeight = computed(() => (windowHeight.value - 48) + 'px')
 
-  function onMessage (message: any) {
+  function onMessage (message: { detail?: Record<string, unknown> } & Record<string, unknown>) {
     const detail = message?.detail ?? message
-    if (detail?.breadcrumbs) {
+    if ('breadcrumbs' in detail) {
       breadcrumbs.receive(detail)
     }
   }

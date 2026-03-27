@@ -402,8 +402,6 @@ const debug = Debug('workflow-update-dataset')
 const { datasetParams } = defineProps({
   datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
 })
-// const updated = defineModel('updated', { type: String })
-
 const { sendUiNotif } = useUiNotif()
 const { t, locale } = useI18n()
 const { height } = useWindowSize()
@@ -422,17 +420,11 @@ const datasetsFilter = computed(() => ({
 }))
 
 const selectedDataset = ref<ListedDataset>()
-// const currentDatasetId = ref(updated.value)
 const currentDatasetId = ref<string>()
 watch(selectedDataset, () => {
   debug('selectedDataset', selectedDataset.value)
   if (selectedDataset.value) {
     currentDatasetId.value = selectedDataset.value.id
-    /* if (selectedDataset.value.isRest) {
-      updated.value = selectedDataset.value.id
-    } else {
-      updated.value = undefined
-    } */
   }
 })
 watch(currentStep, () => {
@@ -451,10 +443,8 @@ const currentDatasetStore = computed(() => {
 const currentDataset = computed(() => currentDatasetStore.value?.dataset?.value)
 const initialized = computed((oldValue) => {
   if (oldValue) return true
-  // if (!updated.value) return true
   return !!currentDataset?.value
 })
-// const initialFetch = ref(!!updated.value)
 const initialFetch = false
 const missingPermissions = computed(() => {
   return ['readJournal', 'readLines'].filter(p => !currentDataset.value?.userPermissions.includes(p))
@@ -467,30 +457,10 @@ const draftCancelledEvent = computed(() => {
 
 watch(currentDataset, (newValue, oldValue) => {
   if (newValue && !oldValue) {
-    /* if (initialFetch.value && currentDataset.value?.file) {
-      currentStep.value = digitalDocumentField.value ? 5 : 4
-      imported.value = true
-    } else {
-      currentStep.value = 2
-    }
-    initialFetch.value = false
-    */
     currentStep.value = 2
   }
 })
 const digitalDocumentField = computed(() => currentDatasetStore.value?.digitalDocumentField.value)
-
-// watch(dataset, () => {
-//   if (!dataset.value) return
-//   /* if (dataset.value.isRest) {
-//     datasetType.value = 'rest'
-//     currentStep.value = 3
-//   } else {
-//     datasetType.value = 'file'
-//     currentStep.value = (dataset.value && digitalDocumentField.value) ? 6 : 5
-//   } */
-//   currentStep.value = 2
-// })
 
 let cancelUpdate: CancelTokenSource
 const uploadProgress = ref<{ loaded: number, total?: number, percent?: number }>()

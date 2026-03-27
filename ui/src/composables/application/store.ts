@@ -1,4 +1,4 @@
-import type { Application, BaseApp, AppConfig } from '#api/types'
+import type { Application, BaseApp, AppConfig, Event, Dataset } from '#api/types'
 import { provide } from 'vue'
 import debugModule from 'debug'
 
@@ -85,23 +85,23 @@ const createApplicationStore = (id: string) => {
     return application.value?.userPermissions?.includes(operation) ?? false
   }
 
-  const journalFetch = useFetch<any[]>($apiPath + `/applications/${id}/journal`, { immediate: false })
-  const journal = ref<any[] | null>(null)
+  const journalFetch = useFetch<Event[]>($apiPath + `/applications/${id}/journal`, { immediate: false })
+  const journal = ref<Event[] | null>(null)
   watch(journalFetch.data, () => { journal.value = journalFetch.data.value })
 
-  const datasetsFetch = useFetch<{ results: any[] }>(() => {
-    const conf = config.value
-    const datasetsIds = ((conf?.datasets as any[]) || [])
-      .map((d: any) => d.id || d.href?.split('/').pop())
-      .filter(Boolean)
+  type ConfigRef = { id?: string, href?: string, [k: string]: unknown } | null
+  const extractIds = (items: ConfigRef[] | undefined) =>
+    (items || [])
+      .map((d) => d?.id || d?.href?.split('/').pop())
+      .filter(Boolean) as string[]
+
+  const datasetsFetch = useFetch<{ results: Dataset[] }>(() => {
+    const datasetsIds = extractIds(config.value?.datasets as ConfigRef[])
     if (!datasetsIds.length) return null
     return `${$apiPath}/datasets`
   }, {
     query: computed(() => {
-      const conf = config.value
-      const datasetsIds = ((conf?.datasets as any[]) || [])
-        .map((d: any) => d.id || d.href?.split('/').pop())
-        .filter(Boolean)
+      const datasetsIds = extractIds(config.value?.datasets as ConfigRef[])
       return {
         id: datasetsIds.join(','),
         size: 10000,
@@ -113,19 +113,13 @@ const createApplicationStore = (id: string) => {
     watch: false
   })
 
-  const childrenAppsFetch = useFetch<{ results: any[] }>(() => {
-    const conf = config.value
-    const appIds = ((conf?.applications as any[]) || [])
-      .map((d: any) => d.id || d.href?.split('/').pop())
-      .filter(Boolean)
+  const childrenAppsFetch = useFetch<{ results: Application[] }>(() => {
+    const appIds = extractIds(config.value?.applications as ConfigRef[])
     if (!appIds.length) return null
     return `${$apiPath}/applications`
   }, {
     query: computed(() => {
-      const conf = config.value
-      const appIds = ((conf?.applications as any[]) || [])
-        .map((d: any) => d.id || d.href?.split('/').pop())
-        .filter(Boolean)
+      const appIds = extractIds(config.value?.applications as ConfigRef[])
       return {
         id: appIds.join(','),
         size: 10000,

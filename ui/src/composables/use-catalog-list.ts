@@ -1,11 +1,11 @@
 import type { Ref, ComputedRef, MaybeRefOrGetter } from 'vue'
 
-type FacetValue = { count: number, value: string, [key: string]: any }
+type FacetValue = { count: number, value: string }
 type CatalogResponse<T> = { count: number, results: T[], facets?: Record<string, FacetValue[]> }
 
 interface UseCatalogListOptions {
   fetchUrl: ComputedRef<string>
-  query: ComputedRef<Record<string, any>>
+  query: ComputedRef<Record<string, string | number | boolean | undefined>>
   facetsFields: string
   pageSize?: MaybeRefOrGetter<number>
 }
@@ -24,7 +24,7 @@ export function useCatalogList<T> (options: UseCatalogListOptions) {
 
   // Build full query with pagination, facets only on page 1
   const fullQuery = computed(() => {
-    const q: Record<string, any> = {
+    const q: Record<string, string | number | boolean | undefined> = {
       ...query.value,
       size: toValue(pageSize),
       page: currentPage.value,

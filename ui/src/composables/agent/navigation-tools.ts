@@ -1,6 +1,7 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
+import { createAgentTranslator } from './utils'
 import type { NavGroup } from '~/composables/layout/use-navigation-items'
 import type { BreadcrumbItem } from '~/composables/layout/use-breadcrumbs'
 
@@ -26,7 +27,7 @@ interface AgentNavigationToolsDeps {
 }
 
 export function useAgentNavigationTools ({ route, router, navigationGroups, breadcrumbItems, locale }: AgentNavigationToolsDeps) {
-  const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
+  const t = createAgentTranslator(messages, locale)
 
   useAgentTool({
     name: 'get_current_location',

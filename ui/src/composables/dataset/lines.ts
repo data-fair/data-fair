@@ -42,7 +42,7 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
   const baseFetchUrl = computed(() => {
     if (!dataset.value?.schema) return null
     if (truncate.value === null) return null
-    const query: Record<string, any> = {
+    const query: Record<string, string | number | boolean | undefined> = {
       draft,
       size: toValue(pageSize),
       truncate: truncate.value,
@@ -59,7 +59,7 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
   const next = ref<string>()
   const results = ref<ExtendedResult[]>([])
 
-  type Lines = { total: number, next?: string, results: any[] }
+  type Lines = { total: number, next?: string, results: Record<string, any>[] }
   let abortController: AbortController | undefined
   const fetchResults = useAsyncAction(async (reset?: boolean) => {
     if (!next.value) return
@@ -81,7 +81,7 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
       for (const property of dataset.value?.schema ?? []) {
         if (property.separator) {
           const values = raw[property.key]?.split(property.separator).map((v: string) => v.trim()) ?? []
-          extendedResult.values[property.key] = values.map((v: any) => prepareExtendedResultValue(v, property, truncate.value, localeDayjs))
+          extendedResult.values[property.key] = values.map((v: string) => prepareExtendedResultValue(v, property, truncate.value, localeDayjs))
         } else {
           const extendedValue = prepareExtendedResultValue(raw[property.key], property, truncate.value, localeDayjs)
           if (property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
@@ -124,6 +124,9 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
 
   return { baseFetchUrl, total, results, fetchResults, truncate }
 }
+
+// FieldValue is kept as `any` because dataset field values come from dynamic API responses
+// with heterogeneous types determined by the schema at runtime
 
 const prepareExtendedResultValue = (value: any, property: SchemaProperty, truncate: number = 50, localeDayjs: ReturnType<typeof useLocaleDayjs>): ExtendedResultValue => {
   return {

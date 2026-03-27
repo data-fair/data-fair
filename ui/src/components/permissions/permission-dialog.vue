@@ -116,7 +116,7 @@
         <v-btn
           :disabled="!valid"
           color="primary"
-          @click="emit('update:modelValue', permission); showDialog = false"
+          @click="emit('update:modelValue', permission as Permission); showDialog = false"
         >
           {{ t('validate') }}
         </v-btn>
@@ -200,28 +200,42 @@ en:
 
 <script lang="ts" setup>
 import MemberSelect from './member-select.vue'
+import type { Permission } from '#api/types'
+
+// Mutable working copy — allows null for fields being cleared in the UI before save
+type EditablePermission = {
+  type?: Permission['type'] | null
+  id?: string | null
+  name?: string | null
+  email?: string | null
+  department?: string | null
+  departmentName?: string | null
+  roles?: string[]
+  operations?: string[]
+  classes?: string[]
+}
 
 const props = defineProps<{
-  modelValue?: any
+  modelValue?: Permission
   permissionClasses: Record<string, { id: string, title: string, class: string }[]>
-  owner: any
+  owner: { type: string, id: string, name?: string, departments?: { id: string, name: string }[], roles?: string[], partners?: { id: string, name: string }[] }
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: any]
+  'update:modelValue': [value: Permission]
 }>()
 
 const { t, te } = useI18n()
 
 const showDialog = ref(false)
-const permission = ref<any>(null)
+const permission = ref<EditablePermission | null>(null)
 const expertMode = ref(false)
 
 // --- Computed: restricted permission classes (public scope = only read/list/use) ---
 const restrictedPermissionClasses = computed(() => {
   if (permission.value && !permission.value.type) {
     return ['read', 'list', 'use']
-      .reduce((classes: Record<string, any[]>, c) => {
+      .reduce((classes: Record<string, { id: string, title: string, class: string }[]>, c) => {
         if (props.permissionClasses[c]) classes[c] = props.permissionClasses[c]
         return classes
       }, {})
@@ -239,7 +253,7 @@ const classItems = computed(() => {
 
 // --- Computed: operations for expert mode v-select ---
 const operations = computed(() => {
-  const result: any[] = []
+  const result: ({ header: string } | { id: string, title: string, class: string })[] = []
   for (const c of Object.keys(restrictedPermissionClasses.value)) {
     if (!te('classNames.' + c)) continue
     result.push({ header: t('classNames.' + c) })
@@ -285,7 +299,7 @@ const userSelectType = computed({
   get () {
     if (!permission.value) return null
     if (permission.value.id === '*') return '*'
-    if (![null, undefined].includes(permission.value.email) && !permission.value.id) return 'email'
+    if (permission.value.email != null && !permission.value.id) return 'email'
     if (props.owner.type === 'organization') {
       if (permission.value.email && permission.value.id) return 'member'
       if (!permission.value.id) return 'member'
@@ -348,9 +362,9 @@ const partner = computed({
   get () {
     if (orgSelectType.value !== 'partner') return null
     if (!permission.value?.id) return null
-    return props.owner.partners?.find((p: any) => p.id === permission.value.id) ?? null
+    return props.owner.partners?.find((p) => p.id === permission.value?.id) ?? null
   },
-  set (org: any) {
+  set (org: { id: string, name: string } | null) {
     if (!permission.value) return
     delete permission.value.email
     if (org) {
@@ -368,9 +382,9 @@ const member = computed({
   get () {
     if (!permission.value || permission.value.type !== 'user') return null
     if (!permission.value.id) return null
-    return { id: permission.value.id, name: permission.value.name }
+    return { id: permission.value.id!, name: permission.value.name ?? '' }
   },
-  set (user: any) {
+  set (user: { id: string, name: string, email?: string } | null) {
     if (!permission.value) return
     delete permission.value.department
     delete permission.value.roles
@@ -405,10 +419,10 @@ function init () {
   }
   if (props.modelValue) {
     permission.value = JSON.parse(JSON.stringify(props.modelValue))
-    if (permission.value.operations && permission.value.operations.length) expertMode.value = true
-    permission.value.type = permission.value.type || null
-    permission.value.id = permission.value.id || null
-    permission.value.department = permission.value.department || null
+    if (permission.value!.operations && permission.value!.operations.length) expertMode.value = true
+    permission.value!.type = permission.value!.type || null
+    permission.value!.id = permission.value!.id || null
+    permission.value!.department = permission.value!.department || null
   } else {
     permission.value = {
       type: 'organization',

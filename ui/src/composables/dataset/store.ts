@@ -30,7 +30,7 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
   const taskProgress = ref<TaskProgress>()
   watch(taskProgressFetch.data, () => { taskProgress.value = taskProgressFetch.data.value?.task ? taskProgressFetch.data.value : undefined })
 
-  const jsonSchemaFetch = useFetch<any>($apiPath + `/datasets/${id}/schema`, {
+  const jsonSchemaFetch = useFetch<Record<string, unknown>>($apiPath + `/datasets/${id}/schema`, {
     query: () => ({
       draft,
       mimeType: 'application/schema+json',
@@ -61,7 +61,7 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
 
   const resourceUrl = computed(() => `${$apiPath}/datasets/${id}`)
 
-  const applicationsFetch = useFetch<{ results: any[], count: number }>(() => {
+  const applicationsFetch = useFetch<{ results: { id: string, title: string }[], count: number }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/applications`
   }, {

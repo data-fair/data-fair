@@ -84,8 +84,8 @@ const requestSummary = async () => {
       body: { content, prompt: 'Compare the old and new versions and summarize the changes concisely:' }
     })
     summary.value = result.summary
-  } catch (err) {
-    console.error('Failed to get summary', err)
+  } catch {
+    // summary is optional, failure is non-critical
   } finally {
     summaryLoading.value = false
   }

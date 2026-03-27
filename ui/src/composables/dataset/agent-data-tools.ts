@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
+import { createAgentTranslator } from '~/composables/agent/utils'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -63,7 +64,7 @@ function normalizeSort (sort: string): string {
 }
 
 export function useAgentDatasetDataTools (locale: Ref<string>) {
-  const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
+  const t = createAgentTranslator(messages, locale)
 
   useAgentTool({
     name: 'get_dataset_schema',

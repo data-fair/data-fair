@@ -72,11 +72,12 @@ en:
 import { mdiClose, mdiTune } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import capabilitiesSchema from '~/../../api/contract/capabilities.js'
+import type { SchemaProperty } from '#api/types'
 
 const { t } = useI18n({ useScope: 'local' })
 
 const props = defineProps<{
-  property: any
+  property: SchemaProperty
   editable?: boolean
 }>()
 
@@ -86,7 +87,7 @@ const capabilitiesDefaultFalse = Object.keys(capabilitiesProperties).filter(
 )
 
 const dialog = ref(false)
-const editCapabilities = ref<Record<string, boolean> | null>(null)
+const editCapabilities = ref<Record<string, unknown> | null>(null)
 
 const relevantCapabilities = computed(() => {
   const type = props.property.type

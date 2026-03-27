@@ -127,7 +127,7 @@ fetchCount()
 const userId = computed(() => session.state.user?.id)
 if (userId.value) {
   useNotificationsWS(props.eventsUrl, userId.value, (notif) => {
-    notifications.value.unshift(notif)
+    notifications.value.unshift(notif as Notification)
     unreadCount.value++
   })
 }

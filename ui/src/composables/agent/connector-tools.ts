@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $uiConfig, $sitePath } from '~/context'
+import { createAgentTranslator, agentToolError } from './utils'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -26,7 +27,7 @@ async function serviceFetch<T> (url: string, query: Record<string, string>): Pro
 }
 
 export function useAgentConnectorTools (locale: Ref<string>) {
-  const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
+  const t = createAgentTranslator(messages, locale)
 
   if ($uiConfig.processingsIntegration) {
     const processingsBase = `${$sitePath}/processings/api/v1/processings`
@@ -53,9 +54,9 @@ export function useAgentConnectorTools (locale: Ref<string>) {
           }
           if (params.q) query.q = params.q
 
-          const data = await serviceFetch<any>(processingsBase, query)
+          const data = await serviceFetch<{ count: number, results: { _id: string, title?: string, status?: string, scheduling?: { type: string }, updatedAt?: string }[] }>(processingsBase, query)
 
-          const lines = data.results.map((p: any) => {
+          const lines = data.results.map((p) => {
             const parts = [`- **${p.title || p._id}** (id: \`${p._id}\`)`,
               `  Status: ${p.status || 'unknown'}`]
             if (p.scheduling?.type) parts.push(`  Scheduling: ${p.scheduling.type}`)
@@ -68,11 +69,8 @@ export function useAgentConnectorTools (locale: Ref<string>) {
             '',
             ...lines
           ].join('\n')
-        } catch (err: any) {
-          return {
-            content: [{ type: 'text' as const, text: `Processings service unavailable: ${err.message}` }],
-            isError: true
-          }
+        } catch (err) {
+          return agentToolError('Processings service unavailable', err)
         }
       }
     })
@@ -106,11 +104,8 @@ export function useAgentConnectorTools (locale: Ref<string>) {
           if (p.createdAt) meta.push(`- **Created:** ${p.createdAt}`)
 
           return meta.join('\n')
-        } catch (err: any) {
-          return {
-            content: [{ type: 'text' as const, text: `Processings service unavailable: ${err.message}` }],
-            isError: true
-          }
+        } catch (err) {
+          return agentToolError('Processings service unavailable', err)
         }
       }
     })
@@ -141,9 +136,9 @@ export function useAgentConnectorTools (locale: Ref<string>) {
           }
           if (params.q) query.q = params.q
 
-          const data = await serviceFetch<any>(catalogsBase, query)
+          const data = await serviceFetch<{ count: number, results: { _id: string, title?: string, type?: string, url?: string, updatedAt?: string }[] }>(catalogsBase, query)
 
-          const lines = data.results.map((c: any) => {
+          const lines = data.results.map((c) => {
             const parts = [`- **${c.title || c._id}** (id: \`${c._id}\`)`,
               `  Type: ${c.type || '?'}`]
             if (c.url) parts.push(`  URL: ${c.url}`)
@@ -156,11 +151,8 @@ export function useAgentConnectorTools (locale: Ref<string>) {
             '',
             ...lines
           ].join('\n')
-        } catch (err: any) {
-          return {
-            content: [{ type: 'text' as const, text: `Catalogs service unavailable: ${err.message}` }],
-            isError: true
-          }
+        } catch (err) {
+          return agentToolError('Catalogs service unavailable', err)
         }
       }
     })
@@ -194,11 +186,8 @@ export function useAgentConnectorTools (locale: Ref<string>) {
           if (c.createdAt) meta.push(`- **Created:** ${c.createdAt}`)
 
           return meta.join('\n')
-        } catch (err: any) {
-          return {
-            content: [{ type: 'text' as const, text: `Catalogs service unavailable: ${err.message}` }],
-            isError: true
-          }
+        } catch (err) {
+          return agentToolError('Catalogs service unavailable', err)
         }
       }
     })

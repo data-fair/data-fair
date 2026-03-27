@@ -53,7 +53,7 @@ export default defineConfig({
       ],
       dirs: [
         'src/utils',
-        'src/composables'
+        'src/composables/**'
       ]
     }),
     Components({

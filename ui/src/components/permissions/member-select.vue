@@ -13,7 +13,7 @@
     @update:model-value="$emit('update:modelValue', $event)"
     @update:search="onSearch"
   >
-    <template #item="{ item, props: itemProps }">
+    <template #item="{ item, props: itemProps }: any">
       <v-list-item v-bind="itemProps">
         <template #subtitle>
           {{ item.raw.email }}
@@ -37,20 +37,22 @@ import { $sdUrl } from '~/context'
 
 const props = defineProps<{
   modelValue: { id: string, name: string, email?: string } | null
-  organization: { id: string, name: string }
+  organization: { id: string, name?: string }
 }>()
 
+type Member = { id: string, name: string, email?: string, role?: string, department?: string, departmentName?: string }
+
 defineEmits<{
-  'update:modelValue': [value: any]
+  'update:modelValue': [value: Member | null]
 }>()
 
 const { t } = useI18n()
 
-const members = ref<any[]>([])
+const members = ref<Member[]>([])
 const loading = ref(false)
 
 const filledMembers = computed(() => {
-  const result: any[] = []
+  const result: Member[] = []
   if (props.modelValue?.id) {
     result.push(props.modelValue)
   }

@@ -149,13 +149,13 @@
                   :key="permClass"
                 >
                   <v-list-item
-                    v-if="(item.classes || []).includes(permClass as string) || classOperations.filter((o: any) => (item.operations || []).includes(o.id)).length"
+                    v-if="(item.classes || []).includes(permClass as string) || classOperations.filter((o) => (item.operations || []).includes(o.id)).length"
                     class="pa-0"
                     style="min-height:25px"
                   >
                     {{ t('classNames.' + permClass) }}
                     <template v-if="!(item.classes || []).includes(permClass as string)">
-                      ({{ classOperations.filter((o: any) => (item.operations || []).find((oid: string) => o.id && o.id === oid)).map((o: any) => o.title.toLowerCase().replace('.', '')).join(' - ') }})
+                      ({{ classOperations.filter((o) => (item.operations || []).find((oid: string) => o.id && o.id === oid)).map((o) => o.title.toLowerCase().replace('.', '')).join(' - ') }})
                     </template>
                   </v-list-item>
                 </template>
@@ -295,79 +295,92 @@ en:
 <script lang="ts" setup>
 import { mdiPencil, mdiDelete } from '@mdi/js'
 import PermissionDialog from './permission-dialog.vue'
+import type { Permission } from '#api/types'
+
+type PermissibleResource = {
+  id: string
+  owner: { type: string, id: string, name?: string, department?: string }
+  isRest?: boolean
+  isVirtual?: boolean
+  file?: { name: string }
+  rest?: { lineOwnership?: boolean }
+}
 
 const props = defineProps<{
-  resource: any
+  resource: PermissibleResource
   resourceType: 'datasets' | 'applications'
   disabled: boolean
   hasPublicDeps?: boolean
   hasPrivateParents?: boolean
 }>()
 
-const emit = defineEmits<{ permissions: [value: any[]] }>()
+const emit = defineEmits<{ permissions: [value: Permission[]] }>()
 
 const { t } = useI18n()
 const { sendUiNotif } = useUiNotif()
 
-const permissions = ref<any[] | null>(null)
+const permissions = ref<Permission[] | null>(null)
 const detailedMode = ref(false)
-const ownerDetails = ref<any>(null)
-const api = ref<any>(null)
+const ownerDetails = ref<{ type: string, id: string, name?: string, departments?: { id: string, name: string }[] } | null>(null)
+type ApiEndpoint = { operationId: string, summary: string, 'x-permissionClass'?: string, 'x-altPermissions'?: PermissionClassItem[] }
+type ApiDoc = { paths: Record<string, Record<string, ApiEndpoint>> }
+const api = ref<ApiDoc | null>(null)
 
 const orgName = computed(() => props.resource.owner?.name || props.resource.owner?.id || '')
 
 // --- Permission type checkers ---
 
-function isInDepartmentPermission (p: any): boolean {
+function isInDepartmentPermission (p: Permission): boolean {
   return !p.department || (!props.resource.owner?.department && p.department === '-') || p.department === props.resource.owner?.department
 }
 
-function isPublicPermission (p: any): boolean {
-  return !p.type && p.classes?.includes('read') && p.classes?.includes('list')
+function isPublicPermission (p: Permission): boolean {
+  return !p.type && !!p.classes?.includes('read') && !!p.classes?.includes('list')
 }
 
-function isSharedInOrgPermission (p: any): boolean {
+function isSharedInOrgPermission (p: Permission): boolean {
   return p.type === 'organization' && props.resource.owner?.type === 'organization' &&
     p.id === props.resource.owner.id && !p.department &&
-    p.classes?.includes('read') && p.classes?.includes('list') && !p.roles
+    !!p.classes?.includes('read') && !!p.classes?.includes('list') && !p.roles
 }
 
-function isPrivateOrgContribPermission (p: any): boolean {
+function isPrivateOrgContribPermission (p: Permission): boolean {
   return p.type === 'organization' && props.resource.owner?.type === 'organization' &&
     p.id === props.resource.owner.id && isInDepartmentPermission(p) &&
-    p.classes?.includes('read') && p.classes?.includes('list') && p.roles?.includes('contrib')
+    !!p.classes?.includes('read') && !!p.classes?.includes('list') && !!p.roles?.includes('contrib')
 }
 
-function isManageOwnLinesPermission (p: any): boolean {
-  return p.type === 'user' && p.id === '*' && p.classes?.includes('manageOwnLines')
+function isManageOwnLinesPermission (p: Permission): boolean {
+  return p.type === 'user' && p.id === '*' && !!p.classes?.includes('manageOwnLines')
 }
 
-function isContribWriteDataPermission (p: any): boolean {
+function isContribWriteDataPermission (p: Permission): boolean {
   return p.type === 'organization' && props.resource.owner?.type === 'organization' &&
     p.id === props.resource.owner.id && isInDepartmentPermission(p) &&
     p.roles?.length === 1 && p.roles[0] === 'contrib' &&
-    p.operations && p.operations.includes(props.resource.isRest ? 'createLine' : 'writeData') &&
+    !!p.operations && p.operations.includes(props.resource.isRest ? 'createLine' : 'writeData') &&
     !p.operations.includes('writeDescription')
 }
 
-function isContribWriteNoBreakingPermission (p: any): boolean {
+function isContribWriteNoBreakingPermission (p: Permission): boolean {
   return p.type === 'organization' && props.resource.owner?.type === 'organization' &&
     p.id === props.resource.owner.id && isInDepartmentPermission(p) &&
     p.roles?.length === 1 && p.roles[0] === 'contrib' &&
-    p.operations?.includes('writeDescription') && !p.operations?.includes('writeDescriptionBreaking')
+    !!p.operations?.includes('writeDescription') && !p.operations?.includes('writeDescriptionBreaking')
 }
 
-function isContribWriteAllPermission (p: any): boolean {
+function isContribWriteAllPermission (p: Permission): boolean {
   return p.type === 'organization' && props.resource.owner?.type === 'organization' &&
     p.id === props.resource.owner.id && isInDepartmentPermission(p) &&
     p.roles?.length === 1 && p.roles[0] === 'contrib' &&
-    p.classes?.includes('write') && p.operations?.includes('delete')
+    !!p.classes?.includes('write') && !!p.operations?.includes('delete')
 }
 
 // --- Permission classes built from API doc ---
 
-const permissionClasses = computed<Record<string, any[]>>(() => {
-  const classes: Record<string, any[]> = {
+type PermissionClassItem = { id: string, title: string, class: string }
+const permissionClasses = computed<Record<string, PermissionClassItem[]>>(() => {
+  const classes: Record<string, PermissionClassItem[]> = {
     list: [{
       id: 'list',
       title: 'Lister la ressource',
@@ -377,7 +390,7 @@ const permissionClasses = computed<Record<string, any[]>>(() => {
   if (api.value) {
     for (const path of Object.keys(api.value.paths)) {
       for (const method of Object.keys(api.value.paths[path])) {
-        const endpoint = api.value.paths[path][method]
+        const endpoint: ApiEndpoint = api.value.paths[path][method]
         const permClass = endpoint['x-permissionClass']
         if (!permClass) continue
         classes[permClass] = (classes[permClass] || []).concat({
@@ -410,7 +423,7 @@ const visibility = computed({
   set (v) {
     if (!permissions.value) return
     permissions.value = permissions.value
-      .filter((p: any) => !isPublicPermission(p) && !isSharedInOrgPermission(p) && !isPrivateOrgContribPermission(p))
+      .filter((p) => !isPublicPermission(p) && !isSharedInOrgPermission(p) && !isPrivateOrgContribPermission(p))
 
     if (v === 'sharedInOrg' || v === 'public' || v === 'privateOrgContrib') {
       permissions.value.push({ type: 'organization', id: props.resource.owner.id, name: orgName.value, roles: ['contrib'], operations: [], classes: ['list', 'read', 'readAdvanced'] })
@@ -425,7 +438,7 @@ const visibility = computed({
 })
 
 const visibilityItems = computed(() => {
-  const items: any[] = []
+  const items: { value: string, title: string, disabled: boolean }[] = []
   const privateDisabled = !!(props.hasPublicDeps && isPublic.value)
   if (props.resource.owner?.type === 'organization') {
     items.push({ value: 'privateOrg', title: t('visibility.privateOrg', { org: orgName.value }), disabled: privateDisabled })
@@ -449,7 +462,7 @@ const contribProfile = computed({
   set (v) {
     if (!permissions.value) return
     permissions.value = permissions.value
-      .filter((p: any) => !isContribWriteAllPermission(p) && !isContribWriteDataPermission(p) && !isContribWriteNoBreakingPermission(p))
+      .filter((p) => !isContribWriteAllPermission(p) && !isContribWriteDataPermission(p) && !isContribWriteNoBreakingPermission(p))
 
     const dep = props.resource.owner?.department || '-'
     const writeDataOps = props.resource.isRest
@@ -487,14 +500,14 @@ const allUsersManageOwnLines = computed({
   },
   set (v) {
     if (!permissions.value) return
-    permissions.value = permissions.value.filter((p: any) => !isManageOwnLinesPermission(p))
+    permissions.value = permissions.value.filter((p) => !isManageOwnLinesPermission(p))
     if (v) permissions.value.push({ type: 'user', id: '*', operations: ['readSafeSchema'], classes: ['manageOwnLines'] })
     save()
   }
 })
 
 const hasDetailedPermission = computed(() => {
-  return !!permissions.value?.find((p: any) =>
+  return !!permissions.value?.find((p) =>
     !isPublicPermission(p) &&
     !isSharedInOrgPermission(p) &&
     !isPrivateOrgContribPermission(p) &&
@@ -508,8 +521,8 @@ const hasDetailedPermission = computed(() => {
 // --- Fetch permissions on mount ---
 
 onMounted(async () => {
-  const perms = await $fetch<any[]>(`${props.resourceType}/${props.resource.id}/permissions`)
-  perms.forEach((p: any) => { if (!p.type) p.type = null })
+  const perms = await $fetch<Permission[]>(`${props.resourceType}/${props.resource.id}/permissions`)
+  perms.forEach((p) => { if (!p.type) delete p.type })
   permissions.value = perms
   emit('permissions', permissions.value)
   if (hasDetailedPermission.value) {
@@ -533,7 +546,7 @@ async function fetchOwnerDetails () {
   const data = await res.json()
   data.type = props.resource.owner.type
   if (data.departments) {
-    data.departments.sort((d1: any, d2: any) => d1.name.localeCompare(d2.name))
+    data.departments.sort((d1: { name: string }, d2: { name: string }) => d1.name.localeCompare(d2.name))
   }
   ownerDetails.value = data
 }
@@ -544,7 +557,7 @@ async function fetchApiDoc () {
   const docPath = props.resourceType === 'datasets'
     ? `datasets/${props.resource.id}/private-api-docs.json`
     : `applications/${props.resource.id}/api-docs.json`
-  api.value = await $fetch<any>(docPath)
+  api.value = await $fetch(docPath)
 }
 
 // --- Save permissions ---
@@ -552,7 +565,7 @@ async function fetchApiDoc () {
 async function save () {
   if (!permissions.value) return
   const clean = JSON.parse(JSON.stringify(permissions.value))
-  clean.forEach((p: any) => {
+  clean.forEach((p: Record<string, unknown>) => {
     if (!p.type) delete p.type
     if (!p.id) delete p.id
     if (!p.department) delete p.department
@@ -564,13 +577,13 @@ async function save () {
 
 // --- Permission CRUD for detailed mode ---
 
-function addPermission (p: any) {
+function addPermission (p: Permission) {
   if (!permissions.value) return
   permissions.value.push(p)
   save()
 }
 
-function editPermission (index: number, p: any) {
+function editPermission (index: number, p: Permission) {
   if (!permissions.value) return
   permissions.value[index] = p
   save()

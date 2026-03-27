@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
+import { createAgentTranslator } from './utils'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -13,7 +14,7 @@ const messages: Record<string, Record<string, string>> = {
 }
 
 export function useAgentGeoTools (locale: Ref<string>) {
-  const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
+  const t = createAgentTranslator(messages, locale)
 
   useAgentTool({
     name: 'geocode_address',

@@ -48,7 +48,7 @@ export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[
   const extraNavigationItems = computed(() => {
     const site = session.site
     const isMain = !site.value || site.value.main !== false
-    return ($uiConfig.extraNavigationItems ?? []).filter((extra: any) => {
+    return ($uiConfig.extraNavigationItems ?? []).filter((extra) => {
       if (extra.mainOnly && !isMain) return false
       if (!extra.can) return true
       if (extra.can === 'contrib') return canContrib.value

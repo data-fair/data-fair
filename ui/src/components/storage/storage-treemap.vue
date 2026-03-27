@@ -53,7 +53,6 @@ const boxes = ref<any[]>([])
 const ratio = 1.62
 const elt = useCurrentElement<HTMLElement>()
 const width = computed(() => {
-  console.log('elt', elt.value)
   return elt.value?.offsetWidth
 })
 
@@ -96,7 +95,10 @@ const refresh = () => {
 
 onMounted(() => {
   refresh()
-  window.addEventListener('resize', () => refresh(), true)
+  window.addEventListener('resize', refresh, true)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', refresh, true)
 })
 watch(() => datasets, () => {
   refresh()

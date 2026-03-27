@@ -1,6 +1,6 @@
 import { onScopeDispose } from 'vue'
 
-export const useNotificationsWS = (eventsUrl: string, userId: string, onNotification: (notif: any) => void) => {
+export const useNotificationsWS = (eventsUrl: string, userId: string, onNotification: (notif: unknown) => void) => {
   // useWS is scoped to /data-fair/ channels; for events service we need a direct WebSocket
   const wsUrl = eventsUrl.replace(/^http/, 'ws') + '/ws'
   let ws: WebSocket | null = null

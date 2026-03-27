@@ -52,7 +52,6 @@ export const useMap = (
     map.touchZoomRotate.disableRotation()
 
     map.on('error', (error) => {
-      console.error('dataset map preview error', error)
       sendUiNotif({ type: 'error', error, msg: t('mapError') })
     })
 
@@ -81,7 +80,7 @@ export const useMap = (
       const feature = map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
       if (!feature) return
 
-      if (feature.properties._id === undefined) return console.error('needs _id property to be able to fetch item', feature.properties)
+      if (feature.properties._id === undefined) return
 
       if (selectable) {
         if (selectedItem.value === feature.properties._id) selectedItem.value = ''
@@ -95,7 +94,7 @@ export const useMap = (
         const params: Record<string, string> = { qs, size: '1', select }
         if (dataset.value.draftReason) params.draft = 'true'
         const item = (await $fetch(`datasets/${id}/lines`, { params })).results[0]
-        if (!item) return console.error('item not found with filter', qs)
+        if (!item) return
 
         const htmlList = dataset.value.schema
           .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')

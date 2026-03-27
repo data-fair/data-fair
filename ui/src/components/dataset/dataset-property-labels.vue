@@ -65,11 +65,12 @@ en:
 /* eslint-disable vue/no-mutating-props */
 import { mdiClose, mdiTagTextOutline } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
+import type { SchemaProperty } from '#api/types'
 
 const { t } = useI18n({ useScope: 'local' })
 
 const props = defineProps<{
-  property: any
+  property: SchemaProperty
   editable?: boolean
 }>()
 
@@ -77,7 +78,7 @@ const dialog = ref(false)
 const editLabels = ref<Array<{ value: string, label: string }> | null>(null)
 
 const schema = computed(() => {
-  const value: any = { type: 'string', title: 'valeur', 'x-cols': 6, 'x-class': 'pr-2' }
+  const value: Record<string, unknown> = { type: 'string', title: 'valeur', 'x-cols': 6, 'x-class': 'pr-2' }
   if (props.property.type === 'boolean') value.enum = ['true', 'false']
   if (props.property.enum) value.examples = props.property.enum
   return {
@@ -101,8 +102,9 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
 
 watch(dialog, (show) => {
   if (show) {
-    editLabels.value = Object.keys(props.property['x-labels'] || {})
-      .map(key => ({ value: key, label: props.property['x-labels'][key] }))
+    const labels = props.property['x-labels'] || {}
+    editLabels.value = Object.keys(labels)
+      .map(key => ({ value: key, label: labels[key] as string }))
   } else {
     editLabels.value = null
   }

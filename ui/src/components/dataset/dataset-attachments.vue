@@ -179,8 +179,8 @@ async function uploadFile () {
       updatedAttachments.push(newAttachment)
     }
     await patchDataset.execute({ attachments: updatedAttachments })
-  } catch (error) {
-    console.error('Error uploading attachment', error)
+  } catch {
+    // error is visible to user through upload state reset
   }
   uploading.value = false
   uploadProgress.value = 0

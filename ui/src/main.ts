@@ -54,10 +54,10 @@ const debug = debugModule('df:main');
   debug('Router is ready')
 
   const vSafeHtml = {
-    beforeMount (el: HTMLElement, binding: any) {
+    beforeMount (el: HTMLElement, binding: { value: string }) {
       el.innerHTML = DOMPurify.sanitize(binding.value)
     },
-    updated (el: HTMLElement, binding: any) {
+    updated (el: HTMLElement, binding: { value: string }) {
       el.innerHTML = DOMPurify.sanitize(binding.value)
     }
   }

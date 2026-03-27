@@ -345,7 +345,6 @@ onUnmounted(() => window.removeEventListener('message', onMessage))
 const cancelDraft = useAsyncAction(async () => {
   if (!canWriteConfig.value) return
   if (!application.value?.url) {
-    console.error('try to cancel draft but application.url is not defined')
     throw new Error('échec de l\'annulation du brouillon')
   }
   await patch({ urlDraft: application.value?.url })

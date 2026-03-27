@@ -308,8 +308,9 @@ const selectFields = computed(() => {
   const res: Record<string, { fields: any[], tags: string[], fieldsAndTags: any[] }> = {}
   for (const extension of dataset.value?.extensions ?? []) {
     if (extension.type !== 'remoteService') continue
-    if (!remoteServicesMap.value[extension.remoteService]?.actions[extension.action]) continue
-    const fields = remoteServicesMap.value[extension.remoteService].actions[extension.action].output
+    const actionData = remoteServicesMap.value[extension.remoteService]?.actions[extension.action]
+    if (!actionData?.output) continue
+    const fields = actionData.output
       .map((field: any) => { field['x-tags'] = field['x-tags'] || []; return field })
       .filter((f: any) => !f.concept || f.concept !== 'http://schema.org/identifier')
       .filter((f: any) => f.name !== 'error' && f.name !== '_error')
@@ -333,10 +334,11 @@ function removeExtension (idx: number) {
   dataset.value.extensions.splice(idx, 1)
 }
 
-function extensionLinkInfo (extension: any) {
-  const actionData = remoteServicesMap.value[extension.remoteService]?.actions[extension.action?.id ?? extension.action]
-  if (!actionData) return ''
-  const input = actionData.input.filter((i: any) => i.concept !== 'http://schema.org/identifier')
+function extensionLinkInfo (extension: { remoteService: string, action: string | { id: string } }) {
+  const actionId = typeof extension.action === 'string' ? extension.action : extension.action?.id
+  const actionData = remoteServicesMap.value[extension.remoteService]?.actions[actionId]
+  if (!actionData?.input) return ''
+  const input = actionData.input.filter((i) => i.concept !== 'http://schema.org/identifier')
   return input.map((i: any) => {
     const concept = vocabulary.value[i.concept]?.title || i.concept
     const field = dataset.value.schema.find((f: any) => f['x-refersTo'] === i.concept)
