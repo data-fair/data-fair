@@ -251,6 +251,16 @@
                   <application-protected-links />
                 </v-tabs-window-item>
 
+                <v-tabs-window-item value="integration">
+                  <v-container fluid>
+                    <integration-dialog
+                      inline
+                      resource-type="applications"
+                      :resource="application"
+                    />
+                  </v-container>
+                </v-tabs-window-item>
+
                 <v-tabs-window-item value="publication-sites">
                   <application-publication-sites />
                 </v-tabs-window-item>
@@ -277,6 +287,30 @@
                       v-if="journal"
                       :journal="journal"
                       type="application"
+                    />
+                  </v-container>
+                </v-tabs-window-item>
+                <v-tabs-window-item
+                  v-if="$uiConfig.eventsIntegration"
+                  value="notifications"
+                >
+                  <v-container fluid>
+                    <notifications-dialog
+                      inline
+                      :resource="application"
+                      resource-type="application"
+                    />
+                  </v-container>
+                </v-tabs-window-item>
+                <v-tabs-window-item
+                  v-if="$uiConfig.eventsIntegration && can('setPermissions')"
+                  value="webhooks"
+                >
+                  <v-container fluid>
+                    <webhooks-dialog
+                      inline
+                      :resource="application"
+                      resource-type="application"
                     />
                   </v-container>
                 </v-tabs-window-item>
@@ -310,9 +344,12 @@ fr:
   share: Partage
   permissions: Permissions
   protectedLink: Lien protege
+  integration: Intégrer dans un site
   publicationSites: Portails
   activity: Activité
   journal: Journal
+  notifications: Notifications
+  webhooks: Webhooks
   version: version
   upgradeAvailable: "Version {version} disponible"
   upgradeAction: Mettre à jour
@@ -335,9 +372,12 @@ en:
   share: Share
   permissions: Permissions
   protectedLink: Protected link
+  integration: Embed in a website
   publicationSites: Portals
   activity: Activity
   journal: Journal
+  notifications: Notifications
+  webhooks: Webhooks
   version: version
   upgradeAvailable: "Version {version} available"
   upgradeAction: Upgrade
@@ -350,7 +390,7 @@ en:
 <script lang="ts" setup>
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiCalendarText, mdiCloudKey, mdiDatabase, mdiImage, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline } from '@mdi/js'
+import { mdiBell, mdiCalendarText, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImage, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import { provideApplicationStore } from '~/composables/application-store'
 import { useApplicationVersions } from '~/composables/application-versions'
 import { useApplicationWatch } from '~/composables/application-watch'
@@ -445,6 +485,7 @@ const sections = computedDeepDiff(() => {
   if (can('getKeys')) {
     shareTabs.push({ key: 'protected-links', title: t('protectedLink'), icon: mdiCloudKey })
   }
+  shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
   if (!$uiConfig.disablePublicationSites) {
     shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
   }
@@ -453,7 +494,16 @@ const sections = computedDeepDiff(() => {
   }
 
   if (can('readJournal')) {
-    result.push({ title: t('activity'), id: 'activity', tabs: [{ key: 'journal', title: t('journal'), icon: mdiCalendarText }] })
+    const activityTabs = [
+      { key: 'journal', title: t('journal'), icon: mdiCalendarText }
+    ]
+    if ($uiConfig.eventsIntegration) {
+      activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    }
+    if ($uiConfig.eventsIntegration && can('setPermissions')) {
+      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
+    }
+    result.push({ title: t('activity'), id: 'activity', tabs: activityTabs })
   }
 
   return result
