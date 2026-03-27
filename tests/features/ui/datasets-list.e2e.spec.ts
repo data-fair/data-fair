@@ -279,3 +279,55 @@ test.describe('owner facet filtering', () => {
     expect(selectedText).not.toContain('[object Object]')
   })
 })
+
+test.describe('publication sites facet', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  test('publication sites facet does not show null values', async ({ page, goToWithAuth }) => {
+    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+
+    // Create a publication site
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com', title: 'Test Portal' }
+    await axOrg.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+
+    // Create a dataset published on the site
+    await sendDataset('datasets/dataset1.csv', axOrg, {}, { title: 'Published Dataset' })
+    const datasets = (await axOrg.get('/api/v1/datasets')).data
+    await axOrg.patch(`/api/v1/datasets/${datasets.results[0].id}`, { publicationSites: ['data-fair-portals:portal1'] })
+
+    // Create a dataset NOT published (will have null publicationSites in facets)
+    await sendDataset('datasets/dataset2.csv', axOrg, {}, { title: 'Unpublished Dataset' })
+
+    // Switch to org context and go to datasets page
+    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+    await goToWithAuth('/data-fair/', 'test_user1')
+    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
+    await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
+    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
+    await page.goto(`${baseUrl}/data-fair/datasets`)
+
+    // Wait for datasets to load
+    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
+
+    // Open the publication sites facet
+    const navRight = page.locator('.v-navigation-drawer--right')
+    const pubSitesFacet = navRight.locator('.v-select').filter({ hasText: 'Sites de publication' })
+    await expect(pubSitesFacet).toBeVisible({ timeout: 5000 })
+    await pubSitesFacet.click()
+
+    // Verify that no option contains "null"
+    const options = page.getByRole('option')
+    await expect(options.first()).toBeVisible({ timeout: 5000 })
+    const count = await options.count()
+    for (let i = 0; i < count; i++) {
+      const text = await options.nth(i).textContent()
+      expect(text).not.toMatch(/\bnull\b/)
+    }
+  })
+})

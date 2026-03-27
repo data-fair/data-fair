@@ -113,6 +113,19 @@
     </owner-change-dialog>
 
     <v-list-item
+      v-if="can('writeDescriptionBreaking').value"
+      @click="showSlugDialog = true"
+    >
+      <template #prepend>
+        <v-icon
+          :icon="mdiPencilOutline"
+          color="primary"
+        />
+      </template>
+      <v-list-item-title>{{ t('editSlug') }}</v-list-item-title>
+    </v-list-item>
+
+    <v-list-item
       v-if="can('delete').value"
       @click="showDeleteDialog = true"
     >
@@ -195,6 +208,49 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <v-dialog
+    v-model="showSlugDialog"
+    max-width="500"
+    @update:model-value="val => { if (val) newSlug = dataset?.slug ?? '' }"
+  >
+    <v-card>
+      <v-card-title>{{ t('editSlug') }}</v-card-title>
+      <v-card-text>
+        <v-alert
+          type="warning"
+          variant="outlined"
+          class="mb-4"
+        >
+          {{ t('slugWarning') }}
+        </v-alert>
+        <v-text-field
+          v-model="newSlug"
+          :label="t('newSlug')"
+          variant="outlined"
+          density="compact"
+          hide-details
+          :rules="[val => !!val, val => !!val?.match(slugRegex)]"
+        />
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn
+          variant="text"
+          @click="showSlugDialog = false"
+        >
+          {{ t('cancel') }}
+        </v-btn>
+        <v-btn
+          color="warning"
+          :disabled="newSlug === dataset?.slug || !newSlug || !newSlug.match(slugRegex)"
+          @click="confirmSlug"
+        >
+          {{ t('validate') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <i18n lang="yaml">
@@ -208,6 +264,11 @@ fr:
   editData: Éditer les données
   useAPI: Utiliser l'API
   changeOwner: Changer le propriétaire
+  editSlug: Modifier l'identifiant
+  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
+  newSlug: Nouvel identifiant
+  cancel: Annuler
+  validate: Valider
   delete: Supprimer
   deleteAllLines: Supprimer toutes les lignes
   deleteAllLinesTitle: Suppression des lignes du jeu de données
@@ -226,6 +287,11 @@ en:
   editData: Edit data
   useAPI: Use the API
   changeOwner: Change owner
+  editSlug: Edit slug
+  slugWarning: "This unique and readable id is used in portal pages URLs, data APIs, etc. Warning: if you modify it you can break existing links and applications."
+  newSlug: New slug
+  cancel: Cancel
+  validate: Validate
   delete: Delete
   deleteAllLines: Delete all lines
   deleteAllLinesTitle: Delete all the lines of the dataset
@@ -245,6 +311,7 @@ import {
   mdiFileDownload,
   mdiFileUpload,
   mdiPencil,
+  mdiPencilOutline,
   mdiProgressDownload,
   mdiTableEdit
 } from '@mdi/js'
@@ -252,7 +319,7 @@ import useDatasetStore from '~/composables/dataset-store'
 
 const { t } = useI18n()
 const router = useRouter()
-const { dataset, dataFiles, can, remove, id, resourceUrl } = useDatasetStore()
+const { dataset, dataFiles, can, remove, id, resourceUrl, patchDataset } = useDatasetStore()
 const session = useSession()
 const user = computed(() => session.state.user)
 
@@ -268,5 +335,14 @@ const confirmRemove = async () => {
 const confirmDeleteAllLines = async () => {
   showDeleteAllLinesDialog.value = false
   await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
+}
+
+const slugRegex = /^[a-z0-9]{1}[a-z0-9_-]*[a-z0-9]{1}$/
+const showSlugDialog = ref(false)
+const newSlug = ref('')
+
+const confirmSlug = async () => {
+  showSlugDialog.value = false
+  await patchDataset({ slug: newSlug.value })
 }
 </script>

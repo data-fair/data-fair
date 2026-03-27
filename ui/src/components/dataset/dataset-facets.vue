@@ -119,11 +119,11 @@ const requestedPublicationSites = defineModel<string[]>('requestedPublicationSit
 const services = defineModel<string[]>('services', { default: () => [] })
 const concepts = defineModel<string[]>('concepts', { default: () => [] })
 
-const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: any) => string) => {
+const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: any) => string, filterFn?: (v: any) => boolean) => {
   return computed(() => {
     const values = props.facets[key]
     if (!values?.length) return []
-    return values.map(f => ({
+    return values.filter(f => filterFn ? filterFn(f) : true).map(f => ({
       title: (labelFn ? labelFn(f) : f.value) + ` (${f.count})`,
       value: valueFn ? valueFn(f) : f.value,
     }))
@@ -136,8 +136,9 @@ const statusItems = facetToItems('status', (f) => t('statusValues.' + f.value))
 const draftStatusItems = facetToItems('draftStatus', (f) => t('draftStatusValues.' + f.value))
 const visibilityItems = facetToItems('visibility', (f) => t('visibilityValues.' + f.value))
 const topicsItems = facetToItems('topics', (f) => f.title || f.value)
-const publicationSitesItems = facetToItems('publicationSites', (f) => f.title || f.value)
-const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', (f) => f.title || f.value)
+const nonNullFilter = (f: any) => f.value !== null
+const publicationSitesItems = facetToItems('publicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
+const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
 const servicesItems = facetToItems('services')
 const conceptsItems = facetToItems('concepts', (f) => f.title || f.value)
 </script>

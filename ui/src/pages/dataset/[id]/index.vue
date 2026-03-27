@@ -369,7 +369,7 @@ const route = useRoute<'/dataset/[id]/'>()
 const { sendUiNotif } = useUiNotif()
 
 const breadcrumbs = useBreadcrumbs()
-const dataTab = ref('schema')
+const dataTab = ref('data')
 const activityTab = ref('journal')
 
 const store = provideDatasetStore(route.params.id, true)

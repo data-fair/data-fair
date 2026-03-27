@@ -83,11 +83,11 @@ const topics = defineModel<string[]>('topics', { default: () => [] })
 const publicationSites = defineModel<string[]>('publicationSites', { default: () => [] })
 const requestedPublicationSites = defineModel<string[]>('requestedPublicationSites', { default: () => [] })
 
-const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: any) => string) => {
+const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: any) => string, filterFn?: (v: any) => boolean) => {
   return computed(() => {
     const values = props.facets[key]
     if (!values?.length) return []
-    return values.map(f => ({
+    return values.filter(f => filterFn ? filterFn(f) : true).map(f => ({
       title: (labelFn ? labelFn(f) : f.value) + ` (${f.count})`,
       value: valueFn ? valueFn(f) : f.value,
     }))
@@ -99,8 +99,9 @@ const ownerItems = facetToItems('owner', (f) => f.value.departmentName || f.valu
 const baseApplicationItems = facetToItems('base-application', (f) => f.title || f.value)
 const visibilityItems = facetToItems('visibility', (f) => t('visibilityValues.' + f.value))
 const topicsItems = facetToItems('topics', (f) => f.title || f.value)
-const publicationSitesItems = facetToItems('publicationSites', (f) => f.title || f.value)
-const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', (f) => f.title || f.value)
+const nonNullFilter = (f: any) => f.value !== null
+const publicationSitesItems = facetToItems('publicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
+const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
 </script>
 
 <i18n lang="yaml">
