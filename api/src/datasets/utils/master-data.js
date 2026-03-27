@@ -93,36 +93,54 @@ export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, sele
     new Transform({
       async transform (lines, encoding, callback) {
         try {
-          const queries = lines.map(line => ({
-            select,
-            sort: bulkSearch.sort,
-            ...paramsBuilder(line),
-            size: 1
-          }))
-          let esResponse
-          try {
-            esResponse = await esUtils.multiSearch(es.client, dataset, queries)
-          } catch (err) {
-            internalError('masterdata-multi-query', err)
-            const { message, status } = esUtils.extractError(err)
-            throw httpError(status, message)
-          }
-          for (const i in esResponse.responses) {
+          const queries = []
+          const lineKeys = []
+          const results = new Array(lines.length)
+          for (let i = 0; i < lines.length; i++) {
             const line = lines[i]
             const lineKey = line._key || lineIndex
+            lineKeys.push(lineKey)
             lineIndex += 1
-            const response = esResponse.responses[i]
+            try {
+              queries.push({
+                select,
+                sort: bulkSearch.sort,
+                ...paramsBuilder(line),
+                size: 1,
+                _lineIdx: i
+              })
+            } catch (err) {
+              results[i] = finalizeResponseLine({}, lineKey, err.message)
+            }
+          }
+          if (queries.length > 0) {
+            let esResponse
+            try {
+              esResponse = await esUtils.multiSearch(es.client, dataset, queries)
+            } catch (err) {
+              internalError('masterdata-multi-query', err)
+              const { message, status } = esUtils.extractError(err)
+              throw httpError(status, message)
+            }
+            for (const i in esResponse.responses) {
+              const { _lineIdx } = queries[i]
+              const lineKey = lineKeys[_lineIdx]
+              const response = esResponse.responses[i]
 
-            if (response.error) {
-              internalError('masterdata-item-query', esUtils.extractError(response.error))
-              this.push(finalizeResponseLine({}, lineKey, esUtils.extractError(response.error).message))
-              continue
+              if (response.error) {
+                internalError('masterdata-item-query', esUtils.extractError(response.error))
+                results[_lineIdx] = finalizeResponseLine({}, lineKey, esUtils.extractError(response.error).message)
+                continue
+              }
+              if (response.hits.hits.length === 0) {
+                results[_lineIdx] = finalizeResponseLine({}, lineKey, 'La donnée de référence ne contient pas de ligne correspondante.')
+                continue
+              }
+              results[_lineIdx] = finalizeResponseLine(response.hits.hits[0]._source, lineKey)
             }
-            if (response.hits.hits.length === 0) {
-              this.push(finalizeResponseLine({}, lineKey, 'La donnée de référence ne contient pas de ligne correspondante.'))
-              continue
-            }
-            this.push(finalizeResponseLine(response.hits.hits[0]._source, lineKey))
+          }
+          for (const result of results) {
+            this.push(result)
           }
           callback()
         } catch (err) {

@@ -196,6 +196,11 @@ describe('Master data management', function () {
 82898347800011,Extra information,filterOk,"multi1, multi2",1,
 `)
 
+    // CSV with wrong header name should return error info in the response body, not crash the stream
+    res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'wrong_header\n82898347800011', { headers: { 'content-type': 'text/csv' } })
+    assert.ok(res.data.includes('_error'))
+    assert.ok(res.data.includes('siret est obligatoire'))
+
     // create REST slave dataset
     await ax.put('/api/v1/datasets/slave', {
       isRest: true,
