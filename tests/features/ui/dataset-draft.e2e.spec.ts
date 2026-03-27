@@ -38,7 +38,7 @@ async function createFileUpdatedDraft (ax: any) {
 test.describe('dataset draft mode - file-new', () => {
   let datasetId: string
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await createFileNewDraft(ax)
@@ -93,7 +93,7 @@ test.describe('dataset draft mode - file-new', () => {
 test.describe('dataset draft mode - file-updated', () => {
   let datasetId: string
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await createFileUpdatedDraft(ax)
@@ -148,7 +148,7 @@ test.describe('dataset draft mode - file-updated', () => {
 test.describe('dataset draft mode - normal dataset (no draft) regression check', () => {
   let datasetId: string
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)

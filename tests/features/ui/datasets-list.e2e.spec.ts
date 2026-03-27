@@ -3,7 +3,7 @@ import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 
 test.describe('datasets list page', () => {
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
     // Seed 3 datasets with distinct titles for search/sort testing
@@ -12,8 +12,8 @@ test.describe('datasets list page', () => {
     await sendDataset('datasets/dates.csv', ax, {}, { title: 'Gamma Dataset' })
   })
 
-  test.afterEach(async ({}, testInfo) => {
-    if (testInfo.status === 'passed') await checkPendingTasks()
+  test.afterAll(async () => {
+    await checkPendingTasks()
   })
 
   test('page loads and shows search and sort controls in right navigation', async ({ page, goToWithAuth }) => {
@@ -147,10 +147,7 @@ test.describe('datasets list page', () => {
     await page.waitForURL(/sort=title/, { timeout: 5000 })
 
     // Wait for results to re-render
-    await page.waitForTimeout(500)
-    const cards = page.locator('.v-container .v-card .v-card-title')
-    const firstTitle = await cards.first().textContent()
-    expect(firstTitle?.trim()).toBe('Alpha Dataset')
+    await expect(page.locator('.v-container .v-card .v-card-title').first()).toHaveText('Alpha Dataset', { timeout: 5000 })
   })
 
   test('results count updates after search', async ({ page, goToWithAuth }) => {
@@ -201,7 +198,7 @@ test.describe('datasets list page', () => {
 })
 
 test.describe('owner facet filtering', () => {
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     // Create datasets under org (no dept) and org+dept so the owner facet has 2 entries
     const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -211,8 +208,8 @@ test.describe('owner facet filtering', () => {
     await sendDataset('datasets/dataset2.csv', axOrgDep, {}, { title: 'Dept Dataset' })
   })
 
-  test.afterEach(async ({}, testInfo) => {
-    if (testInfo.status === 'passed') await checkPendingTasks()
+  test.afterAll(async () => {
+    await checkPendingTasks()
   })
 
   /**
@@ -262,12 +259,11 @@ test.describe('owner facet filtering', () => {
     // Close the dropdown
     await page.keyboard.press('Escape')
 
-    // Wait for URL to update (replaceState may not trigger navigation events)
-    await page.waitForTimeout(1000)
+    // Wait for the selection to take effect and URL to update
+    await page.waitForLoadState('networkidle')
 
     // URL should contain a properly formatted owner param, not [object Object]
     const url = page.url()
-    // If the param is present, verify it's formatted correctly
     if (url.includes('owner=')) {
       expect(url).not.toContain('object+Object')
       expect(url).not.toContain('object%20Object')

@@ -5,7 +5,7 @@ import { sendDataset } from '../../support/workers.ts'
 test.describe('dataset detail pages', () => {
   let datasetId: string
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
@@ -46,6 +46,59 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#structure').getByRole('tab', { name: /Enrichissements|Extensions/ })).toBeVisible()
   })
 
+  test('edit-metadata: schema section shows dataset properties', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
+    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
+    const structureSection = page.locator('#structure')
+    await expect(structureSection.getByRole('heading', { name: /colonne|column/i })).toBeVisible()
+    // Click on one of the property buttons (use key name which is stable)
+    const adrButton = structureSection.getByRole('button').filter({ hasText: /adr/ })
+    await adrButton.click()
+    await expect(structureSection.getByText(/Cl[eé] dans la source|Key in the source/i)).toBeVisible({ timeout: 5000 })
+  })
+
+  test('dataset home page shows metadata-view, schema, data, share and activity sections', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
+    // Schema is a tab within #data, not a separate section
+    await expect(page.locator('#data')).toBeVisible()
+    await expect(page.locator('#share')).toBeVisible()
+    await expect(page.locator('#activity')).toBeVisible()
+  })
+
+  test('dataset home page displays record count', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/enregistrements|records/)).toBeVisible()
+  })
+
+  test('dataset home page action links navigate to edit-metadata', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
+    await page.getByText(/Éditer les métadonnées|Edit metadata/).click()
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 10000 })
+    await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
+  })
+
+  test('edit-metadata: leave guard warns when navigating away with unsaved changes', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
+    await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
+    const titleInput = page.locator('#info').getByRole('textbox', { name: /Titre|Title/ })
+    await titleInput.click()
+    await titleInput.fill('Unsaved Change E2E')
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
+    page.on('dialog', async dialog => {
+      await dialog.dismiss()
+    })
+    // Try navigating away using browser back - goBack will trigger beforeunload dialog
+    // which we dismiss, so navigation doesn't complete. Use a short timeout to avoid hanging.
+    await page.goBack({ timeout: 3000 }).catch(() => {})
+    // Should still be on the same page after dismissing the dialog
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 5000 })
+    await expect(page.locator('#info')).toBeVisible()
+  })
+
+  // Mutating tests last — these modify the dataset
   test('edit-metadata: editing title shows save button and persists changes', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
@@ -78,17 +131,6 @@ test.describe('dataset detail pages', () => {
     await ax.patch(`/api/v1/datasets/${datasetId}`, { title: originalTitle })
   })
 
-  test('edit-metadata: schema section shows dataset properties', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
-    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
-    const structureSection = page.locator('#structure')
-    await expect(structureSection.getByRole('heading', { name: /colonne|column/i })).toBeVisible()
-    // Click on one of the property buttons (use key name which is stable)
-    const adrButton = structureSection.getByRole('button').filter({ hasText: /adr/ })
-    await adrButton.click()
-    await expect(structureSection.getByText(/Cl[eé] dans la source|Key in the source/i)).toBeVisible({ timeout: 5000 })
-  })
-
   test('edit-metadata: editing a schema property label triggers diff and saves', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
@@ -117,46 +159,5 @@ test.describe('dataset detail pages', () => {
     const res = await ax.get(`/api/v1/datasets/${datasetId}`)
     const adrProp = res.data.schema.find((p: any) => p.key === 'adr')
     expect(adrProp.title).toBe('Adresse complète')
-  })
-
-  test('edit-metadata: leave guard warns when navigating away with unsaved changes', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
-    await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
-    const titleInput = page.locator('#info').getByRole('textbox', { name: /Titre|Title/ })
-    await titleInput.click()
-    await titleInput.fill('Unsaved Change E2E')
-    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
-    page.on('dialog', async dialog => {
-      await dialog.dismiss()
-    })
-    // Try navigating away using browser back - goBack will trigger beforeunload dialog
-    // which we dismiss, so navigation doesn't complete. Use a short timeout to avoid hanging.
-    await page.goBack({ timeout: 3000 }).catch(() => {})
-    // Should still be on the same page after dismissing the dialog
-    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 5000 })
-    await expect(page.locator('#info')).toBeVisible()
-  })
-
-  test('dataset home page shows metadata-view, schema, data, share and activity sections', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
-    // Schema is a tab within #data, not a separate section
-    await expect(page.locator('#data')).toBeVisible()
-    await expect(page.locator('#share')).toBeVisible()
-    await expect(page.locator('#activity')).toBeVisible()
-  })
-
-  test('dataset home page displays record count', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText(/enregistrements|records/)).toBeVisible()
-  })
-
-  test('dataset home page action links navigate to edit-metadata', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
-    await page.getByText(/Éditer les métadonnées|Edit metadata/).click()
-    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/edit-metadata`), { timeout: 10000 })
-    await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
   })
 })

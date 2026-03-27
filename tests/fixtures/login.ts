@@ -2,6 +2,18 @@ import { test as base, expect } from '@playwright/test'
 
 const cookieCache = new Map<string, Awaited<ReturnType<import('@playwright/test').BrowserContext['cookies']>>>()
 
+async function performLogin (page: any, context: any, baseUrl: string, url: string, user: string) {
+  const fullUrl = `${baseUrl}${url}`
+  const loginUrl = `${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}`
+  await page.goto(loginUrl)
+  await page.getByLabel('Adresse mail').fill(`${user}@test.com`)
+  await page.getByLabel('Mot de passe').fill('passwd')
+  await page.getByRole('button', { name: 'Se connecter' }).click()
+  await page.waitForURL(fullUrl, { timeout: 10000 })
+  const cookies = await context.cookies()
+  cookieCache.set(user, cookies)
+}
+
 /**
  * Custom test fixture that provides:
  * - `goToWithAuth(url, user)`: navigates to the simple-directory login page,
@@ -34,14 +46,13 @@ export const test = base.extend<{
           if (cached) {
             await context.addCookies(cached)
             await page.goto(url)
+            // Safety: if redirected to login, cache was stale
+            if (page.url().includes('/simple-directory/login')) {
+              cookieCache.delete(user)
+              await performLogin(page, context, baseUrl, url, user)
+            }
           } else {
-            const fullUrl = `${baseUrl}${url}`
-            const loginUrl = `${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}`
-            await page.goto(loginUrl)
-            await page.getByLabel('Adresse mail').fill(`${user}@test.com`)
-            await page.getByLabel('Mot de passe').fill('passwd')
-            await page.getByRole('button', { name: 'Se connecter' }).click()
-            await page.waitForURL(fullUrl, { timeout: 10000 })
+            await performLogin(page, context, baseUrl, url, user)
           }
         }
         await use(goToWithAuth)

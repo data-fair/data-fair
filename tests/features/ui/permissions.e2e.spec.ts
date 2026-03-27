@@ -49,36 +49,32 @@ test.describe('permissions editor', () => {
       await goToPermissions(page, goToWithAuth)
       await page.locator('#share .v-select').first().click()
       await page.getByRole('option', { name: /tous les utilisateurs/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const orgPerm = perms.find((p: any) => p.type === 'organization' && !p.roles && p.classes?.includes('read') && p.classes?.includes('list'))
-      expect(orgPerm).toBeTruthy()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) => p.type === 'organization' && !p.roles && p.classes?.includes('read') && p.classes?.includes('list'))
+      }, { timeout: 5000 }).toBeTruthy()
     })
 
     test('change to public', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.locator('#share .v-select').first().click()
       await page.getByRole('option', { name: /tout le monde/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const publicPerm = perms.find((p: any) => !p.type && p.classes?.includes('read') && p.classes?.includes('list'))
-      expect(publicPerm).toBeTruthy()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) => !p.type && p.classes?.includes('read') && p.classes?.includes('list'))
+      }, { timeout: 5000 }).toBeTruthy()
     })
 
     test('change to privateOrg', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.locator('#share .v-select').first().click()
       await page.getByRole('option', { name: /uniquement les administrateurs/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      // No contrib read permission should remain
-      const contribReadPerm = perms.find((p: any) =>
-        p.type === 'organization' && p.roles?.includes('contrib') && p.classes?.includes('read')
-      )
-      expect(contribReadPerm).toBeFalsy()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) =>
+          p.type === 'organization' && p.roles?.includes('contrib') && p.classes?.includes('read')
+        )
+      }, { timeout: 5000 }).toBeFalsy()
     })
 
     test('change from public back to privateOrg removes public permission', async ({ page, goToWithAuth }) => {
@@ -93,11 +89,10 @@ test.describe('permissions editor', () => {
       // Change back to privateOrg
       await page.locator('#share .v-select').first().click()
       await page.getByRole('option', { name: /uniquement les administrateurs/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const publicPerm = perms.find((p: any) => !p.type && p.classes?.includes('read'))
-      expect(publicPerm).toBeFalsy()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) => !p.type && p.classes?.includes('read'))
+      }, { timeout: 5000 }).toBeFalsy()
     })
   })
 
@@ -115,14 +110,13 @@ test.describe('permissions editor', () => {
       const contribSelect = page.locator('#share .v-select').nth(1)
       await contribSelect.click()
       await page.getByRole('option', { name: /modifier uniquement les données/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const writeDataPerm = perms.find((p: any) =>
-        p.type === 'organization' && p.roles?.includes('contrib') &&
-        p.operations?.includes('writeData') && !p.operations?.includes('writeDescription')
-      )
-      expect(writeDataPerm).toBeTruthy()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) =>
+          p.type === 'organization' && p.roles?.includes('contrib') &&
+          p.operations?.includes('writeData') && !p.operations?.includes('writeDescription')
+        )
+      }, { timeout: 5000 }).toBeTruthy()
     })
 
     test('set contribWriteNoBreaking', async ({ page, goToWithAuth }) => {
@@ -130,14 +124,13 @@ test.describe('permissions editor', () => {
       const contribSelect = page.locator('#share .v-select').nth(1)
       await contribSelect.click()
       await page.getByRole('option', { name: /tout modifier.*exception/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const writeNoBreakingPerm = perms.find((p: any) =>
-        p.type === 'organization' && p.roles?.includes('contrib') &&
-        p.operations?.includes('writeDescription') && !p.operations?.includes('writeDescriptionBreaking')
-      )
-      expect(writeNoBreakingPerm).toBeTruthy()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) =>
+          p.type === 'organization' && p.roles?.includes('contrib') &&
+          p.operations?.includes('writeDescription') && !p.operations?.includes('writeDescriptionBreaking')
+        )
+      }, { timeout: 5000 }).toBeTruthy()
     })
 
     test('set contribWriteAll', async ({ page, goToWithAuth }) => {
@@ -145,14 +138,13 @@ test.describe('permissions editor', () => {
       const contribSelect = page.locator('#share .v-select').nth(1)
       await contribSelect.click()
       await page.getByRole('option', { name: /tout modifier et supprimer/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const writeAllPerm = perms.find((p: any) =>
-        p.type === 'organization' && p.roles?.includes('contrib') &&
-        p.classes?.includes('write') && p.operations?.includes('delete')
-      )
-      expect(writeAllPerm).toBeTruthy()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) =>
+          p.type === 'organization' && p.roles?.includes('contrib') &&
+          p.classes?.includes('write') && p.operations?.includes('delete')
+        )
+      }, { timeout: 5000 }).toBeTruthy()
     })
   })
 
@@ -195,12 +187,11 @@ test.describe('permissions editor', () => {
 
       // Validate
       await page.locator('.v-dialog').getByRole('button', { name: /Valider/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const userPerm = perms.find((p: any) => p.type === 'user' && p.email === 'external@test.com')
-      expect(userPerm).toBeTruthy()
-      expect(userPerm.classes).toContain('read')
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        const userPerm = perms.find((p: any) => p.type === 'user' && p.email === 'external@test.com')
+        return userPerm?.classes?.includes('read') ? userPerm : undefined
+      }, { timeout: 5000 }).toBeTruthy()
     })
 
     test('add partner org permission', async ({ page, goToWithAuth }) => {
@@ -224,12 +215,11 @@ test.describe('permissions editor', () => {
 
       // Validate (default classes are read+list)
       await page.locator('.v-dialog').getByRole('button', { name: /Valider/ }).click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const orgPerm = perms.find((p: any) => p.type === 'organization' && p.id === 'test_org2')
-      expect(orgPerm).toBeTruthy()
-      expect(orgPerm.name).toBe('Test Org 2')
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        const orgPerm = perms.find((p: any) => p.type === 'organization' && p.id === 'test_org2')
+        return orgPerm?.name === 'Test Org 2' ? orgPerm : undefined
+      }, { timeout: 5000 }).toBeTruthy()
     })
 
     test('delete a permission', async ({ page, goToWithAuth }) => {
@@ -246,11 +236,10 @@ test.describe('permissions editor', () => {
       // Click the delete button (warning color)
       const deleteBtn = page.locator('#share table tr').filter({ hasText: /Test Org 2/ }).locator('button').last()
       await deleteBtn.click()
-      await page.waitForTimeout(1500)
-
-      const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-      const orgPerm = perms.find((p: any) => p.type === 'organization' && p.id === 'test_org2')
-      expect(orgPerm).toBeFalsy()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) => p.type === 'organization' && p.id === 'test_org2')
+      }, { timeout: 5000 }).toBeFalsy()
     })
   })
 

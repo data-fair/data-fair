@@ -5,7 +5,7 @@ import { sendDataset } from '../../support/workers.ts'
 test.describe('dataset page restructuring', () => {
   let datasetId: string
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
@@ -77,6 +77,12 @@ test.describe('dataset page restructuring', () => {
     await expect(page.locator('#info').getByRole('tab', { name: /Métadonnées|Metadata/ })).toBeVisible()
   })
 
+  test('/data route redirects to /table', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/data`, 'test_user1')
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/table`), { timeout: 10000 })
+  })
+
+  // Mutating test last — modifies the dataset title
   test('edit-metadata save shows confirmation dialog', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
@@ -94,10 +100,5 @@ test.describe('dataset page restructuring', () => {
     await page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ }).click()
     // Dialog should close and save should succeed
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 10000 })
-  })
-
-  test('/data route redirects to /table', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/data`, 'test_user1')
-    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/table`), { timeout: 10000 })
   })
 })
