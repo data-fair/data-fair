@@ -60,7 +60,7 @@
         v-if="dataset.count != null"
         class="text-body-medium text-medium-emphasis mb-1"
       >
-        {{ t('records', { count: dataset.count.toLocaleString() }) }}
+        {{ t('records', dataset.count, { count: dataset.count.toLocaleString() }) }}
       </div>
       <div
         v-if="showTopics && dataset.topics?.length"
@@ -78,12 +78,15 @@
       </div>
     </v-card-text>
     <v-card-subtitle class="text-body-small pb-3 d-flex align-center">
-      <resource-visibility
+      <span
         v-if="dataset.visibility"
-        :visibility="dataset.visibility"
-        class="mr-1"
-        size="x-small"
-      />
+        class="mr-2 d-inline-flex"
+      >
+        <resource-visibility
+          :visibility="dataset.visibility"
+          size="small"
+        />
+      </span>
       <span v-if="showOwner && dataset.owner">{{ ownerName }} · </span>
       <span v-if="dataset.updatedAt">{{ t('updatedAt', { date: formatDate(dataset.updatedAt) }) }}</span>
     </v-card-subtitle>
@@ -92,6 +95,7 @@
 
 <script lang="ts" setup>
 import type { Dataset } from '#api/types'
+import truncateMiddle from 'truncate-middle'
 
 const { t, locale } = useI18n()
 
@@ -108,7 +112,7 @@ const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||
     props.dataset.draft?.originalFile || props.dataset.draft?.file
   if (!file) return null
-  let info = file.name
+  let info = truncateMiddle(file.name, 26, 4, '...')
   if (file.size) {
     info += ` (${formatBytes(file.size)})`
   }
@@ -133,7 +137,7 @@ fr:
   metaOnly: Métadonnées
   draft: Brouillon
   error: Erreur
-  records: "{count} enregistrements"
+  records: "0 enregistrement | 1 enregistrement | {count} enregistrements"
   updatedAt: Mis à jour le {date}
 en:
   virtual: Virtual
@@ -141,6 +145,6 @@ en:
   metaOnly: Metadata only
   draft: Draft
   error: Error
-  records: "{count} records"
+  records: "0 record | 1 record | {count} records"
   updatedAt: Updated on {date}
 </i18n>
