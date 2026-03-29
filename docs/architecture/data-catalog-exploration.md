@@ -1,5 +1,5 @@
 ---
-title: Stratégie pour l’exploitabilité et la découvrabilité du catalogue de données
+title: Stratégie pour l'exploitabilité et la découvrabilité du catalogue de données
 toc: true
 ---
 
@@ -9,6 +9,8 @@ Les portails de données de la plateforme Data Fair ont pour mission première d
 
 L'objectif est que les agents d'IA (utilisant nos catalogues comme sources de connaissances pour le RAG - Retrieval-Augmented Generation) puissent identifier le bon jeu de données avec la même précision qu'un expert métier.
 
+> **Périmètre :** ce document traite uniquement de la **découverte** des jeux de données dans le catalogue (recherche, navigation, sélection). L'exploitation des données elles-mêmes (requêtes, téléchargements, visualisations) n'est pas abordée ici.
+
 ## Une recherche sémantique augmentée par l'IA
 
 ### Indexation full-text de métadonnées riches
@@ -17,25 +19,42 @@ Chaque jeu de données porte une description textuelle structurée (titres, desc
 
 ### Le "Shadow Content" : combler le fossé sémantique
 
-Pour pallier les limites de la recherche par mots-clés sans basculer dans la complexité du vectoriel, Data Fair introduit un champ de "mots-clés associés".
-
-**Le concept :** Un champ de texte libre, non destiné à l'affichage, mais conçu exclusivement pour enrichir l'indexation.
+Pour pallier les limites de la recherche par mots-clés sans basculer dans la complexité du vectoriel, Data Fair introduit un champ de "mots-clés associés" : un champ de texte libre, non destiné à l'affichage, conçu exclusivement pour enrichir l'indexation.
 
 **Le rôle de l'IA :** Un assistant IA génère automatiquement pour ce champ des synonymes, des acronymes (ex: "PLU" pour "Plan Local d'Urbanisme") et des termes de langage courant liés au domaine.
 
 Cela permet de capturer l'intention de l'utilisateur (ou de l'agent) même si le terme exact n'est pas présent dans le titre officiel.
 
-### Aperçu en liste compacte et densité informationnelle
+```mermaid
+flowchart LR
+    subgraph Requête
+        Q["🔍 'logements sociaux\nà Grenoble'"]
+    end
 
-Chaque jeu de données dispose d'un résumé dense. Ce format permet un scan rapide du catalogue, tant pour l'œil humain que pour la fenêtre de contexte d'un LLM, facilitant ainsi la sélection du dataset le plus pertinent parmi une liste de résultats.
+    subgraph Shadow["Shadow Content généré par IA"]
+        S1["HLM, habitat social,\nlogement aidé"]
+        S2["PLU, Plan Local\nd'Urbanisme"]
+        S3["bailleur, OPH,\noffice public"]
+    end
 
-## De la structure et du lien
+    subgraph Dataset["Jeu de données"]
+        T["'Répertoire des\nlogements conventionnés\n— Métropole grenobloise'"]
+    end
 
-### La donnée comme contexte (Distinct Values)
+    Q -.->|"terme absent\ndu titre"| T
+    Q ==>|"match via\nsynonymes"| Shadow
+    Shadow ==> T
+```
+
+### Aperçu en liste compacte
+
+Chaque jeu de données dispose d'un titre et d'un résumé dense. Ce format permet un scan rapide du catalogue, tant pour l'œil humain que pour la fenêtre de contexte d'un LLM, facilitant la sélection du jeu de données le plus pertinent parmi une liste de résultats.
+
+## Un aperçu des données dès les métadonnées
 
 La plateforme permet d'inclure dans les métadonnées un aperçu des valeurs distinctes de colonnes clés. Pour un agent IA, c'est un outil de "fact-checking" immédiat : il peut confirmer la présence d'une information spécifique (ex: une ville, un code nomenclature) avant même d'interroger la donnée brute.
 
-### Un "graphe" de connaissances
+## Un "graphe" de connaissances pour naviguer le catalogue
 
 Chaque jeu de données est lié à d'autres via :
 
@@ -45,26 +64,80 @@ Chaque jeu de données est lié à d'autres via :
 
 Ces liens permettent aux agents IA de naviguer de manière récursive dans le catalogue, passant d'un concept général à un jeu de données spécifique par rebonds logiques.
 
-## Notre position sur la recherche vectorielle
+```mermaid
+graph LR
+    A["Thématique:\nUrbanisme"] --> B["PLU communal"]
+    A --> C["Permis de construire"]
+    B -->|"voir aussi"| C
+    B -->|"concept: parcelle"| D["Cadastre parcellaire"]
+    C -->|"concept: parcelle"| D
+    D -->|"concept: commune"| E["Référentiel communes"]
 
-### Le choix de la transparence et de la maîtrise
+    style A fill:#e3f2fd,stroke:#1565c0
+    style B fill:#fff3e0,stroke:#e65100
+    style C fill:#fff3e0,stroke:#e65100
+    style D fill:#fff3e0,stroke:#e65100
+    style E fill:#fff3e0,stroke:#e65100
+```
+
+## Deux interfaces, mêmes capacités
+
+L'exploration du catalogue est exposée via deux interfaces complémentaires offrant les mêmes capacités fondamentales : recherche full-text, pagination, filtrage par facettes et navigation par liens entre jeux de données.
+
+```mermaid
+flowchart LR
+    subgraph Catalogue["Catalogue de données"]
+        API["API REST\n(Open API)"]
+        MCP["Serveur MCP"]
+    end
+
+    H["Utilisateur humain"] -->|"Interface web"| API
+    L["Agent IA / LLM"] -->|"Protocole MCP"| MCP
+    L -->|"Appels HTTP"| API
+
+    MCP -->|"condense et\nstructure"| API
+```
+
+### Interface humaine : le portail web
+
+L'interface web s'appuie sur une API REST documentée via Open API. Cette documentation exhaustive constitue le contrat de référence de la plateforme et peut être consommée directement par tout client HTTP, y compris des agents IA.
+
+### Interface machine : le serveur MCP
+
+Pour les agents IA, un serveur [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) condense l'information exhaustive de la documentation Open API en un ensemble d'outils optimisés pour la fenêtre de contexte des LLMs. Le serveur MCP expose essentiellement les mêmes capacités que l'interface humaine :
+
+- **Recherche full-text** avec les mêmes bénéfices du shadow content et de l'indexation enrichie.
+- **Pagination** pour parcourir des catalogues volumineux sans saturer le contexte.
+- **Facettes** pour filtrer par thématique, producteur, licence, etc.
+- **Liens entre jeux de données** pour naviguer le graphe de connaissances par rebonds.
+
+L'intérêt du serveur MCP par rapport à l'utilisation directe de l'API est la concision : les descriptions d'outils, les paramètres et les réponses sont formulés de manière compacte et sémantiquement claire pour un LLM, évitant le bruit d'une spécification Open API complète.
+
+## Notre position sur la recherche vectorielle
 
 À ce stade, nous privilégions une recherche explicable. La recherche vectorielle (embeddings), bien que puissante, peut agir comme une "boîte noire" où la pertinence d'un résultat est parfois difficile à justifier ou à corriger. En enrichissant les métadonnées en amont (IA de saisie), nous conservons une recherche déterministe et performante.
 
-### Précision vs Bruit
-
 Dans le contexte de catalogues de données administratives ou techniques, la précision est critique. La recherche vectorielle peut générer du "bruit" en proposant des résultats sémantiquement proches mais techniquement hors-sujet. Notre approche garantit que la pertinence reste pilotée par la qualité de la description, assistée mais non remplacée par l'IA.
-
-### Sobriété et efficacité immédiate
 
 L'approche actuelle évite le surcoût d'infrastructure et la latence induite par les bases de données vectorielles, tout en offrant une précision souvent supérieure sur des catalogues de taille intermédiaire (quelques milliers de jeux de données).
 
+```mermaid
+quadrantChart
+    title Positionnement de la recherche
+    x-axis "Faible explicabilité" --> "Forte explicabilité"
+    y-axis "Faible couverture" --> "Forte couverture"
+    "Full-text basique": [0.8, 0.25]
+    "Vectoriel pur": [0.2, 0.7]
+    "Data Fair full-text enrichi IA": [0.75, 0.65]
+    "Hybride futur": [0.6, 0.85]
+```
+
 ### Vers une hybridation progressive
 
-Nous ne fermons aucune porte. Si la recherche vectorielle pure apporte parfois du "bruit" dans des contextes très structurés, l'évolution vers une recherche hybride (combinant le score textuel BM25 et la proximité vectorielle) est une perspective que nous étudions.
-
-À mesure que les modèles d'embeddings deviennent plus légers et que les volumes de données croissent, l'intégration de couches vectorielles pourrait venir affiner davantage les résultats, sans jamais sacrifier la base solide de métadonnées curées qui fait la force de Data Fair.
+Nous ne fermons aucune porte. L'évolution vers une recherche hybride (combinant le score textuel BM25 et la proximité vectorielle) est une perspective que nous étudions. À mesure que les modèles d'embeddings deviennent plus légers et que les volumes de données croissent, l'intégration de couches vectorielles pourrait venir affiner davantage les résultats, sans jamais sacrifier la base solide de métadonnées curées qui fait la force de Data Fair.
 
 ## Conclusion
 
-Data Fair mise sur une hybridation intelligente : utiliser la puissance des LLM pour enrichir, structurer et "traduire" les métadonnées en amont, tout en s'appuyant sur des moteurs de recherche robustes et transparents pour l'exploration. Nous rendons le catalogue intelligible pour les machines sans sacrifier la maîtrise et la clarté pour les humains. C'est une stratégie qui garantit une exploitation immédiate par les IA d'aujourd'hui, tout en préparant le terrain pour les technologies de recherche de demain.
+Data Fair mise sur une hybridation intelligente : utiliser la puissance des LLM pour enrichir, structurer et "traduire" les métadonnées en amont, tout en s'appuyant sur des moteurs de recherche robustes et transparents pour l'exploration. Les deux interfaces — portail web pour les humains, serveur MCP pour les agents IA — exposent les mêmes capacités du catalogue, garantissant une parité fonctionnelle entre les deux modes d'accès.
+
+Nous rendons le catalogue intelligible pour les machines sans sacrifier la maîtrise et la clarté pour les humains. C'est une stratégie qui garantit une exploitation immédiate par les IA d'aujourd'hui, tout en préparant le terrain pour les technologies de recherche de demain.
