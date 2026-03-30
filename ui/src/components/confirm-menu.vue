@@ -5,10 +5,12 @@
   >
     <template #activator="{ props }">
       <v-btn
-        v-bind="{...props, ...btnProps}"
+        v-bind="{ ...props, ...btnProps }"
         :title="tooltip"
-        :icon="mdiDelete"
-      />
+        :icon="label ? undefined : icon"
+      >
+        {{ label }}
+      </v-btn>
     </template>
     <v-card>
       <v-card-title
@@ -61,7 +63,7 @@ en:
 <script lang="ts" setup>
 import { mdiDelete } from '@mdi/js'
 
-const { btnProps, title, text, tooltip, yesColor, alert } = defineProps({
+const { btnProps, title, text, tooltip, yesColor, alert, icon, label } = defineProps({
   title: {
     type: String,
     default: ''
@@ -84,6 +86,14 @@ const { btnProps, title, text, tooltip, yesColor, alert } = defineProps({
   },
   alert: {
     type: String as PropType<'warning' | 'success' | 'info' | 'error' | undefined>,
+    default: undefined
+  },
+  icon: {
+    type: String,
+    default: mdiDelete
+  },
+  label: {
+    type: String,
     default: undefined
   }
 })

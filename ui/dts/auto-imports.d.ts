@@ -108,6 +108,7 @@ declare global {
   const unref: typeof import('vue')['unref']
   const useAgentApplicationTools: typeof import('../src/composables/application/agent-tools')['useAgentApplicationTools']
   const useAgentConnectorTools: typeof import('../src/composables/agent/connector-tools')['useAgentConnectorTools']
+  const useAgentDatasetChangesSummaryTools: typeof import('../src/composables/dataset/agent-changes-summary-tools')['useAgentDatasetChangesSummaryTools']
   const useAgentDatasetDataTools: typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']
   const useAgentDatasetSummaryTools: typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']
   const useAgentDatasetTools: typeof import('../src/composables/dataset/agent-tools')['useAgentDatasetTools']
@@ -283,6 +284,7 @@ declare module 'vue' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly useAgentApplicationTools: UnwrapRef<typeof import('../src/composables/application/agent-tools')['useAgentApplicationTools']>
     readonly useAgentConnectorTools: UnwrapRef<typeof import('../src/composables/agent/connector-tools')['useAgentConnectorTools']>
+    readonly useAgentDatasetChangesSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-changes-summary-tools')['useAgentDatasetChangesSummaryTools']>
     readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']>
     readonly useAgentDatasetSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']>
     readonly useAgentDatasetTools: UnwrapRef<typeof import('../src/composables/dataset/agent-tools')['useAgentDatasetTools']>

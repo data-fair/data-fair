@@ -110,21 +110,33 @@
             width="100%"
             color="accent"
             :loading="datasetEditFetch.save.loading.value"
-            @click="showSaveDialog = true"
+            @click="datasetEditFetch.save.execute()"
           >
             {{ t('save') }}
           </v-btn>
         </v-list-item>
+        <v-list-item>
+          <confirm-menu
+            :label="t('cancel')"
+            :text="t('confirmCancelText')"
+            :icon="mdiCancel"
+            yes-color="warning"
+            :btn-props="{ width: '100%', color: 'warning', variant: 'tonal' }"
+            @confirm="cancelChanges"
+          />
+        </v-list-item>
+        <v-list-item v-if="showAgentChat">
+          <df-agent-chat-action
+            action-id="summarize-metadata-changes"
+            :visible-prompt="t('summarizeChanges')"
+            :hidden-context="summarizeChangesContext"
+            :btn-props="{ width: '100%', variant: 'tonal', density: 'default', icon: null, prependIcon: mdiRobotOutline, size: 'default', text: t('summarizeChanges') }"
+            :title="t('summarizeChanges')"
+          />
+        </v-list-item>
       </v-list>
       <layout-toc :sections="sections" />
     </df-navigation-right>
-
-    <dataset-save-dialog
-      v-model="showSaveDialog"
-      :data="datasetEditFetch.data.value"
-      :server-data="datasetEditFetch.serverData.value"
-      @confirm="datasetEditFetch.save.execute()"
-    />
   </v-container>
 </template>
 
@@ -142,6 +154,9 @@ fr:
   virtual: Jeu de données virtuel
   save: Enregistrer
   saved: Les modifications ont été enregistrées
+  cancel: Annuler
+  confirmCancelText: Souhaitez-vous annuler vos modifications ?
+  summarizeChanges: Résumer les modifications
 en:
   datasets: Datasets
   editMetadata: Edit metadata
@@ -155,6 +170,9 @@ en:
   virtual: Virtual dataset
   save: Save
   saved: Changes were saved
+  cancel: Cancel
+  confirmCancelText: Do you want to discard your changes?
+  summarizeChanges: Summarize changes
 </i18n>
 
 <script lang="ts" setup>
@@ -162,8 +180,11 @@ import infoSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiAlert, mdiAttachment, mdiDatabase, mdiInformation, mdiPuzzle, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
+import { mdiAlert, mdiAttachment, mdiCancel, mdiDatabase, mdiInformation, mdiPuzzle, mdiRobotOutline, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
+import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -190,9 +211,10 @@ useLeaveGuard(datasetEditFetch.hasDiff, { locale })
 useAgentDatasetSummaryTools(locale, datasetEditFetch.data, (s) => {
   if (datasetEditFetch.data.value) datasetEditFetch.data.value.summary = s
 })
+useAgentDatasetChangesSummaryTools(locale, datasetEditFetch.data, datasetEditFetch.serverData)
 
 const breadcrumbs = useBreadcrumbs()
-const showSaveDialog = ref(false)
+const showAgentChat = useShowAgentChat()
 const infoTab = ref('info')
 const structureTab = ref('schema')
 
@@ -201,6 +223,14 @@ const onRefreshExtension = async (extension: any) => {
   // Refresh editFetch to sync serverData after the server-side patch
   await datasetEditFetch.fetch.refresh()
 }
+
+const cancelChanges = () => {
+  if (datasetEditFetch.serverData.value) {
+    datasetEditFetch.data.value = JSON.parse(JSON.stringify(datasetEditFetch.serverData.value))
+  }
+}
+
+const summarizeChangesContext = 'Use the dataset_changes_summarizer subagent to read and summarize the changes made to the dataset metadata.'
 
 watch(datasetEditFetch.data, (d) => {
   if (!d) return
