@@ -149,7 +149,7 @@ const settingsPath = computed(() => {
 const publicationSitesFetch = useFetch<PublicationSite[]>(() => settingsPath.value ? $apiPath + `/settings/${settingsPath.value}/publication-sites` : null, { immediate: false, watch: false })
 watch(dataset, () => {
   if (dataset.value) publicationSitesFetch.refresh()
-})
+}, { immediate: true })
 const publicationSites = computed(() => {
   const publicationSites = [...publicationSitesFetch.data.value ?? []]
   publicationSites.sort((ps1, ps2) => {
