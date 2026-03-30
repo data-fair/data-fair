@@ -60,7 +60,7 @@
         v-if="dataset.count != null"
         class="text-body-medium text-medium-emphasis mb-1"
       >
-        {{ t('records', dataset.count, { count: dataset.count.toLocaleString() }) }}
+        {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
       </div>
       <div
         v-if="showTopics && dataset.topics?.length"

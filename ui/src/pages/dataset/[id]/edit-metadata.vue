@@ -130,7 +130,7 @@
             action-id="summarize-metadata-changes"
             :visible-prompt="t('summarizeChanges')"
             :hidden-context="summarizeChangesContext"
-            :btn-props="{ width: '100%', variant: 'tonal', density: 'default', icon: null, prependIcon: mdiRobotOutline, size: 'default', text: t('summarizeChanges') }"
+            :btn-props="{ width: '100%', variant: 'tonal', density: 'default', icon: null, prependIcon: mdiRobotOutline, size: 'default', text: t('summarizeChanges') } as any"
             :title="t('summarizeChanges')"
           />
         </v-list-item>

@@ -112,12 +112,8 @@ test.describe('dataset detail pages', () => {
     // Save button should now be visible (diff detected)
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
 
-    // Click save — opens confirmation dialog
+    // Click save
     await page.getByRole('button', { name: /Enregistrer|Save/ }).click()
-
-    // Confirm in the dialog
-    await expect(page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
-    await page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ }).click()
 
     // Save button should disappear after successful save (no more diff)
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 10000 })
@@ -149,9 +145,8 @@ test.describe('dataset detail pages', () => {
     // Save button should appear
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
 
-    // Save — opens confirmation dialog
+    // Save
     await page.getByRole('button', { name: /Enregistrer|Save/ }).click()
-    await page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ }).click()
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 10000 })
 
     // Verify via API

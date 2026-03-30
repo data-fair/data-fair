@@ -79,7 +79,7 @@ const homogeneity = computed(() => {
   const homogenousProperties = []
   const heterogenousProperties = []
   const propertyValues: Record<string, any[]> = {}
-  for (const key of Object.keys(jsonSchema.properties)) {
+  for (const key of Object.keys(jsonSchema.properties as Record<string, unknown>)) {
     const values: any[] = []
     for (const line of lines) {
       if (!values.some(v => equal(v, line[key]))) values.push(line[key])

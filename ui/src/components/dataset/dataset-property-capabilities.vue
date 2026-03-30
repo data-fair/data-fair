@@ -81,7 +81,7 @@ const props = defineProps<{
   editable?: boolean
 }>()
 
-const capabilitiesProperties = capabilitiesSchema.properties as Record<string, { type: string, default: boolean, 'x-display': string, title: string, description: string }>
+const capabilitiesProperties = capabilitiesSchema.properties as Record<string, { type: string, default: boolean, layout: string, title: string, description: string }>
 const capabilitiesDefaultFalse = Object.keys(capabilitiesProperties).filter(
   (key: string) => capabilitiesProperties[key].default === false
 )

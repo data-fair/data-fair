@@ -42,10 +42,6 @@ test.describe('dataset edit-metadata master data tab', () => {
     await expect(saveBtn).toBeVisible({ timeout: 5000 })
     await saveBtn.click()
 
-    // Confirm in dialog
-    await expect(page.getByText(/Confirmer|Confirm/)).toBeVisible({ timeout: 5000 })
-    await page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ }).click()
-
     // Save should succeed (button disappears)
     await expect(saveBtn).not.toBeVisible({ timeout: 10000 })
 

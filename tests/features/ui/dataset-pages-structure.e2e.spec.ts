@@ -83,22 +83,19 @@ test.describe('dataset page restructuring', () => {
   })
 
   // Mutating test last — modifies the dataset title
-  test('edit-metadata save shows confirmation dialog', async ({ page, goToWithAuth }) => {
+  test('edit-metadata save works', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
     await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
     // Edit the title
     const titleInput = page.locator('#info').getByRole('textbox', { name: /Titre|Title/ })
     await titleInput.click()
-    await titleInput.fill('Modified For Dialog Test')
+    await titleInput.fill('Modified For Save Test')
     // Save button should appear
-    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
+    const saveBtn = page.getByRole('button', { name: /Enregistrer|Save/ })
+    await expect(saveBtn).toBeVisible({ timeout: 5000 })
     // Click save
-    await page.getByRole('button', { name: /Enregistrer|Save/ }).click()
-    // Confirmation dialog should appear
-    await expect(page.getByText(/Confirmer|Confirm/)).toBeVisible({ timeout: 5000 })
-    // Confirm save
-    await page.locator('.v-dialog').getByRole('button', { name: /Enregistrer|Save/ }).click()
-    // Dialog should close and save should succeed
-    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 10000 })
+    await saveBtn.click()
+    // Save should succeed (button disappears)
+    await expect(saveBtn).not.toBeVisible({ timeout: 10000 })
   })
 })
