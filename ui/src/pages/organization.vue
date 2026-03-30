@@ -3,9 +3,7 @@
     <iframe
       :src="`${$sdUrl}/organization/${account.id}?embed=true`"
       width="100%"
-      :style="{ height: iframeHeight }"
-      frameborder="0"
-      @load="onLoad"
+      style="height: 100%; border: none;"
     />
   </template>
   <v-container v-else>
@@ -28,16 +26,6 @@ const authorized = computed(() => {
   if (org.department) return false
   return true
 })
-
-const iframeHeight = ref('600px')
-
-function onLoad (e: Event) {
-  const iframe = e.target as HTMLIFrameElement
-  try {
-    const height = iframe.contentWindow?.document.body.scrollHeight
-    if (height) iframeHeight.value = height + 'px'
-  } catch {}
-}
 </script>
 
 <i18n lang="yaml">

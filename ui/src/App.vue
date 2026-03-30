@@ -34,7 +34,7 @@ useHead({
 
 <style>
 html {
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 /* Vuetify 4 removed heading resets — restore margin:0 so browser defaults don't add spacing */

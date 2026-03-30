@@ -3,7 +3,7 @@
     id="api-doc"
     :src="`${$sitePath}/openapi-viewer?drawerLocation=right&urlType=general`"
     sync-params
-    resize="yes"
+    style="height: 100%"
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"

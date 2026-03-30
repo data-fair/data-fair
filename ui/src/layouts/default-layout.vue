@@ -8,8 +8,12 @@
     v-if="user"
     v-model="drawer"
   />
-  <v-main>
-    <slot />
+  <v-main scrollable>
+    <v-layout style="min-height: 100%; position: static">
+      <v-main tag="div">
+        <slot />
+      </v-main>
+    </v-layout>
   </v-main>
   <df-agent-chat-drawer
     v-if="showAgentChat && session.account.value"

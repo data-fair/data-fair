@@ -19,7 +19,7 @@
 import { mdiChevronUp } from '@mdi/js'
 import { useGoTo } from 'vuetify'
 
-const { selector } = defineProps({ selector: { type: String, required: false, default: null } })
+const { selector } = defineProps({ selector: { type: String, required: false, default: '.v-main__scroller' } })
 
 const route = useRoute()
 const router = useRouter()

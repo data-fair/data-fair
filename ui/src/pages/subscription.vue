@@ -3,20 +3,6 @@
     v-if="$uiConfig.subscriptionUrl"
     :src="$uiConfig.subscriptionUrl"
     width="100%"
-    :style="{ height: iframeHeight }"
-    frameborder="0"
-    @load="onLoad"
+    style="height: 100%; border: none;"
   />
 </template>
-
-<script lang="ts" setup>
-const iframeHeight = ref('600px')
-
-function onLoad (e: Event) {
-  const iframe = e.target as HTMLIFrameElement
-  try {
-    const height = iframe.contentWindow?.document.body.scrollHeight
-    if (height) iframeHeight.value = height + 'px'
-  } catch {}
-}
-</script>

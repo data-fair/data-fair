@@ -34,44 +34,43 @@
     </v-list>
 
     <!-- Collapsible groups -->
-    <v-list
-      v-if="!missingSubscription"
-      v-model:opened="openedGroupsModel"
-      open-strategy="multiple"
-      density="compact"
-      nav
-      bg-color="primary"
-    >
+    <template v-if="!missingSubscription">
       <template
         v-for="group of navigationGroups"
         :key="group.key"
       >
-        <template v-if="group.items.length">
-          <v-divider class="my-1" />
-          <v-list-group
-            :value="group.key"
-            :class="group.key === 'admin' ? 'border-admin border-md border-opacity-100 rounded-md' : ''"
-          >
-            <template #activator="{ props: activatorProps }">
+        <v-divider class="my-1" />
+        <v-list
+          v-model:opened="openedGroupsModel"
+          open-strategy="multiple"
+          density="compact"
+          nav
+          :bg-color="group.key === 'admin' ? 'admin' : 'primary'"
+          class="py-0"
+        >
+          <template v-if="group.items.length">
+            <v-list-group :value="group.key">
+              <template #activator="{ props: activatorProps }">
+                <v-list-item
+                  v-bind="activatorProps"
+                  :title="group.title"
+                />
+              </template>
               <v-list-item
-                v-bind="activatorProps"
-                :title="group.title"
+                v-for="item of group.items"
+                :key="item.to || item.href || item.title"
+                :to="item.to"
+                :href="item.href"
+                :target="item.href ? '_blank' : undefined"
+                :prepend-icon="item.icon"
+                :title="item.title"
+                :subtitle="item.subtitle"
               />
-            </template>
-            <v-list-item
-              v-for="item of group.items"
-              :key="item.to || item.href || item.title"
-              :to="item.to"
-              :href="item.href"
-              :target="item.href ? '_blank' : undefined"
-              :prepend-icon="item.icon"
-              :title="item.title"
-              :subtitle="item.subtitle"
-            />
-          </v-list-group>
-        </template>
+            </v-list-group>
+          </template>
+        </v-list>
       </template>
-    </v-list>
+    </template>
 
     <template #append>
       <div class="pa-1 text-center">

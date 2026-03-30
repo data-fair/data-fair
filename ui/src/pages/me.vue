@@ -2,9 +2,7 @@
   <iframe
     :src="$sdUrl + '/me?embed=true'"
     width="100%"
-    :style="{ height: iframeHeight }"
-    frameborder="0"
-    @load="onLoad"
+    style="height: 100%; border: none;"
   />
 </template>
 
@@ -14,8 +12,6 @@ import { usePermissions } from '~/composables/use-permissions'
 const router = useRouter()
 const session = useSession()
 
-const iframeHeight = ref('600px')
-
 const { missingSubscription } = usePermissions()
 
 onMounted(() => {
@@ -23,12 +19,4 @@ onMounted(() => {
     router.replace('/subscription')
   }
 })
-
-function onLoad (e: Event) {
-  const iframe = e.target as HTMLIFrameElement
-  try {
-    const height = iframe.contentWindow?.document.body.scrollHeight
-    if (height) iframeHeight.value = height + 'px'
-  } catch {}
-}
 </script>

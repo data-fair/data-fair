@@ -4,9 +4,7 @@
       v-if="iframeUrl"
       :src="iframeUrl"
       width="100%"
-      :style="{ height: iframeHeight }"
-      frameborder="0"
-      @load="onLoad"
+      style="height: 100%; border: none;"
     />
   </template>
   <v-container v-else>
@@ -28,16 +26,6 @@ const iframeUrl = computed(() => {
   if (!extra.value?.iframe) return null
   return new URL(extra.value.iframe, window.location.href).href
 })
-
-const iframeHeight = ref('600px')
-
-function onLoad (e: Event) {
-  const iframe = e.target as HTMLIFrameElement
-  try {
-    const height = iframe.contentWindow?.document.body.scrollHeight
-    if (height) iframeHeight.value = height + 'px'
-  } catch {}
-}
 </script>
 
 <i18n lang="yaml">

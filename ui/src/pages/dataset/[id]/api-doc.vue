@@ -3,7 +3,7 @@
     id="dataset-api-doc"
     :src="`${$sitePath}/openapi-viewer?drawerLocation=right&urlType=dataset&id=${route.params.id}`"
     sync-params
-    resize="yes"
+    style="height: 100%"
     @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
   />
 </template>

@@ -5,7 +5,7 @@
     sync-params
     :sync-path="$sitePath + '/data-fair/catalogs/'"
     emit-iframe-messages
-    resize="yes"
+    style="height: 100%"
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"
