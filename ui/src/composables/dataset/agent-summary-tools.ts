@@ -6,12 +6,14 @@ const messages: Record<string, Record<string, string>> = {
   fr: {
     readDatasetInfo: 'Lire les informations du jeu de données',
     setDatasetSummary: 'Définir le résumé du jeu de données',
-    summarizerSubAgent: 'Résumer un jeu de données'
+    summarizerSubAgent: 'Résumer un jeu de données',
+    summarizerSubAgentDesc: 'Lire les métadonnées et le schéma du jeu de données, puis produire un résumé concis.'
   },
   en: {
     readDatasetInfo: 'Read dataset info',
     setDatasetSummary: 'Set dataset summary',
-    summarizerSubAgent: 'Summarize a dataset'
+    summarizerSubAgent: 'Summarize a dataset',
+    summarizerSubAgentDesc: 'Read the dataset metadata and schema, then produce a concise summary.'
   }
 }
 
@@ -51,9 +53,22 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
   useAgentSubAgent({
     name: 'dataset_summarizer',
     title: t('summarizerSubAgent'),
-    description: t('summarizerSubAgent') + '. Read the dataset metadata and schema, then produce a concise summary.',
+    description: t('summarizerSubAgentDesc'),
     model: 'summarizer',
-    prompt: 'You are a dataset summarization assistant. First call read_dataset_info to get the full metadata and schema of the dataset. Then write a summary that describes the content and purpose of the dataset based on its title, description, columns, and other metadata. The summary MUST be between 200 and 300 characters long, plain text only with no formatting, no markdown, no line breaks. The summary should be in the same language as the dataset title and description.',
+    prompt: `You are a dataset summarization expert for Data Fair, an open data publishing platform. Summaries are displayed in dataset catalogs to help users quickly understand what a dataset contains.
+
+Task:
+1. Call read_dataset_info to get the full metadata and schema.
+2. Write a summary describing the content and purpose of the dataset based on its title, description, columns, and other metadata.
+
+Format:
+- Between 200 and 300 characters long
+- Plain text only: no formatting, no markdown, no line breaks
+- Use an accessible tone — the audience ranges from data analysts to general public users
+- Write in the same language as the dataset title and description
+
+Example of a good summary (French):
+"Ce jeu de données recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`,
     tools: ['read_dataset_info']
   })
 }

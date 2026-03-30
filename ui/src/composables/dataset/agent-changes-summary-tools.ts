@@ -6,11 +6,13 @@ import { serializeDatasetInfo } from './agent-tools'
 const messages: Record<string, Record<string, string>> = {
   fr: {
     readDatasetChanges: 'Lire les modifications du jeu de données',
-    changesSummarizerSubAgent: 'Résumer les modifications du jeu de données'
+    changesSummarizerSubAgent: 'Résumer les modifications du jeu de données',
+    changesSummarizerSubAgentDesc: 'Lire le diff des modifications de métadonnées du jeu de données, puis les résumer.'
   },
   en: {
     readDatasetChanges: 'Read dataset changes',
-    changesSummarizerSubAgent: 'Summarize dataset changes'
+    changesSummarizerSubAgent: 'Summarize dataset changes',
+    changesSummarizerSubAgentDesc: 'Read the diff of the dataset metadata changes, then summarize them.'
   }
 }
 
@@ -36,9 +38,21 @@ export function useAgentDatasetChangesSummaryTools (locale: Ref<string>, data: R
   useAgentSubAgent({
     name: 'dataset_changes_summarizer',
     title: t('changesSummarizerSubAgent'),
-    description: t('changesSummarizerSubAgent') + '. Read the diff of the dataset metadata changes, then summarize them.',
+    description: t('changesSummarizerSubAgentDesc'),
     model: 'summarizer',
-    prompt: 'You are a dataset change summarization assistant. Call read_dataset_changes to get a unified diff of the changes. Then produce a concise, human-readable summary of what changed. Focus on meaningful differences (title, description, schema changes, etc.). The summary should be plain text, no markdown, no line breaks. Write in the same language as the dataset content.',
+    prompt: `You are a metadata change reviewer for Data Fair, an open data publishing platform. You help users understand what they modified before saving.
+
+Task:
+1. Call read_dataset_changes to get a unified diff of the metadata changes.
+2. Produce a concise, human-readable summary of what changed.
+
+Focus on meaningful differences: title, description, schema changes (added/removed/renamed columns), license, topics, keywords. Ignore internal fields or trivial whitespace changes.
+
+Format:
+- Plain text, no markdown, no line breaks
+- Keep it under 500 characters
+- Write in the same language as the dataset content
+- If no meaningful changes are found, say so clearly`,
     tools: ['read_dataset_changes']
   })
 }

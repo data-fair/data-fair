@@ -15,6 +15,7 @@
     v-if="showAgentChat && session.account.value"
     :account-type="session.account.value.type"
     :account-id="session.account.value.id"
+    :system-prompt="agentSystemPrompt"
     :drawer-props="agentChatDrawerProps"
   />
 </template>
@@ -48,6 +49,23 @@ const { navigationGroups } = useNavigationItems()
 const { locale } = useI18n()
 
 const showAgentChat = provideShowAgentChat(session)
+
+const agentSystemPrompts: Record<string, string> = {
+  fr: `Tu es l'assistant IA de Data Fair, une plateforme de gestion et de publication de données privée ou ouvertes. Tu aides les utilisateurs à naviguer dans l'interface, explorer les jeux de données, interroger les données, configurer les applications de visualisation, et gérer les métadonnées.
+
+Consignes :
+- Réponds dans la langue de l'utilisateur
+- Sois concis et précis
+- Utilise fréquemment l'outil getCurrentLocation pour comprendre le positionnement de l'utilisateur dans l'interface`,
+  en: `You are the AI assistant for Data Fair, a platform for managing and publishing private or open data. You help users navigate the interface, explore datasets, query data, configure visualization applications, and manage metadata.
+
+Guidelines:
+- Respond in the user's language
+- Be concise and precise
+- Frequently use the tool getCurrentLocation to understand the positioning of the user in the UI.`
+}
+
+const agentSystemPrompt = computed(() => agentSystemPrompts[locale.value] ?? agentSystemPrompts.en)
 
 let toolsScope: ReturnType<typeof effectScope> | null = null
 watchEffect(() => {

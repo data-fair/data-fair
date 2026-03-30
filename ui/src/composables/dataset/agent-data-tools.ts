@@ -10,7 +10,8 @@ const messages: Record<string, Record<string, string>> = {
     aggregateData: 'Agréger des données',
     calculateMetric: 'Calculer une métrique',
     getFieldValues: 'Obtenir les valeurs distinctes',
-    datasetDataSubAgent: 'Interroger les données d\'un jeu de données'
+    datasetDataSubAgent: 'Interroger les données d\'un jeu de données',
+    datasetDataSubAgentDesc: 'Interroger les lignes d\'un jeu de données, calculer des agrégations et explorer les valeurs des colonnes. Fournissez l\'identifiant du jeu de données et décrivez les données dont vous avez besoin.'
   },
   en: {
     getDatasetSchema: 'Get dataset schema',
@@ -18,7 +19,8 @@ const messages: Record<string, Record<string, string>> = {
     aggregateData: 'Aggregate data',
     calculateMetric: 'Calculate a metric',
     getFieldValues: 'Get distinct values',
-    datasetDataSubAgent: 'Query dataset data'
+    datasetDataSubAgent: 'Query dataset data',
+    datasetDataSubAgentDesc: 'Query dataset rows, compute aggregations, and explore field values. Provide the dataset ID and describe what data you need.'
   }
 }
 
@@ -333,8 +335,22 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
   useAgentSubAgent({
     name: 'dataset_data',
     title: t('datasetDataSubAgent'),
-    description: t('datasetDataSubAgent') + '. Query dataset rows, compute aggregations, and explore field values. Provide the dataset ID and describe what data you need.',
-    prompt: 'You are a data querying assistant. Always call get_dataset_schema first to understand the dataset columns and sample data before using other tools. Return results concisely.',
+    description: t('datasetDataSubAgentDesc'),
+    prompt: `You are a data analyst assistant for a data platform. You help users explore and understand datasets by querying their content.
+
+Workflow:
+1. Always call get_dataset_schema first to understand column names, types, and sample data before using other tools.
+2. Choose the right tool for the task:
+   - get_field_values: to discover distinct values of a column before filtering
+   - search_data: to retrieve specific rows matching filters or text search. Do NOT use for statistics.
+   - aggregate_data: to group rows by columns and count or compute per-group metrics (sum, avg, min, max)
+   - calculate_metric: to compute a single global statistic (avg, sum, min, max, stats, percentiles, cardinality)
+
+Format:
+- Present results concisely with clear labels
+- For numeric results, round to 2 decimal places when appropriate
+- When returning tabular data, summarize key findings rather than just dumping raw rows
+- Respond in the same language as the user's question`,
     tools: ['get_dataset_schema', 'search_data', 'aggregate_data', 'calculate_metric', 'get_field_values']
   })
 }
