@@ -185,6 +185,7 @@ import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
+import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -212,6 +213,11 @@ useAgentDatasetSummaryTools(locale, datasetEditFetch.data, (s) => {
   if (datasetEditFetch.data.value) datasetEditFetch.data.value.summary = s
 })
 useAgentDatasetChangesSummaryTools(locale, datasetEditFetch.data, datasetEditFetch.serverData)
+useAgentExpressionTools(locale, datasetEditFetch.data, (extensionIndex, expr) => {
+  if (datasetEditFetch.data.value?.extensions?.[extensionIndex]) {
+    datasetEditFetch.data.value.extensions[extensionIndex].expr = expr
+  }
+})
 
 const breadcrumbs = useBreadcrumbs()
 const showAgentChat = useShowAgentChat()

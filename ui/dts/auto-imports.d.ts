@@ -112,6 +112,7 @@ declare global {
   const useAgentDatasetDataTools: typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']
   const useAgentDatasetSummaryTools: typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']
   const useAgentDatasetTools: typeof import('../src/composables/dataset/agent-tools')['useAgentDatasetTools']
+  const useAgentExpressionTools: typeof import('../src/composables/dataset/agent-expression-tools')['useAgentExpressionTools']
   const useAgentGeoTools: typeof import('../src/composables/agent/geo-tools')['useAgentGeoTools']
   const useAgentNavigationTools: typeof import('../src/composables/agent/navigation-tools')['useAgentNavigationTools']
   const useAgentSummaryTools: typeof import('../src/composables/use-agent-summary-tools')['useAgentSummaryTools']
@@ -288,6 +289,7 @@ declare module 'vue' {
     readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']>
     readonly useAgentDatasetSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']>
     readonly useAgentDatasetTools: UnwrapRef<typeof import('../src/composables/dataset/agent-tools')['useAgentDatasetTools']>
+    readonly useAgentExpressionTools: UnwrapRef<typeof import('../src/composables/dataset/agent-expression-tools')['useAgentExpressionTools']>
     readonly useAgentGeoTools: UnwrapRef<typeof import('../src/composables/agent/geo-tools')['useAgentGeoTools']>
     readonly useAgentNavigationTools: UnwrapRef<typeof import('../src/composables/agent/navigation-tools')['useAgentNavigationTools']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application/store')['useApplicationStore']>

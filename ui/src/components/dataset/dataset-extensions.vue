@@ -179,12 +179,22 @@
                 {{ extension.property?.['x-originalName'] || t('newExprEval') }}
               </v-card-title>
               <v-card-text style="margin-bottom: 40px;">
-                <v-text-field
-                  v-model="extension.expr"
-                  disabled
-                  :label="t('expr')"
-                  hide-details
-                />
+                <div class="d-flex align-center gap-1">
+                  <v-text-field
+                    v-model="extension.expr"
+                    :disabled="!can('writeDescriptionBreaking')"
+                    :label="t('expr')"
+                    hide-details
+                    class="flex-grow-1"
+                  />
+                  <df-agent-chat-action
+                    v-if="showAgentChat && can('writeDescriptionBreaking')"
+                    :action-id="'help-expression-' + idx"
+                    :visible-prompt="t('helpExpression')"
+                    :hidden-context="getExpressionContext(idx)"
+                    :btn-props="{ class: 'ml-1' }"
+                  />
+                </div>
               </v-card-text>
               <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
                 <confirm-menu
@@ -217,6 +227,7 @@ fr:
   missingConcepts: "Il faut associer au moins l'un des concepts suivants a vos colonnes : {concepts}"
   newExprEval: Nouvelle colonne calculee
   expr: Expression
+  helpExpression: Aider a ecrire l'expression
   autoUpdate: Mise a jour automatique si la source change
   link: "Lien : {info}"
   unavailableService: "Donnee de reference non disponible ({service} / {action})."
@@ -235,6 +246,7 @@ en:
   missingConcepts: "You must tag your columns with at least one of these concepts: {concepts}"
   newExprEval: New calculated column
   expr: Expression
+  helpExpression: Help write the expression
   autoUpdate: Auto update when the source changes
   link: "Link: {info}"
   unavailableService: "Master data not available ({service} / {action})."
@@ -244,14 +256,17 @@ en:
 
 <script lang="ts" setup>
 import { mdiChevronDown, mdiChevronUp } from '@mdi/js'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { escapeKey } from '~/utils/escape-key'
 import { useRemoteServices } from '~/composables/use-remote-services'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import useStore from '~/composables/use-store'
 
 const dataset = defineModel<any>({ required: true })
 const emit = defineEmits<{ refresh: [extension: any] }>()
 
 const { t } = useI18n()
+const showAgentChat = useShowAgentChat()
 
 const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? false
 
@@ -376,5 +391,13 @@ function setOverwriteOriginalName (extension: any, propKey: string, value: strin
   } else if (extension.overwrite?.[propKey]) {
     delete extension.overwrite[propKey]['x-originalName']
   }
+}
+
+function getExpressionContext (idx: number): string {
+  const ext = dataset.value.extensions[idx]
+  const name = ext.property?.['x-originalName'] || ext.property?.key || 'calculated column'
+  return `The user wants help writing an expr-eval expression for calculated column "${name}" (type: ${ext.property?.type || 'string'}, extension index: ${idx}). ` +
+    (ext.expr ? `The current expression is: ${ext.expr}. ` : '') +
+    'Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user\'s intent.'
 }
 </script>
