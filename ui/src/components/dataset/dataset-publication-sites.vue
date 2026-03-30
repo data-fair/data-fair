@@ -1,6 +1,7 @@
 <template>
   <v-container
     v-if="dataset && publicationSitesFetch.data.value"
+    fluid
   >
     <p
       v-if="!publicationSitesFetch.data.value.length"
@@ -25,56 +26,58 @@
             <v-list-item-title>
               <a
                 class="simple-link"
-                :href="site.datasetUrlTemplate && dataset.publicationSites?.includes(`${site.type}:${site.id}`) ? site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug ?? dataset.id) : site.url"
+                :href="site.url"
                 target="_blank"
               >{{ site.title || site.url || site.id }}</a>
-              <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
-              <span
-                v-if="toggleRequestedPublicationSitesStatus(site) === 'disabled'"
-                class="text-info"
-              > - {{ t('publicationRequested') }}</span>
-              <v-tooltip
-                v-if="hasWarning(site) || sitesContribPermissionsRisk[`${site.type}:${site.id}`]"
-              >
-                <template #activator="{props}">
-                  <v-icon
-                    v-bind="props"
-                    :icon="mdiAlert"
-                    color="warning"
-                    class="ml-4"
-                  />
-                </template>
-                <p
-                  v-if="hasWarning(site)"
-                >
-                  {{ t('hasWarning') }}{{ sitesWarnings[`${site.type}:${site.id}`].map(w => t('warning.' + w)).join(', ') }}
-                </p>
-                <span
-                  v-if="sitesContribPermissionsRisk[`${site.type}:${site.id}`]"
-                >
-                  {{ t('contribPermission') }}
-                </span>
-              </v-tooltip>
             </v-list-item-title>
+            <v-list-item-subtitle
+              v-if="dataset.owner.department"
+              class="mb-2"
+            >
+              <span>{{ dataset.owner.name }}</span>
+              <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
+              v-if="site.datasetUrlTemplate && isPublishedOnSite(site)"
+              class="mb-2"
+            >
+              <a
+                :href="site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug ?? dataset.id)"
+                target="_blank"
+              >
+                {{ site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug ?? dataset.id) }}
+              </a>
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
+              v-if="hasWarning(site)"
+              class="text-warning"
+            >
+              {{ t('hasWarning') }}{{ sitesWarnings[`${site.type}:${site.id}`].map(w => t('warning.' + w)).join(', ') }}
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
+              v-if="sitesContribPermissionsRisk[`${site.type}:${site.id}`]"
+              class="text-warning"
+            >
+              {{ t('contribPermission') }}
+            </v-list-item-subtitle>
 
             <v-list-item-subtitle>
               <v-switch
-                v-if="togglePublicationSitesStatus(site) !== 'hidden'"
                 hide-details
                 density="compact"
-                :model-value="dataset.publicationSites?.includes(`${site.type}:${site.id}`)"
-                :disabled="togglePublicationSitesStatus(site) === 'disabled'"
+                :model-value="isPublishedOnSite(site)"
+                :disabled="publishSwitchDisabled(site)"
                 :label="t('published')"
                 class="mt-0 ml-6"
                 color="primary"
                 @update:model-value="togglePublicationSites(site)"
               />
               <v-switch
-                v-if="toggleRequestedPublicationSitesStatus(site) === 'visible'"
+                v-if="requestedSwitchVisible(site)"
                 hide-details
                 density="compact"
-                :model-value="dataset.requestedPublicationSites?.includes(`${site.type}:${site.id}`)"
-                :disabled="toggleRequestedPublicationSitesStatus(site) === 'disabled'"
+                :model-value="isRequestedOnSite(site)"
+                :disabled="requestedSwitchDisabled(site)"
                 :label="t('publicationRequested')"
                 class="mt-0 ml-6"
                 @update:model-value="toggleRequestedPublicationSites(site)"
@@ -92,7 +95,7 @@ fr:
   noPublicationSite: Vous n'avez pas configuré de portail sur lequel publier ce jeu de données.
   publishThisDataset: Publiez ce jeu de données sur un ou plusieurs de vos portails.
   published: publié
-  publicationRequested: publication demandée
+  publicationRequested: publication demandée par un contributeur
   hasWarning: "métadonnées manquantes : "
   warning:
     title: titre
@@ -111,7 +114,7 @@ en:
   noPublicationSite: You haven't configured a portal to publish this dataset on.
   publishThisDataset: Publish this dataset on one or more of your portals.
   published: published
-  publicationRequested: publication requested
+  publicationRequested: publication requested by a contributor
   hasWarning: "missing metadata : "
   warning:
     title: title
@@ -120,7 +123,7 @@ en:
     topics: topic
     license: license
     temporal: temporal coverage
-    smissingSpatial: spatial coverage
+    spatial: spatial coverage
     keywords: keyword
     frequency: update frequency
     creator: creator person or entity
@@ -130,7 +133,6 @@ en:
 
 <script lang="ts" setup>
 import type { Dataset, Permission, PublicationSite } from '#api/types'
-import { mdiAlert } from '@mdi/js'
 import permissionsUtils from '~/utils/permissions'
 
 const { id, dataset, patchDataset, can } = useDatasetStore()
@@ -139,9 +141,12 @@ const { t } = useI18n()
 
 const permissionsFetch = useFetch<Permission[]>($apiPath + `/datasets/${id}/permissions`)
 const settingsPath = computed(() => {
-  return `${dataset.value?.owner.type}/${dataset.value?.owner.id}${encodeURIComponent(':*')}`
+  if (!dataset.value) return null
+  let path = `${dataset.value.owner.type}/${dataset.value.owner.id}`
+  if (dataset.value.owner.department) path += ':' + dataset.value.owner.department
+  return path
 })
-const publicationSitesFetch = useFetch<PublicationSite[]>(() => $apiPath + `/settings/${settingsPath.value}/publication-sites`, { immediate: false, watch: false })
+const publicationSitesFetch = useFetch<PublicationSite[]>(() => settingsPath.value ? $apiPath + `/settings/${settingsPath.value}/publication-sites` : null, { immediate: false, watch: false })
 watch(dataset, () => {
   if (dataset.value) publicationSitesFetch.refresh()
 })
@@ -205,6 +210,33 @@ const sitesContribPermissionsRisk = computed(() => {
   return sitesContribPermissionsRisk
 })
 
+const isPublishedOnSite = (site: PublicationSite) => dataset.value?.publicationSites?.includes(`${site.type}:${site.id}`) ?? false
+const isRequestedOnSite = (site: PublicationSite) => dataset.value?.requestedPublicationSites?.includes(`${site.type}:${site.id}`) ?? false
+
+const canPublish = (site: PublicationSite) => {
+  const warnings = sitesWarnings.value[`${site.type}:${site.id}`]
+  return warnings && warnings.length === 0 && can('writePublicationSites').value && (!account.value.department || account.value.department === site.department)
+}
+
+const canRequestPublication = (_site: PublicationSite) => {
+  return can('writeDescription').value
+}
+
+const publishSwitchDisabled = (site: PublicationSite) => {
+  const siteKey = `${site.type}:${site.id}`
+  return ((hasWarning(site) || sitesContribPermissionsRisk.value[siteKey]) && !isPublishedOnSite(site)) ||
+    (!canPublish(site) && !site.settings?.staging) ||
+    !canRequestPublication(site)
+}
+
+const requestedSwitchVisible = (site: PublicationSite) => {
+  return dataset.value?.owner.type === 'organization' && !site.settings?.staging && !isPublishedOnSite(site)
+}
+
+const requestedSwitchDisabled = (site: PublicationSite) => {
+  return (hasWarning(site) && !isRequestedOnSite(site)) || isPublishedOnSite(site) || canPublish(site) || !canRequestPublication(site)
+}
+
 const togglePublicationSites = (site: PublicationSite) => {
   const siteKey = `${site.type}:${site.id}`
   let publicationSites = [...dataset.value!.publicationSites ?? []]
@@ -227,36 +259,6 @@ const toggleRequestedPublicationSites = (site: PublicationSite) => {
     requestedPublicationSites.push(siteKey)
   }
   patchDataset.execute({ requestedPublicationSites })
-}
-
-const canPublish = (site: PublicationSite) => {
-  return can('writeDescription').value && (can('writePublicationSites').value || site.settings?.staging) && (!account.value.department || account.value.department === site.department)
-}
-
-const togglePublicationSitesStatus = (site: PublicationSite) => {
-  const canToggle = canPublish(site)
-  if (dataset.value?.publicationSites?.includes(`${site.type}:${site.id}`)) {
-    if (!canToggle) return 'disabled'
-    return 'visible'
-  } else {
-    if (!canToggle) return 'hidden'
-    if (hasWarning(site) || sitesContribPermissionsRisk.value[`${site.type}:${site.id}`]) return 'disabled'
-    return 'visible'
-  }
-}
-
-const toggleRequestedPublicationSitesStatus = (site: PublicationSite) => {
-  if (dataset.value?.publicationSites?.includes(`${site.type}:${site.id}`)) return 'hidden'
-
-  const canTogglePs = canPublish(site)
-
-  if (dataset.value?.requestedPublicationSites?.includes(`${site.type}:${site.id}`)) {
-    if (canTogglePs) return 'disabled'
-    if (can('writeDescription').value) return 'visible'
-  } else {
-    if (!canTogglePs && can('writeDescription').value) return 'visible'
-    return 'hidden'
-  }
 }
 </script>
 

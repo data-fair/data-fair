@@ -4,6 +4,7 @@
     :close-on-content-click="false"
     min-width="320"
     max-width="420"
+    style="z-index: 2600; /* Higher than agent chat drawer 2500 */"
   >
     <template #activator="{ props: menuProps }">
       <v-btn

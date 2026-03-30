@@ -2,8 +2,7 @@
   <v-navigation-drawer
     v-model="drawer"
     color="primary"
-    elevation="2"
-    class="rounded-te-md"
+    class="border-text-primary border-e-md border-opacity-100"
   >
     <v-list
       density="compact"

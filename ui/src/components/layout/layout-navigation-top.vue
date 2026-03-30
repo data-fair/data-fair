@@ -2,8 +2,6 @@
   <v-app-bar
     color="background"
     density="compact"
-    scroll-behavior="elevate"
-    flat
   >
     <v-app-bar-nav-icon
       v-if="user && !lgAndUp"

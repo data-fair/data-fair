@@ -99,7 +99,7 @@ const agentChatDrawerProps = computed(() => {
   }
 
   return {
-    class: 'border-secondary border-t-md border-s-md border-opacity-100 elevation-2 rounded-ts-md',
+    class: 'border-secondary border-t-md border-s-md border-opacity-100',
     style: 'overflow: hidden',
     width,
     temporary

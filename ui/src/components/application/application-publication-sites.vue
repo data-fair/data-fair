@@ -1,5 +1,8 @@
 <template>
-  <v-container v-if="application && publicationSitesFetch.data.value">
+  <v-container
+    v-if="application && publicationSitesFetch.data.value"
+    fluid
+  >
     <p
       v-if="!publicationSitesFetch.data.value.length"
       class="mb-2"
@@ -22,31 +25,51 @@
             <v-list-item-title>
               <a
                 class="simple-link"
-                :href="site.applicationUrlTemplate && isPublished(site) ? site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug ?? application.id) : site.url"
+                :href="site.url"
                 target="_blank"
               >{{ site.title || site.url || site.id }}</a>
             </v-list-item-title>
-            <template #append>
+            <v-list-item-subtitle
+              v-if="application.owner.department"
+              class="mb-2"
+            >
+              <span>{{ application.owner.name }}</span>
+              <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
+              v-if="site.applicationUrlTemplate && isPublished(site)"
+              class="mb-2"
+            >
+              <a
+                :href="site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug ?? application.id)"
+                target="_blank"
+              >
+                {{ site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug ?? application.id) }}
+              </a>
+            </v-list-item-subtitle>
+
+            <v-list-item-subtitle>
               <v-switch
-                v-if="canPublish(site) || isPublished(site)"
-                :model-value="isPublished(site)"
-                :disabled="!canPublish(site)"
-                :label="t('published')"
-                color="primary"
                 hide-details
                 density="compact"
+                :model-value="isPublished(site)"
+                :disabled="(!canPublish(site) && !site.settings?.staging) || !canRequestPublication(site)"
+                :label="t('published')"
+                class="mt-0 ml-6"
+                color="primary"
                 @update:model-value="(val: boolean | null) => togglePublish(site, !!val)"
               />
               <v-switch
-                v-else-if="canRequestPublication(site) && !isPublished(site)"
-                :model-value="isRequested(site)"
-                :label="t('publicationRequested')"
-                color="primary"
+                v-if="application.owner.type === 'organization' && !site.settings?.staging && !isPublished(site)"
                 hide-details
                 density="compact"
+                :model-value="isRequested(site)"
+                :disabled="isPublished(site) || canPublish(site) || !canRequestPublication(site)"
+                :label="t('publicationRequested')"
+                class="mt-0 ml-6"
                 @update:model-value="(val: boolean | null) => toggleRequested(site, !!val)"
               />
-            </template>
+            </v-list-item-subtitle>
           </v-list-item>
         </v-list>
       </v-card>
@@ -63,16 +86,16 @@
 
 <i18n lang="yaml">
 fr:
-  noPublicationSite: Aucun portail de publication n'est configure.
-  publishThisApp: Publiez cette application sur vos portails.
-  published: publie
-  publicationRequested: publication demandee
-  preferLargeDisplay: privilegier un rendu large
+  noPublicationSite: Vous n'avez pas configuré de portail sur lequel publier cette application.
+  publishThisApp: Publiez cette application sur un ou plusieurs de vos portails.
+  published: publié
+  publicationRequested: publication demandée par un contributeur
+  preferLargeDisplay: privilégier un rendu large
 en:
-  noPublicationSite: No publication site is configured.
-  publishThisApp: Publish this application on your portals.
+  noPublicationSite: You haven't configured a portal to publish this application on.
+  publishThisApp: Publish this application on one or more of your portals.
   published: published
-  publicationRequested: publication requested
+  publicationRequested: publication requested by a contributor
   preferLargeDisplay: prefer a large display
 </i18n>
 
@@ -86,10 +109,23 @@ const { account } = useSessionAuthenticated()
 const owner = computed(() => application.value?.owner)
 const publicationSitesFetch = useFetch<any[]>(() => {
   if (!owner.value) return null
-  return `${$apiPath}/settings/${owner.value.type}/${owner.value.id}/publication-sites`
+  let path = `${$apiPath}/settings/${owner.value.type}/${owner.value.id}`
+  if (owner.value.department) path += ':' + owner.value.department
+  path += '/publication-sites'
+  return path
 }, { immediate: true })
 
-const publicationSites = computed(() => publicationSitesFetch.data.value ?? [])
+const publicationSites = computed(() => {
+  const sites = [...(publicationSitesFetch.data.value ?? [])]
+  sites.sort((ps1, ps2) => {
+    if (owner.value?.department && owner.value.department === ps1.department && ps1.department !== ps2.department) return -1
+    if (owner.value?.department && owner.value.department === ps2.department && ps1.department !== ps2.department) return 1
+    if (!owner.value?.department && !ps1.department && !!ps2.department) return -1
+    if (!owner.value?.department && !!ps1.department && !ps2.department) return 1
+    return 0
+  })
+  return sites
+})
 
 const isPublished = (site: any) => {
   return application.value?.publicationSites?.includes(`${site.type}:${site.id}`) ?? false
@@ -100,8 +136,7 @@ const isRequested = (site: any) => {
 }
 
 const canPublish = (site: any) => {
-  if (!can('writePublicationSites')) return false
-  return !account.value?.department || account.value.department === site.department
+  return can('writePublicationSites') && (!account.value?.department || account.value.department === site.department)
 }
 
 const canRequestPublication = (_site: any) => {
