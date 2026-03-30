@@ -64,4 +64,10 @@ test.describe('admin pages', () => {
     await goToAsAdmin('/data-fair/admin/base-apps')
     await expect(page.getByRole('heading', { name: "Modèles d'application" })).toBeVisible({ timeout: 10000 })
   })
+
+  test('displays agents page with title and organization selector', async ({ page, goToAsAdmin }) => {
+    await goToAsAdmin('/data-fair/admin/agents')
+    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByLabel('Organisation')).toBeVisible({ timeout: 10000 })
+  })
 })

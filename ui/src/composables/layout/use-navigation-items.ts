@@ -102,9 +102,6 @@ export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[
     if (canAdminDep.value && $uiConfig.portalsIntegration) {
       management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })
     }
-    if (canAdminDep.value && $uiConfig.agentsIntegration) {
-      management.push({ to: '/agents', icon: mdiRobotOutline, title: t('agents') })
-    }
     groups.push({ key: 'management', title: t('group.management'), items: management })
 
     // Connectors group
@@ -179,6 +176,9 @@ export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[
       }
       if ($uiConfig.processingsIntegration) {
         admin.push({ to: '/admin/processings-plugins', icon: mdiCogTransferOutline, title: t('processings'), subtitle: 'Plugins' })
+      }
+      if ($uiConfig.agentsIntegration) {
+        admin.push({ to: '/admin/agents', icon: mdiRobotOutline, title: t('agents') })
       }
       for (const extra of ($uiConfig.extraAdminNavigationItems ?? [])) {
         admin.push({

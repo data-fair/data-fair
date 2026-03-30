@@ -34,6 +34,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/admin/agents': RouteRecordInfo<
+      '/admin/agents',
+      '/admin/agents',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/admin/base-apps': RouteRecordInfo<
       '/admin/base-apps',
       '/admin/base-apps',
@@ -81,13 +88,6 @@ declare module 'vue-router/auto-routes' {
       '/admin-extra/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
-      | never
-    >,
-    '/agents': RouteRecordInfo<
-      '/agents',
-      '/agents',
-      Record<never, never>,
-      Record<never, never>,
       | never
     >,
     '/api-doc': RouteRecordInfo<
@@ -543,6 +543,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/admin/agents.vue': {
+      routes:
+        | '/admin/agents'
+      views:
+        | never
+    }
     'src/pages/admin/base-apps.vue': {
       routes:
         | '/admin/base-apps'
@@ -582,12 +588,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/admin-extra/[id].vue': {
       routes:
         | '/admin-extra/[id]'
-      views:
-        | never
-    }
-    'src/pages/agents.vue': {
-      routes:
-        | '/agents'
       views:
         | never
     }
