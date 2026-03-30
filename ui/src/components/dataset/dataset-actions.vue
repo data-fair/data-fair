@@ -343,6 +343,6 @@ const newSlug = ref('')
 
 const confirmSlug = async () => {
   showSlugDialog.value = false
-  await patchDataset({ slug: newSlug.value })
+  await patchDataset.execute({ slug: newSlug.value })
 }
 </script>
