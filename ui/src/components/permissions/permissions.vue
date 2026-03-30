@@ -1,6 +1,8 @@
 <template>
   <div>
-    <p>{{ t('description') }}</p>
+    <p class="mb-5">
+      {{ t('description') }}
+    </p>
 
     <v-alert
       v-if="resource.owner?.department"

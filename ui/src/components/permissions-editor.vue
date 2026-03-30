@@ -1,6 +1,8 @@
 <template>
   <div v-if="permissions">
-    <p>{{ t('description') }}</p>
+    <p class="mb-2">
+      {{ t('description') }}
+    </p>
 
     <v-select
       v-model="visibility"

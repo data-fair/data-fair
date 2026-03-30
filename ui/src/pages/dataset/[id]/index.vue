@@ -473,7 +473,4 @@ const sections = computedDeepDiff(() => {
 </script>
 
 <style>
-.dataset .v-tab {
-  font-weight: bold;
-}
 </style>

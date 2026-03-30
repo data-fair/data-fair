@@ -12,7 +12,7 @@
     </template>
     <v-card
       v-if="permission && showDialog"
-      variant="outlined"
+      variant="elevated"
     >
       <v-card-title>{{ t('editPermission') }}</v-card-title>
       <v-card-text>
