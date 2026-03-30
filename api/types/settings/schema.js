@@ -297,12 +297,13 @@ export default {
           id: {
             type: 'string',
             title: 'Identifiant',
-            'x-if': 'parent.value.id',
-            readOnly: true
+            readOnly: true,
+            layout: {
+              if: { type: 'js-eval', expr: 'parent.data.id', pure: false }
+            }
           },
           identifiers: {
             type: 'array',
-            'x-display': 'hidden',
             layout: 'none',
             items: {
               type: 'string',

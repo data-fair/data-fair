@@ -23,3 +23,4 @@ node_modules
 dev/logs/
 test-results/
 /benchmark/results/*.json
+/docs/**/*.pdf

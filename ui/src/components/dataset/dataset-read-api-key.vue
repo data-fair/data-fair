@@ -94,8 +94,8 @@ const schema = {
         { const: 'P1Y', title: '1 annee', 'x-i18n': { en: { title: '1 year' } } }
       ]
     },
-    expiresAt: { type: 'string', format: 'date-time', readOnly: true, 'x-display': 'hidden' },
-    renewAt: { type: 'string', format: 'date-time', readOnly: true, 'x-display': 'hidden' }
+    expiresAt: { type: 'string', format: 'date-time', readOnly: true, layout: 'none' },
+    renewAt: { type: 'string', format: 'date-time', readOnly: true, layout: 'none' }
   }
 }
 

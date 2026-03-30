@@ -1,7 +1,6 @@
 const filters = {
   type: 'array',
   title: 'Filtres statiques',
-  'x-options': { editMode: 'inline' },
   items: {
     type: 'object',
     required: ['property', 'values'],
@@ -58,7 +57,6 @@ export const schema = {
     bulkSearchs: {
       type: 'array',
       title: 'Récupération de lignes en masse',
-      'x-options': { editMode: 'dialog' },
       items: {
         type: 'object',
         required: ['title'],
@@ -92,7 +90,6 @@ export const schema = {
             type: 'array',
             title: 'Méthodes de correspondance',
             minItems: 1,
-            'x-options': { editMode: 'inline' },
             items: {
               type: 'object',
               required: ['type', 'property'],
@@ -179,7 +176,6 @@ Exemple: ma_colonne,-ma_colonne2`
     singleSearchs: {
       type: 'array',
       title: 'Recherche de paires code / libellé',
-      'x-options': { editMode: 'dialog' },
       items: {
         type: 'object',
         required: ['title', 'output'],
