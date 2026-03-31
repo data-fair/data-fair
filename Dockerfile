@@ -1,8 +1,9 @@
-FROM node:24.11.1-alpine3.22 AS base
+FROM node:24.14.0-alpine3.22 AS base
 
 # RUN npm install -g npm@11.1.0
 
 WORKDIR /app
+ENV NODE_ENV=production
 
 ##########################
 FROM base AS geodeps
@@ -68,12 +69,16 @@ COPY --from=package-strip /app/package-lock.json package-lock.json
 ADD ui/package.json ui/package.json
 ADD api/package.json api/package.json
 ADD shared/package.json shared/package.json
-ADD embed-ui/package.json embed-ui/package.json
 ADD patches patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
+# install all deps including devDependencies needed for ui build
+ENV NODE_ENV=development
 RUN npm ci --no-audit --no-fund
-
+RUN mkdir -p /app/shared/node_modules
+RUN mkdir -p /app/api/node_modules
+RUN mkdir -p /app/ui/node_modules
+ENV NODE_ENV=production
 ADD /api/config api/config
 ADD /api/types api/types
 ADD /api/doc api/doc
@@ -83,24 +88,16 @@ RUN npm run build-types
 ##########################
 FROM installer AS builder
 
+ENV NODE_ENV=development
 ADD ui ui
+COPY --from=installer /app/ui/node_modules /app/ui/node_modules
 ADD api/types api/types
 ADD api/src/config.ts api/src/config.ts
-RUN mkdir -p /app/api/node_modules
+ADD /api/src/ui-config.ts api/src/ui-config.ts
 ADD shared shared
-RUN mkdir -p /app/shared/node_modules
-RUN npm --prefix ui install --no-audit --no-fund
+COPY --from=installer /app/shared/node_modules /app/shared/node_modules
 ENV NODE_ENV=production
 RUN npm run build
-
-##########################
-FROM installer AS embed-ui-builder
-
-ADD /api/src/config.ts api/src/config.ts
-ADD /api/src/ui-config.ts api/src/ui-config.ts
-ADD /shared shared
-ADD /embed-ui embed-ui
-RUN npm -w embed-ui run build
 
 ##########################
 FROM installer AS api-installer
@@ -135,15 +132,12 @@ COPY --from=api-installer /app/api/types /app/api/types
 COPY --from=api-installer /app/api/doc /app/api/doc
 COPY --from=api-installer /app/api/config /app/api/config
 COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
-COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
-COPY --from=embed-ui-builder /app/embed-ui/dist embed-ui/dist
+COPY --from=builder /app/ui/dist /app/ui/dist
 COPY --from=parquet-writer-builder /app/parquet-writer/package.json parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.js parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.d.ts parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.mts parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.node parquet-writer/
-ADD ui/nuxt.config.js ui/nuxt.config.js
-ADD ui/public/static ui/public/static
 ADD /api api
 ADD /shared shared
 
@@ -152,7 +146,6 @@ ADD package.json README.md LICENSE BUILD.json* ./
 WORKDIR /app/api
 
 # configure node webapp environment
-ENV NODE_ENV=production
 ENV DEBUG db,upgrade*
 
 # TODO: activate this line on next major release

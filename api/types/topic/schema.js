@@ -29,7 +29,6 @@ export default {
       'x-i18n-title': {
         en: 'Color'
       },
-      'x-display': 'color-picker',
       layout: {
         comp: 'color-picker',
         cols: 6
@@ -45,11 +44,6 @@ export default {
       'x-i18n-description': {
         en: "You can easily browse the list of available icons on this <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance.",
       },
-      'x-fromUrl': 'https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}',
-      'x-itemKey': 'name',
-      'x-itemTitle': 'name',
-      'x-itemIcon': 'name',
-      'x-itemsProp': 'results',
       layout: {
         getItems: {
           url: 'https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}&select=name,svg,svgPath&size=25',

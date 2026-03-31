@@ -41,7 +41,7 @@ test.describe('Extensions (core)', () => {
     // Prepare for extension using created remote service and patch dataset to ask for it
     await setupCoordsMock(10)
 
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
@@ -49,9 +49,9 @@ test.describe('Extensions (core)', () => {
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
     const extensionKey = dataset.extensions[0].propertyPrefix
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
-    const matchLevelProp = dataset.schema.find(field => field.key === extensionKey + '.matchLevel')
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.lat'))
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.lon'))
+    const matchLevelProp = dataset.schema.find((field: any) => field.key === extensionKey + '.matchLevel')
     assert.equal(matchLevelProp['x-cardinality'], 2)
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -62,9 +62,9 @@ test.describe('Extensions (core)', () => {
     // re-order columns and change titles and descriptions
     dataset = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: [
-        { ...dataset.schema.find(p => p.key === '_coords.lat'), title: 'Overwritten title lat', description: 'Overwritten description lat' },
-        { ...dataset.schema.find(p => p.key === '_coords.lon'), title: 'Overwritten title lon', description: 'Overwritten description lon' },
-        ...dataset.schema.filter(p => p.key !== '_coords.lat' && p.key !== '_coords.lon').reverse()
+        { ...dataset.schema.find((p: any) => p.key === '_coords.lat'), title: 'Overwritten title lat', description: 'Overwritten description lat' },
+        { ...dataset.schema.find((p: any) => p.key === '_coords.lon'), title: 'Overwritten title lon', description: 'Overwritten description lon' },
+        ...dataset.schema.filter((p: any) => p.key !== '_coords.lat' && p.key !== '_coords.lon').reverse()
       ]
     }).then(r => r.data)
     assert.equal(dataset.status, 'finalized')
@@ -84,7 +84,7 @@ test.describe('Extensions (core)', () => {
     // Re-prepare for extension, it should only process the new line
     await setupCoordsMock(50)
     const form = new FormData()
-    let content = await fs.readFile('./tests/resources/datasets/dataset-extensions.csv')
+    let content: string = (await fs.readFile('./tests/resources/datasets/dataset-extensions.csv')).toString()
     content += 'me,3 les noés la chapelle caro\n'
     form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
@@ -94,19 +94,19 @@ test.describe('Extensions (core)', () => {
     // and new result with new extension
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?select=*`)
     assert.equal(res.data.total, 3)
-    const existingResult = res.data.results.find(l => l.label === 'koumoul')
+    const existingResult = res.data.results.find((l: any) => l.label === 'koumoul')
     assert.equal(existingResult[extensionKey + '.lat'], 10)
     assert.equal(existingResult[extensionKey + '.lon'], 10)
     assert.equal(existingResult._geopoint, '10,10')
-    const newResult = res.data.results.find(l => l.label === 'me')
+    const newResult = res.data.results.find((l: any) => l.label === 'me')
     assert.equal(newResult[extensionKey + '.lat'], 50)
     assert.equal(newResult[extensionKey + '.lon'], 50)
     assert.equal(newResult._geopoint, '50,50')
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
-    assert.ok(res.data.find(file => file.key === 'original'))
-    assert.ok(res.data.find(file => file.key === 'full'))
+    assert.ok(res.data.find((file: any) => file.key === 'original'))
+    assert.ok(res.data.find((file: any) => file.key === 'full'))
     assert.equal(res.data.length, 2)
 
     // Reduce selected output using extension.select
@@ -124,8 +124,8 @@ test.describe('Extensions (core)', () => {
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
-    assert.ok(res.data.find(file => file.key === 'original'))
-    assert.ok(res.data.find(file => file.key === 'full'))
+    assert.ok(res.data.find((file: any) => file.key === 'original'))
+    assert.ok(res.data.find((file: any) => file.key === 'full'))
     assert.equal(res.data.length, 2)
 
     // perform the extension as a simulation on a pseudo line
@@ -140,8 +140,8 @@ test.describe('Extensions (core)', () => {
     await waitForFinalize(ax, dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
-    assert.ok(res.data.find(file => file.key === 'original'))
-    assert.ok(!res.data.find(file => file.key === 'full'))
+    assert.ok(res.data.find((file: any) => file.key === 'original'))
+    assert.ok(!res.data.find((file: any) => file.key === 'full'))
   })
 
   test('Extend dataset that was previouly converted', async () => {
@@ -151,7 +151,7 @@ test.describe('Extensions (core)', () => {
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await setupCoordsMock(10, { multiply: true })
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
@@ -159,8 +159,8 @@ test.describe('Extensions (core)', () => {
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
     const extensionKey = dataset.extensions[0].propertyPrefix
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.lat'))
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.lon'))
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 3)
@@ -170,9 +170,9 @@ test.describe('Extensions (core)', () => {
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
-    assert.ok(res.data.find(file => file.key === 'original'))
-    assert.ok(res.data.find(file => file.key === 'normalized'))
-    assert.ok(res.data.find(file => file.key === 'full'))
+    assert.ok(res.data.find((file: any) => file.key === 'original'))
+    assert.ok(res.data.find((file: any) => file.key === 'normalized'))
+    assert.ok(res.data.find((file: any) => file.key === 'full'))
     assert.equal(res.data.length, 3)
   })
 
@@ -183,7 +183,7 @@ test.describe('Extensions (core)', () => {
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await setupCoordsMock(10)
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
@@ -191,8 +191,8 @@ test.describe('Extensions (core)', () => {
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
     const extensionKey = dataset.extensions[0].propertyPrefix
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.lat'))
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.lon'))
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
@@ -210,7 +210,7 @@ test.describe('Extensions (core)', () => {
       { NOMEN_LONG: 'KOUMOUL', 'location.lon': '-2.748514', 'location.lat': '47.687173' },
       'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon'
     )
-    dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
+    dataset.schema.find((field: any) => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{
@@ -230,8 +230,8 @@ test.describe('Extensions (core)', () => {
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
     const extensionKey = dataset.extensions[0].propertyPrefix
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lon'))
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.location.lat'))
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.location.lon'))
 
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -242,10 +242,10 @@ test.describe('Extensions (core)', () => {
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
-    assert.ok(res.data.find(file => file.key === 'original'))
-    assert.ok(res.data.find(file => file.key === 'full'))
-    assert.equal(dataset.storage.indexed.size, res.data.find(file => file.key === 'full').size)
-    assert.equal(dataset.storage.size, res.data.find(file => file.key === 'full').size + res.data.find(file => file.key === 'original').size)
+    assert.ok(res.data.find((file: any) => file.key === 'original'))
+    assert.ok(res.data.find((file: any) => file.key === 'full'))
+    assert.equal(dataset.storage.indexed.size, res.data.find((file: any) => file.key === 'full').size)
+    assert.equal(dataset.storage.size, res.data.find((file: any) => file.key === 'full').size + res.data.find((file: any) => file.key === 'original').size)
     assert.equal(dataset.storage.indexed.parts.length, 1)
     assert.equal(dataset.storage.indexed.parts[0], 'full-file')
     assert.equal(res.data.length, 2)
@@ -267,7 +267,7 @@ other,unknown address
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     let dataset = await waitForFinalize(ax, res.data.id)
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension failure with HTTP error code
     // The mock route persists, so both the first error (with retry) and the second error (no retry)
     // happen instantly (errorRetryDelay: 0 in dev). We wait for the final error state.
@@ -312,7 +312,7 @@ empty,
     const dataset = await waitForFinalize(ax, res.data.id)
 
     await setupCoordsMock(10)
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
@@ -336,7 +336,7 @@ koumoul,19 rue de la voie lactée saint avé
 
     await setupCoordsMock(10)
 
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
@@ -346,7 +346,7 @@ koumoul,19 rue de la voie lactée saint avé
 
     // check extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
-    const fullFile = res.data.find(file => file.key === 'full')
+    const fullFile = res.data.find((file: any) => file.key === 'full')
     assert.ok(fullFile)
     res = await ax.get(fullFile.url)
 
@@ -360,7 +360,7 @@ koumoul,19 rue de la voie lactée saint avé
 
     // check extended file was deleted
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
-    assert.ok(!res.data.find(file => file.key === 'full'))
+    assert.ok(!res.data.find((file: any) => file.key === 'full'))
     await assert.rejects(
       ax.get(fullFile.url),
       { status: 404 }
@@ -377,7 +377,7 @@ koumoul,19 rue de la voie lactée saint avé
       { siret: '82898347800011', NOMEN_LONG: 'KOUMOUL', 'location.lon': '-2.748514', 'location.lat': '47.687173' },
       'siret,NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon'
     )
-    dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
+    dataset.schema.find((field: any) => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{
@@ -398,8 +398,8 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
     const extensionKey = dataset.extensions[0].propertyPrefix
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
-    const extSiret = dataset.schema.find(field => field.key === extensionKey + '.siret')
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.location.lat'))
+    const extSiret = dataset.schema.find((field: any) => field.key === extensionKey + '.siret')
     assert.ok(!extSiret['x-refersTo'])
   })
 
@@ -454,7 +454,7 @@ other,unknown address
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     let dataset = await waitForFinalize(ax, res.data.id)
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     await setupCoordsMock(50)
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -467,7 +467,7 @@ other,unknown address
     assert.equal(dataset.schema.length, 11)
 
     // if we remove the concept, the extension is removed also
-    delete dataset.schema.find(field => field.key === 'adr')['x-refersTo']
+    delete dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo']
     await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema }), (err: any) => {
       assert.equal(err.status, 400)
       assert.ok(err.data.includes('un concept nécessaire'))
@@ -488,7 +488,7 @@ other,unknown address
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     let dataset = await waitForFinalize(ax, res.data.id)
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     await setupCoordsMock(50)
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -500,7 +500,7 @@ other,unknown address
     assert.equal(dataset.schema.length, 11)
 
     const form2 = new FormData()
-    form2.append('schema', JSON.stringify(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension'])))
+    form2.append('schema', JSON.stringify(dataset.schema.filter((p: any) => !p['x-calculated'] && !p['x-extension'])))
     form2.append('file', content, 'dataset2.csv')
     res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
     assert.equal(res.status, 200)
@@ -519,7 +519,7 @@ other,unknown address
       { NOMEN_LONG: 'KOUMOUL' },
       'NOMEN_LONG,bodacc.capital,TEFET'
     )
-    dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
+    dataset.schema.find((field: any) => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{
@@ -537,7 +537,7 @@ other,unknown address
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
     const extensionKey = dataset.extensions[0].propertyPrefix
-    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.NOMEN_LONG'))
+    assert.ok(dataset.schema.find((field: any) => field.key === extensionKey + '.NOMEN_LONG'))
 
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -548,9 +548,9 @@ other,unknown address
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
-    assert.ok(res.data.find(file => file.key === 'original'))
-    assert.ok(res.data.find(file => file.key === 'full'))
-    assert.equal(dataset.storage.indexed.size, res.data.find(file => file.key === 'full').size)
+    assert.ok(res.data.find((file: any) => file.key === 'original'))
+    assert.ok(res.data.find((file: any) => file.key === 'full'))
+    assert.equal(dataset.storage.indexed.size, res.data.find((file: any) => file.key === 'full').size)
     assert.equal(res.data.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.type, 'FeatureCollection')

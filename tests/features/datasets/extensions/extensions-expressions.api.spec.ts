@@ -35,7 +35,7 @@ test.describe('Extensions (expressions)', () => {
     })
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
-    assert.ok(dataset.schema.find(field => field.key === 'calc1'))
+    assert.ok(dataset.schema.find((field: any) => field.key === 'calc1'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
@@ -54,7 +54,7 @@ test.describe('Extensions (expressions)', () => {
     })
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
-    assert.ok(dataset.schema.find(field => field.key === 'test'))
+    assert.ok(dataset.schema.find((field: any) => field.key === 'test'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
@@ -73,7 +73,7 @@ test.describe('Extensions (expressions)', () => {
     })
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
-    assert.ok(dataset.schema.find(field => field.key === 'calc1'))
+    assert.ok(dataset.schema.find((field: any) => field.key === 'calc1'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
@@ -88,7 +88,7 @@ test.describe('Extensions (expressions)', () => {
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     await setupCoordsMock(10, { multiply: true })
-    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
 
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -99,7 +99,7 @@ test.describe('Extensions (expressions)', () => {
     })
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
-    assert.ok(dataset.schema.find(field => field.key === 'calc1'))
+    assert.ok(dataset.schema.find((field: any) => field.key === 'calc1'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
@@ -154,7 +154,7 @@ test.describe('Extensions (expressions)', () => {
     })
     assert.equal(res.status, 200)
     dataset = await waitForFinalize(ax, dataset.id)
-    assert.ok(dataset.schema.find(field => field.key === 'employees'))
+    assert.ok(dataset.schema.find((field: any) => field.key === 'employees'))
 
     const form = new FormData()
     form.append('file', fs.readFileSync('./tests/resources/datasets/dataset2.csv'), 'dataset2.csv')

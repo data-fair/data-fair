@@ -1,3 +1,4 @@
+/** @param {any} p @param {string} defaultPublicUrl @param {string} publicBaseUrl */
 export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flatArrays = false) => {
   const cleanProp = { ...p }
   // we badly named enum from the start, too bad, now we accept this semantic difference with json schema
@@ -17,17 +18,25 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
 
     delete cleanProp.examples
   }
+
+  /** @type {any} */
+  const layout = {}
+
   if (cleanProp['x-fromUrl'] && publicBaseUrl) {
     cleanProp['x-fromUrl'] = cleanProp['x-fromUrl'].replace(defaultPublicUrl, publicBaseUrl)
     delete cleanProp.examples
   }
-  if (cleanProp.separator) cleanProp['x-separator'] = cleanProp.separator
+  if (cleanProp['x-fromUrl']) {
+    layout.getItems = { url: cleanProp['x-fromUrl'] }
+  }
+
+  if (cleanProp.separator) layout.separator = cleanProp.separator
 
   if (cleanProp['x-calculated']) cleanProp.readOnly = true
   if (cleanProp['x-extension']) cleanProp.readOnly = true
 
-  if (p['x-refersTo'] === 'http://schema.org/description') cleanProp['x-display'] = 'markdown'
-  if (p['x-refersTo'] === 'https://schema.org/color') cleanProp['x-display'] = 'color-picker'
+  if (p['x-refersTo'] === 'http://schema.org/description') layout.comp = 'markdown'
+  if (p['x-refersTo'] === 'https://schema.org/color') layout.comp = 'color-picker'
 
   if (cleanProp.pattern && cleanProp.patternErrorMessage) {
     // cf https://ajv.js.org/packages/ajv-errors.html
@@ -44,12 +53,13 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
   const required = cleanProp['x-required']
   delete cleanProp['x-required']
 
-  if (cleanProp['x-separator']) {
+  if (layout.separator) {
     if (flatArrays) {
       if (cleanProp['x-display'] || cleanProp.format) {
         // separator is incompatible with custom input components, we chose to render the proper component
         // but with a single value, instead of multi-value in a basic text field
-        delete cleanProp['x-separator']
+        delete layout.separator
+        if (Object.keys(layout).length) cleanProp.layout = layout
         return cleanProp
       }
       // flat usage of separator is incompatible with validation
@@ -58,18 +68,15 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
         title: cleanProp.title,
         description: cleanProp.description,
         readOnly: cleanProp.readOnly,
-        'x-separator': cleanProp['x-separator'],
-        'x-fromUrl': cleanProp['x-fromUrl'],
         anyOf: cleanProp.anyOf,
-        oneOf: cleanProp.oneOf
+        oneOf: cleanProp.oneOf,
+        layout: { ...layout }
       }
     } else {
       const itemsProps = { ...cleanProp }
       delete itemsProps.title
       delete itemsProps.description
       delete itemsProps.readOnly
-      delete itemsProps['x-separator']
-      delete itemsProps['x-fromUrl']
 
       /** @type {any} */
       const array = {
@@ -77,13 +84,16 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
         title: cleanProp.title,
         description: cleanProp.description,
         readOnly: cleanProp.readOnly,
-        'x-fromUrl': cleanProp['x-fromUrl'],
         items: itemsProps
+      }
+      if (layout.getItems) {
+        array.layout = { getItems: layout.getItems }
       }
       if (required) array.minItems = 1
       return array
     }
   }
 
+  if (Object.keys(layout).length) cleanProp.layout = layout
   return cleanProp
 }

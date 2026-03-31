@@ -68,7 +68,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
-export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
+export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState, options = {}) => {
   const explain = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
@@ -95,11 +95,15 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
-    extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
+    if (options.catalogMode) {
+      extraFilters.push({ publicationSites: `${publicationSite.type}:${publicationSite.id}` })
+    } else {
+      extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
+    }
   }
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
-  const sort = findUtils.sort(reqQuery.sort, reqQuery.q)
+  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
   const project = findUtils.project(reqQuery.select, [], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
@@ -213,7 +217,7 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
   const cached = await memoizedGetDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   if (!cached.dataset) {
     // cache says not found — but is the cache stale? Do a lightweight check
-    const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection: { updatedAt: 1, _id: 0 } })
+    const fresh = await db.collection('datasets').findOne({ _uniqueRefs: datasetId }, { projection: { updatedAt: 1, _id: 0 } })
     if (!fresh) return cached // dataset really doesn't exist
     // dataset exists but cache missed it — do a full read
     return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
@@ -222,7 +226,7 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
   // cache has a result — check if it's still fresh via a lightweight query
   const projection = { updatedAt: 1, finalizedAt: 1, status: 1, errorStatus: 1, errorRetry: 1, _id: 0 }
   if (useDraft) projection['draft.updatedAt'] = 1
-  const fresh = await db.collection('datasets').findOne({ id: datasetId }, { projection })
+  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection })
   if (!fresh) return {} // dataset was deleted
 
   // check top-level updatedAt, finalizedAt and status

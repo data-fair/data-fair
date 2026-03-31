@@ -10,7 +10,7 @@ const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
 const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')
 const testUser6Org = await axiosAuth('test_user6@test.com', 'test_org1')
 
-const publicUrl2 = `http://localhost:${process.env.NGINX_PORT2}/data-fair`
+const publicUrl2 = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}/data-fair`
 
 test.describe('publication sites', () => {
   test.beforeEach(async () => {
@@ -69,7 +69,7 @@ test.describe('publication sites', () => {
       return true
     })
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:' + process.env.NGINX_PORT2 }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT2 }
     await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 
@@ -111,7 +111,7 @@ test.describe('publication sites', () => {
   test('should publish application on a org site', async () => {
     const ax = testUser1Org
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:' + process.env.NGINX_PORT2 }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT2 }
     await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 
@@ -229,5 +229,40 @@ test.describe('publication sites', () => {
     await assert.rejects(testUser5Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-unknown'] }), (err: any) => err.status === 404)
     await assert.rejects(testUser5Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-prod'] }), (err: any) => err.status === 403)
     await testUser5Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-staging'] })
+  })
+
+  test('should access dataset and application by slug through publication site domain', async () => {
+    const ax = testUser1Org
+
+    // register a publication site on NGINX_PORT2
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT2 }
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await clearPublicationSitesCache()
+
+    // create a dataset with a title so slug differs from nanoid-based id
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'my published dataset', schema: [] })).data
+    assert.ok(dataset.slug, 'dataset should have a slug')
+    assert.notEqual(dataset.slug, dataset.id, 'slug should differ from id')
+
+    // publish dataset to the site
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
+
+    // access by id through publication site domain - should work
+    const byId = (await ax.get(`${publicUrl2}/api/v1/datasets/${dataset.id}`)).data
+    assert.equal(byId.id, dataset.id)
+
+    // access by slug through publication site domain - this is the regression
+    const bySlug = (await ax.get(`${publicUrl2}/api/v1/datasets/${dataset.slug}`)).data
+    assert.equal(bySlug.id, dataset.id)
+
+    // create an application and publish it
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'my published app' })).data
+    assert.ok(app.slug, 'application should have a slug')
+    assert.notEqual(app.slug, app.id, 'slug should differ from id')
+    await ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: ['data-fair-portals:portal1'] })
+
+    // access application by slug through publication site domain
+    const appBySlug = (await ax.get(`${publicUrl2}/api/v1/applications/${app.slug}`)).data
+    assert.equal(appBySlug.id, app.id)
   })
 })

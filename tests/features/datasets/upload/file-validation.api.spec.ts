@@ -7,7 +7,7 @@ import { waitForFinalize, waitForDatasetError, waitForJournalEvent } from '../..
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
-const schema = [
+const schema: any[] = [
   {
     key: 'id',
     type: 'string',

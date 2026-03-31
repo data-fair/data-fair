@@ -1,8 +1,6 @@
 const filters = {
   type: 'array',
   title: 'Filtres statiques',
-  'x-class': 'mb-4',
-  'x-options': { editMode: 'inline' },
   items: {
     type: 'object',
     required: ['property', 'values'],
@@ -10,9 +8,15 @@ const filters = {
       property: {
         type: 'object',
         title: 'Propriété sur laquelle appliquer le filtre',
-        'x-fromData': 'context.filterProperties',
-        'x-itemTitle': 'title',
-        'x-itemKey': 'key'
+        layout: {
+          getItems: {
+            type: 'js-eval',
+            expr: 'context.filterProperties',
+            pure: true,
+            itemKey: 'data["key"]',
+            itemTitle: 'data["title"]'
+          }
+        }
       },
       values: {
         type: 'array',
@@ -32,24 +36,27 @@ export const schema = {
     shareOrgs: {
       type: 'array',
       title: 'Partagez cette donnée de référence avec vos partenaires',
-      'x-if': 'context.ownerOrg',
-      'x-fromUrl': '{context.directoryUrl}/api/{context.dataset.owner.type}s/{context.dataset.owner.id}',
-      'x-itemsProp': 'partners',
-      'x-itemTitle': 'name',
-      'x-itemKey': 'id',
       items: {
         type: 'object',
         properties: {
           id: { type: 'string' },
           name: { type: 'string' }
         }
+      },
+      layout: {
+        if: { type: 'js-eval', expr: 'context.ownerOrg', pure: true },
+        getItems: {
+          // eslint-disable-next-line no-template-curly-in-string
+          url: { type: 'js-tpl', expr: '${context.directoryUrl}/api/${context.dataset.owner.type}s/${context.dataset.owner.id}', pure: true },
+          itemKey: 'data["id"]',
+          itemTitle: 'data["name"]',
+          itemsResults: 'data["partners"]'
+        }
       }
     },
     bulkSearchs: {
       type: 'array',
       title: 'Récupération de lignes en masse',
-      'x-class': 'my-4',
-      'x-options': { editMode: 'dialog' },
       items: {
         type: 'object',
         required: ['title'],
@@ -57,32 +64,32 @@ export const schema = {
           id: {
             type: 'string',
             title: 'Identifiant',
-            'x-if': 'parent.value.id',
-            readOnly: true
+            readOnly: true,
+            layout: {
+              if: { type: 'js-eval', expr: 'parent.data.id', pure: false }
+            }
           },
           title: {
             type: 'string',
             title: 'Titre',
-            'x-props': {
-              placeholder: 'exemple "récupérer les informations de plusieurs produits"'
-            },
-            minLength: 3
+            minLength: 3,
+            layout: {
+              props: { placeholder: 'exemple "récupérer les informations de plusieurs produits"' }
+            }
           },
           description: {
             type: 'string',
             title: 'Description',
-            'x-display': 'textarea',
-            'x-props': {
-              placeholder: 'exemple "cet enrichissement vous permet de récupérer les informations de plusieurs produits à partir d\'une liste de codes produits."'
+            layout: {
+              comp: 'textarea',
+              props: { placeholder: 'exemple "cet enrichissement vous permet de récupérer les informations de plusieurs produits à partir d\'une liste de codes produits."' }
             }
           },
           filters,
           input: {
             type: 'array',
             title: 'Méthodes de correspondance',
-            'x-class': 'mb-4',
             minItems: 1,
-            'x-options': { editMode: 'inline' },
             items: {
               type: 'object',
               required: ['type', 'property'],
@@ -94,14 +101,19 @@ export const schema = {
                   property: {
                     type: 'object',
                     title: 'Propriété comparée',
-                    'x-fromData': 'context.propertiesWithConcepts',
-                    'x-itemTitle': 'title',
-                    'x-itemKey': 'key'
+                    layout: {
+                      getItems: {
+                        type: 'js-eval',
+                        expr: 'context.propertiesWithConcepts',
+                        pure: true,
+                        itemKey: 'data["key"]',
+                        itemTitle: 'data["title"]'
+                      }
+                    }
                   }
                 }
               }, {
                 title: 'Date dans un interval',
-                'x-if': 'context.hasDateIntervalConcepts',
                 properties: {
                   type: { type: 'string', const: 'date-in-interval' },
                   property: {
@@ -114,10 +126,12 @@ export const schema = {
                       format: { type: 'string', const: 'date-time' }
                     }
                   }
+                },
+                layout: {
+                  if: { type: 'js-eval', expr: 'context.hasDateIntervalConcepts', pure: true }
                 }
               }, {
                 title: 'Coordonnée géographique à proximité',
-                'x-if': 'context.dataset.bbox',
                 required: ['type', 'distance'],
                 properties: {
                   type: { type: 'string', const: 'geo-distance' },
@@ -135,8 +149,12 @@ export const schema = {
                       type: { type: 'string', const: 'string' }
                     }
                   }
+                },
+                layout: {
+                  if: { type: 'js-eval', expr: 'context.dataset.bbox', pure: true }
                 }
-              }]
+              }],
+              oneOfLayout: { label: 'Type de méthode de correspondance' }
             }
           },
           sort: {
@@ -150,13 +168,14 @@ Le tri est exprimé sous forme d'une liste de clés de colonnes séparées par d
 Exemple: ma_colonne,-ma_colonne2`
           }
         }
+      },
+      layout: {
+        itemTitle: 'data.title'
       }
     },
     singleSearchs: {
       type: 'array',
       title: 'Recherche de paires code / libellé',
-      'x-class': 'mb-4',
-      'x-options': { editMode: 'dialog' },
       items: {
         type: 'object',
         required: ['title', 'output'],
@@ -164,65 +183,62 @@ Exemple: ma_colonne,-ma_colonne2`
           id: {
             type: 'string',
             title: 'Identifiant',
-            'x-if': 'parent.value.id',
-            readOnly: true
+            readOnly: true,
+            layout: {
+              if: { type: 'js-eval', expr: 'parent.data.id', pure: false }
+            }
           },
           title: {
             type: 'string',
             title: 'Titre',
-            'x-props': {
-              placeholder: 'exemple "recherche d\'un produit"'
-            },
-            minLength: 3
+            minLength: 3,
+            layout: {
+              props: { placeholder: 'exemple "recherche d\'un produit"' }
+            }
           },
           description: {
             type: 'string',
             title: 'Description',
-            'x-display': 'textarea',
-            'x-props': {
-              placeholder: 'exemple "récupérez un code produit en effectuant une recherche dans son code ou son libellé"'
+            layout: {
+              comp: 'textarea',
+              props: { placeholder: 'exemple "récupérez un code produit en effectuant une recherche dans son code ou son libellé"' }
             }
           },
           output: {
             type: 'object',
             title: 'Propriété à retourner (code)',
-            'x-fromData': 'context.propertiesWithConcepts',
-            'x-itemTitle': 'title',
-            'x-itemKey': 'key'
+            layout: {
+              getItems: {
+                type: 'js-eval',
+                expr: 'context.propertiesWithConcepts',
+                pure: true,
+                itemKey: 'data["key"]',
+                itemTitle: 'data["title"]'
+              }
+            }
           },
           label: {
             type: 'object',
             title: 'Propriété utilisée pour la recherche (libellé)',
-            'x-fromData': 'context.stringProperties',
-            'x-itemTitle': 'title',
-            'x-itemKey': 'key'
+            layout: {
+              getItems: {
+                type: 'js-eval',
+                expr: 'context.stringProperties',
+                pure: true,
+                itemKey: 'data["key"]',
+                itemTitle: 'data["title"]'
+              }
+            }
           },
           filters
-          /* input: {
-            type: 'array',
-            title: 'Propriétés utilisées pour la recherche',
-            minItems: 1,
-            'x-options': { editMode: 'inline' },
-            items: {
-              type: 'object',
-              required: ['property'],
-              properties: {
-                property: {
-                  type: 'object',
-                  title: 'Propriété',
-                  'x-fromData': 'context.searchProperties',
-                  'x-itemTitle': 'title',
-                  'x-itemKey': 'key',
-                },
-              },
-            },
-          }, */
         }
+      },
+      layout: {
+        itemTitle: 'data.title'
       }
     },
     virtualDatasets: {
       type: 'object',
-      'x-class': 'mt-4',
       properties: {
         active: {
           type: 'boolean',
@@ -232,7 +248,6 @@ Exemple: ma_colonne,-ma_colonne2`
     },
     standardSchema: {
       type: 'object',
-      'x-class': 'mt-4',
       properties: {
         active: {
           type: 'boolean',

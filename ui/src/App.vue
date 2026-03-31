@@ -1,0 +1,44 @@
+<template>
+  <v-app>
+    <component :is="layout">
+      <template #default>
+        <RouterView />
+      </template>
+    </component>
+    <ui-notif />
+  </v-app>
+</template>
+
+<script lang="ts" setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import uiNotif from '@data-fair/lib-vuetify/ui-notif.vue'
+import DefaultLayout from './layouts/default-layout.vue'
+import EmbedLayout from './layouts/embed-layout.vue'
+
+// useSession and useHead are auto-imported via vite.config.ts AutoImport plugin
+const session = useSession()
+const route = useRoute()
+
+const layout = computed(() => {
+  if (route.path.startsWith('/embed/') || route.meta.layout === 'embed') {
+    return EmbedLayout
+  }
+  return DefaultLayout
+})
+
+useHead({
+  htmlAttrs: () => ({ lang: session.lang.value ?? 'fr' })
+})
+</script>
+
+<style>
+html {
+  overflow: hidden;
+}
+
+/* Vuetify 4 removed heading resets — restore margin:0 so browser defaults don't add spacing */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+}
+</style>

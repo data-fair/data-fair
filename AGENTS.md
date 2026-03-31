@@ -36,38 +36,18 @@ Port numbers are defined in `.env`. Do not modify port assignments.
 
 ### Testing
 
-The test suite uses Playwright as test runner with three sub-projects: `unit`, `api`, and `e2e`. Tests are organized by feature under `tests/features/`. The test suite is very long — when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
+See [docs/architecture/testing.md](docs/architecture/testing.md) for full details on the test suite structure, conventions, and how to run tests.
 
+Quick reference:
 ```bash
-# Run all tests
-npm test
-# Run a specific sub-project
-npm run test-unit
-npm run test-api
-npm run test-e2e
-# Run a specific test file
-npx playwright test tests/features/datasets/bulk.api.spec.ts
-# Run a specific test by name
-npx playwright test tests/features/datasets/bulk.api.spec.ts -g "test name"
+npm test                          # all tests
+npm run test-unit                 # unit tests only
+npm run test-api                  # API tests only
+npm run test-e2e                  # e2e tests only
+npx playwright test path/to/file  # specific file
 ```
 
-**File naming convention:**
-- `*.unit.spec.ts` — pure unit tests (no server needed)
-- `*.api.spec.ts` — API tests (HTTP-only, depend on `state-setup` project)
-- `*.e2e.spec.ts` — end-to-end browser tests (depend on `state-setup` project, use Desktop Chrome)
-
-**Test structure:**
-- `tests/features/` — test specs organized by feature (datasets, auth, remote-services, etc.)
-- `tests/support/` — shared utilities (axios, events, workers)
-- `tests/fixtures/` — Playwright fixtures
-- `tests/resources/` — test data files
-- `tests/state-setup.ts` / `tests/state-teardown.ts` — global state lifecycle
-
-**Test conventions:**
-- Use `test` from `@playwright/test`
-- In `e2e` tests use `expect` from `@playwright/test`, in `unit` and `api` tests use standard nodejs asserts.
-- Tests interact with the API via HTTP (no direct DB access from tests)
-- Import utilities from `tests/support/`
+The test suite is very long — when iterating on changes always run only the related test cases. The full test suite will be run when pushing by a git hook managed by husky.
 
 ### Linting & Type Checking
 
@@ -84,6 +64,13 @@ npm run build            # Build UI
 npm run build-types      # Build type definitions
 npm run build-parsers    # Build PEG.js parsers (where, select, order-by, etc.)
 ```
+
+## Architecture Documentation
+
+In-depth documentation for complex subsystems lives in `docs/architecture/`:
+
+- [Dataset Drafts](docs/architecture/dataset-drafts.md) — draft lifecycle, API mechanics, UI section visibility for file-new vs file-updated
+- [Testing](docs/architecture/testing.md) — test suite structure, naming conventions, running tests
 
 ## Common Development Tasks
 

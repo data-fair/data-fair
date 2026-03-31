@@ -26,6 +26,7 @@ module.exports = {
   privatePortalsManagerUrl: 'PRIVATE_PORTALS_MANAGER_URL',
   privateProcessingsUrl: 'PRIVATE_PROCESSINGS_URL',
   privateMetricsUrl: 'PRIVATE_METRICS_URL',
+  privateAgentsUrl: 'PRIVATE_AGENTS_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
   mongo: {
     url: 'MONGO_URL',

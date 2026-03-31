@@ -1,13 +1,17 @@
 import express from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime'
-import * as findUtils from '../misc/utils/find.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import catalogApiDocs from '../../contract/site-catalog-api-docs.js'
 import dcatContext from '../misc/utils/dcat/context.js'
 import mongo from '#mongo'
 import { reqSession } from '@data-fair/lib-express'
+import { findDatasets } from '../datasets/service.js'
+import * as apiKeyUtils from '../misc/utils/api-key.ts'
+import * as cacheHeaders from '../misc/utils/cache-headers.js'
+
+const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
 
 const router = express.Router()
 export default router
@@ -20,39 +24,22 @@ router.use((req, res, next) => {
   next()
 })
 
-router.get('/datasets', async (req, res) => {
-  const datasets = mongo.db.collection('datasets')
+router.get('/datasets', apiKeyMiddlewareRead, cacheHeaders.listBased, async (req, res) => {
   req.resourceType = 'datasets'
-
-  const extraFilters = [{ publicationSites: `${req.publicationSite.type}:${req.publicationSite.id}` }]
-  if (req.query.bbox === 'true') {
-    extraFilters.push({ bbox: { $ne: null } })
+  const response = await findDatasets(
+    mongo.db,
+    req.getLocale(),
+    req.publicationSite,
+    req.publicBaseUrl,
+    req.query,
+    reqSession(req),
+    { catalogMode: true }
+  )
+  for (const r of response.results) {
+    datasetUtils.clean(req, r)
+    delete r.publicationSites
+    delete r.owner
   }
-  if (req.query.queryable === 'true') {
-    extraFilters.push({ isMetaOnly: { $ne: true } })
-    extraFilters.push({ finalizedAt: { $ne: null } })
-  }
-
-  if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
-
-  const query = findUtils.query(req.query, req.getLocale(), reqSession(req), 'datasets', { topics: 'topics.id' }, false, extraFilters)
-  const sort = findUtils.sort(req.query.sort || '-createdAt')
-  const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
-  const [skip, size] = findUtils.pagination(req.query)
-
-  const countPromise = req.query.count !== 'false' && datasets.countDocuments(query)
-  const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const [count, results] = await Promise.all([countPromise, resultsPromise])
-  for (const result of results) {
-    datasetUtils.clean(req, result)
-    delete result.publicationSites
-    delete result.owner
-  }
-  const response = {}
-  if (countPromise) response.count = count
-  if (resultsPromise) response.results = results
-  else response.results = []
-
   res.json(response)
 })
 

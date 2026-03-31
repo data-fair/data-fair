@@ -113,11 +113,11 @@ test.describe('datasets - features', () => {
     await assert.rejects(anonymous.get(res.data.results[0]._thumbnail), (err: any) => err.status === 403)
     assert.ok(thumbnail1.startsWith(`${config.publicUrl}/api/v1/datasets/${dataset.id}/thumbnail/`))
 
-    const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://localhost:${process.env.NGINX_PORT2}` }
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` }
     await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `localhost:${process.env.NGINX_PORT2}` } })
-    assert.equal(thumbnail1.replace('localhost:' + process.env.NGINX_PORT1, `localhost:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` } })
+    assert.equal(thumbnail1.replace(process.env.DEV_HOST + ':' + process.env.NGINX_PORT1, `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
 
     // remove attachmentsAsImage
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { attachmentsAsImage: null }, { params: { draft: true } })).data
@@ -180,14 +180,14 @@ test.describe('datasets - features', () => {
       { attr1: '', attr2: 'test10' }
     ])
     const dataset = await waitForFinalize(ax, 'rest2')
-    const attr1 = dataset.schema.find(p => p.key === 'attr1')
+    const attr1 = dataset.schema.find((p: any) => p.key === 'attr1')
     assert.deepEqual(attr1.enum, ['test2', 'test1'])
 
     // cardinality too close to line count
-    const attr2 = dataset.schema.find(p => p.key === 'attr2')
+    const attr2 = dataset.schema.find((p: any) => p.key === 'attr2')
     assert.equal(attr2.enum, undefined)
     // too sparse
-    const attr3 = dataset.schema.find(p => p.key === 'attr3')
+    const attr3 = dataset.schema.find((p: any) => p.key === 'attr3')
     assert.equal(attr3.enum, undefined)
   })
 

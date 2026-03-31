@@ -2,11 +2,13 @@ import fs from 'fs-extra'
 import path from 'node:path'
 import FormData from 'form-data'
 
+/** @param {any} form */
 export const formHeaders = (form) => {
   const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
   return headers
 }
 
+/** @param {string} fileName @param {any} ax @param {any} opts @param {any} body */
 export const sendDataset = async (fileName, ax, opts, body) => {
   const workers = await import('../../api/src/workers/index.ts')
   const datasetFd = fs.readFileSync(path.resolve('./tests/resources/', fileName))
@@ -17,6 +19,7 @@ export const sendDataset = async (fileName, ax, opts, body) => {
   return workers.hook(`finalize/${res.data.id}`)
 }
 
+/** @param {Promise<any>} promise */
 export const timeout = (promise, delay = 1000, message = 'time limit exceeded') => {
   const error = new Error(message) // prepare error at this level so that stack trace is useful
   const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(error), delay))

@@ -1,5 +1,6 @@
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
+import { trackEmbed } from './nuxt.js'
 import express from 'express'
 import { parsePath as parseUrlPath } from 'ufo'
 import pathToRegexp from 'path-to-regexp'
@@ -178,44 +179,52 @@ export const run = async () => {
 
     const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
 
-    const unsafePaths = [
-      '/dataset/:id/table-edit',
-      '/dataset/:id/form',
-      '/application/:id/config',
-      '/workflow/update-dataset',
-      '/settings',
-      '/settings/:type/:id/licenses',
-      '/settings/:type/:id/topics',
-      '/settings/:type/:id/webhooks',
-      '/settings/:type/:id/datasets-metadata',
+    const embedUnsafePaths = [
+      '/embed/dataset/:id/table-edit',
+      '/embed/dataset/:id/form',
+      '/embed/application/:id/config',
+      '/embed/workflow/update-dataset',
+      '/embed/settings/:type/:id/licenses',
+      '/embed/settings/:type/:id/topics',
+      '/embed/settings/:type/:id/webhooks',
+      '/embed/settings/:type/:id/datasets-metadata',
     ].map(p => pathToRegexp.match(p))
-    app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../embed-ui/dist'), uiConfig, {
-      ignoreSitePath: true,
-      csp: {
-        nonce: true,
-        header: (req) => {
-          const urlPath = parseUrlPath(req.url).pathname
-          const directives = { ...defaultNonceCSPDirectives }
-          for (const p of unsafePaths) {
-            if (p(urlPath)) {
-              // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
-              directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
-              directives['connect-src'] = "'self' https:"
-            }
-          }
-          // all embed pages allow cross domain iframe integration
-          directives['frame-ancestors'] = "'self' http: https:"
-          return directives
-        }
-      },
-      privateDirectoryUrl: config.privateDirectoryUrl
-    }))
+
+    app.use('/embed', trackEmbed)
 
     app.use('/next-ui', (req, res) => {
       // next-ui urls were a temporary alternate UI we redirect
       // them in case some are still in use somewhere
       res.redirect(reqSiteUrl(req) + '/data-fair' + req.url)
     })
+
+    app.use('/', await createSpaMiddleware(resolve(import.meta.dirname, '../../ui/dist'), uiConfig, {
+      ignoreSitePath: true,
+      csp: {
+        nonce: true,
+        header: (req) => {
+          const urlPath = parseUrlPath(req.url).pathname
+          const directives = { ...defaultNonceCSPDirectives }
+          if (urlPath.startsWith('/embed')) {
+            for (const p of embedUnsafePaths) {
+              if (p(urlPath)) {
+                directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+                directives['connect-src'] = "'self' https:"
+              }
+            }
+            // all embed pages allow cross domain iframe integration
+            directives['frame-ancestors'] = "'self' http: https:"
+          } else {
+            // many back-office pages use vjsf
+            directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+            directives['connect-src'] = "'self' https:"
+          }
+
+          return directives
+        }
+      },
+      privateDirectoryUrl: config.privateDirectoryUrl
+    }))
 
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')
@@ -288,10 +297,6 @@ export const run = async () => {
       else next()
     })
 
-    const nuxt = await (await import('./nuxt.js')).default()
-    app.set('nuxt', nuxt.instance)
-    app.use(nuxt.trackEmbed)
-    app.use(nuxt.render)
     app.set('ui-ready', true)
 
     if (config.listenWhenReady) {

@@ -40,8 +40,8 @@ test.describe('markdown contents management', () => {
     assert.equal(res.data.schema[0].description, '<p>This is a <strong>markdown</strong> property description.</p>')
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { html: 'vuetify' } })
-    assert.equal(res.data.description, '<p class="markdown-paragraph">This is a <strong>markdown</strong> description.</p>')
-    assert.equal(res.data.schema[0].description, '<p class="markdown-paragraph">This is a <strong>markdown</strong> property description.</p>')
+    assert.equal(res.data.description, '<p class="markdown-paragraph mt-4 mb-4">This is a <strong>markdown</strong> description.</p>')
+    assert.equal(res.data.schema[0].description, '<p class="markdown-paragraph mt-4 mb-4">This is a <strong>markdown</strong> property description.</p>')
 
     res = await ax.get('/api/v1/datasets', { params: { html: true } })
     assert.equal(res.data.results[0].description, '<p>This is a <strong>markdown</strong> description.</p>')

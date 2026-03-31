@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Ajv from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
 export { default as localize } from 'ajv-i18n'

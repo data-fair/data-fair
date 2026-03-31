@@ -285,7 +285,7 @@ bidule;1;22.2
     assert.equal(data[0].id, 'koumoul')
 
     // geojson export
-    const locProp = dataset.schema.find(p => p.key === 'loc')
+    const locProp = dataset.schema.find((p: any) => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     await waitForFinalize(ax, dataset.id)
@@ -490,17 +490,17 @@ val 1;val 1, val 2
     ])
     await waitForFinalize(ax, 'rest-insensitive')
     res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
-    assert.deepEqual(res.data.results.map(result => result.str1), ['test1', 'Test2', 'test2', 'test3'])
+    assert.deepEqual(res.data.results.map((result: any) => result.str1), ['test1', 'Test2', 'test2', 'test3'])
     res = await ax.get('/api/v1/datasets/rest-insensitive/compat-ods/records', { params: { order_by: 'str1' } })
-    assert.deepEqual(res.data.results.map(result => result.str1), ['test1', 'Test2', 'test2', 'test3'])
+    assert.deepEqual(res.data.results.map((result: any) => result.str1), ['test1', 'Test2', 'test2', 'test3'])
 
     await ax.patch('/api/v1/datasets/rest-insensitive', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }] })
     await waitForFinalize(ax, 'rest-insensitive')
     await clearDatasetCache()
     res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
-    assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
+    assert.deepEqual(res.data.results.map((result: any) => result.str1), ['Test2', 'test1', 'test2', 'test3'])
     res = await ax.get('/api/v1/datasets/rest-insensitive/compat-ods/records', { params: { order_by: 'str1' } })
-    assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
+    assert.deepEqual(res.data.results.map((result: any) => result.str1), ['Test2', 'test1', 'test2', 'test3'])
   })
 
   test('manages geo data', async () => {

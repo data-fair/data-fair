@@ -1,6 +1,7 @@
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { axiosAuth as _axiosAuth } from '@data-fair/lib-node/axios-auth.js'
-import slug from 'slugify'
+import _slug from 'slugify'
+const slug = _slug as unknown as (str: string, opts?: Record<string, any>) => string
 
 /**
  * Test users and orgs are defined in:
@@ -11,10 +12,10 @@ import slug from 'slugify'
  * These are loaded by simple-directory (see docker-compose.yaml, STORAGE_TYPE=file).
  */
 
-export const directoryUrl = `http://localhost:${process.env.NGINX_PORT1}/simple-directory`
+export const directoryUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`
 export const apiUrl = `http://localhost:${process.env.DEV_API_PORT}`
-export const baseURL = `http://localhost:${process.env.NGINX_PORT1}/data-fair`
-export const wsUrl = `ws://localhost:${process.env.NGINX_PORT1}/data-fair`
+export const baseURL = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`
+export const wsUrl = `ws://localhost:${process.env.DEV_API_PORT}`
 export const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
 
 /** Get the full URL for a mock application (e.g. mockAppUrl('monapp1') → 'http://localhost:8999/monapp1/') */

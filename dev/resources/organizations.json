@@ -8,6 +8,13 @@
       "id": "dep2",
       "name": "department 2"
     }],
+    "partners": [{
+      "id": "test_org2",
+      "name": "Test Org 2"
+    }, {
+      "id": "test_org3",
+      "name": "Test Org 3"
+    }],
     "members": [{
       "id": "test_user1",
       "role": "admin"

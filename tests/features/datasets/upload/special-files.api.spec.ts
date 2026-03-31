@@ -54,11 +54,11 @@ test.describe('Many case of special file datasets', () => {
     form.append('file', gzippedContent, 'dataset1.csv.gz')
     await ax.put('/api/v1/datasets/dataset-compressed', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, 'dataset-compressed')
-    assert.ok(dataset.schema.find(p => p.key === 'id'))
-    assert.ok(dataset.schema.find(p => p.key === '_id'))
+    assert.ok(dataset.schema.find((p: any) => p.key === 'id'))
+    assert.ok(dataset.schema.find((p: any) => p.key === '_id'))
 
-    const schema = dataset.schema.filter(p => !p['x-calculated'])
-    const locProp = schema.find(p => p.key === 'loc')
+    const schema = dataset.schema.filter((p: any) => !p['x-calculated'])
+    const locProp = schema.find((p: any) => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
     const csvContent = fs.readFileSync(path.resolve('./tests/resources/datasets/dataset1.csv'))
     const form2 = new FormData()
@@ -66,8 +66,8 @@ test.describe('Many case of special file datasets', () => {
     form2.append('schema', JSON.stringify(schema))
     await ax.put('/api/v1/datasets/dataset-compressed', form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
     dataset = await waitForFinalize(ax, 'dataset-compressed')
-    assert.ok(dataset.schema.find(p => p.key === 'id'))
-    assert.ok(dataset.schema.find(p => p.key === '_id'))
+    assert.ok(dataset.schema.find((p: any) => p.key === 'id'))
+    assert.ok(dataset.schema.find((p: any) => p.key === '_id'))
     assert.ok(dataset.bbox)
   })
 
@@ -89,8 +89,8 @@ test.describe('Many case of special file datasets', () => {
     assert.ok(dataset.timePeriod.startDate)
     assert.ok(dataset.timePeriod.endDate)
     assert.equal(dataset.timeZone, localeTimeZone)
-    assert.ok(dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate'))
-    assert.ok(dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate'))
+    assert.ok(dataset.schema.find((f: any) => f['x-refersTo'] === 'https://schema.org/startDate'))
+    assert.ok(dataset.schema.find((f: any) => f['x-refersTo'] === 'https://schema.org/endDate'))
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(moment(res.data.results[0].DTSTART).format('YYYY-MM-DD-HH:mm'), '2008-02-12-00:00')
     assert.equal(moment(res.data.results[0].DTEND).format('YYYY-MM-DD-HH:mm'), '2008-02-14-00:00')
@@ -105,8 +105,8 @@ test.describe('Many case of special file datasets', () => {
     assert.ok(dataset.timePeriod.startDate)
     assert.ok(dataset.timePeriod.endDate)
     assert.equal(dataset.timeZone, 'America/New_York')
-    assert.ok(dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate'))
-    assert.ok(dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate'))
+    assert.ok(dataset.schema.find((f: any) => f['x-refersTo'] === 'https://schema.org/startDate'))
+    assert.ok(dataset.schema.find((f: any) => f['x-refersTo'] === 'https://schema.org/endDate'))
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(moment(res.data.results[0].DTSTART).tz('America/New_York').format('YYYY-MM-DD-HH:mm'), '2008-02-12-00:00')
   })
@@ -120,8 +120,8 @@ test.describe('Many case of special file datasets', () => {
     assert.ok(dataset.timePeriod.startDate)
     assert.ok(dataset.timePeriod.endDate)
     assert.equal(dataset.timeZone, 'America/Los_Angeles')
-    assert.ok(dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate'))
-    assert.ok(dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate'))
+    assert.ok(dataset.schema.find((f: any) => f['x-refersTo'] === 'https://schema.org/startDate'))
+    assert.ok(dataset.schema.find((f: any) => f['x-refersTo'] === 'https://schema.org/endDate'))
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(moment(res.data.results[0].DTSTART).tz('America/Los_Angeles').format('YYYY-MM-DD-HH:mm'), '2008-02-12-00:00')
   })
@@ -223,11 +223,11 @@ test.describe('Many case of special file datasets', () => {
     assert.ok(errorEvent.data.includes('Unexpected'))
   })
 
-  const checkDateDataset = async (ext) => {
+  const checkDateDataset = async (ext: any) => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dates.' + ext, ax)
-    assert.ok(dataset.schema.find(p => p.key === 'colstr'))
-    const coldate = dataset.schema.find(p => p.key === 'coldate')
+    assert.ok(dataset.schema.find((p: any) => p.key === 'colstr'))
+    const coldate = dataset.schema.find((p: any) => p.key === 'coldate')
     assert.ok(coldate)
     assert.equal(coldate.type, 'string')
     assert.equal(coldate.format, 'date')
@@ -256,7 +256,7 @@ test.describe('Many case of special file datasets', () => {
   test('should manage a sparse XLSX file', async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/sparse.xlsx', ax)
-    assert.equal(dataset.schema.filter(p => p.key.startsWith('col')).length, 4)
+    assert.equal(dataset.schema.filter((p: any) => p.key.startsWith('col')).length, 4)
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 4)
@@ -272,10 +272,10 @@ test.describe('Many case of special file datasets', () => {
   test('should manage a XLSX with formula and links', async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/misc.xlsx', ax)
-    assert.equal(dataset.schema.find(p => p.key === 'col1').type, 'integer')
-    assert.equal(dataset.schema.find(p => p.key === 'col2').type, 'integer')
-    assert.equal(dataset.schema.find(p => p.key === 'col3').type, 'string')
-    assert.equal(dataset.schema.find(p => p.key === 'col4').type, 'integer')
+    assert.equal(dataset.schema.find((p: any) => p.key === 'col1').type, 'integer')
+    assert.equal(dataset.schema.find((p: any) => p.key === 'col2').type, 'integer')
+    assert.equal(dataset.schema.find((p: any) => p.key === 'col3').type, 'string')
+    assert.equal(dataset.schema.find((p: any) => p.key === 'col4').type, 'integer')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 4)
@@ -298,7 +298,7 @@ test.describe('Many case of special file datasets', () => {
 
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     const dataset = await waitForFinalize(ax, res.data.id)
-    assert.equal(dataset.schema.filter(p => !p['x-calculated']).length, 2)
+    assert.equal(dataset.schema.filter((p: any) => !p['x-calculated']).length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
@@ -318,7 +318,7 @@ test.describe('Many case of special file datasets', () => {
 
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     const dataset = await waitForFinalize(ax, res.data.id)
-    assert.equal(dataset.schema.filter(p => !p['x-calculated']).length, 2)
+    assert.equal(dataset.schema.filter((p: any) => !p['x-calculated']).length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)

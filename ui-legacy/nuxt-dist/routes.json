@@ -1,0 +1,603 @@
+[
+  {
+    "name": "api-doc",
+    "path": "/api-doc",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/api-doc.vue",
+    "chunkName": "pages/api-doc",
+    "_name": "_4f366b16"
+  },
+  {
+    "name": "applications",
+    "path": "/applications",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/applications.vue",
+    "chunkName": "pages/applications",
+    "_name": "_8478943c"
+  },
+  {
+    "name": "catalogs",
+    "path": "/catalogs",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/catalogs.vue",
+    "chunkName": "pages/catalogs",
+    "children": [
+      {
+        "name": "catalogs-page",
+        "path": ":page?",
+        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/catalogs/_page.vue",
+        "chunkName": "pages/catalogs/_page",
+        "children": [
+          {
+            "name": "catalogs-page-page",
+            "path": ":page?",
+            "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/catalogs/_page/_page.vue",
+            "chunkName": "pages/catalogs/_page/_page",
+            "children": [
+              {
+                "name": "catalogs-page-page-page",
+                "path": ":page?",
+                "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/catalogs/_page/_page/_page.vue",
+                "chunkName": "pages/catalogs/_page/_page/_page",
+                "children": [
+                  {
+                    "name": "catalogs-page-page-page-page",
+                    "path": ":page?",
+                    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/catalogs/_page/_page/_page/_page.vue",
+                    "chunkName": "pages/catalogs/_page/_page/_page/_page",
+                    "children": [
+                      {
+                        "name": "catalogs-page-page-page-page-page",
+                        "path": ":page?",
+                        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/catalogs/_page/_page/_page/_page/_page.vue",
+                        "chunkName": "pages/catalogs/_page/_page/_page/_page/_page",
+                        "_name": "_28bac994"
+                      }
+                    ],
+                    "_name": "_17963a35"
+                  }
+                ],
+                "_name": "_2d1210d4"
+              }
+            ],
+            "_name": "_6c8591b7"
+          }
+        ],
+        "_name": "_1c969898"
+      }
+    ],
+    "_name": "_57aac78e"
+  },
+  {
+    "name": "datasets",
+    "path": "/datasets",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/datasets.vue",
+    "chunkName": "pages/datasets",
+    "_name": "_8f95a98c"
+  },
+  {
+    "name": "department",
+    "path": "/department",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/department.vue",
+    "chunkName": "pages/department",
+    "_name": "_f05f3b5e"
+  },
+  {
+    "name": "events",
+    "path": "/events",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/events.vue",
+    "chunkName": "pages/events",
+    "children": [
+      {
+        "name": "events-page",
+        "path": ":page?",
+        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/events/_page.vue",
+        "chunkName": "pages/events/_page",
+        "children": [
+          {
+            "name": "events-page-page",
+            "path": ":page?",
+            "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/events/_page/_page.vue",
+            "chunkName": "pages/events/_page/_page",
+            "children": [
+              {
+                "name": "events-page-page-page",
+                "path": ":page?",
+                "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/events/_page/_page/_page.vue",
+                "chunkName": "pages/events/_page/_page/_page",
+                "children": [
+                  {
+                    "name": "events-page-page-page-page",
+                    "path": ":page?",
+                    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/events/_page/_page/_page/_page.vue",
+                    "chunkName": "pages/events/_page/_page/_page/_page",
+                    "children": [
+                      {
+                        "name": "events-page-page-page-page-page",
+                        "path": ":page?",
+                        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/events/_page/_page/_page/_page/_page.vue",
+                        "chunkName": "pages/events/_page/_page/_page/_page/_page",
+                        "_name": "_f898259a"
+                      }
+                    ],
+                    "_name": "_5e9e4114"
+                  }
+                ],
+                "_name": "_7d4951b5"
+              }
+            ],
+            "_name": "_099ca1d4"
+          }
+        ],
+        "_name": "_307fe937"
+      }
+    ],
+    "_name": "_b9eedfd0"
+  },
+  {
+    "name": "me",
+    "path": "/me",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/me.vue",
+    "chunkName": "pages/me",
+    "_name": "_221af097"
+  },
+  {
+    "name": "metrics",
+    "path": "/metrics",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/metrics.vue",
+    "chunkName": "pages/metrics",
+    "_name": "_1e4f45d4"
+  },
+  {
+    "name": "new-application",
+    "path": "/new-application",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/new-application.vue",
+    "chunkName": "pages/new-application",
+    "_name": "_7b624698"
+  },
+  {
+    "name": "new-dataset",
+    "path": "/new-dataset",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/new-dataset.vue",
+    "chunkName": "pages/new-dataset",
+    "_name": "_0552fddc"
+  },
+  {
+    "name": "notifications",
+    "path": "/notifications",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/notifications.vue",
+    "chunkName": "pages/notifications",
+    "_name": "_7e3fe0b9"
+  },
+  {
+    "name": "organization",
+    "path": "/organization",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/organization.vue",
+    "chunkName": "pages/organization",
+    "_name": "_4fa975f2"
+  },
+  {
+    "name": "pages",
+    "path": "/pages",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/pages.vue",
+    "chunkName": "pages/pages",
+    "children": [
+      {
+        "name": "pages-page",
+        "path": ":page?",
+        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/pages/_page.vue",
+        "chunkName": "pages/pages/_page",
+        "children": [
+          {
+            "name": "pages-page-page",
+            "path": ":page?",
+            "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/pages/_page/_page.vue",
+            "chunkName": "pages/pages/_page/_page",
+            "children": [
+              {
+                "name": "pages-page-page-page",
+                "path": ":page?",
+                "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/pages/_page/_page/_page.vue",
+                "chunkName": "pages/pages/_page/_page/_page",
+                "children": [
+                  {
+                    "name": "pages-page-page-page-page",
+                    "path": ":page?",
+                    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/pages/_page/_page/_page/_page.vue",
+                    "chunkName": "pages/pages/_page/_page/_page/_page",
+                    "children": [
+                      {
+                        "name": "pages-page-page-page-page-page",
+                        "path": ":page?",
+                        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/pages/_page/_page/_page/_page/_page.vue",
+                        "chunkName": "pages/pages/_page/_page/_page/_page/_page",
+                        "_name": "_36af4a20"
+                      }
+                    ],
+                    "_name": "_73f30091"
+                  }
+                ],
+                "_name": "_39e29a1c"
+              }
+            ],
+            "_name": "_73f40213"
+          }
+        ],
+        "_name": "_32477df4"
+      }
+    ],
+    "_name": "_b74c92d6"
+  },
+  {
+    "name": "portals",
+    "path": "/portals",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/portals.vue",
+    "chunkName": "pages/portals",
+    "children": [
+      {
+        "name": "portals-page",
+        "path": ":page?",
+        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/portals/_page.vue",
+        "chunkName": "pages/portals/_page",
+        "children": [
+          {
+            "name": "portals-page-page",
+            "path": ":page?",
+            "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/portals/_page/_page.vue",
+            "chunkName": "pages/portals/_page/_page",
+            "children": [
+              {
+                "name": "portals-page-page-page",
+                "path": ":page?",
+                "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/portals/_page/_page/_page.vue",
+                "chunkName": "pages/portals/_page/_page/_page",
+                "children": [
+                  {
+                    "name": "portals-page-page-page-page",
+                    "path": ":page?",
+                    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/portals/_page/_page/_page/_page.vue",
+                    "chunkName": "pages/portals/_page/_page/_page/_page",
+                    "children": [
+                      {
+                        "name": "portals-page-page-page-page-page",
+                        "path": ":page?",
+                        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/portals/_page/_page/_page/_page/_page.vue",
+                        "chunkName": "pages/portals/_page/_page/_page/_page/_page",
+                        "_name": "_27ac85b3"
+                      }
+                    ],
+                    "_name": "_2d133994"
+                  }
+                ],
+                "_name": "_b9faab96"
+              }
+            ],
+            "_name": "_4a1130d4"
+          }
+        ],
+        "_name": "_39cbfc92"
+      }
+    ],
+    "_name": "_773f0898"
+  },
+  {
+    "name": "processings",
+    "path": "/processings",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/processings.vue",
+    "chunkName": "pages/processings",
+    "children": [
+      {
+        "name": "processings-page",
+        "path": ":page?",
+        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/processings/_page.vue",
+        "chunkName": "pages/processings/_page",
+        "children": [
+          {
+            "name": "processings-page-page",
+            "path": ":page?",
+            "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/processings/_page/_page.vue",
+            "chunkName": "pages/processings/_page/_page",
+            "children": [
+              {
+                "name": "processings-page-page-page",
+                "path": ":page?",
+                "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/processings/_page/_page/_page.vue",
+                "chunkName": "pages/processings/_page/_page/_page",
+                "children": [
+                  {
+                    "name": "processings-page-page-page-page",
+                    "path": ":page?",
+                    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/processings/_page/_page/_page/_page.vue",
+                    "chunkName": "pages/processings/_page/_page/_page/_page",
+                    "children": [
+                      {
+                        "name": "processings-page-page-page-page-page",
+                        "path": ":page?",
+                        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/processings/_page/_page/_page/_page/_page.vue",
+                        "chunkName": "pages/processings/_page/_page/_page/_page/_page",
+                        "_name": "_138dbda8"
+                      }
+                    ],
+                    "_name": "_1a3423cd"
+                  }
+                ],
+                "_name": "_0cc9f32e"
+              }
+            ],
+            "_name": "_5a431f4f"
+          }
+        ],
+        "_name": "_54943830"
+      }
+    ],
+    "_name": "_7744645e"
+  },
+  {
+    "name": "remote-services",
+    "path": "/remote-services",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/remote-services.vue",
+    "chunkName": "pages/remote-services",
+    "children": [
+      {
+        "name": "remote-services-id",
+        "path": ":id?",
+        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/remote-services/_id.vue",
+        "chunkName": "pages/remote-services/_id",
+        "_name": "_573b307e"
+      }
+    ],
+    "_name": "_1bbe9516"
+  },
+  {
+    "name": "reuses",
+    "path": "/reuses",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/reuses.vue",
+    "chunkName": "pages/reuses",
+    "children": [
+      {
+        "name": "reuses-page",
+        "path": ":page?",
+        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/reuses/_page.vue",
+        "chunkName": "pages/reuses/_page",
+        "children": [
+          {
+            "name": "reuses-page-page",
+            "path": ":page?",
+            "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/reuses/_page/_page.vue",
+            "chunkName": "pages/reuses/_page/_page",
+            "children": [
+              {
+                "name": "reuses-page-page-page",
+                "path": ":page?",
+                "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/reuses/_page/_page/_page.vue",
+                "chunkName": "pages/reuses/_page/_page/_page",
+                "children": [
+                  {
+                    "name": "reuses-page-page-page-page",
+                    "path": ":page?",
+                    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/reuses/_page/_page/_page/_page.vue",
+                    "chunkName": "pages/reuses/_page/_page/_page/_page",
+                    "children": [
+                      {
+                        "name": "reuses-page-page-page-page-page",
+                        "path": ":page?",
+                        "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/reuses/_page/_page/_page/_page/_page.vue",
+                        "chunkName": "pages/reuses/_page/_page/_page/_page/_page",
+                        "_name": "_3ee55b19"
+                      }
+                    ],
+                    "_name": "_014cd90c"
+                  }
+                ],
+                "_name": "_50182eca"
+              }
+            ],
+            "_name": "_188e2b08"
+          }
+        ],
+        "_name": "_0059291d"
+      }
+    ],
+    "_name": "_c19d9704"
+  },
+  {
+    "name": "settings",
+    "path": "/settings",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/settings.vue",
+    "chunkName": "pages/settings",
+    "_name": "_37623862"
+  },
+  {
+    "name": "share-dataset",
+    "path": "/share-dataset",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/share-dataset.vue",
+    "chunkName": "pages/share-dataset",
+    "_name": "_ebcf794a"
+  },
+  {
+    "name": "storage",
+    "path": "/storage",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/storage.vue",
+    "chunkName": "pages/storage",
+    "_name": "_657f2b8c"
+  },
+  {
+    "name": "subscription",
+    "path": "/subscription",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/subscription.vue",
+    "chunkName": "pages/subscription",
+    "_name": "_c4224648"
+  },
+  {
+    "name": "update-dataset",
+    "path": "/update-dataset",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/update-dataset.vue",
+    "chunkName": "pages/update-dataset",
+    "_name": "_553629f3"
+  },
+  {
+    "name": "admin-base-apps",
+    "path": "/admin/base-apps",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/admin/base-apps.vue",
+    "chunkName": "pages/admin/base-apps",
+    "_name": "_74d6ffbf"
+  },
+  {
+    "name": "admin-catalogs-plugins",
+    "path": "/admin/catalogs-plugins",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/admin/catalogs-plugins.vue",
+    "chunkName": "pages/admin/catalogs-plugins",
+    "_name": "_0e20b20c"
+  },
+  {
+    "name": "admin-errors",
+    "path": "/admin/errors",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/admin/errors.vue",
+    "chunkName": "pages/admin/errors",
+    "_name": "_54b712ea"
+  },
+  {
+    "name": "admin-info",
+    "path": "/admin/info",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/admin/info.vue",
+    "chunkName": "pages/admin/info",
+    "_name": "_2a59c726"
+  },
+  {
+    "name": "admin-owners",
+    "path": "/admin/owners",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/admin/owners.vue",
+    "chunkName": "pages/admin/owners",
+    "_name": "_1468a51f"
+  },
+  {
+    "name": "admin-processings-plugins",
+    "path": "/admin/processings-plugins",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/admin/processings-plugins.vue",
+    "chunkName": "pages/admin/processings-plugins",
+    "_name": "_6454c0a4"
+  },
+  {
+    "name": "index",
+    "path": "/",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/index.vue",
+    "chunkName": "pages/index",
+    "_name": "_3e7db8a3"
+  },
+  {
+    "name": "admin-extra-id",
+    "path": "/admin-extra/:id?",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/admin-extra/_id.vue",
+    "chunkName": "pages/admin-extra/_id",
+    "_name": "_6e16594e"
+  },
+  {
+    "name": "application-id",
+    "path": "/application/:id",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/application/_id/index.vue",
+    "chunkName": "pages/application/_id/index",
+    "_name": "_4cb27a0f"
+  },
+  {
+    "name": "dataset-id",
+    "path": "/dataset/:id",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/dataset/_id/index.vue",
+    "chunkName": "pages/dataset/_id/index",
+    "_name": "_0b5387b7"
+  },
+  {
+    "name": "extra-id",
+    "path": "/extra/:id?",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/extra/_id.vue",
+    "chunkName": "pages/extra/_id",
+    "_name": "_6b5f4a0c"
+  },
+  {
+    "name": "application-id-api-doc",
+    "path": "/application/:id?/api-doc",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/application/_id/api-doc.vue",
+    "chunkName": "pages/application/_id/api-doc",
+    "_name": "_b97efcfc"
+  },
+  {
+    "name": "application-id-config",
+    "path": "/application/:id?/config",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/application/_id/config.vue",
+    "chunkName": "pages/application/_id/config",
+    "_name": "_514461d5"
+  },
+  {
+    "name": "application-id-description",
+    "path": "/application/:id?/description",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/application/_id/description.vue",
+    "chunkName": "pages/application/_id/description",
+    "_name": "_0e5e2079"
+  },
+  {
+    "name": "dataset-id-api-doc",
+    "path": "/dataset/:id?/api-doc",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/dataset/_id/api-doc.vue",
+    "chunkName": "pages/dataset/_id/api-doc",
+    "_name": "_3dd4c52a"
+  },
+  {
+    "name": "dataset-id-description",
+    "path": "/dataset/:id?/description",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/dataset/_id/description.vue",
+    "chunkName": "pages/dataset/_id/description",
+    "_name": "_0f4f5fbe"
+  },
+  {
+    "name": "dataset-id-events",
+    "path": "/dataset/:id?/events",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/dataset/_id/events.vue",
+    "chunkName": "pages/dataset/_id/events",
+    "_name": "_70eca384"
+  },
+  {
+    "name": "remote-service-id-api-doc",
+    "path": "/remote-service/:id?/api-doc",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/remote-service/_id/api-doc.vue",
+    "chunkName": "pages/remote-service/_id/api-doc",
+    "_name": "_17ac4c64"
+  },
+  {
+    "name": "dev-char-sizes",
+    "path": "/:dev/char-sizes",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/_dev/char-sizes.vue",
+    "chunkName": "pages/_dev/char-sizes",
+    "_name": "_32825176"
+  },
+  {
+    "name": "dev-extra",
+    "path": "/:dev/extra",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/_dev/extra.vue",
+    "chunkName": "pages/_dev/extra",
+    "_name": "_08cfe896"
+  },
+  {
+    "name": "dev-extra2",
+    "path": "/:dev/extra2",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/_dev/extra2.vue",
+    "chunkName": "pages/_dev/extra2",
+    "_name": "_1144d38c"
+  },
+  {
+    "name": "dev-extra3",
+    "path": "/:dev/extra3",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/_dev/extra3.vue",
+    "chunkName": "pages/_dev/extra3",
+    "_name": "_1152eb0d"
+  },
+  {
+    "name": "dev-table-embed",
+    "path": "/:dev/table-embed",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/_dev/table-embed.vue",
+    "chunkName": "pages/_dev/table-embed",
+    "_name": "_12acbdc0"
+  },
+  {
+    "name": "dev-update-dataset",
+    "path": "/:dev/update-dataset",
+    "component": "/home/alban/data-fair/data-fair_feat-upgrade-ui/ui/public/pages/_dev/update-dataset.vue",
+    "chunkName": "pages/_dev/update-dataset",
+    "_name": "_1c221c44"
+  }
+]

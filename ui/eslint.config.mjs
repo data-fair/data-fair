@@ -1,21 +1,34 @@
 import neostandard from 'neostandard'
 import pluginVue from 'eslint-plugin-vue'
+import pluginVuetify from 'eslint-plugin-vuetify'
+import dfLibRecommended from '@data-fair/lib-utils/eslint/recommended.js'
 
 export default [
-  ...pluginVue.configs['flat/vue2-recommended'],
-  ...neostandard(),
+  ...dfLibRecommended,
+  ...pluginVue.configs['flat/recommended'],
+  ...pluginVuetify.configs['flat/recommended'].map(c => {
+    // remove vue plugin to avoid "Cannot redefine plugin" conflict
+    const { vue, ...otherPlugins } = c.plugins || {}
+    return { ...c, plugins: otherPlugins }
+  }),
+  ...neostandard({ ts: true }),
   {
     rules: {
-      'vue/no-v-html': 'off',
-      'vue/multi-word-component-names': 'off',
-      'node/no-deprecated-api': 'off',
-      'vue/no-mutating-props': 'off',
-      'vue/require-prop-types': 'off',
-      'vue/no-useless-template-attributes': 'off',
-      'vue/singleline-html-element-content-newline': 'off',
-      'vue/valid-v-slot': 'off',
-      'vue/no-v-text-v-html-on-component': 'off'
+      'vue/multi-word-component-names': 'off'
     }
   },
-  { ignores: ['nuxt-dist/*', 'node_modules/*'] },
+  {
+    files: ['**/*.vue'],
+    languageOptions: {
+      parserOptions: {
+        parser: '@typescript-eslint/parser'
+      }
+    }
+  },
+  {
+    rules: {
+      'no-undef': 'off' // typescript takes care of this with autoImport support
+    }
+  },
+  { ignores: ['dist/*', 'dts/*', 'src/components/vjsf/*', 'node_modules/*'] },
 ]

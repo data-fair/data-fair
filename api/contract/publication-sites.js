@@ -1,7 +1,6 @@
 export default (admin = false) => ({
   type: 'array',
   title: 'Portails',
-  'x-options': admin ? {} : { arrayOperations: ['update'] },
   layout: {
     title: '',
     messages: {
@@ -86,7 +85,6 @@ export default (admin = false) => ({
           datasetsRequiredMetadata: {
             title: 'Métadonnées requises pour les jeux de données',
             type: 'array',
-            'x-fromData': 'context.datasetsMetadata',
             items: {
               type: 'string'
             }
