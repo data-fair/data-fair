@@ -6,7 +6,6 @@
   >
     <v-list
       density="compact"
-      nav
       bg-color="primary"
       class="rounded-te-md pb-0"
     >
@@ -44,7 +43,6 @@
           v-model:opened="openedGroupsModel"
           open-strategy="multiple"
           density="compact"
-          nav
           :bg-color="group.key === 'admin' ? 'admin' : 'primary'"
           class="py-0"
         >
@@ -198,6 +196,10 @@ en:
 
 <style scoped>
 :deep(.v-list-group__items .v-list-item) {
-  padding-inline-start: 8px !important;
+  padding-inline-start: 16px !important;
+}
+
+:deep(.v-list-item__spacer) {
+  width: 16px;
 }
 </style>
