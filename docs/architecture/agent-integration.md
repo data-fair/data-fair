@@ -282,6 +282,7 @@ Subagents are specialized agents with their own system prompt and a restricted s
 > Task:
 > 1. Call read_dataset_info to get the full metadata and schema.
 > 2. Write a summary describing the content and purpose of the dataset based on its title, description, columns, and other metadata.
+> 3. Return the summary text as your final response.
 >
 > Format:
 > - Between 200 and 300 characters long
@@ -314,7 +315,7 @@ Subagents are specialized agents with their own system prompt and a restricted s
 
 - **Source**: `ui/src/composables/dataset/agent-expression-tools.ts`
 - **Model**: _(default)_
-- **Tools**: `get_expression_context`, `get_sample_data`, `test_expression`, `set_expression`
+- **Tools**: `get_expression_context`, `get_sample_data`, `test_expression`
 
 **System prompt (summary):**
 > You are an expression writing assistant for Data Fair. You help users write expr-eval expressions for calculated columns.
@@ -324,7 +325,7 @@ Subagents are specialized agents with their own system prompt and a restricted s
 > 2. Call get_sample_data to see real values
 > 3. Write and test_expression to validate
 > 4. Fix and retry on errors
-> 5. Ask for confirmation before calling set_expression
+> 5. Return the validated expression and test results as the final response
 >
 > (Includes full expression language reference: operators, string/math/date/special functions)
 
@@ -346,7 +347,7 @@ Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer a
 - **Action ID**: `summarize-dataset`
 - **Location**: `ui/src/components/dataset/dataset-info.vue` (next to summary textarea)
 - **Visible prompt**: "Summarize this dataset" / "Resume ce jeu de donnees"
-- **Hidden context**: `Use the subagent_summarizer tool to read the dataset information and produce a summary. Then use the set_dataset_summary tool to set the summary on the form. The dataset ID is "{datasetId}".`
+- **Hidden context**: `Use the dataset_summarizer subagent to produce a summary for this dataset. Once you receive the summary, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_summary tool to set it. If the user wants changes, adjust accordingly.`
 - **Condition**: `showAgentChat && can('writeDescription')`
 
 ### 6.2 Summarize Metadata Changes
@@ -363,7 +364,7 @@ Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer a
 - **Action ID**: `help-expression-{idx}` (one per calculated column)
 - **Location**: `ui/src/components/dataset/dataset-extensions.vue` (next to each expression text field)
 - **Visible prompt**: "Help me write this expression" / "Aide-moi a ecrire cette expression"
-- **Hidden context**: `The user wants help writing an expr-eval expression for calculated column "{name}" (type: {type}, extension index: {idx}). {current expression if any}. Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user's intent.`
+- **Hidden context**: `The user wants help writing an expr-eval expression for calculated column "{name}" (type: {type}, extension index: {idx}). {current expression if any}. Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user's intent. Once you receive the expression from the subagent, present it and the test results to the user. If approved, use the set_expression tool to apply it. If the user wants changes, adjust accordingly.`
 - **Condition**: `showAgentChat && can('writeDescriptionBreaking')`
 
 ### 6.4 Configure Application

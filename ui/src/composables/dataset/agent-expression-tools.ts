@@ -243,7 +243,7 @@ export function useAgentExpressionTools (
 3. Call get_sample_data to see real data values.
 4. Write an expression and call test_expression to validate it.
 5. If there are errors, fix and retry.
-6. Once the expression works correctly, present the results to the user and ask for confirmation before calling set_expression.
+6. Once the expression works correctly, return the validated expression and test results as your final response.
 
 ## Expression Language Reference
 
@@ -298,6 +298,6 @@ f(x) = x * 2; f(column_name)
 - The result must match the target property type (string, number, integer, boolean).
 - For string results that should be arrays, use a separator defined on the property.
 - Respond in the same language as the user.`,
-    tools: ['get_expression_context', 'get_sample_data', 'test_expression', 'set_expression']
+    tools: ['get_expression_context', 'get_sample_data', 'test_expression']
   })
 }

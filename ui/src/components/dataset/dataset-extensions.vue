@@ -398,6 +398,7 @@ function getExpressionContext (idx: number): string {
   const name = ext.property?.['x-originalName'] || ext.property?.key || 'calculated column'
   return `The user wants help writing an expr-eval expression for calculated column "${name}" (type: ${ext.property?.type || 'string'}, extension index: ${idx}). ` +
     (ext.expr ? `The current expression is: ${ext.expr}. ` : '') +
-    'Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user\'s intent.'
+    'Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user\'s intent. ' +
+    'Once you receive the expression from the subagent, present it and the test results to the user. If approved, use the set_expression tool to apply it. If the user wants changes, adjust accordingly.'
 }
 </script>
