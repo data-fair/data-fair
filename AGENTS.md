@@ -71,6 +71,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 
 - [Dataset Drafts](docs/architecture/dataset-drafts.md) — draft lifecycle, API mechanics, UI section visibility for file-new vs file-updated
 - [Testing](docs/architecture/testing.md) — test suite structure, naming conventions, running tests
+- [AI Agent Integration](docs/architecture/agent-integration-architecture.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
 
 ## Common Development Tasks
 
