@@ -359,7 +359,7 @@ import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiWebhook } from '@mdi/js'
+import { mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -432,17 +432,17 @@ const sections = computedDeepDiff(() => {
     if (can('getPermissions').value) {
       shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
     }
-    if (d.finalizedAt) {
-      shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
+    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
+    if ($uiConfig.catalogsIntegration && can('admin').value) {
+      shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiTransitConnection })
     }
+    shareTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
     if (can('getReadApiKey').value) {
       shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
     }
-    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
-    if ($uiConfig.catalogsIntegration && can('admin').value) {
-      shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiPresentation })
+    if (d.finalizedAt) {
+      shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
     }
-    shareTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
     if (shareTabs.length) {
       result.push({ title: t('share'), id: 'share', tabs: shareTabs })
     }

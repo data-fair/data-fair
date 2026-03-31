@@ -21,7 +21,7 @@
             :color="color"
           />
         </div>
-        <div class="pl-4 flex-grow-1">
+        <div class="pl-4 flex-grow-1" style="min-width: 0;">
           <v-toolbar
             extended
             flat
