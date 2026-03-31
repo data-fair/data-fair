@@ -5,7 +5,7 @@
     sync-params
     :sync-path="$sitePath + '/data-fair/events/'"
     emit-iframe-messages
-    resize="yes"
+    resize="no"
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"

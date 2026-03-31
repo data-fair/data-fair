@@ -3,7 +3,7 @@
     id="metrics"
     :src="$sitePath + '/metrics/embed/home'"
     sync-params
-    resize="yes"
+    resize="no"
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"

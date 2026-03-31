@@ -3,7 +3,7 @@
     id="processings"
     :src="$sitePath + '/processings/admin/plugins/'"
     sync-params
-    resize="yes"
+    resize="no"
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"

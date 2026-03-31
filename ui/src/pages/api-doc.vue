@@ -4,6 +4,7 @@
     :src="`${$sitePath}/openapi-viewer?drawerLocation=right&urlType=general`"
     sync-params
     style="height: 100%"
+    resize="no"
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"
