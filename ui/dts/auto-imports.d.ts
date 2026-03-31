@@ -211,18 +211,6 @@ declare module 'vue' {
     readonly datasetStoreKey: UnwrapRef<typeof import('../src/composables/dataset/store')['datasetStoreKey']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
-    readonly dfDateMatchFilter: UnwrapRef<typeof import('@data-fair/lib-vuetify/date-match-filter.vue')['default']>
-    readonly dfDateRangePicker: UnwrapRef<typeof import('@data-fair/lib-vuetify/date-range-picker.vue')['default']>
-    readonly dfLangSwitcher: UnwrapRef<typeof import('@data-fair/lib-vuetify/lang-switcher.vue')['default']>
-    readonly dfNavigationRight: UnwrapRef<typeof import('@data-fair/lib-vuetify/navigation-right.vue')['default']>
-    readonly dfOwnerAvatar: UnwrapRef<typeof import('@data-fair/lib-vuetify/owner-avatar.vue')['default']>
-    readonly dfOwnerPick: UnwrapRef<typeof import('@data-fair/lib-vuetify/owner-pick.vue')['default']>
-    readonly dfPersonalMenu: UnwrapRef<typeof import('@data-fair/lib-vuetify/personal-menu.vue')['default']>
-    readonly dfThemeSwitcher: UnwrapRef<typeof import('@data-fair/lib-vuetify/theme-switcher.vue')['default']>
-    readonly dfTutorialAlert: UnwrapRef<typeof import('@data-fair/lib-vuetify/tutorial-alert.vue')['default']>
-    readonly dfUiNotif: UnwrapRef<typeof import('@data-fair/lib-vuetify/ui-notif.vue')['default']>
-    readonly dfUiNotifAlert: UnwrapRef<typeof import('@data-fair/lib-vuetify/ui-notif-alert.vue')['default']>
-    readonly dfUserAvatar: UnwrapRef<typeof import('@data-fair/lib-vuetify/ui-user-avatar.vue')['default']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly escapeKey: UnwrapRef<typeof import('../src/utils/escape-key')['escapeKey']>
     readonly findEqFilter: UnwrapRef<typeof import('../src/composables/dataset/filters')['findEqFilter']>
@@ -320,7 +308,6 @@ declare module 'vue' {
     readonly useLocaleDayjs: UnwrapRef<typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNavigationItems: UnwrapRef<typeof import('../src/composables/layout/use-navigation-items')['useNavigationItems']>
-    readonly useNotificationsWS: UnwrapRef<typeof import('../src/composables/use-notifications-ws')['useNotificationsWS']>
     readonly useNumberSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useNumberSearchParam']>
     readonly usePermissions: UnwrapRef<typeof import('../src/composables/use-permissions')['usePermissions']>
     readonly useReactiveSearchParams: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useReactiveSearchParams']>

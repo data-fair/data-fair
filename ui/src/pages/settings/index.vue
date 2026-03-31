@@ -39,7 +39,7 @@
             v-for="section of sections"
             :key="section.id"
           >
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'info'"
               :id="section.id"
               :svg="infoSvg"
@@ -65,9 +65,9 @@
                   </v-row>
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'licences'"
               :id="section.id"
               :svg="qualitySvg"
@@ -93,9 +93,9 @@
                   </v-row>
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'topics'"
               :id="section.id"
               :svg="flagsSvg"
@@ -125,9 +125,9 @@
                   </v-row>
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'datasetsMetadata'"
               :id="section.id"
               :svg="checklist2Svg"
@@ -145,9 +145,9 @@
                   />
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'api-keys'"
               :id="section.id"
               :svg="securitysSvg"
@@ -168,9 +168,9 @@
                   />
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'webhooks'"
               :id="section.id"
               :svg="wwwSvg"
@@ -198,9 +198,9 @@
                   </v-row>
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'privateVocabulary'"
               :id="section.id"
               :svg="checklistSvg"
@@ -235,9 +235,9 @@
                   </v-row>
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'publicationSites'"
               :id="section.id"
               :svg="uiSvg"
@@ -266,9 +266,9 @@
                   </v-row>
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'agentChat'"
               :id="section.id"
               :svg="compatSvg"
@@ -294,9 +294,9 @@
                   </v-row>
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
 
-            <layout-section-tabs
+            <df-section-tabs
               v-if="section.id === 'compat'"
               :id="section.id"
               :svg="compatSvg"
@@ -322,14 +322,14 @@
                   </v-row>
                 </v-container>
               </template>
-            </layout-section-tabs>
+            </df-section-tabs>
           </div>
         </template>
       </v-col>
     </v-row>
 
     <df-navigation-right v-if="display.lgAndUp.value">
-      <layout-toc :sections="sections" />
+      <df-toc :sections="sections" />
     </df-navigation-right>
   </v-container>
 </template>

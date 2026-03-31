@@ -38,7 +38,7 @@
       </template>
     </v-breadcrumbs>
     <v-spacer />
-    <layout-notifications-queue
+    <df-notification-queue
       v-if="$uiConfig.eventsIntegration && user"
       :events-url="$sitePath + '/events'"
     />
@@ -52,6 +52,7 @@
 </template>
 
 <script lang="ts" setup>
+import DfNotificationQueue from '@data-fair/lib-vuetify-events/DfNotificationQueue.vue'
 import DfPersonalMenu from '@data-fair/lib-vuetify/personal-menu.vue'
 import DfThemeSwitcher from '@data-fair/lib-vuetify/theme-switcher.vue'
 import DfAgentChatToggle from '@data-fair/lib-vuetify-agents/DfAgentChatToggle.vue'

@@ -54,7 +54,7 @@
           :key="section.id"
         >
           <!-- Metadata section -->
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'metadata'"
             :id="section.id"
             :min-height="300"
@@ -177,10 +177,10 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
 
           <!-- Render section -->
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'render'"
             :id="section.id"
             :min-height="390"
@@ -224,10 +224,10 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
 
           <!-- Share section -->
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'share'"
             :id="section.id"
             :min-height="250"
@@ -266,10 +266,10 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
 
           <!-- Activity section -->
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'activity'"
             :id="section.id"
             :min-height="550"
@@ -316,14 +316,14 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
         </template>
       </v-col>
     </v-row>
 
     <df-navigation-right>
       <application-actions />
-      <layout-toc :sections="sections" />
+      <df-toc :sections="sections" />
     </df-navigation-right>
   </v-container>
 </template>

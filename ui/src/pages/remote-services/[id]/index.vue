@@ -6,7 +6,7 @@
           v-for="section in sections"
           :key="section.id"
         >
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'metadata'"
             :id="section.id"
             :min-height="300"
@@ -31,8 +31,8 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
-          <layout-section-tabs
+          </df-section-tabs>
+          <df-section-tabs
             v-if="section.id === 'configuration'"
             :id="section.id"
             :min-height="300"
@@ -51,9 +51,9 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
 
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'share'"
             :id="section.id"
             :svg="shareSvg"
@@ -95,7 +95,7 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
         </template>
       </v-col>
     </v-row>
@@ -116,7 +116,7 @@
         </v-list-item>
       </v-list>
       <remote-service-actions v-model="remoteServiceEditFetch.data.value" />
-      <layout-toc :sections="sections" />
+      <df-toc :sections="sections" />
     </df-navigation-right>
   </v-container>
 </template>

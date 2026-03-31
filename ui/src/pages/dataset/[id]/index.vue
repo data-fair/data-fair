@@ -11,7 +11,7 @@
           :key="section.id"
         >
           <!-- Data section -->
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'data'"
             :id="section.id"
             v-model="dataTab"
@@ -161,10 +161,10 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
 
           <!-- Share section -->
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'share'"
             :id="section.id"
             :min-height="200"
@@ -229,10 +229,10 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
 
           <!-- Activity section -->
-          <layout-section-tabs
+          <df-section-tabs
             v-if="section.id === 'activity'"
             :id="section.id"
             v-model="activityTab"
@@ -290,14 +290,14 @@
                 </v-tabs-window-item>
               </v-tabs-window>
             </template>
-          </layout-section-tabs>
+          </df-section-tabs>
         </template>
       </v-col>
     </v-row>
 
     <df-navigation-right>
       <dataset-actions />
-      <layout-toc :sections="sections" />
+      <df-toc :sections="sections" />
     </df-navigation-right>
   </v-container>
 </template>

@@ -28,7 +28,7 @@
           <h1 class="text-headline-large text-primary mb-3 mt-5">
             Data Fair
           </h1>
-          <layout-themed-svg
+          <df-themed-svg
             :source="dataProcessSvg"
             style="max-width: 400px; max-height: 250px; width: 100%; margin: 0 auto;"
           />

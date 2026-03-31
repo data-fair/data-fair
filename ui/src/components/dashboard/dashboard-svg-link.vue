@@ -10,7 +10,7 @@
     >
       {{ title }}
     </v-card-title>
-    <layout-themed-svg
+    <df-themed-svg
       v-if="svg && smAndUp"
       :source="svg"
       :color="color"

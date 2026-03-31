@@ -183,7 +183,7 @@
           </template>
         </v-virtual-scroll>
       </tbody>
-      <layout-scroll-to-top selector=".v-table__wrapper" />
+      <df-scroll-to-top selector=".v-table__wrapper" />
     </v-table>
 
     <!--list mode body -->
@@ -242,7 +242,7 @@
       >
         &nbsp;
       </v-row>
-      <layout-scroll-to-top selector=".dataset-table-list-wrapper" />
+      <df-scroll-to-top selector=".dataset-table-list-wrapper" />
     </div>
   </div>
 
