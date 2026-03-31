@@ -60,6 +60,7 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
 Task:
 1. Call read_dataset_info to get the full metadata and schema.
 2. Write a summary describing the content and purpose of the dataset based on its title, description, columns, and other metadata.
+3. Return the summary text as your final response.
 
 Format:
 - Between 200 and 300 characters long

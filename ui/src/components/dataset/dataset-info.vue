@@ -141,6 +141,6 @@ const newSlug = ref('')
 const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? false
 
 const summarizeContext = computed(() => {
-  return `Use the subagent_summarizer tool to read the dataset information and produce a summary. Then use the set_dataset_summary tool to set the summary on the form. The dataset ID is "${dataset.value?.id}".`
+  return 'Use the dataset_summarizer subagent to produce a summary for this dataset. Once you receive the summary, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_summary tool to set it. If the user wants changes, adjust accordingly.'
 })
 </script>
