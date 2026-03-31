@@ -134,6 +134,7 @@ The main system prompt is defined in `ui/src/layouts/default-layout.vue` and inj
 > - Respond in the user's language
 > - Be concise and precise
 > - Frequently use the tool getCurrentLocation to understand the positioning of the user in the UI.
+> - When the data exploration subagent returns "Navigation params", use the navigate tool with those parameters as query to show the user the filtered data in the dataset table page (path: /dataset/{id}/table)
 
 ## 4. Tool Inventory
 
@@ -145,7 +146,7 @@ Source: `ui/src/composables/agent/navigation-tools.ts`
 |------|-------------|------------|-----------|
 | `get_current_location` | Returns current page path, route name, params, query, and breadcrumbs | _(none)_ | Yes |
 | `list_pages` | Lists all accessible pages organized by group (content, management, connectors, monitoring, help, admin, workflow, detail, d-frame) | _(none)_ | Yes |
-| `navigate` | Navigates the application to a given path using Vue Router | `path` (string, required) | **No** |
+| `navigate` | Navigates the application to a given path using Vue Router, optionally with query parameters for filters | `path` (string, required), `query` (object, optional) | **No** |
 
 ### 4.2 Dataset Metadata Tools
 
@@ -269,6 +270,7 @@ Subagents are specialized agents with their own system prompt and a restricted s
 > - For numeric results, round to 2 decimal places when appropriate
 > - When returning tabular data, summarize key findings rather than just dumping raw rows
 > - Respond in the same language as the user's question
+> - When you perform a filtered query, include at the end of your response a "Navigation params" section listing the query parameters as key=value pairs. These use the same filter format and can be used by the main assistant to navigate the user to the dataset table page with the same filters applied.
 
 ### 5.2 `dataset_summarizer` - Summary Generator
 
@@ -367,7 +369,17 @@ Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer a
 - **Hidden context**: `The user wants help writing an expr-eval expression for calculated column "{name}" (type: {type}, extension index: {idx}). {current expression if any}. Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user's intent. Once you receive the expression from the subagent, present it and the test results to the user. If approved, use the set_expression tool to apply it. If the user wants changes, adjust accordingly.`
 - **Condition**: `showAgentChat && can('writeDescriptionBreaking')`
 
-### 6.4 Configure Application
+### 6.4 Help Filter Table Data
+
+- **Action ID**: `help-filter-table`
+- **Location**: `ui/src/components/dataset/table/dataset-table.vue` (in the table toolbar)
+- **Visible prompt**: "Help me filter this data" / "Aide-moi a filtrer ces donnees"
+- **Hidden context**: Describes the current dataset (title, ID) and any active filters. Instructs the agent to ask the user what they want to see or filter before using the data exploration subagent. After exploring, the main agent uses the `navigate` tool with query parameters to apply filters to the table page.
+- **Condition**: `showAgentChat`
+
+**Workflow**: This action demonstrates the **subagent-to-navigation handoff** pattern. The `dataset_data` subagent explores data and returns "Navigation params" in its response. The main agent then passes those params as the `query` argument to the `navigate` tool, which updates the table page URL. Since query params are reactively bound to the table's filter composable, the table filters update live.
+
+### 6.5 Configure Application
 
 - **Action ID**: `configure-application`
 - **Location**: `ui/src/components/application/application-config.vue` (above the configuration form)
@@ -417,6 +429,7 @@ The summary, expression, and changes tools are registered separately in their re
 | `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` action button |
 | `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
+| `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` action button |
 | `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF sub-agent |
 | `ui/src/components/layout/layout-navigation-top.vue` | `DfAgentChatToggle` button in top navigation |
 | `api/src/ui-config.ts` | Exports `agentsIntegration` flag |

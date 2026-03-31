@@ -350,7 +350,12 @@ Format:
 - Present results concisely with clear labels
 - For numeric results, round to 2 decimal places when appropriate
 - When returning tabular data, summarize key findings rather than just dumping raw rows
-- Respond in the same language as the user's question`,
+- Respond in the same language as the user's question
+- When you perform a filtered query (search_data with filters, q, sort, bbox, geoDistance, or dateMatch), always include at the end of your response a "Navigation params" section listing the query parameters as key=value pairs (one per line). These params use the same format and can be used by the main assistant to navigate the user to the dataset table page with the same filters applied. Example:
+  Navigation params:
+  status_eq=active
+  age_lte=30
+  sort=-date`,
     tools: ['get_dataset_schema', 'search_data', 'aggregate_data', 'calculate_metric', 'get_field_values']
   })
 }

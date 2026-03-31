@@ -32,6 +32,13 @@
       class="flex-grow-1"
     />
     <v-spacer />
+    <df-agent-chat-action
+      v-if="showAgentChat"
+      action-id="help-filter-table"
+      :visible-prompt="t('helpFilterPrompt')"
+      :hidden-context="filterHelpContext"
+      :btn-props="{ class: 'mx-1' }"
+    />
     <v-btn-group
       divided
       density="compact"
@@ -365,11 +372,13 @@
     editLine: Éditer une ligne
     deleteLine: Supprimer une ligne
     deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
+    helpFilterPrompt: Aide-moi à filtrer ces données
   en:
     cancel: Cancel
     delete: Delete
     save: Save
     editLine: Edit a line
+    helpFilterPrompt: Help me filter this data
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost definitively
 </i18n>
@@ -383,6 +392,8 @@ import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
 import { type VVirtualScroll, type VForm } from 'vuetify/components'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 
 const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
@@ -403,6 +414,7 @@ const q = defineModel<string>('q', { default: '' })
 const selectedItem = defineModel<string>('selectedItem', { default: '' })
 
 const { t } = useI18n()
+const showAgentChat = useShowAgentChat()
 
 const onFixCol = (key: string) => {
   if (fixed.value === key) fixed.value = undefined
@@ -447,6 +459,14 @@ const hideHeader = (header: TableHeader) => {
 }
 
 const { filters, addFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
+
+const filterHelpContext = computed(() => {
+  const d = dataset.value
+  if (!d) return ''
+  const activeFilters = filters.value.map(f => `${f.property.title || f.property.key} ${f.operator} ${f.formattedValue || f.value}`).join(', ')
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent. After exploring, use the navigate tool with query parameters to apply filters to this table page.`
+})
+
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const indexedAt = ref<string>()
