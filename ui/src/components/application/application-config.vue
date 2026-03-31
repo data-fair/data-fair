@@ -71,7 +71,7 @@
               :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
             />
             <div
-              v-if="showAgentChat && canWriteConfig"
+              v-if="canWriteConfig"
               class="d-flex justify-end mb-1"
             >
               <df-agent-chat-action
@@ -179,7 +179,6 @@ import { useWindowSize } from '@vueuse/core'
 import { useDisplay } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import Vjsf from '@koumoul/vjsf/webmcp'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
@@ -193,7 +192,6 @@ import Debug from 'debug'
 const debug = Debug('application-config')
 
 const display = useDisplay()
-const showAgentChat = useShowAgentChat()
 const { sendUiNotif } = useUiNotif()
 const { t } = useI18n()
 const { height: windowHeight } = useWindowSize()

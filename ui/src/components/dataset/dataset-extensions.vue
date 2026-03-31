@@ -188,7 +188,7 @@
                     class="flex-grow-1"
                   />
                   <df-agent-chat-action
-                    v-if="showAgentChat && can('writeDescriptionBreaking')"
+                    v-if="can('writeDescriptionBreaking')"
                     :action-id="'help-expression-' + idx"
                     :visible-prompt="t('helpExpression')"
                     :hidden-context="getExpressionContext(idx)"
@@ -259,15 +259,12 @@ import { mdiChevronDown, mdiChevronUp } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { escapeKey } from '~/utils/escape-key'
 import { useRemoteServices } from '~/composables/use-remote-services'
-import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import useStore from '~/composables/use-store'
 
 const dataset = defineModel<any>({ required: true })
 const emit = defineEmits<{ refresh: [extension: any] }>()
 
 const { t } = useI18n()
-const showAgentChat = useShowAgentChat()
-
 const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? false
 
 const owner = computed(() => dataset.value?.owner)

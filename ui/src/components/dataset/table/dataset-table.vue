@@ -33,7 +33,6 @@
     />
     <v-spacer />
     <df-agent-chat-action
-      v-if="showAgentChat"
       action-id="help-filter-table"
       :visible-prompt="t('helpFilterPrompt')"
       :hidden-context="filterHelpContext"
@@ -393,7 +392,6 @@ import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
 import { type VVirtualScroll, type VForm } from 'vuetify/components'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 
 const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
@@ -414,8 +412,6 @@ const q = defineModel<string>('q', { default: '' })
 const selectedItem = defineModel<string>('selectedItem', { default: '' })
 
 const { t } = useI18n()
-const showAgentChat = useShowAgentChat()
-
 const onFixCol = (key: string) => {
   if (fixed.value === key) fixed.value = undefined
   else fixed.value = key

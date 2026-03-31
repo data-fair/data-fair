@@ -125,7 +125,7 @@
             @confirm="cancelChanges"
           />
         </v-list-item>
-        <v-list-item v-if="showAgentChat">
+        <v-list-item>
           <df-agent-chat-action
             action-id="summarize-metadata-changes"
             :visible-prompt="t('summarizeChanges')"
@@ -182,7 +182,6 @@ import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiAlert, mdiAttachment, mdiCancel, mdiDatabase, mdiInformation, mdiPuzzle, mdiRobotOutline, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
@@ -220,7 +219,6 @@ useAgentExpressionTools(locale, datasetEditFetch.data, (extensionIndex, expr) =>
 })
 
 const breadcrumbs = useBreadcrumbs()
-const showAgentChat = useShowAgentChat()
 const infoTab = ref('info')
 const structureTab = ref('schema')
 
