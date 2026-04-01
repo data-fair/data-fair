@@ -339,6 +339,9 @@
             :loading="editLine.loading.value"
             :extension="true"
             :ro-primary-key="true"
+            :sub-agent="true"
+            prefix-name="editLine_"
+            :data-title="t('editLine')"
             @on-file-upload="(f: File) => {file = f}"
           />
         </v-card-text>
@@ -393,6 +396,7 @@ import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
 import { type VVirtualScroll, type VForm } from 'vuetify/components'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useAgentTool } from '@data-fair/lib-vue-agents'
 
 const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
@@ -469,7 +473,40 @@ const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFil
 const indexedAt = ref<string>()
 const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
 const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed)
-const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetchUrl, indexedAt)
+const { selectedResults, saveLine, bulkLines, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
+
+if (edit) {
+  useAgentTool({
+    name: 'open_add_line_dialog',
+    description: 'Open the "Add a new line" dialog on the data editing page. After opening, use the editLine_form sub-agent tool to fill the form fields. The user will click Save manually.',
+    annotations: { title: 'Ouvrir le dialogue d\'ajout de ligne', readOnlyHint: false },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {}
+    },
+    execute: async () => {
+      addLineTrigger.value = true
+      return 'Add line dialog opened. You can now use the editLine_form sub-agent tool to fill in the form fields. The user will click Save when ready.'
+    }
+  })
+
+  useAgentTool({
+    name: 'open_edit_line_dialog',
+    description: 'Open the "Edit line" dialog for a specific data row. Provide the line _id. After opening, use the editLine_form sub-agent tool to modify form fields. The user will click Save manually.',
+    annotations: { title: 'Ouvrir le dialogue d\'édition de ligne', readOnlyHint: false },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        lineId: { type: 'string' as const, description: 'The _id of the line to edit. Use search_data to find valid line IDs.' }
+      },
+      required: ['lineId'] as const
+    },
+    execute: async (params: { lineId: string }) => {
+      showEditDialog.value = { _id: params.lineId } as ExtendedResult
+      return 'Edit line dialog opened. You can now use the editLine_form sub-agent tool to modify the form fields. The user will click Save when ready.'
+    }
+  })
+}
 
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])

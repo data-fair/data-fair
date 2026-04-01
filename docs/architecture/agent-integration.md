@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 22 tools, only 3 perform writes (navigate, set_expression, set_dataset_summary). All others are read-only.
+- **Read-heavy, write-light**: of 24 tools, only 5 perform writes (navigate, set_expression, set_dataset_summary, open_add_line_dialog, open_edit_line_dialog). All others are read-only.
 
 ### Activation flow
 
@@ -244,6 +244,17 @@ These tools are only registered when the corresponding integration is enabled in
 | `list_catalogs` | List catalogs with search, type, URL | `q`, `page`, `size` | Yes |
 | `describe_catalog` | Catalog metadata: type, URL, owner, description | `catalogId` (required) | Yes |
 
+### 4.10 REST Dataset Edit Tools
+
+Source: `ui/src/components/dataset/table/dataset-table.vue`
+
+Registered contextually when on the edit-data page (dataset table in `edit` mode). These tools let the agent open add/edit line dialogs; the actual form filling is handled by the VJSF webmcp sub-agent (see §5.6).
+
+| Tool | Description | Parameters | Read-only |
+|------|-------------|------------|-----------|
+| `open_add_line_dialog` | Opens the "Add a new line" dialog | _(none)_ | **No** |
+| `open_edit_line_dialog` | Opens the "Edit line" dialog for a specific row | `lineId` (string, required) | **No** |
+
 ## 5. Subagent Inventory
 
 Subagents are specialized agents with their own system prompt and a restricted set of tools. The main agent delegates to them for domain-specific tasks.
@@ -340,6 +351,15 @@ Subagents are specialized agents with their own system prompt and a restricted s
 
 This subagent is automatically created by the VJSF (Vue JSON Schema Form) component to help users fill in the application configuration form through natural language. The main agent is instructed to delegate to it via the `configure-application` action's hidden context.
 
+### 5.6 `editLine_form` - Line Edit Form Helper
+
+- **Source**: Dynamically created by the `vjsf` component when `:sub-agent="true"` is set
+- **Location**: `ui/src/components/dataset/form/dataset-edit-line-form.vue`
+- **Model**: _(managed by vjsf/lib-vuetify-agents)_
+- **Tools**: _(form manipulation tools provided by vjsf)_
+
+This subagent is automatically created by the VJSF (Vue JSON Schema Form) component in the add-line and edit-line dialogs. The same `editLine_` prefix is used for both dialogs since only one can be open at a time. The main agent opens a dialog first (via `open_add_line_dialog` or `open_edit_line_dialog`), then delegates to this sub-agent to fill form fields. The user retains control of the Save button.
+
 ## 6. Action Buttons
 
 Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer and inject a pre-configured message to trigger a specific workflow.
@@ -387,6 +407,16 @@ Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer a
 - **Hidden context**: `Use the subagent tool appConfig_form to help the user configure the current application. Start the session by asking the user what they want to achieve. The base application type is "{title}". Description: {description}. Category: {category}. The application title is "{appTitle}".`
 - **Condition**: `showAgentChat && canWriteConfig`
 
+### 6.6 Help Enter Data
+
+- **Action ID**: `help-edit-data`
+- **Location**: `ui/src/pages/dataset/[id]/edit-data.vue` (above the data table)
+- **Visible prompt**: "Help me enter data" / "Aide-moi à saisir des données"
+- **Hidden context**: Describes the current REST dataset (title, ID, columns with types). Instructs the agent to use `open_add_line_dialog` or `open_edit_line_dialog` to open dialogs, then the `editLine_form` sub-agent to fill form fields. Explicitly states the agent must NOT submit — the user clicks Save manually.
+- **Condition**: `showAgentChat && dataset.isRest`
+
+**Workflow**: This action demonstrates the **dialog-opening + VJSF webmcp** pattern. The agent opens a dialog via a tool call, then delegates form filling to the VJSF sub-agent. The user retains full control of submission, preventing unintended data modifications.
+
 ## 7. Tool Registration Lifecycle
 
 Tools are registered in the main application layout (`default-layout.vue`) using a Vue `effectScope`:
@@ -429,7 +459,9 @@ The summary, expression, and changes tools are registered separately in their re
 | `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` action button |
 | `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
-| `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` action button |
+| `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` action button, `open_add_line_dialog` / `open_edit_line_dialog` tools |
+| `ui/src/components/dataset/form/dataset-edit-line-form.vue` | VJSF webmcp form for line add/edit (`editLine_form` sub-agent) |
+| `ui/src/pages/dataset/[id]/edit-data.vue` | `help-edit-data` action button |
 | `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF sub-agent |
 | `ui/src/components/layout/layout-navigation-top.vue` | `DfAgentChatToggle` button in top navigation |
 | `api/src/ui-config.ts` | Exports `agentsIntegration` flag |

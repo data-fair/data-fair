@@ -177,5 +177,5 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 | **Med** | 6. Master data config | Med — complex feature | Low — VJSF pattern exists |
 | **Low** | 5. Virtual dataset config | Med — niche feature | Med |
 | **Low** | 10. Publication assistance | Med — wizard already exists | Med |
-| **Low** | 13. REST data entry | Low-Med — niche use case | Med-High |
+| ~~Done~~ | ~~13. REST data entry~~ | ~~Low-Med — niche use case~~ | ~~Med-High~~ |
 | **Low** | 4. Property transforms | Low — niche | Med |
