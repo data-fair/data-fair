@@ -1,7 +1,31 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
-import { createAgentTranslator, toCsv, cleanRow } from '~/composables/agent/utils'
+import { createAgentTranslator } from '~/composables/agent/utils'
+import {
+  executeGetDatasetSchema,
+  executeSearchData,
+  executeAggregateData,
+  executeCalculateMetric,
+  executeGetFieldValues
+} from './agent-data-tools-logic'
+
+export {
+  applyGeoParams,
+  applyDateMatchParam,
+  normalizeSort,
+  executeGetDatasetSchema,
+  executeSearchData,
+  executeAggregateData,
+  executeCalculateMetric,
+  executeGetFieldValues
+} from './agent-data-tools-logic'
+
+export type {
+  SearchDataParams,
+  AggregateDataParams,
+  CalculateMetricParams
+} from './agent-data-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -26,28 +50,6 @@ const messages: Record<string, Record<string, string>> = {
 
 const filtersDescription = 'Column filters as key-value pairs. Key format: column_key + suffix (_eq, _neq, _search, _in, _nin, _starts, _contains, _gte, _gt, _lte, _lt, _exists, _nexists). All values must be strings. Example: {"nom_search":"Jean","age_lte":"30"}'
 
-function applyGeoParams (query: Record<string, string>, bbox?: string, geoDistance?: string) {
-  if (bbox) query.bbox = bbox
-  if (geoDistance) query.geo_distance = geoDistance
-}
-
-function applyDateMatchParam (query: Record<string, string>, dateMatch?: string) {
-  if (dateMatch) query.date_match = dateMatch
-}
-
-/**
- * Drop incomplete _geo_distance sort entries (without :lon:lat suffix).
- * LLMs sometimes write sort: "_geo_distance" redundantly when a geoDistance filter is already present.
- * The API already auto-sorts by distance when a geo_distance filter is set.
- */
-function normalizeSort (sort: string): string {
-  return sort.split(',').map(part => {
-    const trimmed = part.trim()
-    if (/^-?_geo_distance$/.test(trimmed)) return null
-    return trimmed
-  }).filter(Boolean).join(',')
-}
-
 export function useAgentDatasetDataTools (locale: Ref<string>) {
   const t = createAgentTranslator(messages, locale)
 
@@ -62,43 +64,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId'] as const
     },
-    execute: async (params) => {
-      const [dataset, linesData] = await Promise.all([
-        $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}`, { query: { select: 'schema,title' } }),
-        $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/lines`, { query: { size: '3' } })
-      ])
-
-      const schema = dataset.schema
-        ?.filter((col: any) => !['_i', '_id', '_rand'].includes(col.key))
-        .map((col: any) => {
-          const notes: string[] = []
-          if (col.description) notes.push(col.description)
-          if (col['x-concept']?.title) notes.push(`concept: ${col['x-concept'].title}`)
-          if (col.enum) {
-            const shown = col.enum.slice(0, 20).join(', ')
-            notes.push(col.enum.length > 20 ? `enum: ${shown}… (${col.enum.length} total)` : `enum: ${shown}`)
-          }
-          if (col['x-labels']) {
-            const entries = Object.entries(col['x-labels'])
-            const shown = entries.slice(0, 10).map(([k, v]) => `${k}=${v}`).join(', ')
-            notes.push(entries.length > 10 ? `labels: ${shown}… (${entries.length} total)` : `labels: ${shown}`)
-          }
-          return `| \`${col.key}\` | ${col.type} | ${col.title || ''} | ${notes.join(' — ')} |`
-        })
-
-      const samples = (linesData.results ?? []).map(cleanRow)
-
-      const sections = [
-        `# Schema: ${dataset.title}`,
-        '| Key | Type | Title | Notes |',
-        '|-----|------|-------|-------|',
-        ...(schema || []),
-        '',
-        '## Sample data',
-        toCsv(samples)
-      ]
-      return sections.join('\n')
-    }
+    execute: (params) => executeGetDatasetSchema(params, $fetch)
   })
 
   useAgentTool({
@@ -122,44 +88,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId'] as const
     },
-    execute: async (params) => {
-      let data: any
-
-      if (params.next) {
-        data = await $fetch<any>(params.next)
-      } else {
-        const size = Math.min(Math.max(params.size || 10, 1), 50)
-        const query: Record<string, string> = { size: String(size) }
-        if (params.q) { query.q = params.q; query.q_mode = 'complete' }
-        if (params.select) query.select = params.select
-        if (params.sort) {
-          const normalized = normalizeSort(params.sort)
-          if (normalized) query.sort = normalized
-        }
-        if (params.page) query.page = String(params.page)
-        if (params.filters) {
-          for (const [key, value] of Object.entries(params.filters)) {
-            query[key] = String(value)
-          }
-        }
-        applyGeoParams(query, params.bbox, params.geoDistance)
-        applyDateMatchParam(query, params.dateMatch)
-
-        data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/lines`, { query })
-      }
-
-      const rows = (data.results ?? []).map(cleanRow)
-
-      const lines = [
-        `**${data.total}** rows found (showing ${rows.length}, page ${params.page || 1})`,
-        '',
-        toCsv(rows)
-      ]
-      if (data.next) {
-        lines.push('', 'Next page available.')
-      }
-      return lines.join('\n')
-    }
+    execute: (params) => executeSearchData(params, $fetch)
   })
 
   useAgentTool({
@@ -191,42 +120,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId', 'groupByColumns'] as const
     },
-    execute: async (params) => {
-      const query: Record<string, string> = {
-        field: params.groupByColumns.join(';')
-      }
-      if (params.metric && params.metric.type !== 'count') {
-        query.metric = params.metric.type!
-        query.metric_field = params.metric.column!
-      }
-      if (params.sort) query.sort = params.sort
-      if (params.filters) {
-        for (const [key, value] of Object.entries(params.filters)) {
-          query[key] = String(value)
-        }
-      }
-      applyGeoParams(query, params.bbox, params.geoDistance)
-      applyDateMatchParam(query, params.dateMatch)
-
-      const data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/values_agg`, { query })
-
-      const formatAgg = (agg: any, indent: string): string => {
-        let line = `${indent}- **${agg.value}**: ${agg.total} rows`
-        if (params.metric && params.metric.type !== 'count' && agg.metric != null) {
-          line += `, ${params.metric.type}(${params.metric.column}) = ${agg.metric}`
-        }
-        if (agg.aggs?.length) {
-          line += '\n' + agg.aggs.map((sub: any) => formatAgg(sub, indent + '  ')).join('\n')
-        }
-        return line
-      }
-
-      return [
-        `**${data.total}** total rows, **${data.total_values}** groups shown, **${data.total_other}** rows not represented`,
-        '',
-        ...(data.aggs ?? []).map((agg: any) => formatAgg(agg, ''))
-      ].join('\n')
-    }
+    execute: (params) => executeAggregateData(params, $fetch)
   })
 
   useAgentTool({
@@ -247,37 +141,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId', 'fieldKey', 'metric'] as const
     },
-    execute: async (params) => {
-      const query: Record<string, string> = {
-        metric: params.metric,
-        field: params.fieldKey
-      }
-      if (params.percents) query.percents = params.percents
-      if (params.filters) {
-        for (const [key, value] of Object.entries(params.filters)) {
-          query[key] = String(value)
-        }
-      }
-      applyGeoParams(query, params.bbox, params.geoDistance)
-      applyDateMatchParam(query, params.dateMatch)
-
-      const data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/metric_agg`, { query })
-
-      let result: string
-      if (params.metric === 'stats' && typeof data.metric === 'object') {
-        result = Object.entries(data.metric).map(([k, v]) => `${k}: ${v}`).join(', ')
-      } else if (params.metric === 'percentiles' && typeof data.metric === 'object') {
-        result = Object.entries(data.metric).map(([k, v]) => `p${k}: ${v}`).join(', ')
-      } else {
-        result = String(data.metric)
-      }
-
-      return [
-        `**${params.metric}** of \`${params.fieldKey}\``,
-        `Total rows: ${data.total}`,
-        `Result: **${result}**`
-      ].join('\n')
-    }
+    execute: (params) => executeCalculateMetric(params, $fetch)
   })
 
   useAgentTool({
@@ -295,24 +159,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId', 'fieldKey'] as const
     },
-    execute: async (params) => {
-      const query: Record<string, string> = {
-        size: String(Math.min(Math.max(params.size || 10, 1), 1000))
-      }
-      if (params.q) query.q = params.q
-      if (params.sort) query.sort = params.sort
-
-      const values = await $fetch<any>(
-        `datasets/${encodeURIComponent(params.datasetId)}/values/${encodeURIComponent(params.fieldKey)}`,
-        { query }
-      )
-
-      return [
-        `Distinct values of \`${params.fieldKey}\`:`,
-        '',
-        ...values.map((v: any) => `- ${v}`)
-      ].join('\n')
-    }
+    execute: (params) => executeGetFieldValues(params, $fetch)
   })
 
   const datasetDataPrompts: Record<string, string> = {
