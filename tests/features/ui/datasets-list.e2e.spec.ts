@@ -81,14 +81,14 @@ test.describe('datasets list page', () => {
     await expect(page.locator('.v-container .v-list .v-list-item').first()).toBeVisible({ timeout: 5000 })
   })
 
-  test('"Créer un jeu de données" action is visible for contributors', async ({ page, goToWithAuth }) => {
+  test('"Créer un nouveau jeu de données" action is visible for contributors', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    await expect(page.locator('.v-navigation-drawer--right').getByText('Créer un jeu de données')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.v-navigation-drawer--right').getByText('Créer un nouveau jeu de données')).toBeVisible({ timeout: 10000 })
   })
 
-  test('"Créer un jeu de données" action navigates to new-dataset page', async ({ page, goToWithAuth }) => {
+  test('"Créer un nouveau jeu de données" action navigates to new-dataset page', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    await page.locator('.v-navigation-drawer--right').getByText('Créer un jeu de données').click()
+    await page.locator('.v-navigation-drawer--right').getByText('Créer un nouveau jeu de données').click()
     await page.waitForURL(/new-dataset/, { timeout: 10000 })
   })
 

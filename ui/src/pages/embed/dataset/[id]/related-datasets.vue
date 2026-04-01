@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container
     data-iframe-height
     style="min-height:500px;"

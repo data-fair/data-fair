@@ -82,7 +82,7 @@ en:
     download: download
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Event } from '#api/types'
 import eventsJson from '#shared/events.json'
 import { mdiAlert, mdiAlertDecagram, mdiCheck, mdiClipboardText, mdiContentSave, mdiDelete, mdiFileCancel, mdiFileCheck, mdiFileDownload, mdiFileSearch, mdiFileSwap, mdiMerge, mdiPencil, mdiPlusCircleOutline, mdiPublish, mdiReloadAlert, mdiTableOfContents, mdiWrench } from '@mdi/js'

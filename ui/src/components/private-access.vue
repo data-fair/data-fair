@@ -34,7 +34,7 @@ en:
   searchName: Search an organization name
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 
 const modelValue = defineModel<Record<string, any> & { public?: boolean, privateAccess?: { type: string, id: string, name: string }[] }>()
 

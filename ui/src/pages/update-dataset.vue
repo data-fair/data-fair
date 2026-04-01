@@ -5,7 +5,7 @@
   />
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const route = useRoute<'/update-dataset'>()
 const { t } = useI18n()
 const { account } = useSessionAuthenticated()

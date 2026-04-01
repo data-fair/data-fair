@@ -52,7 +52,7 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { AccountKeys } from '@data-fair/lib-vue/session'
 
 interface InitFrom {
@@ -96,7 +96,7 @@ const togglePart = (part: string) => {
 
 <i18n lang="yaml">
 fr:
-  initFromDataset: Utiliser un jeu de données existant comme modèle ?
+  initFromDataset: Utiliser un jeu de données existant comme modèle
   initFromData: copier la donnée
   initFromSchema: copier le schéma
   initFromExtensions: copier les extensions

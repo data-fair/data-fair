@@ -40,7 +40,7 @@
           {{ t("no") }}
         </v-btn>
         <v-btn
-          variant="elevated"
+          variant="flat"
           :color="yesColor"
           @click="emit('confirm')"
         >
@@ -60,7 +60,7 @@ en:
   no: No
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiDelete } from '@mdi/js'
 
 const { btnProps, title, text, tooltip, yesColor, alert, icon, label } = defineProps({

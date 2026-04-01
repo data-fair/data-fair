@@ -256,7 +256,7 @@ en:
   waitForIndex: The requested operations are large, they will be processed with a slight delay. Please wait, the table will be refreshed when the data is processed.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type RestActionsSummary } from '#api/types'
 import axios, { AxiosRequestConfig } from 'axios'
 

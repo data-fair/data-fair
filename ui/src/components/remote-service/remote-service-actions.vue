@@ -60,7 +60,6 @@
       </template>
       <template #default="{ isActive }">
         <v-card
-          variant="elevated"
           :title="t('deleteTitle')"
           :text="t('deleteMsg', {title: remoteService.title})"
           :loading="confirmDelete.loading.value ? 'warning' : undefined"
@@ -96,7 +95,7 @@ fr:
   updateAPI: Mettre a jour la description de l'API
   delete: Supprimer
   deleteTitle: Suppression de la configuration du service
-  deleteMsg: Voulez vous vraiment supprimer la configuration du service "{title}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
+  deleteMsg: Voulez-vous vraiment supprimer la configuration du service "{title}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
   yes: Oui
   no: Non
   refreshOk: La définition de l'API a été mise à jour
@@ -106,13 +105,13 @@ en:
   updateAPI: Update API description
   delete: Delete
   deleteTitle: Delete the service configuration
-  deleteMsg: Do you really want to delete the service configuration "{title}" ? Deletion is definitive.
+  deleteMsg: Do you really want to delete the service configuration "{title}"? Deletion is permanent and data cannot be recovered.
   yes: Yes
   no: No
   refreshOk: The API definition was updated
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { RemoteService } from '#api/types'
 import { mdiCloud, mdiInformation, mdiRefresh } from '@mdi/js'
 

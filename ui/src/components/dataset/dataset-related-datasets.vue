@@ -16,7 +16,7 @@
         variant="outlined"
         density="compact"
         hide-details
-        style="max-width: 600px"
+        max-width="600"
         chips
         closable-chips
         @update:model-value="datasets => {value = datasets.map(d => ({ id: d.id, title: d.title }))}"
@@ -52,7 +52,7 @@ en:
   search: Search
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { withQuery } from 'ufo'
 import { datasetListSelect, type ListedDataset } from './select/utils'
 

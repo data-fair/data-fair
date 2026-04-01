@@ -55,7 +55,7 @@ en:
   createProtectedLink: Create a protected link
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiDelete } from '@mdi/js'
 import useApplicationStore from '~/composables/application/store'
 import { $siteUrl, $fetch } from '~/context'

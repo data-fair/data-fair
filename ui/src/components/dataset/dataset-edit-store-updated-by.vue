@@ -33,6 +33,7 @@
         <v-btn
           v-if="storeUpdatedBy"
           color="warning"
+          variant="flat"
           @click="change(false)"
         >
           {{ t('deActivate') }}
@@ -40,6 +41,7 @@
         <v-btn
           v-else
           color="primary"
+          variant="flat"
           @click="change(true)"
         >
           {{ t('activate') }}
@@ -49,7 +51,7 @@
   </v-menu>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiPencil } from '@mdi/js'
 
 const messages = {
@@ -58,14 +60,14 @@ const messages = {
     alertDeactivate: 'Si vous désactivez le stockage des utilisateurs qui font des modifications de ligne cette information sera supprimée et ne sera récupérable.',
     activate: 'activer',
     deActivate: 'désactiver',
-    cancel: 'annuler'
+    cancel: 'Annuler'
   },
   en: {
     alertActivate: 'If you activate the storage of the users that make line changes all users with read access to this dataset will be able to read this information.',
-    alertDeactivate: 'If you deactivate the storage of the users that make line changes this information will be deleted and will not be recoverable.',
+    alertDeactivate: 'If you deactivate the storage of the users that make line changes this information will be deleted and cannot be recovered.',
     activate: 'activate',
     deActivate: 'deactivate',
-    cancel: 'cancel'
+    cancel: 'Cancel'
   }
 }
 

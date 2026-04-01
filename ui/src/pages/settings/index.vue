@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container>
     <v-row>
       <v-col>
@@ -367,7 +367,7 @@ en:
   compatODS: Enable ODS compatibility
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import qualitySvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import flagsSvg from '~/assets/svg/Crossed flags_Two Color.svg?raw'

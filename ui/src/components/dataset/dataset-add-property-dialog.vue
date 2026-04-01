@@ -64,7 +64,7 @@ en:
   add: Add
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { escapeKey } from '~/utils/escape-key'
 import { propertyTypes } from '~/utils/dataset'
 

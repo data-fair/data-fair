@@ -20,7 +20,7 @@
         variant="outlined"
         density="compact"
         class="my-2"
-        style="max-width: 400px;"
+        max-width="400px"
         hide-details="auto"
         return-object
         @update:model-value="addChild"
@@ -81,7 +81,7 @@
                   item-value="id"
                   :label="t('addColumn')"
                   return-object
-                  style="max-width: 400px;"
+                  max-width="400"
                   hide-details
                   density="compact"
                   variant="solo"
@@ -175,7 +175,7 @@
           :items="allColumns.map((c: any) => ({ disabled: !!filtersByKey[c.key], value: c.key, title: c.title || c['x-originalName'] || c.key }))"
           hide-no-data
           :label="t('addFilter')"
-          style="max-width: 400px;"
+          max-width="400"
           density="compact"
           variant="outlined"
           class="my-2"
@@ -208,7 +208,7 @@
                 hide-details
                 density="compact"
                 class="mt-4"
-                style="max-width: 300px"
+                max-width="300"
                 @update:model-value="(v: string) => filter.operator = v"
               />
               <v-combobox
@@ -295,7 +295,7 @@ en:
   masterData: Master data
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiDelete, mdiSort } from '@mdi/js'
 import draggable from 'vuedraggable'
 import { withQuery } from 'ufo'

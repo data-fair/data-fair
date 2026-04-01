@@ -113,7 +113,7 @@ en:
   confirmDelete: Delete
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiDelete } from '@mdi/js'
 import type { Application } from '#api/types'
 import useApplicationStore from '~/composables/application/store'

@@ -52,7 +52,7 @@ en:
   apiKeyUseDetails: You can refer to the API documentation and use this key by passing its value in the "x-apiKey" header.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 
 const { t } = useI18n()
 const menu = ref(false)

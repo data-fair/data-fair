@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container>
     <p v-if="datasetsErrorsFetch.data.value?.count === 0">
       Aucun jeu de données en erreur
@@ -148,7 +148,7 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiPlay } from '@mdi/js'
 
 const { dayjs } = useLocaleDayjs()

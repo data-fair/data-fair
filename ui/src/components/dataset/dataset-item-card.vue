@@ -121,7 +121,7 @@
     showFullValue: Show full value
   </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type DatasetFilter } from '~/composables/dataset/filters'
 import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset/lines'
 import { type TableHeaderWithProperty } from './table/use-headers'

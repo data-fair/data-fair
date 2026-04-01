@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <journal-view
     v-if="journal"
     :journal="journal"

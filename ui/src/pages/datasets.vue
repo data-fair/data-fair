@@ -135,9 +135,9 @@
       <!-- Sort select -->
       <v-select
         v-model="sort"
+        class="mt-4 mx-4"
         :label="t('sort')"
         :items="sortItems"
-        class="mt-4 mx-4"
         :rounded="false"
       />
 
@@ -177,7 +177,7 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset } from '#api/types'
 import { useDisplay } from 'vuetify'
 import { mdiDatabaseOff, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
@@ -283,7 +283,7 @@ const sortItems = computed(() => [
 <i18n lang="yaml">
 fr:
   sort: Trier par
-  createDataset: Créer un jeu de données
+  createDataset: Créer un nouveau jeu de données
   noDataset: Vous n'avez pas encore créé de jeu de données.
   noResult: Aucun résultat ne correspond à la recherche.
   sortCreatedAtDesc: Création (plus récent)

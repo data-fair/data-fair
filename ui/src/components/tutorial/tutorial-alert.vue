@@ -1,5 +1,5 @@
 <!-- eslint-disable vue/no-v-html -->
-<template lang="html">
+<template>
   <div
     class="tutorial-alert py-2 pr-2"
   >
@@ -53,7 +53,7 @@ en:
   readDoc: Read the documentation
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiCloseCircleOutline, mdiInformationOutline } from '@mdi/js'
 
 const { id, initial } = defineProps({

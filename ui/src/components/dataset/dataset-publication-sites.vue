@@ -131,7 +131,7 @@ en:
   contribPermission: too broad permission granted to contribs (risk of compatibility breakage)
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset, Permission, PublicationSite } from '#api/types'
 import permissionsUtils from '~/utils/permissions'
 

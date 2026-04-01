@@ -175,7 +175,7 @@ en:
   summarizeChanges: Summarize changes
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import infoSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'

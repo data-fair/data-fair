@@ -12,7 +12,6 @@
     </template>
     <v-card
       v-if="permission && showDialog"
-      variant="elevated"
     >
       <v-card-title>{{ t('editPermission') }}</v-card-title>
       <v-card-text>
@@ -116,6 +115,7 @@
         <v-btn
           :disabled="!valid"
           color="primary"
+          variant="flat"
           @click="emit('update:modelValue', permission as Permission); showDialog = false"
         >
           {{ t('validate') }}
@@ -198,7 +198,7 @@ en:
     use: Use the service
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import MemberSelect from './member-select.vue'
 import type { Permission } from '#api/types'
 

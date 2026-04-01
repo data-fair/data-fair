@@ -227,7 +227,7 @@ en:
   dateTimeFormat: Datetime format
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
 import { mdiCheckDecagram, mdiClose } from '@mdi/js'
 

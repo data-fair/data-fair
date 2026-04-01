@@ -74,7 +74,7 @@ en:
   standardSchemaHelp: Allow your users to initialize editable datasets from the metadata and data of this dataset.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import { schema as masterDataSchema } from '../../../../api/contract/master-data.js'
 import { $sitePath } from '../../context.js'

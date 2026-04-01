@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <dataset-publication-sites data-iframe-height />
 </template>
 

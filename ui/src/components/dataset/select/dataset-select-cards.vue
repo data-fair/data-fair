@@ -16,7 +16,7 @@
           variant="outlined"
           density="compact"
           hide-details
-          style="max-width: 600px"
+          max-width="600"
           clearable
           @keyup.enter="search = editSearch"
           @click:append-inner="search = editSearch"
@@ -84,7 +84,7 @@ en:
   sortTitleDesc: reverse alphabetic order
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type AccountKeys } from '@data-fair/lib-vue/session'
 import { withQuery } from 'ufo'
 import { type ListedDataset, datasetListSelect } from './utils'

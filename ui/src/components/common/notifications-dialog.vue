@@ -44,7 +44,7 @@ en:
   title: Notifications
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiClose } from '@mdi/js'
 import settingsSchema from '../../../../api/types/settings/schema.js'
 

@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-card>
     <div
       id="map"

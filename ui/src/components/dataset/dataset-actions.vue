@@ -169,6 +169,7 @@
         </v-btn>
         <v-btn
           color="warning"
+          variant="flat"
           @click="confirmRemove"
         >
           {{ t('yes') }}
@@ -201,6 +202,7 @@
         </v-btn>
         <v-btn
           color="warning"
+          variant="flat"
           @click="confirmDeleteAllLines"
         >
           {{ t('yes') }}
@@ -243,6 +245,7 @@
         </v-btn>
         <v-btn
           color="warning"
+          variant="flat"
           :disabled="newSlug === dataset?.slug || !newSlug || !newSlug.match(slugRegex)"
           @click="confirmSlug"
         >
@@ -272,9 +275,9 @@ fr:
   delete: Supprimer
   deleteAllLines: Supprimer toutes les lignes
   deleteAllLinesTitle: Suppression des lignes du jeu de données
-  deleteAllLinesWarning: Voulez vous vraiment supprimer toutes les lignes du jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  deleteAllLinesWarning: Voulez-vous vraiment supprimer toutes les lignes du jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   deleteDataset: Suppression du jeu de données
-  deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   yes: Oui
   no: Non
 en:
@@ -295,14 +298,14 @@ en:
   delete: Delete
   deleteAllLines: Delete all lines
   deleteAllLinesTitle: Delete all the lines of the dataset
-  deleteAllLinesWarning: Do you really want to delete all the lines of the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
+  deleteAllLinesWarning: Do you really want to delete all the lines of the dataset "{title}"? Deletion is permanent and data cannot be recovered.
   deleteDataset: Dataset deletion
-  deleteMsg: Do you really want to delete the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
+  deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
   yes: Yes
   no: No
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import {
   mdiAccountSwitch,
   mdiCloud,

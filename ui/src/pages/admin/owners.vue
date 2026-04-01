@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container>
     <h2 class="text-title-large mb-4">
       Propriétaires
@@ -59,7 +59,7 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { withQuery } from 'ufo'
 
 const q = ref('')

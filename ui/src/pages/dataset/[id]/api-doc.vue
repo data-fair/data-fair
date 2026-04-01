@@ -9,7 +9,7 @@
   />
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const route = useRoute<'/dataset/[id]/api-doc'>()
 const { sendUiNotif } = useUiNotif()
 </script>

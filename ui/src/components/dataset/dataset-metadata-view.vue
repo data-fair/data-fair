@@ -247,7 +247,7 @@ en:
   nbVirtualDatasets: no virtual dataset | 1 virtual dataset | {count} virtual datasets
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import {
   mdiAccount,
   mdiAccountHardHat,

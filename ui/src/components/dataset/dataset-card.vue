@@ -93,7 +93,7 @@
   </v-card>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset } from '#api/types'
 import truncateMiddle from 'truncate-middle'
 

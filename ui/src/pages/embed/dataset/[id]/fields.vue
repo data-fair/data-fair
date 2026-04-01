@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <dataset-schema-view data-iframe-height />
 </template>
 

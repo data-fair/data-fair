@@ -371,10 +371,10 @@
     save: Save
     editLine: Edit a line
     deleteLine: Delete a line
-    deleteLineWarning: Warning, the data from this line will be lost definitively
+    deleteLineWarning: Warning, the data from this line will be lost permanently
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'

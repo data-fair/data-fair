@@ -5,415 +5,387 @@
   >
     <v-stepper
       v-model="step"
+      style="background-color: transparent"
       flat
     >
       <v-stepper-header>
         <v-stepper-item
-          :value="1"
+          value="type"
           :complete="!!datasetType"
           :editable="!!datasetType"
+          :color="step === 'type' ? 'primary' : ''"
+          :icon="mdiShape"
           :title="t('stepType')"
           :subtitle="datasetType ? t('type_' + datasetType) : undefined"
         />
         <template v-if="hasInitFromStep">
           <v-divider />
           <v-stepper-item
-            :value="2"
-            :complete="step > 2"
-            :editable="step > 2"
+            value="init"
+            :complete="initStepComplete"
+            :editable="initStepComplete"
+            :color="step === 'init' ? 'primary' : ''"
+            :icon="mdiContentCopy"
             :title="t('stepInit')"
             :subtitle="initFrom ? t('completed') : undefined"
           />
         </template>
         <v-divider />
         <v-stepper-item
-          :value="paramsStep"
-          :complete="step > paramsStep"
+          value="params"
+          :complete="paramsStepComplete"
           :editable="paramsValid"
+          :color="step === 'params' ? 'primary' : ''"
+          :icon="mdiCog"
           :title="t('stepParams')"
           :subtitle="paramsSubtitle"
         />
         <v-divider />
         <v-stepper-item
-          :value="actionStep"
+          value="action"
           :editable="paramsValid"
+          :color="step === 'action' ? 'primary' : ''"
+          :icon="mdiCheckAll"
           :title="t('stepAction')"
         />
       </v-stepper-header>
 
       <v-stepper-window>
-        <!-- Step 1: Type selection -->
-        <v-stepper-window-item :value="1">
-          <div class="pa-4">
-            <p class="text-body-large mb-4">
-              {{ t('choseType') }}
-            </p>
-            <v-row density="comfortable">
-              <v-col
-                v-for="type of datasetTypes"
-                :key="type"
-                cols="12"
-                sm="6"
+        <!-- Step: Type selection -->
+        <v-stepper-window-item value="type">
+          <p class="text-body-large mb-4">
+            {{ t('choseType') }}
+          </p>
+          <v-row density="comfortable">
+            <v-col
+              v-for="type of datasetTypes"
+              :key="type"
+              cols="12"
+              sm="6"
+            >
+              <v-card
+                class="h-100"
+                :color="datasetType === type ? 'primary' : ''"
+                @click="selectType(type)"
               >
-                <v-card
-                  hover
-                  variant="outlined"
-                  class="h-100"
-                  :color="datasetType === type ? 'primary' : undefined"
-                  @click="selectType(type)"
-                >
-                  <v-card-title class="text-primary">
+                <v-card-title>
+                  <span :class="datasetType !== type ? 'text-primary' : ''">
                     <v-icon
-                      color="primary"
                       class="mr-2"
                       :icon="datasetTypeIcons[type]"
                     />
                     {{ t('type_' + type) }}
-                  </v-card-title>
-                  <v-card-text>
-                    {{ t('type_desc_' + type) }}
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </div>
+                  </span>
+                </v-card-title>
+                <v-card-text>
+                  {{ t('type_desc_' + type) }}
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
         </v-stepper-window-item>
 
-        <!-- Step 2: Init from (only for file/rest) -->
+        <!-- Step: Init from (only for file/rest) -->
         <v-stepper-window-item
           v-if="hasInitFromStep"
-          :value="2"
+          value="init"
         >
-          <div class="pa-4">
-            <v-alert
-              type="info"
-              variant="outlined"
-              density="compact"
-              style="max-width: 500px;"
-              class="mb-4"
-            >
-              {{ t('optionalStep') }}
-            </v-alert>
+          <v-alert
+            type="info"
+            variant="outlined"
+            density="compact"
+            max-width="500"
+            class="mb-4"
+          >
+            {{ t('optionalStep') }}
+          </v-alert>
 
-            <dataset-init-from
-              v-model="initFrom"
-              :allow-data="datasetType === 'file'"
-            />
-
-            <div class="d-flex gap-2 mt-4">
-              <v-btn
-                variant="text"
-                @click="step = 1"
-              >
-                {{ t('back') }}
-              </v-btn>
-              <v-btn
-                color="primary"
-                @click="onInitFromNext"
-              >
-                {{ initFrom ? t('continue') : t('ignore') }}
-              </v-btn>
-            </div>
-          </div>
+          <dataset-init-from
+            v-model="initFrom"
+            :allow-data="datasetType === 'file'"
+          />
         </v-stepper-window-item>
 
         <!-- Step: Type-specific parameters -->
-        <v-stepper-window-item :value="paramsStep">
-          <div class="pa-4">
-            <!-- FILE params -->
-            <template v-if="datasetType === 'file'">
-              <p class="text-body-large mb-4">
-                {{ t('loadMainFile') }}
-              </p>
-              <v-file-input
-                v-model="fileInputValue"
-                :label="t('selectFile')"
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="max-width: 500px;"
-                prepend-icon=""
-                :prepend-inner-icon="mdiPaperclip"
-                :disabled="initFromData"
-                @update:model-value="onFileChange"
-              />
-
-              <v-file-input
-                v-if="!initFromData && !isSimple"
-                v-model="attachmentsInputValue"
-                :label="t('selectAttachments')"
-                variant="outlined"
-                density="compact"
-                hide-details
-                accept=".zip"
-                class="mt-4"
-                style="max-width: 500px;"
-                prepend-icon=""
-                :prepend-inner-icon="mdiZipBox"
-                clearable
-              />
-
-              <v-checkbox
-                v-if="!initFromData && file"
-                v-model="filenameTitle"
-                hide-details
-                :label="t('filenameTitle')"
-                class="mt-2"
-              />
-
-              <v-alert
-                v-if="suggestArchive"
-                type="info"
-                variant="outlined"
-                class="mt-2 mb-2"
-              >
-                {{ t('suggestArchive', { name: file?.name }) }}
-              </v-alert>
-
-              <v-text-field
-                v-if="initFromData || !filenameTitle || !file"
-                v-model="fileTitle"
-                :label="t('title')"
-                variant="outlined"
-                density="compact"
-                style="max-width: 500px;"
-                :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
-                class="mt-4"
-              />
-
-              <v-checkbox
-                v-if="attachments && !initFromData"
-                v-model="attachmentsAsImage"
-                hide-details
-                :label="t('attachmentsAsImage')"
-              />
-
-              <dataset-normalize-options
-                v-if="isSpreadsheet"
-                v-model="normalizeOptions"
-              />
-
-              <!-- Advanced options -->
-              <div
-                class="text-title-small mt-5 mb-3 d-flex align-center"
-                style="cursor: pointer"
-                @click="showAdvanced = !showAdvanced"
-              >
-                {{ t('advancedOptions') }}
-                <v-icon
-                  class="ml-1"
-                  :icon="showAdvanced ? mdiChevronUp : mdiChevronDown"
-                />
-              </div>
-              <template v-if="showAdvanced">
-                <v-select
-                  v-model="escapeKeyAlgorithm"
-                  :label="t('escapeKeyAlgorithm')"
-                  :items="escapeKeyOptions"
-                  variant="outlined"
-                  density="compact"
-                  clearable
-                  :hint="t('escapeKeyAlgorithmHint')"
-                  persistent-hint
-                  style="max-width: 500px;"
-                  class="mb-4"
-                />
-                <v-combobox
-                  v-if="isTextFile"
-                  v-model="fileEncoding"
-                  :label="t('encoding')"
-                  :items="commonEncodings"
-                  variant="outlined"
-                  density="compact"
-                  clearable
-                  :hint="t('encodingHint')"
-                  persistent-hint
-                  style="max-width: 500px;"
-                />
-              </template>
-
-              <h3
-                class="text-title-small mt-5 mb-3"
-              >
-                {{ t('formats') }}
-              </h3>
-              <dataset-file-formats condensed />
-            </template>
-
-            <!-- REST params -->
-            <template v-if="datasetType === 'rest'">
-              <v-text-field
-                v-model="restTitle"
-                :label="t('title')"
-                variant="outlined"
-                density="compact"
-                style="max-width: 500px;"
-                :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
-              />
-              <v-checkbox
-                v-model="restHistory"
-                hide-details
-                :label="t('history')"
-              />
-              <v-checkbox
-                v-if="session.state.user?.adminMode"
-                v-model="restLineOwnership"
-                hide-details
-                :label="t('lineOwnership')"
-              />
-              <v-checkbox
-                v-model="restAttachments"
-                hide-details
-                :label="t('attachments')"
-              />
-              <v-checkbox
-                v-if="restAttachments"
-                v-model="restAttachmentsAsImage"
-                hide-details
-                :label="t('attachmentsAsImage')"
-              />
-            </template>
-
-            <!-- VIRTUAL params -->
-            <template v-if="datasetType === 'virtual'">
-              <v-text-field
-                v-model="virtualTitle"
-                :label="t('title')"
-                variant="outlined"
-                density="compact"
-                style="max-width: 500px;"
-                :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
-                class="mb-2"
-              />
-              <dataset-children-select v-model="virtualChildren" />
-
-              <v-checkbox
-                v-model="virtualFillSchema"
-                hide-details
-                :label="t('virtualDatasetFill')"
-              />
-              <v-checkbox
-                v-model="virtualInitFromDesc"
-                hide-details
-                :label="t('virtualDatasetInitFromDesc')"
-              />
-              <v-checkbox
-                v-model="virtualInitFromAttachments"
-                hide-details
-                :label="t('virtualDatasetInitFromAttachments')"
-              />
-            </template>
-
-            <!-- META ONLY params -->
-            <template v-if="datasetType === 'metaOnly'">
-              <v-text-field
-                v-model="metaOnlyTitle"
-                :label="t('title')"
-                variant="outlined"
-                density="compact"
-                style="max-width: 500px;"
-                :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
-              />
-            </template>
-
-            <div class="d-flex gap-2 mt-4">
-              <v-btn
-                variant="text"
-                @click="step = hasInitFromStep ? 2 : 1"
-              >
-                {{ t('back') }}
-              </v-btn>
-              <v-btn
-                color="primary"
-                :disabled="!paramsValid"
-                @click="step = actionStep"
-              >
-                {{ t('continue') }}
-              </v-btn>
-            </div>
-          </div>
-        </v-stepper-window-item>
-
-        <!-- Step: Action / Confirmation -->
-        <v-stepper-window-item :value="actionStep">
-          <div class="pa-4">
-            <df-owner-pick
-              v-model="owner"
-              hide-single
+        <v-stepper-window-item value="params">
+          <!-- FILE params -->
+          <template v-if="datasetType === 'file'">
+            <p class="text-body-large mb-4">
+              {{ t('loadMainFile') }}
+            </p>
+            <v-file-input
+              v-model="fileInputValue"
+              :label="t('selectFile')"
+              variant="outlined"
+              density="compact"
+              hide-details
+              style="max-width: 500px;"
+              prepend-icon=""
+              :prepend-inner-icon="mdiPaperclip"
+              :disabled="initFromData"
+              @update:model-value="onFileChange"
             />
 
-            <dataset-conflicts
-              v-if="step === actionStep && owner"
-              v-model="conflictsOk"
-              :title="effectiveTitle"
-              :filename="datasetType === 'file' && file ? file.name : undefined"
-              :owner="owner"
+            <v-file-input
+              v-if="!initFromData && !isSimple"
+              v-model="attachmentsInputValue"
+              :label="t('selectAttachments')"
+              variant="outlined"
+              density="compact"
+              hide-details
+              accept=".zip"
+              class="mt-4"
+              style="max-width: 500px;"
+              prepend-icon=""
+              :prepend-inner-icon="mdiZipBox"
+              clearable
+            />
+
+            <v-checkbox
+              v-if="!initFromData && file"
+              v-model="filenameTitle"
+              hide-details
+              :label="t('filenameTitle')"
+              class="mt-2"
             />
 
             <v-alert
-              v-if="createError"
-              type="error"
-              class="mt-4 mb-4"
-              style="max-width: 500px;"
+              v-if="suggestArchive"
+              type="info"
+              variant="outlined"
+              class="mt-2 mb-2"
             >
-              {{ createError }}
+              {{ t('suggestArchive', { name: file?.name }) }}
             </v-alert>
 
-            <!-- Upload progress for file type -->
-            <v-row
-              v-if="importing && datasetType === 'file'"
-              class="mx-0 my-3"
-              align="center"
-            >
-              <v-progress-linear
-                v-model="uploadPercent"
-                class="my-1"
-                rounded
-                height="28"
-                color="primary"
-                style="max-width: 500px;"
-              >
-                <template v-if="uploadProgress.total && uploadPercent !== undefined">
-                  {{ Math.floor(uploadPercent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
-                </template>
-              </v-progress-linear>
-              <v-btn
-                :icon="mdiCancel"
-                color="warning"
-                density="compact"
-                variant="text"
-                class="ml-2"
-                :title="t('cancel')"
-                @click="cancelUpload"
-              />
-            </v-row>
+            <v-text-field
+              v-if="initFromData || !filenameTitle || !file"
+              v-model="fileTitle"
+              :label="t('title')"
+              variant="outlined"
+              density="compact"
+              max-width="500"
+              :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
+              class="mt-4"
+            />
 
-            <div class="d-flex gap-2 mt-4">
-              <v-btn
-                variant="text"
-                :disabled="importing"
-                @click="step = paramsStep"
-              >
-                {{ t('back') }}
-              </v-btn>
-              <v-btn
-                color="primary"
-                :loading="importing"
-                :disabled="!canCreate"
-                @click="create"
-              >
-                {{ datasetType === 'file' ? t('import') : t('createDataset') }}
-              </v-btn>
+            <v-checkbox
+              v-if="attachments && !initFromData"
+              v-model="attachmentsAsImage"
+              hide-details
+              :label="t('attachmentsAsImage')"
+            />
+
+            <dataset-normalize-options
+              v-if="isSpreadsheet"
+              v-model="normalizeOptions"
+            />
+
+            <!-- Advanced options -->
+            <div
+              class="text-title-small mt-5 mb-3 d-flex align-center"
+              style="cursor: pointer"
+              @click="showAdvanced = !showAdvanced"
+            >
+              {{ t('advancedOptions') }}
+              <v-icon
+                class="ml-1"
+                :icon="showAdvanced ? mdiChevronUp : mdiChevronDown"
+              />
             </div>
-          </div>
+            <template v-if="showAdvanced">
+              <v-select
+                v-model="escapeKeyAlgorithm"
+                :label="t('escapeKeyAlgorithm')"
+                :items="escapeKeyOptions"
+                variant="outlined"
+                density="compact"
+                clearable
+                :hint="t('escapeKeyAlgorithmHint')"
+                persistent-hint
+                style="max-width: 500px;"
+                class="mb-4"
+              />
+              <v-combobox
+                v-if="isTextFile"
+                v-model="fileEncoding"
+                :label="t('encoding')"
+                :items="commonEncodings"
+                variant="outlined"
+                density="compact"
+                clearable
+                :hint="t('encodingHint')"
+                persistent-hint
+                style="max-width: 500px;"
+              />
+            </template>
+          </template>
+
+          <!-- REST params -->
+          <template v-if="datasetType === 'rest'">
+            <v-text-field
+              v-model="restTitle"
+              :label="t('title')"
+              variant="outlined"
+              density="compact"
+              max-width="500"
+              :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
+            />
+            <v-checkbox
+              v-model="restHistory"
+              hide-details
+              :label="t('history')"
+            />
+            <v-checkbox
+              v-if="session.state.user?.adminMode"
+              v-model="restLineOwnership"
+              hide-details
+              :label="t('lineOwnership')"
+            />
+            <v-checkbox
+              v-model="restAttachments"
+              hide-details
+              :label="t('attachments')"
+            />
+            <v-checkbox
+              v-if="restAttachments"
+              v-model="restAttachmentsAsImage"
+              hide-details
+              :label="t('attachmentsAsImage')"
+            />
+          </template>
+
+          <!-- VIRTUAL params -->
+          <template v-if="datasetType === 'virtual'">
+            <v-text-field
+              v-model="virtualTitle"
+              :label="t('title')"
+              variant="outlined"
+              density="compact"
+              max-width="500"
+              :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
+              class="mb-2"
+            />
+            <dataset-children-select v-model="virtualChildren" />
+
+            <v-checkbox
+              v-model="virtualFillSchema"
+              hide-details
+              :label="t('virtualDatasetFill')"
+            />
+            <v-checkbox
+              v-model="virtualInitFromDesc"
+              hide-details
+              :label="t('virtualDatasetInitFromDesc')"
+            />
+            <v-checkbox
+              v-model="virtualInitFromAttachments"
+              hide-details
+              :label="t('virtualDatasetInitFromAttachments')"
+            />
+          </template>
+
+          <!-- META ONLY params -->
+          <template v-if="datasetType === 'metaOnly'">
+            <v-text-field
+              v-model="metaOnlyTitle"
+              :label="t('title')"
+              variant="outlined"
+              density="compact"
+              max-width="500"
+              :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
+            />
+          </template>
+        </v-stepper-window-item>
+
+        <!-- Step: Action / Confirmation -->
+        <v-stepper-window-item value="action">
+          <df-owner-pick
+            v-model="owner"
+            hide-single
+          />
+
+          <dataset-conflicts
+            v-if="step === 'action' && owner"
+            v-model="conflictsOk"
+            :title="effectiveTitle"
+            :filename="datasetType === 'file' && file ? file.name : undefined"
+            :owner="owner"
+          />
+
+          <v-alert
+            v-if="createError"
+            type="error"
+            class="mt-4 mb-4"
+            max-width="500"
+          >
+            {{ createError }}
+          </v-alert>
+
+          <!-- Upload progress for file type -->
+          <v-row
+            v-if="importing && datasetType === 'file'"
+            class="mx-0 my-3"
+            align="center"
+          >
+            <v-progress-linear
+              v-model="uploadPercent"
+              class="my-1"
+              rounded
+              height="28"
+              color="primary"
+              style="max-width: 500px;"
+            >
+              <template v-if="uploadProgress.total && uploadPercent !== undefined">
+                {{ Math.floor(uploadPercent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
+              </template>
+            </v-progress-linear>
+            <v-btn
+              :icon="mdiCancel"
+              color="warning"
+              density="compact"
+              variant="text"
+              class="ml-2"
+              :title="t('cancel')"
+              @click="cancelUpload"
+            />
+          </v-row>
         </v-stepper-window-item>
       </v-stepper-window>
+
+      <v-stepper-actions
+        v-if="step !== 'type'"
+        :prev-text="t('back')"
+        :next-text="nextButtonText"
+        class="justify-start ga-2"
+        @click:prev="goToPrev"
+      >
+        <template #next>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :disabled="isNextDisabled"
+            :loading="step === 'action' && importing"
+            @click="goToNext"
+          >
+            {{ nextButtonText }}
+          </v-btn>
+        </template>
+      </v-stepper-actions>
     </v-stepper>
+
+    <v-card
+      v-if="step === 'params' && datasetType === 'file'"
+      class="ma-4 mt-0"
+    >
+      <v-card-title>{{ t('formats') }}</v-card-title>
+      <dataset-file-formats />
+    </v-card>
   </v-container>
 </template>
 
-<script lang="ts" setup>
-import { mdiAllInclusive, mdiCancel, mdiChevronDown, mdiChevronUp, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiZipBox } from '@mdi/js'
+<script setup lang="ts">
+import { mdiAllInclusive, mdiCancel, mdiCheckAll, mdiChevronDown, mdiChevronUp, mdiCog, mdiContentCopy, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiShape, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { $apiPath } from '~/context'
@@ -459,22 +431,52 @@ const escapeKeyOptions = [
 ]
 
 // ---- Step management ----
-const step = ref(1)
+type StepName = 'type' | 'init' | 'params' | 'action'
+const step = ref<StepName>('type')
 const datasetType = ref<DatasetType | null>(null)
 
 const hasInitFromStep = computed(() => datasetType.value === 'file' || datasetType.value === 'rest')
-const paramsStep = computed(() => hasInitFromStep.value ? 3 : 2)
-const actionStep = computed(() => hasInitFromStep.value ? 4 : 3)
+const initStepComplete = computed(() => step.value === 'params' || step.value === 'action')
+const paramsStepComplete = computed(() => step.value === 'action')
 
 function selectType (type: DatasetType) {
   datasetType.value = type
   nextTick(() => {
     if (type === 'file' || type === 'rest') {
-      step.value = 2
+      step.value = 'init'
     } else {
-      step.value = paramsStep.value
+      step.value = 'params'
     }
   })
+}
+
+const isNextDisabled = computed(() => {
+  if (step.value === 'init') return false
+  if (step.value === 'params') return !paramsValid.value
+  if (step.value === 'action') return !canCreate.value
+  return false
+})
+
+const nextButtonText = computed(() => {
+  if (step.value === 'init') return initFrom.value ? t('continue') : t('ignore')
+  if (step.value === 'action') return datasetType.value === 'file' ? t('import') : t('createDataset')
+  return t('continue')
+})
+
+function goToPrev () {
+  if (step.value === 'init') step.value = 'type'
+  else if (step.value === 'params') step.value = hasInitFromStep.value ? 'init' : 'type'
+  else if (step.value === 'action') step.value = 'params'
+}
+
+function goToNext () {
+  if (step.value === 'init') {
+    onInitFromNext()
+  } else if (step.value === 'params') {
+    step.value = 'action'
+  } else if (step.value === 'action') {
+    create()
+  }
 }
 
 // ---- Init from ----
@@ -482,12 +484,7 @@ const initFrom = ref<InitFrom | null>(null)
 const initFromData = computed(() => initFrom.value?.parts?.includes('data') ?? false)
 
 function onInitFromNext () {
-  if (datasetType.value === 'file' && initFromData.value) {
-    // Skip file selection, go straight to params but file not needed
-    step.value = paramsStep.value
-  } else {
-    step.value = paramsStep.value
-  }
+  step.value = 'params'
 }
 
 // ---- File params ----
@@ -527,6 +524,7 @@ function onFileChange (val: File | File[]) {
   } else {
     file.value = val ?? null
   }
+  createError.value = null
 }
 
 // ---- REST params ----

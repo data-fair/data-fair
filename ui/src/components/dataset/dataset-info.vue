@@ -123,7 +123,7 @@ en:
   validate: Validate
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'

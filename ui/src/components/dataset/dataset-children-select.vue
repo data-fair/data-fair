@@ -15,7 +15,7 @@
       density="compact"
       return-object
       hide-details
-      style="max-width: 500px;"
+      max-width="500px"
       @update:model-value="addChild"
     >
       <template #item="{ item, props: itemProps }">
@@ -60,7 +60,7 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { withQuery } from 'ufo'
 
 export interface VirtualChild {

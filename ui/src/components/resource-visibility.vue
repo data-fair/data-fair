@@ -24,7 +24,7 @@ en:
   protected: Protected
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiLockOpen, mdiLock } from '@mdi/js'
 
 defineProps({

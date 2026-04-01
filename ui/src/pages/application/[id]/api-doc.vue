@@ -8,7 +8,7 @@
   />
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const route = useRoute<'/application/[id]/api-doc'>()
 const { sendUiNotif } = useUiNotif()
 </script>

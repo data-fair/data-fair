@@ -14,7 +14,7 @@ en:
   requestedPublications: No requested publication | 1 requested publication | {n} requested publications
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 
 const { t } = useI18n()

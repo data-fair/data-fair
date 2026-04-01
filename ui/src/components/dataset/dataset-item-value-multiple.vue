@@ -26,7 +26,7 @@
   </v-chip-group>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type SchemaProperty } from '#api/types'
 import { type DatasetFilter } from '../../composables/dataset/filters'
 import { type ExtendedResultValue } from '../../composables/dataset/lines'

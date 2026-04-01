@@ -226,7 +226,7 @@ en:
   attachmentsAsImage: Display attachments as images
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiCalendar } from '@mdi/js'
 import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 

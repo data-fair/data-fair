@@ -1,5 +1,5 @@
 <!-- eslint-disable vue/no-v-html -->
-<template lang="html">
+<template>
   <v-dialog
     v-model="show"
     max-width="700"
@@ -37,7 +37,7 @@
   </v-dialog>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type SchemaProperty } from '#api/types'
 import type { ExtendedResult } from '../../composables/dataset/lines'
 import { mdiClose } from '@mdi/js'

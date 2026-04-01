@@ -54,7 +54,7 @@
   </v-list-item>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset } from '#api/types'
 
 const { t, locale } = useI18n()

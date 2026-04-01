@@ -61,7 +61,7 @@ en:
   tutorialLabels: Enter some labels associated to values present in the data to improve the display in applications.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
 import { mdiClose, mdiTagTextOutline } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'

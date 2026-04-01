@@ -238,7 +238,7 @@ fr:
   textarea: texte long
   markdown: texte formatte
   deletePropertyTitle: Supprimer la colonne
-  deletePropertyText: Souhaitez vous supprimer cette colonne ? Attention la donnee sera effacee et definitivement perdue !
+  deletePropertyText: Souhaitez-vous supprimer cette colonne ? Attention, la donnée sera effacée et définitivement perdue !
 en:
   detailedInfo: Click on a column title to display its detailed information.
   key: "Key in the source: "
@@ -259,10 +259,10 @@ en:
   textarea: long text
   markdown: formatted text
   deletePropertyTitle: Delete the column
-  deletePropertyText: Do you want to delete this column? Warning, data will be definitively erased!
+  deletePropertyText: Do you want to delete this column? Warning, data will be permanently erased!
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import draggable from 'vuedraggable'
 import { propTypeTitle, propTypeIcon } from '~/utils/dataset'

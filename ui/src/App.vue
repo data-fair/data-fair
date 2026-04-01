@@ -9,7 +9,7 @@
   </v-app>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import uiNotif from '@data-fair/lib-vuetify/ui-notif.vue'
@@ -33,12 +33,5 @@ useHead({
 </script>
 
 <style>
-html {
-  overflow: hidden;
-}
-
-/* Vuetify 4 removed heading resets — restore margin:0 so browser defaults don't add spacing */
-h1, h2, h3, h4, h5, h6 {
-  margin: 0;
-}
+html { overflow: hidden; }
 </style>

@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-row v-if="remoteService?.virtualDatasets">
     <v-col cols="12">
       <p>{{ $t('message') }}</p>
@@ -22,7 +22,7 @@
     storageRatio: 'Ratio à appliquer pour le calcul du stockage consommé : {percent}%'
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { RemoteService } from '#api/types'
 
 const remoteService = defineModel<RemoteService>()

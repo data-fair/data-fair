@@ -22,7 +22,7 @@
   </v-tooltip>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiInformation } from '@mdi/js'
 
 withDefaults(defineProps<{

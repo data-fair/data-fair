@@ -353,7 +353,7 @@ en:
   webhooks: Webhooks
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'

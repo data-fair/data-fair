@@ -1,5 +1,5 @@
 <!-- eslint-disable vue/no-v-html -->
-<template lang="html">
+<template>
   <v-container
     v-if="dataset"
     class="pa-0"
@@ -171,7 +171,7 @@ en:
   validateDraft: Validate the draft
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiPlay } from '@mdi/js'
 import allEvents from '~/../../shared/events.json'
 

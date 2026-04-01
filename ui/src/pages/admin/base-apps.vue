@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container>
     <v-row>
       <v-col>
@@ -182,7 +182,7 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { BaseApp } from '#api/types'
 import { mdiEyeOff, mdiLock, mdiLockOpen, mdiMagnify, mdiPencil } from '@mdi/js'
 import { withQuery } from 'ufo'

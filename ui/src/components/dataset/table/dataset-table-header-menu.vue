@@ -668,7 +668,7 @@ en:
   showHelp: "Description"
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiEyeOffOutline, mdiFormatHorizontalAlignLeft, mdiSortAscending, mdiSortDescending, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiCheck, mdiMenuDown, mdiMenuUp, mdiFilterVariant, mdiInformation } from '@mdi/js'
 import { type TableHeaderWithProperty } from './use-headers'
 import { type DatasetFilter } from '~/composables/dataset/filters'

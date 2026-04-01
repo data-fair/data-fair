@@ -5,7 +5,6 @@
   >
     <template v-if="width">
       <div
-
         v-for="box in boxes || []"
         :key="box.data.id"
         :style="`padding:1.5px; position:absolute; top:${box.y0}px; left:${box.x0 * ratio}px; bottom:${height - box.y1}px; right:${width - (box.x1 * ratio)}px;`"
@@ -32,7 +31,7 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 
 import * as d3 from 'd3-hierarchy'
 import type { Dataset } from '#api/types'

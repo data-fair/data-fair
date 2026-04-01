@@ -44,7 +44,7 @@ en:
   title: Webhooks
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiClose } from '@mdi/js'
 
 const props = defineProps<{

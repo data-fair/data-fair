@@ -38,10 +38,11 @@
           >
             {{ t('description') }}
           </p>
-          <p class="text-title-medium mt-5">
+          <p class="text-title-medium mt-4">
             {{ t('authRequired') }}
           </p>
           <v-btn
+            class="mt-4"
             color="primary"
             @click="session.login()"
           >
@@ -73,13 +74,17 @@
           >
             <span v-safe-html="t('organizationRole', { role: accountOrgRole })" />
           </p>
+
           <p
             v-else-if="user.organizations.length"
             class="mb-2"
           >
-            <v-icon color="warning">
-              {{ mdiAlert }}
-            </v-icon>
+            <v-icon
+              color="warning"
+              class="mr-2"
+              :icon="mdiAlert"
+            />
+
             <i18n-t keypath="collaborativeMessage">
               <template #collaborativeMode>
                 <strong>{{ t('collaborativeMode') }}</strong>
@@ -91,6 +96,7 @@
               </template>
             </i18n-t>
           </p>
+
           <p
             v-else
             class="mb-2"
@@ -111,11 +117,10 @@
 
       <!-- Contribute section -->
       <template v-if="canContribDep">
-        <v-row class="mx-0 mt-4 mb-1">
-          <h2 class="text-title-large">
-            {{ t('contribute') }}
-          </h2>
-        </v-row>
+        <h2 class="text-title-large mt-4 mb-2">
+          {{ t('contribute') }}
+        </h2>
+
         <v-row>
           <v-col
             cols="12"
@@ -152,11 +157,10 @@
 
       <!-- Manage datasets section -->
       <template v-if="canAdminDep">
-        <v-row class="mx-0 mt-6 mb-1">
-          <h2 class="text-title-large">
-            {{ t('manageDatasets') }}
-          </h2>
-        </v-row>
+        <h2 class="text-title-large mt-4 mb-2">
+          {{ t('manageDatasets') }}
+        </h2>
+
         <v-row>
           <v-col
             cols="12"
@@ -179,11 +183,9 @@
         </v-row>
 
         <!-- Manage applications section -->
-        <v-row class="mx-0 mt-6 mb-1">
-          <h2 class="text-title-large">
-            {{ t('manageApplications') }}
-          </h2>
-        </v-row>
+        <h2 class="text-title-large mt-4 mb-2">
+          {{ t('manageApplications') }}
+        </h2>
         <v-row>
           <v-col
             cols="12"
@@ -197,7 +199,7 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiAlert } from '@mdi/js'
 import { usePermissions } from '~/composables/use-permissions'
 import dataSvg from '~/assets/svg/Data Arranging_Two Color.svg?raw'

@@ -8,7 +8,7 @@
       clearable
       placeholder="1"
       type="number"
-      style="max-width: 500px;"
+      max-width="500"
       class="mb-2"
       @update:model-value="update('spreadsheetWorksheetIndex', $event)"
     />
@@ -20,7 +20,7 @@
       clearable
       placeholder="1"
       type="number"
-      style="max-width: 500px;"
+      max-width="500"
       class="mb-2"
       @update:model-value="update('spreadsheetHeaderLine', $event)"
     />
@@ -32,7 +32,7 @@
       clearable
       placeholder="1"
       type="number"
-      style="max-width: 500px;"
+      max-width="500"
       @update:model-value="update('spreadsheetStartCol', $event)"
     />
   </div>
@@ -49,7 +49,7 @@ en:
   startCol: First data column number
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const { t } = useI18n()
 
 const modelValue = defineModel<Record<string, any>>({ default: () => ({}) })

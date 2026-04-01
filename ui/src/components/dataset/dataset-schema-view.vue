@@ -81,7 +81,7 @@ en:
   description: Description
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiCodeJson, mdiDownload, mdiTable } from '@mdi/js'
 import { propTypeTitle } from '~/utils/dataset'
 

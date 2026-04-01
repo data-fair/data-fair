@@ -49,7 +49,7 @@
                   variant="outlined"
                   density="compact"
                   hide-details
-                  style="max-width: 500px;"
+                  max-width="500"
                   prepend-icon=""
                   :prepend-inner-icon="mdiPaperclip"
                   @update:model-value="onFileChange"
@@ -62,7 +62,7 @@
                   hide-details
                   accept=".zip"
                   class="mt-4"
-                  style="max-width: 500px;"
+                  max-width="500"
                   prepend-icon=""
                   :prepend-inner-icon="mdiZipBox"
                   clearable
@@ -92,7 +92,7 @@
                   :label="t('encoding')"
                   variant="outlined"
                   density="compact"
-                  style="max-width: 400px;"
+                  max-width="400"
                   class="mb-4"
                 />
                 <v-select
@@ -101,7 +101,7 @@
                   :label="t('escapeKeyAlgorithm')"
                   variant="outlined"
                   density="compact"
-                  style="max-width: 400px;"
+                  max-width="400"
                 />
                 <div class="d-flex gap-2 mt-6">
                   <v-btn
@@ -258,7 +258,7 @@ en:
   fileTooLarge: The file is too large to be imported
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import {
   mdiCancel,
   mdiFile,

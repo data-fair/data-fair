@@ -1,17 +1,13 @@
 <template>
   <div v-if="conflicts && conflicts.length">
     <v-alert
+      :title="t('conflicts')"
       color="warning"
       variant="outlined"
       density="compact"
-      style="max-width: 800px;"
-      class="px-0 pb-0"
+      max-width="800"
     >
-      <span class="px-4">{{ t('conflicts') }}</span>
-      <v-list
-        class="pb-0"
-        bg-color="transparent"
-      >
+      <v-list bg-color="background">
         <v-list-item
           v-for="(conflict, i) in conflicts"
           :key="i"
@@ -24,6 +20,7 @@
               {{ conflict.dataset.title }}
             </a>
           </v-list-item-title>
+
           <v-list-item-subtitle>
             {{ t('conflict_' + conflict.conflict) }}
           </v-list-item-subtitle>
@@ -33,15 +30,14 @@
 
     <v-checkbox
       v-model="ignoreConflicts"
-      class="pl-2"
       :label="t('ignoreConflicts')"
       color="warning"
-      density="compact"
+      hide-details
     />
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { AccountKeys } from '@data-fair/lib-vue/session'
 
 interface Conflict {
@@ -118,11 +114,11 @@ watch(() => [props.title, props.filename, ownerStr.value], () => {
 fr:
   conflicts: Doublons potentiels
   ignoreConflicts: Ignorer ces doublons potentiels
-  conflict_filename: le nom de fichier est identique
-  conflict_title: le titre est identique
+  conflict_filename: Le nom de fichier est identique
+  conflict_title: Le titre du jeu de données est identique
 en:
   conflicts: Potential duplicates
   ignoreConflicts: Ignore these potential duplicates
-  conflict_filename: the file name is the same
-  conflict_title: the title is the same
+  conflict_filename: The filename is the same
+  conflict_title: The dataset title is the same
 </i18n>

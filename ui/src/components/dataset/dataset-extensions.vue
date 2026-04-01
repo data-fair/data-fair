@@ -254,7 +254,7 @@ en:
   overwriteKeys: Override column keys
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiChevronDown, mdiChevronUp } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { escapeKey } from '~/utils/escape-key'

@@ -99,7 +99,7 @@ en:
   preferLargeDisplay: prefer a large display
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import useApplicationStore from '~/composables/application/store'
 
 const { t } = useI18n()

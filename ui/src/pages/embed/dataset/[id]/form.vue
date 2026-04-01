@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container data-iframe-height>
     <v-alert
       v-if="dataset && !dataset.isRest"

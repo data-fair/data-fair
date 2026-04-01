@@ -54,6 +54,7 @@
         </v-btn>
         <v-btn
           color="warning"
+          variant="flat"
           @click="change()"
         >
           {{ t('save') }}
@@ -63,7 +64,7 @@
   </v-menu>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiPencil } from '@mdi/js'
 
 const messages = {
@@ -73,16 +74,16 @@ const messages = {
     activate: 'activer l\'expiration automatique',
     col: 'colonne de date de référence',
     days: 'nombre de jours avant expiration',
-    cancel: 'annuler',
-    save: 'enregistrer'
+    cancel: 'Annuler',
+    save: 'Enregistrer'
   },
   en: {
-    alert: 'If you configure automatic expiration, the deleted lines will not be recoverable.',
-    alertRevisions: 'If you configure automatic expiration of revisions, the deleted data will not be recoverable.',
+    alert: 'If you configure automatic expiration, the deleted lines cannot be recovered.',
+    alertRevisions: 'If you configure automatic expiration of revisions, the deleted data cannot be recovered.',
     activate: 'activate automatic expiration',
     col: 'column containing the reference date',
     days: 'number of days before expiration',
-    cancel: 'cancel',
+    cancel: 'Cancel',
     save: 'Save'
   }
 }

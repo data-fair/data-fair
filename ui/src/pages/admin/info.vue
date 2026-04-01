@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container v-if="services && statusFetch.data.value">
     <v-expansion-panels>
       <v-expansion-panel
@@ -76,7 +76,7 @@
       data-fair/portals: Portals
   </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const { t } = useI18n()
 
 // TODO: make this list dynamic when we contractualize the secondary services

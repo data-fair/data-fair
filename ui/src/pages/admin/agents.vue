@@ -42,7 +42,7 @@ en:
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useDFramePage } from '~/composables/layout/use-d-frame-page'
 

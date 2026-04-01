@@ -125,7 +125,7 @@
                       {{ t('cancel') }}
                     </v-btn>
                     <v-btn
-                      variant="elevated"
+                      variant="flat"
                       color="warning"
                       @click="cancelDraft.execute(); isActive.value = false;"
                     >
@@ -174,7 +174,7 @@ en:
   configurePrompt: Help me configure this application
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
 import { useDisplay } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'

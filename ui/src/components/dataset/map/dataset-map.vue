@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-card>
     <v-text-field
       v-if="search && !noInteraction"

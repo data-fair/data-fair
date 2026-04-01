@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <application-config
     :ro-dataset="$route.query.roDataset === 'true'"
     data-iframe-height

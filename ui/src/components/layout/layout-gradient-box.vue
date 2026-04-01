@@ -7,7 +7,7 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useTheme } from 'vuetify'
 import microTemplate from '@data-fair/lib-utils/micro-template.js'
 

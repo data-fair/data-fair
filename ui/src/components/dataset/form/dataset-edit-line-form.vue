@@ -35,7 +35,7 @@
     selectFile: select a file
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'

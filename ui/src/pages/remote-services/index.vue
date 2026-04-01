@@ -29,14 +29,14 @@
 fr:
   remoteServices: Services interopérables
   description: Cet espace vous permet de gérer les services Web configurés pour l'interopérabilité. Ces services sont généralement utilisés pour proposer des capacités d'enrichissement aux utilisateurs. Un service interopérable peut également être un jeu de données data-fair (local ou distant).
-  configureService: Configurer un service
+  configureService: Créer un nouveau service
 en:
   remoteServices: Interoperable services
   description: This page lets you manage the Web services configured for interoperability. These services are mostly used to propose extentions to the users. An interoperable service can also be a data-fair dataset (local or remote).
-  configureService: Configure a service
+  configureService: Create a new service
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { RemoteService } from '#api/types'
 import setBreadcrumbs from '~/utils/breadcrumbs'
 

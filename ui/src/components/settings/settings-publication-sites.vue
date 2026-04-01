@@ -23,7 +23,7 @@ en:
   topic: topic
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import publicationSitesContract from '~/../../api/contract/publication-sites'
 import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'

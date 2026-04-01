@@ -17,7 +17,7 @@ en:
   revisions: Revisions
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'

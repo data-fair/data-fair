@@ -50,7 +50,7 @@
     nexists: "n'existe pas"
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useCurrentElement, useElementSize } from '@vueuse/core'
 import { type DatasetFilter } from '~/composables/dataset/filters'
 

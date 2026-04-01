@@ -149,7 +149,7 @@ en:
   copied: Copied!
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiCheck, mdiClose, mdiContentCopy } from '@mdi/js'
 
 const props = defineProps<{

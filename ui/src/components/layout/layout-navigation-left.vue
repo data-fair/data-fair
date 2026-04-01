@@ -2,12 +2,10 @@
   <v-navigation-drawer
     v-model="drawer"
     color="primary"
-    class="border-text-primary border-e-md border-opacity-100"
   >
     <v-list
       density="compact"
       bg-color="primary"
-      class="rounded-te-md pb-0"
     >
       <!-- Portal home link (when not main site) -->
       <v-list-item
@@ -30,48 +28,32 @@
         :prepend-icon="mdiCardAccountDetails"
         :title="t('subscription')"
       />
+
+      <template v-if="!missingSubscription">
+        {{ navigationGroups }}
+        <v-list-group
+          v-for="group of navigationGroups"
+          :key="group.key"
+          :value="group.key"
+          :title="group.title"
+          :color="group.key === 'admin' ? 'admin' : undefined"
+        >
+          <v-list-item
+            v-for="item of group.items"
+            :key="item.to || item.href || item.title"
+            :to="item.to"
+            :href="item.href"
+            :target="item.href ? '_blank' : undefined"
+            :prepend-icon="item.icon"
+            :title="item.title"
+            :subtitle="item.subtitle"
+          />
+        </v-list-group>
+      </template>
     </v-list>
 
-    <!-- Collapsible groups -->
-    <template v-if="!missingSubscription">
-      <template
-        v-for="group of navigationGroups"
-        :key="group.key"
-      >
-        <v-divider class="my-1" />
-        <v-list
-          v-model:opened="openedGroupsModel"
-          open-strategy="multiple"
-          density="compact"
-          :bg-color="group.key === 'admin' ? 'admin' : 'primary'"
-          class="py-0"
-        >
-          <template v-if="group.items.length">
-            <v-list-group :value="group.key">
-              <template #activator="{ props: activatorProps }">
-                <v-list-item
-                  v-bind="activatorProps"
-                  :title="group.title"
-                />
-              </template>
-              <v-list-item
-                v-for="item of group.items"
-                :key="item.to || item.href || item.title"
-                :to="item.to"
-                :href="item.href"
-                :target="item.href ? '_blank' : undefined"
-                :prepend-icon="item.icon"
-                :title="item.title"
-                :subtitle="item.subtitle"
-              />
-            </v-list-group>
-          </template>
-        </v-list>
-      </template>
-    </template>
-
     <template #append>
-      <div class="pa-1 text-center">
+      <div class="pa-2 text-center">
         <a
           href="https://data-fair.github.io/4/"
           class="text-label-small"
@@ -83,9 +65,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
 import { usePermissions } from '~/composables/use-permissions'
 import { useNavigationItems } from '~/composables/layout/use-navigation-items'
 import {
@@ -94,33 +74,11 @@ import {
   mdiCardAccountDetails,
 } from '@mdi/js'
 
-const { t } = useI18n()
 const drawer = defineModel<boolean>({ required: true })
-const route = useRoute()
-const session = useSessionAuthenticated()
-const site = session.site
+const { t } = useI18n()
+const { site } = useSessionAuthenticated()
 const { canAdmin, missingSubscription } = usePermissions()
 const { navigationGroups } = useNavigationItems()
-
-// Auto-expand the group containing the current route
-const activeGroup = computed(() => {
-  for (const group of navigationGroups.value) {
-    for (const item of group.items) {
-      if (item.to && route.path.startsWith(item.to) && item.to !== '/') {
-        return group.key
-      }
-    }
-  }
-  return 'content'
-})
-
-const openedGroupsModel = ref<string[]>([activeGroup.value])
-
-watch(activeGroup, (newGroup) => {
-  if (!openedGroupsModel.value.includes(newGroup)) {
-    openedGroupsModel.value = [...openedGroupsModel.value, newGroup]
-  }
-})
 </script>
 
 <i18n lang="yaml">

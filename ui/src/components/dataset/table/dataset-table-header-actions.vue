@@ -205,11 +205,11 @@
     selectAllLines: Select the {nbLines} lines
     unselectAllLines: Deselect all lines
     deleteAllLines: Delete the {nbLines} selected lines
-    deleteAllLinesWarning: Warning, the data from these lines will be lost definitively
+    deleteAllLinesWarning: Warning, the data from these lines will be lost permanently
     editAllLines: Edit the {nbLines} selected lines
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline, mdiPlusCircle, mdiUpload } from '@mdi/js'
 import { type VForm } from 'vuetify/components'
 import { type ExtendedResult } from '~/composables/dataset/lines'

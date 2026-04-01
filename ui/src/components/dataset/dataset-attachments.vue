@@ -85,6 +85,7 @@
           </v-btn>
           <v-btn
             color="warning"
+            variant="flat"
             @click="deleteAttachment()"
           >
             {{ t('confirm') }}
@@ -95,7 +96,7 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiDelete } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset/store'
 
@@ -106,8 +107,8 @@ const messages = {
     thumbnail: 'utiliser comme vignette',
     delete: 'Supprimer la pièce jointe',
     deleteText: 'Souhaitez-vous confirmer la suppression ?',
-    cancel: 'annuler',
-    confirm: 'confirmer'
+    cancel: 'Annuler',
+    confirm: 'Confirmer'
   },
   en: {
     selectFile: 'select a file',
@@ -115,8 +116,8 @@ const messages = {
     thumbnail: 'use as a thumbnail',
     delete: 'Delete attachment',
     deleteText: 'Do you really want to delete this attachment?',
-    cancel: 'cancel',
-    confirm: 'confirm'
+    cancel: 'Cancel',
+    confirm: 'Confirm'
   }
 }
 

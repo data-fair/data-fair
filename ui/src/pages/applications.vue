@@ -174,7 +174,7 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Application } from '#api/types'
 import { useDisplay } from 'vuetify'
 import { mdiImageMultiple, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
@@ -272,7 +272,7 @@ const sortItems = computed(() => [
 <i18n lang="yaml">
 fr:
   sort: Trier par
-  newApplication: Nouvelle application
+  newApplication: Créer une nouvelle application
   noApplication: Vous n'avez pas encore configuré d'application.
   noResult: Aucun résultat ne correspond à la recherche.
   applications: "{count} applications"
@@ -284,7 +284,7 @@ fr:
   sortTitleDesc: Titre (Z → A)
 en:
   sort: Sort by
-  newApplication: New application
+  newApplication: Create a new application
   noApplication: You haven't configured any application yet.
   noResult: No result matches the search.
   applications: "{count} applications"

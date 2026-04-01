@@ -122,6 +122,7 @@
         </v-btn>
         <v-btn
           color="warning"
+          variant="flat"
           @click="confirmRemove"
         >
           {{ t('yes') }}
@@ -164,6 +165,7 @@
         </v-btn>
         <v-btn
           color="warning"
+          variant="flat"
           :disabled="newSlug === application?.slug || !newSlug || !newSlug.match(slugRegex)"
           @click="confirmSlug"
         >
@@ -189,7 +191,7 @@ fr:
   validate: Valider
   delete: Supprimer
   deleteApp: Suppression de l'application
-  deleteMsg: Voulez vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
+  deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
   yes: Oui
   no: Non
 en:
@@ -206,12 +208,12 @@ en:
   validate: Validate
   delete: Delete
   deleteApp: Deletion of the application
-  deleteMsg: Do you really want to delete the application "{title}" ? Deletion is definitive and application configuration will not be recoverable.
+  deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
   yes: Yes
   no: No
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiAccountSwitch, mdiCamera, mdiCloud, mdiDelete, mdiExitToApp, mdiPencil, mdiSquareEditOutline } from '@mdi/js'
 import useApplicationStore from '~/composables/application/store'
 

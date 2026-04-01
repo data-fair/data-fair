@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-data-table
     :items="remoteService.actions"
     hide-default-header
@@ -75,7 +75,7 @@ en:
   withoutConcepts: "column without concept | columns without concept"
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { RemoteService } from '#api/types'
 import { mdiArrowLeftRight, mdiArrowRight, mdiViewList } from '@mdi/js'
 

@@ -81,7 +81,7 @@ en:
   permissionsUpdated: Permissions were updated
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const props = defineProps<{
   resource: any
   resourceType: 'datasets' | 'applications'

@@ -133,7 +133,7 @@
                   variant="outlined"
                   density="compact"
                   hide-details
-                  style="max-width: 400px;"
+                  max-width="400"
                   :accept="accepted.join(', ')"
                   @change="currentStep += 1"
                 />
@@ -171,7 +171,7 @@
                 type="info"
                 variant="outlined"
                 density="compact"
-                style="max-width:400px;"
+                max-width="400"
               >
                 {{ t('attachmentInfo') }}
               </v-alert>
@@ -192,7 +192,7 @@
                   :label="t('selectFile')"
                   variant="outlined"
                   density="compact"
-                  style="max-width: 400px;"
+                  max-width="400"
                   accept=".zip"
                   hide-details
                   clearable
@@ -353,7 +353,7 @@ en:
   type_file: Replace a file
   type_desc_file: Load a file among the many supported formats and replace an existing file.
   type_rest: Contribute to an editable file
-  type_desc_rest: Create, update and delete lines. You can also load a file to upadte multiple lines.
+  type_desc_rest: Create, update and delete lines. You can also load a file to update multiple lines.
   dataset: Dataset
   selectDataset: Select a dataset
   stepFile: File
@@ -385,7 +385,7 @@ en:
   draftCancelled: Your file was rejected. You can fix a structure problem in the file before loading it again, or contact an administrator.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import truncateMiddle from 'truncate-middle'
 import { accepted } from '~/utils/dataset'
 import axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'

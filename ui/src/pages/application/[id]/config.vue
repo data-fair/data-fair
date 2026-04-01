@@ -2,7 +2,7 @@
   <application-config />
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { provideApplicationStore } from '~/composables/application/store'
 
 const route = useRoute<'/application/[id]/config'>()

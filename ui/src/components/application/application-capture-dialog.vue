@@ -99,7 +99,7 @@ en:
   height: Height
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiCamera, mdiClose } from '@mdi/js'
 import '@data-fair/frame/lib/d-frame.js'
 import useApplicationStore from '~/composables/application/store'

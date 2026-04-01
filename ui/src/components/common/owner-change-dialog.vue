@@ -46,6 +46,7 @@
         </v-btn>
         <v-btn
           color="warning"
+          variant="flat"
           :disabled="!newOwner"
           @click="confirmChangeOwner"
         >
@@ -83,7 +84,7 @@ en:
   confirm: Confirm
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const props = defineProps<{
   resource: { id: string, owner: Record<string, any> }
   resourceType: 'datasets' | 'applications'

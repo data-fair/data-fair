@@ -85,7 +85,7 @@ en:
   showFullValue: Show full value
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type SchemaProperty } from '#api/types'
 import { useTheme } from 'vuetify'
 import type { ExtendedResultValue } from '../../composables/dataset/lines'

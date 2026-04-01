@@ -33,6 +33,7 @@
         <v-btn
           v-if="history"
           color="warning"
+          variant="flat"
           @click="change(false)"
         >
           {{ t('deActivate') }}
@@ -40,6 +41,7 @@
         <v-btn
           v-else
           color="primary"
+          variant="flat"
           @click="change(true)"
         >
           {{ t('activate') }}
@@ -49,7 +51,7 @@
   </v-menu>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiPencil } from '@mdi/js'
 
 const messages = {
@@ -58,14 +60,14 @@ const messages = {
     alertDeactivate: 'Si vous désactivez l\'historisation toutes les révisions de lignes déjà stockées seront supprimées et ne seront pas récupérables.',
     activate: 'activer l\'historisation',
     deActivate: 'désactiver l\'historisation',
-    cancel: 'annuler'
+    cancel: 'Annuler'
   },
   en: {
     alertActivate: 'If you activate the history the used data storage will be significantly increased. Depending on the number of lines this operation can take some time.',
-    alertDeactivate: 'If you deactivate the history all lines revisions already stored will be deleted and will not be recoverable.',
+    alertDeactivate: 'If you deactivate the history all lines revisions already stored will be deleted and cannot be recovered.',
     activate: 'activate history',
     deActivate: 'deactivate history',
-    cancel: 'cancel'
+    cancel: 'Cancel'
   }
 }
 

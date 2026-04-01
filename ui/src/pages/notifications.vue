@@ -75,7 +75,7 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import settingsSchema from '../../../api/types/settings/schema.js'
 
 const { t } = useI18n()

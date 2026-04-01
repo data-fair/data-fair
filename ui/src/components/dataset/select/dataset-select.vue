@@ -13,7 +13,7 @@
     variant="outlined"
     density="compact"
     hide-details
-    style="max-width: 600px"
+    max-width="600"
     clearable
     @update:model-value="dataset => {value = dataset}"
   >
@@ -43,7 +43,7 @@ en:
   ownerDatasets: Your datasets
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type AccountKeys } from '@data-fair/lib-vue/session'
 import { withQuery } from 'ufo'
 import { datasetListSelect, type ListedDataset } from './utils'

@@ -1,11 +1,11 @@
-<template lang="html">
+<template>
   <v-container>
     <v-row>
       <v-col>
         <h2 class="text-title-large mb-2">
           {{ t('statistics') }}
         </h2>
-        <v-sheet :loading="!stats">
+        <v-card class="mb-4">
           <v-data-table
             :loading="statsFetch.loading.value"
             :loading-text="t('loading')"
@@ -37,21 +37,23 @@
               </tr>
             </template>
           </v-data-table>
-        </v-sheet>
+        </v-card>
 
-        <h2 class="text-title-large my-3">
-          {{ t('details') }}
-        </h2>
+        <div class="d-flex align-center justify-space-between ga-2 my-4">
+          <h2 class="text-title-large">
+            {{ t('details') }}
+          </h2>
 
-        <v-select
-          v-model="storageType"
-          :items="[{value: 'indexed', title: t('indexedBytes')}, {value: 'stored', title: t('storedBytes')}]"
-          style="max-width: 300px"
-          :label="t('storageType')"
-          variant="outlined"
-          hide-details
-          density="compact"
-        />
+          <v-select
+            v-model="storageType"
+            :items="[{value: 'indexed', title: t('indexedBytes')}, {value: 'stored', title: t('storedBytes')}]"
+            :label="t('storageType')"
+            max-width="300"
+            variant="outlined"
+            density="compact"
+            hide-details
+          />
+        </div>
 
         <storage-treemap
           v-if="stats && datasets"
@@ -65,6 +67,7 @@
           v-if="datasets"
           :datasets="datasets.results"
         />
+
         <v-progress-linear
           v-else
           :height="2"
@@ -98,7 +101,7 @@ en:
   storageType: Sort by storage type
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset } from '#api/types'
 import type { DataTableHeader } from 'vuetify'
 

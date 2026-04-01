@@ -114,7 +114,7 @@
     unselectLine: Deselect the line
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiMap } from '@mdi/js'
 import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset/lines'

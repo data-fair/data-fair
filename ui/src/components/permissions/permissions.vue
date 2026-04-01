@@ -294,7 +294,7 @@ en:
   allUsersManageOwnLines: Allow all external users to manage their own lines inside the dataset (advanced crowd-sourcing use-cases).
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiPencil, mdiDelete } from '@mdi/js'
 import PermissionDialog from './permission-dialog.vue'
 import type { Permission } from '#api/types'

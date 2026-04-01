@@ -97,7 +97,7 @@ en:
   exprEvalHelp: "Apply a transformation to the data in this column when it is loaded. An expression (or formula) is used to transform each value. It must follow the syntax of the <a href=\"https://github.com/silentmatt/expr-eval\" target=\"_blank\">expr-eval</a> module. The value to transform is passed as a parameter with the name \"value\"."
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
 import { mdiClose, mdiDatabaseCog } from '@mdi/js'
 import { propertyTypes } from '~/utils/dataset'

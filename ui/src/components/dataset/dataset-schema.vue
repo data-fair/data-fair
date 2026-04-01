@@ -24,7 +24,7 @@
         variant="outlined"
         density="compact"
         rounded
-        style="max-width: 200px;"
+        max-width="200"
         :append-inner-icon="mdiMagnify"
         hide-details
       />
@@ -40,7 +40,7 @@
       :items="primaryKeyItems"
       item-title="title"
       item-value="value"
-      style="max-width: 500px;"
+      max-width="500"
       multiple
       class="mb-3"
       @update:model-value="emit('update:primaryKey', $event)"
@@ -88,7 +88,7 @@ en:
   sortProperties: You can sort the columns by drag and drop.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import {
   mdiMagnify,
   mdiPlus

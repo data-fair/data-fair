@@ -71,7 +71,7 @@ en:
   exampleUsage: Example usage
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
 const { t, locale } = useI18n()

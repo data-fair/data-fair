@@ -13,7 +13,7 @@
     hide-details
     clearable
     no-filter
-    style="max-width: 600px"
+    max-width="600px"
     @update:search="onSearch"
   />
 </template>
@@ -27,7 +27,7 @@ en:
   search: Search...
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { $fetch } from '~/context'
 
 const props = withDefaults(defineProps<{

@@ -116,7 +116,7 @@ en:
   uploadError: Error while uploading the file
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiClose, mdiPencil, mdiPlus } from '@mdi/js'
 import type { Application } from '#api/types'
 import useApplicationStore from '~/composables/application/store'

@@ -11,7 +11,7 @@
   />
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useDFramePage } from '~/composables/layout/use-d-frame-page'
 
 const { sendUiNotif } = useUiNotif()

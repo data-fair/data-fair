@@ -4,10 +4,12 @@
     :breadcrumbs="breadcrumbs"
     :show-agent-chat="showAgentChat"
   />
+
   <layout-navigation-left
     v-if="user"
     v-model="drawer"
   />
+
   <v-main scrollable>
     <v-layout style="min-height: 100%; position: static">
       <v-main tag="div">
@@ -15,6 +17,7 @@
       </v-main>
     </v-layout>
   </v-main>
+
   <df-agent-chat-drawer
     v-if="showAgentChat && session.account.value"
     :account-type="session.account.value.type"

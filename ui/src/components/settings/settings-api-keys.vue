@@ -77,7 +77,7 @@
           </v-btn>
           <v-btn
             color="primary"
-            variant="elevated"
+            variant="flat"
             :disabled="!newApiKeyValid"
             density="comfortable"
             @click="addApiKey"
@@ -190,7 +190,7 @@ fr:
   emailMsg: Ce pseudo email peut être utilisé pour affecter des permissions fines à cette clé d'API.
   expireAt: Date d'expiration
   deleteKey: Supprimer cette clé d'API
-  deleteKeyDetails: Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
+  deleteKeyDetails: Voulez-vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
   datasets: Jeux de données - toutes opérations
   datasets-read: Jeux de données - lecture
   datasets-write: Jeux de données - écriture
@@ -226,7 +226,7 @@ en:
   stats: Stats
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { VDateInput } from 'vuetify/labs/VDateInput'
 import type { Settings } from '#api/types'
 

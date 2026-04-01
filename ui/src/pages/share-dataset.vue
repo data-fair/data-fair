@@ -53,7 +53,7 @@
               v-if="publicationSitesFetch.data.value && !publicationSites.length"
               type="warning"
               variant="outlined"
-              style="max-width: 500px;"
+              max-width="500"
             >
               {{ t('noPublicationSite') }}
             </v-alert>
@@ -63,7 +63,7 @@
               </p>
               <v-card
                 variant="outlined"
-                style="max-width: 500px;"
+                max-width="500"
               >
                 <v-list>
                   <v-list-item
@@ -108,7 +108,7 @@
               variant="outlined"
               density="compact"
               class="mt-4"
-              style="max-width: 600px;"
+              max-width="600"
             >
               {{ t('alreadyPublished') }}
             </v-alert>
@@ -160,7 +160,7 @@
                 variant="outlined"
                 density="compact"
                 class="mb-2"
-                style="max-width: 600px;"
+                max-width="600"
               />
               <v-textarea
                 v-model="datasetDescription"
@@ -168,7 +168,7 @@
                 variant="outlined"
                 density="compact"
                 rows="4"
-                style="max-width: 600px;"
+                max-width="600"
               />
             </v-form>
 
@@ -254,7 +254,7 @@ en:
   required: This field is required
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { $fetch, $apiPath } from '~/context'
 import type { ListedDataset } from '~/components/dataset/select/utils'
 
