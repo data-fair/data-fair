@@ -96,7 +96,7 @@ test.describe('getAvailableSchema', () => {
 test.describe('executeGetExpressionContext', () => {
   test('returns error when no dataset', () => {
     const result = executeGetExpressionContext({ extensionIndex: 0 }, null)
-    assert.ok(result.isError)
+    assert.ok(typeof result === 'object' && result.isError)
   })
 
   test('returns error for invalid extension index', () => {
@@ -104,7 +104,7 @@ test.describe('executeGetExpressionContext', () => {
       extensions: [{ type: 'remoteService' }]
     }
     const result = executeGetExpressionContext({ extensionIndex: 0 }, dataset)
-    assert.ok(result.isError)
+    assert.ok(typeof result === 'object' && result.isError)
   })
 
   test('returns error for out-of-bounds extension index', () => {
@@ -112,7 +112,7 @@ test.describe('executeGetExpressionContext', () => {
       extensions: []
     }
     const result = executeGetExpressionContext({ extensionIndex: 5 }, dataset)
-    assert.ok(result.isError)
+    assert.ok(typeof result === 'object' && result.isError)
   })
 
   test('returns schema table and target info for valid extension', () => {
@@ -129,14 +129,15 @@ test.describe('executeGetExpressionContext', () => {
     const result = executeGetExpressionContext({ extensionIndex: 0 }, dataset)
     // Should be a string (not error object)
     assert.equal(typeof result, 'string')
-    assert.ok(result.includes('`name`'))
-    assert.ok(result.includes('`age`'))
+    const text = result as string
+    assert.ok(text.includes('`name`'))
+    assert.ok(text.includes('`age`'))
     // full_name is produced by extension at index 0, so should be excluded from available columns
-    assert.ok(!result.includes('| `full_name`'))
+    assert.ok(!text.includes('| `full_name`'))
     // Target info
-    assert.ok(result.includes('Key: `full_name`'))
-    assert.ok(result.includes('Full Name'))
-    assert.ok(result.includes('Current expression: `CONCAT(name)`'))
+    assert.ok(text.includes('Key: `full_name`'))
+    assert.ok(text.includes('Full Name'))
+    assert.ok(text.includes('Current expression: `CONCAT(name)`'))
   })
 
   test('shows "No expression set yet" when no expr', () => {
@@ -146,7 +147,7 @@ test.describe('executeGetExpressionContext', () => {
         { type: 'exprEval', property: { key: 'calc', type: 'string' } }
       ]
     }
-    const result = executeGetExpressionContext({ extensionIndex: 0 }, dataset)
+    const result = executeGetExpressionContext({ extensionIndex: 0 }, dataset) as string
     assert.ok(result.includes('No expression set yet'))
   })
 
@@ -160,7 +161,7 @@ test.describe('executeGetExpressionContext', () => {
         { type: 'exprEval', property: { key: 'calc', type: 'string' } }
       ]
     }
-    const result = executeGetExpressionContext({ extensionIndex: 0 }, dataset)
+    const result = executeGetExpressionContext({ extensionIndex: 0 }, dataset) as string
     assert.ok(result.includes('The city name'))
     assert.ok(result.includes('concept: City'))
   })

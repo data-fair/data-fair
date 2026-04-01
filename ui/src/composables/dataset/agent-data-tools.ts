@@ -9,6 +9,7 @@ import {
   executeCalculateMetric,
   executeGetFieldValues
 } from './agent-data-tools-logic'
+import type { SearchDataParams, AggregateDataParams, CalculateMetricParams } from './agent-data-tools-logic'
 
 export {
   applyGeoParams,
@@ -88,7 +89,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId'] as const
     },
-    execute: (params) => executeSearchData(params, $fetch)
+    execute: (params) => executeSearchData(params as SearchDataParams, $fetch)
   })
 
   useAgentTool({
@@ -120,7 +121,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId', 'groupByColumns'] as const
     },
-    execute: (params) => executeAggregateData(params, $fetch)
+    execute: (params) => executeAggregateData(params as AggregateDataParams, $fetch)
   })
 
   useAgentTool({
@@ -141,7 +142,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId', 'fieldKey', 'metric'] as const
     },
-    execute: (params) => executeCalculateMetric(params, $fetch)
+    execute: (params) => executeCalculateMetric(params as CalculateMetricParams, $fetch)
   })
 
   useAgentTool({

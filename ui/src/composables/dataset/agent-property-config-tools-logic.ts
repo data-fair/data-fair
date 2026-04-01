@@ -1,4 +1,4 @@
-import { toCsv } from '../agent/utils-logic'
+import { toCsv } from '../agent/utils-logic.js'
 import capabilitiesSchema from '../../../../api/contract/capabilities.js'
 
 export interface PropertyConfig {

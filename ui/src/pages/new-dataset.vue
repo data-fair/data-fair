@@ -428,7 +428,7 @@ import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { $apiPath } from '~/context'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
-import { injectShowAgentChat } from '~/composables/agent/use-show-chat'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -437,7 +437,7 @@ const session = useSessionAuthenticated()
 const breadcrumbs = useBreadcrumbs()
 const { account } = session
 
-const showAgentChat = injectShowAgentChat()
+const showAgentChat = useShowAgentChat()
 const isSimple = computed(() => route.query.simple === 'true')
 
 breadcrumbs.receive({

@@ -1,4 +1,4 @@
-import { toCsv, cleanRow } from '../agent/utils-logic'
+import { toCsv, cleanRow } from '../agent/utils-logic.js'
 
 export function applyGeoParams (query: Record<string, string>, bbox?: string, geoDistance?: string) {
   if (bbox) query.bbox = bbox

@@ -251,10 +251,10 @@ import { $apiPath, $uiConfig } from '~/context'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentApplicationCreationTools } from '~/composables/application/agent-creation-tools'
-import { injectShowAgentChat } from '~/composables/agent/use-show-chat'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import type { BaseApp } from '#api/types'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const { account } = useSessionAuthenticated()
@@ -264,7 +264,7 @@ breadcrumbs.receive({
   breadcrumbs: [{ text: t('apps'), to: '/applications' }, { text: t('breadcrumb') }]
 })
 
-const showAgentChat = injectShowAgentChat()
+const showAgentChat = useShowAgentChat()
 
 // ---- Types ----
 type CreationType = 'copy' | 'baseApp'

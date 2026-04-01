@@ -1,4 +1,4 @@
-import { agentToolError } from '../agent/utils-logic'
+import { agentToolError } from '../agent/utils-logic.js'
 
 export function getAvailableSchema (dataset: any, extensionIndex: number) {
   const schema = dataset.schema ?? []

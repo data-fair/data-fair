@@ -44,7 +44,7 @@ export function useAgentApplicationCreationTools (locale: Ref<string>, state: Ap
       required: ['type'] as const
     },
     execute: async (params) => {
-      state.creationType.value = params.type
+      state.creationType.value = params.type as 'copy' | 'baseApp'
       state.step.value = 2
       return `Creation type set to "${params.type}". The wizard is now on step 2.`
     }

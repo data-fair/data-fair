@@ -32,14 +32,14 @@
         action-id="help-annotate-schema"
         :visible-prompt="t('helpAnnotateSchema')"
         :hidden-context="'Use the schema_annotator subagent to suggest titles and descriptions for the dataset columns.'"
-        :btn-props="{ size: 'small' }"
+        :btn-props="{ size: 'small' } as any"
         :title="t('helpAnnotateSchema')"
       />
       <df-agent-chat-action
         action-id="help-configure-properties"
         :visible-prompt="t('helpConfigureProperties')"
         :hidden-context="'The property_config_advisor subagent can help optimize column types and indexing capabilities. Ask the user what they need: type corrections, capability optimization for performance, or both.'"
-        :btn-props="{ size: 'small' }"
+        :btn-props="{ size: 'small' } as any"
         :title="t('helpConfigureProperties')"
       />
       <v-spacer />
