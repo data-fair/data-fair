@@ -41,7 +41,7 @@
         <template v-if="mode === 'd-frame'">
           <p
             class="mb-2"
-            v-html="t('dFrameIntro')"
+            v-html="/*eslint-disable-line vue/no-v-html*/t('dFrameIntro')"
           />
           <v-checkbox
             v-model="syncParams"
@@ -94,7 +94,7 @@
     <template v-if="mode === 'd-frame'">
       <p
         class="mb-2"
-        v-html="t('dFrameIntro')"
+        v-html="/*eslint-disable-line vue/no-v-html*/t('dFrameIntro')"
       />
       <v-checkbox
         v-model="syncParams"

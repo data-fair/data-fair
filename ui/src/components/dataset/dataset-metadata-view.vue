@@ -15,7 +15,7 @@
         <p
           v-if="dataset.description"
           class="text-body-medium mb-4"
-          v-html="dataset.description"
+          v-html="/*eslint-disable-line vue/no-v-html*/dataset.description"
         />
 
         <v-list density="compact">

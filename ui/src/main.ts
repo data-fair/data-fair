@@ -10,7 +10,6 @@ import { createLocaleDayjs } from '@data-fair/lib-vue/locale-dayjs.js'
 import { createSession } from '@data-fair/lib-vue/session.js'
 import { createUiNotif } from '@data-fair/lib-vue/ui-notif.js'
 import { createI18n } from 'vue-i18n'
-import { createHead } from '@unhead/vue'
 import App from './App.vue'
 import dFrameContent from '@data-fair/frame/lib/vue-router/d-frame-content.js'
 import '@data-fair/frame/lib/d-frame.js'
@@ -38,8 +37,6 @@ const debug = debugModule('df:main');
     VColorPicker: { mode: 'hex', modes: ['hex', 'rgb', 'hsl'] }
   })
   const i18n = createI18n({ locale: session.state.lang })
-  const head = createHead()
-
   const app = createApp(App)
     .use(router)
     .use(reactiveSearchParams)
@@ -48,7 +45,6 @@ const debug = debugModule('df:main');
     .use(uiNotif)
     .use(vuetify)
     .use(i18n)
-    .use(head)
 
   await router.isReady()
   debug('Router is ready')

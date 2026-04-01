@@ -150,7 +150,7 @@
             <df-section-tabs
               v-if="section.id === 'api-keys'"
               :id="section.id"
-              :svg="securitysSvg"
+              :svg="securitySvg"
               svg-no-margin
               :title="section.title"
             >
@@ -371,7 +371,7 @@ en:
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import qualitySvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import flagsSvg from '~/assets/svg/Crossed flags_Two Color.svg?raw'
-import securitysSvg from '~/assets/svg/Security_Two Color.svg?raw'
+import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import wwwSvg from '~/assets/svg/World wide web_Two Color.svg?raw'
 import uiSvg from '~/assets/svg/User Interface _Two Color.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
@@ -381,7 +381,6 @@ import compatSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import { useDisplay } from 'vuetify'
 
 const { t } = useI18n()
-useHead({ title: t('pageTitle') })
 const session = useSessionAuthenticated()
 const display = useDisplay()
 

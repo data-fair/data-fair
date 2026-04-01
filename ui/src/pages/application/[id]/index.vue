@@ -197,10 +197,10 @@
                       variant="tonal"
                       class="mb-4"
                     >
-                      <p v-html="t('validatedError')" />
+                      <p v-html="/*eslint-disable-line vue/no-v-html*/t('validatedError')" />
                       <p
                         class="mb-0"
-                        v-html="application.errorMessage"
+                        v-html="/*eslint-disable-line vue/no-v-html*/application.errorMessage"
                       />
                     </v-alert>
                     <v-btn

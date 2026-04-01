@@ -106,7 +106,7 @@
           <template v-if="creationType === 'baseApp'">
             <p
               class="mb-4"
-              v-html="t('customApp')"
+              v-html="/*eslint-disable-line vue/no-v-html*/t('customApp')"
             />
 
             <v-progress-linear

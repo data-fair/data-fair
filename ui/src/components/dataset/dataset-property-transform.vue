@@ -62,7 +62,7 @@
           variant="tonal"
           class="mb-4"
         >
-          <p v-html="t('exprEvalHelp')" />
+          <p v-html="/*eslint-disable-line vue/no-v-html*/t('exprEvalHelp')" />
         </v-alert>
 
         <v-text-field

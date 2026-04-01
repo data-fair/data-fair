@@ -52,8 +52,8 @@ const { user } = session
 const breadcrumbs = provideBreadcrumbs()
 const route = useRoute()
 const router = useRouter()
-const { navigationGroups } = useNavigationItems()
-const { locale } = useI18n()
+const { t, locale } = useI18n()
+const { navigationGroups } = useNavigationItems({ t, locale })
 
 const showAgentChat = provideShowAgentChat(session)
 

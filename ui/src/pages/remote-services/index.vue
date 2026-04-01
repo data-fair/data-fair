@@ -1,15 +1,11 @@
 <template>
   <v-container>
-    <p
-      class="px-0 mb-4"
-      style="height: auto;"
-    >
+    <p class="mb-4">
       {{ t('description') }}
     </p>
 
     <v-row
       v-if="remoteServicesFetch.data.value"
-      class="resourcesList"
     >
       <v-col
         v-for="remoteService in remoteServicesFetch.data.value.results"
@@ -20,7 +16,6 @@
       >
         <remote-service-card :remote-service="remoteService" />
       </v-col>
-      <search-progress :loading="remoteServicesFetch.loading.value" />
     </v-row>
   </v-container>
 </template>

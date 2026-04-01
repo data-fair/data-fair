@@ -76,6 +76,23 @@
             :show-owner="showOwner"
           />
         </v-col>
+        <template v-if="catalog.loading.value && catalog.initialized.value">
+          <v-col
+            v-for="i in 12"
+            :key="`skeleton-${i}`"
+            cols="12"
+            sm="6"
+            md="4"
+            xxl="3"
+            class="d-flex"
+          >
+            <v-skeleton-loader
+              class="w-100"
+              height="200"
+              type="article"
+            />
+          </v-col>
+        </template>
       </v-row>
 
       <!-- List view -->
@@ -89,19 +106,15 @@
           :dataset="dataset"
           :show-owner="showOwner"
         />
+        <template v-if="catalog.loading.value && catalog.initialized.value">
+          <v-skeleton-loader
+            v-for="i in 12"
+            :key="`skeleton-${i}`"
+            type="list-item-two-line"
+          />
+        </template>
       </v-list>
     </template>
-
-    <!-- Loading spinner (infinite scroll) -->
-    <div
-      v-if="catalog.loading.value && catalog.initialized.value"
-      class="d-flex justify-center my-4"
-    >
-      <v-progress-circular
-        indeterminate
-        color="primary"
-      />
-    </div>
 
     <!-- Infinite scroll sentinel -->
     <div

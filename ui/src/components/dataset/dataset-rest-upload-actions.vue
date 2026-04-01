@@ -154,7 +154,7 @@
               </template>
             </v-file-input>
             <template v-if="dataset?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
-              <!--<p v-t="'attachmentsMsg'" />-->
+              <!--<p> {{ t('attachmentsMsg') }} </p>-->
               <v-file-input
                 v-model="attachmentsFile"
                 :label="t('selectAttachmentsFile')"

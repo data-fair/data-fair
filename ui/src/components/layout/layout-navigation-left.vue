@@ -4,8 +4,11 @@
     color="primary"
   >
     <v-list
+      v-model:opened="openedGroups"
       density="compact"
       bg-color="primary"
+      open-strategy="multiple"
+      nav
     >
       <!-- Portal home link (when not main site) -->
       <v-list-item
@@ -30,14 +33,18 @@
       />
 
       <template v-if="!missingSubscription">
-        {{ navigationGroups }}
         <v-list-group
           v-for="group of navigationGroups"
           :key="group.key"
           :value="group.key"
-          :title="group.title"
-          :color="group.key === 'admin' ? 'admin' : undefined"
+          :class="group.key === 'admin' ? 'bg-admin rounded' : undefined"
         >
+          <template #activator="{ props: activatorProps }">
+            <v-list-item
+              v-bind="activatorProps"
+              :title="group.title"
+            />
+          </template>
           <v-list-item
             v-for="item of group.items"
             :key="item.to || item.href || item.title"
@@ -65,7 +72,9 @@
 </template>
 
 <script lang="ts" setup>
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { usePermissions } from '~/composables/use-permissions'
 import { useNavigationItems } from '~/composables/layout/use-navigation-items'
 import {
@@ -75,10 +84,31 @@ import {
 } from '@mdi/js'
 
 const drawer = defineModel<boolean>({ required: true })
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const route = useRoute()
 const { site } = useSessionAuthenticated()
 const { canAdmin, missingSubscription } = usePermissions()
-const { navigationGroups } = useNavigationItems()
+const { navigationGroups } = useNavigationItems({ t, locale })
+
+// Auto-expand the group containing the current route
+const activeGroup = computed(() => {
+  for (const group of navigationGroups.value) {
+    for (const item of group.items) {
+      if (item.to && route.path.startsWith(item.to) && item.to !== '/') {
+        return group.key
+      }
+    }
+  }
+  return 'content'
+})
+
+const openedGroups = ref<string[]>([activeGroup.value])
+
+watch(activeGroup, (newGroup) => {
+  if (!openedGroups.value.includes(newGroup)) {
+    openedGroups.value = [...openedGroups.value, newGroup]
+  }
+})
 </script>
 
 <i18n lang="yaml">

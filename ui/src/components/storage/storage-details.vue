@@ -16,10 +16,7 @@
           >{{ dataset.title || dataset.id }}</a>
           <span v-if="dataset.storage?.indexed?.size"> - <b>{{ formatBytes(dataset.storage.indexed.size, locale) }}</b> de données indexées</span>
           <span v-if="dataset.storage?.size"> - <b>{{ formatBytes(dataset.storage.size, locale) }}</b> de données stockées</span>
-          <span
-            v-if="!dataset.storage"
-            v-t="'noInfo'"
-          />
+          <span v-if="!dataset.storage">{{ t('noInfo') }}</span>
         </v-list-item-title>
         <template v-if="dataset.storage">
           <v-list-item-subtitle v-if="dataset.storageParts.length">

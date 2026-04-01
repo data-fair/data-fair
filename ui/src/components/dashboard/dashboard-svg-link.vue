@@ -4,9 +4,8 @@
     variant="outlined"
   >
     <v-card-title
-      class="text-center justify-center text-title-medium pt-4"
-      style="word-break: normal; line-height: 1.4rem;"
-      :class="{ [`text-${color}`]: !!to, 'pb-0': !!svg }"
+      class="text-center text-title-medium"
+      :class="{ [`text-${color}`]: !!to }"
     >
       {{ title }}
     </v-card-title>

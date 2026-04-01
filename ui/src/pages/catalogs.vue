@@ -1,18 +1,17 @@
 <template>
   <d-frame
     id="catalogs"
-    :src="$sitePath + '/catalogs/catalogs/'"
-    sync-params
-    :sync-path="$sitePath + '/data-fair/catalogs/'"
-    emit-iframe-messages
-    style="height: 100%"
-    resize="no"
     :adapter.prop="stateChangeAdapter"
+    src="/catalogs/catalogs/"
+    sync-path="/data-fair/catalogs/"
+    class="fill-height"
+    resize="no"
+    sync-params
+    emit-iframe-messages
     @message="onMessage"
     @iframe-message="onMessage"
     @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
   />
-  <RouterView />
 </template>
 
 <script setup lang="ts">

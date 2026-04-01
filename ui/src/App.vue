@@ -13,10 +13,9 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import uiNotif from '@data-fair/lib-vuetify/ui-notif.vue'
-import DefaultLayout from './layouts/default-layout.vue'
-import EmbedLayout from './layouts/embed-layout.vue'
+import DefaultLayout from './layouts/default.vue'
+import EmbedLayout from './layouts/embed.vue'
 
-// useSession and useHead are auto-imported via vite.config.ts AutoImport plugin
 const session = useSession()
 const route = useRoute()
 
@@ -27,11 +26,12 @@ const layout = computed(() => {
   return DefaultLayout
 })
 
-useHead({
-  htmlAttrs: () => ({ lang: session.lang.value ?? 'fr' })
+watchEffect(() => {
+  document.documentElement.lang = session.lang.value ?? 'fr'
 })
 </script>
 
 <style>
+/* https://stackoverflow.com/questions/56973002/vuetify-adds-scrollbar-when-its-not-needed */
 html { overflow: hidden; }
 </style>

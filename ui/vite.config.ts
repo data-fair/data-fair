@@ -5,7 +5,6 @@ import VueRouter from 'vue-router/vite'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { unheadVueComposablesImports } from '@unhead/vue'
 // import webfontDownload from 'vite-plugin-webfont-dl'
 import Vuetify from 'vite-plugin-vuetify'
 import microTemplate from '@data-fair/lib-utils/micro-template.js'
@@ -14,7 +13,7 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/data-fair/',
+  base: '/data-fair',
   optimizeDeps: { include: [...commonjsDeps, 'easymde', 'vuedraggable', 'fast-deep-equal'] },
   build: {
     rolldownOptions: {
@@ -33,7 +32,7 @@ export default defineConfig({
   },
   plugins: [
     VueRouter({
-      dts: 'src/route-map.d.ts',
+      dts: './dts/route-map.d.ts',
       // exclude: process.env.NODE_ENV === 'development' ? [] : ['src/pages/dev.vue']
     }),
     Vue({ template: { compilerOptions: { isCustomElement: (tag) => ['d-frame'].includes(tag) } } }),
@@ -44,7 +43,6 @@ export default defineConfig({
       vueTemplate: true,
       imports: [
         ...(autoImports as any),
-        unheadVueComposablesImports,
         {
           '~/context': ['$uiConfig', '$sitePath', '$cspNonce', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl'],
           'truncate-middle': [['default', '$truncate']],
@@ -53,7 +51,7 @@ export default defineConfig({
       ],
       dirs: [
         'src/utils',
-        'src/composables/**'
+        'src/composables'
       ]
     }),
     Components({
