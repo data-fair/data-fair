@@ -392,7 +392,7 @@ import { $apiPath } from '~/context'
 
 const { t, locale } = useI18n()
 const router = useRouter()
-const route = useRoute()
+const route = useRoute<'/new-dataset'>()
 const session = useSessionAuthenticated()
 const breadcrumbs = useBreadcrumbs()
 const { account } = session

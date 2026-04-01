@@ -1,11 +1,9 @@
 <template>
-  <v-list
-    v-if="dataset"
-    density="compact"
-    bg-color="background"
-  >
+  <template v-if="dataset">
     <template v-if="dataFiles.length">
-      <v-list-subheader>{{ t('downloads') }}</v-list-subheader>
+      <v-list-subheader class="text-uppercase">
+        {{ t('downloads') }}
+      </v-list-subheader>
       <v-list-item
         v-for="dataFile in dataFiles"
         :key="dataFile.key"
@@ -57,7 +55,9 @@
       </template>
     </dataset-upload-dialog>
 
-    <v-list-subheader>{{ t('actions') }}</v-list-subheader>
+    <v-list-subheader class="text-uppercase">
+      {{ t('actions') }}
+    </v-list-subheader>
 
     <v-list-item
       v-if="can('writeDescription').value"
@@ -148,7 +148,7 @@
       </template>
       {{ t('deleteAllLines') }}
     </v-list-item>
-  </v-list>
+  </template>
 
   <v-dialog
     v-model="showDeleteDialog"
@@ -212,11 +212,11 @@
 
 <i18n lang="yaml">
 fr:
-  downloads: TÉLÉCHARGEMENTS
+  downloads: Téléchargements
   updateFile: Mettre à jour le fichier
   downloadRawRest: Export brut
   downloadRawRestSubtitle: Téléchargement de l'export brut des données originales (admin)
-  actions: ACTIONS
+  actions: Actions
   editMetadata: Éditer les métadonnées
   editData: Éditer les données
   useAPI: Utiliser l'API
@@ -232,11 +232,11 @@ fr:
   yes: Oui
   no: Non
 en:
-  downloads: DOWNLOADS
+  downloads: Downloads
   updateFile: Update data file
   downloadRawRest: Raw export
   downloadRawRestSubtitle: Download the raw export of original data (admin)
-  actions: ACTIONS
+  actions: Actions
   editMetadata: Edit metadata
   editData: Edit data
   useAPI: Use the API

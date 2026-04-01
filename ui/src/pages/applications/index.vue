@@ -144,8 +144,9 @@
         v-model="sort"
         :label="t('sort')"
         :items="sortItems"
+        :clearable="false"
         class="mt-4 mx-4"
-        :rounded="false"
+        rounded="md"
       />
 
       <!-- Facets -->

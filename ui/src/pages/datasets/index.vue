@@ -142,10 +142,11 @@
       <!-- Sort select -->
       <v-select
         v-model="sort"
-        class="mt-4 mx-4"
         :label="t('sort')"
         :items="sortItems"
-        :rounded="false"
+        :clearable="false"
+        class="mt-4 mx-4"
+        rounded="md"
       />
 
       <!-- Facets -->

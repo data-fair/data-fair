@@ -1,9 +1,6 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
-  <v-container
-    v-if="dataset"
-    class="pa-0"
-  >
+  <template v-if="dataset">
     <v-row class="mx-0">
       <v-col class="pa-0">
         <template v-if="journal && !dataset.draftReason">
@@ -23,7 +20,7 @@
                 :icon="mdiPlay"
                 title="Relancer"
                 color="primary"
-                @click="patch({})"
+                @click="patchDataset.execute({})"
               />
             </template>
           </v-alert>
@@ -53,9 +50,8 @@
         </template>
       </v-col>
     </v-row>
-    <v-row
-      v-if="dataset.draftReason"
-    >
+
+    <v-row v-if="dataset.draftReason">
       <v-col>
         <v-alert
           :type="(draftError || draftValidationError) ? 'warning' : 'info'"
@@ -66,9 +62,7 @@
             <v-col
               class="grow"
             >
-              <p
-                v-if="dataset.draftReason.key === 'file-new'"
-              >
+              <p v-if="dataset.draftReason.key === 'file-new'">
                 {{ t('draftNew1') }}
               </p>
 
@@ -147,7 +141,7 @@
         </v-alert>
       </v-col>
     </v-row>
-  </v-container>
+  </template>
 </template>
 
 <i18n lang="yaml">
@@ -217,10 +211,6 @@ const validateDraft = useAsyncAction(async () => {
   if (!dataset.value) return
   await $fetch(`datasets/${dataset.value.id}/draft`, { method: 'post' })
 })
-
-const patch = (p: any) => {
-  patchDataset.execute(p)
-}
 
 </script>
 

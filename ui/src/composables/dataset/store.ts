@@ -9,7 +9,7 @@ export type TaskProgress = { task: string, progress: number, error?: string }
 export type DatasetStore = ReturnType<typeof createDatasetStore>
 export const datasetStoreKey = Symbol('dataset-store')
 
-export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) => {
+export const createDatasetStore = (id: string, draft?: boolean, html?: boolean | string) => {
   // manage case of application key prefixed to dataset id in embed page
   const keys = id.split(':')
   if (keys.length > 1) id = keys[1]
@@ -156,7 +156,7 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean) 
   }
 }
 
-export const provideDatasetStore = (id: string, draft?: boolean, html?: boolean) => {
+export const provideDatasetStore = (id: string, draft?: boolean, html?: boolean | string) => {
   const store = createDatasetStore(id, draft, html)
   provide(datasetStoreKey, store)
   return store

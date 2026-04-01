@@ -254,7 +254,7 @@ import type { BaseApp } from '#api/types'
 
 const { t } = useI18n()
 const router = useRouter()
-const route = useRoute()
+const route = useRoute<'/new-application'>()
 const { account } = useSessionAuthenticated()
 const breadcrumbs = useBreadcrumbs()
 

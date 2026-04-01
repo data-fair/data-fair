@@ -1,299 +1,298 @@
 <template>
   <v-container v-if="dataset">
-    <dataset-status v-if="!dataset.isMetaOnly" />
+    <!-- Show dataset status -->
+    <dataset-status v-if="!dataset.isMetaOnly && (dataset.status === 'error' || !!dataset.draftReason)" />
 
-    <v-row class="dataset">
-      <v-col>
-        <dataset-metadata-view />
+    <!-- Show dataset metadata : Title, thumbnail, description, and others metadata -->
+    <dataset-metadata-view />
 
-        <template
-          v-for="section in sections"
-          :key="section.id"
+    <!-- Data section -->
+    <df-section-tabs
+      v-if="dataSection"
+      :id="dataSection.id"
+      v-model="dataTab"
+      :min-height="140"
+      :title="dataSection.title"
+      :tabs="dataSection.tabs"
+      :svg="dataSvg"
+    >
+      <template #content="{ tab }">
+        <v-tabs-window
+          :model-value="tab"
+          class="pa-4"
         >
-          <!-- Data section -->
-          <df-section-tabs
-            v-if="section.id === 'data'"
-            :id="section.id"
-            v-model="dataTab"
-            :min-height="140"
-            :title="section.title"
-            :tabs="section.tabs"
-            :svg="dataSvg"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="schema">
-                  <v-container fluid>
-                    <dataset-schema-view />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="data">
-                  <v-container fluid>
-                    <v-row class="pa-4">
-                      <v-col
-                        cols="6"
-                        md="4"
-                        lg="3"
-                      >
-                        <v-card
-                          :to="`/dataset/${dataset.id}/table`"
-                          variant="outlined"
-                        >
-                          <v-card-text class="text-center">
-                            <v-icon
-                              size="48"
-                              :icon="mdiTable"
-                            />
-                            <div class="mt-2">
-                              {{ t('table') }}
-                            </div>
-                          </v-card-text>
-                        </v-card>
-                      </v-col>
-                      <v-col
-                        v-if="dataset.bbox"
-                        cols="6"
-                        md="4"
-                        lg="3"
-                      >
-                        <v-card
-                          :to="`/dataset/${dataset.id}/map`"
-                          variant="outlined"
-                        >
-                          <v-card-text class="text-center">
-                            <v-icon
-                              size="48"
-                              :icon="mdiMap"
-                            />
-                            <div class="mt-2">
-                              {{ t('map') }}
-                            </div>
-                          </v-card-text>
-                        </v-card>
-                      </v-col>
-                      <v-col
-                        v-if="digitalDocumentField"
-                        cols="6"
-                        md="4"
-                        lg="3"
-                      >
-                        <v-card
-                          :to="`/dataset/${dataset.id}/files`"
-                          variant="outlined"
-                        >
-                          <v-card-text class="text-center">
-                            <v-icon
-                              size="48"
-                              :icon="mdiContentCopy"
-                            />
-                            <div class="mt-2">
-                              {{ t('files') }}
-                            </div>
-                          </v-card-text>
-                        </v-card>
-                      </v-col>
-                      <v-col
-                        v-if="imageField"
-                        cols="6"
-                        md="4"
-                        lg="3"
-                      >
-                        <v-card
-                          :to="`/dataset/${dataset.id}/thumbnails`"
-                          variant="outlined"
-                        >
-                          <v-card-text class="text-center">
-                            <v-icon
-                              size="48"
-                              :icon="mdiImage"
-                            />
-                            <div class="mt-2">
-                              {{ t('thumbnails') }}
-                            </div>
-                          </v-card-text>
-                        </v-card>
-                      </v-col>
-                      <v-col
-                        v-if="dataset.rest?.history"
-                        cols="6"
-                        md="4"
-                        lg="3"
-                      >
-                        <v-card
-                          :to="`/dataset/${dataset.id}/revisions`"
-                          variant="outlined"
-                        >
-                          <v-card-text class="text-center">
-                            <v-icon
-                              size="48"
-                              :icon="mdiHistory"
-                            />
-                            <div class="mt-2">
-                              {{ t('revisions') }}
-                            </div>
-                          </v-card-text>
-                        </v-card>
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="applications">
-                  <v-container fluid>
-                    <v-row v-if="applications.length">
-                      <v-col
-                        v-for="app in applications"
-                        :key="app.id"
-                        cols="12"
-                        md="6"
-                        lg="4"
-                      >
-                        <v-card :to="`/application/${app.id}`">
-                          <v-card-title class="text-body-large font-weight-bold">
-                            {{ app.title || app.id }}
-                          </v-card-title>
-                        </v-card>
-                      </v-col>
-                    </v-row>
-                    <p v-else>
-                      {{ t('noApplications') }}
-                    </p>
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-
-          <!-- Share section -->
-          <df-section-tabs
-            v-if="section.id === 'share'"
-            :id="section.id"
-            :min-height="200"
-            :title="section.title"
-            :tabs="section.tabs"
-            :svg="shareSvg"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="permissions">
-                  <v-container fluid>
-                    <permissions
-                      v-if="dataset"
-                      :resource="dataset"
-                      resource-type="datasets"
-                      :disabled="!can('setPermissions').value"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-
-                <v-tabs-window-item value="integration">
-                  <v-container fluid>
-                    <integration-dialog
-                      inline
-                      resource-type="datasets"
-                      :resource="dataset"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-
-                <v-tabs-window-item value="readApiKey">
-                  <v-container fluid>
-                    <dataset-read-api-key />
-                  </v-container>
-                </v-tabs-window-item>
-
-                <v-tabs-window-item value="publication-sites">
-                  <dataset-publication-sites />
-                </v-tabs-window-item>
-
-                <!-- Catalog publications -->
-                <v-tabs-window-item
-                  v-if="$uiConfig.catalogsIntegration && can('admin').value"
-                  value="catalog-publications"
+          <v-tabs-window-item value="data">
+            <v-row>
+              <!-- Table -->
+              <v-col
+                cols="6"
+                md="4"
+                lg="3"
+              >
+                <v-card
+                  :to="`/dataset/${dataset.id}/table`"
+                  variant="outlined"
                 >
-                  <v-container fluid>
-                    <h3 class="text-title-small font-weight-bold mt-4">
-                      {{ t('catalogPublications') }}
-                    </h3>
-                    <d-frame
-                      :src="catalogPublicationsUrl"
-                      sync-params
-                      @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+                  <v-card-text class="text-center">
+                    <v-icon
+                      size="48"
+                      :icon="mdiTable"
                     />
-                  </v-container>
-                </v-tabs-window-item>
+                    <div class="mt-2">
+                      {{ t('table') }}
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
 
-                <v-tabs-window-item value="related-datasets">
-                  <v-container fluid>
-                    <dataset-related-datasets />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
+              <!-- Map -->
+              <v-col
+                v-if="dataset.bbox"
+                cols="6"
+                md="4"
+                lg="3"
+              >
+                <v-card
+                  :to="`/dataset/${dataset.id}/map`"
+                  variant="outlined"
+                >
+                  <v-card-text class="text-center">
+                    <v-icon
+                      size="48"
+                      :icon="mdiMap"
+                    />
+                    <div class="mt-2">
+                      {{ t('map') }}
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
 
-          <!-- Activity section -->
-          <df-section-tabs
-            v-if="section.id === 'activity'"
-            :id="section.id"
-            v-model="activityTab"
-            :min-height="550"
-            :title="section.title"
-            :tabs="section.tabs"
-            :svg="settingsSvg"
-            svg-no-margin
+              <!-- Files -->
+              <v-col
+                v-if="digitalDocumentField"
+                cols="6"
+                md="4"
+                lg="3"
+              >
+                <v-card
+                  :to="`/dataset/${dataset.id}/files`"
+                  variant="outlined"
+                >
+                  <v-card-text class="text-center">
+                    <v-icon
+                      size="48"
+                      :icon="mdiContentCopy"
+                    />
+                    <div class="mt-2">
+                      {{ t('files') }}
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+
+              <!-- Thumbnails -->
+              <v-col
+                v-if="imageField"
+                cols="6"
+                md="4"
+                lg="3"
+              >
+                <v-card
+                  :to="`/dataset/${dataset.id}/thumbnails`"
+                  variant="outlined"
+                >
+                  <v-card-text class="text-center">
+                    <v-icon
+                      size="48"
+                      :icon="mdiImage"
+                    />
+                    <div class="mt-2">
+                      {{ t('thumbnails') }}
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+
+              <!-- Revisions -->
+              <v-col
+                v-if="dataset.rest?.history"
+                cols="6"
+                md="4"
+                lg="3"
+              >
+                <v-card
+                  :to="`/dataset/${dataset.id}/revisions`"
+                  variant="outlined"
+                >
+                  <v-card-text class="text-center">
+                    <v-icon
+                      size="48"
+                      :icon="mdiHistory"
+                    />
+                    <div class="mt-2">
+                      {{ t('revisions') }}
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-tabs-window-item>
+          <v-tabs-window-item value="applications">
+            <v-container fluid>
+              <v-row v-if="applications.length">
+                <v-col
+                  v-for="app in applications"
+                  :key="app.id"
+                  cols="12"
+                  md="6"
+                  lg="4"
+                >
+                  <v-card :to="`/application/${app.id}`">
+                    <v-card-title class="text-body-large font-weight-bold">
+                      {{ app.title || app.id }}
+                    </v-card-title>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <p v-else>
+                {{ t('noApplications') }}
+              </p>
+            </v-container>
+          </v-tabs-window-item>
+          <v-tabs-window-item value="schema">
+            <dataset-schema-view />
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
+    <!-- Share section -->
+    <df-section-tabs
+      v-if="shareSection"
+      :id="shareSection.id"
+      :min-height="200"
+      :title="shareSection.title"
+      :tabs="shareSection.tabs"
+      :svg="shareSvg"
+    >
+      <template #content="{ tab }">
+        <v-tabs-window :model-value="tab">
+          <v-tabs-window-item value="permissions">
+            <v-container fluid>
+              <permissions
+                v-if="dataset"
+                :resource="dataset"
+                resource-type="datasets"
+                :disabled="!can('setPermissions').value"
+              />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="integration">
+            <v-container fluid>
+              <integration-dialog
+                inline
+                resource-type="datasets"
+                :resource="dataset"
+              />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="readApiKey">
+            <v-container fluid>
+              <dataset-read-api-key />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="publication-sites">
+            <dataset-publication-sites />
+          </v-tabs-window-item>
+
+          <!-- Catalog publications -->
+          <v-tabs-window-item
+            v-if="$uiConfig.catalogsIntegration && can('admin').value"
+            value="catalog-publications"
           >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="journal">
-                  <v-container
-                    fluid
-                    class="pa-0"
-                  >
-                    <journal-view
-                      v-if="journal"
-                      :journal="journal"
-                      :task-progress="taskProgress"
-                      type="dataset"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="traceability">
-                  <d-frame
-                    :src="traceabilityUrl"
-                    sync-params
-                    @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
-                  />
-                </v-tabs-window-item>
-                <v-tabs-window-item
-                  v-if="$uiConfig.eventsIntegration"
-                  value="notifications"
-                >
-                  <v-container fluid>
-                    <notifications-dialog
-                      inline
-                      :resource="dataset"
-                      resource-type="dataset"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item
-                  v-if="$uiConfig.eventsIntegration && can('setPermissions').value"
-                  value="webhooks"
-                >
-                  <v-container fluid>
-                    <webhooks-dialog
-                      inline
-                      :resource="dataset"
-                      resource-type="dataset"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-        </template>
-      </v-col>
-    </v-row>
+            <v-container fluid>
+              <h3 class="text-title-small font-weight-bold mt-4">
+                {{ t('catalogPublications') }}
+              </h3>
+              <d-frame
+                :src="catalogPublicationsUrl"
+                sync-params
+                @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+              />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="related-datasets">
+            <v-container fluid>
+              <dataset-related-datasets />
+            </v-container>
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
+    <!-- Activity section -->
+    <df-section-tabs
+      v-if="activitySection"
+      :id="activitySection.id"
+      v-model="activityTab"
+      :min-height="550"
+      :title="activitySection.title"
+      :tabs="activitySection.tabs"
+      :svg="settingsSvg"
+      svg-no-margin
+    >
+      <template #content="{ tab }">
+        <v-tabs-window :model-value="tab">
+          <v-tabs-window-item value="journal">
+            <v-container
+              fluid
+              class="pa-0"
+            >
+              <journal-view
+                v-if="journal"
+                :journal="journal"
+                :task-progress="taskProgress"
+                type="dataset"
+              />
+            </v-container>
+          </v-tabs-window-item>
+          <v-tabs-window-item value="traceability">
+            <d-frame
+              :src="traceabilityUrl"
+              sync-params
+              @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+            />
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="$uiConfig.eventsIntegration"
+            value="notifications"
+          >
+            <notifications-dialog
+              :resource="dataset"
+              resource-type="dataset"
+              inline
+            />
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="$uiConfig.eventsIntegration && can('setPermissions').value"
+            value="webhooks"
+          >
+            <v-container fluid>
+              <webhooks-dialog
+                inline
+                :resource="dataset"
+                resource-type="dataset"
+              />
+            </v-container>
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
 
     <df-navigation-right>
       <dataset-actions />
@@ -372,7 +371,7 @@ const breadcrumbs = useBreadcrumbs()
 const dataTab = ref('data')
 const activityTab = ref('journal')
 
-const store = provideDatasetStore(route.params.id, true)
+const store = provideDatasetStore(route.params.id, true, 'vuetify')
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can } = store
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
@@ -403,6 +402,10 @@ const traceabilityUrl = computed(() => {
   if (!dataset.value) return ''
   return `${window.location.origin}/events/embed/traceability?resource=${encodeURIComponent($apiPath + '/datasets/' + dataset.value.id)}`
 })
+
+const dataSection = computed(() => sections.value.find(s => s.id === 'data'))
+const shareSection = computed(() => sections.value.find(s => s.id === 'share'))
+const activitySection = computed(() => sections.value.find(s => s.id === 'activity'))
 
 const sections = computedDeepDiff(() => {
   if (!dataset.value) return []
