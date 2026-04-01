@@ -183,6 +183,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiAlert, mdiAttachment, mdiCancel, mdiDatabase, mdiInformation, mdiPuzzle, mdiRobotOutline, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
+import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
@@ -211,6 +212,9 @@ useLeaveGuard(datasetEditFetch.hasDiff, { locale })
 
 useAgentDatasetSummaryTools(locale, datasetEditFetch.data, (s) => {
   if (datasetEditFetch.data.value) datasetEditFetch.data.value.summary = s
+})
+useAgentDatasetDescriptionTools(locale, datasetEditFetch.data, (d) => {
+  if (datasetEditFetch.data.value) datasetEditFetch.data.value.description = d
 })
 useAgentDatasetChangesSummaryTools(locale, datasetEditFetch.data, datasetEditFetch.serverData)
 useAgentExpressionTools(locale, datasetEditFetch.data, (extensionIndex, expr) => {

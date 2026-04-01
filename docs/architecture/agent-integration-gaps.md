@@ -8,6 +8,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 - **Dataset metadata**: list, describe (2 tools)
 - **Dataset data queries**: schema, search, aggregate, metric, field values (5 tools + 1 subagent)
 - **Dataset summary**: read info, set summary (2 tools + 1 subagent)
+- **Dataset description**: set description (1 tool + 1 subagent)
 - **Dataset changes**: read diff (1 tool + 1 subagent)
 - **Dataset expressions**: context, sample, test, set (4 tools + 1 subagent)
 - **Applications**: list, describe, list base apps (3 tools)
@@ -15,7 +16,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 - **Geolocation**: geocode, user location (2 tools)
 - **Connectors**: list/describe processings and catalogs (0-4 conditional tools)
 
-**Total: 22 tools, 5 subagents, 5 action buttons**
+**Total: 23 tools, 6 subagents, 6 action buttons**
 
 ---
 
@@ -165,7 +166,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 | Priority | Gap | Value | Effort |
 |----------|-----|-------|--------|
-| **High** | 1. Description generation | High — frequently needed | Low — pattern exists |
+| ~~Done~~ | ~~1. Description generation~~ | ~~High — frequently needed~~ | ~~Low — pattern exists~~ |
 | **High** | 2. Metadata completion | High — often skipped by users | Low-Med |
 | **High** | 3. Schema annotation | High — very tedious manually | Med |
 | **High** | 14. Dataset journal tool | Med-High — debugging/auditing | Low — read-only API call |

@@ -31,13 +31,24 @@
       />
     </div>
 
-    <markdown-editor
-      v-model="dataset.description"
-      :disabled="!can('writeDescription')"
-      :label="t('description')"
-      :locale="locale"
-      :csp-nonce="$cspNonce"
-    />
+    <div class="d-flex align-start gap-1 mb-3">
+      <markdown-editor
+        v-model="dataset.description"
+        :disabled="!can('writeDescription')"
+        :label="t('description')"
+        :locale="locale"
+        :csp-nonce="$cspNonce"
+        class="flex-grow-1"
+      />
+      <df-agent-chat-action
+        v-if="can('writeDescription')"
+        action-id="describe-dataset"
+        :visible-prompt="t('describePrompt')"
+        :hidden-context="describeContext"
+        :btn-props="{ class: 'ml-1 mt-1' }"
+        :title="t('describePrompt')"
+      />
+    </div>
 
     <v-text-field
       id="slug-input"
@@ -110,6 +121,7 @@ fr:
   summary: Resume
   summarizePrompt: Aide-moi à rédiger un résumé pour ce jeu de données
   description: Description
+  describePrompt: Aide-moi à rédiger une description pour ce jeu de données
   cancel: Annuler
   validate: Valider
 en:
@@ -120,6 +132,7 @@ en:
   summary: Summary
   summarizePrompt: Help me write a summary for this dataset
   description: Description
+  describePrompt: Help me write a description for this dataset
   cancel: Cancel
   validate: Validate
 </i18n>
@@ -140,5 +153,9 @@ const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? fals
 
 const summarizeContext = computed(() => {
   return 'Use the dataset_summarizer subagent to produce a summary for this dataset. Once you receive the summary, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_summary tool to set it. If the user wants changes, adjust accordingly.'
+})
+
+const describeContext = computed(() => {
+  return 'The user wants help writing a description for this dataset. The description field supports markdown and should be more detailed than the summary. Ask the user what aspects they want to emphasize or if they have any specific requirements before using the dataset_description_writer subagent. Once you receive the description, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_description tool to set it. If the user wants changes, adjust accordingly.'
 })
 </script>

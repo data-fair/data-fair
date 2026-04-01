@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 24 tools, only 5 perform writes (navigate, set_expression, set_dataset_summary, open_add_line_dialog, open_edit_line_dialog). All others are read-only.
+- **Read-heavy, write-light**: of 25 tools, only 6 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, open_add_line_dialog, open_edit_line_dialog). All others are read-only.
 
 ### Activation flow
 
@@ -35,8 +35,8 @@ graph TB
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["22 Tools"]
-            SubAgents["5 Subagents"]
+            Tools["23 Tools"]
+            SubAgents["6 Subagents"]
             TR --> Tools
             SR --> SubAgents
             FS --> TR
@@ -244,7 +244,17 @@ These tools are only registered when the corresponding integration is enabled in
 | `list_catalogs` | List catalogs with search, type, URL | `q`, `page`, `size` | Yes |
 | `describe_catalog` | Catalog metadata: type, URL, owner, description | `catalogId` (required) | Yes |
 
-### 4.10 REST Dataset Edit Tools
+### 4.10 Dataset Description Tools
+
+Source: `ui/src/composables/dataset/agent-description-tools.ts`
+
+Registered contextually when editing a dataset (via action button).
+
+| Tool | Description | Parameters | Read-only |
+|------|-------------|------------|-----------|
+| `set_dataset_description` | Sets the description field (markdown) on the dataset form | `description` (string, required) | **No** |
+
+### 4.11 REST Dataset Edit Tools
 
 Source: `ui/src/components/dataset/table/dataset-table.vue`
 
@@ -351,7 +361,31 @@ Subagents are specialized agents with their own system prompt and a restricted s
 
 This subagent is automatically created by the VJSF (Vue JSON Schema Form) component to help users fill in the application configuration form through natural language. The main agent is instructed to delegate to it via the `configure-application` action's hidden context.
 
-### 5.6 `editLine_form` - Line Edit Form Helper
+### 5.6 `dataset_description_writer` - Description Writer
+
+- **Source**: `ui/src/composables/dataset/agent-description-tools.ts`
+- **Model**: _(default)_
+- **Tools**: `read_dataset_info`
+
+**System prompt:**
+> You are a dataset documentation expert for Data Fair, an open data publishing platform. Descriptions are displayed on dataset pages to help users understand the dataset in detail.
+>
+> Task:
+> 1. Call read_dataset_info to get the full metadata and schema.
+> 2. Write a detailed description of the dataset based on its title, summary, columns, topics, and other metadata.
+> 3. Return the description text as your final response.
+>
+> Format:
+> - Between 500 and 2000 characters
+> - Markdown formatting is encouraged: use headings (##), bullet lists, and bold for key terms
+> - Structure the description with sections such as: overview, content details, usage notes
+> - Use an accessible tone -- the audience ranges from data analysts to general public users
+> - Write in the same language as the dataset title and existing metadata
+> - Do not simply repeat the summary; the description should add depth and context
+> - If the dataset has geographic or temporal scope, mention it
+> - If the dataset has notable columns, highlight the most important ones
+
+### 5.7 `editLine_form` - Line Edit Form Helper
 
 - **Source**: Dynamically created by the `vjsf` component when `:sub-agent="true"` is set
 - **Location**: `ui/src/components/dataset/form/dataset-edit-line-form.vue`
@@ -407,7 +441,15 @@ Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer a
 - **Hidden context**: `Use the subagent tool appConfig_form to help the user configure the current application. Start the session by asking the user what they want to achieve. The base application type is "{title}". Description: {description}. Category: {category}. The application title is "{appTitle}".`
 - **Condition**: `showAgentChat && canWriteConfig`
 
-### 6.6 Help Enter Data
+### 6.6 Help Write Description
+
+- **Action ID**: `describe-dataset`
+- **Location**: `ui/src/components/dataset/dataset-info.vue` (next to description markdown-editor)
+- **Visible prompt**: "Help me write a description for this dataset" / "Aide-moi a rediger une description pour ce jeu de donnees"
+- **Hidden context**: `The user wants help writing a description for this dataset. The description field supports markdown and should be more detailed than the summary. Ask the user what aspects they want to emphasize or if they have any specific requirements before using the dataset_description_writer subagent. Once you receive the description, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_description tool to set it. If the user wants changes, adjust accordingly.`
+- **Condition**: `showAgentChat && can('writeDescription')`
+
+### 6.7 Help Enter Data
 
 - **Action ID**: `help-edit-data`
 - **Location**: `ui/src/pages/dataset/[id]/edit-data.vue` (above the data table)
@@ -437,7 +479,7 @@ watchEffect:
     stop scope (unregisters all tools)
 ```
 
-The summary, expression, and changes tools are registered separately in their respective page components, scoped to the editing context.
+The summary, description, expression, and changes tools are registered separately in their respective page components, scoped to the editing context.
 
 ## 8. Key Files Reference
 
@@ -453,10 +495,11 @@ The summary, expression, and changes tools are registered separately in their re
 | `ui/src/composables/dataset/agent-tools.ts` | Dataset metadata tools (2) + `serializeDatasetInfo` |
 | `ui/src/composables/dataset/agent-data-tools.ts` | Dataset data query tools (5) + `dataset_data` subagent |
 | `ui/src/composables/dataset/agent-summary-tools.ts` | Summary tools (2) + `dataset_summarizer` subagent |
+| `ui/src/composables/dataset/agent-description-tools.ts` | Description tools (1) + `dataset_description_writer` subagent |
 | `ui/src/composables/dataset/agent-changes-summary-tools.ts` | Changes tools (1) + `dataset_changes_summarizer` subagent |
 | `ui/src/composables/dataset/agent-expression-tools.ts` | Expression tools (4) + `expression_helper` subagent |
 | `ui/src/composables/application/agent-tools.ts` | Application tools (3) |
-| `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` action button |
+| `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` and `describe-dataset` action buttons |
 | `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
 | `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` action button, `open_add_line_dialog` / `open_edit_line_dialog` tools |
