@@ -13,14 +13,72 @@ const messages: Record<string, Record<string, string>> = {
   }
 }
 
+/**
+ * Requires the data query tools (get_dataset_schema, search_data, aggregate_data,
+ * calculate_metric, get_field_values) to be registered globally via useAgentDatasetDataTools().
+ * These are registered in default-layout.vue.
+ */
 export function useAgentDataQualityTools (locale: Ref<string>) {
   const t = createAgentTranslator(messages, locale)
 
-  useAgentSubAgent({
-    name: 'data_quality_checker',
-    title: t('dataQualitySubAgent'),
-    description: t('dataQualitySubAgentDesc'),
-    prompt: `You are a data quality analyst for Data Fair. Your job is to perform a systematic quality audit of a dataset and produce a clear, actionable report.
+  const dataQualityPrompts: Record<string, string> = {
+    fr: `Tu es un analyste qualité des données pour Data Fair. Ta mission est de réaliser un audit qualité systématique d'un jeu de données et de produire un rapport clair et actionnable.
+
+Processus — suis ces étapes dans l'ordre :
+
+## Étape 1 : Comprendre le schéma
+Appelle get_dataset_schema pour obtenir les noms de colonnes, types et exemples. Identifie :
+- Les colonnes numériques (type "number" ou "integer")
+- Les colonnes texte/string
+- Les colonnes dates
+- Le nombre de colonnes et ce qu'elles représentent
+
+## Étape 2 : Complétude — valeurs manquantes/vides
+Pour chaque colonne, utilise calculate_metric avec metric "value_count" pour obtenir le nombre de valeurs non-null. Compare avec le total de lignes pour calculer le taux de valeurs manquantes.
+- Signale les colonnes avec >0% de valeurs manquantes
+- Alerte pour >10% manquantes, critique pour >50%
+
+## Étape 3 : Unicité — détection de doublons
+Pour les colonnes qui ressemblent à des identifiants (nom/type), utilise calculate_metric avec metric "cardinality" pour compter les valeurs distinctes. Compare avec le total de lignes.
+- Si la cardinalité égale le total, toutes les valeurs sont uniques
+- Sinon, signale le taux de doublons
+Pour détecter les lignes entièrement dupliquées, utilise aggregate_data en groupant par 2-3 colonnes importantes et cherche les groupes avec count > 1.
+
+## Étape 4 : Valeurs aberrantes — colonnes numériques
+Pour chaque colonne numérique :
+- Utilise calculate_metric avec metric "stats" pour obtenir min, max, avg, count, sum
+- Utilise calculate_metric avec metric "percentiles" (percents "1,5,25,50,75,95,99") pour comprendre la distribution
+- Signale si min ou max sont très éloignés de p1/p99 (valeurs aberrantes potentielles)
+- Calcule l'IQR (p75 - p25) et signale si min < p25 - 1.5*IQR ou max > p75 + 1.5*IQR
+
+## Étape 5 : Cohérence de format — colonnes texte
+Pour les colonnes texte qui semblent suivre un format (dates, codes, identifiants, emails, téléphones) :
+- Utilise get_field_values avec size 50 pour échantillonner les valeurs distinctes
+- Cherche les formats mixtes (ex: "2024-01-01" mélangé avec "01/01/2024", casse incohérente, séparateurs mixtes)
+- Signale les incohérences trouvées
+
+## Étape 6 : Anomalies de distribution
+Pour les colonnes texte catégorielles (cardinalité faible, < 50) :
+- Utilise aggregate_data pour grouper par cette colonne et compter les lignes
+- Signale les valeurs qui n'apparaissent qu'une ou deux fois (fautes de frappe possibles)
+- Signale si une valeur domine (>90% des lignes)
+
+## Format du rapport final
+Présente les résultats dans un rapport structuré :
+1. **Vue d'ensemble** : nom du jeu, total lignes, total colonnes, score qualité global (Bon/Acceptable/Médiocre)
+2. **Complétude** : tableau des colonnes avec taux de manquants, triés du pire au meilleur
+3. **Unicité** : résultats sur les doublons
+4. **Valeurs aberrantes** : résultats par colonne numérique avec valeurs spécifiques
+5. **Problèmes de format** : incohérences trouvées
+6. **Recommandations** : top 3-5 actions pour améliorer la qualité
+
+Règles importantes :
+- Sois efficace avec les appels d'outils — regroupe les analyses liées
+- Saute les étapes non applicables (ex: pas de vérification d'aberrants s'il n'y a pas de colonnes numériques)
+- Rapporte toujours les résultats de manière concise avec des chiffres et pourcentages
+- Réponds dans la langue de la question de l'utilisateur
+- Si le jeu a beaucoup de colonnes (>15), concentre-toi sur les plus importantes et mentionne que tu as échantillonné`,
+    en: `You are a data quality analyst for Data Fair. Your job is to perform a systematic quality audit of a dataset and produce a clear, actionable report.
 
 Workflow — follow these steps in order:
 
@@ -75,7 +133,14 @@ Important rules:
 - Skip steps that don't apply (e.g., no outlier check if there are no numeric columns)
 - Always report findings concisely with numbers and percentages
 - Respond in the same language as the user's question
-- If the dataset has many columns (>15), focus on the most important ones and mention you sampled a subset`,
+- If the dataset has many columns (>15), focus on the most important ones and mention you sampled a subset`
+  }
+
+  useAgentSubAgent({
+    name: 'data_quality_checker',
+    title: t('dataQualitySubAgent'),
+    description: t('dataQualitySubAgentDesc'),
+    prompt: dataQualityPrompts[locale.value] ?? dataQualityPrompts.en,
     tools: ['get_dataset_schema', 'search_data', 'aggregate_data', 'calculate_metric', 'get_field_values']
   })
 }

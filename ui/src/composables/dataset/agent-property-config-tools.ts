@@ -1,7 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
-import { $fetch } from '~/context'
-import { createAgentTranslator } from '~/composables/agent/utils'
+import { createAgentTranslator, toCsv, fetchSampleRows } from '~/composables/agent/utils'
 import capabilitiesSchema from '~/../../api/contract/capabilities.js'
 
 const messages: Record<string, Record<string, string>> = {
@@ -66,18 +65,6 @@ function diffCapabilities (capabilities: Record<string, boolean>): Record<string
   return diff
 }
 
-function csvEscape (value: any): string {
-  if (value == null) return ''
-  const s = String(value)
-  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
-}
-
-function toCsv (rows: Record<string, any>[]): string {
-  if (!rows.length) return ''
-  const keys = Object.keys(rows[0])
-  return [keys.map(csvEscape).join(','), ...rows.map(row => keys.map(k => csvEscape(row[k])).join(','))].join('\n')
-}
-
 export function useAgentPropertyConfigTools (
   locale: Ref<string>,
   datasetData: Ref<any>,
@@ -125,12 +112,8 @@ export function useAgentPropertyConfigTools (
       let sampleCsv = ''
       if (dataset.id) {
         try {
-          const data = await $fetch<any>(`datasets/${encodeURIComponent(dataset.id)}/lines`, { query: { size: '5' } })
-          const results = (data.results ?? []).map((row: any) => {
-            const { _id, _i, _rand, ...clean } = row
-            return clean
-          })
-          sampleCsv = toCsv(results)
+          const { rows } = await fetchSampleRows(dataset.id, 5)
+          sampleCsv = toCsv(rows)
         } catch {
           sampleCsv = '(failed to fetch sample data)'
         }
@@ -232,12 +215,33 @@ export function useAgentPropertyConfigTools (
     }
   })
 
-  useAgentSubAgent({
-    name: 'property_config_advisor',
-    title: t('propertyConfigAdvisor'),
-    description: t('propertyConfigAdvisorDesc'),
-    model: 'summarizer',
-    prompt: `You are a data configuration expert for Data Fair, an open data publishing platform. You help users optimize column types and indexing capabilities.
+  const propertyConfigAdvisorPrompts: Record<string, string> = {
+    fr: `Tu es un expert en configuration de données pour Data Fair, une plateforme de publication de données ouvertes. Tu aides les utilisateurs à optimiser les types de colonnes et les capacités d'indexation.
+
+Tâche :
+1. Appelle read_property_config pour obtenir le schéma actuel, les capacités et des exemples de données.
+2. Analyse le type détecté de chaque colonne vs. le contenu réel. Cherche :
+   - Des dates stockées comme texte (suggère un override de type vers date ou date-time)
+   - Des nombres stockés comme texte (suggère un override vers number ou integer)
+   - Des booléens stockés comme texte (suggère un override vers boolean)
+   - Des entiers détectés comme nombres (suggère un override vers integer)
+3. Analyse les capacités pour des opportunités d'optimisation :
+   - Colonnes de texte long : désactiver \`index\` et \`values\` (le filtrage exact et le tri n'ont pas de sens pour du texte long)
+   - Texte non français : désactiver \`text\` (l'analyse spécifique au français est inutile)
+   - Colonnes où un nuage de mots pourrait être utile : suggérer d'activer \`textAgg\`
+   - Codes à faible cardinalité : \`wildcard\` est généralement inutile
+   - IDs uniques à haute cardinalité : le tri \`insensitive\` peut être inutile
+4. Présente tes suggestions avec de brèves explications pour chacune.
+5. Appelle set_property_config avec toutes les suggestions en une fois.
+6. Renvoie un résumé des changements effectués.
+
+Consignes :
+- Les overrides de type ne sont disponibles que pour les jeux de type fichier. Ignore les suggestions de type si ce n'est pas un fichier.
+- Pour les capacités, ne suggère que les changements avec un bénéfice clair. Ne modifie pas ce qui est déjà bien configuré.
+- Ne passe que les valeurs de capacités qui diffèrent des défauts. Les défauts sont : index=true, values=true, textStandard=true, text=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false.
+- N'écris PAS d'expressions de transformation. Si un override de type nécessite une expression (ex: reformater des dates), mentionne-le et indique à l'utilisateur d'utiliser l'assistant d'expressions.
+- Rédige dans la même langue que le titre du jeu et les annotations existantes.`,
+    en: `You are a data configuration expert for Data Fair, an open data publishing platform. You help users optimize column types and indexing capabilities.
 
 Task:
 1. Call read_property_config to get the current schema, capabilities, and sample data.
@@ -261,7 +265,15 @@ Guidelines:
 - For capabilities, only suggest changes that provide clear benefits. Don't change things that are already well configured.
 - Only pass capabilities values that differ from defaults. The defaults are: index=true, values=true, textStandard=true, text=true, insensitive=true, geoShape=true, indexAttachment=true, textAgg=false, wildcard=false, vtPrepare=false.
 - Do NOT write transform expressions. If a type override needs an expression (e.g., reformatting dates), mention it and tell the user to use the expression helper.
-- Write in the same language as the dataset title and existing annotations.`,
+- Write in the same language as the dataset title and existing annotations.`
+  }
+
+  useAgentSubAgent({
+    name: 'property_config_advisor',
+    title: t('propertyConfigAdvisor'),
+    description: t('propertyConfigAdvisorDesc'),
+    model: 'summarizer',
+    prompt: propertyConfigAdvisorPrompts[locale.value] ?? propertyConfigAdvisorPrompts.en,
     tools: ['read_property_config', 'set_property_config']
   })
 }

@@ -117,487 +117,212 @@ sequenceDiagram
 
 ## 3. System Prompt
 
-The main system prompt is defined in `ui/src/layouts/default-layout.vue` and injected into the chat drawer. It is selected based on the user's locale.
-
-**French:**
-> Tu es l'assistant IA de Data Fair, une plateforme de gestion et de publication de donnees privee ou ouvertes. Tu aides les utilisateurs a naviguer dans l'interface, explorer les jeux de donnees, interroger les donnees, configurer les applications de visualisation, et gerer les metadonnees.
->
-> Consignes :
-> - Reponds dans la langue de l'utilisateur
-> - Sois concis et precis
-> - Utilise frequemment l'outil getCurrentLocation pour comprendre le positionnement de l'utilisateur dans l'interface
-
-**English:**
-> You are the AI assistant for Data Fair, a platform for managing and publishing private or open data. You help users navigate the interface, explore datasets, query data, configure visualization applications, and manage metadata.
->
-> Guidelines:
-> - Respond in the user's language
-> - Be concise and precise
-> - Frequently use the tool getCurrentLocation to understand the positioning of the user in the UI.
-> - When the data exploration subagent returns "Navigation params", use the navigate tool with those parameters as query to show the user the filtered data in the dataset table page (path: /dataset/{id}/table)
-
-## 4. Tool Inventory
-
-### 4.1 Navigation Tools
-
-Source: `ui/src/composables/agent/navigation-tools.ts`
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `get_current_location` | Returns current page path, route name, params, query, and breadcrumbs | _(none)_ | Yes |
-| `list_pages` | Lists all accessible pages organized by group (content, management, connectors, monitoring, help, admin, workflow, detail, d-frame) | _(none)_ | Yes |
-| `navigate` | Navigates the application to a given path using Vue Router, optionally with query parameters for filters | `path` (string, required), `query` (object, optional) | **No** |
-
-### 4.2 Dataset Metadata Tools
-
-Source: `ui/src/composables/dataset/agent-tools.ts`
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `list_datasets` | Search and list datasets. Returns title, ID, status, row count, topics, keywords | `q` (search), `page`, `size` | Yes |
-| `describe_dataset` | Full dataset metadata: title, description, schema, owner, visibility, topics, keywords, license, frequency, spatial/temporal info | `datasetId` (required) | Yes |
-
-### 4.3 Dataset Data Query Tools
-
-Source: `ui/src/composables/dataset/agent-data-tools.ts`
-
-| Tool | Description | Key Parameters | Read-only |
-|------|-------------|----------------|-----------|
-| `get_dataset_schema` | Column schema table + 3 sample rows in CSV | `datasetId` | Yes |
-| `search_data` | Full-text search and column filtering with pagination. Supports geo (`bbox`, `geoDistance`) and temporal (`dateMatch`) filters | `datasetId`, `q`, `filters`, `select`, `sort`, `size`, `page`, `bbox`, `geoDistance`, `dateMatch`, `next` | Yes |
-| `aggregate_data` | Group by 1-3 columns with optional metric (sum, avg, min, max, count) | `datasetId`, `groupByColumns`, `metric`, `filters`, `sort`, `bbox`, `geoDistance`, `dateMatch` | Yes |
-| `calculate_metric` | Single global metric: avg, sum, min, max, stats, value_count, cardinality, percentiles | `datasetId`, `fieldKey`, `metric`, `percents`, `filters`, `bbox`, `geoDistance`, `dateMatch` | Yes |
-| `get_field_values` | Distinct values of a column | `datasetId`, `fieldKey`, `q`, `sort`, `size` | Yes |
-
-**Filter syntax** (used in `filters` parameter): column key + suffix (`_eq`, `_neq`, `_search`, `_in`, `_nin`, `_starts`, `_contains`, `_gte`, `_gt`, `_lte`, `_lt`, `_exists`, `_nexists`). All values are strings.
-
-### 4.4 Dataset Summary Tools
-
-Source: `ui/src/composables/dataset/agent-summary-tools.ts`
-
-Registered contextually when editing a dataset (via action button).
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `read_dataset_info` | Full metadata and schema of the dataset currently being edited | _(none)_ | Yes |
-| `set_dataset_summary` | Sets the summary field on the dataset form | `summary` (string, required) | **No** |
-
-### 4.5 Dataset Expression Tools
-
-Source: `ui/src/composables/dataset/agent-expression-tools.ts`
-
-Registered contextually when editing calculated columns (via action button).
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `get_expression_context` | Available columns as variables + target calculated column definition | `extensionIndex` (number, required) | Yes |
-| `get_sample_data` | 5 sample rows in CSV for the available columns | `extensionIndex` (number, required) | Yes |
-| `test_expression` | Validates syntax, compiles, and evaluates expression against sample data | `extensionIndex`, `expression` (required) | Yes |
-| `set_expression` | Sets the expression on the calculated column | `extensionIndex`, `expression` (required) | **No** |
-
-### 4.6 Dataset Changes Summary Tools
-
-Source: `ui/src/composables/dataset/agent-changes-summary-tools.ts`
-
-Registered contextually when editing dataset metadata (via action button).
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `read_dataset_changes` | Unified diff of metadata changes (original vs. edited) | _(none)_ | Yes |
-
-### 4.7 Application Tools
-
-Source: `ui/src/composables/application/agent-tools.ts`
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `list_applications` | Search and list applications. Returns title, ID, status, base app, topics | `q`, `page`, `size` | Yes |
-| `describe_application` | Full application metadata including configured datasets | `applicationId` (required) | Yes |
-| `list_base_applications` | List available base application templates (models) | `q`, `page`, `size` | Yes |
-
-### 4.8 Geolocation Tools
-
-Source: `ui/src/composables/agent/geo-tools.ts`
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `geocode_address` | Convert French addresses to coordinates via IGN Geoplateforme | `q` (required), `limit` | Yes |
-| `get_user_geolocation` | Browser Geolocation API (requires user permission) | _(none)_ | Yes |
-
-### 4.9 Connector Tools (conditional)
-
-Source: `ui/src/composables/agent/connector-tools.ts`
-
-These tools are only registered when the corresponding integration is enabled in `$uiConfig`.
-
-**Processings** (if `processingsIntegration` is enabled):
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `list_processings` | List processings with search, status, scheduling info | `q`, `page`, `size` | Yes |
-| `describe_processing` | Processing metadata: plugin, scheduling, owner | `processingId` (required) | Yes |
-
-**Catalogs** (if `catalogsIntegration` is enabled):
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `list_catalogs` | List catalogs with search, type, URL | `q`, `page`, `size` | Yes |
-| `describe_catalog` | Catalog metadata: type, URL, owner, description | `catalogId` (required) | Yes |
-
-### 4.10 Dataset Description Tools
-
-Source: `ui/src/composables/dataset/agent-description-tools.ts`
-
-Registered contextually when editing a dataset (via action button).
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `set_dataset_description` | Sets the description field (markdown) on the dataset form | `description` (string, required) | **No** |
-
-### 4.11 REST Dataset Edit Tools
-
-Source: `ui/src/components/dataset/table/dataset-table.vue`
-
-Registered contextually when on the edit-data page (dataset table in `edit` mode). These tools let the agent open add/edit line dialogs; the actual form filling is handled by the VJSF webmcp sub-agent (see §5.6).
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `open_add_line_dialog` | Opens the "Add a new line" dialog | _(none)_ | **No** |
-| `open_edit_line_dialog` | Opens the "Edit line" dialog for a specific row | `lineId` (string, required) | **No** |
-
-### 4.12 Dataset Property Config Tools
-
-Source: `ui/src/composables/dataset/agent-property-config-tools.ts`
-
-Registered contextually when editing dataset metadata (via action button).
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `read_property_config` | Schema with detected types, type overrides, resolved capabilities per column, relevant capabilities per type, and 5 sample rows | _(none)_ | Yes |
-| `set_property_config` | Sets type overrides and/or capabilities for one or more columns. Capabilities stored as diff from defaults. Type overrides only for file datasets. | `configs` (array of `{ key, typeOverrideType?, typeOverrideFormat?, clearTypeOverride?, capabilities?, resetCapabilities? }`) | **No** |
-
-### 4.13 Application Creation Tools
-
-Source: `ui/src/composables/application/agent-creation-tools.ts`
-
-Registered contextually in the application creation page (`new-application.vue`). These tools drive the stepper wizard, filling form fields and advancing steps. The final creation (Save button) remains the user's prerogative.
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `select_creation_type` | Sets creation type ("copy" or "baseApp") and advances to step 2 | `type` (string, required) | **No** (client state) |
-| `select_base_application` | Selects a base app template by ID, sets title, advances to step 3 | `id` (string, required) | **No** (client state) |
-| `select_copy_application` | Selects an existing application to copy by ID, sets title, advances to step 3 | `id` (string, required) | **No** (client state) |
-| `set_application_title` | Sets or overrides the application title | `title` (string, required) | **No** (client state) |
-
-### 4.14 Dataset Creation Tools
-
-Source: `ui/src/composables/dataset/agent-creation-tools.ts`
-
-Registered contextually in the dataset creation page (`new-dataset.vue`). These tools drive the stepper wizard, filling form fields and advancing steps. The final creation (Create/Import button) remains the user's prerogative.
-
-| Tool | Description | Parameters | Read-only |
-|------|-------------|------------|-----------|
-| `select_dataset_type` | Sets dataset type (file, rest, virtual, metaOnly) and advances the wizard | `type` (string, required) | **No** (client state) |
-| `set_dataset_title` | Sets the title for the current dataset type. Must be at least 4 characters | `title` (string, required) | **No** (client state) |
-| `set_rest_options` | Configures REST-specific options (history, attachments, attachmentsAsImage) | `history`, `attachments`, `attachmentsAsImage` (booleans, optional) | **No** (client state) |
-| `skip_init_from_step` | Skips the optional initialization step (file/rest types) | _(none)_ | **No** (client state) |
-| `advance_to_confirmation` | Advances to the final confirmation step if parameters are valid | _(none)_ | **No** (client state) |
-
-## 5. Subagent Inventory
-
-Subagents are specialized agents with their own system prompt and a restricted set of tools. The main agent delegates to them for domain-specific tasks.
-
-### 5.1 `dataset_data` - Data Analyst
-
-- **Source**: `ui/src/composables/dataset/agent-data-tools.ts`
-- **Model**: _(default)_
-- **Tools**: `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values`
-
-**System prompt:**
-> You are a data analyst assistant for a data platform. You help users explore and understand datasets by querying their content.
->
-> Workflow:
-> 1. Always call get_dataset_schema first to understand column names, types, and sample data before using other tools.
-> 2. Choose the right tool for the task:
->    - get_field_values: to discover distinct values of a column before filtering
->    - search_data: to retrieve specific rows matching filters or text search. Do NOT use for statistics.
->    - aggregate_data: to group rows by columns and count or compute per-group metrics
->    - calculate_metric: to compute a single global statistic
->
-> Format:
-> - Present results concisely with clear labels
-> - For numeric results, round to 2 decimal places when appropriate
-> - When returning tabular data, summarize key findings rather than just dumping raw rows
-> - Respond in the same language as the user's question
-> - When you perform a filtered query, include at the end of your response a "Navigation params" section listing the query parameters as key=value pairs. These use the same filter format and can be used by the main assistant to navigate the user to the dataset table page with the same filters applied.
-
-### 5.2 `dataset_summarizer` - Summary Generator
-
-- **Source**: `ui/src/composables/dataset/agent-summary-tools.ts`
-- **Model**: `summarizer`
-- **Tools**: `read_dataset_info`
-
-**System prompt:**
-> You are a dataset summarization expert for Data Fair, an open data publishing platform. Summaries are displayed in dataset catalogs to help users quickly understand what a dataset contains.
->
-> Task:
-> 1. Call read_dataset_info to get the full metadata and schema.
-> 2. Write a summary describing the content and purpose of the dataset based on its title, description, columns, and other metadata.
-> 3. Return the summary text as your final response.
->
-> Format:
-> - Between 200 and 300 characters long
-> - Plain text only: no formatting, no markdown, no line breaks
-> - Use an accessible tone -- the audience ranges from data analysts to general public users
-> - Write in the same language as the dataset title and description
-
-### 5.3 `dataset_changes_summarizer` - Changes Reviewer
-
-- **Source**: `ui/src/composables/dataset/agent-changes-summary-tools.ts`
-- **Model**: `summarizer`
-- **Tools**: `read_dataset_changes`
-
-**System prompt:**
-> You are a metadata change reviewer for Data Fair, an open data publishing platform. You help users understand what they modified before saving.
->
-> Task:
-> 1. Call read_dataset_changes to get a unified diff of the metadata changes.
-> 2. Produce a concise, human-readable summary of what changed.
->
-> Focus on meaningful differences: title, description, schema changes (added/removed/renamed columns), license, topics, keywords. Ignore internal fields or trivial whitespace changes.
->
-> Format:
-> - Plain text, no markdown, no line breaks
-> - Keep it under 500 characters
-> - Write in the same language as the dataset content
-> - If no meaningful changes are found, say so clearly
-
-### 5.4 `expression_helper` - Expression Writer
-
-- **Source**: `ui/src/composables/dataset/agent-expression-tools.ts`
-- **Model**: _(default)_
-- **Tools**: `get_expression_context`, `get_sample_data`, `test_expression`
-
-**System prompt (summary):**
-> You are an expression writing assistant for Data Fair. You help users write expr-eval expressions for calculated columns.
->
-> Workflow:
-> 1. Call get_expression_context to understand available columns and target type
-> 2. Call get_sample_data to see real values
-> 3. Write and test_expression to validate
-> 4. Fix and retry on errors
-> 5. Return the validated expression and test results as the final response
->
-> (Includes full expression language reference: operators, string/math/date/special functions)
-
-### 5.5 `appConfig_form` - Application Configuration Form Helper
-
-- **Source**: Dynamically created by the `vjsf` component when `:sub-agent="true"` is set
-- **Location**: `ui/src/components/application/application-config.vue`
-- **Model**: _(managed by vjsf/lib-vuetify-agents)_
-- **Tools**: _(form manipulation tools provided by vjsf)_
-
-This subagent is automatically created by the VJSF (Vue JSON Schema Form) component to help users fill in the application configuration form through natural language. The main agent is instructed to delegate to it via the `configure-application` action's hidden context.
-
-### 5.6 `dataset_description_writer` - Description Writer
-
-- **Source**: `ui/src/composables/dataset/agent-description-tools.ts`
-- **Model**: _(default)_
-- **Tools**: `read_dataset_info`
-
-**System prompt:**
-> You are a dataset documentation expert for Data Fair, an open data publishing platform. Descriptions are displayed on dataset pages to help users understand the dataset in detail.
->
-> Task:
-> 1. Call read_dataset_info to get the full metadata and schema.
-> 2. Write a detailed description of the dataset based on its title, summary, columns, topics, and other metadata.
-> 3. Return the description text as your final response.
->
-> Format:
-> - Between 500 and 2000 characters
-> - Markdown formatting is encouraged: use headings (##), bullet lists, and bold for key terms
-> - Structure the description with sections such as: overview, content details, usage notes
-> - Use an accessible tone -- the audience ranges from data analysts to general public users
-> - Write in the same language as the dataset title and existing metadata
-> - Do not simply repeat the summary; the description should add depth and context
-> - If the dataset has geographic or temporal scope, mention it
-> - If the dataset has notable columns, highlight the most important ones
-
-### 5.7 `editLine_form` - Line Edit Form Helper
-
-- **Source**: Dynamically created by the `vjsf` component when `:sub-agent="true"` is set
-- **Location**: `ui/src/components/dataset/form/dataset-edit-line-form.vue`
-- **Model**: _(managed by vjsf/lib-vuetify-agents)_
-- **Tools**: _(form manipulation tools provided by vjsf)_
-
-This subagent is automatically created by the VJSF (Vue JSON Schema Form) component in the add-line and edit-line dialogs. The same `editLine_` prefix is used for both dialogs since only one can be open at a time. The main agent opens a dialog first (via `open_add_line_dialog` or `open_edit_line_dialog`), then delegates to this sub-agent to fill form fields. The user retains control of the Save button.
-
-### 5.8 `property_config_advisor` - Property Config Advisor
-
-- **Source**: `ui/src/composables/dataset/agent-property-config-tools.ts`
-- **Model**: `summarizer`
-- **Tools**: `read_property_config`, `set_property_config`
-
-**System prompt (summary):**
-> You are a data configuration expert for Data Fair. You help users optimize column types and indexing capabilities.
->
-> Workflow:
-> 1. Read property config and sample data
-> 2. Suggest type overrides for file datasets (dates-as-strings, numbers-as-strings, etc.)
-> 3. Suggest capability optimizations (disable index/values for long text, disable text for non-French, enable textAgg for word clouds)
-> 4. Present suggestions with explanations, then apply via set_property_config
->
-> Does NOT write transform expressions — directs users to the expression_helper if needed.
-
-### 5.9 `data_quality_checker` - Data Quality Analyst
-
-- **Source**: `ui/src/composables/dataset/agent-data-quality-tools.ts`
-- **Model**: _(default)_
-- **Tools**: `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values`
-
-**System prompt (summary):**
-> You are a data quality analyst for Data Fair. You perform a systematic quality audit following a 6-step workflow:
->
-> 1. **Schema**: understand column names, types, and sample data
-> 2. **Completeness**: check missing/empty value rates per column using value_count metric
-> 3. **Uniqueness**: detect duplicates using cardinality metric and aggregate grouping
-> 4. **Outliers**: analyze numeric columns with stats and percentiles, flag using IQR method
-> 5. **Format consistency**: sample text column values to detect mixed formats
-> 6. **Distribution anomalies**: check categorical columns for typos (rare values) and dominance (>90%)
->
-> Produces a structured report with: Overview (quality score), Completeness, Uniqueness, Outliers, Format Issues, and Recommendations.
-
-## 6. Action Buttons
-
-Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer and inject a pre-configured message to trigger a specific workflow.
-
-### 6.1 Summarize Dataset
-
-- **Action ID**: `summarize-dataset`
-- **Location**: `ui/src/components/dataset/dataset-info.vue` (next to summary textarea)
-- **Visible prompt**: "Summarize this dataset" / "Resume ce jeu de donnees"
-- **Hidden context**: `Use the dataset_summarizer subagent to produce a summary for this dataset. Once you receive the summary, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_summary tool to set it. If the user wants changes, adjust accordingly.`
-- **Condition**: `showAgentChat && can('writeDescription')`
-
-### 6.2 Summarize Metadata Changes
-
-- **Action ID**: `summarize-metadata-changes`
-- **Location**: `ui/src/pages/dataset/[id]/edit-metadata.vue` (right navigation panel, visible when changes exist)
-- **Visible prompt**: "Summarize changes" / "Resumer les modifications"
-- **Hidden context**: `Use the dataset_changes_summarizer subagent to read and summarize the changes made to the dataset metadata.`
-- **Condition**: `showAgentChat` and `hasDiff` (unsaved changes exist)
-- **Style**: Tonal button with robot icon
-
-### 6.3 Help Write Expression
-
-- **Action ID**: `help-expression-{idx}` (one per calculated column)
-- **Location**: `ui/src/components/dataset/dataset-extensions.vue` (next to each expression text field)
-- **Visible prompt**: "Help me write this expression" / "Aide-moi a ecrire cette expression"
-- **Hidden context**: `The user wants help writing an expr-eval expression for calculated column "{name}" (type: {type}, extension index: {idx}). {current expression if any}. Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user's intent. Once you receive the expression from the subagent, present it and the test results to the user. If approved, use the set_expression tool to apply it. If the user wants changes, adjust accordingly.`
-- **Condition**: `showAgentChat && can('writeDescriptionBreaking')`
-
-### 6.4 Help Filter Table Data
-
-- **Action ID**: `help-filter-table`
-- **Location**: `ui/src/components/dataset/table/dataset-table.vue` (in the table toolbar)
-- **Visible prompt**: "Help me filter this data" / "Aide-moi a filtrer ces donnees"
-- **Hidden context**: Describes the current dataset (title, ID) and any active filters. Instructs the agent to ask the user what they want to see or filter before using the data exploration subagent. After exploring, the main agent uses the `navigate` tool with query parameters to apply filters to the table page.
-- **Condition**: `showAgentChat`
-
-**Workflow**: This action demonstrates the **subagent-to-navigation handoff** pattern. The `dataset_data` subagent explores data and returns "Navigation params" in its response. The main agent then passes those params as the `query` argument to the `navigate` tool, which updates the table page URL. Since query params are reactively bound to the table's filter composable, the table filters update live.
-
-### 6.5 Configure Application
-
-- **Action ID**: `configure-application`
-- **Location**: `ui/src/components/application/application-config.vue` (above the configuration form)
-- **Visible prompt**: "Help me configure this application" / "Aidez-moi a configurer cette application"
-- **Hidden context**: `Use the subagent tool appConfig_form to help the user configure the current application. Start the session by asking the user what they want to achieve. The base application type is "{title}". Description: {description}. Category: {category}. The application title is "{appTitle}".`
-- **Condition**: `showAgentChat && canWriteConfig`
-
-### 6.6 Help Write Description
-
-- **Action ID**: `describe-dataset`
-- **Location**: `ui/src/components/dataset/dataset-info.vue` (next to description markdown-editor)
-- **Visible prompt**: "Help me write a description for this dataset" / "Aide-moi a rediger une description pour ce jeu de donnees"
-- **Hidden context**: `The user wants help writing a description for this dataset. The description field supports markdown and should be more detailed than the summary. Ask the user what aspects they want to emphasize or if they have any specific requirements before using the dataset_description_writer subagent. Once you receive the description, present it to the user and ask for their approval before applying it. If approved, use the set_dataset_description tool to set it. If the user wants changes, adjust accordingly.`
-- **Condition**: `showAgentChat && can('writeDescription')`
-
-### 6.7 Help Enter Data
-
-- **Action ID**: `help-edit-data`
-- **Location**: `ui/src/pages/dataset/[id]/edit-data.vue` (above the data table)
-- **Visible prompt**: "Help me enter data" / "Aide-moi à saisir des données"
-- **Hidden context**: Describes the current REST dataset (title, ID, columns with types). Instructs the agent to use `open_add_line_dialog` or `open_edit_line_dialog` to open dialogs, then the `editLine_form` sub-agent to fill form fields. Explicitly states the agent must NOT submit — the user clicks Save manually.
-- **Condition**: `showAgentChat && dataset.isRest`
-
-**Workflow**: This action demonstrates the **dialog-opening + VJSF webmcp** pattern. The agent opens a dialog via a tool call, then delegates form filling to the VJSF sub-agent. The user retains full control of submission, preventing unintended data modifications.
-
-### 6.8 Help Annotate Schema
-
-- **Action ID**: `help-annotate-schema`
-- **Location**: `ui/src/components/dataset/dataset-schema.vue` (schema toolbar)
-- **Visible prompt**: "Help annotate schema" / "Aide-moi à annoter le schéma"
-- **Hidden context**: `Use the schema_annotator subagent to suggest titles and descriptions for the dataset columns.`
-
-### 6.9 Help Configure Properties
-
-- **Action ID**: `help-configure-properties`
-- **Location**: `ui/src/components/dataset/dataset-schema.vue` (schema toolbar, next to annotate button)
-- **Visible prompt**: "Optimize types and capabilities" / "Optimiser les types et capacités"
-- **Hidden context**: `The property_config_advisor subagent can help optimize column types and indexing capabilities. Ask the user what they need: type corrections, capability optimization for performance, or both.`
-
-### 6.10 Check Data Quality
-
-- **Action ID**: `check-data-quality`
-- **Location**: `ui/src/components/dataset/table/dataset-table.vue` (in the table toolbar, next to filter help button)
-- **Visible prompt**: "Check data quality" / "Vérifier la qualité de ces données"
-- **Hidden context**: Describes the current dataset (title, ID). Instructs the agent to ask the user if they want a full quality analysis or a focus on specific aspects (completeness, duplicates, outliers, format issues) before dispatching the `data_quality_checker` subagent.
-- **Condition**: `showAgentChat`
-
-### 6.11 Help Create Application
-
-- **Action ID**: `help-create-application`
-- **Location**: `ui/src/pages/new-application.vue` (in the stepper, below the header)
-- **Visible prompt**: "Help me create an application" / "Aidez-moi à créer une application"
-- **Hidden context**: Instructs the agent to ask the user what kind of visualization they want, then use `list_base_applications` or `list_applications` to find options, and the creation tools (`select_creation_type`, `select_base_application`/`select_copy_application`, `set_application_title`) to fill the wizard. Includes dataset context when creating from a dataset page. Explicitly states the agent must NOT create — the user clicks Save.
-- **Condition**: `showAgentChat`
-
-**Workflow**: This action demonstrates the **stepper-driving** pattern. The agent uses existing global tools (`list_base_applications`) for discovery, then creation-specific tools to manipulate the stepper state. Each tool call advances the wizard to the next step, and the user retains control of the final submission.
-
-### 6.12 Help Create Dataset
-
-- **Action ID**: `help-create-dataset`
-- **Location**: `ui/src/pages/new-dataset.vue` (in the stepper, below the header)
-- **Visible prompt**: "Help me create a dataset" / "Aidez-moi à créer un jeu de données"
-- **Hidden context**: Instructs the agent to ask the user about their data source and needs, then recommend the right dataset type (file, rest, virtual, metaOnly). Uses `select_dataset_type`, `set_dataset_title`, `set_rest_options`, `skip_init_from_step`, and `advance_to_confirmation` to fill the wizard. Notes that file upload must be done manually by the user. Explicitly states the agent must NOT create — the user clicks Create/Import.
-- **Condition**: `showAgentChat`
-
-**Workflow**: Same **stepper-driving** pattern as 6.11. The agent recommends a dataset type based on the user's description, then fills configuration fields. For file datasets, the agent can set the type and title but cannot handle the file upload — that remains a manual step.
-
-## 7. Tool Registration Lifecycle
-
-Tools are registered in the main application layout (`default-layout.vue`) using a Vue `effectScope`:
-
-```
-watchEffect:
-  if showAgentChat && no scope:
-    create effectScope
-    register:
-      - useAgentNavigationTools (3 tools)
-      - useAgentDatasetTools (2 tools)
-      - useAgentDatasetDataTools (5 tools + 1 subagent)
-      - useAgentDataQualityTools (1 subagent)
-      - useAgentGeoTools (2 tools)
-      - useAgentApplicationTools (3 tools)
-      - useAgentConnectorTools (0-4 tools, conditional)
-
-  if !showAgentChat && scope exists:
-    stop scope (unregisters all tools)
-```
-
-The summary, description, expression, changes, schema annotation, property config, application creation, and dataset creation tools are registered separately in their respective page components, scoped to the editing context.
-
-## 8. Key Files Reference
+Defined in `ui/src/layouts/default-layout.vue`, locale-dependent. Instructs the agent to be a Data Fair assistant: help navigate, explore datasets, query data, configure applications, manage metadata. Key directives: respond in the user's language, be concise, frequently use `getCurrentLocation`, and use `navigate` to show filtered data after subagent exploration.
+
+## 4. Workflows
+
+### 4.1 Free Chat
+
+The user types directly in the chat drawer. The agent has access to all globally-registered tools (navigation, dataset listing/description, data queries, applications, geolocation, connectors) and can combine them freely.
+
+### 4.2 Explore Dataset Data
+
+| | |
+|---|---|
+| **Trigger** | Free chat or via filter/quality actions |
+| **Subagent** | `dataset_data` — data analyst that queries dataset content |
+| **Pattern** | Schema-first exploration: always reads schema before querying. Returns "Navigation params" for table filtering handoff. |
+| **Tools** | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
+| **Source** | `ui/src/composables/dataset/agent-data-tools.ts` |
+
+### 4.3 Filter Table Data
+
+| | |
+|---|---|
+| **Trigger** | Action button on dataset table toolbar |
+| **Action ID** | `help-filter-table` |
+| **Pattern** | **Subagent-to-navigation handoff**: asks user intent, delegates to `dataset_data` subagent, then uses `navigate` with query params to apply filters to the table page. Query params are reactively bound to the table's filter composable. |
+| **Source** | `ui/src/components/dataset/table/dataset-table.vue` |
+
+### 4.4 Check Data Quality
+
+| | |
+|---|---|
+| **Trigger** | Action button on dataset table toolbar |
+| **Action ID** | `check-data-quality` |
+| **Subagent** | `data_quality_checker` — systematic 6-step audit (completeness, uniqueness, outliers, format consistency, distribution anomalies) |
+| **Pattern** | Asks user for full analysis or specific focus, then delegates. Produces a structured report with quality score. |
+| **Tools** | Reuses data query tools: `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
+| **Source** | `ui/src/composables/dataset/agent-data-quality-tools.ts` |
+
+### 4.5 Summarize Dataset
+
+| | |
+|---|---|
+| **Trigger** | Action button next to summary textarea |
+| **Action ID** | `summarize-dataset` |
+| **Subagent** | `dataset_summarizer` (model: `summarizer`) — reads metadata, produces 200-300 char plain text summary |
+| **Pattern** | Generate, present to user, apply on approval via `set_dataset_summary` |
+| **Tools** | `read_dataset_info`, `set_dataset_summary` |
+| **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` |
+
+### 4.6 Write Dataset Description
+
+| | |
+|---|---|
+| **Trigger** | Action button next to description markdown editor |
+| **Action ID** | `describe-dataset` |
+| **Subagent** | `dataset_description_writer` — reads metadata, produces 500-2000 char markdown description |
+| **Pattern** | Asks user what to emphasize, generates, presents, applies on approval via `set_dataset_description` |
+| **Tools** | `read_dataset_info`, `set_dataset_description` |
+| **Source** | `ui/src/composables/dataset/agent-description-tools.ts` |
+
+### 4.7 Summarize Metadata Changes
+
+| | |
+|---|---|
+| **Trigger** | Action button on edit-metadata page (visible when unsaved changes exist) |
+| **Action ID** | `summarize-metadata-changes` |
+| **Subagent** | `dataset_changes_summarizer` (model: `summarizer`) — reads unified diff, produces <500 char plain text summary |
+| **Pattern** | Direct delegation, no user confirmation needed (read-only output) |
+| **Tools** | `read_dataset_changes` |
+| **Source** | `ui/src/composables/dataset/agent-changes-summary-tools.ts` |
+
+### 4.8 Write Calculated Expression
+
+| | |
+|---|---|
+| **Trigger** | Action button next to each expression text field |
+| **Action ID** | `help-expression-{idx}` (one per calculated column) |
+| **Subagent** | `expression_helper` — writes and tests expr-eval expressions (has full language reference in prompt) |
+| **Pattern** | Asks user intent first, then: get context → get sample data → write & test expression → fix on errors → present with test results → apply on approval via `set_expression` |
+| **Tools** | `get_expression_context`, `get_sample_data`, `test_expression`, `set_expression` |
+| **Source** | `ui/src/composables/dataset/agent-expression-tools.ts` |
+
+### 4.9 Annotate Schema
+
+| | |
+|---|---|
+| **Trigger** | Action button on schema toolbar |
+| **Action ID** | `help-annotate-schema` |
+| **Subagent** | `schema_annotator` — suggests human-readable titles and descriptions for columns |
+| **Source** | `ui/src/composables/dataset/agent-schema-annotation-tools.ts` |
+
+### 4.10 Optimize Property Config
+
+| | |
+|---|---|
+| **Trigger** | Action button on schema toolbar |
+| **Action ID** | `help-configure-properties` |
+| **Subagent** | `property_config_advisor` (model: `summarizer`) — suggests type overrides and capability optimizations |
+| **Pattern** | Asks user what they need (type corrections, capability optimization, or both). Reads config and sample data, suggests changes with explanations, applies via `set_property_config`. Does NOT write expressions — directs to expression_helper. |
+| **Tools** | `read_property_config`, `set_property_config` |
+| **Source** | `ui/src/composables/dataset/agent-property-config-tools.ts` |
+
+### 4.11 Configure Application
+
+| | |
+|---|---|
+| **Trigger** | Action button above application configuration form |
+| **Action ID** | `configure-application` |
+| **Subagent** | `appConfig_form` — VJSF-managed form manipulation subagent |
+| **Pattern** | **VJSF webmcp**: the VJSF component creates the subagent automatically when `:sub-agent="true"`. Agent asks what the user wants, then delegates to the form subagent. |
+| **Source** | `ui/src/components/application/application-config.vue` |
+
+### 4.12 Enter Data (REST Dataset)
+
+| | |
+|---|---|
+| **Trigger** | Action button on edit-data page |
+| **Action ID** | `help-edit-data` |
+| **Subagent** | `editLine_form` — VJSF-managed form subagent for add/edit line dialogs |
+| **Pattern** | **Dialog-opening + VJSF webmcp**: agent opens dialog via `open_add_line_dialog` or `open_edit_line_dialog`, then delegates form filling to VJSF subagent. User retains Save button control. |
+| **Tools** | `open_add_line_dialog`, `open_edit_line_dialog` |
+| **Source** | `ui/src/components/dataset/table/dataset-table.vue`, `ui/src/components/dataset/form/dataset-edit-line-form.vue` |
+
+### 4.13 Create Application
+
+| | |
+|---|---|
+| **Trigger** | Action button in application creation stepper |
+| **Action ID** | `help-create-application` |
+| **Pattern** | **Stepper-driving**: agent asks user what visualization they want, uses `list_base_applications`/`list_applications` for discovery, then drives the wizard with creation tools. User retains final Save. |
+| **Tools** | `select_creation_type`, `select_base_application`, `select_copy_application`, `set_application_title` |
+| **Source** | `ui/src/composables/application/agent-creation-tools.ts`, `ui/src/pages/new-application.vue` |
+
+### 4.14 Create Dataset
+
+| | |
+|---|---|
+| **Trigger** | Action button in dataset creation stepper |
+| **Action ID** | `help-create-dataset` |
+| **Pattern** | **Stepper-driving**: agent asks about data source, recommends dataset type (file, rest, virtual, metaOnly), drives wizard. File upload remains manual. User retains final Create/Import. |
+| **Tools** | `select_dataset_type`, `set_dataset_title`, `set_rest_options`, `skip_init_from_step`, `advance_to_confirmation` |
+| **Source** | `ui/src/composables/dataset/agent-creation-tools.ts`, `ui/src/pages/new-dataset.vue` |
+
+## 5. Tool Reference
+
+| Tool | Category | R/W | Source |
+|------|----------|-----|--------|
+| `get_current_location` | Navigation | R | `agent/navigation-tools.ts` |
+| `list_pages` | Navigation | R | `agent/navigation-tools.ts` |
+| `navigate` | Navigation | **W** | `agent/navigation-tools.ts` |
+| `list_datasets` | Dataset metadata | R | `dataset/agent-tools.ts` |
+| `describe_dataset` | Dataset metadata | R | `dataset/agent-tools.ts` |
+| `get_dataset_schema` | Dataset data | R | `dataset/agent-data-tools.ts` |
+| `search_data` | Dataset data | R | `dataset/agent-data-tools.ts` |
+| `aggregate_data` | Dataset data | R | `dataset/agent-data-tools.ts` |
+| `calculate_metric` | Dataset data | R | `dataset/agent-data-tools.ts` |
+| `get_field_values` | Dataset data | R | `dataset/agent-data-tools.ts` |
+| `read_dataset_info` | Dataset summary | R | `dataset/agent-summary-tools.ts` |
+| `set_dataset_summary` | Dataset summary | **W** | `dataset/agent-summary-tools.ts` |
+| `set_dataset_description` | Dataset description | **W** | `dataset/agent-description-tools.ts` |
+| `read_dataset_changes` | Dataset changes | R | `dataset/agent-changes-summary-tools.ts` |
+| `get_expression_context` | Expressions | R | `dataset/agent-expression-tools.ts` |
+| `get_sample_data` | Expressions | R | `dataset/agent-expression-tools.ts` |
+| `test_expression` | Expressions | R | `dataset/agent-expression-tools.ts` |
+| `set_expression` | Expressions | **W** | `dataset/agent-expression-tools.ts` |
+| `read_property_config` | Property config | R | `dataset/agent-property-config-tools.ts` |
+| `set_property_config` | Property config | **W** | `dataset/agent-property-config-tools.ts` |
+| `open_add_line_dialog` | REST data entry | **W** | `dataset/table/dataset-table.vue` |
+| `open_edit_line_dialog` | REST data entry | **W** | `dataset/table/dataset-table.vue` |
+| `geocode_address` | Geolocation | R | `agent/geo-tools.ts` |
+| `get_user_geolocation` | Geolocation | R | `agent/geo-tools.ts` |
+| `list_applications` | Applications | R | `application/agent-tools.ts` |
+| `describe_application` | Applications | R | `application/agent-tools.ts` |
+| `list_base_applications` | Applications | R | `application/agent-tools.ts` |
+| `select_creation_type` | App creation | W* | `application/agent-creation-tools.ts` |
+| `select_base_application` | App creation | W* | `application/agent-creation-tools.ts` |
+| `select_copy_application` | App creation | W* | `application/agent-creation-tools.ts` |
+| `set_application_title` | App creation | W* | `application/agent-creation-tools.ts` |
+| `select_dataset_type` | Dataset creation | W* | `dataset/agent-creation-tools.ts` |
+| `set_dataset_title` | Dataset creation | W* | `dataset/agent-creation-tools.ts` |
+| `set_rest_options` | Dataset creation | W* | `dataset/agent-creation-tools.ts` |
+| `skip_init_from_step` | Dataset creation | W* | `dataset/agent-creation-tools.ts` |
+| `advance_to_confirmation` | Dataset creation | W* | `dataset/agent-creation-tools.ts` |
+| `list_processings` | Connectors | R | `agent/connector-tools.ts` |
+| `describe_processing` | Connectors | R | `agent/connector-tools.ts` |
+| `list_catalogs` | Connectors | R | `agent/connector-tools.ts` |
+| `describe_catalog` | Connectors | R | `agent/connector-tools.ts` |
+
+All source paths are relative to `ui/src/composables/` unless otherwise noted. **W*** = client-side state only (no server write). Connector tools are conditional on integration flags.
+
+## 6. Subagent Reference
+
+| Subagent | Model | Purpose | Tools |
+|----------|-------|---------|-------|
+| `dataset_data` | default | Data exploration and querying | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
+| `data_quality_checker` | default | Systematic data quality audit (6-step) | Same as `dataset_data` |
+| `dataset_summarizer` | summarizer | Generate 200-300 char dataset summaries | `read_dataset_info` |
+| `dataset_description_writer` | default | Generate 500-2000 char markdown descriptions | `read_dataset_info` |
+| `dataset_changes_summarizer` | summarizer | Summarize metadata diff (<500 chars) | `read_dataset_changes` |
+| `expression_helper` | default | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
+| `schema_annotator` | summarizer | Suggest column titles and descriptions | Schema annotation tools |
+| `property_config_advisor` | summarizer | Suggest type overrides and capability optimizations | `read_property_config`, `set_property_config` |
+| `appConfig_form` | VJSF-managed | Fill application configuration form via natural language | VJSF form tools |
+| `editLine_form` | VJSF-managed | Fill add/edit line form via natural language | VJSF form tools |
+
+## 7. Key Files Reference
 
 | File | Role |
 |------|------|
@@ -607,12 +332,12 @@ The summary, description, expression, changes, schema annotation, property confi
 | `ui/src/composables/agent/navigation-tools.ts` | Navigation tools (3) |
 | `ui/src/composables/agent/geo-tools.ts` | Geolocation tools (2) |
 | `ui/src/composables/agent/connector-tools.ts` | Processings & catalogs tools (0-4) |
-| `ui/src/composables/agent/utils.ts` | `createAgentTranslator`, `agentToolError` helpers |
+| `ui/src/composables/agent/utils.ts` | Shared helpers: `createAgentTranslator`, `agentToolError`, `csvEscape`, `toCsv`, `cleanRow`, `fetchSampleRows`, `buildPaginatedQuery` |
 | `ui/src/composables/dataset/agent-tools.ts` | Dataset metadata tools (2) + `serializeDatasetInfo` |
 | `ui/src/composables/dataset/agent-data-tools.ts` | Dataset data query tools (5) + `dataset_data` subagent |
 | `ui/src/composables/dataset/agent-data-quality-tools.ts` | `data_quality_checker` subagent (reuses data query tools) |
 | `ui/src/composables/dataset/agent-summary-tools.ts` | Summary tools (2) + `dataset_summarizer` subagent |
-| `ui/src/composables/dataset/agent-description-tools.ts` | Description tools (1) + `dataset_description_writer` subagent |
+| `ui/src/composables/dataset/agent-description-tools.ts` | Description tools (2) + `dataset_description_writer` subagent |
 | `ui/src/composables/dataset/agent-changes-summary-tools.ts` | Changes tools (1) + `dataset_changes_summarizer` subagent |
 | `ui/src/composables/dataset/agent-expression-tools.ts` | Expression tools (4) + `expression_helper` subagent |
 | `ui/src/composables/dataset/agent-schema-annotation-tools.ts` | Schema annotation tools (2) + `schema_annotator` subagent |
@@ -624,7 +349,7 @@ The summary, description, expression, changes, schema annotation, property confi
 | `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
 | `ui/src/components/dataset/dataset-schema.vue` | `help-annotate-schema` and `help-configure-properties` action buttons |
-| `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` and `check-data-quality` action buttons, `open_add_line_dialog` / `open_edit_line_dialog` tools |
+| `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` and `check-data-quality` action buttons, line edit tools |
 | `ui/src/components/dataset/form/dataset-edit-line-form.vue` | VJSF webmcp form for line add/edit (`editLine_form` sub-agent) |
 | `ui/src/pages/dataset/[id]/edit-data.vue` | `help-edit-data` action button |
 | `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF sub-agent |
@@ -635,7 +360,7 @@ The summary, description, expression, changes, schema annotation, property confi
 | `api/src/settings/router.ts` | `GET /settings/:type/:id/agent-chat` endpoint |
 | `api/types/settings/schema.js` | `agentChat` boolean setting definition |
 
-## 9. Dependencies
+## 8. Dependencies
 
 | Package | Role |
 |---------|------|

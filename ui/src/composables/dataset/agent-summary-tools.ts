@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { createAgentTranslator } from '~/composables/agent/utils'
 import { serializeDatasetInfo } from './agent-tools'
 
 const messages: Record<string, Record<string, string>> = {
@@ -18,7 +19,7 @@ const messages: Record<string, Record<string, string>> = {
 }
 
 export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: Ref<any>, setSummary: (summary: string) => void) {
-  const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
+  const t = createAgentTranslator(messages, locale)
 
   useAgentTool({
     name: 'read_dataset_info',
@@ -50,12 +51,23 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
     }
   })
 
-  useAgentSubAgent({
-    name: 'dataset_summarizer',
-    title: t('summarizerSubAgent'),
-    description: t('summarizerSubAgentDesc'),
-    model: 'summarizer',
-    prompt: `You are a dataset summarization expert for Data Fair, an open data publishing platform. Summaries are displayed in dataset catalogs to help users quickly understand what a dataset contains.
+  const summarizerPrompts: Record<string, string> = {
+    fr: `Tu es un expert en résumé de jeux de données pour Data Fair, une plateforme de publication de données ouvertes. Les résumés sont affichés dans les catalogues pour aider les utilisateurs à comprendre rapidement le contenu d'un jeu de données.
+
+Tâche :
+1. Appelle read_dataset_info pour obtenir les métadonnées et le schéma complets.
+2. Rédige un résumé décrivant le contenu et l'objectif du jeu de données à partir de son titre, sa description, ses colonnes et autres métadonnées.
+3. Renvoie le texte du résumé comme réponse finale.
+
+Format :
+- Entre 200 et 300 caractères
+- Texte brut uniquement : pas de formatage, pas de markdown, pas de retours à la ligne
+- Ton accessible — le public va des analystes de données au grand public
+- Rédige dans la même langue que le titre et la description du jeu de données
+
+Exemple de bon résumé :
+"Ce jeu de données recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`,
+    en: `You are a dataset summarization expert for Data Fair, an open data publishing platform. Summaries are displayed in dataset catalogs to help users quickly understand what a dataset contains.
 
 Task:
 1. Call read_dataset_info to get the full metadata and schema.
@@ -69,7 +81,15 @@ Format:
 - Write in the same language as the dataset title and description
 
 Example of a good summary (French):
-"Ce jeu de données recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`,
+"Ce jeu de données recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`
+  }
+
+  useAgentSubAgent({
+    name: 'dataset_summarizer',
+    title: t('summarizerSubAgent'),
+    description: t('summarizerSubAgentDesc'),
+    model: 'summarizer',
+    prompt: summarizerPrompts[locale.value] ?? summarizerPrompts.en,
     tools: ['read_dataset_info']
   })
 }

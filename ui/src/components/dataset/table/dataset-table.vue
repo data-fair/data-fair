@@ -493,7 +493,7 @@ const { selectedResults, saveLine, bulkLines, addLineTrigger } = provideDatasetE
 if (edit) {
   useAgentTool({
     name: 'open_add_line_dialog',
-    description: 'Open the "Add a new line" dialog on the data editing page. After opening, use the editLine_form sub-agent tool to fill the form fields. The user will click Save manually.',
+    description: 'Open the "Add a new line" dialog on the data editing page. After opening, delegate to the editLine_form subagent to fill the form fields (it becomes available once the dialog opens). The user will click Save manually.',
     annotations: { title: 'Ouvrir le dialogue d\'ajout de ligne', readOnlyHint: false },
     inputSchema: {
       type: 'object' as const,
@@ -501,13 +501,13 @@ if (edit) {
     },
     execute: async () => {
       addLineTrigger.value = true
-      return 'Add line dialog opened. You can now use the editLine_form sub-agent tool to fill in the form fields. The user will click Save when ready.'
+      return 'Add line dialog opened. You can now delegate to the editLine_form subagent to fill in the form fields. The user will click Save when ready.'
     }
   })
 
   useAgentTool({
     name: 'open_edit_line_dialog',
-    description: 'Open the "Edit line" dialog for a specific data row. Provide the line _id. After opening, use the editLine_form sub-agent tool to modify form fields. The user will click Save manually.',
+    description: 'Open the "Edit line" dialog for a specific data row. Provide the line _id. After opening, delegate to the editLine_form subagent to modify form fields (it becomes available once the dialog opens). The user will click Save manually.',
     annotations: { title: 'Ouvrir le dialogue d\'édition de ligne', readOnlyHint: false },
     inputSchema: {
       type: 'object' as const,
@@ -518,7 +518,7 @@ if (edit) {
     },
     execute: async (params: { lineId: string }) => {
       showEditDialog.value = { _id: params.lineId } as ExtendedResult
-      return 'Edit line dialog opened. You can now use the editLine_form sub-agent tool to modify the form fields. The user will click Save when ready.'
+      return 'Edit line dialog opened. You can now delegate to the editLine_form subagent to modify the form fields. The user will click Save when ready.'
     }
   })
 }

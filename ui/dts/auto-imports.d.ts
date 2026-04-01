@@ -21,6 +21,8 @@ declare global {
   const applicationStore: typeof import('../src/composables/application-store')['default']
   const applicationVersions: typeof import('../src/composables/application-versions')['default']
   const breadcrumbs: typeof import('../src/utils/breadcrumbs')['default']
+  const buildPaginatedQuery: typeof import('../src/composables/agent/utils')['buildPaginatedQuery']
+  const cleanRow: typeof import('../src/composables/agent/utils')['cleanRow']
   const computed: typeof import('vue')['computed']
   const computedDeepDiff: typeof import('@data-fair/lib-vue/deep-diff.js')['computedDeepDiff']
   const createAgentTranslator: typeof import('../src/composables/agent/utils')['createAgentTranslator']
@@ -28,6 +30,7 @@ declare global {
   const createApplicationStore: typeof import('../src/composables/application-store')['createApplicationStore']
   const createBreadcrumbs: typeof import('../src/composables/layout/use-breadcrumbs')['createBreadcrumbs']
   const createDatasetStore: typeof import('../src/composables/dataset/store')['createDatasetStore']
+  const csvEscape: typeof import('../src/composables/agent/utils')['csvEscape']
   const customRef: typeof import('vue')['customRef']
   const datasetLines: typeof import('../src/composables/dataset-lines')['default']
   const datasetStore: typeof import('../src/composables/dataset-store')['default']
@@ -48,6 +51,7 @@ declare global {
   const dfUserAvatar: typeof import('@data-fair/lib-vuetify/ui-user-avatar.vue')['default']
   const effectScope: typeof import('vue')['effectScope']
   const escapeKey: typeof import('../src/utils/escape-key')['escapeKey']
+  const fetchSampleRows: typeof import('../src/composables/agent/utils')['fetchSampleRows']
   const findEqFilter: typeof import('../src/composables/dataset/filters')['findEqFilter']
   const formatBytes: typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']
   const formatValue: typeof import('../src/composables/dataset/lines')['formatValue']
@@ -100,15 +104,19 @@ declare global {
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
   const store: typeof import('../src/composables/dataset/store')['default']
+  const toCsv: typeof import('../src/composables/agent/utils')['toCsv']
   const toRaw: typeof import('vue')['toRaw']
   const toRef: typeof import('vue')['toRef']
   const toRefs: typeof import('vue')['toRefs']
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
+  const useAgentApplicationCreationTools: typeof import('../src/composables/application/agent-creation-tools')['useAgentApplicationCreationTools']
   const useAgentApplicationTools: typeof import('../src/composables/application/agent-tools')['useAgentApplicationTools']
   const useAgentConnectorTools: typeof import('../src/composables/agent/connector-tools')['useAgentConnectorTools']
+  const useAgentDataQualityTools: typeof import('../src/composables/dataset/agent-data-quality-tools')['useAgentDataQualityTools']
   const useAgentDatasetChangesSummaryTools: typeof import('../src/composables/dataset/agent-changes-summary-tools')['useAgentDatasetChangesSummaryTools']
+  const useAgentDatasetCreationTools: typeof import('../src/composables/dataset/agent-creation-tools')['useAgentDatasetCreationTools']
   const useAgentDatasetDataTools: typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']
   const useAgentDatasetDescriptionTools: typeof import('../src/composables/dataset/agent-description-tools')['useAgentDatasetDescriptionTools']
   const useAgentDatasetSummaryTools: typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']
@@ -204,18 +212,22 @@ declare module 'vue' {
     readonly accepted: UnwrapRef<typeof import('../src/utils/dataset')['accepted']>
     readonly agentToolError: UnwrapRef<typeof import('../src/composables/agent/utils')['agentToolError']>
     readonly breadcrumbs: UnwrapRef<typeof import('../src/utils/breadcrumbs')['default']>
+    readonly buildPaginatedQuery: UnwrapRef<typeof import('../src/composables/agent/utils')['buildPaginatedQuery']>
+    readonly cleanRow: UnwrapRef<typeof import('../src/composables/agent/utils')['cleanRow']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedDeepDiff: UnwrapRef<typeof import('@data-fair/lib-vue/deep-diff.js')['computedDeepDiff']>
     readonly createAgentTranslator: UnwrapRef<typeof import('../src/composables/agent/utils')['createAgentTranslator']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createBreadcrumbs: UnwrapRef<typeof import('../src/composables/layout/use-breadcrumbs')['createBreadcrumbs']>
     readonly createDatasetStore: UnwrapRef<typeof import('../src/composables/dataset/store')['createDatasetStore']>
+    readonly csvEscape: UnwrapRef<typeof import('../src/composables/agent/utils')['csvEscape']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly datasetStoreKey: UnwrapRef<typeof import('../src/composables/dataset/store')['datasetStoreKey']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly escapeKey: UnwrapRef<typeof import('../src/utils/escape-key')['escapeKey']>
+    readonly fetchSampleRows: UnwrapRef<typeof import('../src/composables/agent/utils')['fetchSampleRows']>
     readonly findEqFilter: UnwrapRef<typeof import('../src/composables/dataset/filters')['findEqFilter']>
     readonly formatBytes: UnwrapRef<typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']>
     readonly formatValue: UnwrapRef<typeof import('../src/composables/dataset/lines')['formatValue']>
@@ -268,15 +280,19 @@ declare module 'vue' {
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly store: UnwrapRef<typeof import('../src/composables/dataset/store')['default']>
+    readonly toCsv: UnwrapRef<typeof import('../src/composables/agent/utils')['toCsv']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
+    readonly useAgentApplicationCreationTools: UnwrapRef<typeof import('../src/composables/application/agent-creation-tools')['useAgentApplicationCreationTools']>
     readonly useAgentApplicationTools: UnwrapRef<typeof import('../src/composables/application/agent-tools')['useAgentApplicationTools']>
     readonly useAgentConnectorTools: UnwrapRef<typeof import('../src/composables/agent/connector-tools')['useAgentConnectorTools']>
+    readonly useAgentDataQualityTools: UnwrapRef<typeof import('../src/composables/dataset/agent-data-quality-tools')['useAgentDataQualityTools']>
     readonly useAgentDatasetChangesSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-changes-summary-tools')['useAgentDatasetChangesSummaryTools']>
+    readonly useAgentDatasetCreationTools: UnwrapRef<typeof import('../src/composables/dataset/agent-creation-tools')['useAgentDatasetCreationTools']>
     readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']>
     readonly useAgentDatasetDescriptionTools: UnwrapRef<typeof import('../src/composables/dataset/agent-description-tools')['useAgentDatasetDescriptionTools']>
     readonly useAgentDatasetSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']>

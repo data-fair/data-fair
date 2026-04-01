@@ -1,13 +1,17 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
+import { createAgentTranslator } from '~/composables/agent/utils'
+import { serializeDatasetInfo } from './agent-tools'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
+    readDatasetInfo: 'Lire les informations du jeu de données',
     setDatasetDescription: 'Définir la description du jeu de données',
     descriptionWriterSubAgent: 'Rédiger une description de jeu de données',
     descriptionWriterSubAgentDesc: 'Lire les métadonnées et le schéma du jeu de données, puis rédiger une description détaillée.'
   },
   en: {
+    readDatasetInfo: 'Read dataset info',
     setDatasetDescription: 'Set the dataset description',
     descriptionWriterSubAgent: 'Write a dataset description',
     descriptionWriterSubAgentDesc: 'Read the dataset metadata and schema, then write a detailed description.'
@@ -15,7 +19,22 @@ const messages: Record<string, Record<string, string>> = {
 }
 
 export function useAgentDatasetDescriptionTools (locale: Ref<string>, datasetData: Ref<any>, setDescription: (description: string) => void) {
-  const t = (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
+  const t = createAgentTranslator(messages, locale)
+
+  // Also register read_dataset_info here so this composable is self-contained
+  // (the tool may also be registered by agent-summary-tools.ts — duplicate names are idempotent)
+  useAgentTool({
+    name: 'read_dataset_info',
+    description: 'Read the full metadata and schema of the current dataset being edited. Returns title, description, status, owner, column schema, etc.',
+    annotations: { title: t('readDatasetInfo'), readOnlyHint: true },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {}
+    },
+    execute: async () => {
+      return serializeDatasetInfo(datasetData.value)
+    }
+  })
 
   useAgentTool({
     name: 'set_dataset_description',
@@ -34,11 +53,24 @@ export function useAgentDatasetDescriptionTools (locale: Ref<string>, datasetDat
     }
   })
 
-  useAgentSubAgent({
-    name: 'dataset_description_writer',
-    title: t('descriptionWriterSubAgent'),
-    description: t('descriptionWriterSubAgentDesc'),
-    prompt: `You are a dataset documentation expert for Data Fair, an open data publishing platform. Descriptions are displayed on dataset pages to help users understand the dataset in detail.
+  const descriptionWriterPrompts: Record<string, string> = {
+    fr: `Tu es un expert en documentation de jeux de données pour Data Fair, une plateforme de publication de données ouvertes. Les descriptions sont affichées sur les pages de jeux de données pour aider les utilisateurs à comprendre le jeu en détail.
+
+Tâche :
+1. Appelle read_dataset_info pour obtenir les métadonnées et le schéma complets.
+2. Rédige une description détaillée du jeu de données à partir de son titre, résumé, colonnes, thématiques et autres métadonnées.
+3. Renvoie le texte de la description comme réponse finale.
+
+Format :
+- Entre 500 et 2000 caractères
+- Le formatage markdown est encouragé : utilise des titres (##), des listes à puces et du gras pour les termes clés
+- Structure la description avec des sections : vue d'ensemble, détail du contenu, notes d'utilisation
+- Ton accessible — le public va des analystes de données au grand public
+- Rédige dans la même langue que le titre et les métadonnées existantes
+- Ne répète pas simplement le résumé ; la description doit apporter de la profondeur et du contexte
+- Si le jeu a une portée géographique ou temporelle, mentionne-la
+- Si le jeu a des colonnes notables, mets en avant les plus importantes`,
+    en: `You are a dataset documentation expert for Data Fair, an open data publishing platform. Descriptions are displayed on dataset pages to help users understand the dataset in detail.
 
 Task:
 1. Call read_dataset_info to get the full metadata and schema.
@@ -53,7 +85,14 @@ Format:
 - Write in the same language as the dataset title and existing metadata
 - Do not simply repeat the summary; the description should add depth and context
 - If the dataset has geographic or temporal scope, mention it
-- If the dataset has notable columns, highlight the most important ones`,
+- If the dataset has notable columns, highlight the most important ones`
+  }
+
+  useAgentSubAgent({
+    name: 'dataset_description_writer',
+    title: t('descriptionWriterSubAgent'),
+    description: t('descriptionWriterSubAgentDesc'),
+    prompt: descriptionWriterPrompts[locale.value] ?? descriptionWriterPrompts.en,
     tools: ['read_dataset_info']
   })
 }

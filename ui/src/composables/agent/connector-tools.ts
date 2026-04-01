@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $uiConfig, $sitePath } from '~/context'
-import { createAgentTranslator, agentToolError } from './utils'
+import { createAgentTranslator, agentToolError, buildPaginatedQuery } from './utils'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -46,13 +46,7 @@ export function useAgentConnectorTools (locale: Ref<string>) {
       },
       execute: async (params) => {
         try {
-          const size = Math.min(Math.max(params.size || 10, 1), 50)
-          const page = Math.max(params.page || 1, 1)
-          const query: Record<string, string> = {
-            size: String(size),
-            page: String(page)
-          }
-          if (params.q) query.q = params.q
+          const { query, page, size } = buildPaginatedQuery(params)
 
           const data = await serviceFetch<{ count: number, results: { _id: string, title?: string, status?: string, scheduling?: { type: string }, updatedAt?: string }[] }>(processingsBase, query)
 
@@ -128,13 +122,7 @@ export function useAgentConnectorTools (locale: Ref<string>) {
       },
       execute: async (params) => {
         try {
-          const size = Math.min(Math.max(params.size || 10, 1), 50)
-          const page = Math.max(params.page || 1, 1)
-          const query: Record<string, string> = {
-            size: String(size),
-            page: String(page)
-          }
-          if (params.q) query.q = params.q
+          const { query, page, size } = buildPaginatedQuery(params)
 
           const data = await serviceFetch<{ count: number, results: { _id: string, title?: string, type?: string, url?: string, updatedAt?: string }[] }>(catalogsBase, query)
 

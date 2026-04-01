@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
-import { createAgentTranslator } from '~/composables/agent/utils'
+import { createAgentTranslator, toCsv, cleanRow } from '~/composables/agent/utils'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -25,23 +25,6 @@ const messages: Record<string, Record<string, string>> = {
 }
 
 const filtersDescription = 'Column filters as key-value pairs. Key format: column_key + suffix (_eq, _neq, _search, _in, _nin, _starts, _contains, _gte, _gt, _lte, _lt, _exists, _nexists). All values must be strings. Example: {"nom_search":"Jean","age_lte":"30"}'
-
-function csvEscape (value: any): string {
-  if (value == null) return ''
-  const s = String(value)
-  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
-}
-
-function toCsv (rows: Record<string, any>[]): string {
-  if (!rows.length) return ''
-  const keys = Object.keys(rows[0])
-  return [keys.map(csvEscape).join(','), ...rows.map(row => keys.map(k => csvEscape(row[k])).join(','))].join('\n')
-}
-
-function cleanRow (row: any): any {
-  const { _id, _i, _rand, ...clean } = row
-  return clean
-}
 
 function applyGeoParams (query: Record<string, string>, bbox?: string, geoDistance?: string) {
   if (bbox) query.bbox = bbox
@@ -332,11 +315,28 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     }
   })
 
-  useAgentSubAgent({
-    name: 'dataset_data',
-    title: t('datasetDataSubAgent'),
-    description: t('datasetDataSubAgentDesc'),
-    prompt: `You are a data analyst assistant for a data platform. You help users explore and understand datasets by querying their content.
+  const datasetDataPrompts: Record<string, string> = {
+    fr: `Tu es un assistant analyste de données pour une plateforme de données. Tu aides les utilisateurs à explorer et comprendre les jeux de données en interrogeant leur contenu.
+
+Processus :
+1. Appelle toujours get_dataset_schema en premier pour comprendre les noms de colonnes, types et exemples de données avant d'utiliser les autres outils.
+2. Choisis le bon outil :
+   - get_field_values : pour découvrir les valeurs distinctes d'une colonne avant de filtrer
+   - search_data : pour récupérer des lignes correspondant à des filtres ou une recherche textuelle. NE PAS utiliser pour des statistiques.
+   - aggregate_data : pour regrouper des lignes par colonnes et compter ou calculer des métriques par groupe (sum, avg, min, max)
+   - calculate_metric : pour calculer une statistique globale unique (avg, sum, min, max, stats, percentiles, cardinality)
+
+Format :
+- Présente les résultats de manière concise avec des libellés clairs
+- Pour les résultats numériques, arrondis à 2 décimales si approprié
+- Pour les données tabulaires, résume les observations clés plutôt que d'afficher les lignes brutes
+- Réponds dans la langue de la question de l'utilisateur
+- Lorsque tu effectues une requête filtrée (search_data avec filters, q, sort, bbox, geoDistance ou dateMatch), inclus toujours à la fin de ta réponse une section "Navigation params" listant les paramètres de requête sous forme clé=valeur (un par ligne). Ces paramètres utilisent le même format et peuvent être utilisés par l'assistant principal pour naviguer vers la page tableau du jeu de données avec les mêmes filtres. Exemple :
+  Navigation params:
+  status_eq=active
+  age_lte=30
+  sort=-date`,
+    en: `You are a data analyst assistant for a data platform. You help users explore and understand datasets by querying their content.
 
 Workflow:
 1. Always call get_dataset_schema first to understand column names, types, and sample data before using other tools.
@@ -355,7 +355,14 @@ Format:
   Navigation params:
   status_eq=active
   age_lte=30
-  sort=-date`,
+  sort=-date`
+  }
+
+  useAgentSubAgent({
+    name: 'dataset_data',
+    title: t('datasetDataSubAgent'),
+    description: t('datasetDataSubAgentDesc'),
+    prompt: datasetDataPrompts[locale.value] ?? datasetDataPrompts.en,
     tools: ['get_dataset_schema', 'search_data', 'aggregate_data', 'calculate_metric', 'get_field_values']
   })
 }

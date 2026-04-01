@@ -1,7 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
-import { $fetch } from '~/context'
-import { createAgentTranslator } from '~/composables/agent/utils'
+import { createAgentTranslator, toCsv, fetchSampleRows } from '~/composables/agent/utils'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -16,18 +15,6 @@ const messages: Record<string, Record<string, string>> = {
     schemaAnnotator: 'Annotate a dataset schema',
     schemaAnnotatorDesc: 'Read the schema and sample data, then suggest titles and descriptions for columns.'
   }
-}
-
-function csvEscape (value: any): string {
-  if (value == null) return ''
-  const s = String(value)
-  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
-}
-
-function toCsv (rows: Record<string, any>[]): string {
-  if (!rows.length) return ''
-  const keys = Object.keys(rows[0])
-  return [keys.map(csvEscape).join(','), ...rows.map(row => keys.map(k => csvEscape(row[k])).join(','))].join('\n')
 }
 
 export function useAgentSchemaAnnotationTools (
@@ -72,11 +59,7 @@ export function useAgentSchemaAnnotationTools (
       let sampleCsv = ''
       if (dataset.id) {
         try {
-          const data = await $fetch<any>(`datasets/${encodeURIComponent(dataset.id)}/lines`, { query: { size: '5' } })
-          const rows = (data.results ?? []).map((row: any) => {
-            const { _id, _i, _rand, ...clean } = row
-            return clean
-          })
+          const { rows } = await fetchSampleRows(dataset.id, 5)
           sampleCsv = toCsv(rows)
         } catch {
           sampleCsv = '(failed to fetch sample data)'
@@ -127,12 +110,25 @@ export function useAgentSchemaAnnotationTools (
     }
   })
 
-  useAgentSubAgent({
-    name: 'schema_annotator',
-    title: t('schemaAnnotator'),
-    description: t('schemaAnnotatorDesc'),
-    model: 'summarizer',
-    prompt: `You are a data documentation expert for Data Fair, an open data publishing platform. You help users annotate dataset schemas with clear, human-readable titles and descriptions.
+  const schemaAnnotatorPrompts: Record<string, string> = {
+    fr: `Tu es un expert en documentation de données pour Data Fair, une plateforme de publication de données ouvertes. Tu aides les utilisateurs à annoter les schémas de jeux de données avec des libellés et descriptions clairs et lisibles.
+
+Tâche :
+1. Appelle read_schema_for_annotation pour obtenir le schéma actuel et des exemples de données.
+2. Analyse chaque colonne : clé, type, nom original, titre existant, valeurs d'exemple, et tout enum/labels.
+3. Pour les colonnes sans titre, avec un titre cryptique ou un titre qui répète simplement la clé, suggère un titre clair et lisible.
+4. Pour les colonnes sans description, suggère une brève description basée sur le contenu.
+5. NE PAS écraser les titres ou descriptions déjà bons et informatifs.
+6. Appelle annotate_schema avec toutes tes suggestions en une fois.
+7. Renvoie un résumé des annotations effectuées.
+
+Consignes :
+- Les titres doivent être courts (2-5 mots), avec une capitalisation naturelle (ex: "Montant HT", "Date de naissance")
+- Les descriptions doivent faire 1-2 phrases expliquant le contenu de la colonne
+- Rédige dans la même langue que le titre du jeu et les annotations existantes
+- Utilise les données d'exemple pour comprendre le contenu réel de chaque colonne
+- Pour les colonnes avec des valeurs enum ou des labels, mentionne les valeurs possibles dans la description`,
+    en: `You are a data documentation expert for Data Fair, an open data publishing platform. You help users annotate dataset schemas with clear, human-readable titles and descriptions.
 
 Task:
 1. Call read_schema_for_annotation to get the current schema and sample data.
@@ -148,7 +144,15 @@ Guidelines:
 - Descriptions should be 1-2 sentences explaining what the column contains
 - Write in the same language as the dataset title and existing annotations
 - Use the sample data to understand what each column actually contains
-- For columns with enum values or labels, mention the possible values in the description`,
+- For columns with enum values or labels, mention the possible values in the description`
+  }
+
+  useAgentSubAgent({
+    name: 'schema_annotator',
+    title: t('schemaAnnotator'),
+    description: t('schemaAnnotatorDesc'),
+    model: 'summarizer',
+    prompt: schemaAnnotatorPrompts[locale.value] ?? schemaAnnotatorPrompts.en,
     tools: ['read_schema_for_annotation', 'annotate_schema']
   })
 }
