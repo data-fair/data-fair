@@ -227,7 +227,7 @@ fr:
   missingConcepts: "Il faut associer au moins l'un des concepts suivants a vos colonnes : {concepts}"
   newExprEval: Nouvelle colonne calculee
   expr: Expression
-  helpExpression: Aider a ecrire l'expression
+  helpExpression: Aide-moi à écrire l'expression
   autoUpdate: Mise a jour automatique si la source change
   link: "Lien : {info}"
   unavailableService: "Donnee de reference non disponible ({service} / {action})."

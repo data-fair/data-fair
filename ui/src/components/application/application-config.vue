@@ -162,7 +162,7 @@ fr:
   removeDraft: Effacer le brouillon
   removeDraftWarning: Attention ! Le brouillon sera perdu et l'application reviendra à son état validé précédent.
   appConfig: Configuration d'application
-  configurePrompt: Aidez-moi à configurer cette application
+  configurePrompt: Aide-moi à configurer cette application
 en:
   changeVersion: Change version
   validate: Validate

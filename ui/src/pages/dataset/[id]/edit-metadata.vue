@@ -185,6 +185,7 @@ import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
+import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -215,6 +216,16 @@ useAgentDatasetChangesSummaryTools(locale, datasetEditFetch.data, datasetEditFet
 useAgentExpressionTools(locale, datasetEditFetch.data, (extensionIndex, expr) => {
   if (datasetEditFetch.data.value?.extensions?.[extensionIndex]) {
     datasetEditFetch.data.value.extensions[extensionIndex].expr = expr
+  }
+})
+useAgentSchemaAnnotationTools(locale, datasetEditFetch.data, (annotations) => {
+  if (!datasetEditFetch.data.value?.schema) return
+  for (const ann of annotations) {
+    const prop = datasetEditFetch.data.value.schema.find((p: any) => p.key === ann.key)
+    if (prop) {
+      if (ann.title !== undefined) prop.title = ann.title
+      if (ann.description !== undefined) prop.description = ann.description
+    }
   }
 })
 
