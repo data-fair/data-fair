@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 25 tools, only 6 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, open_add_line_dialog, open_edit_line_dialog). All others are read-only.
+- **Read-heavy, write-light**: of 27 tools, only 7 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). All others are read-only.
 
 ### Activation flow
 
@@ -35,8 +35,8 @@ graph TB
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["23 Tools"]
-            SubAgents["6 Subagents"]
+            Tools["25 Tools"]
+            SubAgents["7 Subagents"]
             TR --> Tools
             SR --> SubAgents
             FS --> TR
@@ -265,6 +265,17 @@ Registered contextually when on the edit-data page (dataset table in `edit` mode
 | `open_add_line_dialog` | Opens the "Add a new line" dialog | _(none)_ | **No** |
 | `open_edit_line_dialog` | Opens the "Edit line" dialog for a specific row | `lineId` (string, required) | **No** |
 
+### 4.12 Dataset Property Config Tools
+
+Source: `ui/src/composables/dataset/agent-property-config-tools.ts`
+
+Registered contextually when editing dataset metadata (via action button).
+
+| Tool | Description | Parameters | Read-only |
+|------|-------------|------------|-----------|
+| `read_property_config` | Schema with detected types, type overrides, resolved capabilities per column, relevant capabilities per type, and 5 sample rows | _(none)_ | Yes |
+| `set_property_config` | Sets type overrides and/or capabilities for one or more columns. Capabilities stored as diff from defaults. Type overrides only for file datasets. | `configs` (array of `{ key, typeOverrideType?, typeOverrideFormat?, clearTypeOverride?, capabilities?, resetCapabilities? }`) | **No** |
+
 ## 5. Subagent Inventory
 
 Subagents are specialized agents with their own system prompt and a restricted set of tools. The main agent delegates to them for domain-specific tasks.
@@ -394,6 +405,23 @@ This subagent is automatically created by the VJSF (Vue JSON Schema Form) compon
 
 This subagent is automatically created by the VJSF (Vue JSON Schema Form) component in the add-line and edit-line dialogs. The same `editLine_` prefix is used for both dialogs since only one can be open at a time. The main agent opens a dialog first (via `open_add_line_dialog` or `open_edit_line_dialog`), then delegates to this sub-agent to fill form fields. The user retains control of the Save button.
 
+### 5.8 `property_config_advisor` - Property Config Advisor
+
+- **Source**: `ui/src/composables/dataset/agent-property-config-tools.ts`
+- **Model**: `summarizer`
+- **Tools**: `read_property_config`, `set_property_config`
+
+**System prompt (summary):**
+> You are a data configuration expert for Data Fair. You help users optimize column types and indexing capabilities.
+>
+> Workflow:
+> 1. Read property config and sample data
+> 2. Suggest type overrides for file datasets (dates-as-strings, numbers-as-strings, etc.)
+> 3. Suggest capability optimizations (disable index/values for long text, disable text for non-French, enable textAgg for word clouds)
+> 4. Present suggestions with explanations, then apply via set_property_config
+>
+> Does NOT write transform expressions — directs users to the expression_helper if needed.
+
 ## 6. Action Buttons
 
 Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer and inject a pre-configured message to trigger a specific workflow.
@@ -459,6 +487,20 @@ Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer a
 
 **Workflow**: This action demonstrates the **dialog-opening + VJSF webmcp** pattern. The agent opens a dialog via a tool call, then delegates form filling to the VJSF sub-agent. The user retains full control of submission, preventing unintended data modifications.
 
+### 6.8 Help Annotate Schema
+
+- **Action ID**: `help-annotate-schema`
+- **Location**: `ui/src/components/dataset/dataset-schema.vue` (schema toolbar)
+- **Visible prompt**: "Help annotate schema" / "Aide-moi à annoter le schéma"
+- **Hidden context**: `Use the schema_annotator subagent to suggest titles and descriptions for the dataset columns.`
+
+### 6.9 Help Configure Properties
+
+- **Action ID**: `help-configure-properties`
+- **Location**: `ui/src/components/dataset/dataset-schema.vue` (schema toolbar, next to annotate button)
+- **Visible prompt**: "Optimize types and capabilities" / "Optimiser les types et capacités"
+- **Hidden context**: `The property_config_advisor subagent can help optimize column types and indexing capabilities. Ask the user what they need: type corrections, capability optimization for performance, or both.`
+
 ## 7. Tool Registration Lifecycle
 
 Tools are registered in the main application layout (`default-layout.vue`) using a Vue `effectScope`:
@@ -479,7 +521,7 @@ watchEffect:
     stop scope (unregisters all tools)
 ```
 
-The summary, description, expression, and changes tools are registered separately in their respective page components, scoped to the editing context.
+The summary, description, expression, changes, schema annotation, and property config tools are registered separately in their respective page components, scoped to the editing context.
 
 ## 8. Key Files Reference
 
@@ -498,10 +540,13 @@ The summary, description, expression, and changes tools are registered separatel
 | `ui/src/composables/dataset/agent-description-tools.ts` | Description tools (1) + `dataset_description_writer` subagent |
 | `ui/src/composables/dataset/agent-changes-summary-tools.ts` | Changes tools (1) + `dataset_changes_summarizer` subagent |
 | `ui/src/composables/dataset/agent-expression-tools.ts` | Expression tools (4) + `expression_helper` subagent |
+| `ui/src/composables/dataset/agent-schema-annotation-tools.ts` | Schema annotation tools (2) + `schema_annotator` subagent |
+| `ui/src/composables/dataset/agent-property-config-tools.ts` | Property config tools (2) + `property_config_advisor` subagent |
 | `ui/src/composables/application/agent-tools.ts` | Application tools (3) |
 | `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` and `describe-dataset` action buttons |
 | `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
+| `ui/src/components/dataset/dataset-schema.vue` | `help-annotate-schema` and `help-configure-properties` action buttons |
 | `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` action button, `open_add_line_dialog` / `open_edit_line_dialog` tools |
 | `ui/src/components/dataset/form/dataset-edit-line-form.vue` | VJSF webmcp form for line add/edit (`editLine_form` sub-agent) |
 | `ui/src/pages/dataset/[id]/edit-data.vue` | `help-edit-data` action button |

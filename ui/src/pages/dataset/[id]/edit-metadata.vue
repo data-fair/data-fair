@@ -187,6 +187,7 @@ import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-des
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
+import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -229,6 +230,34 @@ useAgentSchemaAnnotationTools(locale, datasetEditFetch.data, (annotations) => {
     if (prop) {
       if (ann.title !== undefined) prop.title = ann.title
       if (ann.description !== undefined) prop.description = ann.description
+    }
+  }
+})
+useAgentPropertyConfigTools(locale, datasetEditFetch.data, (configs) => {
+  if (!datasetEditFetch.data.value?.schema) return
+  for (const cfg of configs) {
+    const prop = datasetEditFetch.data.value.schema.find((p: any) => p.key === cfg.key)
+    if (!prop) continue
+    if (cfg.typeOverride !== undefined) {
+      if (cfg.typeOverride === null) {
+        if (prop['x-transform']) {
+          delete prop['x-transform'].type
+          delete prop['x-transform'].format
+          if (!prop['x-transform'].expr) delete prop['x-transform']
+        }
+      } else {
+        if (!prop['x-transform']) prop['x-transform'] = {}
+        prop['x-transform'].type = cfg.typeOverride.type
+        if (cfg.typeOverride.format) prop['x-transform'].format = cfg.typeOverride.format
+        else delete prop['x-transform'].format
+      }
+    }
+    if (cfg.capabilities !== undefined) {
+      if (cfg.capabilities === null || !Object.keys(cfg.capabilities).length) {
+        delete prop['x-capabilities']
+      } else {
+        prop['x-capabilities'] = cfg.capabilities
+      }
     }
   }
 })

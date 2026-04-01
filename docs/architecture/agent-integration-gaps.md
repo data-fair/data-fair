@@ -16,7 +16,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 - **Geolocation**: geocode, user location (2 tools)
 - **Connectors**: list/describe processings and catalogs (0-4 conditional tools)
 
-**Total: 23 tools, 6 subagents, 6 action buttons**
+**Total: 25 tools, 7 subagents, 7 action buttons**
 
 ---
 
@@ -52,13 +52,11 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 ---
 
-### 4. Dataset Property Transformation Suggestions
+### ~~4. Dataset Property Transformation Suggestions~~ ✓
 
-**Current state:** `dataset-property-transform.vue` and `dataset-property-capabilities.vue` allow configuring column-level transforms and capabilities. Users need to understand the options.
+**Implemented:** `agent-property-config-tools.ts` provides a `read_property_config` tool, a `set_property_config` tool, and a `property_config_advisor` subagent. Action button "Optimize types and capabilities" on `dataset-schema.vue`.
 
-**Opportunity:** A contextual tool that explains available transforms/capabilities for a column type and suggests appropriate ones based on data content.
-
-**Location:** `ui/src/components/dataset/dataset-property-transform.vue`
+**Location:** `ui/src/composables/dataset/agent-property-config-tools.ts`
 
 ---
 
@@ -179,4 +177,4 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 | **Low** | 5. Virtual dataset config | Med — niche feature | Med |
 | **Low** | 10. Publication assistance | Med — wizard already exists | Med |
 | ~~Done~~ | ~~13. REST data entry~~ | ~~Low-Med — niche use case~~ | ~~Med-High~~ |
-| **Low** | 4. Property transforms | Low — niche | Med |
+| ~~Done~~ | ~~4. Property transforms~~ | ~~Low — niche~~ | ~~Med~~ |

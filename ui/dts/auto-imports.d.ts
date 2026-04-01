@@ -110,11 +110,14 @@ declare global {
   const useAgentConnectorTools: typeof import('../src/composables/agent/connector-tools')['useAgentConnectorTools']
   const useAgentDatasetChangesSummaryTools: typeof import('../src/composables/dataset/agent-changes-summary-tools')['useAgentDatasetChangesSummaryTools']
   const useAgentDatasetDataTools: typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']
+  const useAgentDatasetDescriptionTools: typeof import('../src/composables/dataset/agent-description-tools')['useAgentDatasetDescriptionTools']
   const useAgentDatasetSummaryTools: typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']
   const useAgentDatasetTools: typeof import('../src/composables/dataset/agent-tools')['useAgentDatasetTools']
   const useAgentExpressionTools: typeof import('../src/composables/dataset/agent-expression-tools')['useAgentExpressionTools']
   const useAgentGeoTools: typeof import('../src/composables/agent/geo-tools')['useAgentGeoTools']
   const useAgentNavigationTools: typeof import('../src/composables/agent/navigation-tools')['useAgentNavigationTools']
+  const useAgentPropertyConfigTools: typeof import('../src/composables/dataset/agent-property-config-tools')['useAgentPropertyConfigTools']
+  const useAgentSchemaAnnotationTools: typeof import('../src/composables/dataset/agent-schema-annotation-tools')['useAgentSchemaAnnotationTools']
   const useAgentSummaryTools: typeof import('../src/composables/use-agent-summary-tools')['useAgentSummaryTools']
   const useApplicationStore: typeof import('../src/composables/application/store')['useApplicationStore']
   const useApplicationVersions: typeof import('../src/composables/application/versions')['useApplicationVersions']
@@ -275,11 +278,14 @@ declare module 'vue' {
     readonly useAgentConnectorTools: UnwrapRef<typeof import('../src/composables/agent/connector-tools')['useAgentConnectorTools']>
     readonly useAgentDatasetChangesSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-changes-summary-tools')['useAgentDatasetChangesSummaryTools']>
     readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']>
+    readonly useAgentDatasetDescriptionTools: UnwrapRef<typeof import('../src/composables/dataset/agent-description-tools')['useAgentDatasetDescriptionTools']>
     readonly useAgentDatasetSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']>
     readonly useAgentDatasetTools: UnwrapRef<typeof import('../src/composables/dataset/agent-tools')['useAgentDatasetTools']>
     readonly useAgentExpressionTools: UnwrapRef<typeof import('../src/composables/dataset/agent-expression-tools')['useAgentExpressionTools']>
     readonly useAgentGeoTools: UnwrapRef<typeof import('../src/composables/agent/geo-tools')['useAgentGeoTools']>
     readonly useAgentNavigationTools: UnwrapRef<typeof import('../src/composables/agent/navigation-tools')['useAgentNavigationTools']>
+    readonly useAgentPropertyConfigTools: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['useAgentPropertyConfigTools']>
+    readonly useAgentSchemaAnnotationTools: UnwrapRef<typeof import('../src/composables/dataset/agent-schema-annotation-tools')['useAgentSchemaAnnotationTools']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application/store')['useApplicationStore']>
     readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application/versions')['useApplicationVersions']>
     readonly useApplicationWatch: UnwrapRef<typeof import('../src/composables/application/watch')['useApplicationWatch']>
