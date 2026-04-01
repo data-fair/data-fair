@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 25 tools, only 7 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). All others are read-only.
+- **Read-heavy, write-light**: of 34 tools, only 7 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). The creation wizard tools manipulate client-side form state only — no server-side writes.
 
 ### Activation flow
 
@@ -35,7 +35,7 @@ graph TB
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["25 Tools"]
+            Tools["34 Tools"]
             SubAgents["8 Subagents"]
             TR --> Tools
             SR --> SubAgents
@@ -275,6 +275,33 @@ Registered contextually when editing dataset metadata (via action button).
 |------|-------------|------------|-----------|
 | `read_property_config` | Schema with detected types, type overrides, resolved capabilities per column, relevant capabilities per type, and 5 sample rows | _(none)_ | Yes |
 | `set_property_config` | Sets type overrides and/or capabilities for one or more columns. Capabilities stored as diff from defaults. Type overrides only for file datasets. | `configs` (array of `{ key, typeOverrideType?, typeOverrideFormat?, clearTypeOverride?, capabilities?, resetCapabilities? }`) | **No** |
+
+### 4.13 Application Creation Tools
+
+Source: `ui/src/composables/application/agent-creation-tools.ts`
+
+Registered contextually in the application creation page (`new-application.vue`). These tools drive the stepper wizard, filling form fields and advancing steps. The final creation (Save button) remains the user's prerogative.
+
+| Tool | Description | Parameters | Read-only |
+|------|-------------|------------|-----------|
+| `select_creation_type` | Sets creation type ("copy" or "baseApp") and advances to step 2 | `type` (string, required) | **No** (client state) |
+| `select_base_application` | Selects a base app template by ID, sets title, advances to step 3 | `id` (string, required) | **No** (client state) |
+| `select_copy_application` | Selects an existing application to copy by ID, sets title, advances to step 3 | `id` (string, required) | **No** (client state) |
+| `set_application_title` | Sets or overrides the application title | `title` (string, required) | **No** (client state) |
+
+### 4.14 Dataset Creation Tools
+
+Source: `ui/src/composables/dataset/agent-creation-tools.ts`
+
+Registered contextually in the dataset creation page (`new-dataset.vue`). These tools drive the stepper wizard, filling form fields and advancing steps. The final creation (Create/Import button) remains the user's prerogative.
+
+| Tool | Description | Parameters | Read-only |
+|------|-------------|------------|-----------|
+| `select_dataset_type` | Sets dataset type (file, rest, virtual, metaOnly) and advances the wizard | `type` (string, required) | **No** (client state) |
+| `set_dataset_title` | Sets the title for the current dataset type. Must be at least 4 characters | `title` (string, required) | **No** (client state) |
+| `set_rest_options` | Configures REST-specific options (history, attachments, attachmentsAsImage) | `history`, `attachments`, `attachmentsAsImage` (booleans, optional) | **No** (client state) |
+| `skip_init_from_step` | Skips the optional initialization step (file/rest types) | _(none)_ | **No** (client state) |
+| `advance_to_confirmation` | Advances to the final confirmation step if parameters are valid | _(none)_ | **No** (client state) |
 
 ## 5. Subagent Inventory
 
@@ -527,6 +554,26 @@ Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer a
 - **Hidden context**: Describes the current dataset (title, ID). Instructs the agent to ask the user if they want a full quality analysis or a focus on specific aspects (completeness, duplicates, outliers, format issues) before dispatching the `data_quality_checker` subagent.
 - **Condition**: `showAgentChat`
 
+### 6.11 Help Create Application
+
+- **Action ID**: `help-create-application`
+- **Location**: `ui/src/pages/new-application.vue` (in the stepper, below the header)
+- **Visible prompt**: "Help me create an application" / "Aidez-moi à créer une application"
+- **Hidden context**: Instructs the agent to ask the user what kind of visualization they want, then use `list_base_applications` or `list_applications` to find options, and the creation tools (`select_creation_type`, `select_base_application`/`select_copy_application`, `set_application_title`) to fill the wizard. Includes dataset context when creating from a dataset page. Explicitly states the agent must NOT create — the user clicks Save.
+- **Condition**: `showAgentChat`
+
+**Workflow**: This action demonstrates the **stepper-driving** pattern. The agent uses existing global tools (`list_base_applications`) for discovery, then creation-specific tools to manipulate the stepper state. Each tool call advances the wizard to the next step, and the user retains control of the final submission.
+
+### 6.12 Help Create Dataset
+
+- **Action ID**: `help-create-dataset`
+- **Location**: `ui/src/pages/new-dataset.vue` (in the stepper, below the header)
+- **Visible prompt**: "Help me create a dataset" / "Aidez-moi à créer un jeu de données"
+- **Hidden context**: Instructs the agent to ask the user about their data source and needs, then recommend the right dataset type (file, rest, virtual, metaOnly). Uses `select_dataset_type`, `set_dataset_title`, `set_rest_options`, `skip_init_from_step`, and `advance_to_confirmation` to fill the wizard. Notes that file upload must be done manually by the user. Explicitly states the agent must NOT create — the user clicks Create/Import.
+- **Condition**: `showAgentChat`
+
+**Workflow**: Same **stepper-driving** pattern as 6.11. The agent recommends a dataset type based on the user's description, then fills configuration fields. For file datasets, the agent can set the type and title but cannot handle the file upload — that remains a manual step.
+
 ## 7. Tool Registration Lifecycle
 
 Tools are registered in the main application layout (`default-layout.vue`) using a Vue `effectScope`:
@@ -548,7 +595,7 @@ watchEffect:
     stop scope (unregisters all tools)
 ```
 
-The summary, description, expression, changes, schema annotation, and property config tools are registered separately in their respective page components, scoped to the editing context.
+The summary, description, expression, changes, schema annotation, property config, application creation, and dataset creation tools are registered separately in their respective page components, scoped to the editing context.
 
 ## 8. Key Files Reference
 
@@ -571,6 +618,8 @@ The summary, description, expression, changes, schema annotation, and property c
 | `ui/src/composables/dataset/agent-schema-annotation-tools.ts` | Schema annotation tools (2) + `schema_annotator` subagent |
 | `ui/src/composables/dataset/agent-property-config-tools.ts` | Property config tools (2) + `property_config_advisor` subagent |
 | `ui/src/composables/application/agent-tools.ts` | Application tools (3) |
+| `ui/src/composables/application/agent-creation-tools.ts` | Application creation wizard tools (4) |
+| `ui/src/composables/dataset/agent-creation-tools.ts` | Dataset creation wizard tools (5) |
 | `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` and `describe-dataset` action buttons |
 | `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
@@ -579,6 +628,8 @@ The summary, description, expression, changes, schema annotation, and property c
 | `ui/src/components/dataset/form/dataset-edit-line-form.vue` | VJSF webmcp form for line add/edit (`editLine_form` sub-agent) |
 | `ui/src/pages/dataset/[id]/edit-data.vue` | `help-edit-data` action button |
 | `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF sub-agent |
+| `ui/src/pages/new-application.vue` | `help-create-application` action button + creation tools registration |
+| `ui/src/pages/new-dataset.vue` | `help-create-dataset` action button + creation tools registration |
 | `ui/src/components/layout/layout-navigation-top.vue` | `DfAgentChatToggle` button in top navigation |
 | `api/src/ui-config.ts` | Exports `agentsIntegration` flag |
 | `api/src/settings/router.ts` | `GET /settings/:type/:id/agent-chat` endpoint |

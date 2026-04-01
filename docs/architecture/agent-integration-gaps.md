@@ -16,7 +16,10 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 - **Geolocation**: geocode, user location (2 tools)
 - **Connectors**: list/describe processings and catalogs (0-4 conditional tools)
 
-**Total: 25 tools, 8 subagents, 8 action buttons**
+- **Application creation**: wizard stepper tools (4 tools + 1 action button)
+- **Dataset creation**: wizard stepper tools (5 tools + 1 action button)
+
+**Total: 34 tools, 8 subagents, 10 action buttons**
 
 ---
 
@@ -88,23 +91,19 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 ---
 
-### 8. Application Creation Wizard Assistance
+### ~~8. Application Creation Wizard Assistance~~ ✓
 
-**Current state:** `new-application.vue` is a stepper (choose type, select base app, set title). No AI help.
+**Implemented:** `agent-creation-tools.ts` provides `select_creation_type`, `select_base_application`, `select_copy_application`, and `set_application_title` tools. Action button "Help me create an application" on `new-application.vue`. The agent asks the user what they want, recommends base applications, and fills the wizard steps. Final creation remains the user's prerogative.
 
-**Opportunity:** A conversational flow where the user describes what visualization they want, the agent recommends the best base application using `list_base_applications`, and navigates through the creation wizard.
-
-**Location:** `ui/src/pages/new-application.vue`
+**Location:** `ui/src/composables/application/agent-creation-tools.ts`
 
 ---
 
-### 9. Dataset Creation Guidance
+### ~~9. Dataset Creation Guidance~~ ✓
 
-**Current state:** `new-dataset.vue` is a stepper (choose type: file, REST, virtual, metaonly). No AI help.
+**Implemented:** `agent-creation-tools.ts` provides `select_dataset_type`, `set_dataset_title`, `set_rest_options`, `skip_init_from_step`, and `advance_to_confirmation` tools. Action button "Help me create a dataset" on `new-dataset.vue`. The agent asks the user about their data, recommends the right type, and fills the wizard steps. Final creation remains the user's prerogative.
 
-**Opportunity:** A conversational action "Help me create a dataset" where the user describes their data source and needs, and the agent recommends the right dataset type and walks through the steps.
-
-**Location:** `ui/src/pages/new-dataset.vue`
+**Location:** `ui/src/composables/dataset/agent-creation-tools.ts`
 
 ---
 
@@ -168,8 +167,8 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 | **High** | 14. Dataset journal tool | Med-High — debugging/auditing | Low — read-only API call |
 | **High** | 11. Storage stats tool | Med — account management | Low — read-only API call |
 | ~~Done~~ | ~~7. Data quality analysis~~ | ~~High — unique value~~ | ~~Med — subagent prompt design~~ |
-| **Med** | 8. App creation guidance | Med — occasional use | Low — leverages existing tools |
-| **Med** | 9. Dataset creation guidance | Med — occasional use | Low — conversational only |
+| ~~Done~~ | ~~8. App creation guidance~~ | ~~Med — occasional use~~ | ~~Low — leverages existing tools~~ |
+| ~~Done~~ | ~~9. Dataset creation guidance~~ | ~~Med — occasional use~~ | ~~Low — conversational only~~ |
 | **Med** | 12. Processing logs | Med — debugging | Med — new API calls |
 | **Med** | 6. Master data config | Med — complex feature | Low — VJSF pattern exists |
 | **Low** | 5. Virtual dataset config | Med — niche feature | Med |
