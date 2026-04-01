@@ -2,18 +2,14 @@
   <v-container v-if="datasetEditFetch.data.value">
     <v-row class="dataset">
       <v-col>
-        <template
-          v-for="section in sections"
-          :key="section.id"
-        >
           <df-section-tabs
-            v-if="section.id === 'info'"
-            :id="section.id"
+            v-if="sections.info"
+            id="info"
             v-model="infoTab"
             :min-height="300"
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
+            :title="sections.info.title"
+            :tabs="sections.info.tabs"
+            :color="sections.info.color"
             :svg="infoSvg"
           >
             <template #content="{ tab }">
@@ -39,13 +35,13 @@
           </df-section-tabs>
 
           <df-section-tabs
-            v-if="section.id === 'structure'"
-            :id="section.id"
+            v-if="sections.structure"
+            id="structure"
             v-model="structureTab"
             :min-height="300"
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
+            :title="sections.structure.title"
+            :tabs="sections.structure.tabs"
+            :color="sections.structure.color"
             :svg="buildingSvg"
           >
             <template #content="{ tab }">
@@ -78,12 +74,12 @@
           </df-section-tabs>
 
           <df-section-tabs
-            v-if="section.id === 'virtual'"
-            :id="section.id"
+            v-if="sections.virtual"
+            id="virtual"
             :min-height="300"
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
+            :title="sections.virtual.title"
+            :tabs="sections.virtual.tabs"
+            :color="sections.virtual.color"
             :svg="dataSvg"
           >
             <template #content="{ tab }">
@@ -96,7 +92,6 @@
               </v-tabs-window>
             </template>
           </df-section-tabs>
-        </template>
       </v-col>
     </v-row>
 
@@ -135,7 +130,7 @@
           />
         </v-list-item>
       </v-list>
-      <df-toc :sections="sections" />
+      <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -310,7 +305,7 @@ const virtualHasDiff = computed(() => {
 
 const sections = computedDeepDiff(() => {
   const d = datasetEditFetch.data.value
-  if (!d) return []
+  if (!d) return {} as Record<string, { title: string, color?: string, tabs: any[] }>
 
   const infoOrMetaDiff = infoHasDiff.value || metadataHasDiff.value
   const structureDiff = schemaHasDiff.value || extensionsHasDiff.value || masterDataHasDiff.value
@@ -365,26 +360,23 @@ const sections = computedDeepDiff(() => {
     })
   }
 
-  const result: any[] = [
-    {
+  const result: Record<string, { title: string, color?: string, tabs: any[] }> = {
+    info: {
       title: t('info'),
-      id: 'info',
       color: infoOrMetaDiff ? 'accent' : undefined,
       tabs: infoTabs
     },
-    {
+    structure: {
       title: t('structure'),
-      id: 'structure',
       color: structureDiff ? 'accent' : undefined,
       tabs: structureTabs
     }
-  ]
+  }
 
   // Virtual dataset section
   if (d.isVirtual) {
-    result.push({
+    result.virtual = {
       title: t('virtual'),
-      id: 'virtual',
       color: virtualHasDiff.value ? 'accent' : undefined,
       tabs: [{
         key: 'virtual',
@@ -393,11 +385,13 @@ const sections = computedDeepDiff(() => {
         appendIcon: virtualHasDiff.value ? mdiAlert : undefined,
         color: virtualHasDiff.value ? 'accent' : undefined
       }]
-    })
+    }
   }
 
   return result
 })
+
+const tocSections = computed(() => Object.entries(sections.value).map(([id, s]) => ({ id, title: s.title })))
 </script>
 
 <style>

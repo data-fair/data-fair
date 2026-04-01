@@ -47,287 +47,275 @@
       </v-card>
     </v-dialog>
 
-    <v-row class="application">
-      <v-col>
-        <template
-          v-for="section in sections"
-          :key="section.id"
+    <!-- Metadata section -->
+    <df-section-tabs
+      v-if="sections.metadata"
+      id="metadata"
+      :min-height="300"
+      :title="sections.metadata.title"
+      :tabs="sections.metadata.tabs"
+      :svg="checklistSvg"
+      svg-no-margin
+    >
+      <template #content="{ tab }">
+        <v-tabs-window
+          :model-value="tab"
+          class="pa-4"
         >
-          <!-- Metadata section -->
-          <df-section-tabs
-            v-if="section.id === 'metadata'"
-            :id="section.id"
-            :min-height="300"
-            :title="section.title"
-            :tabs="section.tabs"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="info">
-                  <v-container fluid>
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <div class="text-title-medium mb-2">
-                          {{ application.title }}
-                        </div>
-                        <p
-                          v-if="application.description"
-                          class="text-body-medium"
-                        >
-                          {{ application.description }}
-                        </p>
-                      </v-col>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <v-list density="compact">
-                          <v-list-item v-if="baseAppFetch.data.value">
-                            <template #prepend>
-                              <v-icon :icon="mdiImage" />
-                            </template>
-                            <v-list-item-title>
-                              {{ baseAppFetch.data.value.title || application.url }}
-                              <span v-if="baseAppFetch.data.value.version">
-                                — {{ t('version') }} {{ baseAppFetch.data.value.version }}
-                              </span>
-                            </v-list-item-title>
-                          </v-list-item>
-                          <v-list-item v-if="application.updatedAt">
-                            <template #prepend>
-                              <v-icon :icon="mdiPencil" />
-                            </template>
-                            <v-list-item-title>
-                              {{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}
-                            </v-list-item-title>
-                          </v-list-item>
-                          <v-list-item>
-                            <template #prepend>
-                              <v-icon :icon="mdiPlusCircleOutline" />
-                            </template>
-                            <v-list-item-title>
-                              {{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}
-                            </v-list-item-title>
-                          </v-list-item>
-                        </v-list>
-                        <v-chip
-                          v-for="topic in application.topics"
-                          :key="topic.id"
-                          size="small"
-                          class="mr-1 mb-1"
-                        >
-                          {{ topic.title }}
-                        </v-chip>
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </v-tabs-window-item>
-
-                <v-tabs-window-item value="datasets">
-                  <v-container fluid>
-                    <v-row v-if="datasets.length">
-                      <v-col
-                        v-for="dataset in datasets"
-                        :key="dataset.id"
-                        cols="12"
-                        md="6"
-                        lg="4"
-                      >
-                        <v-card :to="`/dataset/${dataset.id}`">
-                          <v-card-title class="text-body-large font-weight-bold">
-                            {{ dataset.title || dataset.id }}
-                          </v-card-title>
-                        </v-card>
-                      </v-col>
-                    </v-row>
-                    <p v-else>
-                      {{ t('noDatasets') }}
-                    </p>
-                  </v-container>
-                </v-tabs-window-item>
-
-                <v-tabs-window-item
-                  v-if="childrenApps.length"
-                  value="children-apps"
+          <v-tabs-window-item value="info">
+            <v-row>
+              <v-col
+                cols="12"
+                md="6"
+              >
+                <div class="text-title-medium mb-2">
+                  {{ application.title }}
+                </div>
+                <p
+                  v-if="application.description"
+                  class="text-body-medium"
                 >
-                  <v-container fluid>
-                    <v-row>
-                      <v-col
-                        v-for="app in childrenApps"
-                        :key="app.id"
-                        cols="12"
-                        md="6"
-                        lg="4"
-                      >
-                        <v-card :to="`/application/${app.id}`">
-                          <v-card-title class="text-body-large font-weight-bold">
-                            {{ app.title || app.id }}
-                          </v-card-title>
-                        </v-card>
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </v-tabs-window-item>
-
-                <v-tabs-window-item value="attachments">
-                  <application-attachments />
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-
-          <!-- Render section -->
-          <df-section-tabs
-            v-if="section.id === 'render'"
-            :id="section.id"
-            :min-height="390"
-            :title="section.title"
-            :tabs="section.tabs"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="config">
-                  <v-container fluid>
-                    <v-alert
-                      v-if="application.errorMessage"
-                      type="error"
-                      variant="tonal"
-                      class="mb-4"
-                    >
-                      <i18n-t keypath="validatedError" tag="p">
-                        <template #bold>
-                          <b>{{ t('validatedErrorBold') }}</b>
-                        </template>
-                      </i18n-t>
-                      <p
-                        class="mb-0"
-                        v-html="/*eslint-disable-line vue/no-v-html*/application.errorMessage"
-                      />
-                    </v-alert>
-                    <v-btn
-                      v-if="can('writeConfig')"
-                      :to="`/application/${application.id}/config`"
-                      color="primary"
-                      class="mb-4"
-                    >
-                      {{ t('editConfig') }}
-                    </v-btn>
-                    <v-card
-                      variant="outlined"
-                      class="pa-0"
-                    >
-                      <d-frame
-                        :src="`${applicationLink}?embed=true`"
-                        resize="no"
-                      />
-                    </v-card>
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-
-          <!-- Share section -->
-          <df-section-tabs
-            v-if="section.id === 'share'"
-            :id="section.id"
-            :min-height="250"
-            :title="section.title"
-            :tabs="section.tabs"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="permissions">
-                  <v-container fluid>
-                    <permissions
-                      v-if="application"
-                      :resource="application"
-                      resource-type="applications"
-                      :disabled="!can('setPermissions')"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-
-                <v-tabs-window-item value="protected-links">
-                  <application-protected-links />
-                </v-tabs-window-item>
-
-                <v-tabs-window-item value="integration">
-                  <v-container fluid>
-                    <integration-dialog
-                      inline
-                      resource-type="applications"
-                      :resource="application"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-
-                <v-tabs-window-item value="publication-sites">
-                  <application-publication-sites />
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-
-          <!-- Activity section -->
-          <df-section-tabs
-            v-if="section.id === 'activity'"
-            :id="section.id"
-            :min-height="550"
-            :title="section.title"
-            :tabs="section.tabs"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="journal">
-                  <v-container
-                    fluid
-                    class="pa-0"
-                  >
-                    <journal-view
-                      v-if="journal"
-                      :journal="journal"
-                      type="application"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item
-                  v-if="$uiConfig.eventsIntegration"
-                  value="notifications"
+                  {{ application.description }}
+                </p>
+              </v-col>
+              <v-col
+                cols="12"
+                md="6"
+              >
+                <v-list density="compact">
+                  <v-list-item v-if="baseAppFetch.data.value">
+                    <template #prepend>
+                      <v-icon :icon="mdiImage" />
+                    </template>
+                    <v-list-item-title>
+                      {{ baseAppFetch.data.value.title || application.url }}
+                      <span v-if="baseAppFetch.data.value.version">
+                        — {{ t('version') }} {{ baseAppFetch.data.value.version }}
+                      </span>
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item v-if="application.updatedAt">
+                    <template #prepend>
+                      <v-icon :icon="mdiPencil" />
+                    </template>
+                    <v-list-item-title>
+                      {{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item>
+                    <template #prepend>
+                      <v-icon :icon="mdiPlusCircleOutline" />
+                    </template>
+                    <v-list-item-title>
+                      {{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+                <v-chip
+                  v-for="topic in application.topics"
+                  :key="topic.id"
+                  size="small"
+                  class="mr-1 mb-1"
                 >
-                  <v-container fluid>
-                    <notifications-dialog
-                      inline
-                      :resource="application"
-                      resource-type="application"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item
-                  v-if="$uiConfig.eventsIntegration && can('setPermissions')"
-                  value="webhooks"
+                  {{ topic.title }}
+                </v-chip>
+              </v-col>
+            </v-row>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="datasets">
+            <v-row v-if="datasets.length">
+              <v-col
+                v-for="dataset in datasets"
+                :key="dataset.id"
+                cols="12"
+                md="6"
+                lg="4"
+              >
+                <dataset-card :dataset="dataset" />
+              </v-col>
+            </v-row>
+            <p v-else>
+              {{ t('noDatasets') }}
+            </p>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="children-apps">
+            <v-row>
+              <v-col
+                v-for="app in childrenApps"
+                :key="app.id"
+                cols="12"
+                md="6"
+                lg="4"
+              >
+                <application-card :application="app" />
+              </v-col>
+            </v-row>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="attachments">
+            <application-attachments />
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
+    <!-- Render section -->
+    <df-section-tabs
+      v-if="sections.render"
+      id="render"
+      :min-height="390"
+      :title="sections.render.title"
+      :tabs="sections.render.tabs"
+      :svg="creativeSvg"
+      svg-no-margin
+    >
+      <template #content="{ tab }">
+        <v-tabs-window :model-value="tab">
+          <v-tabs-window-item value="config">
+            <v-container fluid>
+              <v-alert
+                v-if="application.errorMessage"
+                type="error"
+                variant="tonal"
+                class="mb-4"
+              >
+                <i18n-t
+                  keypath="validatedError"
+                  tag="p"
                 >
-                  <v-container fluid>
-                    <webhooks-dialog
-                      inline
-                      :resource="application"
-                      resource-type="application"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-        </template>
-      </v-col>
-    </v-row>
+                  <template #bold>
+                    <b>{{ t('validatedErrorBold') }}</b>
+                  </template>
+                </i18n-t>
+                <p
+                  class="mb-0"
+                  v-html="/*eslint-disable-line vue/no-v-html*/application.errorMessage"
+                />
+              </v-alert>
+              <v-btn
+                v-if="can('writeConfig')"
+                :to="`/application/${application.id}/config`"
+                color="primary"
+                class="mb-4"
+              >
+                {{ t('editConfig') }}
+              </v-btn>
+              <v-card
+                variant="outlined"
+                class="pa-0"
+              >
+                <d-frame
+                  :src="`${applicationLink}?embed=true`"
+                  resize="no"
+                />
+              </v-card>
+            </v-container>
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
+    <!-- Share section -->
+    <df-section-tabs
+      v-if="sections.share"
+      id="share"
+      :min-height="250"
+      :title="sections.share.title"
+      :tabs="sections.share.tabs"
+      :svg="shareSvg"
+      svg-no-margin
+    >
+      <template #content="{ tab }">
+        <v-tabs-window :model-value="tab">
+          <v-tabs-window-item value="permissions">
+            <v-container fluid>
+              <permissions
+                v-if="application"
+                :resource="application"
+                resource-type="applications"
+                :disabled="!can('setPermissions')"
+              />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="protected-links">
+            <application-protected-links />
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="integration">
+            <v-container fluid>
+              <integration-dialog
+                inline
+                resource-type="applications"
+                :resource="application"
+              />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="publication-sites">
+            <application-publication-sites />
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
+    <!-- Activity section -->
+    <df-section-tabs
+      v-if="sections.activity"
+      id="activity"
+      :min-height="550"
+      :title="sections.activity.title"
+      :tabs="sections.activity.tabs"
+      :svg="settingsSvg"
+      svg-no-margin
+    >
+      <template #content="{ tab }">
+        <v-tabs-window :model-value="tab">
+          <v-tabs-window-item value="journal">
+            <v-container
+              fluid
+              class="pa-0"
+            >
+              <journal-view
+                v-if="journal"
+                :journal="journal"
+                type="application"
+              />
+            </v-container>
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="$uiConfig.eventsIntegration"
+            value="notifications"
+          >
+            <v-container fluid>
+              <notifications-dialog
+                inline
+                :resource="application"
+                resource-type="application"
+              />
+            </v-container>
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="$uiConfig.eventsIntegration && can('setPermissions')"
+            value="webhooks"
+          >
+            <v-container fluid>
+              <webhooks-dialog
+                inline
+                :resource="application"
+                resource-type="application"
+              />
+            </v-container>
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
 
     <df-navigation-right>
       <application-actions />
-      <df-toc :sections="sections" />
+      <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -348,7 +336,7 @@ fr:
   validatedErrorBold: version validée
   share: Partage
   permissions: Permissions
-  protectedLink: Lien protege
+  protectedLink: Lien protégé
   integration: Intégrer dans un site
   publicationSites: Portails
   activity: Activité
@@ -397,6 +385,10 @@ en:
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import { mdiBell, mdiCalendarText, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImage, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
+import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
+import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
+import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import { provideApplicationStore } from '~/composables/application/store'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
@@ -468,7 +460,7 @@ const formatDate = (dateStr?: string) => {
 }
 
 const sections = computedDeepDiff(() => {
-  if (!application.value) return []
+  if (!application.value) return {} as Record<string, { title: string, tabs: any[] }>
 
   const metadataTabs = [
     { key: 'info', title: t('info'), icon: mdiInformation },
@@ -479,10 +471,10 @@ const sections = computedDeepDiff(() => {
   }
   metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiPaperclip })
 
-  const result: any[] = [
-    { title: t('metadata'), id: 'metadata', tabs: metadataTabs },
-    { title: t('render'), id: 'render', tabs: [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline }] }
-  ]
+  const result: Record<string, { title: string, tabs: any[] }> = {
+    metadata: { title: t('metadata'), tabs: metadataTabs },
+    render: { title: t('render'), tabs: [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline }] }
+  }
 
   const shareTabs = []
   if (can('getPermissions')) {
@@ -496,7 +488,7 @@ const sections = computedDeepDiff(() => {
     shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
   }
   if (shareTabs.length) {
-    result.push({ title: t('share'), id: 'share', tabs: shareTabs })
+    result.share = { title: t('share'), tabs: shareTabs }
   }
 
   if (can('readJournal')) {
@@ -509,15 +501,11 @@ const sections = computedDeepDiff(() => {
     if ($uiConfig.eventsIntegration && can('setPermissions')) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
-    result.push({ title: t('activity'), id: 'activity', tabs: activityTabs })
+    result.activity = { title: t('activity'), tabs: activityTabs }
   }
 
   return result
 })
-</script>
 
-<style>
-.application .v-tab {
-  font-weight: bold;
-}
-</style>
+const tocSections = computed(() => Object.entries(sections.value).map(([id, s]) => ({ id, title: s.title })))
+</script>

@@ -2,19 +2,15 @@
   <v-container v-if="remoteServiceEditFetch.data.value">
     <v-row class="remoteService">
       <v-col>
-        <template
-          v-for="section in sections"
-          :key="section.id"
-        >
           <df-section-tabs
-            v-if="section.id === 'metadata'"
-            :id="section.id"
+            v-if="sections.metadata"
+            id="metadata"
             :min-height="300"
             :svg="checklistSvg"
             svg-no-margin
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
+            :title="sections.metadata.title"
+            :tabs="sections.metadata.tabs"
+            :color="sections.metadata.color"
           >
             <template #content="{tab}">
               <v-tabs-window :model-value="tab">
@@ -33,14 +29,14 @@
             </template>
           </df-section-tabs>
           <df-section-tabs
-            v-if="section.id === 'configuration'"
-            :id="section.id"
+            v-if="sections.configuration"
+            id="configuration"
             :min-height="300"
             :svg="settingsSvg"
             svg-no-margin
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
+            :title="sections.configuration.title"
+            :tabs="sections.configuration.tabs"
+            :color="sections.configuration.color"
           >
             <template #content="{tab}">
               <v-tabs-window :model-value="tab">
@@ -54,14 +50,14 @@
           </df-section-tabs>
 
           <df-section-tabs
-            v-if="section.id === 'share'"
-            :id="section.id"
+            v-if="sections.share"
+            id="share"
             :svg="shareSvg"
             svg-no-margin
             :min-height="200"
-            :title="section.title"
-            :tabs="section.tabs"
-            :color="section.color"
+            :title="sections.share.title"
+            :tabs="sections.share.tabs"
+            :color="sections.share.color"
           >
             <template #content="{tab}">
               <v-container
@@ -96,7 +92,6 @@
               </v-tabs-window>
             </template>
           </df-section-tabs>
-        </template>
       </v-col>
     </v-row>
     <df-navigation-right>
@@ -116,7 +111,7 @@
         </v-list-item>
       </v-list>
       <remote-service-actions v-model="remoteServiceEditFetch.data.value" />
-      <df-toc :sections="sections" />
+      <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -186,39 +181,33 @@ const privateAccessHasDiff = computed(() => remoteServiceEditFetch.data.value?.p
 const virtualDatasetsHasDiff = computed(() => remoteServiceEditFetch.data.value?.virtualDatasets?.storageRatio !== remoteServiceEditFetch.serverData.value?.virtualDatasets?.storageRatio)
 
 const sections = computedDeepDiff(() => {
-  return [
-    {
+  return {
+    metadata: {
       title: t('metadata'),
-      id: 'metadata',
       color: infoHasDiff.value ? 'accent' : undefined,
       tabs: [
         { key: 'info', title: t('info'), icon: mdiInformation, appendIcon: infoHasDiff.value ? mdiAlert : undefined, color: infoHasDiff.value ? 'accent' : undefined },
-        { key: 'extensions', title: t('extensions'), icon: mdiMerge }]
+        { key: 'extensions', title: t('extensions'), icon: mdiMerge }
+      ]
     },
-    {
+    configuration: {
       title: t('configuration'),
-      id: 'configuration',
       color: configHasDiff.value ? 'accent' : undefined,
       tabs: [
         { key: 'params', title: t('params'), icon: mdiPencil, appendIcon: configHasDiff.value ? mdiAlert : undefined, color: configHasDiff.value ? 'accent' : undefined }
       ]
     },
-    {
+    share: {
       title: t('share'),
-      id: 'share',
       color: (privateAccessHasDiff.value || virtualDatasetsHasDiff.value) ? 'accent' : undefined,
       tabs: [
         { key: 'permissions', title: t('visibility'), icon: mdiSecurity, appendIcon: privateAccessHasDiff.value ? mdiAlert : undefined, color: privateAccessHasDiff.value ? 'accent' : undefined },
         remoteServiceEditFetch.data.value?.virtualDatasets ? { key: 'virtual-datasets', title: t('virtualDatasets'), icon: mdiPictureInPictureBottomRightOutline, appendIcon: virtualDatasetsHasDiff.value ? mdiAlert : undefined, color: virtualDatasetsHasDiff.value ? 'accent' : undefined } : null
       ]
     }
-  ]
+  }
 })
 
-</script>
+const tocSections = computed(() => Object.entries(sections.value).map(([id, s]) => ({ id, title: s.title })))
 
-<style>
-.remoteService .v-tab {
-  font-weight: bold;
-}
-</style>
+</script>

@@ -35,15 +35,11 @@
           indeterminate
         />
         <template v-else>
-          <div
-            v-for="section of sections"
-            :key="section.id"
-          >
             <df-section-tabs
-              v-if="section.id === 'info'"
-              :id="section.id"
+              v-if="sections.info"
+              id="info"
               :svg="infoSvg"
-              :title="section.title"
+              :title="sections.info.title"
             >
               <template #extension>
                 <p>
@@ -68,10 +64,10 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'licences'"
-              :id="section.id"
+              v-if="sections.licences"
+              id="licences"
               :svg="qualitySvg"
-              :title="section.title"
+              :title="sections.licences.title"
             >
               <template #extension>
                 <p>
@@ -96,11 +92,11 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'topics'"
-              :id="section.id"
+              v-if="sections.topics"
+              id="topics"
               :svg="flagsSvg"
               svg-no-margin
-              :title="section.title"
+              :title="sections.topics.title"
             >
               <template #extension>
                 <p v-if="$uiConfig.disableApplications">
@@ -128,11 +124,11 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'datasetsMetadata'"
-              :id="section.id"
+              v-if="sections.datasetsMetadata"
+              id="datasetsMetadata"
               :svg="checklist2Svg"
               svg-no-margin
-              :title="section.title"
+              :title="sections.datasetsMetadata.title"
             >
               <template #extension>
                 Configurez des métadonnées additionnelles pour vos jeux de données.
@@ -148,11 +144,11 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'api-keys'"
-              :id="section.id"
+              v-if="sections['api-keys']"
+              id="api-keys"
               :svg="securitySvg"
               svg-no-margin
-              :title="section.title"
+              :title="sections['api-keys'].title"
             >
               <template #extension>
                 <p>
@@ -171,11 +167,11 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'webhooks'"
-              :id="section.id"
+              v-if="sections.webhooks"
+              id="webhooks"
               :svg="wwwSvg"
               svg-no-margin
-              :title="section.title"
+              :title="sections.webhooks.title"
             >
               <template #extension>
                 <p>
@@ -201,11 +197,11 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'privateVocabulary'"
-              :id="section.id"
+              v-if="sections.privateVocabulary"
+              id="privateVocabulary"
               :svg="checklistSvg"
               svg-no-margin
-              :title="section.title"
+              :title="sections.privateVocabulary.title"
             >
               <template #extension>
                 <p>
@@ -238,11 +234,11 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'publicationSites'"
-              :id="section.id"
+              v-if="sections.publicationSites"
+              id="publicationSites"
               :svg="uiSvg"
               svg-no-margin
-              :title="section.title"
+              :title="sections.publicationSites.title"
             >
               <template #extension>
                 <p>
@@ -269,12 +265,12 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'agentChat'"
-              :id="section.id"
+              v-if="sections.agentChat"
+              id="agentChat"
               :svg="compatSvg"
               svg-no-margin
               color="admin"
-              :title="section.title"
+              :title="sections.agentChat.title"
             >
               <template #extension>
                 <p>
@@ -297,12 +293,12 @@
             </df-section-tabs>
 
             <df-section-tabs
-              v-if="section.id === 'compat'"
-              :id="section.id"
+              v-if="sections.compat"
+              id="compat"
               :svg="compatSvg"
               svg-no-margin
               color="admin"
-              :title="section.title"
+              :title="sections.compat.title"
             >
               <template #extension>
                 <p>
@@ -323,13 +319,12 @@
                 </v-container>
               </template>
             </df-section-tabs>
-          </div>
         </template>
       </v-col>
     </v-row>
 
     <df-navigation-right v-if="display.lgAndUp.value">
-      <df-toc :sections="sections" />
+      <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -407,57 +402,29 @@ const settingsAccountId = computed(() => {
 const { patch, settings, loading } = useSettingsStore(settingsAccount.value.type, settingsAccountId)
 
 const sections = computed(() => {
-  const sections = []
+  const result: Record<string, { title: string }> = {}
   if (!settingsAccount.value.department) {
-    sections.push({
-      id: 'info',
-      title: t('info')
-    })
-    sections.push({
-      id: 'licences',
-      title: t('licences')
-    })
-    sections.push({
-      id: 'topics',
-      title: t('topics')
-    })
-    sections.push({
-      id: 'datasetsMetadata',
-      title: t('datasetsMetadata')
-    })
-    sections.push({
-      id: 'privateVocabulary',
-      title: t('privateVocab')
-    })
+    result.info = { title: t('info') }
+    result.licences = { title: t('licences') }
+    result.topics = { title: t('topics') }
+    result.datasetsMetadata = { title: t('datasetsMetadata') }
+    result.privateVocabulary = { title: t('privateVocab') }
   }
   if (!$uiConfig.disablePublicationSites) {
-    sections.push({
-      id: 'publicationSites',
-      title: t('publicationSites')
-    })
+    result.publicationSites = { title: t('publicationSites') }
   }
-  sections.push({
-    id: 'api-keys',
-    title: t('apiKeys')
-  })
-  sections.push({
-    id: 'webhooks',
-    title: t('webhooks')
-  })
+  result['api-keys'] = { title: t('apiKeys') }
+  result.webhooks = { title: t('webhooks') }
   if ($uiConfig.agentsIntegration && session.user.value.adminMode) {
-    sections.push({
-      id: 'agentChat',
-      title: t('agentChat')
-    })
+    result.agentChat = { title: t('agentChat') }
   }
   if ($uiConfig.compatODS && session.user.value.adminMode) {
-    sections.push({
-      id: 'compat',
-      title: t('compat')
-    })
+    result.compat = { title: t('compat') }
   }
-  return sections
+  return result
 })
+
+const tocSections = computed(() => Object.entries(sections.value).map(([id, s]) => ({ id, title: s.title })))
 
 const accountDetailsFetch = useFetch<any>(`${$sitePath}/simple-directory/api/${session.account.value.type}s/${session.account.value.id}`)
 const departments = computed(() => {

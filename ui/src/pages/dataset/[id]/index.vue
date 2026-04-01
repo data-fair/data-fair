@@ -8,12 +8,12 @@
 
     <!-- Data section -->
     <df-section-tabs
-      v-if="dataSection"
-      :id="dataSection.id"
+      v-if="sections.data"
+      id="data"
       v-model="dataTab"
       :min-height="140"
-      :title="dataSection.title"
-      :tabs="dataSection.tabs"
+      :title="sections.data.title"
+      :tabs="sections.data.tabs"
       :svg="dataSvg"
     >
       <template #content="{ tab }">
@@ -169,11 +169,11 @@
 
     <!-- Share section -->
     <df-section-tabs
-      v-if="shareSection"
-      :id="shareSection.id"
+      v-if="sections.share"
+      id="share"
       :min-height="200"
-      :title="shareSection.title"
-      :tabs="shareSection.tabs"
+      :title="sections.share.title"
+      :tabs="sections.share.tabs"
       :svg="shareSvg"
     >
       <template #content="{ tab }">
@@ -237,12 +237,12 @@
 
     <!-- Activity section -->
     <df-section-tabs
-      v-if="activitySection"
-      :id="activitySection.id"
+      v-if="sections.activity"
+      id="activity"
       v-model="activityTab"
       :min-height="550"
-      :title="activitySection.title"
-      :tabs="activitySection.tabs"
+      :title="sections.activity.title"
+      :tabs="sections.activity.tabs"
       :svg="settingsSvg"
       svg-no-margin
     >
@@ -296,7 +296,7 @@
 
     <df-navigation-right>
       <dataset-actions />
-      <df-toc :sections="sections" />
+      <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -403,14 +403,10 @@ const traceabilityUrl = computed(() => {
   return `${window.location.origin}/events/embed/traceability?resource=${encodeURIComponent($apiPath + '/datasets/' + dataset.value.id)}`
 })
 
-const dataSection = computed(() => sections.value.find(s => s.id === 'data'))
-const shareSection = computed(() => sections.value.find(s => s.id === 'share'))
-const activitySection = computed(() => sections.value.find(s => s.id === 'activity'))
-
 const sections = computedDeepDiff(() => {
-  if (!dataset.value) return []
+  if (!dataset.value) return {} as Record<string, { title: string, tabs: any[] }>
   const d = dataset.value
-  const result: any[] = []
+  const result: Record<string, { title: string, tabs: any[] }> = {}
 
   if (d.finalizedAt || d.draftReason) {
     const dataTabs = []
@@ -422,11 +418,7 @@ const sections = computedDeepDiff(() => {
       dataTabs.push({ key: 'schema', title: t('schema'), icon: mdiTableCog })
     }
     if (dataTabs.length) {
-      result.push({
-        title: t('content'),
-        id: 'data',
-        tabs: dataTabs
-      })
+      result.data = { title: t('content'), tabs: dataTabs }
     }
   }
 
@@ -447,7 +439,7 @@ const sections = computedDeepDiff(() => {
       shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
     }
     if (shareTabs.length) {
-      result.push({ title: t('share'), id: 'share', tabs: shareTabs })
+      result.share = { title: t('share'), tabs: shareTabs }
     }
   }
 
@@ -464,15 +456,13 @@ const sections = computedDeepDiff(() => {
     if ($uiConfig.eventsIntegration && can('setPermissions').value) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
-    result.push({
-      title: t('activity'),
-      id: 'activity',
-      tabs: activityTabs
-    })
+    result.activity = { title: t('activity'), tabs: activityTabs }
   }
 
   return result
 })
+
+const tocSections = computed(() => Object.entries(sections.value).map(([id, s]) => ({ id, title: s.title })))
 </script>
 
 <style>
