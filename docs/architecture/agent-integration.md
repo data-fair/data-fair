@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 27 tools, only 7 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). All others are read-only.
+- **Read-heavy, write-light**: of 25 tools, only 7 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). All others are read-only.
 
 ### Activation flow
 
@@ -36,7 +36,7 @@ graph TB
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
             Tools["25 Tools"]
-            SubAgents["7 Subagents"]
+            SubAgents["8 Subagents"]
             TR --> Tools
             SR --> SubAgents
             FS --> TR
@@ -422,6 +422,24 @@ This subagent is automatically created by the VJSF (Vue JSON Schema Form) compon
 >
 > Does NOT write transform expressions — directs users to the expression_helper if needed.
 
+### 5.9 `data_quality_checker` - Data Quality Analyst
+
+- **Source**: `ui/src/composables/dataset/agent-data-quality-tools.ts`
+- **Model**: _(default)_
+- **Tools**: `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values`
+
+**System prompt (summary):**
+> You are a data quality analyst for Data Fair. You perform a systematic quality audit following a 6-step workflow:
+>
+> 1. **Schema**: understand column names, types, and sample data
+> 2. **Completeness**: check missing/empty value rates per column using value_count metric
+> 3. **Uniqueness**: detect duplicates using cardinality metric and aggregate grouping
+> 4. **Outliers**: analyze numeric columns with stats and percentiles, flag using IQR method
+> 5. **Format consistency**: sample text column values to detect mixed formats
+> 6. **Distribution anomalies**: check categorical columns for typos (rare values) and dominance (>90%)
+>
+> Produces a structured report with: Overview (quality score), Completeness, Uniqueness, Outliers, Format Issues, and Recommendations.
+
 ## 6. Action Buttons
 
 Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer and inject a pre-configured message to trigger a specific workflow.
@@ -501,6 +519,14 @@ Action buttons (`DfAgentChatAction`) are UI elements that open the chat drawer a
 - **Visible prompt**: "Optimize types and capabilities" / "Optimiser les types et capacités"
 - **Hidden context**: `The property_config_advisor subagent can help optimize column types and indexing capabilities. Ask the user what they need: type corrections, capability optimization for performance, or both.`
 
+### 6.10 Check Data Quality
+
+- **Action ID**: `check-data-quality`
+- **Location**: `ui/src/components/dataset/table/dataset-table.vue` (in the table toolbar, next to filter help button)
+- **Visible prompt**: "Check data quality" / "Vérifier la qualité de ces données"
+- **Hidden context**: Describes the current dataset (title, ID). Instructs the agent to ask the user if they want a full quality analysis or a focus on specific aspects (completeness, duplicates, outliers, format issues) before dispatching the `data_quality_checker` subagent.
+- **Condition**: `showAgentChat`
+
 ## 7. Tool Registration Lifecycle
 
 Tools are registered in the main application layout (`default-layout.vue`) using a Vue `effectScope`:
@@ -513,6 +539,7 @@ watchEffect:
       - useAgentNavigationTools (3 tools)
       - useAgentDatasetTools (2 tools)
       - useAgentDatasetDataTools (5 tools + 1 subagent)
+      - useAgentDataQualityTools (1 subagent)
       - useAgentGeoTools (2 tools)
       - useAgentApplicationTools (3 tools)
       - useAgentConnectorTools (0-4 tools, conditional)
@@ -536,6 +563,7 @@ The summary, description, expression, changes, schema annotation, and property c
 | `ui/src/composables/agent/utils.ts` | `createAgentTranslator`, `agentToolError` helpers |
 | `ui/src/composables/dataset/agent-tools.ts` | Dataset metadata tools (2) + `serializeDatasetInfo` |
 | `ui/src/composables/dataset/agent-data-tools.ts` | Dataset data query tools (5) + `dataset_data` subagent |
+| `ui/src/composables/dataset/agent-data-quality-tools.ts` | `data_quality_checker` subagent (reuses data query tools) |
 | `ui/src/composables/dataset/agent-summary-tools.ts` | Summary tools (2) + `dataset_summarizer` subagent |
 | `ui/src/composables/dataset/agent-description-tools.ts` | Description tools (1) + `dataset_description_writer` subagent |
 | `ui/src/composables/dataset/agent-changes-summary-tools.ts` | Changes tools (1) + `dataset_changes_summarizer` subagent |
@@ -547,7 +575,7 @@ The summary, description, expression, changes, schema annotation, and property c
 | `ui/src/pages/dataset/[id]/edit-metadata.vue` | `summarize-metadata-changes` action button |
 | `ui/src/components/dataset/dataset-extensions.vue` | `help-expression-{idx}` action buttons |
 | `ui/src/components/dataset/dataset-schema.vue` | `help-annotate-schema` and `help-configure-properties` action buttons |
-| `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` action button, `open_add_line_dialog` / `open_edit_line_dialog` tools |
+| `ui/src/components/dataset/table/dataset-table.vue` | `help-filter-table` and `check-data-quality` action buttons, `open_add_line_dialog` / `open_edit_line_dialog` tools |
 | `ui/src/components/dataset/form/dataset-edit-line-form.vue` | VJSF webmcp form for line add/edit (`editLine_form` sub-agent) |
 | `ui/src/pages/dataset/[id]/edit-data.vue` | `help-edit-data` action button |
 | `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF sub-agent |

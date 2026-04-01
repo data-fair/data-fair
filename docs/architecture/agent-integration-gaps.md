@@ -16,7 +16,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 - **Geolocation**: geocode, user location (2 tools)
 - **Connectors**: list/describe processings and catalogs (0-4 conditional tools)
 
-**Total: 25 tools, 7 subagents, 7 action buttons**
+**Total: 25 tools, 8 subagents, 8 action buttons**
 
 ---
 
@@ -80,13 +80,11 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 
 ---
 
-### 7. Data Quality / Anomaly Detection
+### ~~7. Data Quality / Anomaly Detection~~ ✓
 
-**Current state:** Data query tools let the agent search/aggregate data, but no tool targets quality analysis specifically.
+**Implemented:** `agent-data-quality-tools.ts` provides a `data_quality_checker` subagent that performs systematic quality analysis (completeness, duplicates, outliers, format issues) using the existing data query tools. Action button "Check data quality" on `dataset-table.vue`.
 
-**Opportunity:** An action button "Check data quality" that uses a specialized subagent prompt to check null rates, duplicate values, outliers, and format inconsistencies. Could reuse existing data tools with a dedicated subagent.
-
-**Location:** `ui/src/pages/dataset/[id]/data.vue` or `ui/src/components/dataset/table/dataset-table.vue`
+**Location:** `ui/src/composables/dataset/agent-data-quality-tools.ts`
 
 ---
 
@@ -169,7 +167,7 @@ This document identifies areas of Data Fair where AI assistance would be valuabl
 | **High** | 3. Schema annotation | High — very tedious manually | Med |
 | **High** | 14. Dataset journal tool | Med-High — debugging/auditing | Low — read-only API call |
 | **High** | 11. Storage stats tool | Med — account management | Low — read-only API call |
-| **Med** | 7. Data quality analysis | High — unique value | Med — subagent prompt design |
+| ~~Done~~ | ~~7. Data quality analysis~~ | ~~High — unique value~~ | ~~Med — subagent prompt design~~ |
 | **Med** | 8. App creation guidance | Med — occasional use | Low — leverages existing tools |
 | **Med** | 9. Dataset creation guidance | Med — occasional use | Low — conversational only |
 | **Med** | 12. Processing logs | Med — debugging | Med — new API calls |

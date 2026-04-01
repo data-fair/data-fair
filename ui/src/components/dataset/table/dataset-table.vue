@@ -39,6 +39,13 @@
       :btn-props="{ class: 'mx-1' }"
       :title="t('helpFilterPrompt')"
     />
+    <df-agent-chat-action
+      action-id="check-data-quality"
+      :visible-prompt="t('checkDataQualityPrompt')"
+      :hidden-context="dataQualityContext"
+      :btn-props="{ class: 'mx-1' }"
+      :title="t('checkDataQualityPrompt')"
+    />
     <v-btn-group
       divided
       density="compact"
@@ -376,12 +383,14 @@
     deleteLine: Supprimer une ligne
     deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
     helpFilterPrompt: Aide-moi à filtrer ces données
+    checkDataQualityPrompt: Vérifier la qualité de ces données
   en:
     cancel: Cancel
     delete: Delete
     save: Save
     editLine: Edit a line
     helpFilterPrompt: Help me filter this data
+    checkDataQualityPrompt: Check data quality
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost definitively
 </i18n>
@@ -466,6 +475,12 @@ const filterHelpContext = computed(() => {
   if (!d) return ''
   const activeFilters = filters.value.map(f => `${f.property.title || f.property.key} ${f.operator} ${f.formattedValue || f.value}`).join(', ')
   return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent. After exploring, use the navigate tool with query parameters to apply filters to this table page.`
+})
+
+const dataQualityContext = computed(() => {
+  const d = dataset.value
+  if (!d) return ''
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}). They clicked the "Check data quality" button. Before running the data_quality_checker subagent, ask the user if they want a full quality analysis or if they want to focus on specific aspects (completeness, duplicates, outliers, or format issues). Once the user confirms, dispatch the data_quality_checker subagent with the dataset ID.`
 })
 
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
