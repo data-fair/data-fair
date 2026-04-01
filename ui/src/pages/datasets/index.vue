@@ -11,8 +11,6 @@
         cols="12"
         sm="6"
         md="4"
-        xxl="3"
-        class="d-flex"
       >
         <v-skeleton-loader
           class="w-100"
@@ -38,24 +36,24 @@
           color="grey"
           class="mb-4"
         >
-          {{ mdiImageMultiple }}
+          {{ mdiDatabaseOff }}
         </v-icon>
         <div class="text-title-medium">
-          {{ t('noApplication') }}
+          {{ t('noDataset') }}
         </div>
         <v-btn
           v-if="canContribDep"
           color="primary"
           :prepend-icon="mdiPlus"
-          to="/new-application"
+          to="/new-dataset"
           class="mt-4"
         >
-          {{ t('newApplication') }}
+          {{ t('createDataset') }}
         </v-btn>
       </template>
     </div>
 
-    <!-- Content: results count + grid/list -->
+    <!-- Content: grid/list -->
     <template v-else>
       <!-- Grid view -->
       <v-row
@@ -63,16 +61,14 @@
         class="d-flex align-stretch"
       >
         <v-col
-          v-for="application in catalog.displayedItems.value"
-          :key="application.id"
+          v-for="dataset in catalog.displayedItems.value"
+          :key="dataset.id"
           cols="12"
           sm="6"
           md="4"
-          xxl="3"
-          class="d-flex"
         >
-          <application-card
-            :application="application"
+          <dataset-card
+            :dataset="dataset"
             :show-owner="showOwner"
           />
         </v-col>
@@ -83,8 +79,6 @@
             cols="12"
             sm="6"
             md="4"
-            xxl="3"
-            class="d-flex"
           >
             <v-skeleton-loader
               class="w-100"
@@ -100,10 +94,10 @@
         v-else
         lines="two"
       >
-        <application-list-item
-          v-for="application in catalog.displayedItems.value"
-          :key="application.id"
-          :application="application"
+        <dataset-list-item
+          v-for="dataset in catalog.displayedItems.value"
+          :key="dataset.id"
+          :dataset="dataset"
           :show-owner="showOwner"
         />
         <template v-if="catalog.loading.value && catalog.initialized.value">
@@ -124,10 +118,10 @@
 
     <!-- Right navigation: actions, search, sort, facets, view toggle -->
     <df-navigation-right v-if="catalog.initialized.value">
-      <!-- New application action -->
+      <!-- New dataset action -->
       <v-list-item
         v-if="canContribDep"
-        to="/new-application"
+        to="/new-dataset"
         link
       >
         <template #prepend>
@@ -136,7 +130,7 @@
             :icon="mdiPlusCircle"
           />
         </template>
-        {{ t('newApplication') }}
+        {{ t('createDataset') }}
       </v-list-item>
 
       <!-- Search field -->
@@ -148,25 +142,28 @@
       <!-- Sort select -->
       <v-select
         v-model="sort"
+        class="mt-4 mx-4"
         :label="t('sort')"
         :items="sortItems"
-        class="mt-4 mx-4"
         :rounded="false"
       />
 
       <!-- Facets -->
-      <application-facets
+      <dataset-facets
         v-model:owner="facetOwner"
-        v-model:base-application="facetBaseApplication"
+        v-model:status="facetStatus"
+        v-model:draft-status="facetDraftStatus"
         v-model:visibility="facetVisibility"
         v-model:topics="facetTopics"
         v-model:publication-sites="facetPublicationSites"
         v-model:requested-publication-sites="facetRequestedPublicationSites"
+        v-model:services="facetServices"
+        v-model:concepts="facetConcepts"
         :facets="catalog.facets.value"
         class="mt-4 mx-4"
       />
 
-      <!-- View toggle -->
+      <!-- View toggle (below filters) -->
       <div class="d-flex justify-end mx-4 mt-4">
         <v-btn-toggle
           v-model="viewMode"
@@ -188,9 +185,9 @@
 </template>
 
 <script setup lang="ts">
-import type { Application } from '#api/types'
+import type { Dataset } from '#api/types'
 import { useDisplay } from 'vuetify'
-import { mdiImageMultiple, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
+import { mdiDatabaseOff, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -217,7 +214,7 @@ const sort = useStringSearchParam('sort', 'createdAt:-1')
 // View mode persisted per user
 const viewModeKey = computed(() => {
   const a = account.value
-  return a ? `${a.type}:${a.id}:applications:render-mode` : 'df-applications-view'
+  return a ? `${a.type}:${a.id}:datasets:render-mode` : 'df-datasets-view'
 })
 const viewMode = ref(localStorage.getItem(viewModeKey.value) || 'grid')
 watch(viewMode, (v) => { localStorage.setItem(viewModeKey.value, v) })
@@ -227,11 +224,14 @@ const pageSize = computed(() => ({ xs: 12, sm: 12, md: 12, lg: 15, xl: 24, xxl: 
 
 // Facet filter URL params
 const facetOwner = useStringsArraySearchParam('owner')
-const facetBaseApplication = useStringsArraySearchParam('base-application')
+const facetStatus = useStringsArraySearchParam('status')
+const facetDraftStatus = useStringsArraySearchParam('draftStatus')
 const facetVisibility = useStringsArraySearchParam('visibility')
 const facetTopics = useStringsArraySearchParam('topics')
 const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
+const facetServices = useStringsArraySearchParam('services')
+const facetConcepts = useStringsArraySearchParam('concepts')
 
 // Owner scoping: default to current account unless facet overrides
 const ownerParam = computed(() => {
@@ -245,31 +245,34 @@ const ownerParam = computed(() => {
 
 const showOwner = computed(() => !!facetOwner.value?.length)
 
-const applicationsQuery = computed(() => {
+const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,updatedAt,publicationSites,topics,visibility,owner,url',
+    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason',
     sort: sort.value,
   }
   if (q.value) params.q = q.value
   if (ownerParam.value) params.owner = ownerParam.value
-  if (facetBaseApplication.value?.length) params['base-application'] = facetBaseApplication.value.join(',')
+  if (facetStatus.value?.length) params.status = facetStatus.value.join(',')
+  if (facetDraftStatus.value?.length) params.draftStatus = facetDraftStatus.value.join(',')
   if (facetVisibility.value?.length) params.visibility = facetVisibility.value.join(',')
   if (facetTopics.value?.length) params.topics = facetTopics.value.join(',')
   if (facetPublicationSites.value?.length) params.publicationSites = facetPublicationSites.value.join(',')
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
+  if (facetServices.value?.length) params.services = facetServices.value.join(',')
+  if (facetConcepts.value?.length) params.concepts = facetConcepts.value.join(',')
   return params
 })
 
-const catalog = useCatalogList<Application>({
-  fetchUrl: computed(() => $apiPath + '/applications'),
-  query: applicationsQuery,
-  facetsFields: 'visibility,topics,publicationSites,requestedPublicationSites,base-application,owner',
+const catalog = useCatalogList<Dataset>({
+  fetchUrl: computed(() => $apiPath + '/datasets'),
+  query: datasetsQuery,
+  facetsFields: 'status,visibility,topics,publicationSites,requestedPublicationSites,services,concepts,owner,draftStatus',
   pageSize,
 })
 
 // Breadcrumb updates
 watch(() => catalog.totalCount.value, (count) => {
-  breadcrumbs.receive({ breadcrumbs: [{ text: t('applications', { count }) }] })
+  breadcrumbs.receive({ breadcrumbs: [{ text: t('datasets', { count }) }] })
 }, { immediate: true })
 
 const sortItems = computed(() => [
@@ -277,6 +280,8 @@ const sortItems = computed(() => [
   { title: t('sortCreatedAtAsc'), value: 'createdAt:1' },
   { title: t('sortUpdatedAtDesc'), value: 'updatedAt:-1' },
   { title: t('sortUpdatedAtAsc'), value: 'updatedAt:1' },
+  { title: t('sortDataUpdatedAtDesc'), value: 'dataUpdatedAt:-1' },
+  { title: t('sortDataUpdatedAtAsc'), value: 'dataUpdatedAt:1' },
   { title: t('sortTitleAsc'), value: 'title:1' },
   { title: t('sortTitleDesc'), value: 'title:-1' },
 ])
@@ -285,26 +290,30 @@ const sortItems = computed(() => [
 <i18n lang="yaml">
 fr:
   sort: Trier par
-  newApplication: Créer une nouvelle application
-  noApplication: Vous n'avez pas encore configuré d'application.
+  createDataset: Créer un nouveau jeu de données
+  noDataset: Vous n'avez pas encore créé de jeu de données.
   noResult: Aucun résultat ne correspond à la recherche.
-  applications: "{count} applications"
   sortCreatedAtDesc: Création (plus récent)
   sortCreatedAtAsc: Création (plus ancien)
   sortUpdatedAtDesc: Mise à jour (plus récente)
   sortUpdatedAtAsc: Mise à jour (plus ancienne)
+  sortDataUpdatedAtDesc: Données mises à jour (plus récentes)
+  sortDataUpdatedAtAsc: Données mises à jour (plus anciennes)
   sortTitleAsc: Titre (A → Z)
   sortTitleDesc: Titre (Z → A)
+  datasets: "{count} jeux de données"
 en:
   sort: Sort by
-  newApplication: Create a new application
-  noApplication: You haven't configured any application yet.
+  createDataset: Create a dataset
+  noDataset: You haven't created a dataset yet.
   noResult: No result matches the search.
-  applications: "{count} applications"
   sortCreatedAtDesc: Creation (newest)
   sortCreatedAtAsc: Creation (oldest)
   sortUpdatedAtDesc: Update (newest)
   sortUpdatedAtAsc: Update (oldest)
+  sortDataUpdatedAtDesc: Data update (newest)
+  sortDataUpdatedAtAsc: Data update (oldest)
   sortTitleAsc: Title (A → Z)
   sortTitleDesc: Title (Z → A)
+  datasets: "{count} datasets"
 </i18n>

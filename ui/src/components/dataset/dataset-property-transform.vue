@@ -62,7 +62,14 @@
           variant="tonal"
           class="mb-4"
         >
-          <p v-html="/*eslint-disable-line vue/no-v-html*/t('exprEvalHelp')" />
+          <i18n-t keypath="exprEvalHelp" tag="p">
+            <template #link>
+              <a
+                href="https://github.com/silentmatt/expr-eval"
+                target="_blank"
+              >expr-eval</a>
+            </template>
+          </i18n-t>
         </v-alert>
 
         <v-text-field
@@ -86,7 +93,7 @@ fr:
   expr: Expression
   typeOverrideHelp1: Vous pouvez surcharger le type de cette colonne. De cette manière vous pouvez définir un type différent de celui détecté automatiquement depuis l'analyse du fichier.
   typeOverrideHelp2: Si le type choisi ne peut pas être obtenu à partir des données brutes vous pouvez saisir une expression de transformation ci-dessous.
-  exprEvalHelp: "Appliquez une transformation aux données de cette colonne quand elles sont chargées. Une expression (ou formule) est utilisée pour transformer chaque valeur. Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\" target=\"_blank\">expr-eval</a>. La valeur à transformer est passée en paramètre avec le nom \"value\"."
+  exprEvalHelp: 'Appliquez une transformation aux données de cette colonne quand elles sont chargées. Une expression (ou formule) est utilisée pour transformer chaque valeur. Elle doit suivre la syntaxe du module {link}. La valeur à transformer est passée en paramètre avec le nom "value".'
 en:
   transform: Transformation
   overrideType: Override type
@@ -94,7 +101,7 @@ en:
   expr: Expression
   typeOverrideHelp1: You can override the type of this column. This way you can define a type different from the one automatically detected from the file analysis.
   typeOverrideHelp2: If the chosen type cannot be obtained from the raw data you can enter a transformation expression below.
-  exprEvalHelp: "Apply a transformation to the data in this column when it is loaded. An expression (or formula) is used to transform each value. It must follow the syntax of the <a href=\"https://github.com/silentmatt/expr-eval\" target=\"_blank\">expr-eval</a> module. The value to transform is passed as a parameter with the name \"value\"."
+  exprEvalHelp: 'Apply a transformation to the data in this column when it is loaded. An expression (or formula) is used to transform each value. It must follow the syntax of the {link} module. The value to transform is passed as a parameter with the name "value".'
 </i18n>
 
 <script setup lang="ts">

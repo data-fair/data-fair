@@ -9,14 +9,21 @@
       v-if="remoteService.apiDoc?.externalDocs?.url"
       :href="remoteService.apiDoc.externalDocs.url"
       target="_blank"
-      :prepend-icon="mdiInformation"
+      link
     >
-      <v-list-item-title>{{ t('externalDoc') }}</v-list-item-title>
+      <template #prepend>
+        <v-icon
+          :icon="mdiInformation"
+          color="primary"
+        />
+      </template>
+      {{ t('externalDoc') }}
     </v-list-item>
 
     <v-list-item
       :href="`/data-fair/remote-service/${remoteService.id}/api-doc`"
       target="_top"
+      link
     >
       <template #prepend>
         <v-icon
@@ -24,17 +31,22 @@
           :icon="mdiCloud"
         />
       </template>
-      <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
+      {{ t('useAPI') }}
     </v-list-item>
 
     <v-list-item
       v-if="remoteService.url"
       color="admin"
       :disabled="refresh.loading.value"
-      :prepend-icon="mdiRefresh"
       @click="refresh.execute()"
     >
-      <v-list-item-title>{{ t('updateAPI') }}</v-list-item-title>
+      <template #prepend>
+        <v-icon
+          :icon="mdiRefresh"
+          color="primary"
+        />
+      </template>
+      {{ t('updateAPI') }}
     </v-list-item>
 
     <!--

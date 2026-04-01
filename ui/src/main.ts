@@ -13,7 +13,6 @@ import { createI18n } from 'vue-i18n'
 import App from './App.vue'
 import dFrameContent from '@data-fair/frame/lib/vue-router/d-frame-content.js'
 import '@data-fair/frame/lib/d-frame.js'
-import { useFrameServer } from '@data-fair/lib-vue-agents'
 import debugModule from 'debug'
 import DOMPurify from 'dompurify'
 
@@ -60,5 +59,4 @@ const debug = debugModule('df:main');
 
   app.directive('safe-html', vSafeHtml)
   app.mount('#app')
-  useFrameServer('data-fair')
 })()

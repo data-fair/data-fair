@@ -1,70 +1,106 @@
 <template>
   <v-card
     :to="`/dataset/${dataset.id}`"
-    class="w-100 h-100 d-flex flex-column"
+    class="h-100 d-flex flex-column"
   >
-    <v-card-title class="text-body-large font-weight-bold text-truncate">
-      {{ dataset.title || dataset.id }}
-    </v-card-title>
-    <v-card-text class="flex-grow-1">
-      <!-- Type badges -->
-      <div class="d-flex flex-wrap ga-1 mb-2">
-        <v-chip
-          v-if="dataset.isVirtual"
-          size="x-small"
-          color="primary"
-          variant="tonal"
-        >
+    <v-card-item class="text-primary">
+      <template #title>
+        <span class="font-weight-bold">{{ dataset.title || dataset.id }}</span>
+      </template>
+      <template #append>
+        <owner-avatar
+          v-if="showOwner && dataset.owner"
+          :owner="dataset.owner"
+        />
+      </template>
+    </v-card-item>
+    <v-divider />
+    <v-card-text class="pa-0 flex-grow-1">
+      <v-list
+        density="compact"
+        style="background-color: inherit;"
+      >
+        <v-list-item v-if="dataset.visibility === 'public'">
+          <template #prepend>
+            <v-icon
+              :icon="mdiLockOpen"
+              color="primary"
+            />
+          </template>
+          {{ t('public') }}
+        </v-list-item>
+        <v-list-item v-else-if="dataset.visibility">
+          <template #prepend>
+            <v-icon
+              :icon="mdiLock"
+              color="warning"
+            />
+          </template>
+          {{ t('private') }}
+        </v-list-item>
+        <v-list-item v-if="dataset.isVirtual">
+          <template #prepend>
+            <v-icon
+              :icon="mdiPictureInPictureBottomRightOutline"
+              color="primary"
+            />
+          </template>
           {{ t('virtual') }}
-        </v-chip>
-        <v-chip
-          v-if="dataset.isRest"
-          size="x-small"
-          color="primary"
-          variant="tonal"
-        >
+        </v-list-item>
+        <v-list-item v-if="dataset.isRest">
+          <template #prepend>
+            <v-icon
+              :icon="mdiAllInclusive"
+              color="primary"
+            />
+          </template>
           {{ t('editable') }}
-        </v-chip>
-        <v-chip
-          v-if="dataset.isMetaOnly"
-          size="x-small"
-          color="primary"
-          variant="tonal"
-        >
+        </v-list-item>
+        <v-list-item v-if="dataset.isMetaOnly">
+          <template #prepend>
+            <v-icon
+              :icon="mdiInformationOutline"
+              color="primary"
+            />
+          </template>
           {{ t('metaOnly') }}
-        </v-chip>
-        <v-chip
-          v-if="dataset.status === 'draft'"
-          size="x-small"
-          color="warning"
-          variant="tonal"
-        >
+        </v-list-item>
+        <v-list-item v-if="dataset.status === 'draft'">
+          <template #prepend>
+            <v-icon
+              :icon="mdiProgressWrench"
+              color="warning"
+            />
+          </template>
           {{ t('draft') }}
-        </v-chip>
-        <v-chip
-          v-if="dataset.status === 'error'"
-          size="x-small"
-          color="error"
-          variant="tonal"
-        >
+        </v-list-item>
+        <v-list-item v-if="dataset.status === 'error'">
+          <template #prepend>
+            <v-icon
+              :icon="mdiAlert"
+              color="error"
+            />
+          </template>
           {{ t('error') }}
-        </v-chip>
-      </div>
-      <div
-        v-if="fileInfo"
-        class="text-body-medium text-medium-emphasis mb-1"
-      >
-        {{ fileInfo }}
-      </div>
-      <div
-        v-if="dataset.count != null"
-        class="text-body-medium text-medium-emphasis mb-1"
-      >
-        {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
-      </div>
+        </v-list-item>
+        <v-list-item v-if="fileInfo">
+          <template #prepend>
+            <v-icon :icon="mdiFile" />
+          </template>
+          {{ fileInfo }}
+        </v-list-item>
+        <v-list-item v-if="dataset.count != null">
+          <template #prepend>
+            <v-icon :icon="mdiViewHeadline" />
+          </template>
+          {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
+        </v-list-item>
+      </v-list>
+    </v-card-text>
+    <v-card-subtitle class="text-body-small pb-3">
       <div
         v-if="showTopics && dataset.topics?.length"
-        class="d-flex flex-wrap ga-1 mt-1"
+        class="d-flex flex-wrap ga-1 mb-1"
       >
         <v-chip
           v-for="topic in dataset.topics"
@@ -76,18 +112,6 @@
           {{ topic.title }}
         </v-chip>
       </div>
-    </v-card-text>
-    <v-card-subtitle class="text-body-small pb-3 d-flex align-center">
-      <span
-        v-if="dataset.visibility"
-        class="mr-2 d-inline-flex"
-      >
-        <resource-visibility
-          :visibility="dataset.visibility"
-          size="small"
-        />
-      </span>
-      <span v-if="showOwner && dataset.owner">{{ ownerName }} · </span>
       <span v-if="dataset.updatedAt">{{ t('updatedAt', { date: formatDate(dataset.updatedAt) }) }}</span>
     </v-card-subtitle>
   </v-card>
@@ -96,6 +120,18 @@
 <script setup lang="ts">
 import type { Dataset } from '#api/types'
 import truncateMiddle from 'truncate-middle'
+import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
+import {
+  mdiLockOpen,
+  mdiLock,
+  mdiPictureInPictureBottomRightOutline,
+  mdiAllInclusive,
+  mdiInformationOutline,
+  mdiProgressWrench,
+  mdiAlert,
+  mdiFile,
+  mdiViewHeadline,
+} from '@mdi/js'
 
 const { t, locale } = useI18n()
 
@@ -119,12 +155,6 @@ const fileInfo = computed(() => {
   return info
 })
 
-const ownerName = computed(() => {
-  const o = props.dataset.owner
-  if (!o) return ''
-  return o.departmentName || o.name || o.id
-})
-
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString(locale.value)
 }
@@ -132,6 +162,8 @@ const formatDate = (dateStr: string) => {
 
 <i18n lang="yaml">
 fr:
+  public: Public
+  private: Privé
   virtual: Virtuel
   editable: Éditable
   metaOnly: Métadonnées
@@ -140,6 +172,8 @@ fr:
   records: "0 enregistrement | 1 enregistrement | {count} enregistrements"
   updatedAt: Mis à jour le {date}
 en:
+  public: Public
+  private: Private
   virtual: Virtual
   editable: Editable
   metaOnly: Metadata only

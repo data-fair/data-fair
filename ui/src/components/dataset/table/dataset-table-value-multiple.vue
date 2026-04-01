@@ -1,35 +1,26 @@
 <template>
   <v-chip-group
+    :class="dense ? 'py-0' : ''"
     style="max-width:500px;"
-    :class="{'dense-value': dense}"
   >
     <v-chip
       v-for="(value, i) in extendedValues"
       :key="i"
-      :class="{'my-0': true, 'pr-1': !noInteraction && value.filterable && dense, 'pr-2': !noInteraction && value.filterable && !dense}"
-      :color="hovered === value ? 'primary' : 'default'"
+      :text="value.formatted"
+      :base-color="hovered === value ? 'primary' : 'default'"
       :size="dense ? 'small' : undefined"
-      @click="emit('filter', value)"
+      :append-icon="!noInteraction && value.filterable && !value.displayDetail && filter?.value !== value.raw && hovered === value ? mdiFilterVariant : undefined"
+      @click="!noInteraction && value.filterable && !value.displayDetail && filter?.value !== value.raw && hovered === value &&emit('filter', value)"
       @mouseenter="emit('hoverstart', markRaw(value))"
       @mouseleave="emit('hoverstop')"
-    >
-      <span>
-        {{ value.formatted }}
-        <v-icon
-          v-if="!noInteraction && value.filterable && !value.displayDetail && filter?.value !== value.raw"
-          :style="{width: '14px'}"
-          :size="dense ? 14 : 18"
-          :icon="hovered === value ? mdiFilterVariant : undefined"
-        />
-      </span>
-    </v-chip>
+    />
   </v-chip-group>
 </template>
 
 <script setup lang="ts">
-import { type SchemaProperty } from '#api/types'
-import { type DatasetFilter } from '../../composables/dataset/filters'
-import { type ExtendedResultValue } from '../../composables/dataset/lines'
+import type { SchemaProperty } from '#api/types'
+import type { DatasetFilter } from '../../../composables/dataset/filters'
+import type { ExtendedResultValue } from '../../../composables/dataset/lines'
 import { mdiFilterVariant } from '@mdi/js'
 
 const { values: extendedValues } = defineProps({
@@ -48,10 +39,3 @@ const emit = defineEmits<{
   hoverstop: []
 }>()
 </script>
-
-<style>
-.v-chip-group.dense-value .v-slide-group__content {
-  padding-top: 0;
-  padding-bottom: 0;
-}
-</style>

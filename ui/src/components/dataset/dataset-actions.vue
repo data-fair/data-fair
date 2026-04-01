@@ -11,6 +11,7 @@
         :key="dataFile.key"
         :disabled="!can('downloadFullData').value"
         :href="dataFile.url"
+        link
       >
         <template #prepend>
           <v-icon
@@ -18,13 +19,14 @@
             color="primary"
           />
         </template>
-        <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
+        {{ dataFile.title }}
       </v-list-item>
     </template>
 
     <v-list-item
       v-if="dataset.isRest && user?.adminMode"
       :href="resourceUrl + '/raw'"
+      link
     >
       <template #prepend>
         <v-icon
@@ -32,7 +34,7 @@
           color="admin"
         />
       </template>
-      <v-list-item-title>{{ t('downloadRawRest') }}</v-list-item-title>
+      {{ t('downloadRawRest') }}
       <v-list-item-subtitle>{{ t('downloadRawRestSubtitle') }}</v-list-item-subtitle>
     </v-list-item>
 
@@ -40,14 +42,17 @@
       v-if="can('writeData').value && !dataset.isRest && !dataset.isVirtual && !dataset.isMetaOnly"
     >
       <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
+        <v-list-item
+          v-bind="activatorProps"
+          link
+        >
           <template #prepend>
             <v-icon
               :icon="mdiFileUpload"
               color="primary"
             />
           </template>
-          <v-list-item-title>{{ t('updateFile') }}</v-list-item-title>
+          {{ t('updateFile') }}
         </v-list-item>
       </template>
     </dataset-upload-dialog>
@@ -57,6 +62,7 @@
     <v-list-item
       v-if="can('writeDescription').value"
       :to="`/dataset/${dataset.id}/edit-metadata`"
+      link
     >
       <template #prepend>
         <v-icon
@@ -64,12 +70,13 @@
           color="primary"
         />
       </template>
-      <v-list-item-title>{{ t('editMetadata') }}</v-list-item-title>
+      {{ t('editMetadata') }}
     </v-list-item>
 
     <v-list-item
       v-if="dataset.isRest && can('createLine').value"
       :to="`/dataset/${dataset.id}/edit-data`"
+      link
     >
       <template #prepend>
         <v-icon
@@ -77,12 +84,13 @@
           color="primary"
         />
       </template>
-      <v-list-item-title>{{ t('editData') }}</v-list-item-title>
+      {{ t('editData') }}
     </v-list-item>
 
     <v-list-item
       v-if="can('readApiDoc').value && dataset.finalizedAt"
       :to="`/dataset/${dataset.id}/api-doc`"
+      link
     >
       <template #prepend>
         <v-icon
@@ -90,7 +98,7 @@
           color="primary"
         />
       </template>
-      <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
+      {{ t('useAPI') }}
     </v-list-item>
 
     <owner-change-dialog
@@ -100,30 +108,20 @@
       @changed="router.push('/datasets')"
     >
       <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
+        <v-list-item
+          v-bind="activatorProps"
+          link
+        >
           <template #prepend>
             <v-icon
               :icon="mdiAccountSwitch"
               color="admin"
             />
           </template>
-          <v-list-item-title>{{ t('changeOwner') }}</v-list-item-title>
+          {{ t('changeOwner') }}
         </v-list-item>
       </template>
     </owner-change-dialog>
-
-    <v-list-item
-      v-if="can('writeDescriptionBreaking').value"
-      @click="showSlugDialog = true"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiPencilOutline"
-          color="primary"
-        />
-      </template>
-      <v-list-item-title>{{ t('editSlug') }}</v-list-item-title>
-    </v-list-item>
 
     <v-list-item
       v-if="can('delete').value"
@@ -135,7 +133,7 @@
           color="warning"
         />
       </template>
-      <v-list-item-title>{{ t('delete') }}</v-list-item-title>
+      {{ t('delete') }}
     </v-list-item>
 
     <v-list-item
@@ -148,7 +146,7 @@
           color="warning"
         />
       </template>
-      <v-list-item-title>{{ t('deleteAllLines') }}</v-list-item-title>
+      {{ t('deleteAllLines') }}
     </v-list-item>
   </v-list>
 
@@ -210,50 +208,6 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
-
-  <v-dialog
-    v-model="showSlugDialog"
-    max-width="500"
-    @update:model-value="val => { if (val) newSlug = dataset?.slug ?? '' }"
-  >
-    <v-card>
-      <v-card-title>{{ t('editSlug') }}</v-card-title>
-      <v-card-text>
-        <v-alert
-          type="warning"
-          variant="outlined"
-          class="mb-4"
-        >
-          {{ t('slugWarning') }}
-        </v-alert>
-        <v-text-field
-          v-model="newSlug"
-          :label="t('newSlug')"
-          variant="outlined"
-          density="compact"
-          hide-details
-          :rules="[val => !!val, val => !!val?.match(slugRegex)]"
-        />
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          @click="showSlugDialog = false"
-        >
-          {{ t('cancel') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          variant="flat"
-          :disabled="newSlug === dataset?.slug || !newSlug || !newSlug.match(slugRegex)"
-          @click="confirmSlug"
-        >
-          {{ t('validate') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
 </template>
 
 <i18n lang="yaml">
@@ -267,9 +221,6 @@ fr:
   editData: Éditer les données
   useAPI: Utiliser l'API
   changeOwner: Changer le propriétaire
-  editSlug: Modifier l'identifiant
-  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
-  newSlug: Nouvel identifiant
   cancel: Annuler
   validate: Valider
   delete: Supprimer
@@ -290,9 +241,6 @@ en:
   editData: Edit data
   useAPI: Use the API
   changeOwner: Change owner
-  editSlug: Edit slug
-  slugWarning: "This unique and readable id is used in portal pages URLs, data APIs, etc. Warning: if you modify it you can break existing links and applications."
-  newSlug: New slug
   cancel: Cancel
   validate: Validate
   delete: Delete
@@ -314,7 +262,6 @@ import {
   mdiFileDownload,
   mdiFileUpload,
   mdiPencil,
-  mdiPencilOutline,
   mdiProgressDownload,
   mdiTableEdit
 } from '@mdi/js'
@@ -322,7 +269,7 @@ import useDatasetStore from '~/composables/dataset/store'
 
 const { t } = useI18n()
 const router = useRouter()
-const { dataset, dataFiles, can, remove, id, resourceUrl, patchDataset } = useDatasetStore()
+const { dataset, dataFiles, can, remove, id, resourceUrl } = useDatasetStore()
 const session = useSession()
 const user = computed(() => session.state.user)
 
@@ -338,14 +285,5 @@ const confirmRemove = async () => {
 const confirmDeleteAllLines = async () => {
   showDeleteAllLinesDialog.value = false
   await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
-}
-
-const slugRegex = /^[a-z0-9]{1}[a-z0-9_-]*[a-z0-9]{1}$/
-const showSlugDialog = ref(false)
-const newSlug = ref('')
-
-const confirmSlug = async () => {
-  showSlugDialog.value = false
-  await patchDataset.execute({ slug: newSlug.value })
 }
 </script>

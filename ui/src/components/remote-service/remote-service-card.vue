@@ -2,38 +2,74 @@
 <template>
   <v-card
     :to="`/remote-services/${encodeURIComponent(remoteService.id ?? '')}`"
-    class="w-100 h-100 d-flex flex-column"
+    class="h-100 d-flex flex-column"
   >
-    <v-card-title class="text-body-large font-weight-bold text-truncate">
-      {{ remoteService.title || remoteService.id }}
-    </v-card-title>
-    <v-card-text class="flex-grow-1">
-      <div
-        v-if="remoteService.description"
-        class="text-body-medium text-medium-emphasis card-description"
-        v-html="remoteService.description"
-      />
-    </v-card-text>
-    <v-card-subtitle class="text-body-small pb-3 d-flex align-center">
-      <resource-visibility :visibility="remoteService.public ? 'public' : 'protected'" />
-      <template v-if="!remoteService.public && remoteService.privateAccess">
-        <span
-          v-for="owner in remoteService.privateAccess"
-          :key="owner.id"
-          class="ml-2"
-        >
-          <owner-short :owner="owner" />
-        </span>
+    <v-card-item class="text-primary">
+      <template #title>
+        <span class="font-weight-bold">{{ remoteService.title || remoteService.id }}</span>
       </template>
-    </v-card-subtitle>
+    </v-card-item>
+    <v-divider />
+    <v-card-text class="pa-0 flex-grow-1">
+      <v-list
+        density="compact"
+        style="background-color: inherit;"
+      >
+        <v-list-item v-if="remoteService.public">
+          <template #prepend>
+            <v-icon
+              :icon="mdiLockOpen"
+              color="primary"
+            />
+          </template>
+          {{ t('public') }}
+        </v-list-item>
+        <v-list-item v-else>
+          <template #prepend>
+            <v-icon
+              :icon="mdiLock"
+              color="warning"
+            />
+          </template>
+          {{ t('private') }}
+        </v-list-item>
+        <v-list-item v-if="!remoteService.public && remoteService.privateAccess?.length">
+          <div class="d-flex flex-wrap ga-1">
+            <owner-short
+              v-for="owner in remoteService.privateAccess"
+              :key="owner.id"
+              :owner="owner"
+            />
+          </div>
+        </v-list-item>
+        <v-list-item v-if="remoteService.description">
+          <div
+            class="card-description"
+            v-html="remoteService.description"
+          />
+        </v-list-item>
+      </v-list>
+    </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
 import { RemoteService } from '#api/types'
+import { mdiLockOpen, mdiLock } from '@mdi/js'
 
 defineProps<{ remoteService: RemoteService }>()
+
+const { t } = useI18n()
 </script>
+
+<i18n lang="yaml">
+fr:
+  public: Public
+  private: Privé
+en:
+  public: Public
+  private: Private
+</i18n>
 
 <style lang="css" scoped>
 .card-description {

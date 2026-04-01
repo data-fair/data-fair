@@ -9,6 +9,7 @@
     <v-list-item
       :href="applicationLink"
       target="_blank"
+      link
     >
       <template #prepend>
         <v-icon
@@ -16,12 +17,13 @@
           :icon="mdiExitToApp"
         />
       </template>
-      <v-list-item-title>{{ t('fullPage') }}</v-list-item-title>
+      {{ t('fullPage') }}
     </v-list-item>
 
     <v-list-item
       v-if="can('writeConfig')"
       :to="`/application/${application.id}/config`"
+      link
     >
       <template #prepend>
         <v-icon
@@ -29,12 +31,13 @@
           :icon="mdiSquareEditOutline"
         />
       </template>
-      <v-list-item-title>{{ t('editConfig') }}</v-list-item-title>
+      {{ t('editConfig') }}
     </v-list-item>
 
     <v-list-item
       v-if="can('readApiDoc')"
       :to="`/application/${application.id}/api-doc`"
+      link
     >
       <template #prepend>
         <v-icon
@@ -42,19 +45,22 @@
           :icon="mdiCloud"
         />
       </template>
-      <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
+      {{ t('useAPI') }}
     </v-list-item>
 
     <application-capture-dialog>
       <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
+        <v-list-item
+          v-bind="activatorProps"
+          link
+        >
           <template #prepend>
             <v-icon
               color="primary"
               :icon="mdiCamera"
             />
           </template>
-          <v-list-item-title>{{ t('capture') }}</v-list-item-title>
+          {{ t('capture') }}
         </v-list-item>
       </template>
     </application-capture-dialog>
@@ -66,14 +72,17 @@
       @changed="router.push('/applications')"
     >
       <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
+        <v-list-item
+          v-bind="activatorProps"
+          link
+        >
           <template #prepend>
             <v-icon
               color="admin"
               :icon="mdiAccountSwitch"
             />
           </template>
-          <v-list-item-title>{{ t('changeOwner') }}</v-list-item-title>
+          {{ t('changeOwner') }}
         </v-list-item>
       </template>
     </owner-change-dialog>
@@ -88,7 +97,7 @@
           :icon="mdiPencil"
         />
       </template>
-      <v-list-item-title>{{ t('editSlug') }}</v-list-item-title>
+      {{ t('editSlug') }}
     </v-list-item>
 
     <v-list-item
@@ -101,7 +110,7 @@
           :icon="mdiDelete"
         />
       </template>
-      <v-list-item-title>{{ t('delete') }}</v-list-item-title>
+      {{ t('delete') }}
     </v-list-item>
   </v-list>
 

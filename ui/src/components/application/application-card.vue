@@ -1,32 +1,45 @@
 <template>
   <v-card
     :to="`/application/${application.id}`"
-    class="w-100 h-100 d-flex flex-column"
+    class="h-100 d-flex flex-column"
   >
-    <v-card-title class="text-body-large font-weight-bold text-truncate">
-      {{ application.title || application.id }}
-    </v-card-title>
-    <v-card-text class="flex-grow-1">
-      <p
-        v-if="application.description"
-        class="text-body-medium text-medium-emphasis mb-2"
-        style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+    <v-card-item class="text-primary">
+      <template #title>
+        <span class="font-weight-bold">{{ application.title || application.id }}</span>
+      </template>
+      <template #append>
+        <owner-avatar
+          v-if="showOwner && application.owner"
+          :owner="application.owner"
+        />
+      </template>
+    </v-card-item>
+    <v-divider />
+    <v-card-text class="pa-0 flex-grow-1">
+      <v-list
+        density="compact"
+        style="background-color: inherit;"
       >
-        {{ application.description }}
-      </p>
-      <div class="d-flex flex-wrap ga-1">
-        <v-chip
-          v-if="application.status"
-          size="x-small"
-          :color="statusColor"
-          variant="tonal"
-        >
+        <v-list-item v-if="application.description">
+          <span style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+            {{ application.description }}
+          </span>
+        </v-list-item>
+        <v-list-item v-if="application.status">
+          <template #prepend>
+            <v-icon
+              :icon="statusIcon"
+              :color="statusColor"
+            />
+          </template>
           {{ t('status.' + application.status) }}
-        </v-chip>
-      </div>
+        </v-list-item>
+      </v-list>
+    </v-card-text>
+    <v-card-subtitle class="text-body-small pb-3">
       <div
         v-if="showTopics && application.topics?.length"
-        class="d-flex flex-wrap ga-1 mt-2"
+        class="d-flex flex-wrap ga-1 mb-1"
       >
         <v-chip
           v-for="topic in application.topics"
@@ -38,9 +51,6 @@
           {{ topic.title }}
         </v-chip>
       </div>
-    </v-card-text>
-    <v-card-subtitle class="text-body-small pb-3">
-      <span v-if="showOwner && application.owner">{{ ownerName }} · </span>
       <span v-if="application.updatedAt">{{ t('updatedAt', { date: formatDate(application.updatedAt) }) }}</span>
     </v-card-subtitle>
   </v-card>
@@ -48,6 +58,8 @@
 
 <script setup lang="ts">
 import type { Application } from '#api/types'
+import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
+import { mdiPlay, mdiAlert, mdiStop, mdiCog } from '@mdi/js'
 
 const { t, locale } = useI18n()
 
@@ -70,10 +82,14 @@ const statusColor = computed(() => {
   return (props.application.status && colors[props.application.status]) ?? 'default'
 })
 
-const ownerName = computed(() => {
-  const o = props.application.owner
-  if (!o) return ''
-  return o.departmentName || o.name || o.id
+const statusIcon = computed(() => {
+  const icons: Record<string, string> = {
+    running: mdiPlay,
+    error: mdiAlert,
+    stopped: mdiStop,
+    configured: mdiCog,
+  }
+  return (props.application.status && icons[props.application.status]) ?? mdiCog
 })
 
 const formatDate = (dateStr: string) => {

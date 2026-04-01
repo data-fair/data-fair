@@ -1,4 +1,3 @@
-<!-- eslint-disable vue/no-v-html -->
 <template>
   <div
     class="tutorial-alert py-2 pr-2"
@@ -25,7 +24,7 @@
           />
           <div
             v-else-if="html"
-            v-html="html"
+            v-html="/*eslint-disable-line vue/no-v-html*/html"
           />
         </template>
       </slot>

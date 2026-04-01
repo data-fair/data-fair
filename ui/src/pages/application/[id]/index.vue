@@ -197,7 +197,11 @@
                       variant="tonal"
                       class="mb-4"
                     >
-                      <p v-html="/*eslint-disable-line vue/no-v-html*/t('validatedError')" />
+                      <i18n-t keypath="validatedError" tag="p">
+                        <template #bold>
+                          <b>{{ t('validatedErrorBold') }}</b>
+                        </template>
+                      </i18n-t>
                       <p
                         class="mb-0"
                         v-html="/*eslint-disable-line vue/no-v-html*/application.errorMessage"
@@ -340,7 +344,8 @@ fr:
   render: Rendu
   config: Configuration
   editConfig: Éditer la configuration
-  validatedError: "Erreur dans la <b>version validée</b>"
+  validatedError: "Erreur dans la {bold}"
+  validatedErrorBold: version validée
   share: Partage
   permissions: Permissions
   protectedLink: Lien protege
@@ -368,7 +373,8 @@ en:
   render: Render
   config: Configuration
   editConfig: Edit configuration
-  validatedError: "Error in the <b>validated version</b>"
+  validatedError: "Error in the {bold}"
+  validatedErrorBold: validated version
   share: Share
   permissions: Permissions
   protectedLink: Protected link

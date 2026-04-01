@@ -6,13 +6,14 @@
 
     <v-row
       v-if="remoteServicesFetch.data.value"
+      class="d-flex align-stretch"
     >
       <v-col
         v-for="remoteService in remoteServicesFetch.data.value.results"
         :key="remoteService.id"
         cols="12"
-        md="6"
-        lg="4"
+        sm="6"
+        md="4"
       >
         <remote-service-card :remote-service="remoteService" />
       </v-col>

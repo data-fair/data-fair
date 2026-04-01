@@ -1,7 +1,11 @@
+<!--
+  Card component used by dataset-table in 'list' display mode (card layout).
+  Each result is rendered as a v-card with its fields listed vertically.
+-->
 <!-- eslint-disable vue/no-v-html -->
 <template>
   <v-card
-    class="fill-height dataset-item-card"
+    class="fill-height dataset-table-card"
     variant="outlined"
   >
     <v-card-title
@@ -43,7 +47,7 @@
         >
           <div
             v-if="result.values[header.key]"
-            :class="`dataset-item-card-value-${result._id}-${header.cssKey ?? header.key}`"
+            :class="`dataset-table-card-value-${result._id}-${header.cssKey ?? header.key}`"
             style="position: relative;"
             :style="noInteraction ? '' : 'cursor:pointer'"
             @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key] as ExtendedResultValue))"
@@ -52,7 +56,7 @@
             <div class="text-body-small mt-2">
               {{ header.title }}
             </div>
-            <dataset-item-value-multiple
+            <dataset-table-value-multiple
               v-if="Array.isArray(result.values[header.key])"
               :values="result.values[header.key] as ExtendedResultValue[]"
               :property="header.property"
@@ -63,7 +67,7 @@
               @hoverstart="v => emit('hoverstart', result, v)"
               @hoverstop="emit('hoverstop')"
             />
-            <dataset-item-value
+            <dataset-table-value
               v-else
               :value="result.values[header.key] as ExtendedResultValue"
               :property="header.property"
@@ -86,7 +90,7 @@
           </div>
           <dataset-table-header-menu
             v-if="!noInteraction"
-            :activator="`.dataset-item-card-value-${result._id}-${header.cssKey ?? header.key}`"
+            :activator="`.dataset-table-card-value-${result._id}-${header.cssKey ?? header.key}`"
             :header="header"
             :filters="filters"
             :filter-height="filterHeight"
@@ -124,7 +128,7 @@
 <script setup lang="ts">
 import { type DatasetFilter } from '~/composables/dataset/filters'
 import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset/lines'
-import { type TableHeaderWithProperty } from './table/use-headers'
+import { type TableHeaderWithProperty } from './use-headers'
 import { findEqFilter } from '~/composables/dataset/filters'
 import { mdiSortAscending, mdiSortDescending, mdiMenuDown, mdiMagnifyPlus } from '@mdi/js'
 
@@ -162,13 +166,13 @@ const otherHeaders = computed(() => headers.filter(h => {
 
 <style>
 
-.dataset-item-card .v-input__slot {
+.dataset-table-card .v-input__slot {
   display: block;
   overflow: hidden;
   text-overflow:ellipsis;
 }
 
-.dataset-item-card .v-input__slot .v-label {
+.dataset-table-card .v-input__slot .v-label {
   font-size:12px;
   line-height: 16px;
   height: 16px;
@@ -176,7 +180,7 @@ const otherHeaders = computed(() => headers.filter(h => {
   white-space:nowrap;
 }
 
-.dataset-item-card .item-card-value-icon {
+.dataset-table-card .item-card-value-icon {
   position:absolute;
   top:16px;
   right:0px;

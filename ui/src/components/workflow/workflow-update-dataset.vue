@@ -1,5 +1,3 @@
-<!-- eslint-disable vue/no-v-html -->
-<!-- eslint-disable vue/no-v-text-v-html-on-component -->
 <template>
   <v-stepper
     v-model="currentStep"
@@ -143,8 +141,10 @@
                 variant="outlined"
                 type="info"
                 density="compact"
-                v-html="t('suggestArchive', {name: file.name})"
-              />
+              >
+                <p>{{ t('suggestArchive.part1') }}</p>
+                <p>{{ t('suggestArchive.part2', {name: file.name}) }}</p>
+              </v-alert>
               <v-btn
                 class="mt-2"
                 :disabled="!file"
@@ -332,9 +332,9 @@ fr:
   attachmentInfo: Cette étape est optionnelle
   attachmentsMsg1: Vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.
   attachmentsMsg2: Le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
-  suggestArchive: |
-    Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
-    <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
+  suggestArchive:
+    part1: "Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée."
+    part2: 'Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.'
   similarDatasets: "Ce jeu de données a le même nom de fichier : | Ces jeux de données ont le même nom de fichier :"
   updateMsg: Après la soumission vous pourrez observer les changements et vous serez averti si il y a un risque d'incompatibilité.
   update: Mettre à jour
@@ -369,9 +369,9 @@ en:
   attachmentInfo: This step is optional
   attachmentsMsg1: You can load a zip archive containing files to be used as attachments to the lines of the main dataset file.
   attachmentsMsg2: The main data file must have a column that contains paths of the attachments in the archive.
-  suggestArchive: |
-    This file is large. To save and time and energy you can if you wish send a compressed version of it.
-    <br>To do so you must create a file "{name}.gz" or a zip archive containing only this file.
+  suggestArchive:
+    part1: "This file is large. To save time and energy you can if you wish send a compressed version of it."
+    part2: 'To do so you must create a file "{name}.gz" or a zip archive containing only this file.'
   similarDatasets: "This dataset has the same file name: | These datasets have the same file name:"
   updateMsg: After submitting you will be be able to review the changes and you will be warned if there is an incompatibility.
   update: Update

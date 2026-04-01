@@ -15,6 +15,9 @@ import { useRoute } from 'vue-router'
 import uiNotif from '@data-fair/lib-vuetify/ui-notif.vue'
 import DefaultLayout from './layouts/default.vue'
 import EmbedLayout from './layouts/embed.vue'
+import { useFrameServer } from '@data-fair/lib-vue-agents'
+
+useFrameServer('data-fair')
 
 const session = useSession()
 const route = useRoute()

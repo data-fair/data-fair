@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { type SchemaProperty } from '#api/types'
-import type { ExtendedResult } from '../../composables/dataset/lines'
+import type { ExtendedResult } from '../../../composables/dataset/lines'
 import { mdiClose } from '@mdi/js'
 
 const { extendedResult, property } = defineProps({
@@ -62,20 +62,6 @@ const fullValue = computed(() => fetchFullValue.data.value?.results[0]?.[propert
 </script>
 
 <style>
-.v-chip-group.dense-value .v-slide-group__content {
-  padding-top: 0;
-  padding-bottom: 0;
-}
-.item-value-color-pin {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: inline-block;
-  position: absolute;
-  top: 8px;
-  left: 2px;
-  border: 2px solid #ccc;
-}
 .item-value-detail-textarea {
   white-space: pre-line;
   overflow-wrap: break-word;

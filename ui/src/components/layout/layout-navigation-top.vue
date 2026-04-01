@@ -37,6 +37,7 @@
           :to="item.to"
           :disabled="!item.to"
           :class="item.to ? 'text-primary' : undefined"
+          style="opacity: 0.9;"
         >
           {{ item.title }}
         </v-breadcrumbs-item>

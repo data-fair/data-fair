@@ -104,10 +104,18 @@
 
           <!-- Base app mode -->
           <template v-if="creationType === 'baseApp'">
-            <p
+            <i18n-t
+              keypath="customApp"
+              tag="p"
               class="mb-4"
-              v-html="/*eslint-disable-line vue/no-v-html*/t('customApp')"
-            />
+            >
+              <template #highlight>
+                <span class="text-accent">{{ t('customAppHighlight') }}</span>
+              </template>
+              <template #link>
+                <a href="https://koumoul.com/contact">{{ t('customAppContact') }}</a>
+              </template>
+            </i18n-t>
 
             <v-progress-linear
               v-if="baseAppsFetch.loading.value && !baseAppsFetch.data.value"
@@ -428,7 +436,9 @@ fr:
   selectBaseApp: Sélection du modèle d'application
   selectApp: Sélection de l'application à copier
   info: Informations
-  customApp: 'Koumoul réalise aussi des <span class="text-accent">applications personnalisées</span> sur demande. N''hésitez pas à <a href="https://koumoul.com/contact">nous contacter</a> !'
+  customApp: "Koumoul réalise aussi des {highlight} sur demande. N'hésitez pas à {link} !"
+  customAppHighlight: applications personnalisées
+  customAppContact: nous contacter
   title: Titre de la nouvelle application
   save: Enregistrer
   back: Retour
@@ -451,7 +461,9 @@ en:
   selectBaseApp: Application model selection
   selectApp: Application to copy
   info: Information
-  customApp: 'Koumoul also creates <span class="text-accent">custom applications</span> on demand. Do not hesitate <a href="https://koumoul.com/contact">contacting us</a> !'
+  customApp: "Koumoul also creates {highlight} on demand. Do not hesitate {link}!"
+  customAppHighlight: custom applications
+  customAppContact: contacting us
   title: Title of the new application
   save: Save
   back: Back

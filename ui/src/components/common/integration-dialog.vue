@@ -39,10 +39,18 @@
         />
 
         <template v-if="mode === 'd-frame'">
-          <p
+          <i18n-t
+            keypath="dFrameIntro"
+            tag="p"
             class="mb-2"
-            v-html="/*eslint-disable-line vue/no-v-html*/t('dFrameIntro')"
-          />
+          >
+            <template #link>
+              <a
+                href="https://data-fair.github.io/frame/latest/"
+                target="_blank"
+              >D-Frame</a>
+            </template>
+          </i18n-t>
           <v-checkbox
             v-model="syncParams"
             :label="t('syncParams')"
@@ -92,10 +100,18 @@
     />
 
     <template v-if="mode === 'd-frame'">
-      <p
+      <i18n-t
+        keypath="dFrameIntro"
+        tag="p"
         class="mb-2"
-        v-html="/*eslint-disable-line vue/no-v-html*/t('dFrameIntro')"
-      />
+      >
+        <template #link>
+          <a
+            href="https://data-fair.github.io/frame/latest/"
+            target="_blank"
+          >D-Frame</a>
+        </template>
+      </i18n-t>
       <v-checkbox
         v-model="syncParams"
         :label="t('syncParams')"
@@ -134,7 +150,7 @@ fr:
   integrationMsgDataset: Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant dans le code source HTML.
   integrationMsgApp: Pour intégrer cette application dans un site vous pouvez copier le code suivant dans le code source HTML.
   integrationMode: Mode d'intégration
-  dFrameIntro: <a href="https://data-fair.github.io/frame/latest/">D-Frame</a> est un composant que vous pouvez intégrer à votre site pour une intégration plus riche.
+  dFrameIntro: "{link} est un composant que vous pouvez intégrer à votre site pour une intégration plus riche."
   syncParams: Synchroniser les paramètres de l'application
   copy: Copier
   copied: Copié !
@@ -143,7 +159,7 @@ en:
   integrationMsgDataset: To integrate a preview of this dataset in a website you can copy the code below in your HTML source code.
   integrationMsgApp: To integrate this application in a website you can copy the code below in your HTML source code.
   integrationMode: Integration mode
-  dFrameIntro: <a href="https://data-fair.github.io/frame/latest/">D-Frame</a> is a component that you can integrate in your website for a richer integration.
+  dFrameIntro: "{link} is a component that you can integrate in your website for a richer integration."
   syncParams: Synchronize the application parameters
   copy: Copy
   copied: Copied!

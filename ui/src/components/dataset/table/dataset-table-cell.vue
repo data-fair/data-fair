@@ -17,23 +17,25 @@
         <img :src="result._thumbnail">
       </v-avatar>
     </template>
+
     <template v-else-if="header.key === '_map_preview'">
       <v-btn
         v-if="result._geopoint"
         :icon="mdiMap"
+        :title="t('showMapPreview')"
+        position="absolute"
         size="x-small"
         variant="flat"
-        absolute
-        :title="t('showMapPreview')"
         @click="emit('showMapPreview')"
       />
     </template>
+
     <template v-else-if="header.key === '_owner'">
       <v-tooltip
         v-if="result._owner"
         location="top"
       >
-        <template #activator="{props}">
+        <template #activator="{ props }">
           <span
             class="text-body-medium"
             v-bind="props"
@@ -46,58 +48,62 @@
         {{ result._owner }}
       </v-tooltip>
     </template>
+
     <template v-if="header.key === '_actions'">
       <template v-if="selectable">
         <v-btn
           v-if="selected"
+          :icon="mdiCheckboxMarked"
+          :size="dense ? 'md' : 'large'"
           :title="t('unselectLine')"
           color="primary"
-          :size="dense ? 'md' : 'large'"
           density="compact"
           variant="text"
-          :icon="mdiCheckboxMarked"
           @click="emit('select')"
         />
         <v-btn
           v-else
+          :icon="mdiCheckboxBlankOutline"
           :size="dense ? 'md' : 'large'"
+          :title="t('selectLine')"
           density="compact"
           variant="text"
-          :title="t('selectLine')"
-          :icon="mdiCheckboxBlankOutline"
           @click="emit('select')"
         />
       </template>
+
       <dataset-table-result-actions
         v-else
         v-model:selected-results="selectedResults"
-        :result="result"
         :dense="dense"
+        :result="result"
         @edit="emit('edit')"
         @delete="emit('delete')"
       />
     </template>
-    <!--{{ item.__formatted[header.key] }}-->
-    <dataset-item-value-multiple
+
+    <dataset-table-value-multiple
       v-else-if="header.property && Array.isArray(result.values[header.key])"
-      :values="result.values[header.key] as ExtendedResultValue[]"
-      :property="header.property"
       :dense="dense"
+      :filter="filter"
       :hovered="hovered"
       :no-interaction="noInteraction"
-      :filter="filter"
+      :property="header.property"
+      :values="result.values[header.key] as ExtendedResultValue[]"
       @filter="v => emit('filter', {property: header.property, operator: 'eq', value: v.raw, formattedValue: v.formatted})"
       @hoverstart="v => emit('hoverstart', result, v)"
       @hoverstop="emit('hoverstop')"
     />
-    <dataset-item-value
+
+    <dataset-table-value
       v-else-if="header.property"
-      :value="result.values[header.key] as ExtendedResultValue"
-      :property="header.property"
-      :dense="dense"
-      :hovered="hovered === result.values[header.key]"
+      :filter-loading="filterLoading"
       :filtered="!!filter"
-      @filter="emit('filter', {property: header.property, operator: 'eq', value: (result.values[header.key] as ExtendedResultValue).raw, formattedValue: (result.values[header.key] as ExtendedResultValue).formatted})"
+      :hovered="hovered === result.values[header.key]"
+      :property="header.property"
+      :value="result.values[header.key] as ExtendedResultValue"
+      :dense="dense"
+      @filter="filterValue(result, header)"
       @show-detail-dialog="emit('showDetailDialog', markRaw(result.values[header.key] as ExtendedResultValue))"
     />
   </td>
@@ -119,6 +125,27 @@ import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiMap } from '@mdi/js'
 import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset/lines'
 import { type DatasetFilter } from '../../../composables/dataset/filters'
+
+const { id } = useDatasetStore()
+const filterLoading = ref(false)
+const filterValue = async (result: ExtendedResult, header: TableHeader) => {
+  if (!header.property) return
+  const value = result.values[header.key] as ExtendedResultValue
+  if (value?.displayDetail) {
+    filterLoading.value = true
+    try {
+      const data = await $fetch<{ results: Record<string, any>[] }>(`${$apiPath}/datasets/${id}/lines`, {
+        query: { qs: `_id:"${result._id}"`, select: header.key }
+      })
+      const fullValue = data.results[0]?.[header.key]
+      emit('filter', { property: header.property, operator: 'eq', value: fullValue, formattedValue: fullValue })
+    } finally {
+      filterLoading.value = false
+    }
+  } else {
+    emit('filter', { property: header.property, operator: 'eq', value: value.raw, formattedValue: value.formatted })
+  }
+}
 
 defineProps({
   result: { type: Object as () => ExtendedResult, required: true },

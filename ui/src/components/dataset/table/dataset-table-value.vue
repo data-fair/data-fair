@@ -51,28 +51,30 @@
     >
       {{ extendedValue.formatted }}
     </span>
-    <template v-if="hovered">
+    <div
+      v-if="hovered"
+      class="item-value-hover-actions"
+    >
       <v-btn
         v-if="extendedValue.displayDetail"
-        :icon="dense ? mdiLoupe : mdiMagnifyMinus"
+        :icon="dense ? mdiLoupe : mdiMagnifyPlus"
         size="x-small"
+        color="primary"
         variant="flat"
-        class="item-value-hover-action"
-        :style="`background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
         :title="t('showFullValue')"
         @click="emit('showDetailDialog')"
       />
       <v-btn
-        v-else-if="!filtered && extendedValue.filterable"
+        v-if="!filtered && extendedValue.filterable"
         :icon="mdiFilterVariant"
+        :loading="filterLoading"
         size="x-small"
         color="primary"
-        class="item-value-hover-action"
-        style="background-color:white;"
+        variant="flat"
         :title="t('filterValue')"
         @click="emit('filter')"
       />
-    </template>
+    </div>
   </div>
 </template>
 
@@ -87,16 +89,16 @@ en:
 
 <script setup lang="ts">
 import { type SchemaProperty } from '#api/types'
-import { useTheme } from 'vuetify'
-import type { ExtendedResultValue } from '../../composables/dataset/lines'
-import { mdiFilterVariant, mdiLoupe, mdiMagnifyMinus } from '@mdi/js'
+import type { ExtendedResultValue } from '../../../composables/dataset/lines'
+import { mdiFilterVariant, mdiLoupe, mdiMagnifyPlus } from '@mdi/js'
 
 const { value: extendedValue, property } = defineProps({
   value: { type: Object as () => ExtendedResultValue, required: true },
   property: { type: Object as () => SchemaProperty, required: true },
   filtered: { type: Boolean, required: true },
   hovered: { type: Boolean, default: false },
-  dense: { type: Boolean, default: false }
+  dense: { type: Boolean, default: false },
+  filterLoading: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{
@@ -104,7 +106,6 @@ const emit = defineEmits<{
   showDetailDialog: []
 }>()
 
-const theme = useTheme()
 const { t } = useI18n()
 </script>
 
@@ -119,11 +120,13 @@ const { t } = useI18n()
   left: 2px;
   border: 2px solid #ccc;
 }
-.item-value-hover-action {
+.item-value-hover-actions {
   position: absolute;
   right: 2px;
   top: 50%;
   transform: translate(0, -50%);
-  z-index:100;
+  z-index: 100;
+  display: flex;
+  gap: 2px;
 }
 </style>
