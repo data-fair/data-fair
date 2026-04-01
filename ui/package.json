@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_CONFIG_DIR=../api/config/ vite --port $DEV_UI_PORT",
-    "build": "vue-tsc -b && vite build",
+    "build": "vite build",
     "prepare-webfont-css": "",
     "preview": "vite preview",
     "check-types": "vue-tsc",

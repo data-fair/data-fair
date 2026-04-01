@@ -2,96 +2,96 @@
   <v-container v-if="remoteServiceEditFetch.data.value">
     <v-row class="remoteService">
       <v-col>
-          <df-section-tabs
-            v-if="sections.metadata"
-            id="metadata"
-            :min-height="300"
-            :svg="checklistSvg"
-            svg-no-margin
-            :title="sections.metadata.title"
-            :tabs="sections.metadata.tabs"
-            :color="sections.metadata.color"
-          >
-            <template #content="{tab}">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="info">
-                  <v-container>
-                    <remote-service-info v-model="remoteServiceEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
+        <df-section-tabs
+          v-if="sections.metadata"
+          id="metadata"
+          :min-height="300"
+          :svg="checklistSvg"
+          svg-no-margin
+          :title="sections.metadata.title"
+          :tabs="sections.metadata.tabs"
+          :color="sections.metadata.color"
+        >
+          <template #content="{tab}">
+            <v-tabs-window :model-value="tab">
+              <v-tabs-window-item value="info">
+                <v-container>
+                  <remote-service-info v-model="remoteServiceEditFetch.data.value" />
+                </v-container>
+              </v-tabs-window-item>
 
-                <v-tabs-window-item value="extensions">
-                  <v-container>
-                    <remote-service-schema :remote-service="remoteServiceEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-          <df-section-tabs
-            v-if="sections.configuration"
-            id="configuration"
-            :min-height="300"
-            :svg="settingsSvg"
-            svg-no-margin
-            :title="sections.configuration.title"
-            :tabs="sections.configuration.tabs"
-            :color="sections.configuration.color"
-          >
-            <template #content="{tab}">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="params">
-                  <v-container>
-                    <remote-service-config v-model="remoteServiceEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
+              <v-tabs-window-item value="extensions">
+                <v-container>
+                  <remote-service-schema :remote-service="remoteServiceEditFetch.data.value" />
+                </v-container>
+              </v-tabs-window-item>
+            </v-tabs-window>
+          </template>
+        </df-section-tabs>
+        <df-section-tabs
+          v-if="sections.configuration"
+          id="configuration"
+          :min-height="300"
+          :svg="settingsSvg"
+          svg-no-margin
+          :title="sections.configuration.title"
+          :tabs="sections.configuration.tabs"
+          :color="sections.configuration.color"
+        >
+          <template #content="{tab}">
+            <v-tabs-window :model-value="tab">
+              <v-tabs-window-item value="params">
+                <v-container>
+                  <remote-service-config v-model="remoteServiceEditFetch.data.value" />
+                </v-container>
+              </v-tabs-window-item>
+            </v-tabs-window>
+          </template>
+        </df-section-tabs>
 
-          <df-section-tabs
-            v-if="sections.share"
-            id="share"
-            :svg="shareSvg"
-            svg-no-margin
-            :min-height="200"
-            :title="sections.share.title"
-            :tabs="sections.share.tabs"
-            :color="sections.share.color"
-          >
-            <template #content="{tab}">
-              <v-container
-                class="pb-0"
-              >
-                <tutorial-alert
-                  id="dataset-share-portal"
-                  :text="t('permissions')"
-                  persistent
-                />
-              </v-container>
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="permissions">
-                  <v-container>
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                        class="order-md-2"
-                      >
-                        <private-access v-model="remoteServiceEditFetch.data.value" />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </v-tabs-window-item>
+        <df-section-tabs
+          v-if="sections.share"
+          id="share"
+          :svg="shareSvg"
+          svg-no-margin
+          :min-height="200"
+          :title="sections.share.title"
+          :tabs="sections.share.tabs"
+          :color="sections.share.color"
+        >
+          <template #content="{tab}">
+            <v-container
+              class="pb-0"
+            >
+              <tutorial-alert
+                id="dataset-share-portal"
+                :text="t('permissions')"
+                persistent
+              />
+            </v-container>
+            <v-tabs-window :model-value="tab">
+              <v-tabs-window-item value="permissions">
+                <v-container>
+                  <v-row>
+                    <v-col
+                      cols="12"
+                      md="6"
+                      class="order-md-2"
+                    >
+                      <private-access v-model="remoteServiceEditFetch.data.value" />
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </v-tabs-window-item>
 
-                <v-tabs-window-item value="virtual-datasets">
-                  <v-container>
-                    <remote-service-virtual-datasets v-model="remoteServiceEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
+              <v-tabs-window-item value="virtual-datasets">
+                <v-container>
+                  <remote-service-virtual-datasets v-model="remoteServiceEditFetch.data.value" />
+                </v-container>
+              </v-tabs-window-item>
+            </v-tabs-window>
+          </template>
+        </df-section-tabs>
       </v-col>
     </v-row>
     <df-navigation-right>
