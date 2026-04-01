@@ -27,6 +27,7 @@
         :visible-prompt="t('summarizePrompt')"
         :hidden-context="summarizeContext"
         :btn-props="{ class: 'ml-1 mt-1' }"
+        :title="t('summarizePrompt')"
       />
     </div>
 

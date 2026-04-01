@@ -78,6 +78,7 @@
                 action-id="configure-application"
                 :visible-prompt="t('configurePrompt')"
                 :hidden-context="configureContext"
+                :title="t('configurePrompt')"
               />
             </div>
             <vjsf

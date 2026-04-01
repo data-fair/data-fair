@@ -37,6 +37,7 @@
       :visible-prompt="t('helpFilterPrompt')"
       :hidden-context="filterHelpContext"
       :btn-props="{ class: 'mx-1' }"
+      :title="t('helpFilterPrompt')"
     />
     <v-btn-group
       divided

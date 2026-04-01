@@ -193,6 +193,7 @@
                     :visible-prompt="t('helpExpression')"
                     :hidden-context="getExpressionContext(idx)"
                     :btn-props="{ class: 'ml-1' }"
+                    :title="t('helpExpression')"
                   />
                 </div>
               </v-card-text>
