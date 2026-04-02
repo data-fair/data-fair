@@ -1,26 +1,41 @@
 <template>
   <template v-if="dataset">
-    <div class="text-headline-large mb-4">
-      {{ dataset.title }}
-    </div>
     <v-row>
-      <!-- Left: image + description -->
+      <!-- Left: summary + image + description -->
       <v-col
         cols="12"
         md="6"
       >
-        <v-img
-          v-if="dataset.image"
-          :src="dataset.image"
-          max-height="250"
-          cover
-          class="mb-4"
-        />
-        <div
-          v-if="dataset.description"
-          class="text-break"
-          v-html="/*eslint-disable-line vue/no-v-html*/dataset.description"
-        />
+        <template v-if="dataset.summary">
+          <h3 class="text-title-medium font-weight-bold mb-2">
+            {{ t('summary') }}
+          </h3>
+          <p class="mb-4">
+            {{ dataset.summary }}
+          </p>
+        </template>
+
+        <template v-if="dataset.image">
+          <h3 class="text-title-medium font-weight-bold mb-2">
+            {{ t('thumbnail') }}
+          </h3>
+          <v-img
+            :src="dataset.image"
+            max-height="250"
+            cover
+            class="mb-4"
+          />
+        </template>
+
+        <template v-if="dataset.description">
+          <h3 class="text-title-medium font-weight-bold mb-2">
+            {{ t('description') }}
+          </h3>
+          <div
+            class="text-break"
+            v-html="/*eslint-disable-line vue/no-v-html*/dataset.description"
+          />
+        </template>
       </v-col>
 
       <!-- Right: metadata card -->
@@ -228,6 +243,9 @@
 
 <i18n lang="yaml">
 fr:
+  summary: Résumé
+  thumbnail: Vignette
+  description: Description
   owner: Propriétaire
   creator: Producteur
   license: Licence
@@ -256,6 +274,9 @@ fr:
   freq_yearly: Annuelle
   freq_irregular: Irrégulière
 en:
+  summary: Summary
+  thumbnail: Thumbnail
+  description: Description
   owner: Owner
   creator: Producer
   license: License

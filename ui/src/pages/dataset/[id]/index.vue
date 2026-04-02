@@ -3,17 +3,47 @@
     <!-- Show dataset status -->
     <dataset-status v-if="!dataset.isMetaOnly && (dataset.status === 'error' || !!dataset.draftReason)" />
 
-    <!-- Show dataset metadata : Title, thumbnail, description, and others metadata -->
-    <dataset-metadata-view />
+    <!-- Title -->
+    <div class="text-headline-large mb-4">
+      {{ dataset.title }}
+    </div>
 
-    <!-- Data section -->
+    <!-- Metadata section -->
     <df-section-tabs
-      v-if="sections.data"
-      id="data"
-      v-model="dataTab"
-      :min-height="140"
-      :title="sections.data.title"
-      :tabs="sections.data.tabs"
+      v-if="sections.metadata"
+      id="metadata"
+      v-model="metadataTab"
+      :min-height="200"
+      :title="sections.metadata.title"
+      :tabs="sections.metadata.tabs"
+      :svg="metadataSvg"
+    >
+      <template #content="{ tab }">
+        <v-tabs-window
+          :model-value="tab"
+          class="pa-4"
+        >
+          <v-tabs-window-item value="informations">
+            <dataset-metadata-view />
+          </v-tabs-window-item>
+          <v-tabs-window-item value="schema">
+            <dataset-schema-view />
+          </v-tabs-window-item>
+          <v-tabs-window-item value="attachments">
+            <dataset-attachments />
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
+    <!-- Exploration section -->
+    <df-section-tabs
+      v-if="sections.exploration"
+      id="exploration"
+      v-model="explorationTab"
+      :min-height="650"
+      :title="sections.exploration.title"
+      :tabs="sections.exploration.tabs"
       :svg="dataSvg"
     >
       <template #content="{ tab }">
@@ -21,122 +51,32 @@
           :model-value="tab"
           class="pa-4"
         >
-          <v-tabs-window-item value="data">
-            <v-row>
-              <!-- Table -->
-              <v-col
-                cols="6"
-                md="4"
-                lg="3"
-              >
-                <v-card
-                  :to="`/dataset/${dataset.id}/table`"
-                  variant="outlined"
-                >
-                  <v-card-text class="text-center">
-                    <v-icon
-                      size="48"
-                      :icon="mdiTable"
-                    />
-                    <div class="mt-2">
-                      {{ t('table') }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-
-              <!-- Map -->
-              <v-col
-                v-if="dataset.bbox"
-                cols="6"
-                md="4"
-                lg="3"
-              >
-                <v-card
-                  :to="`/dataset/${dataset.id}/map`"
-                  variant="outlined"
-                >
-                  <v-card-text class="text-center">
-                    <v-icon
-                      size="48"
-                      :icon="mdiMap"
-                    />
-                    <div class="mt-2">
-                      {{ t('map') }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-
-              <!-- Files -->
-              <v-col
-                v-if="digitalDocumentField"
-                cols="6"
-                md="4"
-                lg="3"
-              >
-                <v-card
-                  :to="`/dataset/${dataset.id}/files`"
-                  variant="outlined"
-                >
-                  <v-card-text class="text-center">
-                    <v-icon
-                      size="48"
-                      :icon="mdiContentCopy"
-                    />
-                    <div class="mt-2">
-                      {{ t('files') }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-
-              <!-- Thumbnails -->
-              <v-col
-                v-if="imageField"
-                cols="6"
-                md="4"
-                lg="3"
-              >
-                <v-card
-                  :to="`/dataset/${dataset.id}/thumbnails`"
-                  variant="outlined"
-                >
-                  <v-card-text class="text-center">
-                    <v-icon
-                      size="48"
-                      :icon="mdiImage"
-                    />
-                    <div class="mt-2">
-                      {{ t('thumbnails') }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-
-              <!-- Revisions -->
-              <v-col
-                v-if="dataset.rest?.history"
-                cols="6"
-                md="4"
-                lg="3"
-              >
-                <v-card
-                  :to="`/dataset/${dataset.id}/revisions`"
-                  variant="outlined"
-                >
-                  <v-card-text class="text-center">
-                    <v-icon
-                      size="48"
-                      :icon="mdiHistory"
-                    />
-                    <div class="mt-2">
-                      {{ t('revisions') }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
+          <v-tabs-window-item value="table">
+            <dataset-table :height="600" />
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="dataset.bbox"
+            value="map"
+          >
+            <dataset-map :height="600" />
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="digitalDocumentField"
+            value="files"
+          >
+            <dataset-search-files :height="600" />
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="imageField"
+            value="thumbnails"
+          >
+            <dataset-thumbnails :height="600" />
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="dataset.rest?.history"
+            value="revisions"
+          >
+            <dataset-history />
           </v-tabs-window-item>
           <v-tabs-window-item value="applications">
             <v-container fluid>
@@ -160,8 +100,10 @@
               </p>
             </v-container>
           </v-tabs-window-item>
-          <v-tabs-window-item value="schema">
-            <dataset-schema-view />
+          <v-tabs-window-item value="related-datasets">
+            <v-container fluid>
+              <dataset-related-datasets />
+            </v-container>
           </v-tabs-window-item>
         </v-tabs-window>
       </template>
@@ -185,16 +127,6 @@
                 :resource="dataset"
                 resource-type="datasets"
                 :disabled="!can('setPermissions').value"
-              />
-            </v-container>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="integration">
-            <v-container fluid>
-              <integration-dialog
-                inline
-                resource-type="datasets"
-                :resource="dataset"
               />
             </v-container>
           </v-tabs-window-item>
@@ -226,23 +158,27 @@
             </v-container>
           </v-tabs-window-item>
 
-          <v-tabs-window-item value="related-datasets">
+          <v-tabs-window-item value="integration">
             <v-container fluid>
-              <dataset-related-datasets />
+              <integration-dialog
+                inline
+                resource-type="datasets"
+                :resource="dataset"
+              />
             </v-container>
           </v-tabs-window-item>
         </v-tabs-window>
       </template>
     </df-section-tabs>
 
-    <!-- Activity section -->
+    <!-- Tracking section -->
     <df-section-tabs
-      v-if="sections.activity"
-      id="activity"
-      v-model="activityTab"
+      v-if="sections.tracking"
+      id="tracking"
+      v-model="trackingTab"
       :min-height="550"
-      :title="sections.activity.title"
-      :tabs="sections.activity.tabs"
+      :title="sections.tracking.title"
+      :tabs="sections.tracking.tabs"
       :svg="settingsSvg"
       svg-no-margin
     >
@@ -304,9 +240,11 @@
 <i18n lang="yaml">
 fr:
   datasets: Jeux de données
+  metadata: Métadonnées
+  informations: Informations
   schema: Schéma
-  content: Contenu
-  data: Données
+  attachments: Pièces jointes
+  exploration: Exploration des données
   table: Tableau
   map: Carte
   files: Fichiers
@@ -314,23 +252,25 @@ fr:
   revisions: Révisions
   applications: Applications
   noApplications: Aucune application n'utilise ce jeu de données.
-  share: Partage
+  relatedDatasets: Voir aussi
+  share: Permissions & partage
   permissions: Permissions
+  readApiKey: Clé d'API en lecture
   publicationSites: Portails
   catalogPublications: Publications dans les catalogues
-  relatedDatasets: Voir aussi
   integration: Intégrer dans un site
-  readApiKey: Clé d'API en lecture
-  activity: Activité
+  tracking: Suivi
   journal: Journal
   traceability: Traçabilité
   notifications: Notifications
   webhooks: Webhooks
 en:
   datasets: Datasets
+  metadata: Metadata
+  informations: Information
   schema: Schema
-  content: View data
-  data: Content
+  attachments: Attachments
+  exploration: Data exploration
   table: Table
   map: Map
   files: Files
@@ -338,14 +278,14 @@ en:
   revisions: Revisions
   applications: Applications
   noApplications: No application uses this dataset.
+  relatedDatasets: See also
   share: Share
   permissions: Permissions
+  readApiKey: Read API key
   publicationSites: Portals
   catalogPublications: Catalog publications
-  relatedDatasets: See also
   integration: Embed in a website
-  readApiKey: Read API key
-  activity: Activity
+  tracking: Tracking
   journal: Journal
   traceability: Traceability
   notifications: Notifications
@@ -354,11 +294,12 @@ en:
 
 <script setup lang="ts">
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
+import metadataSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiKey, mdiMap, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAttachment, mdiBell, mdiCalendarText, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -368,8 +309,9 @@ const route = useRoute<'/dataset/[id]/'>()
 const { sendUiNotif } = useUiNotif()
 
 const breadcrumbs = useBreadcrumbs()
-const dataTab = ref('data')
-const activityTab = ref('journal')
+const metadataTab = ref('informations')
+const explorationTab = ref('table')
+const trackingTab = ref('journal')
 
 const store = provideDatasetStore(route.params.id, true, 'vuetify')
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can } = store
@@ -408,32 +350,57 @@ const sections = computedDeepDiff(() => {
   const d = dataset.value
   const result: Record<string, { title: string, tabs: any[] }> = {}
 
+  // Metadata section
+  const metadataTabs = [
+    { key: 'informations', title: t('informations'), icon: mdiInformation }
+  ]
+  if (d.finalizedAt && !d.isMetaOnly) {
+    metadataTabs.push({ key: 'schema', title: t('schema'), icon: mdiTableCog })
+  }
+  if (!d.draftReason) {
+    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment })
+  }
+  result.metadata = { title: t('metadata'), tabs: metadataTabs }
+
+  // Exploration section
   if (d.finalizedAt || d.draftReason) {
-    const dataTabs = []
+    const explorationTabs = []
     if (d.finalizedAt && !d.isMetaOnly) {
-      dataTabs.push({ key: 'data', title: t('data'), icon: mdiTable })
-      if (!d.draftReason || d.draftReason.key === 'file-updated') {
-        dataTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
+      explorationTabs.push({ key: 'table', title: t('table'), icon: mdiTable })
+      if (d.bbox) {
+        explorationTabs.push({ key: 'map', title: t('map'), icon: mdiMap })
       }
-      dataTabs.push({ key: 'schema', title: t('schema'), icon: mdiTableCog })
+      if (digitalDocumentField.value) {
+        explorationTabs.push({ key: 'files', title: t('files'), icon: mdiContentCopy })
+      }
+      if (imageField.value) {
+        explorationTabs.push({ key: 'thumbnails', title: t('thumbnails'), icon: mdiImage })
+      }
+      if (d.rest?.history) {
+        explorationTabs.push({ key: 'revisions', title: t('revisions'), icon: mdiHistory })
+      }
+      if (!d.draftReason || d.draftReason.key === 'file-updated') {
+        explorationTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
+      }
+      explorationTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
     }
-    if (dataTabs.length) {
-      result.data = { title: t('content'), tabs: dataTabs }
+    if (explorationTabs.length) {
+      result.exploration = { title: t('exploration'), tabs: explorationTabs }
     }
   }
 
+  // Share section
   if (!d.draftReason || d.draftReason.key === 'file-updated') {
     const shareTabs = []
     if (can('getPermissions').value) {
       shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
     }
+    if (can('getReadApiKey').value) {
+      shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
+    }
     shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
     if ($uiConfig.catalogsIntegration && can('admin').value) {
       shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiTransitConnection })
-    }
-    shareTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
-    if (can('getReadApiKey').value) {
-      shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
     }
     if (d.finalizedAt) {
       shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
@@ -443,20 +410,21 @@ const sections = computedDeepDiff(() => {
     }
   }
 
+  // Tracking section
   if (can('readJournal').value && !d.isMetaOnly) {
-    const activityTabs = [
+    const trackingTabs = [
       { key: 'journal', title: t('journal'), icon: mdiCalendarText }
     ]
     if ($uiConfig.eventsIntegration) {
-      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
+      trackingTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
     }
     if ($uiConfig.eventsIntegration) {
-      activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+      trackingTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
     }
     if ($uiConfig.eventsIntegration && can('setPermissions').value) {
-      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
+      trackingTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
-    result.activity = { title: t('activity'), tabs: activityTabs }
+    result.tracking = { title: t('tracking'), tabs: trackingTabs }
   }
 
   return result

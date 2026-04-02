@@ -1,10 +1,8 @@
 <template>
-  <v-list
-    v-if="application"
-    density="compact"
-    bg-color="background"
-  >
-    <v-list-subheader>{{ t('actions') }}</v-list-subheader>
+  <template v-if="application">
+    <v-list-subheader class="text-uppercase">
+      {{ t('navigation') }}
+    </v-list-subheader>
 
     <v-list-item
       :href="applicationLink"
@@ -19,6 +17,26 @@
       </template>
       {{ t('fullPage') }}
     </v-list-item>
+
+    <v-list-item
+      v-for="portalUrl in portalUrls"
+      :key="portalUrl.url"
+      :href="portalUrl.url"
+      target="_blank"
+      link
+    >
+      <template #prepend>
+        <v-icon
+          color="primary"
+          :icon="mdiWeb"
+        />
+      </template>
+      {{ t('viewOnPortal', { title: portalUrl.title }) }}
+    </v-list-item>
+
+    <v-list-subheader class="text-uppercase">
+      {{ t('actions') }}
+    </v-list-subheader>
 
     <v-list-item
       v-if="can('writeConfig')"
@@ -112,7 +130,7 @@
       </template>
       {{ t('delete') }}
     </v-list-item>
-  </v-list>
+  </template>
 
   <v-dialog
     v-model="showDeleteDialog"
@@ -187,9 +205,11 @@
 
 <i18n lang="yaml">
 fr:
-  actions: ACTIONS
+  navigation: Navigation
+  actions: Actions
   capture: Capture d'écran
   fullPage: Ouvrir en pleine page
+  viewOnPortal: "Voir sur {title}"
   editConfig: Éditer la configuration
   useAPI: Utiliser l'API
   changeOwner: Changer le propriétaire
@@ -204,9 +224,11 @@ fr:
   yes: Oui
   no: Non
 en:
-  actions: ACTIONS
+  navigation: Navigation
+  actions: Actions
   capture: Screenshot
-  fullPage: Open in a fullscreen
+  fullPage: Open fullscreen
+  viewOnPortal: "View on {title}"
   editConfig: Edit configuration
   useAPI: Use the API
   changeOwner: Change owner
@@ -223,12 +245,32 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiAccountSwitch, mdiCamera, mdiCloud, mdiDelete, mdiExitToApp, mdiPencil, mdiSquareEditOutline } from '@mdi/js'
+import { mdiAccountSwitch, mdiCamera, mdiCloud, mdiDelete, mdiExitToApp, mdiPencil, mdiSquareEditOutline, mdiWeb } from '@mdi/js'
 import useApplicationStore from '~/composables/application/store'
 
 const { t } = useI18n()
 const router = useRouter()
 const { application, applicationLink, can, patch, remove } = useApplicationStore()
+
+const owner = computed(() => application.value?.owner)
+const publicationSitesFetch = useFetch<any[]>(() => {
+  if (!owner.value) return null
+  let path = `${$apiPath}/settings/${owner.value.type}/${owner.value.id}`
+  if (owner.value.department) path += ':' + owner.value.department
+  path += '/publication-sites'
+  return path
+}, { immediate: true })
+
+const portalUrls = computed(() => {
+  if (!application.value || !publicationSitesFetch.data.value) return []
+  const published = application.value.publicationSites ?? []
+  return publicationSitesFetch.data.value
+    .filter((site: any) => site.applicationUrlTemplate && published.includes(`${site.type}:${site.id}`))
+    .map((site: any) => ({
+      title: site.title || site.url || site.id,
+      url: site.applicationUrlTemplate.replace('{id}', application.value!.id).replace('{slug}', application.value!.slug ?? application.value!.id)
+    }))
+})
 
 const showDeleteDialog = ref(false)
 

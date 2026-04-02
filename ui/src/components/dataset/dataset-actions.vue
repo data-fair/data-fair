@@ -1,5 +1,27 @@
 <template>
   <template v-if="dataset">
+    <template v-if="portalUrls.length">
+      <v-list-subheader class="text-uppercase">
+        {{ t('navigation') }}
+      </v-list-subheader>
+
+      <v-list-item
+        v-for="portalUrl in portalUrls"
+        :key="portalUrl.url"
+        :href="portalUrl.url"
+        target="_blank"
+        link
+      >
+        <template #prepend>
+          <v-icon
+            color="primary"
+            :icon="mdiWeb"
+          />
+        </template>
+        {{ t('viewOnPortal', { title: portalUrl.title }) }}
+      </v-list-item>
+    </template>
+
     <template v-if="dataFiles.length">
       <v-list-subheader class="text-uppercase">
         {{ t('downloads') }}
@@ -58,20 +80,6 @@
     <v-list-subheader class="text-uppercase">
       {{ t('actions') }}
     </v-list-subheader>
-
-    <v-list-item
-      v-if="can('writeDescription').value"
-      :to="`/dataset/${dataset.id}/edit-metadata`"
-      link
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiPencil"
-          color="primary"
-        />
-      </template>
-      {{ t('editMetadata') }}
-    </v-list-item>
 
     <v-list-item
       v-if="dataset.isRest && can('createLine').value"
@@ -212,12 +220,13 @@
 
 <i18n lang="yaml">
 fr:
+  navigation: Navigation
+  viewOnPortal: "Voir sur {title}"
   downloads: Téléchargements
   updateFile: Mettre à jour le fichier
   downloadRawRest: Export brut
   downloadRawRestSubtitle: Téléchargement de l'export brut des données originales (admin)
   actions: Actions
-  editMetadata: Éditer les métadonnées
   editData: Éditer les données
   useAPI: Utiliser l'API
   changeOwner: Changer le propriétaire
@@ -232,12 +241,13 @@ fr:
   yes: Oui
   no: Non
 en:
+  navigation: Navigation
+  viewOnPortal: "View on {title}"
   downloads: Downloads
   updateFile: Update data file
   downloadRawRest: Raw export
   downloadRawRestSubtitle: Download the raw export of original data (admin)
   actions: Actions
-  editMetadata: Edit metadata
   editData: Edit data
   useAPI: Use the API
   changeOwner: Change owner
@@ -261,9 +271,9 @@ import {
   mdiDeleteSweep,
   mdiFileDownload,
   mdiFileUpload,
-  mdiPencil,
   mdiProgressDownload,
-  mdiTableEdit
+  mdiTableEdit,
+  mdiWeb
 } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset/store'
 
@@ -272,6 +282,26 @@ const router = useRouter()
 const { dataset, dataFiles, can, remove, id, resourceUrl } = useDatasetStore()
 const session = useSession()
 const user = computed(() => session.state.user)
+
+const owner = computed(() => dataset.value?.owner)
+const publicationSitesFetch = useFetch<any[]>(() => {
+  if (!owner.value) return null
+  let path = `${$apiPath}/settings/${owner.value.type}/${owner.value.id}`
+  if (owner.value.department) path += ':' + owner.value.department
+  path += '/publication-sites'
+  return path
+}, { immediate: true })
+
+const portalUrls = computed(() => {
+  if (!dataset.value || !publicationSitesFetch.data.value) return []
+  const published = dataset.value.publicationSites ?? []
+  return publicationSitesFetch.data.value
+    .filter((site: any) => site.datasetUrlTemplate && published.includes(`${site.type}:${site.id}`))
+    .map((site: any) => ({
+      title: site.title || site.url || site.id,
+      url: site.datasetUrlTemplate.replace('{id}', dataset.value!.id).replace('{slug}', dataset.value!.slug ?? dataset.value!.id)
+    }))
+})
 
 const showDeleteDialog = ref(false)
 const showDeleteAllLinesDialog = ref(false)

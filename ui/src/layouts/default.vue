@@ -10,12 +10,8 @@
     v-model="drawer"
   />
 
-  <v-main scrollable>
-    <v-layout style="min-height: 100%; position: static">
-      <v-main tag="div">
-        <slot />
-      </v-main>
-    </v-layout>
+  <v-main>
+    <slot />
   </v-main>
 
   <df-agent-chat-drawer

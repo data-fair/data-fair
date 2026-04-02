@@ -46,7 +46,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
 
   const extraNavigationItems = computed(() => {
     const isMain = !site.value || site.value.main !== false
-    return ($uiConfig.extraNavigationItems ?? []).filter((extra) => {
+    return ($uiConfig.extraNavigationItems ?? []).filter((extra: any) => {
       if (extra.mainOnly && !isMain) return false
       if (!extra.can) return true
       if (extra.can === 'contrib') return canContrib.value

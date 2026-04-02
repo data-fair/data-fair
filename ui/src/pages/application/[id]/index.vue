@@ -62,117 +62,6 @@
           :model-value="tab"
           class="pa-4"
         >
-          <v-tabs-window-item value="info">
-            <v-row>
-              <v-col
-                cols="12"
-                md="6"
-              >
-                <div class="text-title-medium mb-2">
-                  {{ application.title }}
-                </div>
-                <p
-                  v-if="application.description"
-                  class="text-body-medium"
-                >
-                  {{ application.description }}
-                </p>
-              </v-col>
-              <v-col
-                cols="12"
-                md="6"
-              >
-                <v-list density="compact">
-                  <v-list-item v-if="baseAppFetch.data.value">
-                    <template #prepend>
-                      <v-icon :icon="mdiImage" />
-                    </template>
-                    <v-list-item-title>
-                      {{ baseAppFetch.data.value.title || application.url }}
-                      <span v-if="baseAppFetch.data.value.version">
-                        — {{ t('version') }} {{ baseAppFetch.data.value.version }}
-                      </span>
-                    </v-list-item-title>
-                  </v-list-item>
-                  <v-list-item v-if="application.updatedAt">
-                    <template #prepend>
-                      <v-icon :icon="mdiPencil" />
-                    </template>
-                    <v-list-item-title>
-                      {{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}
-                    </v-list-item-title>
-                  </v-list-item>
-                  <v-list-item>
-                    <template #prepend>
-                      <v-icon :icon="mdiPlusCircleOutline" />
-                    </template>
-                    <v-list-item-title>
-                      {{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}
-                    </v-list-item-title>
-                  </v-list-item>
-                </v-list>
-                <v-chip
-                  v-for="topic in application.topics"
-                  :key="topic.id"
-                  size="small"
-                  class="mr-1 mb-1"
-                >
-                  {{ topic.title }}
-                </v-chip>
-              </v-col>
-            </v-row>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="datasets">
-            <v-row v-if="datasets.length">
-              <v-col
-                v-for="dataset in datasets"
-                :key="dataset.id"
-                cols="12"
-                md="6"
-                lg="4"
-              >
-                <dataset-card :dataset="dataset" />
-              </v-col>
-            </v-row>
-            <p v-else>
-              {{ t('noDatasets') }}
-            </p>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="children-apps">
-            <v-row>
-              <v-col
-                v-for="app in childrenApps"
-                :key="app.id"
-                cols="12"
-                md="6"
-                lg="4"
-              >
-                <application-card :application="app" />
-              </v-col>
-            </v-row>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="attachments">
-            <application-attachments />
-          </v-tabs-window-item>
-        </v-tabs-window>
-      </template>
-    </df-section-tabs>
-
-    <!-- Render section -->
-    <df-section-tabs
-      v-if="sections.render"
-      id="render"
-      :min-height="390"
-      :title="sections.render.title"
-      :tabs="sections.render.tabs"
-      :svg="creativeSvg"
-      svg-no-margin
-    >
-      <template #content="{ tab }">
-        <v-tabs-window :model-value="tab">
           <v-tabs-window-item value="config">
             <v-container fluid>
               <v-alert
@@ -213,6 +102,120 @@
               </v-card>
             </v-container>
           </v-tabs-window-item>
+
+          <v-tabs-window-item value="info">
+            <v-row>
+              <!-- Left: description -->
+              <v-col
+                cols="12"
+                md="6"
+              >
+                <template v-if="application.description">
+                  <h3 class="text-title-medium font-weight-bold mb-2">
+                    {{ t('description') }}
+                  </h3>
+                  <p class="text-body-medium mb-4">
+                    {{ application.description }}
+                  </p>
+                </template>
+              </v-col>
+
+              <!-- Right: metadata card -->
+              <v-col
+                cols="12"
+                md="6"
+              >
+                <v-card>
+                  <v-list density="compact">
+                    <v-list-item
+                      v-if="baseAppFetch.data.value"
+                      :prepend-icon="mdiImage"
+                    >
+                      <div class="text-body-small text-medium-emphasis">
+                        {{ t('baseApp') }}
+                      </div>
+                      <div>
+                        {{ baseAppFetch.data.value.title || application.url }}
+                        <span v-if="baseAppFetch.data.value.version">
+                          — {{ t('version') }} {{ baseAppFetch.data.value.version }}
+                        </span>
+                      </div>
+                    </v-list-item>
+                    <v-list-item
+                      v-if="application.updatedAt"
+                      :prepend-icon="mdiPencil"
+                    >
+                      <div class="text-body-small text-medium-emphasis">
+                        {{ t('metadataUpdated') }}
+                      </div>
+                      <div>{{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}</div>
+                    </v-list-item>
+                    <v-list-item :prepend-icon="mdiPlusCircleOutline">
+                      <div class="text-body-small text-medium-emphasis">
+                        {{ t('created') }}
+                      </div>
+                      <div>{{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}</div>
+                    </v-list-item>
+                  </v-list>
+                  <template v-if="application.topics?.length">
+                    <v-divider />
+                    <div class="d-flex flex-wrap ga-1 pa-3">
+                      <v-chip
+                        v-for="topic in application.topics"
+                        :key="topic.id"
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      >
+                        {{ topic.title }}
+                      </v-chip>
+                    </div>
+                  </template>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <!-- Jeux de données -->
+            <h3 class="text-title-medium font-weight-bold mt-6 mb-3">
+              {{ t('datasets') }}
+            </h3>
+            <v-row v-if="datasets.length">
+              <v-col
+                v-for="dataset in datasets"
+                :key="dataset.id"
+                cols="12"
+                md="6"
+                lg="4"
+              >
+                <dataset-card :dataset="dataset" />
+              </v-col>
+            </v-row>
+            <p v-else>
+              {{ t('noDatasets') }}
+            </p>
+
+            <!-- Applications -->
+            <template v-if="childrenApps.length">
+              <h3 class="text-title-medium font-weight-bold mt-6 mb-3">
+                {{ t('childrenApps') }}
+              </h3>
+              <v-row>
+                <v-col
+                  v-for="app in childrenApps"
+                  :key="app.id"
+                  cols="12"
+                  md="6"
+                  lg="4"
+                >
+                  <application-card :application="app" />
+                </v-col>
+              </v-row>
+            </template>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="attachments">
+            <application-attachments />
+          </v-tabs-window-item>
         </v-tabs-window>
       </template>
     </df-section-tabs>
@@ -244,6 +247,10 @@
             <application-protected-links />
           </v-tabs-window-item>
 
+          <v-tabs-window-item value="publication-sites">
+            <application-publication-sites />
+          </v-tabs-window-item>
+
           <v-tabs-window-item value="integration">
             <v-container fluid>
               <integration-dialog
@@ -253,37 +260,28 @@
               />
             </v-container>
           </v-tabs-window-item>
-
-          <v-tabs-window-item value="publication-sites">
-            <application-publication-sites />
-          </v-tabs-window-item>
         </v-tabs-window>
       </template>
     </df-section-tabs>
 
-    <!-- Activity section -->
+    <!-- Tracking section -->
     <df-section-tabs
-      v-if="sections.activity"
-      id="activity"
+      v-if="sections.tracking"
+      id="tracking"
       :min-height="550"
-      :title="sections.activity.title"
-      :tabs="sections.activity.tabs"
+      :title="sections.tracking.title"
+      :tabs="sections.tracking.tabs"
       :svg="settingsSvg"
       svg-no-margin
     >
       <template #content="{ tab }">
         <v-tabs-window :model-value="tab">
-          <v-tabs-window-item value="journal">
-            <v-container
-              fluid
-              class="pa-0"
-            >
-              <journal-view
-                v-if="journal"
-                :journal="journal"
-                type="application"
-              />
-            </v-container>
+          <v-tabs-window-item value="traceability">
+            <d-frame
+              :src="traceabilityUrl"
+              sync-params
+              @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+            />
           </v-tabs-window-item>
           <v-tabs-window-item
             v-if="$uiConfig.eventsIntegration"
@@ -324,23 +322,26 @@
 fr:
   applications: Applications
   info: Informations
+  description: Description
+  baseApp: Application de base
+  metadataUpdated: Métadonnées mises à jour
+  created: Création
   datasets: Jeux de données
   noDatasets: Aucun jeu de données utilisé.
   childrenApps: Applications utilisées
   attachments: Pièces jointes
   metadata: Métadonnées
-  render: Rendu
   config: Configuration
   editConfig: Éditer la configuration
   validatedError: "Erreur dans la {bold}"
   validatedErrorBold: version validée
-  share: Partage
+  share: Permissions & partage
   permissions: Permissions
   protectedLink: Lien protégé
-  integration: Intégrer dans un site
   publicationSites: Portails
-  activity: Activité
-  journal: Journal
+  integration: Intégrer dans un site
+  tracking: Suivi
+  traceability: Traçabilité
   notifications: Notifications
   webhooks: Webhooks
   version: version
@@ -353,12 +354,15 @@ fr:
 en:
   applications: Applications
   info: Information
+  description: Description
+  baseApp: Base application
+  metadataUpdated: Metadata updated
+  created: Created
   datasets: Datasets
   noDatasets: No datasets used.
   childrenApps: Used applications
   attachments: Attachments
   metadata: Metadata
-  render: Render
   config: Configuration
   editConfig: Edit configuration
   validatedError: "Error in the {bold}"
@@ -366,10 +370,10 @@ en:
   share: Share
   permissions: Permissions
   protectedLink: Protected link
-  integration: Embed in a website
   publicationSites: Portals
-  activity: Activity
-  journal: Journal
+  integration: Embed in a website
+  tracking: Tracking
+  traceability: Traceability
   notifications: Notifications
   webhooks: Webhooks
   version: version
@@ -384,27 +388,27 @@ en:
 <script setup lang="ts">
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiBell, mdiCalendarText, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImage, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiBell, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiImage, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
-import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import { provideApplicationStore } from '~/composables/application/store'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
-import { $uiConfig } from '~/context'
+import { $apiPath, $uiConfig } from '~/context'
 
 const { t, locale } = useI18n()
+const { sendUiNotif } = useUiNotif()
 const route = useRoute<'/application/[id]/'>()
 const router = useRouter()
 
 const breadcrumbs = useBreadcrumbs()
 const store = provideApplicationStore(route.params.id)
-const { application, applicationLink, can, patch, journal, journalFetch, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
+const { application, applicationLink, can, patch, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
 const { availableVersions } = useApplicationVersions(store)
 
-useApplicationWatch(['journal', 'draft-error'], store)
+useApplicationWatch(['draft-error'], store)
 
 // Fetch additional data once application is loaded
 watch(application, (app) => {
@@ -416,7 +420,6 @@ watch(application, (app) => {
     ]
   })
   if (!configFetch.initialized.value) configFetch.refresh()
-  if (can('readJournal') && !journalFetch.initialized.value) journalFetch.refresh()
   if (!baseAppFetch.initialized.value) baseAppFetch.refresh()
 }, { immediate: true })
 
@@ -454,6 +457,11 @@ const confirmUpgrade = async () => {
   }
 }
 
+const traceabilityUrl = computed(() => {
+  if (!application.value) return ''
+  return `${window.location.origin}/events/embed/traceability?resource=${encodeURIComponent($apiPath + '/applications/' + application.value.id)}`
+})
+
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString(locale.value, { dateStyle: 'medium' })
@@ -463,17 +471,13 @@ const sections = computedDeepDiff(() => {
   if (!application.value) return {} as Record<string, { title: string, tabs: any[] }>
 
   const metadataTabs = [
+    { key: 'config', title: t('config'), icon: mdiSquareEditOutline },
     { key: 'info', title: t('info'), icon: mdiInformation },
-    { key: 'datasets', title: t('datasets'), icon: mdiDatabase }
+    { key: 'attachments', title: t('attachments'), icon: mdiPaperclip }
   ]
-  if (childrenApps.value.length) {
-    metadataTabs.push({ key: 'children-apps', title: t('childrenApps'), icon: mdiImageMultiple })
-  }
-  metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiPaperclip })
 
   const result: Record<string, { title: string, tabs: any[] }> = {
-    metadata: { title: t('metadata'), tabs: metadataTabs },
-    render: { title: t('render'), tabs: [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline }] }
+    metadata: { title: t('metadata'), tabs: metadataTabs }
   }
 
   const shareTabs = []
@@ -483,25 +487,23 @@ const sections = computedDeepDiff(() => {
   if (can('getKeys')) {
     shareTabs.push({ key: 'protected-links', title: t('protectedLink'), icon: mdiCloudKey })
   }
-  shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
   if (!$uiConfig.disablePublicationSites) {
     shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
   }
+  shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
   if (shareTabs.length) {
     result.share = { title: t('share'), tabs: shareTabs }
   }
 
-  if (can('readJournal')) {
-    const activityTabs = [
-      { key: 'journal', title: t('journal'), icon: mdiCalendarText }
+  if ($uiConfig.eventsIntegration) {
+    const trackingTabs = [
+      { key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock }
     ]
-    if ($uiConfig.eventsIntegration) {
-      activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    trackingTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    if (can('setPermissions')) {
+      trackingTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
-    if ($uiConfig.eventsIntegration && can('setPermissions')) {
-      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
-    }
-    result.activity = { title: t('activity'), tabs: activityTabs }
+    result.tracking = { title: t('tracking'), tabs: trackingTabs }
   }
 
   return result

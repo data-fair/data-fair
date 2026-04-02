@@ -183,7 +183,7 @@
 
             <!-- Advanced options -->
             <div
-              class="text-title-small mt-5 mb-3 d-flex align-center"
+              class="text-title-small mt-4 mb-2 d-flex align-center"
               style="cursor: pointer"
               @click="showAdvanced = !showAdvanced"
             >
@@ -226,6 +226,7 @@
             <v-text-field
               v-model="restTitle"
               :label="t('title')"
+              class="mt-2"
               variant="outlined"
               density="compact"
               max-width="500"
@@ -260,11 +261,11 @@
             <v-text-field
               v-model="virtualTitle"
               :label="t('title')"
+              class="mt-2"
               variant="outlined"
               density="compact"
               max-width="500"
               :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
-              class="mb-2"
             />
             <dataset-children-select v-model="virtualChildren" />
 
@@ -290,6 +291,7 @@
             <v-text-field
               v-model="metaOnlyTitle"
               :label="t('title')"
+              class="mt-2"
               variant="outlined"
               density="compact"
               max-width="500"
