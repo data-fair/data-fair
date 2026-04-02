@@ -22,6 +22,13 @@
       </v-list-item>
     </template>
 
+    <v-list-subheader
+      v-if="hasActions"
+      class="text-uppercase"
+    >
+      {{ t('actions') }}
+    </v-list-subheader>
+
     <v-list-item
       v-if="dataset.isRest && user?.adminMode"
       :href="resourceUrl + '/raw'"
@@ -37,13 +44,6 @@
       <v-list-item-subtitle>{{ t('downloadRawRestSubtitle') }}</v-list-item-subtitle>
     </v-list-item>
 
-    <v-list-subheader
-      v-if="hasActions"
-      class="text-uppercase"
-    >
-      {{ t('actions') }}
-    </v-list-subheader>
-
     <v-list-item
       v-if="can('readApiDoc').value && dataset.finalizedAt"
       :to="`/dataset/${dataset.id}/api-doc`"
@@ -57,7 +57,6 @@
       </template>
       {{ t('useAPI') }}
     </v-list-item>
-
   </template>
 </template>
 
@@ -113,6 +112,7 @@ const portalUrls = computed(() => {
 
 const hasActions = computed(() => {
   if (!dataset.value) return false
-  return can('readApiDoc').value && !!dataset.value.finalizedAt
+  return (can('readApiDoc').value && !!dataset.value.finalizedAt) ||
+    (dataset.value.isRest && user.value?.adminMode)
 })
 </script>

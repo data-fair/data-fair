@@ -58,7 +58,18 @@
           </v-tabs-window-item>
 
           <v-tabs-window-item value="schema">
-            <dataset-schema-view />
+            <v-btn
+              v-if="dataset && can('writeDescriptionBreaking').value"
+              color="primary"
+              variant="flat"
+              class="mr-2"
+              :prepend-icon="mdiPencil"
+              :to="`/dataset/${dataset.id}/edit-schema`"
+            >
+              {{ t('editSchema') }}
+            </v-btn>
+            <dataset-schema-download />
+            <dataset-schema-view class="mt-2" />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="attachments">
@@ -196,14 +207,14 @@
       </template>
     </df-section-tabs>
 
-    <!-- Events section -->
+    <!-- Activity section -->
     <df-section-tabs
-      v-if="sections.events"
-      id="events"
-      v-model="eventsTab"
+      v-if="sections.activity"
+      id="activity"
+      v-model="activityTab"
       :min-height="550"
-      :title="sections.events.title"
-      :tabs="sections.events.tabs"
+      :title="sections.activity.title"
+      :tabs="sections.activity.tabs"
       :svg="settingsSvg"
       svg-no-margin
     >
@@ -212,6 +223,15 @@
           :model-value="tab"
           class="pa-4"
         >
+          <v-tabs-window-item value="journal">
+            <journal-view
+              v-if="journal"
+              :journal="journal"
+              :task-progress="taskProgress"
+              type="dataset"
+            />
+          </v-tabs-window-item>
+
           <v-tabs-window-item value="traceability">
             <event-traceability
               resource-type="dataset"
@@ -410,6 +430,7 @@
 
 <i18n lang="yaml">
 fr:
+  editSchema: Éditer le schéma
   datasets: Jeux de données
   import: Import
   source: Source
@@ -452,6 +473,7 @@ fr:
   yes: Oui
   no: Non
 en:
+  editSchema: Edit schema
   datasets: Datasets
   import: Import
   source: Source
@@ -504,7 +526,7 @@ import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiAttachment, mdiBell, mdiCalendarText, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiFileDownload, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAttachment, mdiBell, mdiCalendarText, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiFileDownload, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPencil, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -518,7 +540,7 @@ const breadcrumbs = useBreadcrumbs()
 const importTab = ref('source')
 const metadataTab = ref('informations')
 const explorationTab = ref('generic-views')
-const eventsTab = ref('traceability')
+const activityTab = ref('journal')
 
 const store = provideDatasetStore(route.params.id, true, 'vuetify')
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove } = store
@@ -631,16 +653,18 @@ const sections = computedDeepDiff(() => {
     }
   }
 
-  // Events section
+  // Activity section
+  const activityTabs = []
+  if (can('readJournal').value) {
+    activityTabs.push({ key: 'journal', title: t('journal'), icon: mdiCalendarText })
+  }
   if ($uiConfig.eventsIntegration) {
-    const eventsTabs = [
-      { key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock }
-    ]
-    eventsTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
+    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
     if (can('setPermissions').value) {
-      eventsTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
+      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
-    result.events = { title: t('tracking'), tabs: eventsTabs }
+    result.activity = { title: t('tracking'), tabs: activityTabs }
   }
 
   // Danger zone section
@@ -668,7 +692,7 @@ const tabModels: Record<string, Ref<string>> = {
   import: importTab,
   metadata: metadataTab,
   exploration: explorationTab,
-  events: eventsTab
+  activity: activityTab
 }
 
 const tocSections = computed(() => {

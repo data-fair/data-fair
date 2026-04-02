@@ -35,290 +35,290 @@
           indeterminate
         />
         <template v-else>
-            <df-section-tabs
-              v-if="sections.info"
-              id="info"
-              :svg="infoSvg"
-              :title="sections.info.title"
-            >
-              <template #extension>
-                <p>
-                  Permettez aux utilisateurs de vos APIs et de vos applications de vous contacter en renseignant ces informations.
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <settings-info
-                        v-model="settings.info"
-                        @update:model-value="patch.execute({info: settings.info})"
-                      />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </df-section-tabs>
-
-            <df-section-tabs
-              v-if="sections.licences"
-              id="licences"
-              :svg="qualitySvg"
-              :title="sections.licences.title"
-            >
-              <template #extension>
-                <p>
-                  Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <settings-licenses
-                        v-model="settings.licenses"
-                        @update:model-value="patch.execute({licenses: settings.licenses})"
-                      />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </df-section-tabs>
-
-            <df-section-tabs
-              v-if="sections.topics"
-              id="topics"
-              :svg="flagsSvg"
-              svg-no-margin
-              :title="sections.topics.title"
-            >
-              <template #extension>
-                <p v-if="$uiConfig.disableApplications">
-                  Les thématiques sont une manière simple d'organiser vos jeux de données.
-                </p>
-                <p v-else>
-                  Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <settings-topics
-                        v-model="settings.topics"
-                        @update:model-value="patch.execute({topics: settings.topics})"
-                      />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </df-section-tabs>
-
-            <df-section-tabs
-              v-if="sections.datasetsMetadata"
-              id="datasetsMetadata"
-              :svg="checklist2Svg"
-              svg-no-margin
-              :title="sections.datasetsMetadata.title"
-            >
-              <template #extension>
-                Configurez des métadonnées additionnelles pour vos jeux de données.
-              </template>
-              <template #content>
-                <v-container>
-                  <settings-datasets-metadata
-                    v-model="settings.datasetsMetadata"
-                    @update:model-value="patch.execute({datasetsMetadata: settings.datasetsMetadata})"
-                  />
-                </v-container>
-              </template>
-            </df-section-tabs>
-
-            <df-section-tabs
-              v-if="sections['api-keys']"
-              id="api-keys"
-              :svg="securitySvg"
-              svg-no-margin
-              :title="sections['api-keys'].title"
-            >
-              <template #extension>
-                <p>
-                  Les clés d'API sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
-                  Il s'agit d'une configuration technique pour personne avertie.
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <settings-api-keys
-                    v-model="settings.apiKeys"
-                    @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
-                  />
-                </v-container>
-              </template>
-            </df-section-tabs>
-
-            <df-section-tabs
-              v-if="sections.webhooks"
-              id="webhooks"
-              :svg="wwwSvg"
-              svg-no-margin
-              :title="sections.webhooks.title"
-            >
-              <template #extension>
-                <p>
-                  Les <i>webhooks</i> sont un moyen d'avertir d'autres services Web d'événements internes à Data Fair.
-                  Il s'agit d'une configuration technique pour personne avertie.
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <settings-webhooks
-                        v-model="settings.webhooks"
-                        @update:model-value="patch.execute({webhooks: settings.webhooks})"
-                      />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </df-section-tabs>
-
-            <df-section-tabs
-              v-if="sections.privateVocabulary"
-              id="privateVocabulary"
-              :svg="checklistSvg"
-              svg-no-margin
-              :title="sections.privateVocabulary.title"
-            >
-              <template #extension>
-                <p>
-                  Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <v-alert
-                    type="warning"
-                    variant="outlined"
-                    density="compact"
-                    class="mb-2"
+          <df-section-tabs
+            v-if="sections.info"
+            id="info"
+            :svg="infoSvg"
+            :title="sections.info.title"
+          >
+            <template #extension>
+              <p>
+                Permettez aux utilisateurs de vos APIs et de vos applications de vous contacter en renseignant ces informations.
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    md="6"
                   >
-                    Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
-                  </v-alert>
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <settings-private-vocabulary
-                        v-model="settings.privateVocabulary"
-                        @update:model-value="patch.execute({privateVocabulary: settings.privateVocabulary})"
-                      />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </df-section-tabs>
+                    <settings-info
+                      v-model="settings.info"
+                      @update:model-value="patch.execute({info: settings.info})"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </template>
+          </df-section-tabs>
 
-            <df-section-tabs
-              v-if="sections.publicationSites"
-              id="publicationSites"
-              :svg="uiSvg"
-              svg-no-margin
-              :title="sections.publicationSites.title"
-            >
-              <template #extension>
-                <p>
-                  Les <i>portails</i> sont vos sites de publication de ressources.
-                  Cette liste est surtout gérée depuis l'onglet Portails mais certains paramètres sont édités ici.
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <settings-publication-sites
-                        v-model="settings.publicationSites"
-                        :datasets-metadata="settings.datasetsMetadata"
-                        @update:model-value="patch.execute({publicationSites: settings.publicationSites})"
-                      />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </df-section-tabs>
+          <df-section-tabs
+            v-if="sections.licences"
+            id="licences"
+            :svg="qualitySvg"
+            :title="sections.licences.title"
+          >
+            <template #extension>
+              <p>
+                Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    md="6"
+                  >
+                    <settings-licenses
+                      v-model="settings.licenses"
+                      @update:model-value="patch.execute({licenses: settings.licenses})"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </template>
+          </df-section-tabs>
 
-            <df-section-tabs
-              v-if="sections.agentChat"
-              id="agentChat"
-              :svg="compatSvg"
-              svg-no-margin
-              color="admin"
-              :title="sections.agentChat.title"
-            >
-              <template #extension>
-                <p>
-                  {{ t('agentChatDesc') }}
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <v-row>
-                    <v-col>
-                      <v-checkbox
-                        v-model="settings.agentChat"
-                        :label="t('agentChatToggle')"
-                        @update:model-value="patch.execute({agentChat: settings.agentChat})"
-                      />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </df-section-tabs>
+          <df-section-tabs
+            v-if="sections.topics"
+            id="topics"
+            :svg="flagsSvg"
+            svg-no-margin
+            :title="sections.topics.title"
+          >
+            <template #extension>
+              <p v-if="$uiConfig.disableApplications">
+                Les thématiques sont une manière simple d'organiser vos jeux de données.
+              </p>
+              <p v-else>
+                Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    md="6"
+                  >
+                    <settings-topics
+                      v-model="settings.topics"
+                      @update:model-value="patch.execute({topics: settings.topics})"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </template>
+          </df-section-tabs>
 
-            <df-section-tabs
-              v-if="sections.compat"
-              id="compat"
-              :svg="compatSvg"
-              svg-no-margin
-              color="admin"
-              :title="sections.compat.title"
-            >
-              <template #extension>
-                <p>
-                  Gérez les compatibilités de votre organisation avec d'autres services. Peut-être particulièrement utile en période de transition.
-                </p>
-              </template>
-              <template #content>
-                <v-container>
-                  <v-row>
-                    <v-col>
-                      <v-checkbox
-                        v-model="settings.compatODS"
-                        :label="t('compatODS')"
-                        @update:model-value="patch.execute({compatODS: settings.compatODS})"
-                      />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </df-section-tabs>
+          <df-section-tabs
+            v-if="sections.datasetsMetadata"
+            id="datasetsMetadata"
+            :svg="checklist2Svg"
+            svg-no-margin
+            :title="sections.datasetsMetadata.title"
+          >
+            <template #extension>
+              Configurez des métadonnées additionnelles pour vos jeux de données.
+            </template>
+            <template #content>
+              <v-container>
+                <settings-datasets-metadata
+                  v-model="settings.datasetsMetadata"
+                  @update:model-value="patch.execute({datasetsMetadata: settings.datasetsMetadata})"
+                />
+              </v-container>
+            </template>
+          </df-section-tabs>
+
+          <df-section-tabs
+            v-if="sections['api-keys']"
+            id="api-keys"
+            :svg="securitySvg"
+            svg-no-margin
+            :title="sections['api-keys'].title"
+          >
+            <template #extension>
+              <p>
+                Les clés d'API sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
+                Il s'agit d'une configuration technique pour personne avertie.
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <settings-api-keys
+                  v-model="settings.apiKeys"
+                  @update:model-value="patch.execute({apiKeys: settings.apiKeys})"
+                />
+              </v-container>
+            </template>
+          </df-section-tabs>
+
+          <df-section-tabs
+            v-if="sections.webhooks"
+            id="webhooks"
+            :svg="wwwSvg"
+            svg-no-margin
+            :title="sections.webhooks.title"
+          >
+            <template #extension>
+              <p>
+                Les <i>webhooks</i> sont un moyen d'avertir d'autres services Web d'événements internes à Data Fair.
+                Il s'agit d'une configuration technique pour personne avertie.
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    md="6"
+                  >
+                    <settings-webhooks
+                      v-model="settings.webhooks"
+                      @update:model-value="patch.execute({webhooks: settings.webhooks})"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </template>
+          </df-section-tabs>
+
+          <df-section-tabs
+            v-if="sections.privateVocabulary"
+            id="privateVocabulary"
+            :svg="checklistSvg"
+            svg-no-margin
+            :title="sections.privateVocabulary.title"
+          >
+            <template #extension>
+              <p>
+                Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <v-alert
+                  type="warning"
+                  variant="outlined"
+                  density="compact"
+                  class="mb-2"
+                >
+                  Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
+                </v-alert>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    md="6"
+                  >
+                    <settings-private-vocabulary
+                      v-model="settings.privateVocabulary"
+                      @update:model-value="patch.execute({privateVocabulary: settings.privateVocabulary})"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </template>
+          </df-section-tabs>
+
+          <df-section-tabs
+            v-if="sections.publicationSites"
+            id="publicationSites"
+            :svg="uiSvg"
+            svg-no-margin
+            :title="sections.publicationSites.title"
+          >
+            <template #extension>
+              <p>
+                Les <i>portails</i> sont vos sites de publication de ressources.
+                Cette liste est surtout gérée depuis l'onglet Portails mais certains paramètres sont édités ici.
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    md="6"
+                  >
+                    <settings-publication-sites
+                      v-model="settings.publicationSites"
+                      :datasets-metadata="settings.datasetsMetadata"
+                      @update:model-value="patch.execute({publicationSites: settings.publicationSites})"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </template>
+          </df-section-tabs>
+
+          <df-section-tabs
+            v-if="sections.agentChat"
+            id="agentChat"
+            :svg="compatSvg"
+            svg-no-margin
+            color="admin"
+            :title="sections.agentChat.title"
+          >
+            <template #extension>
+              <p>
+                {{ t('agentChatDesc') }}
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <v-row>
+                  <v-col>
+                    <v-checkbox
+                      v-model="settings.agentChat"
+                      :label="t('agentChatToggle')"
+                      @update:model-value="patch.execute({agentChat: settings.agentChat})"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </template>
+          </df-section-tabs>
+
+          <df-section-tabs
+            v-if="sections.compat"
+            id="compat"
+            :svg="compatSvg"
+            svg-no-margin
+            color="admin"
+            :title="sections.compat.title"
+          >
+            <template #extension>
+              <p>
+                Gérez les compatibilités de votre organisation avec d'autres services. Peut-être particulièrement utile en période de transition.
+              </p>
+            </template>
+            <template #content>
+              <v-container>
+                <v-row>
+                  <v-col>
+                    <v-checkbox
+                      v-model="settings.compatODS"
+                      :label="t('compatODS')"
+                      @update:model-value="patch.execute({compatODS: settings.compatODS})"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </template>
+          </df-section-tabs>
         </template>
       </v-col>
     </v-row>

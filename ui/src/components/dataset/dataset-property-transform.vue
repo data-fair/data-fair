@@ -62,7 +62,10 @@
           variant="tonal"
           class="mb-4"
         >
-          <i18n-t keypath="exprEvalHelp" tag="p">
+          <i18n-t
+            keypath="exprEvalHelp"
+            tag="p"
+          >
             <template #link>
               <a
                 href="https://github.com/silentmatt/expr-eval"

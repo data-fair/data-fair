@@ -1,4 +1,7 @@
 <template>
+  <div class="text-center">
+    <dataset-schema-download />
+  </div>
   <dataset-schema-view data-iframe-height />
 </template>
 

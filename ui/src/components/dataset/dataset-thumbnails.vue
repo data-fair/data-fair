@@ -54,7 +54,7 @@
               {{ item.raw[labelField.key] }}
             </v-card-title>
             <v-card-subtitle v-if="descriptionField">
-              <template v-html="/*eslint-disable-line vue/no-v-html*/item.raw[descriptionField.key]" />
+              <div v-html="/*eslint-disable-line vue/no-v-html*/item.raw[descriptionField.key]" />
             </v-card-subtitle>
           </v-card>
         </v-col>

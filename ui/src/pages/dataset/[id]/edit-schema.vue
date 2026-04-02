@@ -2,64 +2,64 @@
   <v-container v-if="datasetEditFetch.data.value">
     <v-row class="dataset">
       <v-col>
-          <df-section-tabs
-            v-if="sections.structure"
-            id="structure"
-            v-model="structureTab"
-            :min-height="300"
-            :title="sections.structure.title"
-            :tabs="sections.structure.tabs"
-            :color="sections.structure.color"
-            :svg="buildingSvg"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="schema">
-                  <v-container fluid>
-                    <dataset-schema
-                      v-model="datasetEditFetch.data.value.schema"
-                      :dataset="datasetEditFetch.data.value"
-                      :primary-key="datasetEditFetch.data.value.primaryKey"
-                      @update:primary-key="pk => { if (datasetEditFetch.data.value) datasetEditFetch.data.value.primaryKey = pk }"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="extensions">
-                  <v-container fluid>
-                    <dataset-extensions
-                      v-model="datasetEditFetch.data.value"
-                      @refresh="onRefreshExtension"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="master-data">
-                  <v-container fluid>
-                    <dataset-master-data v-model="datasetEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
+        <df-section-tabs
+          v-if="sections.structure"
+          id="structure"
+          v-model="structureTab"
+          :min-height="300"
+          :title="sections.structure.title"
+          :tabs="sections.structure.tabs"
+          :color="sections.structure.color"
+          :svg="buildingSvg"
+        >
+          <template #content="{ tab }">
+            <v-tabs-window :model-value="tab">
+              <v-tabs-window-item value="schema">
+                <v-container fluid>
+                  <dataset-schema
+                    v-model="datasetEditFetch.data.value.schema"
+                    :dataset="datasetEditFetch.data.value"
+                    :primary-key="datasetEditFetch.data.value.primaryKey"
+                    @update:primary-key="pk => { if (datasetEditFetch.data.value) datasetEditFetch.data.value.primaryKey = pk }"
+                  />
+                </v-container>
+              </v-tabs-window-item>
+              <v-tabs-window-item value="extensions">
+                <v-container fluid>
+                  <dataset-extensions
+                    v-model="datasetEditFetch.data.value"
+                    @refresh="onRefreshExtension"
+                  />
+                </v-container>
+              </v-tabs-window-item>
+              <v-tabs-window-item value="master-data">
+                <v-container fluid>
+                  <dataset-master-data v-model="datasetEditFetch.data.value" />
+                </v-container>
+              </v-tabs-window-item>
+            </v-tabs-window>
+          </template>
+        </df-section-tabs>
 
-          <df-section-tabs
-            v-if="sections.virtual"
-            id="virtual"
-            :min-height="300"
-            :title="sections.virtual.title"
-            :tabs="sections.virtual.tabs"
-            :color="sections.virtual.color"
-            :svg="dataSvg"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="virtual">
-                  <v-container fluid>
-                    <dataset-virtual v-model="datasetEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
+        <df-section-tabs
+          v-if="sections.virtual"
+          id="virtual"
+          :min-height="300"
+          :title="sections.virtual.title"
+          :tabs="sections.virtual.tabs"
+          :color="sections.virtual.color"
+          :svg="dataSvg"
+        >
+          <template #content="{ tab }">
+            <v-tabs-window :model-value="tab">
+              <v-tabs-window-item value="virtual">
+                <v-container fluid>
+                  <dataset-virtual v-model="datasetEditFetch.data.value" />
+                </v-container>
+              </v-tabs-window-item>
+            </v-tabs-window>
+          </template>
+        </df-section-tabs>
       </v-col>
     </v-row>
 

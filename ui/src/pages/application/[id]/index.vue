@@ -531,7 +531,6 @@ import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { $uiConfig } from '~/context'
 
 const { t, locale } = useI18n()
-const { sendUiNotif } = useUiNotif()
 const route = useRoute<'/application/[id]/'>()
 const router = useRouter()
 

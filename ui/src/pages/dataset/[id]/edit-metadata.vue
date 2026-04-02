@@ -5,13 +5,13 @@
         cols="12"
         md="8"
       >
-        <dataset-info v-model="datasetEditFetch.data.value" />
+        <dataset-metadata-form v-model="datasetEditFetch.data.value" />
       </v-col>
       <v-col
         cols="12"
         md="4"
       >
-        <dataset-metadata-form v-model="datasetEditFetch.data.value" />
+        <!-- Additional metadata sidebar can go here if needed -->
       </v-col>
     </v-row>
 

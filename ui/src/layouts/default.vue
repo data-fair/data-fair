@@ -10,7 +10,10 @@
     v-model="drawer"
   />
 
-  <v-main scrollable :style="mainStyle">
+  <v-main
+    scrollable
+    :style="mainStyle"
+  >
     <v-layout style="min-height: 100%">
       <v-main tag="div">
         <slot />
