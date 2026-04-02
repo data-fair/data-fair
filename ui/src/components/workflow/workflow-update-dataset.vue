@@ -5,6 +5,7 @@
   >
     <v-stepper-header class="bg-surface">
       <v-stepper-item
+        v-if="!props.initialDatasetId"
         :value="1"
         :complete="!!currentDataset"
         editable
@@ -68,7 +69,10 @@
     </v-stepper-header>
 
     <v-stepper-window class="mx-0 mb-0 mt-2">
-      <v-stepper-window-item :value="1">
+      <v-stepper-window-item
+        v-if="!props.initialDatasetId"
+        :value="1"
+      >
         <v-row
           v-if="!initialFetch"
           class="mt-4 mb-1 mx-0"
@@ -399,14 +403,15 @@ import { useWindowSize } from '@vueuse/core'
 
 const debug = Debug('workflow-update-dataset')
 
-const { datasetParams } = defineProps({
-  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
+const props = defineProps({
+  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} },
+  initialDatasetId: { type: String, default: undefined }
 })
 const { sendUiNotif } = useUiNotif()
 const { t, locale } = useI18n()
 const { height } = useWindowSize()
 
-const currentStep = ref(1)
+const currentStep = ref(props.initialDatasetId ? 2 : 1)
 
 const file = ref<File>()
 const attachments = ref<File>()
@@ -414,13 +419,13 @@ const attachments = ref<File>()
 const suggestArchive = computed(() => file.value && file.value.size > 50000000 && (file.value.name.endsWith('.csv') || file.value.name.endsWith('.tsv') || file.value.name.endsWith('.txt') || file.value.name.endsWith('.geojson')))
 
 const datasetsFilter = computed(() => ({
-  ...datasetParams,
+  ...props.datasetParams,
   type: 'file,rest',
   can: 'writeData,createLine,updateLine'
 }))
 
 const selectedDataset = ref<ListedDataset>()
-const currentDatasetId = ref<string>()
+const currentDatasetId = ref<string | undefined>(props.initialDatasetId)
 watch(selectedDataset, () => {
   debug('selectedDataset', selectedDataset.value)
   if (selectedDataset.value) {
@@ -430,7 +435,7 @@ watch(selectedDataset, () => {
 watch(currentStep, () => {
   debug('step change', currentStep.value)
   if (!initialized.value) return
-  if (currentStep.value === 1) {
+  if (currentStep.value === 1 && !props.initialDatasetId) {
     selectedDataset.value = undefined
     currentDatasetId.value = undefined
   }

@@ -20,23 +20,12 @@
         density="compact"
         style="background-color: inherit;"
       >
-        <v-list-item v-if="dataset.visibility === 'public'">
+        <!-- Type -->
+        <v-list-item v-if="fileInfo">
           <template #prepend>
-            <v-icon
-              :icon="mdiLockOpen"
-              color="primary"
-            />
+            <v-icon :icon="mdiFile" />
           </template>
-          {{ t('public') }}
-        </v-list-item>
-        <v-list-item v-else-if="dataset.visibility">
-          <template #prepend>
-            <v-icon
-              :icon="mdiLock"
-              color="warning"
-            />
-          </template>
-          {{ t('private') }}
+          {{ fileInfo }}
         </v-list-item>
         <v-list-item v-if="dataset.isVirtual">
           <template #prepend>
@@ -65,6 +54,8 @@
           </template>
           {{ t('metaOnly') }}
         </v-list-item>
+
+        <!-- Status -->
         <v-list-item v-if="dataset.status === 'draft'">
           <template #prepend>
             <v-icon
@@ -83,17 +74,33 @@
           </template>
           {{ t('error') }}
         </v-list-item>
-        <v-list-item v-if="fileInfo">
-          <template #prepend>
-            <v-icon :icon="mdiFile" />
-          </template>
-          {{ fileInfo }}
-        </v-list-item>
+
+        <!-- Record count -->
         <v-list-item v-if="dataset.count != null">
           <template #prepend>
             <v-icon :icon="mdiViewHeadline" />
           </template>
           {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
+        </v-list-item>
+
+        <!-- Visibility -->
+        <v-list-item v-if="dataset.visibility === 'public'">
+          <template #prepend>
+            <v-icon
+              :icon="mdiLockOpen"
+              color="primary"
+            />
+          </template>
+          {{ t('public') }}
+        </v-list-item>
+        <v-list-item v-else-if="dataset.visibility">
+          <template #prepend>
+            <v-icon
+              :icon="mdiLock"
+              color="warning"
+            />
+          </template>
+          {{ t('private') }}
         </v-list-item>
       </v-list>
     </v-card-text>

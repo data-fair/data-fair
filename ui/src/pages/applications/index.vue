@@ -2,7 +2,7 @@
   <v-container data-iframe-height>
     <!-- Skeleton loader (initial load) -->
     <v-row
-      v-if="catalog.loading.value && !catalog.initialized.value"
+      v-if="!catalog.initialized.value"
       class="d-flex align-stretch"
     >
       <v-col
@@ -113,7 +113,7 @@
     <!-- Infinite scroll sentinel -->
     <div
       v-if="catalog.hasMore.value && !catalog.loading.value"
-      v-intersect:quiet="(isIntersecting: boolean) => isIntersecting && catalog.loadMore()"
+      v-intersect="(isIntersecting: boolean) => isIntersecting && catalog.loadMore()"
     />
 
     <!-- Right navigation: actions, search, sort, facets, view toggle -->
@@ -184,14 +184,12 @@
 
 <script setup lang="ts">
 import type { Application } from '#api/types'
-import { useDisplay } from 'vuetify'
 import { mdiImageMultiple, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
-const { name: breakpointName } = useDisplay()
 const session = useSession()
 const account = session.account
 const { canContribDep } = usePermissions()
@@ -216,9 +214,6 @@ const viewModeKey = computed(() => {
 })
 const viewMode = ref(localStorage.getItem(viewModeKey.value) || 'grid')
 watch(viewMode, (v) => { localStorage.setItem(viewModeKey.value, v) })
-
-// Responsive page size matching legacy breakpoints
-const pageSize = computed(() => ({ xs: 12, sm: 12, md: 12, lg: 15, xl: 24, xxl: 24 }[breakpointName.value] || 12))
 
 // Facet filter URL params
 const facetOwner = useStringsArraySearchParam('owner')
@@ -259,7 +254,6 @@ const catalog = useCatalogList<Application>({
   fetchUrl: computed(() => $apiPath + '/applications'),
   query: applicationsQuery,
   facetsFields: 'visibility,topics,publicationSites,requestedPublicationSites,base-application,owner',
-  pageSize,
 })
 
 // Breadcrumb updates

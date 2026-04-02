@@ -10,8 +10,12 @@
     v-model="drawer"
   />
 
-  <v-main>
-    <slot />
+  <v-main scrollable :style="mainStyle">
+    <v-layout style="min-height: 100%">
+      <v-main tag="div">
+        <slot />
+      </v-main>
+    </v-layout>
   </v-main>
 
   <df-agent-chat-drawer
@@ -40,6 +44,7 @@ import { useAgentApplicationTools } from '~/composables/application/agent-tools'
 import { useAgentConnectorTools } from '~/composables/agent/connector-tools'
 import { provideShowAgentChat } from '~/composables/agent/use-show-chat'
 import DfAgentChatDrawer from '@data-fair/lib-vuetify-agents/DfAgentChatDrawer.vue'
+import { useAgentChatDrawer } from '@data-fair/lib-vuetify-agents/useAgentChatDrawer.js'
 
 const { lgAndUp, xlAndUp, xxl } = useDisplay()
 const drawer = ref(lgAndUp.value)
@@ -108,4 +113,23 @@ const agentChatDrawerProps = computed(() => {
     temporary
   }
 })
+
+const agentChatState = useAgentChatDrawer()
+
+const mainStyle = computed(() => {
+  let rightOffset = 0
+  if (showAgentChat.value && !agentChatDrawerProps.value.temporary && agentChatState.drawerOpen.value) {
+    rightOffset = agentChatDrawerProps.value.width
+  }
+  return { '--nav-right-offset': rightOffset + 'px' }
+})
 </script>
+
+<style scoped>
+:deep(.v-main__scroller .v-navigation-drawer--right) {
+  position: fixed !important;
+  top: 48px !important;
+  right: var(--nav-right-offset, 0px) !important;
+  height: calc(100dvh - 48px) !important;
+}
+</style>

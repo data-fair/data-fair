@@ -59,7 +59,7 @@
 <script setup lang="ts">
 import type { Application } from '#api/types'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
-import { mdiPlay, mdiAlert, mdiStop, mdiCog } from '@mdi/js'
+import { mdiPlay, mdiAlert, mdiProgressWrench, mdiCog } from '@mdi/js'
 
 const { t, locale } = useI18n()
 
@@ -74,20 +74,20 @@ const props = withDefaults(defineProps<{
 
 const statusColor = computed(() => {
   const colors: Record<string, string> = {
-    running: 'success',
+    created: 'warning',
+    'configured-draft': 'info',
+    configured: 'success',
     error: 'error',
-    stopped: 'warning',
-    configured: 'info',
   }
   return (props.application.status && colors[props.application.status]) ?? 'default'
 })
 
 const statusIcon = computed(() => {
   const icons: Record<string, string> = {
-    running: mdiPlay,
+    created: mdiProgressWrench,
+    'configured-draft': mdiCog,
+    configured: mdiPlay,
     error: mdiAlert,
-    stopped: mdiStop,
-    configured: mdiCog,
   }
   return (props.application.status && icons[props.application.status]) ?? mdiCog
 })
@@ -101,15 +101,15 @@ const formatDate = (dateStr: string) => {
 fr:
   updatedAt: Mis à jour le {date}
   status:
-    running: En cours
+    created: Créée
+    configured-draft: Brouillon configuré
+    configured: Configurée
     error: Erreur
-    stopped: Arrêté
-    configured: Configuré
 en:
   updatedAt: Updated on {date}
   status:
-    running: Running
-    error: Error
-    stopped: Stopped
+    created: Created
+    configured-draft: Draft configured
     configured: Configured
+    error: Error
 </i18n>

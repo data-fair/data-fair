@@ -141,14 +141,6 @@
               clearable
             />
 
-            <v-checkbox
-              v-if="!initFromData && file"
-              v-model="filenameTitle"
-              hide-details
-              :label="t('filenameTitle')"
-              class="mt-2"
-            />
-
             <v-alert
               v-if="suggestArchive"
               type="info"
@@ -159,7 +151,7 @@
             </v-alert>
 
             <v-text-field
-              v-if="initFromData || !filenameTitle || !file"
+              v-if="!initFromData"
               v-model="fileTitle"
               :label="t('title')"
               variant="outlined"
@@ -494,8 +486,8 @@ const fileInputValue = ref<File[]>([])
 const file = ref<File | null>(null)
 const attachmentsInputValue = ref<File[]>([])
 const attachments = computed(() => attachmentsInputValue.value?.[0] ?? null)
-const filenameTitle = ref(true)
 const fileTitle = ref('')
+const lastAutoFilledTitle = ref('')
 const attachmentsAsImage = ref(false)
 const showAdvanced = ref(false)
 const escapeKeyAlgorithm = ref<string | null>(null)
@@ -520,11 +512,22 @@ const suggestArchive = computed(() => {
 
 const normalizeOptions = ref<Record<string, any>>({})
 
+function fileNameWithoutExt (name: string) {
+  return name.replace(/\.[^/.]+$/, '')
+}
+
 function onFileChange (val: File | File[]) {
   if (Array.isArray(val)) {
     file.value = val[0] ?? null
   } else {
     file.value = val ?? null
+  }
+  if (file.value) {
+    const title = fileNameWithoutExt(file.value.name)
+    if (!fileTitle.value || fileTitle.value === lastAutoFilledTitle.value) {
+      fileTitle.value = title
+    }
+    lastAutoFilledTitle.value = title
   }
   createError.value = null
 }
@@ -555,7 +558,6 @@ const conflictsOk = ref(false)
 // ---- Computed helpers ----
 const effectiveTitle = computed(() => {
   if (datasetType.value === 'file') {
-    if (filenameTitle.value && file.value) return undefined
     return fileTitle.value || undefined
   }
   if (datasetType.value === 'rest') return restTitle.value || undefined
@@ -655,9 +657,7 @@ async function createFileDataset () {
   if (initFrom.value) {
     body.initFrom = initFrom.value
   }
-  if (!filenameTitle.value || !file.value || initFromData.value) {
-    body.title = fileTitle.value
-  }
+  body.title = fileTitle.value
   if (attachments.value && attachmentsAsImage.value) {
     body.attachmentsAsImage = true
   }

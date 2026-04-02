@@ -4,18 +4,17 @@
     fluid
     class="pa-0"
   >
-    <v-alert
-      v-if="!dataset.isRest"
-      type="info"
-      variant="tonal"
-      class="ma-4"
-    >
-      {{ t('notEditable') }}
-    </v-alert>
+    <!-- REST dataset: editable table -->
     <dataset-table
-      v-else
+      v-if="dataset.isRest"
       :height="contentHeight"
       :edit="true"
+    />
+
+    <!-- File dataset: update stepper -->
+    <workflow-update-dataset
+      v-else-if="dataset.file"
+      :initial-dataset-id="dataset.id"
     />
   </v-container>
 </template>
@@ -24,11 +23,9 @@
 fr:
   datasets: Jeux de données
   editData: Éditer les données
-  notEditable: Ce jeu de données n'est pas éditable. Seuls les jeux de données de type REST peuvent être édités directement.
 en:
   datasets: Datasets
   editData: Edit data
-  notEditable: This dataset is not editable. Only REST type datasets can be edited directly.
 </i18n>
 
 <script setup lang="ts">

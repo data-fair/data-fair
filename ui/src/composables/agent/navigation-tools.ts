@@ -82,6 +82,7 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
         '- Dataset files: /dataset/{id}/files\n' +
         '- Edit dataset data: /dataset/{id}/edit-data\n' +
         '- Edit dataset metadata: /dataset/{id}/edit-metadata\n' +
+        '- Edit dataset schema: /dataset/{id}/edit-schema\n' +
         '- Dataset thumbnails: /dataset/{id}/thumbnails\n' +
         '- Dataset revisions: /dataset/{id}/revisions\n' +
         '- Dataset API doc: /dataset/{id}/api-doc\n' +

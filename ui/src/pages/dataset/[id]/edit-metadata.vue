@@ -34,64 +34,6 @@
             </template>
           </df-section-tabs>
 
-          <df-section-tabs
-            v-if="sections.structure"
-            id="structure"
-            v-model="structureTab"
-            :min-height="300"
-            :title="sections.structure.title"
-            :tabs="sections.structure.tabs"
-            :color="sections.structure.color"
-            :svg="buildingSvg"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="schema">
-                  <v-container fluid>
-                    <dataset-schema
-                      v-model="datasetEditFetch.data.value.schema"
-                      :dataset="datasetEditFetch.data.value"
-                      :primary-key="datasetEditFetch.data.value.primaryKey"
-                      @update:primary-key="pk => { if (datasetEditFetch.data.value) datasetEditFetch.data.value.primaryKey = pk }"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="extensions">
-                  <v-container fluid>
-                    <dataset-extensions
-                      v-model="datasetEditFetch.data.value"
-                      @refresh="onRefreshExtension"
-                    />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="master-data">
-                  <v-container fluid>
-                    <dataset-master-data v-model="datasetEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-
-          <df-section-tabs
-            v-if="sections.virtual"
-            id="virtual"
-            :min-height="300"
-            :title="sections.virtual.title"
-            :tabs="sections.virtual.tabs"
-            :color="sections.virtual.color"
-            :svg="dataSvg"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="virtual">
-                  <v-container fluid>
-                    <dataset-virtual v-model="datasetEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
       </v-col>
     </v-row>
 
@@ -141,12 +83,7 @@ fr:
   editMetadata: Éditer les métadonnées
   info: Informations
   metadata: Métadonnées
-  structure: Structure
-  schema: Schéma
   attachments: Pièces jointes
-  extensions: Enrichissements
-  masterData: Données de référence
-  virtual: Jeu de données virtuel
   save: Enregistrer
   saved: Les modifications ont été enregistrées
   cancel: Annuler
@@ -157,12 +94,7 @@ en:
   editMetadata: Edit metadata
   info: Information
   metadata: Metadata
-  structure: Structure
-  schema: Schema
   attachments: Attachments
-  extensions: Extensions
-  masterData: Master data
-  virtual: Virtual dataset
   save: Save
   saved: Changes were saved
   cancel: Cancel
@@ -172,22 +104,18 @@ en:
 
 <script setup lang="ts">
 import infoSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
-import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
-import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiAlert, mdiAttachment, mdiCancel, mdiDatabase, mdiInformation, mdiPuzzle, mdiRobotOutline, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
+import { mdiAlert, mdiAttachment, mdiCancel, mdiInformation, mdiRobotOutline, mdiTag } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
-import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import equal from 'fast-deep-equal'
 
 const { t, locale } = useI18n()
-const { accountRole } = useSessionAuthenticated()
 const route = useRoute<'/dataset/[id]/edit-metadata'>()
 
 // Provide dataset store for child components that need it (dataset-attachments, dataset-status)
@@ -208,22 +136,10 @@ useAgentDatasetSummaryTools(locale, datasetEditFetch.data, (s) => {
   if (datasetEditFetch.data.value) datasetEditFetch.data.value.summary = s
 })
 useAgentDatasetChangesSummaryTools(locale, datasetEditFetch.data, datasetEditFetch.serverData)
-useAgentExpressionTools(locale, datasetEditFetch.data, (extensionIndex, expr) => {
-  if (datasetEditFetch.data.value?.extensions?.[extensionIndex]) {
-    datasetEditFetch.data.value.extensions[extensionIndex].expr = expr
-  }
-})
 
 const breadcrumbs = useBreadcrumbs()
 const showAgentChat = useShowAgentChat()
 const infoTab = ref('info')
-const structureTab = ref('schema')
-
-const onRefreshExtension = async (extension: any) => {
-  await store.patchDataset.execute({ extensions: [{ ...extension, needsUpdate: true }] })
-  // Refresh editFetch to sync serverData after the server-side patch
-  await datasetEditFetch.fetch.refresh()
-}
 
 const cancelChanges = () => {
   if (datasetEditFetch.serverData.value) {
@@ -275,40 +191,11 @@ const metadataHasDiff = computed(() => {
     !equal(d.customMetadata, s.customMetadata)
 })
 
-const schemaHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
-  if (!d || !s) return false
-  return !equal(d.schema, s.schema) || !equal(d.primaryKey, s.primaryKey)
-})
-
-const extensionsHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
-  if (!d || !s) return false
-  return !equal(d.extensions, s.extensions)
-})
-
-const masterDataHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
-  if (!d || !s) return false
-  return !equal(d.masterData, s.masterData)
-})
-
-const virtualHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
-  if (!d || !s) return false
-  return !equal(d.virtual, s.virtual) || !equal(d.schema, s.schema)
-})
-
 const sections = computedDeepDiff(() => {
   const d = datasetEditFetch.data.value
   if (!d) return {} as Record<string, { title: string, color?: string, tabs: any[] }>
 
   const infoOrMetaDiff = infoHasDiff.value || metadataHasDiff.value
-  const structureDiff = schemaHasDiff.value || extensionsHasDiff.value || masterDataHasDiff.value
 
   const infoTabs: any[] = [
     {
@@ -330,65 +217,13 @@ const sections = computedDeepDiff(() => {
     infoTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment })
   }
 
-  const structureTabs: any[] = [{
-    key: 'schema',
-    title: t('schema'),
-    icon: mdiTableCog,
-    appendIcon: schemaHasDiff.value ? mdiAlert : undefined,
-    color: schemaHasDiff.value ? 'accent' : undefined
-  }]
-
-  // Extensions tab (non-virtual, non-meta-only datasets)
-  if (!d.isVirtual && !d.isMetaOnly) {
-    structureTabs.push({
-      key: 'extensions',
-      title: t('extensions'),
-      icon: mdiPuzzle,
-      appendIcon: extensionsHasDiff.value ? mdiAlert : undefined,
-      color: extensionsHasDiff.value ? 'accent' : undefined
-    })
-  }
-
-  // Master data tab (admin only, finalized, non-meta-only)
-  if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
-    structureTabs.push({
-      key: 'master-data',
-      title: t('masterData'),
-      icon: mdiDatabase,
-      appendIcon: masterDataHasDiff.value ? mdiAlert : undefined,
-      color: masterDataHasDiff.value ? 'accent' : undefined
-    })
-  }
-
-  const result: Record<string, { title: string, color?: string, tabs: any[] }> = {
+  return {
     info: {
       title: t('info'),
       color: infoOrMetaDiff ? 'accent' : undefined,
       tabs: infoTabs
-    },
-    structure: {
-      title: t('structure'),
-      color: structureDiff ? 'accent' : undefined,
-      tabs: structureTabs
     }
-  }
-
-  // Virtual dataset section
-  if (d.isVirtual) {
-    result.virtual = {
-      title: t('virtual'),
-      color: virtualHasDiff.value ? 'accent' : undefined,
-      tabs: [{
-        key: 'virtual',
-        title: t('virtual'),
-        icon: mdiSetAll,
-        appendIcon: virtualHasDiff.value ? mdiAlert : undefined,
-        color: virtualHasDiff.value ? 'accent' : undefined
-      }]
-    }
-  }
-
-  return result
+  } as Record<string, { title: string, color?: string, tabs: any[] }>
 })
 
 const tocSections = computed(() => Object.entries(sections.value).map(([id, s]) => ({ id, title: s.title })))

@@ -63,44 +63,42 @@
           class="pa-4"
         >
           <v-tabs-window-item value="config">
-            <v-container fluid>
-              <v-alert
-                v-if="application.errorMessage"
-                type="error"
-                variant="tonal"
-                class="mb-4"
+            <v-alert
+              v-if="application.errorMessage"
+              type="error"
+              variant="tonal"
+              class="mb-4"
+            >
+              <i18n-t
+                keypath="validatedError"
+                tag="p"
               >
-                <i18n-t
-                  keypath="validatedError"
-                  tag="p"
-                >
-                  <template #bold>
-                    <b>{{ t('validatedErrorBold') }}</b>
-                  </template>
-                </i18n-t>
-                <p
-                  class="mb-0"
-                  v-html="/*eslint-disable-line vue/no-v-html*/application.errorMessage"
-                />
-              </v-alert>
-              <v-btn
-                v-if="can('writeConfig')"
-                :to="`/application/${application.id}/config`"
-                color="primary"
-                class="mb-4"
-              >
-                {{ t('editConfig') }}
-              </v-btn>
-              <v-card
-                variant="outlined"
-                class="pa-0"
-              >
-                <d-frame
-                  :src="`${applicationLink}?embed=true`"
-                  resize="no"
-                />
-              </v-card>
-            </v-container>
+                <template #bold>
+                  <b>{{ t('validatedErrorBold') }}</b>
+                </template>
+              </i18n-t>
+              <p
+                class="mb-0"
+                v-html="/*eslint-disable-line vue/no-v-html*/application.errorMessage"
+              />
+            </v-alert>
+            <v-btn
+              v-if="can('writeConfig')"
+              :to="`/application/${application.id}/config`"
+              color="primary"
+              class="mb-4"
+            >
+              {{ t('editConfig') }}
+            </v-btn>
+            <v-card
+              variant="outlined"
+              class="pa-0"
+            >
+              <d-frame
+                :src="`${applicationLink}?embed=true`"
+                resize="no"
+              />
+            </v-card>
           </v-tabs-window-item>
 
           <v-tabs-window-item value="info">
@@ -231,16 +229,17 @@
       svg-no-margin
     >
       <template #content="{ tab }">
-        <v-tabs-window :model-value="tab">
+        <v-tabs-window
+          :model-value="tab"
+          class="pa-4"
+        >
           <v-tabs-window-item value="permissions">
-            <v-container fluid>
-              <permissions
-                v-if="application"
-                :resource="application"
-                resource-type="applications"
-                :disabled="!can('setPermissions')"
-              />
-            </v-container>
+            <permissions
+              v-if="application"
+              :resource="application"
+              resource-type="applications"
+              :disabled="!can('setPermissions')"
+            />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="protected-links">
@@ -252,30 +251,31 @@
           </v-tabs-window-item>
 
           <v-tabs-window-item value="integration">
-            <v-container fluid>
-              <integration-dialog
-                inline
-                resource-type="applications"
-                :resource="application"
-              />
-            </v-container>
+            <integration-dialog
+              inline
+              resource-type="applications"
+              :resource="application"
+            />
           </v-tabs-window-item>
         </v-tabs-window>
       </template>
     </df-section-tabs>
 
-    <!-- Tracking section -->
+    <!-- Events section -->
     <df-section-tabs
-      v-if="sections.tracking"
-      id="tracking"
+      v-if="sections.events"
+      id="events"
       :min-height="550"
-      :title="sections.tracking.title"
-      :tabs="sections.tracking.tabs"
+      :title="sections.events.title"
+      :tabs="sections.events.tabs"
       :svg="settingsSvg"
       svg-no-margin
     >
       <template #content="{ tab }">
-        <v-tabs-window :model-value="tab">
+        <v-tabs-window
+          :model-value="tab"
+          class="pa-4"
+        >
           <v-tabs-window-item value="traceability">
             <d-frame
               :src="traceabilityUrl"
@@ -287,25 +287,21 @@
             v-if="$uiConfig.eventsIntegration"
             value="notifications"
           >
-            <v-container fluid>
-              <notifications-dialog
-                inline
-                :resource="application"
-                resource-type="application"
-              />
-            </v-container>
+            <notifications-dialog
+              inline
+              :resource="application"
+              resource-type="application"
+            />
           </v-tabs-window-item>
           <v-tabs-window-item
             v-if="$uiConfig.eventsIntegration && can('setPermissions')"
             value="webhooks"
           >
-            <v-container fluid>
-              <webhooks-dialog
-                inline
-                :resource="application"
-                resource-type="application"
-              />
-            </v-container>
+            <webhooks-dialog
+              inline
+              :resource="application"
+              resource-type="application"
+            />
           </v-tabs-window-item>
         </v-tabs-window>
       </template>
@@ -396,7 +392,7 @@ import { provideApplicationStore } from '~/composables/application/store'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
-import { $apiPath, $uiConfig } from '~/context'
+import { $uiConfig } from '~/context'
 
 const { t, locale } = useI18n()
 const { sendUiNotif } = useUiNotif()
@@ -459,7 +455,7 @@ const confirmUpgrade = async () => {
 
 const traceabilityUrl = computed(() => {
   if (!application.value) return ''
-  return `${window.location.origin}/events/embed/traceability?resource=${encodeURIComponent($apiPath + '/applications/' + application.value.id)}`
+  return `${window.location.origin}/events/embed/traceability?resource=${encodeURIComponent('application/' + application.value.id)}`
 })
 
 const formatDate = (dateStr?: string) => {
@@ -496,14 +492,14 @@ const sections = computedDeepDiff(() => {
   }
 
   if ($uiConfig.eventsIntegration) {
-    const trackingTabs = [
+    const eventsTabs = [
       { key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock }
     ]
-    trackingTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    eventsTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
     if (can('setPermissions')) {
-      trackingTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
+      eventsTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
-    result.tracking = { title: t('tracking'), tabs: trackingTabs }
+    result.events = { title: t('tracking'), tabs: eventsTabs }
   }
 
   return result

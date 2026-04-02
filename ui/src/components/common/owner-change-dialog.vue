@@ -96,7 +96,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const showDialog = ref(false)
+const showDialog = defineModel({ default: false })
 const newOwner = ref<Record<string, any> | null>(null)
 
 const confirmChangeOwner = async () => {
