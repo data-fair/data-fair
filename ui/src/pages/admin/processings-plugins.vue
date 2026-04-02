@@ -2,6 +2,7 @@
   <d-frame
     id="processings"
     :src="$sitePath + '/processings/admin/plugins/'"
+    class="fill-height"
     sync-params
     resize="no"
     :adapter.prop="stateChangeAdapter"

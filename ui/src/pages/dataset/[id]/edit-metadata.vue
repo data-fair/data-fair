@@ -1,39 +1,17 @@
 <template>
   <v-container v-if="datasetEditFetch.data.value">
     <v-row class="dataset">
-      <v-col>
-          <df-section-tabs
-            v-if="sections.info"
-            id="info"
-            v-model="infoTab"
-            :min-height="300"
-            :title="sections.info.title"
-            :tabs="sections.info.tabs"
-            :color="sections.info.color"
-            :svg="infoSvg"
-          >
-            <template #content="{ tab }">
-              <v-tabs-window :model-value="tab">
-                <v-tabs-window-item value="info">
-                  <v-container fluid>
-                    <dataset-info v-model="datasetEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item value="metadata">
-                  <v-container fluid>
-                    <dataset-metadata-form v-model="datasetEditFetch.data.value" />
-                  </v-container>
-                </v-tabs-window-item>
-                <v-tabs-window-item
-                  v-if="!datasetEditFetch.data.value?.draftReason"
-                  value="attachments"
-                >
-                  <dataset-attachments />
-                </v-tabs-window-item>
-              </v-tabs-window>
-            </template>
-          </df-section-tabs>
-
+      <v-col
+        cols="12"
+        md="8"
+      >
+        <dataset-info v-model="datasetEditFetch.data.value" />
+      </v-col>
+      <v-col
+        cols="12"
+        md="4"
+      >
+        <dataset-metadata-form v-model="datasetEditFetch.data.value" />
       </v-col>
     </v-row>
 
@@ -72,7 +50,6 @@
           />
         </v-list-item>
       </v-list>
-      <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -103,9 +80,8 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import infoSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import { mdiAlert, mdiAttachment, mdiCancel, mdiInformation, mdiRobotOutline, mdiTag } from '@mdi/js'
+import { mdiCancel, mdiRobotOutline } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
@@ -113,7 +89,6 @@ import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
-import equal from 'fast-deep-equal'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/edit-metadata'>()
@@ -139,7 +114,6 @@ useAgentDatasetChangesSummaryTools(locale, datasetEditFetch.data, datasetEditFet
 
 const breadcrumbs = useBreadcrumbs()
 const showAgentChat = useShowAgentChat()
-const infoTab = ref('info')
 
 const cancelChanges = () => {
   if (datasetEditFetch.serverData.value) {
@@ -159,74 +133,6 @@ watch(datasetEditFetch.data, (d) => {
     ]
   })
 }, { immediate: true })
-
-// Diff detection per section
-const infoHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
-  if (!d || !s) return false
-  return d.title !== s.title ||
-    d.description !== s.description ||
-    d.summary !== s.summary ||
-    d.slug !== s.slug ||
-    !equal(d.rest, s.rest)
-})
-
-const metadataHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
-  if (!d || !s) return false
-  return !equal(d.license, s.license) ||
-    !equal(d.topics, s.topics) ||
-    !equal(d.keywords, s.keywords) ||
-    d.origin !== s.origin ||
-    d.image !== s.image ||
-    d.creator !== s.creator ||
-    d.frequency !== s.frequency ||
-    d.spatial !== s.spatial ||
-    !equal(d.temporal, s.temporal) ||
-    d.modified !== s.modified ||
-    d.projection !== s.projection ||
-    d.attachmentsAsImage !== s.attachmentsAsImage ||
-    !equal(d.customMetadata, s.customMetadata)
-})
-
-const sections = computedDeepDiff(() => {
-  const d = datasetEditFetch.data.value
-  if (!d) return {} as Record<string, { title: string, color?: string, tabs: any[] }>
-
-  const infoOrMetaDiff = infoHasDiff.value || metadataHasDiff.value
-
-  const infoTabs: any[] = [
-    {
-      key: 'info',
-      title: t('info'),
-      icon: mdiInformation,
-      appendIcon: infoHasDiff.value ? mdiAlert : undefined,
-      color: infoHasDiff.value ? 'accent' : undefined
-    },
-    {
-      key: 'metadata',
-      title: t('metadata'),
-      icon: mdiTag,
-      appendIcon: metadataHasDiff.value ? mdiAlert : undefined,
-      color: metadataHasDiff.value ? 'accent' : undefined
-    }
-  ]
-  if (!d.draftReason) {
-    infoTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment })
-  }
-
-  return {
-    info: {
-      title: t('info'),
-      color: infoOrMetaDiff ? 'accent' : undefined,
-      tabs: infoTabs
-    }
-  } as Record<string, { title: string, color?: string, tabs: any[] }>
-})
-
-const tocSections = computed(() => Object.entries(sections.value).map(([id, s]) => ({ id, title: s.title })))
 </script>
 
 <style>

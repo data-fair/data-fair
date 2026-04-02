@@ -1,12 +1,7 @@
 <template>
   <v-container v-if="dataset">
     <!-- Show dataset status -->
-    <dataset-status v-if="!dataset.isMetaOnly && (dataset.status === 'error' || !!dataset.draftReason)" />
-
-    <!-- Title -->
-    <div class="text-headline-large mb-4">
-      {{ dataset.title }}
-    </div>
+    <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
     <!-- Import section -->
     <df-section-tabs
@@ -140,7 +135,6 @@
               {{ t('noApplications') }}
             </p>
           </v-tabs-window-item>
-
         </v-tabs-window>
       </template>
     </df-section-tabs>
@@ -219,28 +213,25 @@
           class="pa-4"
         >
           <v-tabs-window-item value="traceability">
-            <d-frame
-              :src="traceabilityUrl"
-              sync-params
-              @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+            <event-traceability
+              resource-type="dataset"
+              :resource-id="dataset.id"
             />
           </v-tabs-window-item>
           <v-tabs-window-item
             v-if="$uiConfig.eventsIntegration"
             value="notifications"
           >
-            <notifications-dialog
+            <event-notifications
               :resource="dataset"
               resource-type="dataset"
-              inline
             />
           </v-tabs-window-item>
           <v-tabs-window-item
             v-if="$uiConfig.eventsIntegration && can('setPermissions').value"
             value="webhooks"
           >
-            <webhooks-dialog
-              inline
+            <event-webhooks
               :resource="dataset"
               resource-type="dataset"
             />
@@ -285,7 +276,35 @@
           </v-list-item>
 
           <v-divider
-            v-if="can('setOwner').value && can('delete').value"
+            v-if="can('setOwner').value && (canDeleteAllLines || can('delete').value)"
+          />
+
+          <v-list-item
+            v-if="canDeleteAllLines"
+            class="py-4"
+          >
+            <div>
+              <div class="text-body-1 font-weight-bold">
+                {{ t('deleteAllLines') }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ t('deleteAllLinesDesc') }}
+              </div>
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                @click="showDeleteAllLinesDialog = true"
+              >
+                {{ t('deleteAllLines') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+
+          <v-divider
+            v-if="canDeleteAllLines && can('delete').value"
           />
 
           <v-list-item
@@ -349,6 +368,39 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog
+      v-model="showDeleteAllLinesDialog"
+      max-width="500"
+    >
+      <v-card>
+        <v-card-title>{{ t('deleteAllLinesTitle') }}</v-card-title>
+        <v-card-text>
+          <v-alert
+            type="error"
+            variant="outlined"
+          >
+            {{ t('deleteAllLinesWarning', { title: dataset?.title }) }}
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="showDeleteAllLinesDialog = false"
+          >
+            {{ t('no') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            variant="flat"
+            @click="confirmDeleteAllLines"
+          >
+            {{ t('yes') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <df-navigation-right>
       <dataset-actions />
       <toc-local :sections="tocSections" />
@@ -390,6 +442,10 @@ fr:
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer ce jeu de données à un autre propriétaire.
+  deleteAllLines: Supprimer toutes les lignes
+  deleteAllLinesDesc: Supprime toutes les lignes du jeu de données. Cette action est irréversible.
+  deleteAllLinesTitle: Suppression des lignes du jeu de données
+  deleteAllLinesWarning: Voulez-vous vraiment supprimer toutes les lignes du jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   deleteDataset: Supprimer le jeu de données
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
@@ -428,6 +484,10 @@ en:
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this dataset to another owner.
+  deleteAllLines: Delete all lines
+  deleteAllLinesDesc: Delete all the lines of the dataset. This action is irreversible.
+  deleteAllLinesTitle: Delete all the lines of the dataset
+  deleteAllLinesWarning: Do you really want to delete all the lines of the dataset "{title}"? Deletion is permanent and data cannot be recovered.
   deleteDataset: Delete dataset
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
@@ -461,15 +521,23 @@ const explorationTab = ref('generic-views')
 const eventsTab = ref('traceability')
 
 const store = provideDatasetStore(route.params.id, true, 'vuetify')
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, remove } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove } = store
 
 const showOwnerDialog = ref(false)
 const showDeleteDialog = ref(false)
+const showDeleteAllLinesDialog = ref(false)
+
+const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
 const confirmRemove = async () => {
   showDeleteDialog.value = false
   await remove()
   router.push('/datasets')
+}
+
+const confirmDeleteAllLines = async () => {
+  showDeleteAllLinesDialog.value = false
+  await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
 }
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
@@ -494,11 +562,6 @@ const applications = computed(() => applicationsFetch.data.value?.results ?? [])
 const catalogPublicationsUrl = computed(() => {
   if (!dataset.value) return ''
   return `${window.location.origin}/catalogs/dataset-publications?dataset-id=${dataset.value.id}`
-})
-
-const traceabilityUrl = computed(() => {
-  if (!dataset.value) return ''
-  return `${window.location.origin}/events/embed/traceability?resource=${encodeURIComponent('dataset/' + dataset.value.id)}`
 })
 
 const sections = computedDeepDiff(() => {
@@ -581,7 +644,7 @@ const sections = computedDeepDiff(() => {
   }
 
   // Danger zone section
-  if (can('setOwner').value || can('delete').value) {
+  if (can('setOwner').value || canDeleteAllLines.value || can('delete').value) {
     result.dangerZone = { title: t('dangerZone'), tabs: [] }
   }
 

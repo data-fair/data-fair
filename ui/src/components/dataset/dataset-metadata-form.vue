@@ -186,10 +186,10 @@
 <i18n lang="yaml">
 fr:
   licence: Licence
-  topics: Thematiques
+  topics: Thématiques
   origin: Provenance
-  image: Adresse d'une image utilisee comme vignette
-  keywords: Mots cles
+  image: Adresse d'une image utilisée comme vignette
+  keywords: Mots clés
   projection: Système de coordonnées
   creator: Producteur
   frequency: Fréquence de mise à jour

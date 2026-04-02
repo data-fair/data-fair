@@ -51,6 +51,7 @@
     <df-section-tabs
       v-if="sections.metadata"
       id="metadata"
+      v-model="metadataTab"
       :min-height="300"
       :title="sections.metadata.title"
       :tabs="sections.metadata.tabs"
@@ -86,6 +87,8 @@
               v-if="can('writeConfig')"
               :to="`/application/${application.id}/config`"
               color="primary"
+              variant="flat"
+              :prepend-icon="mdiSquareEditOutline"
               class="mb-4"
             >
               {{ t('editConfig') }}
@@ -102,76 +105,40 @@
           </v-tabs-window-item>
 
           <v-tabs-window-item value="info">
-            <v-row>
-              <!-- Left: description -->
-              <v-col
-                cols="12"
-                md="6"
-              >
-                <template v-if="application.description">
-                  <h3 class="text-title-medium font-weight-bold mb-2">
-                    {{ t('description') }}
-                  </h3>
-                  <p class="text-body-medium mb-4">
-                    {{ application.description }}
-                  </p>
-                </template>
-              </v-col>
+            <v-btn
+              v-if="can('writeDescription')"
+              color="primary"
+              variant="flat"
+              :prepend-icon="mdiPencil"
+              :to="`/application/${application.id}/edit-metadata`"
+              class="mb-4"
+            >
+              {{ t('editMetadata') }}
+            </v-btn>
 
-              <!-- Right: metadata card -->
-              <v-col
-                cols="12"
-                md="6"
+            <template v-if="application.description">
+              <h3 class="text-title-medium font-weight-bold mb-2">
+                {{ t('description') }}
+              </h3>
+              <p class="text-body-medium mb-4">
+                {{ application.description }}
+              </p>
+            </template>
+
+            <div
+              v-if="application.topics?.length"
+              class="d-flex flex-wrap ga-1 mb-4"
+            >
+              <v-chip
+                v-for="topic in application.topics"
+                :key="topic.id"
+                size="small"
+                color="primary"
+                variant="outlined"
               >
-                <v-card>
-                  <v-list density="compact">
-                    <v-list-item
-                      v-if="baseAppFetch.data.value"
-                      :prepend-icon="mdiImage"
-                    >
-                      <div class="text-body-small text-medium-emphasis">
-                        {{ t('baseApp') }}
-                      </div>
-                      <div>
-                        {{ baseAppFetch.data.value.title || application.url }}
-                        <span v-if="baseAppFetch.data.value.version">
-                          — {{ t('version') }} {{ baseAppFetch.data.value.version }}
-                        </span>
-                      </div>
-                    </v-list-item>
-                    <v-list-item
-                      v-if="application.updatedAt"
-                      :prepend-icon="mdiPencil"
-                    >
-                      <div class="text-body-small text-medium-emphasis">
-                        {{ t('metadataUpdated') }}
-                      </div>
-                      <div>{{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}</div>
-                    </v-list-item>
-                    <v-list-item :prepend-icon="mdiPlusCircleOutline">
-                      <div class="text-body-small text-medium-emphasis">
-                        {{ t('created') }}
-                      </div>
-                      <div>{{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}</div>
-                    </v-list-item>
-                  </v-list>
-                  <template v-if="application.topics?.length">
-                    <v-divider />
-                    <div class="d-flex flex-wrap ga-1 pa-3">
-                      <v-chip
-                        v-for="topic in application.topics"
-                        :key="topic.id"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      >
-                        {{ topic.title }}
-                      </v-chip>
-                    </div>
-                  </template>
-                </v-card>
-              </v-col>
-            </v-row>
+                {{ topic.title }}
+              </v-chip>
+            </div>
 
             <!-- Jeux de données -->
             <h3 class="text-title-medium font-weight-bold mt-6 mb-3">
@@ -209,6 +176,54 @@
                 </v-col>
               </v-row>
             </template>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="details">
+            <v-card>
+              <v-list density="compact">
+                <v-list-item
+                  v-if="application.owner"
+                  :prepend-icon="mdiAccount"
+                >
+                  <div class="text-body-small text-medium-emphasis">
+                    {{ t('owner') }}
+                  </div>
+                  <div>{{ application.owner.name }}</div>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="baseAppFetch.data.value"
+                  :prepend-icon="mdiImage"
+                >
+                  <div class="text-body-small text-medium-emphasis">
+                    {{ t('baseApp') }}
+                  </div>
+                  <div>
+                    {{ baseAppFetch.data.value.title || application.url }}
+                    <span v-if="baseAppFetch.data.value.version">
+                      — {{ t('version') }} {{ baseAppFetch.data.value.version }}
+                    </span>
+                  </div>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="application.updatedAt"
+                  :prepend-icon="mdiPencil"
+                >
+                  <div class="text-body-small text-medium-emphasis">
+                    {{ t('metadataUpdated') }}
+                  </div>
+                  <div>{{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}</div>
+                </v-list-item>
+
+                <v-list-item :prepend-icon="mdiPlusCircleOutline">
+                  <div class="text-body-small text-medium-emphasis">
+                    {{ t('created') }}
+                  </div>
+                  <div>{{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}</div>
+                </v-list-item>
+              </v-list>
+            </v-card>
           </v-tabs-window-item>
 
           <v-tabs-window-item value="attachments">
@@ -265,6 +280,7 @@
     <df-section-tabs
       v-if="sections.events"
       id="events"
+      v-model="eventsTab"
       :min-height="550"
       :title="sections.events.title"
       :tabs="sections.events.tabs"
@@ -277,18 +293,16 @@
           class="pa-4"
         >
           <v-tabs-window-item value="traceability">
-            <d-frame
-              :src="traceabilityUrl"
-              sync-params
-              @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+            <event-traceability
+              resource-type="application"
+              :resource-id="application.id"
             />
           </v-tabs-window-item>
           <v-tabs-window-item
             v-if="$uiConfig.eventsIntegration"
             value="notifications"
           >
-            <notifications-dialog
-              inline
+            <event-notifications
               :resource="application"
               resource-type="application"
             />
@@ -297,8 +311,7 @@
             v-if="$uiConfig.eventsIntegration && can('setPermissions')"
             value="webhooks"
           >
-            <webhooks-dialog
-              inline
+            <event-webhooks
               :resource="application"
               resource-type="application"
             />
@@ -307,9 +320,109 @@
       </template>
     </df-section-tabs>
 
+    <!-- Danger zone section -->
+    <df-section-tabs
+      v-if="sections.dangerZone"
+      id="danger-zone"
+      :svg="securitySvg"
+      svg-no-margin
+      color="admin"
+      :title="sections.dangerZone.title"
+    >
+      <template #content>
+        <v-list>
+          <v-list-item
+            v-if="can('setOwner')"
+            class="py-4"
+          >
+            <div>
+              <div class="text-body-1 font-weight-bold">
+                {{ t('changeOwner') }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ t('changeOwnerDesc') }}
+              </div>
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                @click="showOwnerDialog = true"
+              >
+                {{ t('changeOwner') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+
+          <v-divider
+            v-if="can('setOwner') && can('delete')"
+          />
+
+          <v-list-item
+            v-if="can('delete')"
+            class="py-4"
+          >
+            <div>
+              <div class="text-body-1 font-weight-bold">
+                {{ t('deleteApp') }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ t('deleteAppDesc') }}
+              </div>
+            </div>
+            <template #append>
+              <v-btn
+                variant="outlined"
+                color="error"
+                class="ml-4 align-self-center"
+                @click="showDeleteDialog = true"
+              >
+                {{ t('deleteApp') }}
+              </v-btn>
+            </template>
+          </v-list-item>
+        </v-list>
+      </template>
+    </df-section-tabs>
+
+    <owner-change-dialog
+      v-if="can('setOwner')"
+      v-model="showOwnerDialog"
+      :resource="application"
+      resource-type="applications"
+      @changed="router.push('/applications')"
+    />
+
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="500"
+    >
+      <v-card>
+        <v-card-title>{{ t('deleteApp') }}</v-card-title>
+        <v-card-text>{{ t('deleteMsg', { title: application?.title }) }}</v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="showDeleteDialog = false"
+          >
+            {{ t('no') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            variant="flat"
+            @click="confirmRemove"
+          >
+            {{ t('yes') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <df-navigation-right>
       <application-actions />
-      <df-toc :sections="tocSections" />
+      <toc-local :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -329,6 +442,9 @@ fr:
   metadata: Métadonnées
   config: Configuration
   editConfig: Éditer la configuration
+  editMetadata: Éditer les métadonnées
+  details: Détails
+  owner: Propriétaire
   validatedError: "Erreur dans la {bold}"
   validatedErrorBold: version validée
   share: Permissions & partage
@@ -347,6 +463,14 @@ fr:
   upgradeConfirm: "Voulez-vous mettre à jour l'application vers la version {version} ? L'application sera reconfigurée avec la nouvelle version."
   cancel: Annuler
   upgrade: Mettre à jour
+  dangerZone: Zone de danger
+  changeOwner: Changer le propriétaire
+  changeOwnerDesc: Transférer cette application à un autre propriétaire.
+  deleteApp: Supprimer l'application
+  deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
+  deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
+  yes: Oui
+  no: Non
 en:
   applications: Applications
   info: Information
@@ -361,6 +485,9 @@ en:
   metadata: Metadata
   config: Configuration
   editConfig: Edit configuration
+  editMetadata: Edit metadata
+  details: Details
+  owner: Owner
   validatedError: "Error in the {bold}"
   validatedErrorBold: validated version
   share: Share
@@ -379,15 +506,24 @@ en:
   upgradeConfirm: "Do you want to upgrade the application to version {version}? The application will be reconfigured with the new version."
   cancel: Cancel
   upgrade: Upgrade
+  dangerZone: Danger Zone
+  changeOwner: Change owner
+  changeOwnerDesc: Transfer this application to another owner.
+  deleteApp: Delete application
+  deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
+  deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
+  yes: Yes
+  no: No
 </i18n>
 
 <script setup lang="ts">
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiBell, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiImage, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccount, mdiBell, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiImage, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
+import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import { provideApplicationStore } from '~/composables/application/store'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
@@ -400,11 +536,19 @@ const route = useRoute<'/application/[id]/'>()
 const router = useRouter()
 
 const breadcrumbs = useBreadcrumbs()
+const metadataTab = ref('config')
+const eventsTab = ref('traceability')
+
 const store = provideApplicationStore(route.params.id)
-const { application, applicationLink, can, patch, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
+const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
 const { availableVersions } = useApplicationVersions(store)
 
 useApplicationWatch(['draft-error'], store)
+
+const showUpgradeDialog = ref(false)
+const showOwnerDialog = ref(false)
+const showDeleteDialog = ref(false)
+const upgrading = ref(false)
 
 // Fetch additional data once application is loaded
 watch(application, (app) => {
@@ -438,9 +582,6 @@ const upgradeAvailable = computed(() => {
   return latest
 })
 
-const showUpgradeDialog = ref(false)
-const upgrading = ref(false)
-
 const confirmUpgrade = async () => {
   if (!upgradeAvailable.value) return
   upgrading.value = true
@@ -453,10 +594,11 @@ const confirmUpgrade = async () => {
   }
 }
 
-const traceabilityUrl = computed(() => {
-  if (!application.value) return ''
-  return `${window.location.origin}/events/embed/traceability?resource=${encodeURIComponent('application/' + application.value.id)}`
-})
+const confirmRemove = async () => {
+  showDeleteDialog.value = false
+  await remove()
+  router.push('/applications')
+}
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''
@@ -469,6 +611,7 @@ const sections = computedDeepDiff(() => {
   const metadataTabs = [
     { key: 'config', title: t('config'), icon: mdiSquareEditOutline },
     { key: 'info', title: t('info'), icon: mdiInformation },
+    { key: 'details', title: t('details'), icon: mdiCardTextOutline },
     { key: 'attachments', title: t('attachments'), icon: mdiPaperclip }
   ]
 
@@ -502,8 +645,24 @@ const sections = computedDeepDiff(() => {
     result.events = { title: t('tracking'), tabs: eventsTabs }
   }
 
+  if (can('setOwner') || can('delete')) {
+    result.dangerZone = { title: t('dangerZone'), tabs: [] }
+  }
+
   return result
 })
 
-const tocSections = computed(() => Object.entries(sections.value).map(([id, s]) => ({ id, title: s.title })))
+const tabModels: Record<string, Ref<string>> = {
+  metadata: metadataTab,
+  events: eventsTab
+}
+
+const tocSections = computed(() => {
+  return Object.entries(sections.value).map(([id, s]) => ({
+    id: id === 'dangerZone' ? 'danger-zone' : id,
+    title: s.title,
+    tabs: s.tabs,
+    tabModel: tabModels[id]
+  }))
+})
 </script>

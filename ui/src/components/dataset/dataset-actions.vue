@@ -37,7 +37,10 @@
       <v-list-item-subtitle>{{ t('downloadRawRestSubtitle') }}</v-list-item-subtitle>
     </v-list-item>
 
-    <v-list-subheader class="text-uppercase">
+    <v-list-subheader
+      v-if="hasActions"
+      class="text-uppercase"
+    >
       {{ t('actions') }}
     </v-list-subheader>
 
@@ -55,52 +58,7 @@
       {{ t('useAPI') }}
     </v-list-item>
 
-    <v-list-item
-      v-if="dataset.isRest && can('deleteLine').value"
-      @click="showDeleteAllLinesDialog = true"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiDeleteSweep"
-          color="warning"
-        />
-      </template>
-      {{ t('deleteAllLines') }}
-    </v-list-item>
   </template>
-
-  <v-dialog
-    v-model="showDeleteAllLinesDialog"
-    max-width="500"
-  >
-    <v-card>
-      <v-card-title>{{ t('deleteAllLinesTitle') }}</v-card-title>
-      <v-card-text>
-        <v-alert
-          type="error"
-          variant="outlined"
-        >
-          {{ t('deleteAllLinesWarning', { title: dataset?.title }) }}
-        </v-alert>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          @click="showDeleteAllLinesDialog = false"
-        >
-          {{ t('no') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          variant="flat"
-          @click="confirmDeleteAllLines"
-        >
-          {{ t('yes') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
 </template>
 
 <i18n lang="yaml">
@@ -111,11 +69,6 @@ fr:
   downloadRawRestSubtitle: Téléchargement de l'export brut des données originales (admin)
   actions: Actions
   useAPI: Utiliser l'API
-  deleteAllLines: Supprimer toutes les lignes
-  deleteAllLinesTitle: Suppression des lignes du jeu de données
-  deleteAllLinesWarning: Voulez-vous vraiment supprimer toutes les lignes du jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
-  yes: Oui
-  no: Non
 en:
   navigation: Navigation
   viewOnPortal: "View on {title}"
@@ -123,24 +76,18 @@ en:
   downloadRawRestSubtitle: Download the raw export of original data (admin)
   actions: Actions
   useAPI: Use the API
-  deleteAllLines: Delete all lines
-  deleteAllLinesTitle: Delete all the lines of the dataset
-  deleteAllLinesWarning: Do you really want to delete all the lines of the dataset "{title}"? Deletion is permanent and data cannot be recovered.
-  yes: Yes
-  no: No
 </i18n>
 
 <script setup lang="ts">
 import {
   mdiCloud,
-  mdiDeleteSweep,
   mdiProgressDownload,
   mdiWeb
 } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset/store'
 
 const { t } = useI18n()
-const { dataset, can, id, resourceUrl } = useDatasetStore()
+const { dataset, can, resourceUrl } = useDatasetStore()
 const session = useSession()
 const user = computed(() => session.state.user)
 
@@ -164,10 +111,8 @@ const portalUrls = computed(() => {
     }))
 })
 
-const showDeleteAllLinesDialog = ref(false)
-
-const confirmDeleteAllLines = async () => {
-  showDeleteAllLinesDialog.value = false
-  await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
-}
+const hasActions = computed(() => {
+  if (!dataset.value) return false
+  return can('readApiDoc').value && !!dataset.value.finalizedAt
+})
 </script>

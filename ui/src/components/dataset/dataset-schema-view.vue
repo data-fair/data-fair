@@ -1,4 +1,14 @@
 <template>
+  <v-btn
+    v-if="dataset && can('writeDescriptionBreaking').value"
+    color="primary"
+    variant="flat"
+    class="mb-4"
+    :prepend-icon="mdiPencil"
+    :to="`/dataset/${dataset.id}/edit-schema`"
+  >
+    {{ t('editSchema') }}
+  </v-btn>
   <v-data-table-virtual
     v-if="dataset?.schema"
     :group-by="dataset.schema.some(f => 'x-group' in f) ? [{ key: 'x-group' }] : []"
@@ -60,6 +70,7 @@
 
 <i18n lang="yaml">
 fr:
+  editSchema: Éditer le schéma
   downloadSchema: Télécharger le schéma
   jsonSchema: Schéma JSON
   tableSchema: Schéma Table
@@ -70,6 +81,7 @@ fr:
   x-refersTo: Concept
   description: Description
 en:
+  editSchema: Edit schema
   group: Group
   downloadSchema: Download the schema
   jsonSchema: JSON Schema
@@ -82,12 +94,12 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiCodeJson, mdiDownload, mdiTable } from '@mdi/js'
+import { mdiCodeJson, mdiDownload, mdiPencil, mdiTable } from '@mdi/js'
 import { propTypeTitle } from '~/utils/dataset'
 
 const { t } = useI18n()
 const { vocabulary } = useStore()
-const { id, dataset } = useDatasetStore()
+const { id, dataset, can } = useDatasetStore()
 
 const downloadUrls = {
   tableschema: $apiPath + '/datasets/' + id + '/schema?mimeType=' + encodeURIComponent('application/tableschema+json'),

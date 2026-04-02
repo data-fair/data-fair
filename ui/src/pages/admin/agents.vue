@@ -30,10 +30,11 @@ en:
       v-if="selectedOwner"
       id="agents"
       :src="`${$sitePath}/agents/${selectedOwner.type}/${selectedOwner.id}/settings`"
+      class="fill-height"
       sync-params
       :sync-path="$sitePath + '/data-fair/admin/agents/'"
       emit-iframe-messages
-      resize="yes"
+      resize="no"
       :adapter.prop="stateChangeAdapter"
       @message="onMessage"
       @iframe-message="onMessage"

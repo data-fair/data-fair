@@ -3,6 +3,12 @@
     v-if="application && publicationSitesFetch.data.value"
     fluid
   >
+    <slug-edit-dialog
+      :slug="application.slug ?? application.id"
+      :can-edit="can('writeDescriptionBreaking')"
+      @update:slug="slug => patch({ slug })"
+    />
+
     <p
       v-if="!publicationSitesFetch.data.value.length"
       class="mb-2"

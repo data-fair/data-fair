@@ -1,5 +1,15 @@
 <template>
   <template v-if="dataset">
+    <v-btn
+      v-if="can('writeDescription').value"
+      color="primary"
+      variant="flat"
+      class="mb-4"
+      :prepend-icon="mdiPencil"
+      :to="`/dataset/${dataset.id}/edit-metadata`"
+    >
+      {{ t('editMetadata') }}
+    </v-btn>
     <v-row>
       <!-- Left: summary + image + description -->
       <v-col
@@ -156,6 +166,7 @@
 
 <i18n lang="yaml">
 fr:
+  editMetadata: Éditer les métadonnées
   summary: Résumé
   thumbnail: Vignette
   description: Description
@@ -173,6 +184,7 @@ fr:
   freq_yearly: Annuelle
   freq_irregular: Irrégulière
 en:
+  editMetadata: Edit metadata
   summary: Summary
   thumbnail: Thumbnail
   description: Description
@@ -198,13 +210,14 @@ import {
   mdiLicense,
   mdiLink,
   mdiMapMarker,
+  mdiPencil,
   mdiTag,
   mdiUpdate
 } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset/store'
 import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 
-const { dataset } = useDatasetStore()
+const { dataset, can } = useDatasetStore()
 
 const { t, locale } = useI18n()
 

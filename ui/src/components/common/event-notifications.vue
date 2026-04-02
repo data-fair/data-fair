@@ -1,64 +1,14 @@
 <template>
-  <d-frame
-    v-if="inline"
-    :src="iframeUrl"
-  />
-  <v-dialog
-    v-else
-    v-model="showDialog"
-    max-width="500"
-  >
-    <template #activator="{ props: activatorProps }">
-      <slot
-        name="activator"
-        :props="activatorProps"
-      />
-    </template>
-    <v-card>
-      <v-toolbar
-        density="compact"
-        flat
-      >
-        <v-toolbar-title>{{ t('title') }}</v-toolbar-title>
-        <v-spacer />
-        <v-btn
-          :icon="mdiClose"
-          @click="showDialog = false"
-        />
-      </v-toolbar>
-      <v-card-text class="py-0 px-3">
-        <iframe
-          v-if="showDialog"
-          :src="iframeUrl"
-          style="width: 100%; height: 300px; border: none; background-color: transparent;"
-        />
-      </v-card-text>
-    </v-card>
-  </v-dialog>
+  <d-frame :src="iframeUrl" />
 </template>
 
-<i18n lang="yaml">
-fr:
-  title: Notifications
-en:
-  title: Notifications
-</i18n>
-
 <script setup lang="ts">
-import { mdiClose } from '@mdi/js'
 import settingsSchema from '../../../../api/types/settings/schema.js'
 
 const props = defineProps<{
   resource: { id: string, slug?: string, title: string, owner: { type: string, id: string, department?: string } }
   resourceType: 'dataset' | 'application'
-  inline?: boolean
 }>()
-
-const { t } = useI18n()
-
-const showDialog = ref(false)
-
-const eventsUrl = window.location.origin + '/events'
 
 const webhooksSchema = settingsSchema.properties.webhooks
 
@@ -83,6 +33,6 @@ const iframeUrl = computed(() => {
     sender,
     register: 'false'
   }).toString()
-  return `${eventsUrl}/embed/subscribe?${searchParams}`
+  return `${window.location.origin}/events/embed/subscribe?${searchParams}`
 })
 </script>

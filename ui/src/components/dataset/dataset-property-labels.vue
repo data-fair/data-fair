@@ -78,7 +78,7 @@ const dialog = ref(false)
 const editLabels = ref<Array<{ value: string, label: string }> | null>(null)
 
 const schema = computed(() => {
-  const value: Record<string, unknown> = { type: 'string', title: 'valeur', layout: { cols: 6, class: 'pr-2' } }
+  const value: Record<string, unknown> = { type: 'string', title: 'Valeur', layout: { cols: 6, class: 'pr-2' } }
   if (props.property.type === 'boolean') value.enum = ['true', 'false']
   if (props.property.enum) value.examples = props.property.enum
   return {
@@ -89,7 +89,7 @@ const schema = computed(() => {
       required: ['value'],
       properties: {
         value,
-        label: { type: 'string', title: 'libellé', layout: { cols: 6 } }
+        label: { type: 'string', title: 'Libellé', layout: { cols: 6 } }
       }
     }
   }

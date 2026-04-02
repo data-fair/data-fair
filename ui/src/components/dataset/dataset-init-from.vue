@@ -66,6 +66,7 @@ defineProps<{
 }>()
 
 const modelValue = defineModel<InitFrom | null>({ default: null })
+const sourceTitle = defineModel<string | null>('sourceTitle', { default: null })
 
 const { t } = useI18n()
 
@@ -74,8 +75,10 @@ const initFromDataset = ref<any>(null)
 watch(initFromDataset, (dataset) => {
   if (dataset) {
     modelValue.value = { dataset: dataset.id, parts: [] }
+    sourceTitle.value = dataset.title ?? null
   } else {
     modelValue.value = null
+    sourceTitle.value = null
   }
 })
 
@@ -97,16 +100,16 @@ const togglePart = (part: string) => {
 <i18n lang="yaml">
 fr:
   initFromDataset: Utiliser un jeu de données existant comme modèle
-  initFromData: copier la donnée
-  initFromSchema: copier le schéma
-  initFromExtensions: copier les extensions
-  initFromDescription: copier la description
-  initFromAttachments: copier les pièces jointes
+  initFromData: Copier la donnée
+  initFromSchema: Copier le schéma
+  initFromExtensions: Copier les extensions
+  initFromDescription: Copier la description
+  initFromAttachments: Copier les pièces jointes
 en:
   initFromDataset: Use an existing dataset as a model ?
-  initFromData: copy data
-  initFromSchema: copy schema
-  initFromExtensions: copy extensions
-  initFromDescription: copy description
-  initFromAttachments: copy attachments
+  initFromData: Copy data
+  initFromSchema: Copy schema
+  initFromExtensions: Copy extensions
+  initFromDescription: Copy description
+  initFromAttachments: Copy attachments
 </i18n>

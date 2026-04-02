@@ -1,146 +1,129 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
   <template v-if="dataset">
-    <v-row class="mx-0">
-      <v-col class="pa-0">
-        <template v-if="journal && !dataset.draftReason">
-          <v-alert
-            v-if="dataset.status === 'error'"
-            type="error"
-            style="width: 100%"
-            variant="outlined"
-          >
-            <p
-              v-if="lastProdEvent"
-              class="mb-0"
-              v-html="lastProdEvent.data"
-            />
-            <template #append>
-              <v-btn
-                :icon="mdiPlay"
-                title="Relancer"
-                color="primary"
-                @click="patchDataset.execute({})"
-              />
-            </template>
-          </v-alert>
-          <v-list-item
-            v-else-if="lastProdEvent"
-            :class="`pa-2 event-${lastProdEvent.type}`"
-          >
-            <template #prepend>
-              <v-icon
-                v-if="['finalize-end', 'publication', 'error', 'draft-cancelled'].includes(lastProdEvent.type)"
-                :color="events[lastProdEvent.type].color || 'primary'"
-                :icon="events[lastProdEvent.type].icon"
-              />
-              <v-progress-circular
-                v-else
-                :size="20"
-                :width="3"
-                small
-                indeterminate
-                color="primary"
-              />
-            </template>
-            <span :class="events[lastProdEvent.type].color ? `${events[lastProdEvent.type].color}--text` : ''">
-              {{ events[lastProdEvent.type] && (events[lastProdEvent.type].text[locale] || events[lastProdEvent.type].text['fr']) }}
-            </span>
-          </v-list-item>
+    <template v-if="journal && !dataset.draftReason">
+      <v-alert
+        v-if="dataset.status === 'error'"
+        type="error"
+        variant="outlined"
+      >
+        <p
+          v-if="lastProdEvent"
+          v-html="lastProdEvent.data"
+        />
+        <template #append>
+          <v-btn
+            :icon="mdiPlay"
+            title="Relancer"
+            color="primary"
+            @click="patchDataset.execute({})"
+          />
         </template>
-      </v-col>
-    </v-row>
+      </v-alert>
+      <v-list-item
+        v-else-if="lastProdEvent"
+        class="pa-2"
+      >
+        <template #prepend>
+          <v-icon
+            v-if="['finalize-end', 'publication', 'error', 'draft-cancelled'].includes(lastProdEvent.type)"
+            :color="events[lastProdEvent.type].color || 'primary'"
+            :icon="events[lastProdEvent.type].icon"
+          />
+          <v-progress-circular
+            v-else
+            :size="20"
+            :width="3"
+            small
+            indeterminate
+            color="primary"
+          />
+        </template>
+        <span :class="events[lastProdEvent.type].color ? `${events[lastProdEvent.type].color}--text` : ''">
+          {{ events[lastProdEvent.type] && (events[lastProdEvent.type].text[locale] || events[lastProdEvent.type].text['fr']) }}
+        </span>
+      </v-list-item>
+    </template>
 
-    <v-row v-if="dataset.draftReason">
-      <v-col>
-        <v-alert
-          :type="(draftError || draftValidationError) ? 'warning' : 'info'"
-          style="width: 100%"
-          variant="outlined"
-        >
-          <v-row align="center">
-            <v-col
-              class="grow"
+    <v-alert
+      v-if="dataset.draftReason"
+      :type="(draftError || draftValidationError) ? 'warning' : 'info'"
+      variant="outlined"
+    >
+      <v-row align="center">
+        <v-col>
+          <p v-if="dataset.draftReason.key === 'file-new'">
+            {{ t('draftNew1') }}
+          </p>
+
+          <p v-else-if="dataset.draftReason.key === 'file-updated'">
+            {{ t('draftUpdated1') }}
+          </p>
+
+          <p v-else>
+            {{ dataset.draftReason.message }}
+          </p>
+
+          <template v-if="dataset.status === 'finalized'">
+            <p
+              v-if="draftError"
+              class="mt-4 mb-0 font-weight-bold"
+              v-html="draftError.data"
+            />
+            <p
+              v-if="draftValidationError"
+              class="mt-4 mb-0 font-weight-bold"
+              v-html="draftValidationError.data"
+            />
+            <p
+              class="mt-4 mb-0"
             >
-              <p v-if="dataset.draftReason.key === 'file-new'">
-                {{ t('draftNew1') }}
-              </p>
-
-              <p
-                v-else-if="dataset.draftReason.key === 'file-updated'"
-                class="mb-0"
+              <span
+                v-if="dataset.draftReason.key === 'file-new'"
               >
-                {{ t('draftUpdated1') }}
-              </p>
-              <p
+                {{ t('draftNew2') }}
+              </span>
+              <span
+                v-if="dataset.draftReason.key === 'file-updated'"
+              >
+                {{ t('draftUpdated2') }}
+              </span>
+              <span
+                v-if="can('validateDraft').value"
+              >
+                {{ t('draftValidateCan') }}
+              </span>
+              <span
                 v-else
-                class="mb-0"
               >
-                {{ dataset.draftReason.message }}
-              </p>
-
-              <template v-if="dataset.status === 'finalized'">
-                <p
-                  v-if="draftError"
-                  class="mt-4 mb-0 font-weight-bold"
-                  v-html="draftError.data"
-                />
-                <p
-                  v-if="draftValidationError"
-                  class="mt-4 mb-0 font-weight-bold"
-                  v-html="draftValidationError.data"
-                />
-                <p
-                  class="mt-4 mb-0"
-                >
-                  <span
-                    v-if="dataset.draftReason.key === 'file-new'"
-                  >
-                    {{ t('draftNew2') }}
-                  </span>
-                  <span
-                    v-if="dataset.draftReason.key === 'file-updated'"
-                  >
-                    {{ t('draftUpdated2') }}
-                  </span>
-                  <span
-                    v-if="can('validateDraft').value"
-                  >
-                    {{ t('draftValidateCan') }}
-                  </span>
-                  <span
-                    v-else
-                  >
-                    {{ t('draftValidateCannot') }}
-                  </span>
-                </p>
-              </template>
-            </v-col>
-            <v-col cols="12">
-              <div class="d-flex justify-end ga-2 mt-4">
-                <v-btn
-                  v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
-                  :disabled="!can('cancelDraft').value"
-                  :color="(draftError || draftValidationError) ? 'default' : 'warning'"
-                  elevation="0"
-                  @click="cancelDraft.execute()"
-                >
-                  {{ t('cancelDraft') }}
-                </v-btn>
-                <v-btn
-                  v-if="dataset.status === 'finalized'"
-                  :disabled="!can('validateDraft').value"
-                  :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
-                  @click="validateDraft.execute()"
-                >
-                  {{ t('validateDraft') }}
-                </v-btn>
-              </div>
-            </v-col>
-          </v-row>
-        </v-alert>
-      </v-col>
-    </v-row>
+                {{ t('draftValidateCannot') }}
+              </span>
+            </p>
+          </template>
+        </v-col>
+        <v-col cols="12">
+          <div class="d-flex justify-end ga-2 mt-4">
+            <v-btn
+              v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
+              :disabled="!can('cancelDraft').value"
+              :color="(draftError || draftValidationError) ? 'default' : 'warning'"
+              elevation="0"
+              @click="cancelDraft.execute()"
+            >
+              {{ t('cancelDraft') }}
+            </v-btn>
+            <v-btn
+              v-if="dataset.status === 'finalized'"
+              :disabled="!can('validateDraft').value"
+              :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
+              @click="validateDraft.execute()"
+            >
+              {{ t('validateDraft') }}
+            </v-btn>
+          </div>
+        </v-col>
+      </v-row>
+    </v-alert>
   </template>
 </template>
 

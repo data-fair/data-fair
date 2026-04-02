@@ -27,7 +27,6 @@
             :color="step === 'init' ? 'primary' : ''"
             :icon="mdiContentCopy"
             :title="t('stepInit')"
-            :subtitle="initFrom ? t('completed') : undefined"
           />
         </template>
         <v-divider />
@@ -102,6 +101,7 @@
 
           <dataset-init-from
             v-model="initFrom"
+            v-model:source-title="initFromSourceTitle"
             :allow-data="datasetType === 'file'"
           />
         </v-stepper-window-item>
@@ -222,6 +222,7 @@
               variant="outlined"
               density="compact"
               max-width="500"
+              hide-details="auto"
               :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
             />
             <v-checkbox
@@ -257,6 +258,7 @@
               variant="outlined"
               density="compact"
               max-width="500"
+              hide-details="auto"
               :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
             />
             <dataset-children-select v-model="virtualChildren" />
@@ -287,6 +289,7 @@
               variant="outlined"
               density="compact"
               max-width="500"
+              hide-details="auto"
               :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
             />
           </template>
@@ -475,9 +478,18 @@ function goToNext () {
 
 // ---- Init from ----
 const initFrom = ref<InitFrom | null>(null)
+const initFromSourceTitle = ref<string | null>(null)
 const initFromData = computed(() => initFrom.value?.parts?.includes('data') ?? false)
 
 function onInitFromNext () {
+  if (initFromSourceTitle.value) {
+    if (datasetType.value === 'file' && (!fileTitle.value || fileTitle.value === lastAutoFilledTitle.value)) {
+      fileTitle.value = initFromSourceTitle.value
+      lastAutoFilledTitle.value = initFromSourceTitle.value
+    } else if (datasetType.value === 'rest' && !restTitle.value) {
+      restTitle.value = initFromSourceTitle.value
+    }
+  }
   step.value = 'params'
 }
 
@@ -570,7 +582,6 @@ const paramsSubtitle = computed(() => {
   if (datasetType.value === 'file' && file.value) {
     return file.value.name.length > 30 ? file.value.name.slice(0, 27) + '...' : file.value.name
   }
-  if (paramsValid.value) return t('completed')
   return undefined
 })
 

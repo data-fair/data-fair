@@ -191,8 +191,8 @@
 <i18n lang="yaml">
 fr:
   validationConfig: Configuration de la validation des données
-  required: information obligatoire
-  restricted: cochez cette case pour restreindre les données aux valeurs avec libellés associés
+  required: Information obligatoire
+  restricted: Cochez cette case pour restreindre les données aux valeurs avec libellés associés
   pattern: Format
   patternErrorMessage: Message d'erreur en cas de format erroné
   minimum: Minimum
