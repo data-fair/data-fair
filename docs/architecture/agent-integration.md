@@ -161,9 +161,9 @@ The user types directly in the chat drawer. The agent has access to all globally
 |---|---|
 | **Trigger** | Action button next to summary textarea |
 | **Action ID** | `summarize-dataset` |
-| **Subagent** | `dataset_summarizer` (model: `summarizer`) — reads metadata, produces 200-300 char plain text summary |
-| **Pattern** | Generate, present to user, apply on approval via `set_dataset_summary` |
-| **Tools** | `read_dataset_info`, `set_dataset_summary` |
+| **Subagent** | `dataset_summarizer` (model: `summarizer`) — reads metadata and sample data, produces ≤300 char plain text summary |
+| **Pattern** | Generate, present to user, apply on approval via `set_dataset_summary`. The write tool validates: rejects summaries over 300 chars or starting with generic phrasing ("This dataset is…" / "Ce jeu de données est…"), forcing the agent to retry. |
+| **Tools** | `read_dataset_info` (includes 5 sample rows), `set_dataset_summary` |
 | **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` |
 
 ### 4.6 Write Dataset Description
@@ -313,7 +313,7 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 |----------|-------|---------|-------|
 | `dataset_data` | default | Data exploration and querying | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | `data_quality_checker` | default | Systematic data quality audit (6-step) | Same as `dataset_data` |
-| `dataset_summarizer` | summarizer | Generate 200-300 char dataset summaries | `read_dataset_info` |
+| `dataset_summarizer` | summarizer | Generate ≤300 char dataset summaries (with sample data, validated on write) | `read_dataset_info` |
 | `dataset_description_writer` | default | Generate 500-2000 char markdown descriptions | `read_dataset_info` |
 | `dataset_changes_summarizer` | summarizer | Summarize metadata diff (<500 chars) | `read_dataset_changes` |
 | `expression_helper` | default | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
