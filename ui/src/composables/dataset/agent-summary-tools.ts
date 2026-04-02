@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
-import { createAgentTranslator } from '~/composables/agent/utils'
+import { createAgentTranslator, fetchSampleRows, toCsv } from '~/composables/agent/utils'
 import { serializeDatasetInfo } from './agent-tools'
 
 const messages: Record<string, Record<string, string>> = {
@@ -30,7 +30,21 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
       properties: {}
     },
     execute: async () => {
-      return serializeDatasetInfo(datasetData.value)
+      const dataset = datasetData.value
+      const info = serializeDatasetInfo(dataset)
+      let sampleCsv = ''
+      if (dataset?.id) {
+        try {
+          const { rows } = await fetchSampleRows(dataset.id, 5)
+          sampleCsv = toCsv(rows)
+        } catch {
+          sampleCsv = '(failed to fetch sample data)'
+        }
+      }
+      if (sampleCsv) {
+        return info + '\n\n## Sample data (5 rows)\n' + sampleCsv
+      }
+      return info
     }
   })
 
@@ -46,6 +60,13 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
       required: ['summary'] as const
     },
     execute: async (params) => {
+      if (params.summary.length > 300) {
+        return `Error: summary is ${params.summary.length} characters long, it must be 300 characters or less. Please shorten it and try again.`
+      }
+      const genericStarts = ['this dataset is', 'ce jeu de données est']
+      if (genericStarts.some(s => params.summary.toLowerCase().startsWith(s))) {
+        return 'Error: the summary must not start with a generic phrase like "This dataset is..." or "Ce jeu de données est...". Please rephrase with a more direct and specific opening.'
+      }
       setSummary(params.summary)
       return 'Summary updated successfully.'
     }
@@ -60,13 +81,15 @@ Tâche :
 3. Renvoie le texte du résumé comme réponse finale.
 
 Format :
-- Entre 200 et 300 caractères
+- 300 caractères maximum (entre 200 et 300 idéalement)
 - Texte brut uniquement : pas de formatage, pas de markdown, pas de retours à la ligne
 - Ton accessible — le public va des analystes de données au grand public
 - Rédige dans la même langue que le titre et la description du jeu de données
+- Ne commence JAMAIS par "Ce jeu de données est..." ou une formulation générique similaire. Commence directement par le sujet concret.
+- Utilise les données d'exemple retournées par read_dataset_info pour mieux comprendre le contenu réel.
 
 Exemple de bon résumé :
-"Ce jeu de données recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`,
+"Recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`,
     en: `You are a dataset summarization expert for Data Fair, an open data publishing platform. Summaries are displayed in dataset catalogs to help users quickly understand what a dataset contains.
 
 Task:
@@ -75,13 +98,15 @@ Task:
 3. Return the summary text as your final response.
 
 Format:
-- Between 200 and 300 characters long
+- 300 characters maximum (ideally between 200 and 300)
 - Plain text only: no formatting, no markdown, no line breaks
 - Use an accessible tone — the audience ranges from data analysts to general public users
 - Write in the same language as the dataset title and description
+- NEVER start with "This dataset is..." or similar generic phrasing. Start directly with the concrete subject.
+- Use the sample data returned by read_dataset_info to better understand the actual content.
 
 Example of a good summary (French):
-"Ce jeu de données recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`
+"Recense les bornes de recharge pour véhicules électriques en France métropolitaine, avec leur localisation, puissance, type de connecteur et disponibilité en temps réel."`
   }
 
   useAgentSubAgent({

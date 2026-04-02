@@ -120,7 +120,7 @@ declare global {
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
-  const store: typeof import('../src/composables/application/store')['default']
+  const store: typeof import('../src/composables/dataset/store')['default']
   const toCsv: typeof import('../src/composables/agent/utils')['toCsv']
   const toRaw: typeof import('vue')['toRaw']
   const toRef: typeof import('vue')['toRef']
@@ -313,7 +313,7 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
-    readonly store: UnwrapRef<typeof import('../src/composables/application/store')['default']>
+    readonly store: UnwrapRef<typeof import('../src/composables/dataset/store')['default']>
     readonly toCsv: UnwrapRef<typeof import('../src/composables/agent/utils')['toCsv']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
