@@ -32,6 +32,15 @@
         />
       </v-stepper-header>
 
+      <df-agent-chat-action
+        v-if="showAgentChat"
+        action-id="help-create-application"
+        :visible-prompt="t('helpCreatePrompt')"
+        :hidden-context="createApplicationContext"
+        :btn-props="{ variant: 'tonal', density: 'compact', class: 'ma-2', prependIcon: mdiRobotOutline, text: t('helpCreatePrompt') }"
+        :title="t('helpCreatePrompt')"
+      />
+
       <v-stepper-window>
         <!-- Step 1: Type selection -->
         <v-stepper-window-item :value="1">
@@ -237,12 +246,15 @@
 </template>
 
 <script lang="ts" setup>
-import { mdiContentCopy, mdiApps, mdiSecurity } from '@mdi/js'
+import { mdiContentCopy, mdiApps, mdiSecurity, mdiRobotOutline } from '@mdi/js'
 import { $apiPath, $uiConfig } from '~/context'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useAgentApplicationCreationTools } from '~/composables/application/agent-creation-tools'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import type { BaseApp } from '#api/types'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const { account } = useSessionAuthenticated()
@@ -251,6 +263,8 @@ const breadcrumbs = useBreadcrumbs()
 breadcrumbs.receive({
   breadcrumbs: [{ text: t('apps'), to: '/applications' }, { text: t('breadcrumb') }]
 })
+
+const showAgentChat = useShowAgentChat()
 
 // ---- Types ----
 type CreationType = 'copy' | 'baseApp'
@@ -371,6 +385,35 @@ const appTitle = ref('')
 const importing = ref(false)
 const createError = ref<string | null>(null)
 
+// ---- Agent tools ----
+useAgentApplicationCreationTools(locale, {
+  step,
+  creationType,
+  selectedBaseApp,
+  copyApp,
+  appTitle,
+  baseAppsFetch,
+  datasetId,
+  dataset
+})
+
+const createApplicationContext = computed(() => {
+  const lines = [
+    'Help the user create a new application.',
+    'Start by asking the user what kind of visualization or application they want to create.',
+    '',
+    'Based on their description, use list_base_applications to find matching base application templates, or list_applications if they want to copy an existing one. Present the options and let the user choose.',
+    '',
+    'Once the user has decided, use select_creation_type, then select_base_application or select_copy_application, then optionally set_application_title to fill in the wizard steps.',
+    '',
+    'Do NOT create the application — the user will review and click the save button themselves.'
+  ]
+  if (datasetId.value && dataset.value) {
+    lines.push('', `The application is being created in the context of dataset "${dataset.value.title}" (id: ${datasetId.value}).`)
+  }
+  return lines.join('\n')
+})
+
 // ---- Create ----
 async function createApplication () {
   importing.value = true
@@ -410,6 +453,7 @@ async function createApplication () {
 fr:
   apps: Applications
   breadcrumb: Configurer une application
+  helpCreatePrompt: Aidez-moi à créer une application
   selectCreationType: Type d'initialisation
   choseType: Choisissez la manière dont vous souhaitez initialiser une nouvelle application.
   selectBaseApp: Sélection du modèle d'application
@@ -432,6 +476,7 @@ fr:
 en:
   apps: Applications
   breadcrumb: Configure an application
+  helpCreatePrompt: Help me create an application
   selectCreationType: Initialization type
   choseType: Choose how you would like to initialize a new application.
   selectBaseApp: Application model selection

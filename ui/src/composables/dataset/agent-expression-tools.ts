@@ -1,9 +1,12 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
-import { createAgentTranslator, agentToolError } from '~/composables/agent/utils'
+import { createAgentTranslator, agentToolError, csvEscape, toCsv, fetchSampleRows } from '~/composables/agent/utils'
+import { getAvailableSchema, executeGetExpressionContext } from './agent-expression-tools-logic'
 // @ts-ignore -- shared module, no types
 import exprEvalFactory from '#shared/expr-eval.js'
+
+export { getAvailableSchema, executeGetExpressionContext } from './agent-expression-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -22,37 +25,6 @@ const messages: Record<string, Record<string, string>> = {
     expressionHelper: 'Expression writing helper',
     expressionHelperDesc: 'Help write expressions for calculated columns. Describe the desired computation.'
   }
-}
-
-function csvEscape (value: any): string {
-  if (value == null) return ''
-  const s = String(value)
-  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
-}
-
-function toCsv (rows: Record<string, any>[]): string {
-  if (!rows.length) return ''
-  const keys = Object.keys(rows[0])
-  return [keys.map(csvEscape).join(','), ...rows.map(row => keys.map(k => csvEscape(row[k])).join(','))].join('\n')
-}
-
-function getAvailableSchema (dataset: any, extensionIndex: number) {
-  const schema = dataset.schema ?? []
-  const extensions = dataset.extensions ?? []
-
-  // collect keys produced by extensions at or after the current index
-  const laterExtensionKeys = new Set<string>()
-  for (let i = extensionIndex; i < extensions.length; i++) {
-    const ext = extensions[i]
-    if (ext.type === 'exprEval' && ext.property?.key) {
-      laterExtensionKeys.add(ext.property.key)
-    }
-  }
-
-  return schema.filter((col: any) =>
-    !['_i', '_id', '_rand'].includes(col.key) &&
-    !laterExtensionKeys.has(col.key)
-  )
 }
 
 export function useAgentExpressionTools (
@@ -75,36 +47,7 @@ export function useAgentExpressionTools (
       },
       required: ['extensionIndex'] as const
     },
-    execute: async (params) => {
-      const dataset = datasetData.value
-      if (!dataset) return agentToolError('Error', 'No dataset loaded')
-
-      const ext = dataset.extensions?.[params.extensionIndex]
-      if (!ext || ext.type !== 'exprEval') return agentToolError('Error', `No exprEval extension at index ${params.extensionIndex}`)
-
-      const availableSchema = getAvailableSchema(dataset, params.extensionIndex)
-
-      const schemaTable = availableSchema.map((col: any) => {
-        const notes: string[] = []
-        if (col.description) notes.push(col.description)
-        if (col['x-concept']?.title) notes.push(`concept: ${col['x-concept'].title}`)
-        return `| \`${col.key}\` | ${col.type}${col.format ? ' (' + col.format + ')' : ''} | ${col.title || col['x-originalName'] || ''} | ${notes.join(' — ')} |`
-      })
-
-      const sections = [
-        '## Available columns (use as variables in expressions)',
-        '| Key | Type | Title | Notes |',
-        '|-----|------|-------|-------|',
-        ...schemaTable,
-        '',
-        '## Target calculated column',
-        `- Key: \`${ext.property?.key}\``,
-        `- Name: ${ext.property?.['x-originalName'] || '(unnamed)'}`,
-        `- Type: ${ext.property?.type || 'string'}${ext.property?.format ? ' (' + ext.property.format + ')' : ''}`,
-        ext.expr ? `- Current expression: \`${ext.expr}\`` : '- No expression set yet'
-      ]
-      return sections.join('\n')
-    }
+    execute: (params) => executeGetExpressionContext(params, datasetData.value)
   })
 
   useAgentTool({
@@ -126,15 +69,9 @@ export function useAgentExpressionTools (
       const select = availableSchema.map((col: any) => col.key).join(',')
 
       try {
-        const data = await $fetch<any>(`datasets/${encodeURIComponent(dataset.id)}/lines`, {
-          query: { size: '5', select }
-        })
-        const rows = (data.results ?? []).map((row: any) => {
-          const { _id, _i, _rand, ...clean } = row
-          return clean
-        })
+        const { total, rows } = await fetchSampleRows(dataset.id, 5, select)
         return [
-          `**${data.total}** total rows, showing 5 samples:`,
+          `**${total}** total rows, showing 5 samples:`,
           '',
           toCsv(rows)
         ].join('\n')
@@ -231,20 +168,8 @@ export function useAgentExpressionTools (
     }
   })
 
-  useAgentSubAgent({
-    name: 'expression_helper',
-    title: t('expressionHelper'),
-    description: t('expressionHelperDesc'),
-    prompt: `You are an expression writing assistant for Data Fair, a data management platform. You help users write expr-eval expressions for calculated columns.
-
-## Workflow
-1. The extension index and the user's description of what they want are provided in the context.
-2. Call get_expression_context with the extensionIndex to understand available columns and the target property type.
-3. Call get_sample_data to see real data values.
-4. Write an expression and call test_expression to validate it.
-5. If there are errors, fix and retry.
-6. Once the expression works correctly, present the results to the user and ask for confirmation before calling set_expression.
-
+  // Expression language reference shared across locales (function names and syntax are not translated)
+  const expressionLanguageRef = `
 ## Expression Language Reference
 
 Variables are column keys from the dataset schema.
@@ -261,11 +186,7 @@ f(x) = x * 2; f(column_name)
 
 ### String Functions
 - CONCAT(a, b, ...) or CONCATENATE(a, b, ...): join values into a string. Null values become empty strings.
-- UPPER(str): convert to uppercase
-- LOWER(str): convert to lowercase
-- TRIM(str): trim and normalize whitespace
-- TITLE(str): Title Case
-- PHRASE(str): capitalize first letter, lowercase rest
+- UPPER(str), LOWER(str), TRIM(str), TITLE(str), PHRASE(str)
 - SUBSTRING(str, start, length?): extract substring (0-based)
 - REPLACE(str, search, replace): replace all occurrences
 - EXTRACT(str, before, after): extract text between two delimiters. Returns undefined if delimiters not found.
@@ -273,8 +194,7 @@ f(x) = x * 2; f(column_name)
 - STRPOS(str, search): position of substring, -1 if not found
 - SPLIT(str, separator): split string into array
 - JOIN(array, separator?): join array into string (default: ",")
-- PAD_LEFT(str, length, pad): pad string on the left
-- PAD_RIGHT(str, length, pad): pad string on the right
+- PAD_LEFT(str, length, pad), PAD_RIGHT(str, length, pad)
 
 ### Math Functions
 - SUM(a, b, ...): sum of numeric arguments (ignores non-numbers)
@@ -291,13 +211,48 @@ f(x) = x * 2; f(column_name)
 - JSON_PARSE(str): parse JSON string to object
 - GET(obj, key, default?): get property from parsed JSON object
 - TRUTHY(val): boolean truthiness
-- DEFINED(val): true if value is not null/undefined
+- DEFINED(val): true if value is not null/undefined`
+
+  const expressionHelperPrompts: Record<string, string> = {
+    fr: `Tu es un assistant d'écriture d'expressions pour Data Fair, une plateforme de gestion de données. Tu aides les utilisateurs à écrire des expressions expr-eval pour les colonnes calculées.
+
+## Processus
+1. L'index de l'extension et la description de ce que l'utilisateur souhaite sont fournis dans le contexte.
+2. Appelle get_expression_context avec extensionIndex pour comprendre les colonnes disponibles et le type de la propriété cible.
+3. Appelle get_sample_data pour voir les valeurs réelles.
+4. Écris une expression et appelle test_expression pour la valider.
+5. En cas d'erreurs, corrige et réessaie.
+6. Une fois l'expression validée, renvoie l'expression et les résultats de test comme réponse finale.
+${expressionLanguageRef}
+
+### Important
+- Utilise les clés exactes des colonnes comme variables (pas les titres ni les noms originaux).
+- Le résultat doit correspondre au type de la propriété cible (string, number, integer, boolean).
+- Pour les résultats string qui doivent être des tableaux, utilise un séparateur défini sur la propriété.
+- Réponds dans la langue de l'utilisateur.`,
+    en: `You are an expression writing assistant for Data Fair, a data management platform. You help users write expr-eval expressions for calculated columns.
+
+## Workflow
+1. The extension index and the user's description of what they want are provided in the context.
+2. Call get_expression_context with the extensionIndex to understand available columns and the target property type.
+3. Call get_sample_data to see real data values.
+4. Write an expression and call test_expression to validate it.
+5. If there are errors, fix and retry.
+6. Once the expression works correctly, return the validated expression and test results as your final response.
+${expressionLanguageRef}
 
 ### Important
 - Use exact column keys as variables (not titles or original names).
 - The result must match the target property type (string, number, integer, boolean).
 - For string results that should be arrays, use a separator defined on the property.
-- Respond in the same language as the user.`,
-    tools: ['get_expression_context', 'get_sample_data', 'test_expression', 'set_expression']
+- Respond in the same language as the user.`
+  }
+
+  useAgentSubAgent({
+    name: 'expression_helper',
+    title: t('expressionHelper'),
+    description: t('expressionHelperDesc'),
+    prompt: expressionHelperPrompts[locale.value] ?? expressionHelperPrompts.en,
+    tools: ['get_expression_context', 'get_sample_data', 'test_expression']
   })
 }

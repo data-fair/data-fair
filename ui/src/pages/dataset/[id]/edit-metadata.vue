@@ -125,7 +125,7 @@
             @confirm="cancelChanges"
           />
         </v-list-item>
-        <v-list-item v-if="showAgentChat">
+        <v-list-item>
           <df-agent-chat-action
             action-id="summarize-metadata-changes"
             :visible-prompt="t('summarizeChanges')"
@@ -182,10 +182,12 @@ import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiAlert, mdiAttachment, mdiCancel, mdiDatabase, mdiInformation, mdiPuzzle, mdiRobotOutline, mdiSetAll, mdiTableCog, mdiTag } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
+import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
+import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
+import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -212,15 +214,55 @@ useLeaveGuard(datasetEditFetch.hasDiff, { locale })
 useAgentDatasetSummaryTools(locale, datasetEditFetch.data, (s) => {
   if (datasetEditFetch.data.value) datasetEditFetch.data.value.summary = s
 })
+useAgentDatasetDescriptionTools(locale, datasetEditFetch.data, (d) => {
+  if (datasetEditFetch.data.value) datasetEditFetch.data.value.description = d
+})
 useAgentDatasetChangesSummaryTools(locale, datasetEditFetch.data, datasetEditFetch.serverData)
 useAgentExpressionTools(locale, datasetEditFetch.data, (extensionIndex, expr) => {
   if (datasetEditFetch.data.value?.extensions?.[extensionIndex]) {
     datasetEditFetch.data.value.extensions[extensionIndex].expr = expr
   }
 })
+useAgentSchemaAnnotationTools(locale, datasetEditFetch.data, (annotations) => {
+  if (!datasetEditFetch.data.value?.schema) return
+  for (const ann of annotations) {
+    const prop = datasetEditFetch.data.value.schema.find((p: any) => p.key === ann.key)
+    if (prop) {
+      if (ann.title !== undefined) prop.title = ann.title
+      if (ann.description !== undefined) prop.description = ann.description
+    }
+  }
+})
+useAgentPropertyConfigTools(locale, datasetEditFetch.data, (configs) => {
+  if (!datasetEditFetch.data.value?.schema) return
+  for (const cfg of configs) {
+    const prop = datasetEditFetch.data.value.schema.find((p: any) => p.key === cfg.key)
+    if (!prop) continue
+    if (cfg.typeOverride !== undefined) {
+      if (cfg.typeOverride === null) {
+        if (prop['x-transform']) {
+          delete prop['x-transform'].type
+          delete prop['x-transform'].format
+          if (!prop['x-transform'].expr) delete prop['x-transform']
+        }
+      } else {
+        if (!prop['x-transform']) prop['x-transform'] = {}
+        prop['x-transform'].type = cfg.typeOverride.type
+        if (cfg.typeOverride.format) prop['x-transform'].format = cfg.typeOverride.format
+        else delete prop['x-transform'].format
+      }
+    }
+    if (cfg.capabilities !== undefined) {
+      if (cfg.capabilities === null || !Object.keys(cfg.capabilities).length) {
+        delete prop['x-capabilities']
+      } else {
+        prop['x-capabilities'] = cfg.capabilities
+      }
+    }
+  }
+})
 
 const breadcrumbs = useBreadcrumbs()
-const showAgentChat = useShowAgentChat()
 const infoTab = ref('info')
 const structureTab = ref('schema')
 

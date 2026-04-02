@@ -3,6 +3,9 @@
     v-model="model"
     :schema="editSchema"
     :options="vjsfOptions"
+    :sub-agent="subAgent"
+    :prefix-name="prefixName"
+    :data-title="dataTitle"
   />
 
   <template v-if="digitalDocumentField && digitalDocumentField['x-display'] !== 'text-field'">
@@ -36,17 +39,21 @@
 </i18n>
 
 <script lang="ts" setup>
-import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
+import Vjsf from '@koumoul/vjsf/webmcp'
+import { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
-const { readonlyCols, selectedCols, ownLines, extension, loading, roPrimaryKey } = defineProps({
+const { readonlyCols, selectedCols, ownLines, extension, loading, roPrimaryKey, subAgent, prefixName, dataTitle } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
   selectedCols: { type: Array as PropType<string[] | null>, default: null },
   ownLines: { type: Boolean, default: false },
   extension: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
-  roPrimaryKey: { type: Boolean, default: false }
+  roPrimaryKey: { type: Boolean, default: false },
+  subAgent: { type: Boolean, default: false },
+  prefixName: { type: String, default: undefined },
+  dataTitle: { type: String, default: undefined }
 })
 
 const model = defineModel<any>()

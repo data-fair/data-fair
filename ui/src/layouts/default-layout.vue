@@ -39,6 +39,7 @@ import { useAgentDatasetDataTools } from '~/composables/dataset/agent-data-tools
 import { useAgentGeoTools } from '~/composables/agent/geo-tools'
 import { useAgentApplicationTools } from '~/composables/application/agent-tools'
 import { useAgentConnectorTools } from '~/composables/agent/connector-tools'
+import { useAgentDataQualityTools } from '~/composables/dataset/agent-data-quality-tools'
 import { provideShowAgentChat } from '~/composables/agent/use-show-chat'
 import DfAgentChatDrawer from '@data-fair/lib-vuetify-agents/DfAgentChatDrawer.vue'
 
@@ -60,13 +61,15 @@ const agentSystemPrompts: Record<string, string> = {
 Consignes :
 - Réponds dans la langue de l'utilisateur
 - Sois concis et précis
-- Utilise fréquemment l'outil getCurrentLocation pour comprendre le positionnement de l'utilisateur dans l'interface`,
+- Utilise fréquemment l'outil getCurrentLocation pour comprendre le positionnement de l'utilisateur dans l'interface
+- Lorsque le sous-agent d'exploration de données renvoie des "Navigation params", utilise l'outil navigate avec ces paramètres en query pour montrer à l'utilisateur les données filtrées dans la page tableau du jeu de données (chemin: /dataset/{id}/table)`,
   en: `You are the AI assistant for Data Fair, a platform for managing and publishing private or open data. You help users navigate the interface, explore datasets, query data, configure visualization applications, and manage metadata.
 
 Guidelines:
 - Respond in the user's language
 - Be concise and precise
-- Frequently use the tool getCurrentLocation to understand the positioning of the user in the UI.`
+- Frequently use the tool getCurrentLocation to understand the positioning of the user in the UI.
+- When the data exploration subagent returns "Navigation params", use the navigate tool with those parameters as query to show the user the filtered data in the dataset table page (path: /dataset/{id}/table)`
 }
 
 const agentSystemPrompt = computed(() => agentSystemPrompts[locale.value] ?? agentSystemPrompts.en)
@@ -79,6 +82,7 @@ watchEffect(() => {
       useAgentNavigationTools({ route, router, navigationGroups, breadcrumbItems: breadcrumbs.items, locale })
       useAgentDatasetTools(locale)
       useAgentDatasetDataTools(locale)
+      useAgentDataQualityTools(locale)
       useAgentGeoTools(locale)
       useAgentApplicationTools(locale)
       useAgentConnectorTools(locale)
