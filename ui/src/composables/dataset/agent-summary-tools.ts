@@ -29,7 +29,7 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
       properties: {}
     },
     execute: async () => {
-      return serializeDatasetInfo(datasetData.value)
+      return serializeDatasetInfo(datasetData.value, { includeOwner: true })
     }
   })
 

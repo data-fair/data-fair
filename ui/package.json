@@ -62,6 +62,7 @@
     "vuetify": "^4.0.0"
   },
   "dependencies": {
+    "@data-fair/agent-tools-data-fair": "*",
     "@data-fair/lib-vuetify-events": "^0.2.0",
     "zod-to-json-schema": "^3.25.1"
   }

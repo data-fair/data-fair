@@ -84,7 +84,6 @@ declare module 'vue' {
     DatasetUploadDialog: typeof import('./../src/components/dataset/dataset-upload-dialog.vue')['default']
     DatasetVirtual: typeof import('./../src/components/dataset/dataset-virtual.vue')['default']
     DatasetVirtualChildCompat: typeof import('./../src/components/dataset/dataset-virtual-child-compat.vue')['default']
-    DfNotificationQueue: typeof import('@data-fair/lib-vuetify/notification-queue.vue')['default']
     DfOwnerPick: typeof import('@data-fair/lib-vuetify/owner-pick.vue')['default']
     DfScrollToTop: typeof import('@data-fair/lib-vuetify/scroll-to-top.vue')['default']
     DfSectionTabs: typeof import('@data-fair/lib-vuetify/section-tabs.vue')['default']

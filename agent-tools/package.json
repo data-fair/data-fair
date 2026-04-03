@@ -1,0 +1,19 @@
+{
+  "name": "@data-fair/agent-tools-data-fair",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "exports": {
+    "./_utils.ts": "./_utils.ts",
+    "./search-data.ts": "./search-data.ts",
+    "./aggregate-data.ts": "./aggregate-data.ts",
+    "./calculate-metric.ts": "./calculate-metric.ts",
+    "./get-field-values.ts": "./get-field-values.ts",
+    "./get-dataset-schema.ts": "./get-dataset-schema.ts",
+    "./list-datasets.ts": "./list-datasets.ts",
+    "./describe-dataset.ts": "./describe-dataset.ts",
+    "./geocode-address.ts": "./geocode-address.ts",
+    "./dataset-data-subagent.ts": "./dataset-data-subagent.ts",
+    ".": "./index.ts"
+  },
+  "dependencies": {}
+}
