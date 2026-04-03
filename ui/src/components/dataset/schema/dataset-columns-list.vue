@@ -44,7 +44,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: any[]]
+  'update:modelValue': [value: SchemaProperty[]]
   'update:activeColumnKey': [key: string | null]
 }>()
 
