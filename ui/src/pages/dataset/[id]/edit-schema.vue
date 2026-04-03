@@ -18,7 +18,6 @@
                 <v-container fluid>
                   <dataset-schema
                     v-model="datasetEditFetch.data.value.schema"
-                    :dataset="datasetEditFetch.data.value"
                     :primary-key="datasetEditFetch.data.value.primaryKey"
                     @update:primary-key="pk => { if (datasetEditFetch.data.value) datasetEditFetch.data.value.primaryKey = pk }"
                   />
