@@ -128,7 +128,7 @@ const activeColumn = computed(() => {
   return props.modelValue.find(c => c.key === activeColumnKey.value) ?? null
 })
 
-function addColumn (column: any) {
+function addColumn (column: SchemaProperty) {
   emit('update:modelValue', [...props.modelValue, column])
 }
 
@@ -136,7 +136,7 @@ function removeColumn (key: string) {
   emit('update:modelValue', props.modelValue.filter(p => p.key !== key))
 }
 
-function onSort (sorted: any[]) {
+function onSort (sorted: SchemaProperty[]) {
   // Merge sorted editable columns with non-editable (calculated) ones
   const calculated = props.modelValue.filter(p => p['x-calculated'])
   const sortedKeys = sorted.map(s => s.key)
