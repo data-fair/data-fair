@@ -39,15 +39,18 @@
   />
 
   <v-select
-    v-if="editableColumns.length && dataset?.isRest"
-    :model-value="projection ?? []"
+    v-if="showProjection"
+    :model-value="projection"
     :label="t('projection')"
-    :items="primaryKeyItems"
+    :items="projectionsFetch.data.value ?? []"
     item-title="title"
-    item-value="value"
+    item-value="code"
+    return-object
     max-width="500"
-    multiple
     class="mb-4"
+    clearable
+    :loading="projectionsFetch.loading.value"
+    :disabled="!can('writeDescriptionBreaking')"
     @update:model-value="emit('update:projection', $event)"
   />
 
@@ -84,7 +87,7 @@ fr:
   primaryKey: Cle primaire
   primaryKeyMsgData: La cle primaire ne peut pas être modifiée une fois que des données ont été insérées.
   primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schema pour construire une cle primaire qui identifiera de manière unique chaque ligne de la donnée.
-  projection: Projection (colonnes visibles)
+  projection: Projection cartographique
   sortProperties: Vous pouvez changer l'ordre des colonnes par glisser-déposer.
 en:
   column: column | columns
@@ -92,7 +95,7 @@ en:
   primaryKey: Primary key
   primaryKeyMsgData: The primary key cannot be changed once data has been inserted.
   primaryKeyMsgNoData: Optional. Use one or more columns of the schema to build a primary key that will uniquely identify each line of the data.
-  projection: Projection (visible columns)
+  projection: Map projection
   sortProperties: You can sort the columns by drag and drop.
 </i18n>
 
@@ -101,21 +104,37 @@ import { mdiMagnify } from '@mdi/js'
 import type { SchemaProperty } from '#api/types'
 import { useDatasetStore } from '~/composables/dataset/store'
 
+const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
+const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
+const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
+
 const props = defineProps<{
   modelValue: SchemaProperty[]
   primaryKey?: string[]
-  projection?: string[]
+  projection?: { title?: string, code?: string } | null
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: SchemaProperty[]]
   'update:primaryKey': [value: string[]]
-  'update:projection': [value: string[]]
+  'update:projection': [value: { title?: string, code?: string } | null]
 }>()
 
 const { t } = useI18n({ useScope: 'local' })
 
 const { dataset } = useDatasetStore()
+
+const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? false
+
+const showProjection = computed(() => {
+  const schema = props.modelValue
+  return !!(schema && (
+    (schema.find(p => p['x-refersTo'] === coordXUri) && schema.find(p => p['x-refersTo'] === coordYUri)) ||
+    schema.find(p => p['x-refersTo'] === projectGeomUri)
+  ))
+})
+
+const projectionsFetch = useFetch<{ title: string, code: string }[]>(() => showProjection.value ? `${$apiPath}/projections` : null)
 
 const searchQuery = ref('')
 const activeColumnKey = ref<string | null>(null)

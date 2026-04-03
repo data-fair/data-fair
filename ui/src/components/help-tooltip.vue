@@ -1,24 +1,23 @@
 <template>
   <v-tooltip
     :location="location"
+    :text="text"
     max-width="400"
   >
     <template #activator="{ props }">
       <v-btn
         v-bind="props"
-        icon
         :size="small ? 'small' : 'default'"
+        :icon="mdiInformation"
         variant="text"
-      >
-        <v-icon
-          :size="small ? 'small' : 'default'"
-          :icon="mdiInformation"
-        />
-      </v-btn>
+      />
     </template>
-    <div class="help-tooltip-content">
+    <template
+      v-if="$slots.default"
+      #default
+    >
       <slot />
-    </div>
+    </template>
   </v-tooltip>
 </template>
 
@@ -28,14 +27,9 @@ import { mdiInformation } from '@mdi/js'
 withDefaults(defineProps<{
   small?: boolean
   location?: 'top' | 'bottom' | 'start' | 'end' | 'left' | 'right'
+  text?: string
 }>(), {
   small: false,
-  location: 'start'
+  location: 'start',
 })
 </script>
-
-<style>
-.help-tooltip-content p:last-child {
-  margin-bottom: 0;
-}
-</style>

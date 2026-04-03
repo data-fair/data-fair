@@ -13,24 +13,25 @@
       :svg="buildingSvg"
     >
       <template #actions>
-        <v-btn
-          v-if="structureEditFetch.hasDiff.value"
-          color="accent"
-          :loading="structureEditFetch.save.loading.value"
-          class="mr-2"
-          @click="structureEditFetch.save.execute()"
-        >
-          {{ t('save') }}
-        </v-btn>
         <confirm-menu
           v-if="structureEditFetch.hasDiff.value"
+          :btn-props="{ color: 'warning', variant: 'tonal' }"
           :label="t('cancel')"
           :text="t('confirmCancelText')"
           :icon="mdiCancel"
           yes-color="warning"
-          :btn-props="{ color: 'warning', variant: 'tonal' }"
           @confirm="cancelStructure"
         />
+        <v-btn
+          v-if="structureEditFetch.hasDiff.value"
+          class="ml-2"
+          color="accent"
+          variant="flat"
+          :loading="structureEditFetch.save.loading.value"
+          @click="structureEditFetch.save.execute()"
+        >
+          {{ t('save') }}
+        </v-btn>
       </template>
 
       <template #windows>
@@ -39,7 +40,7 @@
             v-model="structureEditFetch.data.value.schema"
             :dataset="structureEditFetch.data.value"
             :primary-key="structureEditFetch.data.value.primaryKey"
-            :projection="structureEditFetch.data.value.projection"
+            :projection="structureEditFetch.data.value.projection ?? null"
             @update:primary-key="pk => { if (structureEditFetch.data.value) structureEditFetch.data.value.primaryKey = pk }"
             @update:projection="p => { if (structureEditFetch.data.value) structureEditFetch.data.value.projection = p }"
           />
@@ -81,24 +82,25 @@
       :svg="metadataSvg"
     >
       <template #actions>
-        <v-btn
-          v-if="metadataEditFetch.hasDiff.value"
-          color="accent"
-          :loading="metadataEditFetch.save.loading.value"
-          class="mr-2"
-          @click="metadataEditFetch.save.execute()"
-        >
-          {{ t('save') }}
-        </v-btn>
         <confirm-menu
           v-if="metadataEditFetch.hasDiff.value"
+          :btn-props="{ color: 'warning', variant: 'tonal' }"
           :label="t('cancel')"
           :text="t('confirmCancelText')"
           :icon="mdiCancel"
           yes-color="warning"
-          :btn-props="{ color: 'warning', variant: 'tonal' }"
           @confirm="cancelMetadata"
         />
+        <v-btn
+          v-if="metadataEditFetch.hasDiff.value"
+          class="ml-2"
+          color="accent"
+          variant="flat"
+          :loading="metadataEditFetch.save.loading.value"
+          @click="metadataEditFetch.save.execute()"
+        >
+          {{ t('save') }}
+        </v-btn>
       </template>
 
       <template #windows>
@@ -106,6 +108,7 @@
           <dataset-metadata-form
             v-if="metadataEditFetch.data.value"
             v-model="metadataEditFetch.data.value"
+            :server-data="metadataEditFetch.serverData.value"
           />
         </v-tabs-window-item>
 
@@ -464,7 +467,7 @@ fr:
   datasets: Jeux de données
   structure: Structure
   extensions: Enrichissements
-  restConfig: Configuration REST
+  restConfig: Jeu éditable
   masterData: Données de référence
   virtual: Jeu de données virtuel
   saved: Les modifications ont été enregistrées
@@ -473,6 +476,8 @@ fr:
   details: Détails
   schema: Schéma
   attachments: Pièces jointes
+  save: Enregistrer
+  cancel: Annuler
   confirmCancelText: Souhaitez-vous annuler vos modifications ?
   exploration: Exploration des données
   table: Tableau
@@ -519,6 +524,8 @@ en:
   details: Details
   schema: Schema
   attachments: Attachments
+  save: Save
+  cancel: Cancel
   confirmCancelText: Do you want to discard your changes?
   exploration: Data exploration
   table: Table
@@ -765,7 +772,7 @@ const sections = computedDeepDiff(() => {
 
   // Metadata section
   const metadataTabs = [
-    { key: 'informations', title: t('informations'), icon: mdiInformation },
+    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined },
     { key: 'details', title: t('details'), icon: mdiCardTextOutline }
   ]
   if (!d.draftReason) {

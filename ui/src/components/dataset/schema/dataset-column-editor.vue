@@ -4,7 +4,7 @@
     v-if="!column"
     class="text-body-medium text-medium-emphasis"
   >
-    {{ t('detailedInfo') }}
+    {{ t('noColumnSelected') }}
   </div>
 
   <v-row v-if="column">
@@ -13,21 +13,20 @@
       cols="12"
       md="6"
       lg="7"
-      class="order-md-1"
     >
       <v-text-field
         v-model="column.title"
-        :placeholder="column['x-originalName'] || ' '"
+        :placeholder="column['x-originalName'] || ''"
         :label="t('label')"
         :disabled="!editable"
         variant="outlined"
         density="compact"
+        class="mb-2"
         hide-details
-        class="mb-3"
         autofocus
       >
         <template #append>
-          <help-tooltip>{{ t('labelHelp') }}</help-tooltip>
+          <help-tooltip :text="t('labelHelp')" />
         </template>
       </v-text-field>
 
@@ -89,17 +88,14 @@
         />
       </div>
 
-      <!-- Column info list -->
-      <v-list
-        density="compact"
-        class="labels-list"
-      >
-        <v-list-item>
-          <span class="text-medium-emphasis">{{ t('key') }}</span>&nbsp;
+      <!-- Column info -->
+      <div class="text-body-2 mb-3">
+        <div class="mb-1">
+          <span class="text-medium-emphasis">{{ t('sourceKey') }}:</span>
           {{ column.key }}
-        </v-list-item>
-        <v-list-item>
-          <span class="text-medium-emphasis">Type :</span>&nbsp;
+        </div>
+        <div class="mb-1">
+          <span class="text-medium-emphasis">{{ t('type') }}:</span>
           {{ propTypeTitle(column) }}
           <template v-if="currentFileColumn?.dateFormat">
             ({{ currentFileColumn.dateFormat }})
@@ -107,17 +103,23 @@
           <template v-if="currentFileColumn?.dateTimeFormat">
             ({{ currentFileColumn.dateTimeFormat }})
           </template>
-        </v-list-item>
-        <v-list-item v-if="column['x-cardinality']">
-          <span class="text-medium-emphasis">{{ t('distinctValues') }} : </span>&nbsp;
+        </div>
+        <div
+          v-if="column['x-cardinality']"
+          class="mb-1"
+        >
+          <span class="text-medium-emphasis">{{ t('distinctValues') }}:</span>
           {{ column['x-cardinality'].toLocaleString() }}
           <help-tooltip>{{ t('distinctValuesHelp') }}</help-tooltip>
-        </v-list-item>
-        <v-list-item v-if="column.enum">
-          <span class="text-medium-emphasis">{{ t('values') }}</span>&nbsp;
+        </div>
+        <div
+          v-if="column.enum"
+          class="mb-1"
+        >
+          <span class="text-medium-emphasis">{{ t('values') }}:</span>
           {{ column.enum.join(' - ').substring(0, 100) }}
-        </v-list-item>
-      </v-list>
+        </div>
+      </div>
 
       <!-- Concept / vocabulary autocomplete -->
       <v-autocomplete
@@ -181,15 +183,16 @@
 
 <i18n lang="yaml">
 fr:
-  detailedInfo: Cliquez sur un nom de colonne pour afficher ses informations détaillées.
-  key: "Clé dans la source : "
+  noColumnSelected: Cliquez sur un nom de colonne pour afficher ses informations détaillées.
+  sourceKey: Clé source
+  type: Type
   label: Libellé
   labelHelp: Libellé court de la colonne utilisé dans toutes les applications de données, la clé sera utilisée si vous laissez cette information vide.
   description: Description
   descriptionHelp: Un contenu markdown ou HTML qui sera utilisé pour décrire cette colonne aux utilisateurs des applications de données et de la documentation d'API.
   distinctValues: Nombre de valeurs distinctes
   distinctValuesHelp: approximatif dans le cas de données volumineuses
-  values: "Valeurs : "
+  values: Valeurs
   sep: Séparateur
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
   concept: Concept
@@ -202,15 +205,16 @@ fr:
   deleteColumnTitle: Supprimer la colonne
   deleteColumnText: Souhaitez-vous supprimer cette colonne ? Attention, la donnée sera effacée et définitivement perdue !
 en:
-  detailedInfo: Click on a column title to display its detailed information.
-  key: "Key in the source: "
+  noColumnSelected: Click on a column title to display its detailed information.
+  sourceKey: Source key
+  type: Type
   label: Label
   labelHelp: Short label of the column used in all data applications, the key will be used if you leave this empty.
   description: Description
   descriptionHelp: A markdown or HTML content that will be used to describe this column to the users of data applications and API documentations.
   distinctValues: Number of distinct values
   distinctValuesHelp: approximative in the case of a large dataset
-  values: "Values: "
+  values: Values
   sep: Separator
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
   concept: Concept
@@ -329,9 +333,3 @@ function onRemoveColumn () {
   emit('remove', props.column.key)
 }
 </script>
-
-<style>
-.labels-list .v-list-item {
-  min-height: 30px;
-}
-</style>

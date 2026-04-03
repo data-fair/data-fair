@@ -1,251 +1,254 @@
 <template>
-  <div v-if="dataset">
-    <v-text-field
-      v-model="dataset.title"
-      :disabled="!can('writeDescription')"
-      :label="t('title')"
-      variant="outlined"
-      density="compact"
-      hide-details
-      class="mb-3"
-    />
-
-    <div class="d-flex align-start gap-1 mb-3">
-      <v-textarea
-        v-model="dataset.summary"
+  <v-row v-if="dataset">
+    <!-- Left column: primary fields -->
+    <v-col
+      cols="12"
+      md="6"
+      lg="7"
+    >
+      <v-text-field
+        v-model="dataset.title"
         :disabled="!can('writeDescription')"
-        :label="t('summary')"
-        rows="3"
+        :label="t('title')"
+        :base-color="fieldColor('title')"
+        :color="fieldColor('title')"
         variant="outlined"
         density="compact"
         hide-details
-        class="flex-grow-1"
+        class="mb-4"
       />
-      <df-agent-chat-action
-        v-if="showAgentChat && can('writeDescription')"
-        action-id="summarize-dataset"
-        :visible-prompt="t('summarizePrompt')"
-        :hidden-context="summarizeContext"
-        :btn-props="{ class: 'ml-1 mt-1' }"
-      />
-    </div>
 
-    <markdown-editor
-      v-model="dataset.description"
-      :disabled="!can('writeDescription')"
-      :label="t('description')"
-      :locale="locale"
-      :csp-nonce="$cspNonce"
-    />
+      <div class="d-flex align-start gap-1 mb-4">
+        <v-textarea
+          v-model="dataset.summary"
+          :disabled="!can('writeDescription')"
+          :label="t('summary')"
+          :base-color="fieldColor('summary')"
+          :color="fieldColor('summary')"
+          rows="3"
+          variant="outlined"
+          density="compact"
+          hide-details
+          class="flex-grow-1"
+        />
+        <df-agent-chat-action
+          v-if="showAgentChat && can('writeDescription')"
+          action-id="summarize-dataset"
+          :visible-prompt="t('summarizePrompt')"
+          :hidden-context="summarizeContext"
+          :btn-props="{ class: 'ml-1 mt-1' }"
+        />
+      </div>
 
-    <v-divider class="my-4" />
-
-    <v-select
-      v-model="dataset.license"
-      :items="licensesFetch.data.value ?? []"
-      :disabled="!can('writeDescription')"
-      item-title="title"
-      item-value="href"
-      :label="t('licence')"
-      return-object
-      hide-details
-      class="mb-3"
-      clearable
-    />
-
-    <v-select
-      v-if="topicsFetch.data.value?.length"
-      v-model="dataset.topics"
-      :items="topicsFetch.data.value ?? []"
-      :disabled="!can('writeDescription')"
-      item-title="title"
-      item-value="id"
-      :label="t('topics')"
-      multiple
-      return-object
-      hide-details
-      class="mb-3"
-    />
-
-    <v-combobox
-      v-model="dataset.keywords"
-      :disabled="!can('writeDescription')"
-      :label="t('keywords')"
-      hide-details
-      multiple
-      chips
-      closable-chips
-      class="mb-3"
-    />
-
-    <v-text-field
-      v-model="dataset.origin"
-      :disabled="!can('writeDescription')"
-      :label="t('origin')"
-      hide-details
-      class="mb-3"
-      clearable
-    />
-
-    <v-text-field
-      v-model="dataset.image"
-      :disabled="!can('writeDescription')"
-      :label="t('image')"
-      hide-details
-      class="mb-3"
-      clearable
-    />
-
-    <!-- Conditional metadata fields based on owner settings -->
-
-    <v-text-field
-      v-if="datasetsMetadata?.creator?.active"
-      v-model="dataset.creator"
-      :disabled="!can('writeDescription')"
-      :label="datasetsMetadata.creator.title || t('creator')"
-      hide-details
-      class="mb-3"
-      clearable
-      :rules="props.required.includes('creator') ? [(val: string) => !!val] : []"
-    />
-
-    <v-select
-      v-if="datasetsMetadata?.frequency?.active"
-      v-model="dataset.frequency"
-      :items="frequencies"
-      :disabled="!can('writeDescription')"
-      :label="datasetsMetadata.frequency.title || t('frequency')"
-      hide-details
-      clearable
-      class="mb-3"
-    />
-
-    <v-text-field
-      v-if="datasetsMetadata?.spatial?.active"
-      v-model="dataset.spatial"
-      :disabled="!can('writeDescription')"
-      :label="datasetsMetadata.spatial.title || t('spatial')"
-      hide-details
-      class="mb-3"
-      clearable
-    />
-
-    <v-text-field
-      v-if="datasetsMetadata?.temporal?.active"
-      :model-value="formatTemporal(dataset.temporal)"
-      readonly
-      :label="datasetsMetadata.temporal.title || t('temporal')"
-      hide-details
-      class="mb-3"
-      clearable
-      @click:clear="dataset.temporal = null"
-    >
-      <template #append-inner>
-        <v-menu
-          v-model="temporalMenu"
-          :close-on-content-click="false"
-        >
-          <template #activator="{ props: menuProps }">
-            <v-icon
-              :icon="mdiCalendar"
-              v-bind="menuProps"
-            />
-          </template>
-          <v-date-picker
-            :model-value="temporalDates"
-            multiple
-            @update:model-value="setTemporalDates"
-          />
-        </v-menu>
-      </template>
-    </v-text-field>
-
-    <v-text-field
-      v-if="datasetsMetadata?.modified?.active"
-      :model-value="dataset.modified ? formatDate(dataset.modified) : ''"
-      readonly
-      :label="datasetsMetadata.modified.title || t('modified')"
-      hide-details
-      class="mb-3"
-      clearable
-      @click:clear="dataset.modified = null"
-    >
-      <template #append-inner>
-        <v-menu
-          v-model="modifiedMenu"
-          :close-on-content-click="false"
-        >
-          <template #activator="{ props: menuProps }">
-            <v-icon
-              :icon="mdiCalendar"
-              v-bind="menuProps"
-            />
-          </template>
-          <v-date-picker
-            :model-value="dataset.modified ? [dataset.modified] : []"
-            @update:model-value="dates => { dataset.modified = dates[0] || null; modifiedMenu = false }"
-          />
-        </v-menu>
-      </template>
-    </v-text-field>
-
-    <v-checkbox
-      v-if="dataset.schema?.some((prop: any) => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
-      v-model="dataset.attachmentsAsImage"
-      :disabled="!can('writeDescriptionBreaking')"
-      :label="t('attachmentsAsImage')"
-      hide-details
-      density="compact"
-    />
-
-    <template v-if="datasetsMetadata?.custom?.length">
-      <v-text-field
-        v-for="cm of datasetsMetadata.custom"
-        :key="cm.key"
-        :model-value="dataset.customMetadata?.[cm.key]"
+      <markdown-editor
+        v-model="dataset.description"
         :disabled="!can('writeDescription')"
-        :label="cm.title"
+        :label="t('description')"
+        :locale="locale"
+        :csp-nonce="$cspNonce"
+      />
+    </v-col>
+
+    <!-- Right column: secondary metadata fields -->
+    <v-col
+      cols="12"
+      md="6"
+      lg="5"
+    >
+      <v-select
+        v-model="dataset.license"
+        :items="licensesFetch.data.value ?? []"
+        :disabled="!can('writeDescription')"
+        :base-color="fieldColor('license')"
+        :color="fieldColor('license')"
+        :label="t('licence')"
+        item-title="title"
+        item-value="href"
+        class="mb-4"
+        return-object
         hide-details
         clearable
-        class="mb-3"
-        @update:model-value="(v) => setCustomMetadata(cm.key, v)"
       />
-    </template>
 
-    <!-- Related datasets / "See also" -->
-    <div
-      v-if="dataset.finalizedAt || dataset.isMetaOnly"
-      class="mb-3"
-    >
-      <label class="text-body-2 font-weight-medium mb-2 d-block">
-        {{ t('seeAlso') }}
-      </label>
-      <v-autocomplete
-        :model-value="dataset.relatedDatasets ?? []"
+      <v-select
+        v-if="topicsFetch.data.value?.length"
+        v-model="dataset.topics"
+        :items="topicsFetch.data.value ?? []"
         :disabled="!can('writeDescription')"
-        :label="t('addRelatedDatasets')"
-        :items="relatedDatasetsItems"
+        :label="t('topics')"
+        :base-color="fieldColor('topics')"
+        :color="fieldColor('topics')"
         item-title="title"
         item-value="id"
+        class="mb-4"
+        chips
+        multiple
+        hide-details
+        return-object
+        closable-chips
+      />
+
+      <v-combobox
+        v-model="dataset.keywords"
+        :items="keywordsSuggestions"
+        :disabled="!can('writeDescription')"
+        :label="t('keywords')"
+        :base-color="fieldColor('keywords')"
+        :color="fieldColor('keywords')"
+        :loading="loadingKeywords"
+        class="mb-4"
+        chips
+        multiple
+        hide-details
+        closable-chips
+        @update:search="fetchKeywordsFacets"
+      />
+
+      <v-text-field
+        v-model="dataset.origin"
+        :disabled="!can('writeDescription')"
+        :label="t('origin')"
+        :base-color="fieldColor('origin')"
+        :color="fieldColor('origin')"
+        class="mb-4"
+        clearable
+        hide-details
+      />
+
+      <v-text-field
+        v-model="dataset.image"
+        :disabled="!can('writeDescription')"
+        :label="t('image')"
+        :base-color="fieldColor('image')"
+        :color="fieldColor('image')"
+        class="mb-4"
+        clearable
+        hide-details
+      />
+
+      <!-- Conditional metadata fields based on owner settings -->
+
+      <v-text-field
+        v-if="datasetsMetadata?.creator?.active"
+        v-model="dataset.creator"
+        :rules="props.required.includes('creator') ? [(val: string) => !!val] : []"
+        :disabled="!can('writeDescription')"
+        :label="datasetsMetadata.creator.title || t('creator')"
+        :base-color="fieldColor('creator')"
+        :color="fieldColor('creator')"
+        class="mb-4"
+        clearable
+        hide-details
+      />
+
+      <v-select
+        v-if="datasetsMetadata?.frequency?.active"
+        v-model="dataset.frequency"
+        :items="frequencies"
+        :disabled="!can('writeDescription')"
+        :label="datasetsMetadata.frequency.title || t('frequency')"
+        :base-color="fieldColor('frequency')"
+        :color="fieldColor('frequency')"
+        hide-details
+        clearable
+        class="mb-4"
+      />
+
+      <v-text-field
+        v-if="datasetsMetadata?.spatial?.active"
+        v-model="dataset.spatial"
+        :disabled="!can('writeDescription')"
+        :label="datasetsMetadata.spatial.title || t('spatial')"
+        :base-color="fieldColor('spatial')"
+        :color="fieldColor('spatial')"
+        hide-details
+        class="mb-4"
+        clearable
+      />
+
+      <v-date-input
+        v-if="datasetsMetadata?.temporal?.active"
+        :model-value="temporalDateObjects"
+        :label="datasetsMetadata.temporal.title || t('temporal')"
+        :disabled="!can('writeDescription')"
+        :base-color="fieldColor('temporal')"
+        :color="fieldColor('temporal')"
+        prepend-icon=""
+        multiple="range"
+        class="mb-4"
+        hide-details
+        clearable
+        @update:model-value="setTemporalDates"
+        @click:clear="dataset.temporal = null"
+      />
+
+      <v-date-input
+        v-if="datasetsMetadata?.modified?.active"
+        :model-value="dataset.modified ? dayjs(dataset.modified).toDate() : null"
+        :label="datasetsMetadata.modified.title || t('modified')"
+        :disabled="!can('writeDescription')"
+        :base-color="fieldColor('modified')"
+        :color="fieldColor('modified')"
+        prepend-icon=""
+        class="mb-4"
+        hide-details
+        clearable
+        @update:model-value="v => { dataset.modified = v ? dayjs(v).format('YYYY-MM-DD') : null }"
+        @click:clear="dataset.modified = null"
+      />
+
+      <v-checkbox
+        v-if="dataset.schema?.some((prop: any) => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
+        v-model="dataset.attachmentsAsImage"
+        :disabled="!can('writeDescriptionBreaking')"
+        :label="t('attachmentsAsImage')"
+        :base-color="fieldColor('attachmentsAsImage')"
+        :color="fieldColor('attachmentsAsImage')"
+        density="compact"
+        hide-details
+      />
+
+      <template v-if="datasetsMetadata?.custom?.length">
+        <v-text-field
+          v-for="cm of datasetsMetadata.custom"
+          :key="cm.key"
+          :model-value="dataset.customMetadata?.[cm.key]"
+          :disabled="!can('writeDescription')"
+          :label="cm.title"
+          :base-color="isCustomModified(cm.key) ? 'accent' : undefined"
+          :color="isCustomModified(cm.key) ? 'accent' : undefined"
+          class="mb-4"
+          clearable
+          hide-details
+          @update:model-value="(v) => setCustomMetadata(cm.key, v)"
+        />
+      </template>
+
+      <!-- Related datasets -->
+      <v-autocomplete
+        v-if="dataset.finalizedAt || dataset.isMetaOnly"
+        v-model:search="relatedDatasetsSearch"
+        :model-value="dataset.relatedDatasets ?? []"
+        :disabled="!can('writeDescription')"
+        :label="t('relatedDatasets')"
+        :items="relatedDatasetsItems"
+        :loading="relatedDatasetsFetch.loading.value"
+        :base-color="fieldColor('relatedDatasets')"
+        :color="fieldColor('relatedDatasets')"
+        item-title="title"
+        item-value="id"
+        class="mb-4"
         hide-details
         multiple
+        no-filter
+        chips
+        closable-chips
         clearable
-        @update:model-value="v => { dataset.relatedDatasets = v }"
+        return-object
+        @update:model-value="v => { dataset.relatedDatasets = v.map((d: any) => ({ id: d.id, title: d.title })) }"
       />
-      <div class="mt-2 d-flex flex-wrap gap-2">
-        <v-chip
-          v-for="datasetId in (dataset.relatedDatasets ?? [])"
-          :key="datasetId"
-          :href="`/dataset/${datasetId}`"
-          target="_blank"
-          closable
-          @click:close="dataset.relatedDatasets = (dataset.relatedDatasets ?? []).filter(id => id !== datasetId)"
-        >
-          {{ getRelatedDatasetTitle(datasetId) }}
-        </v-chip>
-      </div>
-    </div>
-  </div>
+    </v-col>
+  </v-row>
 </template>
 
 <i18n lang="yaml">
@@ -273,8 +276,7 @@ fr:
   temporal: Couverture temporelle
   modified: Date de modification de la source
   attachmentsAsImage: Afficher les pièces jointes comme des images
-  seeAlso: Voir aussi
-  addRelatedDatasets: Ajouter des jeux de données liés
+  relatedDatasets: Jeux de données liés
 en:
   title: Title
   summary: Summary
@@ -299,14 +301,15 @@ en:
   temporal: Temporal coverage
   modified: Source modification date
   attachmentsAsImage: Display attachments as images
-  seeAlso: See also
-  addRelatedDatasets: Add related datasets
+  relatedDatasets: Related datasets
 </i18n>
 
 <script setup lang="ts">
+import { withQuery } from 'ufo'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { mdiCalendar } from '@mdi/js'
+import { VDateInput } from 'vuetify/labs/VDateInput'
+import equal from 'fast-deep-equal'
 import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 
@@ -315,11 +318,13 @@ const showAgentChat = useShowAgentChat()
 const dataset = defineModel<any>({ required: true })
 
 const { t, locale } = useI18n()
+const { dayjs } = useLocaleDayjs()
 
 const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? false
 
 const props = withDefaults(defineProps<{
   required?: string[]
+  serverData?: any
 }>(), { required: () => [] })
 
 const owner = computed(() => dataset.value?.owner)
@@ -328,35 +333,41 @@ const topicsFetch = useFetch<any[]>(() => owner.value ? `${$apiPath}/settings/${
 
 const { datasetsMetadata } = useDatasetsMetadata(owner)
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString(locale.value)
+// --- Modified field detection ---
+
+const fieldColor = (field: string): string | undefined => {
+  if (!props.serverData) return undefined
+  const current = dataset.value?.[field]
+  const original = props.serverData?.[field]
+  return !equal(current, original) ? 'accent' : undefined
 }
+
+const isCustomModified = (key: string): boolean => {
+  if (!props.serverData) return false
+  return dataset.value?.customMetadata?.[key] !== props.serverData?.customMetadata?.[key]
+}
+
+// --- Frequencies ---
 
 const frequencyKeys = ['realtime', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'irregular'] as const
 const frequencies = computed(() => frequencyKeys.map(k => ({ title: t(`freq_${k}`), value: k })))
 
-const temporalMenu = ref(false)
-const modifiedMenu = ref(false)
+// --- Temporal coverage (VDateInput multiple="range") ---
 
-const temporalDates = computed(() => {
+const temporalDateObjects = computed(() => {
   if (!dataset.value?.temporal) return []
-  return [dataset.value.temporal.start, dataset.value.temporal.end].filter(Boolean)
+  return [dataset.value.temporal.start, dataset.value.temporal.end]
+    .filter(Boolean)
+    .map((d: string) => dayjs(d).toDate())
 })
 
-const formatTemporal = (temporal: any) => {
-  if (!temporal) return ''
-  const parts = []
-  if (temporal.start) parts.push(formatDate(temporal.start))
-  if (temporal.end) parts.push(formatDate(temporal.end))
-  return parts.join(' — ')
-}
-
-const setTemporalDates = (dates: string[]) => {
-  if (!dates.length) { dataset.value.temporal = null; return }
-  const sorted = [...dates].sort()
+const setTemporalDates = (dates: Date[]) => {
+  if (!dates?.length) { dataset.value.temporal = null; return }
+  const sorted = dates.map(d => dayjs(d).format('YYYY-MM-DD')).sort()
   dataset.value.temporal = { start: sorted[0], end: sorted[sorted.length - 1] }
 }
+
+// --- Custom metadata ---
 
 const setCustomMetadata = (key: string, value: any) => {
   if (!dataset.value.customMetadata) dataset.value.customMetadata = {}
@@ -364,27 +375,50 @@ const setCustomMetadata = (key: string, value: any) => {
   else delete dataset.value.customMetadata[key]
 }
 
+// --- AI summarize ---
+
 const summarizeContext = computed(() => {
   return `Use the subagent_summarizer tool to read the dataset information and produce a summary. Then use the set_dataset_summary tool to set the summary on the form. The dataset ID is "${dataset.value?.id}".`
 })
 
-// For autocomplete of related datasets — fetch available datasets from the same owner
-const relatedDatasetsItems = ref<any[]>([])
+// --- Keywords facets (suggestions from other datasets) ---
 
-onMounted(async () => {
-  if (dataset.value?.owner) {
-    try {
-      const response = await $fetch<any>(`${$apiPath}/datasets`, {
-        query: { owner: `${dataset.value.owner.type}/${dataset.value.owner.id}`, size: 1000 }
-      })
-      relatedDatasetsItems.value = (response?.results ?? []).filter((d: any) => d.id !== dataset.value?.id)
-    } catch (e) {
-      console.error('Failed to fetch related datasets', e)
-    }
+const keywordsSuggestions = ref<string[]>([])
+const loadingKeywords = ref(false)
+let keywordsFetched = false
+
+const fetchKeywordsFacets = async (search: string) => {
+  if (keywordsFetched || !search || !dataset.value?.owner) return
+  loadingKeywords.value = true
+  try {
+    const response = await $fetch<any>(`${$apiPath}/datasets`, {
+      query: { size: 0, facets: 'keywords', owner: `${dataset.value.owner.type}:${dataset.value.owner.id}` }
+    })
+    keywordsSuggestions.value = (response?.facets?.keywords ?? []).map((f: any) => f.value)
+    keywordsFetched = true
+  } catch (e) {
+    console.error('Failed to fetch keywords facets', e)
   }
+  loadingKeywords.value = false
+}
+
+// --- Related datasets autocomplete (search-as-you-type) ---
+
+const relatedDatasetsSearch = ref('')
+
+const relatedDatasetsUrl = computed(() => {
+  if (!dataset.value?.owner) return null
+  const query: Record<string, any> = {
+    owner: `${dataset.value.owner.type}:${dataset.value.owner.id}`,
+    size: 20
+  }
+  if (relatedDatasetsSearch.value) query.q = relatedDatasetsSearch.value
+  return withQuery(`${$apiPath}/datasets`, query)
 })
 
-const getRelatedDatasetTitle = (datasetId: string) => {
-  return relatedDatasetsItems.value.find(d => d.id === datasetId)?.title || datasetId
-}
+const relatedDatasetsFetch = useFetch<{ results: { id: string, title: string }[] }>(relatedDatasetsUrl)
+
+const relatedDatasetsItems = computed(() =>
+  (relatedDatasetsFetch.data.value?.results ?? []).filter((d: any) => d.id !== dataset.value?.id)
+)
 </script>
