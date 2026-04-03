@@ -1,74 +1,69 @@
 <template>
-  <v-container
-    fluid
-    class="pa-0"
-  >
-    <div class="d-flex align-center flex-wrap ga-2 mb-2">
-      <h3
-        v-if="editableProperties.length"
-        class="text-headline-small"
-      >
-        {{ editableProperties.length.toLocaleString() }} {{ t('column', editableProperties.length) }}
-      </h3>
-      <v-btn
-        v-if="dataset.isRest"
-        color="primary"
-        size="small"
-        :icon="mdiPlus"
-        @click="addPropertyDialog = true"
-      />
-      <v-text-field
-        v-if="editableProperties.length > 10"
-        v-model="searchQuery"
-        :placeholder="t('search')"
-        variant="outlined"
-        density="compact"
-        rounded
-        max-width="200"
-        :append-inner-icon="mdiMagnify"
-        hide-details
-      />
-      <v-spacer />
-    </div>
-
-    <v-select
-      v-if="editableProperties.length && dataset.isRest"
-      :model-value="primaryKey ?? []"
-      :label="t('primaryKey')"
-      :disabled="!!dataset.count"
-      :messages="dataset.count ? t('primaryKeyMsgData') : t('primaryKeyMsgNoData')"
-      :items="primaryKeyItems"
-      item-title="title"
-      item-value="value"
-      max-width="500"
-      multiple
-      class="mb-3"
-      @update:model-value="emit('update:primaryKey', $event)"
-    />
-
-    <p
-      v-if="dataset.isRest"
-      class="text-body-medium text-medium-emphasis mb-2"
+  <div class="d-flex align-center flex-wrap ga-2 mb-2">
+    <h3
+      v-if="editableProperties.length"
+      class="text-headline-small"
     >
-      {{ t('sortProperties') }}
-    </p>
-
-    <dataset-properties-slide
-      v-if="filteredProperties.length"
-      :model-value="filteredProperties"
-      :dataset="dataset"
-      :editable="true"
-      :sortable="(dataset.isRest || !!dataset.file) && !searchQuery"
-      @update:model-value="onSort"
-      @remove="removeProperty"
+      {{ editableProperties.length.toLocaleString() }} {{ t('column', editableProperties.length) }}
+    </h3>
+    <v-btn
+      v-if="dataset.isRest"
+      color="primary"
+      size="small"
+      density="compact"
+      :icon="mdiPlus"
+      @click="addPropertyDialog = true"
     />
-
-    <dataset-add-property-dialog
-      v-model="addPropertyDialog"
-      :schema="modelValue"
-      @add="addProperty"
+    <v-text-field
+      v-if="editableProperties.length > 10"
+      v-model="searchQuery"
+      :placeholder="t('search')"
+      variant="outlined"
+      density="compact"
+      rounded
+      max-width="200"
+      :append-inner-icon="mdiMagnify"
+      hide-details
     />
-  </v-container>
+  </div>
+
+  <v-select
+    v-if="editableProperties.length && dataset.isRest"
+    :model-value="primaryKey ?? []"
+    :label="t('primaryKey')"
+    :disabled="!!dataset.count"
+    :messages="dataset.count ? t('primaryKeyMsgData') : t('primaryKeyMsgNoData')"
+    :items="primaryKeyItems"
+    item-title="title"
+    item-value="value"
+    max-width="500"
+    multiple
+    class="mb-3"
+    @update:model-value="emit('update:primaryKey', $event)"
+  />
+
+  <p
+    v-if="dataset.isRest"
+    class="text-body-medium text-medium-emphasis mb-2"
+  >
+    {{ t('sortProperties') }}
+  </p>
+
+  <dataset-properties-slide
+    v-if="filteredProperties.length"
+    :model-value="filteredProperties"
+    :dataset="dataset"
+    :editable="true"
+    :sortable="(dataset.isRest || !!dataset.file) && !searchQuery"
+    @update:model-value="onSort"
+    @remove="removeProperty"
+  />
+
+  <dataset-add-property-dialog
+    v-model="addPropertyDialog"
+    :schema="modelValue"
+    @add="addProperty"
+  />
 </template>
 
 <i18n lang="yaml">

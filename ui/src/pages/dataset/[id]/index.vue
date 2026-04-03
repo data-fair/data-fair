@@ -14,38 +14,32 @@
       :svg="buildingSvg"
     >
       <template #content="{ tab }">
-        <v-tabs-window :model-value="tab">
+        <v-tabs-window
+          :model-value="tab"
+          class="pa-4"
+        >
           <v-tabs-window-item value="schema">
-            <v-container fluid>
-              <dataset-schema
-                v-model="datasetEditFetch.data.value.schema"
-                :dataset="datasetEditFetch.data.value"
-                :primary-key="datasetEditFetch.data.value.primaryKey"
-                @update:primary-key="pk => { if (datasetEditFetch.data.value) datasetEditFetch.data.value.primaryKey = pk }"
-              />
-              <dataset-schema-download class="mt-4" />
-            </v-container>
+            <dataset-schema
+              v-model="datasetEditFetch.data.value.schema"
+              :dataset="datasetEditFetch.data.value"
+              :primary-key="datasetEditFetch.data.value.primaryKey"
+              @update:primary-key="pk => { if (datasetEditFetch.data.value) datasetEditFetch.data.value.primaryKey = pk }"
+            />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="extensions">
-            <v-container fluid>
-              <dataset-extensions
-                v-model="datasetEditFetch.data.value"
-                @refresh="onRefreshExtension"
-              />
-            </v-container>
+            <dataset-extensions
+              v-model="datasetEditFetch.data.value"
+              @refresh="onRefreshExtension"
+            />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="master-data">
-            <v-container fluid>
-              <dataset-master-data v-model="datasetEditFetch.data.value" />
-            </v-container>
+            <dataset-master-data v-model="datasetEditFetch.data.value" />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="virtual">
-            <v-container fluid>
-              <dataset-virtual v-model="datasetEditFetch.data.value" />
-            </v-container>
+            <dataset-virtual v-model="datasetEditFetch.data.value" />
           </v-tabs-window-item>
         </v-tabs-window>
       </template>

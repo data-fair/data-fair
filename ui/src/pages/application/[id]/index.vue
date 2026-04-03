@@ -63,6 +63,168 @@
           :model-value="tab"
           class="pa-4"
         >
+          <v-tabs-window-item value="info">
+            <!-- Infos éditables inline -->
+            <v-text-field
+              v-model="application.title"
+              :disabled="!can('writeDescription')"
+              label="Titre"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="mb-3"
+              @change="patch({title: application.title})"
+            />
+            <v-textarea
+              v-model="application.summary"
+              :disabled="!can('writeDescription')"
+              label="Résumé"
+              rows="3"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="mb-3"
+              @change="patch({summary: application.summary})"
+            />
+            <v-text-field
+              v-model="application.description"
+              :disabled="!can('writeDescription')"
+              label="Description"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="mb-3"
+              @change="patch({description: application.description})"
+            />
+
+            <!-- Topics -->
+            <v-autocomplete
+              v-if="$uiConfig.owner?.topics?.length"
+              v-model="application.topics"
+              :disabled="!can('writeDescription')"
+              :items="$uiConfig.owner.topics"
+              item-title="title"
+              item-value="id"
+              label="Thématiques"
+              multiple
+              return-object
+              chips
+              class="mb-3"
+              @update:model-value="patch({topics: application.topics})"
+            />
+
+            <!-- Image -->
+            <v-text-field
+              v-model="application.image"
+              :disabled="!can('writeDescription')"
+              label="Image"
+              hide-details
+              class="mb-3"
+              clearable
+              @change="patch({image: application.image})"
+            />
+
+            <!-- Détails (read-only) -->
+            <v-card class="mt-6">
+              <v-list density="compact">
+                <v-list-item
+                  v-if="application.owner"
+                  :prepend-icon="mdiAccount"
+                >
+                  <div class="text-body-small text-medium-emphasis">
+                    {{ t('owner') }}
+                  </div>
+                  <div>{{ application.owner.name }}</div>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="baseAppFetch.data.value"
+                  :prepend-icon="mdiSquareEditOutline"
+                >
+                  <div class="text-body-small text-medium-emphasis">
+                    {{ t('baseApp') }}
+                  </div>
+                  <div>
+                    {{ baseAppFetch.data.value.title || application.url }}
+                    <span v-if="baseAppFetch.data.value.version">
+                      — {{ t('version') }} {{ baseAppFetch.data.value.version }}
+                    </span>
+                  </div>
+                </v-list-item>
+
+                <v-list-item
+                  v-if="application.updatedAt"
+                  :prepend-icon="mdiPencil"
+                >
+                  <div class="text-body-small text-medium-emphasis">
+                    {{ t('metadataUpdated') }}
+                  </div>
+                  <div>{{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}</div>
+                </v-list-item>
+
+                <v-list-item :prepend-icon="mdiPlusCircleOutline">
+                  <div class="text-body-small text-medium-emphasis">
+                    {{ t('created') }}
+                  </div>
+                  <div>{{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}</div>
+                </v-list-item>
+              </v-list>
+            </v-card>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="attachments">
+            <application-attachments />
+          </v-tabs-window-item>
+
+          <v-tabs-window-item
+            v-if="datasets.length"
+            value="datasets"
+          >
+            <v-row>
+              <v-col
+                v-for="dataset in datasets"
+                :key="dataset.id"
+                cols="12"
+                md="6"
+                lg="4"
+              >
+                <dataset-card :dataset="dataset" />
+              </v-col>
+            </v-row>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item
+            v-if="childrenApps.length"
+            value="children-apps"
+          >
+            <v-row>
+              <v-col
+                v-for="app in childrenApps"
+                :key="app.id"
+                cols="12"
+                md="6"
+                lg="4"
+              >
+                <application-card :application="app" />
+              </v-col>
+            </v-row>
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
+    <!-- Render section (new) -->
+    <df-section-tabs
+      v-if="sections.render"
+      id="render"
+      v-model="renderTab"
+      :min-height="400"
+      :title="sections.render.title"
+      :tabs="sections.render.tabs"
+      :svg="creativeSvg"
+    >
+      <template #content="{ tab }">
+        <v-tabs-window :model-value="tab">
           <v-tabs-window-item value="config">
             <v-alert
               v-if="application.errorMessage"
@@ -102,132 +264,6 @@
                 resize="no"
               />
             </v-card>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="info">
-            <v-btn
-              v-if="can('writeDescription')"
-              color="primary"
-              variant="flat"
-              :prepend-icon="mdiPencil"
-              :to="`/application/${application.id}/edit-metadata`"
-              class="mb-4"
-            >
-              {{ t('editMetadata') }}
-            </v-btn>
-
-            <template v-if="application.description">
-              <h3 class="text-title-medium font-weight-bold mb-2">
-                {{ t('description') }}
-              </h3>
-              <p class="text-body-medium mb-4">
-                {{ application.description }}
-              </p>
-            </template>
-
-            <div
-              v-if="application.topics?.length"
-              class="d-flex flex-wrap ga-1 mb-4"
-            >
-              <v-chip
-                v-for="topic in application.topics"
-                :key="topic.id"
-                size="small"
-                color="primary"
-                variant="outlined"
-              >
-                {{ topic.title }}
-              </v-chip>
-            </div>
-
-            <!-- Jeux de données -->
-            <h3 class="text-title-medium font-weight-bold mt-6 mb-3">
-              {{ t('datasets') }}
-            </h3>
-            <v-row v-if="datasets.length">
-              <v-col
-                v-for="dataset in datasets"
-                :key="dataset.id"
-                cols="12"
-                md="6"
-                lg="4"
-              >
-                <dataset-card :dataset="dataset" />
-              </v-col>
-            </v-row>
-            <p v-else>
-              {{ t('noDatasets') }}
-            </p>
-
-            <!-- Applications -->
-            <template v-if="childrenApps.length">
-              <h3 class="text-title-medium font-weight-bold mt-6 mb-3">
-                {{ t('childrenApps') }}
-              </h3>
-              <v-row>
-                <v-col
-                  v-for="app in childrenApps"
-                  :key="app.id"
-                  cols="12"
-                  md="6"
-                  lg="4"
-                >
-                  <application-card :application="app" />
-                </v-col>
-              </v-row>
-            </template>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="details">
-            <v-card>
-              <v-list density="compact">
-                <v-list-item
-                  v-if="application.owner"
-                  :prepend-icon="mdiAccount"
-                >
-                  <div class="text-body-small text-medium-emphasis">
-                    {{ t('owner') }}
-                  </div>
-                  <div>{{ application.owner.name }}</div>
-                </v-list-item>
-
-                <v-list-item
-                  v-if="baseAppFetch.data.value"
-                  :prepend-icon="mdiImage"
-                >
-                  <div class="text-body-small text-medium-emphasis">
-                    {{ t('baseApp') }}
-                  </div>
-                  <div>
-                    {{ baseAppFetch.data.value.title || application.url }}
-                    <span v-if="baseAppFetch.data.value.version">
-                      — {{ t('version') }} {{ baseAppFetch.data.value.version }}
-                    </span>
-                  </div>
-                </v-list-item>
-
-                <v-list-item
-                  v-if="application.updatedAt"
-                  :prepend-icon="mdiPencil"
-                >
-                  <div class="text-body-small text-medium-emphasis">
-                    {{ t('metadataUpdated') }}
-                  </div>
-                  <div>{{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}</div>
-                </v-list-item>
-
-                <v-list-item :prepend-icon="mdiPlusCircleOutline">
-                  <div class="text-body-small text-medium-emphasis">
-                    {{ t('created') }}
-                  </div>
-                  <div>{{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}</div>
-                </v-list-item>
-              </v-list>
-            </v-card>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="attachments">
-            <application-attachments />
           </v-tabs-window-item>
         </v-tabs-window>
       </template>
@@ -430,21 +466,18 @@
 <i18n lang="yaml">
 fr:
   applications: Applications
-  info: Informations
-  description: Description
-  baseApp: Application de base
-  metadataUpdated: Métadonnées mises à jour
-  created: Création
-  datasets: Jeux de données
-  noDatasets: Aucun jeu de données utilisé.
-  childrenApps: Applications utilisées
-  attachments: Pièces jointes
   metadata: Métadonnées
+  info: Informations
+  attachments: Pièces jointes
+  datasets: Jeux de données utilisés
+  childrenApps: Applications utilisées
+  render: Rendu
   config: Configuration
   editConfig: Éditer la configuration
-  editMetadata: Éditer les métadonnées
-  details: Détails
+  baseApp: Application de base
   owner: Propriétaire
+  metadataUpdated: Métadonnées mises à jour
+  created: Création
   validatedError: "Erreur dans la {bold}"
   validatedErrorBold: version validée
   share: Permissions & partage
@@ -473,21 +506,18 @@ fr:
   no: Non
 en:
   applications: Applications
-  info: Information
-  description: Description
-  baseApp: Base application
-  metadataUpdated: Metadata updated
-  created: Created
-  datasets: Datasets
-  noDatasets: No datasets used.
-  childrenApps: Used applications
-  attachments: Attachments
   metadata: Metadata
+  info: Information
+  attachments: Attachments
+  datasets: Used datasets
+  childrenApps: Used applications
+  render: Render
   config: Configuration
   editConfig: Edit configuration
-  editMetadata: Edit metadata
-  details: Details
+  baseApp: Base application
   owner: Owner
+  metadataUpdated: Metadata updated
+  created: Created
   validatedError: "Error in the {bold}"
   validatedErrorBold: validated version
   share: Share
@@ -519,8 +549,9 @@ en:
 <script setup lang="ts">
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiAccount, mdiBell, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiImage, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccount, mdiBell, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
+import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
@@ -535,7 +566,8 @@ const route = useRoute<'/application/[id]/'>()
 const router = useRouter()
 
 const breadcrumbs = useBreadcrumbs()
-const metadataTab = ref('config')
+const metadataTab = ref('info')
+const renderTab = ref('config')
 const activityTab = ref('traceability')
 
 const store = provideApplicationStore(route.params.id)
@@ -607,15 +639,25 @@ const formatDate = (dateStr?: string) => {
 const sections = computedDeepDiff(() => {
   if (!application.value) return {} as Record<string, { title: string, tabs: any[] }>
 
+  const result: Record<string, { title: string, tabs: any[] }> = {}
+
+  // Metadata section
   const metadataTabs = [
-    { key: 'config', title: t('config'), icon: mdiSquareEditOutline },
     { key: 'info', title: t('info'), icon: mdiInformation },
-    { key: 'details', title: t('details'), icon: mdiCardTextOutline },
     { key: 'attachments', title: t('attachments'), icon: mdiPaperclip }
   ]
+  if (datasets.value.length) {
+    metadataTabs.push({ key: 'datasets', title: t('datasets'), icon: mdiDatabase })
+  }
+  if (childrenApps.value.length) {
+    metadataTabs.push({ key: 'children-apps', title: t('childrenApps'), icon: mdiImageMultiple })
+  }
+  result.metadata = { title: t('metadata'), tabs: metadataTabs }
 
-  const result: Record<string, { title: string, tabs: any[] }> = {
-    metadata: { title: t('metadata'), tabs: metadataTabs }
+  // Render section
+  result.render = {
+    title: t('render'),
+    tabs: [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline }]
   }
 
   const shareTabs = []
