@@ -38,6 +38,19 @@
     @update:model-value="emit('update:primaryKey', $event)"
   />
 
+  <v-select
+    v-if="editableColumns.length && dataset?.isRest"
+    :model-value="projection ?? []"
+    :label="t('projection')"
+    :items="primaryKeyItems"
+    item-title="title"
+    item-value="value"
+    max-width="500"
+    multiple
+    class="mb-4"
+    @update:model-value="emit('update:projection', $event)"
+  />
+
   <p
     v-if="dataset?.isRest"
     class="text-body-medium mb-2"
@@ -71,6 +84,7 @@ fr:
   primaryKey: Cle primaire
   primaryKeyMsgData: La cle primaire ne peut pas être modifiée une fois que des données ont été insérées.
   primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schema pour construire une cle primaire qui identifiera de manière unique chaque ligne de la donnée.
+  projection: Projection (colonnes visibles)
   sortProperties: Vous pouvez changer l'ordre des colonnes par glisser-déposer.
 en:
   column: column | columns
@@ -78,6 +92,7 @@ en:
   primaryKey: Primary key
   primaryKeyMsgData: The primary key cannot be changed once data has been inserted.
   primaryKeyMsgNoData: Optional. Use one or more columns of the schema to build a primary key that will uniquely identify each line of the data.
+  projection: Projection (visible columns)
   sortProperties: You can sort the columns by drag and drop.
 </i18n>
 
@@ -89,11 +104,13 @@ import { useDatasetStore } from '~/composables/dataset/store'
 const props = defineProps<{
   modelValue: SchemaProperty[]
   primaryKey?: string[]
+  projection?: string[]
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: SchemaProperty[]]
   'update:primaryKey': [value: string[]]
+  'update:projection': [value: string[]]
 }>()
 
 const { t } = useI18n({ useScope: 'local' })

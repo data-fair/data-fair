@@ -4,83 +4,120 @@
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
     <!-- Structure section -->
-    <df-section-tabs
-      v-if="sections.structure && datasetEditFetch.data.value"
+    <section-tabs-local
+      v-if="sections.structure && structureEditFetch.data.value"
       id="structure"
       v-model="structureTab"
-      :min-height="300"
       :title="sections.structure.title"
       :tabs="sections.structure.tabs"
       :svg="buildingSvg"
     >
-      <template #content="{ tab }">
-        <v-tabs-window
-          :model-value="tab"
-          class="pa-4"
+      <template #actions>
+        <v-btn
+          v-if="structureEditFetch.hasDiff.value"
+          color="accent"
+          :loading="structureEditFetch.save.loading.value"
+          class="mr-2"
+          @click="structureEditFetch.save.execute()"
         >
-          <v-tabs-window-item value="schema">
-            <dataset-schema
-              v-model="datasetEditFetch.data.value.schema"
-              :dataset="datasetEditFetch.data.value"
-              :primary-key="datasetEditFetch.data.value.primaryKey"
-              @update:primary-key="pk => { if (datasetEditFetch.data.value) datasetEditFetch.data.value.primaryKey = pk }"
-            />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="extensions">
-            <dataset-extensions
-              v-model="datasetEditFetch.data.value"
-              @refresh="onRefreshExtension"
-            />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="master-data">
-            <dataset-master-data v-model="datasetEditFetch.data.value" />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="virtual">
-            <dataset-virtual v-model="datasetEditFetch.data.value" />
-          </v-tabs-window-item>
-        </v-tabs-window>
+          {{ t('save') }}
+        </v-btn>
+        <confirm-menu
+          v-if="structureEditFetch.hasDiff.value"
+          :label="t('cancel')"
+          :text="t('confirmCancelText')"
+          :icon="mdiCancel"
+          yes-color="warning"
+          :btn-props="{ color: 'warning', variant: 'tonal' }"
+          @confirm="cancelStructure"
+        />
       </template>
-    </df-section-tabs>
+
+      <template #windows>
+        <v-tabs-window-item value="schema">
+          <dataset-schema
+            v-model="structureEditFetch.data.value.schema"
+            :dataset="structureEditFetch.data.value"
+            :primary-key="structureEditFetch.data.value.primaryKey"
+            :projection="structureEditFetch.data.value.projection"
+            @update:primary-key="pk => { if (structureEditFetch.data.value) structureEditFetch.data.value.primaryKey = pk }"
+            @update:projection="p => { if (structureEditFetch.data.value) structureEditFetch.data.value.projection = p }"
+          />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="extensions">
+          <dataset-extensions
+            v-model="structureEditFetch.data.value"
+            @refresh="onRefreshExtension"
+          />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="rest-config">
+          <dataset-rest-config
+            v-if="dataset?.isRest"
+            :rest="structureEditFetch.data.value.rest"
+            :dataset="structureEditFetch.data.value"
+            @update:rest="r => { if (structureEditFetch.data.value) structureEditFetch.data.value.rest = r }"
+          />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="virtual">
+          <dataset-virtual v-model="structureEditFetch.data.value" />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="master-data">
+          <dataset-master-data v-model="structureEditFetch.data.value" />
+        </v-tabs-window-item>
+      </template>
+    </section-tabs-local>
 
     <!-- Metadata section -->
-    <df-section-tabs
-      v-if="sections.metadata"
+    <section-tabs-local
+      v-if="sections.metadata && metadataEditFetch.data.value"
       id="metadata"
       v-model="metadataTab"
-      :min-height="200"
       :title="sections.metadata.title"
       :tabs="sections.metadata.tabs"
       :svg="metadataSvg"
     >
-      <template #content="{ tab }">
-        <v-tabs-window
-          :model-value="tab"
-          class="pa-4"
+      <template #actions>
+        <v-btn
+          v-if="metadataEditFetch.hasDiff.value"
+          color="accent"
+          :loading="metadataEditFetch.save.loading.value"
+          class="mr-2"
+          @click="metadataEditFetch.save.execute()"
         >
-          <v-tabs-window-item value="informations">
-            <dataset-metadata-form
-              v-if="datasetEditFetch.data.value"
-              v-model="datasetEditFetch.data.value"
-            />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="details">
-            <dataset-metadata-details />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="attachments">
-            <dataset-attachments />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="related-datasets">
-            <dataset-related-datasets />
-          </v-tabs-window-item>
-        </v-tabs-window>
+          {{ t('save') }}
+        </v-btn>
+        <confirm-menu
+          v-if="metadataEditFetch.hasDiff.value"
+          :label="t('cancel')"
+          :text="t('confirmCancelText')"
+          :icon="mdiCancel"
+          yes-color="warning"
+          :btn-props="{ color: 'warning', variant: 'tonal' }"
+          @confirm="cancelMetadata"
+        />
       </template>
-    </df-section-tabs>
+
+      <template #windows>
+        <v-tabs-window-item value="informations">
+          <dataset-metadata-form
+            v-if="metadataEditFetch.data.value"
+            v-model="metadataEditFetch.data.value"
+          />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="details">
+          <dataset-metadata-details />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="attachments">
+          <dataset-attachments />
+        </v-tabs-window-item>
+      </template>
+    </section-tabs-local>
 
     <!-- Exploration section -->
     <df-section-tabs
@@ -427,6 +464,7 @@ fr:
   datasets: Jeux de données
   structure: Structure
   extensions: Enrichissements
+  restConfig: Configuration REST
   masterData: Données de référence
   virtual: Jeu de données virtuel
   saved: Les modifications ont été enregistrées
@@ -435,6 +473,7 @@ fr:
   details: Détails
   schema: Schéma
   attachments: Pièces jointes
+  confirmCancelText: Souhaitez-vous annuler vos modifications ?
   exploration: Exploration des données
   table: Tableau
   map: Carte
@@ -471,6 +510,7 @@ en:
   datasets: Datasets
   structure: Structure
   extensions: Extensions
+  restConfig: REST Configuration
   masterData: Master data
   virtual: Virtual dataset
   saved: Changes were saved
@@ -479,6 +519,7 @@ en:
   details: Details
   schema: Schema
   attachments: Attachments
+  confirmCancelText: Do you want to discard your changes?
   exploration: Data exploration
   table: Table
   map: Map
@@ -522,14 +563,18 @@ import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiAlert, mdiAttachment, mdiBell, mdiCalendarText, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import ConfirmMenu from '~/components/confirm-menu.vue'
+import SectionTabsLocal from '~/components/common/section-tabs-local.vue'
+import DatasetRestConfig from '~/components/dataset/dataset-rest-config.vue'
+import { mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
 const router = useRouter()
 const { sendUiNotif } = useUiNotif()
@@ -545,8 +590,8 @@ const structureTab = ref('schema')
 const store = provideDatasetStore(route.params.id, true, 'vuetify')
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove } = store
 
-// Auto-patch via useEditFetch
-const datasetEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.id}`, {
+// Separate editFetch for structure (schema, primaryKey, rest, projection, extensions)
+const structureEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.id}`, {
   query: { draft: true },
   patch: true,
   saveOptions: {
@@ -554,29 +599,38 @@ const datasetEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.
   }
 })
 
-// Sync store.dataset avec les changements sauvés
-watch(datasetEditFetch.serverData, (d) => {
+// Separate editFetch for metadata (all other descriptive fields)
+const metadataEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.id}`, {
+  query: { draft: true },
+  patch: true,
+  saveOptions: {
+    success: t('saved')
+  }
+})
+
+// Sync store.dataset with both editFetch instances
+watch(structureEditFetch.serverData, (d) => {
+  if (d) dataset.value = d as any
+})
+watch(metadataEditFetch.serverData, (d) => {
   if (d) dataset.value = d as any
 })
 
-// Auto-patch avec debounce
-let autoSaveTimeout: NodeJS.Timeout | null = null
-watch(
-  () => datasetEditFetch.hasDiff.value,
-  (hasDiff) => {
-    if (autoSaveTimeout) clearTimeout(autoSaveTimeout)
-    if (hasDiff) {
-      autoSaveTimeout = setTimeout(() => {
-        datasetEditFetch.save.execute()
-        autoSaveTimeout = null
-      }, 1000)
-    }
-  }
-)
+// Leave guards for unsaved changes
+useLeaveGuard(structureEditFetch.hasDiff, { locale })
+useLeaveGuard(metadataEditFetch.hasDiff, { locale })
+
+// Cancel functions for both editFetch instances
+const cancelStructure = () => {
+  structureEditFetch.data.value = JSON.parse(JSON.stringify(structureEditFetch.serverData.value))
+}
+const cancelMetadata = () => {
+  metadataEditFetch.data.value = JSON.parse(JSON.stringify(metadataEditFetch.serverData.value))
+}
 
 const onRefreshExtension = async (extension: any) => {
   await store.patchDataset.execute({ extensions: [{ ...extension, needsUpdate: true }] })
-  await datasetEditFetch.fetch.refresh()
+  await structureEditFetch.fetch.refresh()
 }
 
 const showOwnerDialog = ref(false)
@@ -622,29 +676,36 @@ const catalogPublicationsUrl = computed(() => {
 
 // Diff-detection computeds for structure tabs
 const schemaHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
+  const d = structureEditFetch.data.value
+  const s = structureEditFetch.serverData.value
   if (!d || !s) return false
-  return !equal(d.schema, s.schema) || !equal(d.primaryKey, s.primaryKey)
+  return !equal(d.schema, s.schema) || !equal(d.primaryKey, s.primaryKey) || !equal(d.projection, s.projection)
 })
 
 const extensionsHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
+  const d = structureEditFetch.data.value
+  const s = structureEditFetch.serverData.value
   if (!d || !s) return false
   return !equal(d.extensions, s.extensions)
 })
 
+const restHasDiff = computed(() => {
+  const d = structureEditFetch.data.value
+  const s = structureEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.rest, s.rest)
+})
+
 const masterDataHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
+  const d = structureEditFetch.data.value
+  const s = structureEditFetch.serverData.value
   if (!d || !s) return false
   return !equal(d.masterData, s.masterData)
 })
 
 const virtualHasDiff = computed(() => {
-  const d = datasetEditFetch.data.value
-  const s = datasetEditFetch.serverData.value
+  const d = structureEditFetch.data.value
+  const s = structureEditFetch.serverData.value
   if (!d || !s) return false
   return !equal(d.virtual, s.virtual) || !equal(d.schema, s.schema)
 })
@@ -660,7 +721,6 @@ const sections = computedDeepDiff(() => {
       key: 'schema',
       title: t('schema'),
       icon: mdiTableCog,
-      appendIcon: schemaHasDiff.value ? mdiAlert : undefined,
       color: schemaHasDiff.value ? 'accent' : undefined
     }]
 
@@ -669,18 +729,16 @@ const sections = computedDeepDiff(() => {
         key: 'extensions',
         title: t('extensions'),
         icon: mdiPuzzle,
-        appendIcon: extensionsHasDiff.value ? mdiAlert : undefined,
         color: extensionsHasDiff.value ? 'accent' : undefined
       })
     }
 
-    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+    if (d.isRest) {
       structureTabs.push({
-        key: 'master-data',
-        title: t('masterData'),
-        icon: mdiDatabase,
-        appendIcon: masterDataHasDiff.value ? mdiAlert : undefined,
-        color: masterDataHasDiff.value ? 'accent' : undefined
+        key: 'rest-config',
+        title: t('restConfig'),
+        icon: mdiTableCog,
+        color: restHasDiff.value ? 'accent' : undefined
       })
     }
 
@@ -689,8 +747,16 @@ const sections = computedDeepDiff(() => {
         key: 'virtual',
         title: t('virtual'),
         icon: mdiSetAll,
-        appendIcon: virtualHasDiff.value ? mdiAlert : undefined,
         color: virtualHasDiff.value ? 'accent' : undefined
+      })
+    }
+
+    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+      structureTabs.push({
+        key: 'master-data',
+        title: t('masterData'),
+        icon: mdiDatabase,
+        color: masterDataHasDiff.value ? 'accent' : undefined
       })
     }
 
@@ -704,9 +770,6 @@ const sections = computedDeepDiff(() => {
   ]
   if (!d.draftReason) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment })
-  }
-  if (d.finalizedAt || d.isMetaOnly) {
-    metadataTabs.push({ key: 'related-datasets', title: t('relatedDatasets'), icon: mdiEyeArrowRight })
   }
   result.metadata = { title: t('metadata'), tabs: metadataTabs }
 

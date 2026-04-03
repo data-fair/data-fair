@@ -97,15 +97,6 @@
     />
 
     <!-- Conditional metadata fields based on owner settings -->
-    <v-text-field
-      v-if="datasetsMetadata?.projection?.active"
-      v-model="dataset.projection"
-      :disabled="!can('writeDescription')"
-      :label="datasetsMetadata.projection.title || t('projection')"
-      hide-details
-      class="mb-3"
-      clearable
-    />
 
     <v-text-field
       v-if="datasetsMetadata?.creator?.active"
@@ -215,11 +206,45 @@
         :disabled="!can('writeDescription')"
         :label="cm.title"
         hide-details
-        class="mb-3"
         clearable
-        @update:model-value="v => setCustomMetadata(cm.key, v)"
+        class="mb-3"
+        @update:model-value="(v) => setCustomMetadata(cm.key, v)"
       />
     </template>
+
+    <!-- Related datasets / "See also" -->
+    <div
+      v-if="dataset.finalizedAt || dataset.isMetaOnly"
+      class="mb-3"
+    >
+      <label class="text-body-2 font-weight-medium mb-2 d-block">
+        {{ t('seeAlso') }}
+      </label>
+      <v-autocomplete
+        :model-value="dataset.relatedDatasets ?? []"
+        :disabled="!can('writeDescription')"
+        :label="t('addRelatedDatasets')"
+        :items="relatedDatasetsItems"
+        item-title="title"
+        item-value="id"
+        hide-details
+        multiple
+        clearable
+        @update:model-value="v => { dataset.relatedDatasets = v }"
+      />
+      <div class="mt-2 d-flex flex-wrap gap-2">
+        <v-chip
+          v-for="datasetId in (dataset.relatedDatasets ?? [])"
+          :key="datasetId"
+          :href="`/dataset/${datasetId}`"
+          target="_blank"
+          closable
+          @click:close="dataset.relatedDatasets = (dataset.relatedDatasets ?? []).filter(id => id !== datasetId)"
+        >
+          {{ getRelatedDatasetTitle(datasetId) }}
+        </v-chip>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -248,6 +273,8 @@ fr:
   temporal: Couverture temporelle
   modified: Date de modification de la source
   attachmentsAsImage: Afficher les pièces jointes comme des images
+  seeAlso: Voir aussi
+  addRelatedDatasets: Ajouter des jeux de données liés
 en:
   title: Title
   summary: Summary
@@ -272,6 +299,8 @@ en:
   temporal: Temporal coverage
   modified: Source modification date
   attachmentsAsImage: Display attachments as images
+  seeAlso: See also
+  addRelatedDatasets: Add related datasets
 </i18n>
 
 <script setup lang="ts">
@@ -338,4 +367,24 @@ const setCustomMetadata = (key: string, value: any) => {
 const summarizeContext = computed(() => {
   return `Use the subagent_summarizer tool to read the dataset information and produce a summary. Then use the set_dataset_summary tool to set the summary on the form. The dataset ID is "${dataset.value?.id}".`
 })
+
+// For autocomplete of related datasets — fetch available datasets from the same owner
+const relatedDatasetsItems = ref<any[]>([])
+
+onMounted(async () => {
+  if (dataset.value?.owner) {
+    try {
+      const response = await $fetch<any>(`${$apiPath}/datasets`, {
+        query: { owner: `${dataset.value.owner.type}/${dataset.value.owner.id}`, size: 1000 }
+      })
+      relatedDatasetsItems.value = (response?.results ?? []).filter((d: any) => d.id !== dataset.value?.id)
+    } catch (e) {
+      console.error('Failed to fetch related datasets', e)
+    }
+  }
+})
+
+const getRelatedDatasetTitle = (datasetId: string) => {
+  return relatedDatasetsItems.value.find(d => d.id === datasetId)?.title || datasetId
+}
 </script>
