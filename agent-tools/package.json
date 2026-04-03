@@ -15,5 +15,6 @@
     "./dataset-data-subagent.ts": "./dataset-data-subagent.ts",
     ".": "./index.ts"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "version": "0.1.0"
 }
