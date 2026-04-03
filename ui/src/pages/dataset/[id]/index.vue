@@ -3,6 +3,54 @@
     <!-- Show dataset status -->
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
+    <!-- Structure section -->
+    <df-section-tabs
+      v-if="sections.structure && datasetEditFetch.data.value"
+      id="structure"
+      v-model="structureTab"
+      :min-height="300"
+      :title="sections.structure.title"
+      :tabs="sections.structure.tabs"
+      :svg="buildingSvg"
+    >
+      <template #content="{ tab }">
+        <v-tabs-window :model-value="tab">
+          <v-tabs-window-item value="schema">
+            <v-container fluid>
+              <dataset-schema
+                v-model="datasetEditFetch.data.value.schema"
+                :dataset="datasetEditFetch.data.value"
+                :primary-key="datasetEditFetch.data.value.primaryKey"
+                @update:primary-key="pk => { if (datasetEditFetch.data.value) datasetEditFetch.data.value.primaryKey = pk }"
+              />
+              <dataset-schema-download class="mt-4" />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="extensions">
+            <v-container fluid>
+              <dataset-extensions
+                v-model="datasetEditFetch.data.value"
+                @refresh="onRefreshExtension"
+              />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="master-data">
+            <v-container fluid>
+              <dataset-master-data v-model="datasetEditFetch.data.value" />
+            </v-container>
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="virtual">
+            <v-container fluid>
+              <dataset-virtual v-model="datasetEditFetch.data.value" />
+            </v-container>
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
     <!-- Metadata section -->
     <df-section-tabs
       v-if="sections.metadata"
@@ -19,26 +67,14 @@
           class="pa-4"
         >
           <v-tabs-window-item value="informations">
-            <dataset-metadata-view />
+            <dataset-metadata-form
+              v-if="datasetEditFetch.data.value"
+              v-model="datasetEditFetch.data.value"
+            />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="details">
             <dataset-metadata-details />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="schema">
-            <v-btn
-              v-if="dataset && can('writeDescriptionBreaking').value"
-              color="primary"
-              variant="flat"
-              class="mr-2"
-              :prepend-icon="mdiPencil"
-              :to="`/dataset/${dataset.id}/edit-schema`"
-            >
-              {{ t('editSchema') }}
-            </v-btn>
-            <dataset-schema-download />
-            <dataset-schema-view class="mt-2" />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="attachments">
@@ -63,40 +99,32 @@
       :svg="dataSvg"
     >
       <template #content="{ tab }">
-        <v-tabs-window
-          :model-value="tab"
-          class="pa-4"
-        >
-          <v-tabs-window-item value="generic-views">
-            <v-row>
-              <v-col
-                v-for="view in genericViewCards"
-                :key="view.key"
-                cols="12"
-                sm="6"
-                md="4"
-                lg="3"
-              >
-                <v-card
-                  :to="`/dataset/${dataset.id}/${view.key}`"
-                  hover
-                >
-                  <v-card-item>
-                    <template #prepend>
-                      <v-icon
-                        :icon="view.icon"
-                        size="large"
-                      />
-                    </template>
-                    <v-card-title>{{ view.title }}</v-card-title>
-                  </v-card-item>
-                </v-card>
-              </v-col>
-            </v-row>
+        <v-tabs-window :model-value="tab">
+          <v-tabs-window-item value="table">
+            <dataset-table :height="windowHeight - 300" />
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="map">
+            <dataset-map :height="windowHeight - 300" />
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="files">
+            <dataset-search-files :height="windowHeight - 300" />
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="thumbnails">
+            <dataset-thumbnails :height="windowHeight - 300" />
+          </v-tabs-window-item>
+
+          <v-tabs-window-item value="revisions">
+            <dataset-history />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="applications">
-            <v-row v-if="applications.length">
+            <v-row
+              v-if="applications.length"
+              class="pa-4"
+            >
               <v-col
                 v-for="app in applications"
                 :key="app.id"
@@ -111,7 +139,10 @@
                 </v-card>
               </v-col>
             </v-row>
-            <p v-else>
+            <p
+              v-else
+              class="pa-4"
+            >
               {{ t('noApplications') }}
             </p>
           </v-tabs-window-item>
@@ -399,17 +430,18 @@
 
 <i18n lang="yaml">
 fr:
-  editSchema: Éditer le schéma
   datasets: Jeux de données
-  import: Import
-  source: Source
+  structure: Structure
+  extensions: Enrichissements
+  masterData: Données de référence
+  virtual: Jeu de données virtuel
+  saved: Les modifications ont été enregistrées
   metadata: Métadonnées
   informations: Informations
   details: Détails
   schema: Schéma
   attachments: Pièces jointes
   exploration: Exploration des données
-  genericViews: Vues génériques
   table: Tableau
   map: Carte
   files: Fichiers
@@ -442,17 +474,18 @@ fr:
   yes: Oui
   no: Non
 en:
-  editSchema: Edit schema
   datasets: Datasets
-  import: Import
-  source: Source
+  structure: Structure
+  extensions: Extensions
+  masterData: Master data
+  virtual: Virtual dataset
+  saved: Changes were saved
   metadata: Metadata
   informations: Information
   details: Details
   schema: Schema
   attachments: Attachments
   exploration: Data exploration
-  genericViews: Generic views
   table: Table
   map: Map
   files: Files
@@ -487,6 +520,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import metadataSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
@@ -494,7 +528,9 @@ import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiAttachment, mdiBell, mdiCalendarText, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPencil, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAlert, mdiAttachment, mdiBell, mdiCalendarText, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import equal from 'fast-deep-equal'
+import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -503,14 +539,51 @@ const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
 const router = useRouter()
 const { sendUiNotif } = useUiNotif()
+const { accountRole } = useSessionAuthenticated()
+const { height: windowHeight } = useWindowSize()
 
 const breadcrumbs = useBreadcrumbs()
 const metadataTab = ref('informations')
-const explorationTab = ref('generic-views')
+const explorationTab = ref('table')
 const activityTab = ref('journal')
+const structureTab = ref('schema')
 
 const store = provideDatasetStore(route.params.id, true, 'vuetify')
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove } = store
+
+// Auto-patch via useEditFetch
+const datasetEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.id}`, {
+  query: { draft: true },
+  patch: true,
+  saveOptions: {
+    success: t('saved')
+  }
+})
+
+// Sync store.dataset avec les changements sauvés
+watch(datasetEditFetch.serverData, (d) => {
+  if (d) dataset.value = d as any
+})
+
+// Auto-patch avec debounce
+let autoSaveTimeout: NodeJS.Timeout | null = null
+watch(
+  () => datasetEditFetch.hasDiff.value,
+  (hasDiff) => {
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout)
+    if (hasDiff) {
+      autoSaveTimeout = setTimeout(() => {
+        datasetEditFetch.save.execute()
+        autoSaveTimeout = null
+      }, 1000)
+    }
+  }
+)
+
+const onRefreshExtension = async (extension: any) => {
+  await store.patchDataset.execute({ extensions: [{ ...extension, needsUpdate: true }] })
+  await datasetEditFetch.fetch.refresh()
+}
 
 const showOwnerDialog = ref(false)
 const showDeleteDialog = ref(false)
@@ -553,19 +626,88 @@ const catalogPublicationsUrl = computed(() => {
   return `${window.location.origin}/catalogs/dataset-publications?dataset-id=${dataset.value.id}`
 })
 
+// Diff-detection computeds for structure tabs
+const schemaHasDiff = computed(() => {
+  const d = datasetEditFetch.data.value
+  const s = datasetEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.schema, s.schema) || !equal(d.primaryKey, s.primaryKey)
+})
+
+const extensionsHasDiff = computed(() => {
+  const d = datasetEditFetch.data.value
+  const s = datasetEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.extensions, s.extensions)
+})
+
+const masterDataHasDiff = computed(() => {
+  const d = datasetEditFetch.data.value
+  const s = datasetEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.masterData, s.masterData)
+})
+
+const virtualHasDiff = computed(() => {
+  const d = datasetEditFetch.data.value
+  const s = datasetEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.virtual, s.virtual) || !equal(d.schema, s.schema)
+})
+
 const sections = computedDeepDiff(() => {
   if (!dataset.value) return {} as Record<string, { title: string, tabs: any[] }>
   const d = dataset.value
   const result: Record<string, { title: string, tabs: any[] }> = {}
+
+  // Structure section (new)
+  if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual)) {
+    const structureTabs: any[] = [{
+      key: 'schema',
+      title: t('schema'),
+      icon: mdiTableCog,
+      appendIcon: schemaHasDiff.value ? mdiAlert : undefined,
+      color: schemaHasDiff.value ? 'accent' : undefined
+    }]
+
+    if (!d.isVirtual && !d.isMetaOnly) {
+      structureTabs.push({
+        key: 'extensions',
+        title: t('extensions'),
+        icon: mdiPuzzle,
+        appendIcon: extensionsHasDiff.value ? mdiAlert : undefined,
+        color: extensionsHasDiff.value ? 'accent' : undefined
+      })
+    }
+
+    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+      structureTabs.push({
+        key: 'master-data',
+        title: t('masterData'),
+        icon: mdiDatabase,
+        appendIcon: masterDataHasDiff.value ? mdiAlert : undefined,
+        color: masterDataHasDiff.value ? 'accent' : undefined
+      })
+    }
+
+    if (d.isVirtual) {
+      structureTabs.push({
+        key: 'virtual',
+        title: t('virtual'),
+        icon: mdiSetAll,
+        appendIcon: virtualHasDiff.value ? mdiAlert : undefined,
+        color: virtualHasDiff.value ? 'accent' : undefined
+      })
+    }
+
+    result.structure = { title: t('structure'), tabs: structureTabs }
+  }
 
   // Metadata section
   const metadataTabs = [
     { key: 'informations', title: t('informations'), icon: mdiInformation },
     { key: 'details', title: t('details'), icon: mdiCardTextOutline }
   ]
-  if (d.finalizedAt && !d.isMetaOnly) {
-    metadataTabs.push({ key: 'schema', title: t('schema'), icon: mdiTableCog })
-  }
   if (!d.draftReason) {
     metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment })
   }
@@ -574,14 +716,25 @@ const sections = computedDeepDiff(() => {
   }
   result.metadata = { title: t('metadata'), tabs: metadataTabs }
 
-  // Exploration section
-  if (d.finalizedAt || d.draftReason) {
-    const explorationTabs = []
-    if (d.finalizedAt && !d.isMetaOnly) {
-      explorationTabs.push({ key: 'generic-views', title: t('genericViews'), icon: mdiPresentation })
-      if (!d.draftReason || d.draftReason.key === 'file-updated') {
-        explorationTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
-      }
+  // Exploration section (direct component tabs)
+  if (d.finalizedAt && !d.isMetaOnly) {
+    const explorationTabs = [
+      { key: 'table', title: t('table'), icon: mdiTable }
+    ]
+    if (d.bbox) {
+      explorationTabs.push({ key: 'map', title: t('map'), icon: mdiMap })
+    }
+    if (digitalDocumentField.value) {
+      explorationTabs.push({ key: 'files', title: t('files'), icon: mdiContentCopy })
+    }
+    if (imageField.value) {
+      explorationTabs.push({ key: 'thumbnails', title: t('thumbnails'), icon: mdiImage })
+    }
+    if (d.rest?.history) {
+      explorationTabs.push({ key: 'revisions', title: t('revisions'), icon: mdiHistory })
+    }
+    if (!d.draftReason || d.draftReason.key === 'file-updated') {
+      explorationTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
     }
     if (explorationTabs.length) {
       result.exploration = { title: t('exploration'), tabs: explorationTabs }
@@ -629,19 +782,6 @@ const sections = computedDeepDiff(() => {
   }
 
   return result
-})
-
-const genericViewCards = computed(() => {
-  const d = dataset.value
-  if (!d) return []
-  const cards = [
-    { key: 'table', title: t('table'), icon: mdiTable }
-  ]
-  if (d.bbox) cards.push({ key: 'map', title: t('map'), icon: mdiMap })
-  if (digitalDocumentField.value) cards.push({ key: 'files', title: t('files'), icon: mdiContentCopy })
-  if (imageField.value) cards.push({ key: 'thumbnails', title: t('thumbnails'), icon: mdiImage })
-  if (d.rest?.history) cards.push({ key: 'revisions', title: t('revisions'), icon: mdiHistory })
-  return cards
 })
 
 const tocSections = computed(() => {
