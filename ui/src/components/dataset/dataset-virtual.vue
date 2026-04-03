@@ -253,9 +253,9 @@
 <i18n lang="yaml">
 fr:
   search: Rechercher
-  children: Jeux de donnees agreges
-  addChild: Ajouter un jeu de donnees
-  noChild: Aucun jeu de donnees agrege.
+  children: Jeux de données agreges
+  addChild: Ajouter un jeu de données
+  noChild: Aucun jeu de données agrege.
   selectedColumns: Colonnes selectionnees
   noColumn: Aucune colonne selectionnee.
   addColumn: ajouter une colonne
@@ -270,8 +270,8 @@ fr:
   addFilter: ajouter un filtre
   noFilter: Aucun filtre defini.
   filterActiveAccount: Filtrer sur les comptes actifs
-  ownerDatasets: Vos jeux de donnees
-  masterData: Donnees de reference
+  ownerDatasets: Vos jeux de données
+  masterData: données de reference
 en:
   search: Search
   children: Aggregated datasets

@@ -121,15 +121,17 @@
 
       <!-- Concept / vocabulary autocomplete -->
       <v-autocomplete
-        v-model="column['x-refersTo']"
+        v-if="column"
+        :model-value="column['x-refersTo'] ?? undefined"
         :items="filteredVocabularyItems"
-        :disabled="!editable || (dataset && dataset.isVirtual)"
+        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false)"
         :label="t('concept')"
         clearable
         hide-details
         class="mb-3"
         item-title="text"
         item-value="value"
+        @update:model-value="col => { if (col !== undefined && column) column['x-refersTo'] = col; else if (column) delete column['x-refersTo'] }"
       >
         <template #item="{ internalItem, props: itemProps }">
           <v-list-item v-bind="itemProps">
@@ -145,14 +147,15 @@
 
       <!-- Separator select -->
       <v-select
-        v-if="column.type === 'string'"
-        v-model="column.separator"
+        v-if="column && column.type === 'string'"
+        :model-value="(column as any).separator ?? undefined"
         :items="[', ', '; ', ' - ', ' / ', ' | ']"
-        :disabled="!editable || (dataset && dataset.isVirtual)"
+        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false)"
         :label="t('sep')"
         hide-details
         class="mb-3"
         clearable
+        @update:model-value="val => { if (column) (column as any).separator = val; }"
       >
         <template #append>
           <help-tooltip>{{ t('separatorHelp') }}</help-tooltip>
@@ -161,7 +164,7 @@
 
       <!-- Display format select -->
       <v-select
-        v-if="showDisplayFormat"
+        v-if="column && showDisplayFormat"
         v-model="displayFormat"
         :items="displayFormatItems"
         :label="t('xDisplay')"
@@ -245,7 +248,8 @@ const emit = defineEmits<{
 
 const currentFileColumn = computed(() => {
   if (!props.column || !dataset.value?.file?.schema) return null
-  return dataset.value.file.schema.find((c: any) => c.key === props.column.key)
+  const col = props.column
+  return dataset.value.file.schema.find((c: any) => c.key === col.key)
 })
 
 const vocabularyItems = computed(() => {

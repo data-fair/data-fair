@@ -1,238 +1,225 @@
 <template>
-  <v-row v-if="dataset">
-    <v-col class="my-4">
-      <v-row v-if="can('writeDescriptionBreaking')">
-        <v-col>
-          <v-menu
-            v-model="addExtensionDialog"
-            :max-height="450"
-          >
-            <template #activator="{ props: menuProps }">
-              <v-btn
-                color="primary"
-                v-bind="menuProps"
-              >
-                {{ t('addExtension') }}
-              </v-btn>
-            </template>
-
-            <v-list>
-              <template v-if="!availableExtensions">
-                <v-skeleton-loader type="list-item-two-line" />
-                <v-skeleton-loader type="list-item-two-line" />
-                <v-skeleton-loader type="list-item-two-line" />
-              </template>
-
-              <template v-else>
-                <v-list-item
-                  v-for="extension in availableExtensions.filter(e => !e.disabled)"
-                  :key="extension.id"
-                  @click="dataset.extensions.push({
-                    active: true,
-                    type: extension.type,
-                    remoteService: extension.remoteService,
-                    action: extension.action.id,
-                    select: defaultFields[extension.action.id] || [],
-                    overwrite: {}
-                  })"
-                >
-                  <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ extension.linkInfo }}</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item
-                  v-for="extension in availableExtensions.filter(e => e.disabled)"
-                  :key="extension.id"
-                  disabled
-                >
-                  <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ extension.disabled }}</v-list-item-subtitle>
-                </v-list-item>
-              </template>
-            </v-list>
-          </v-menu>
-
-          <br>
-
-          <v-btn
-            color="primary"
-            class="mt-2"
-            @click="addPropertyDialog = true"
-          >
-            {{ t('addExprEvalExtension') }}
-          </v-btn>
-
-          <dataset-add-property-dialog
-            v-model="addPropertyDialog"
-            :schema="dataset.schema"
-            @add="property => dataset.extensions.push({
-              active: true,
-              type: 'exprEval',
-              expr: '',
-              property
-            })"
-          />
-        </v-col>
-      </v-row>
-
-      <v-row
-        v-if="dataset.extensions"
-        class="mt-0"
-      >
-        <v-col
-          v-for="(extension, idx) in dataset.extensions"
-          :key="idx"
-          cols="12"
-          md="6"
+  <div
+    v-if="can('writeDescriptionBreaking')"
+    class="mb-2"
+  >
+    <v-menu
+      v-model="addExtensionDialog"
+      :max-height="450"
+    >
+      <template #activator="{ props: menuProps }">
+        <v-btn
+          v-bind="menuProps"
+          :prepend-icon="mdiPlus"
+          color="primary"
+          variant="flat"
+          class="mb-2"
         >
-          <v-card height="100%">
-            <template v-if="extension.type === 'remoteService'">
-              <template v-if="remoteServicesMap[extension.remoteService]?.actions[extension.action]">
-                <v-card-title>
-                  {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
-                </v-card-title>
-                <v-card-text style="margin-bottom: 40px;">
-                  {{ t('link', { info: extensionLinkInfo(extension) }) }}
-                  <v-autocomplete
-                    v-if="selectFields[extension.remoteService + '_' + extension.action]?.fieldsAndTags"
-                    v-model="extension.select"
-                    :disabled="!can('writeDescriptionBreaking')"
-                    :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
-                    item-value="name"
-                    item-title="title"
-                    :label="t('additionalCols')"
-                    multiple
-                    :placeholder="t('allColsOut')"
-                    persistent-hint
-                    chips
-                    closable-chips
-                  />
-                  <v-btn
-                    variant="text"
-                    @click="showOverwrite = showOverwrite === idx ? null : idx"
-                  >
-                    {{ t('overwriteKeys') }}
-                    <v-icon :icon="showOverwrite === idx ? mdiChevronUp : mdiChevronDown" />
-                  </v-btn>
-                  <div v-show="showOverwrite === idx">
-                    <div
-                      v-for="propKey of extension.select?.length ? extension.select : selectFields[extension.remoteService + '_' + extension.action]?.fieldsAndTags?.map((p: any) => p.name).filter(Boolean)"
-                      :key="propKey"
-                    >
-                      <v-text-field
-                        :label="propKey"
-                        :model-value="extension.overwrite?.[propKey]?.['x-originalName']"
-                        :placeholder="extension.propertyPrefix + '.' + propKey"
-                        :rules="[v => validPropertyOverwrite(extension, propKey, v) || '']"
-                        validate-on="eager"
-                        @update:model-value="val => setOverwriteOriginalName(extension, propKey, val)"
-                      />
-                    </div>
-                  </div>
-                  <v-checkbox
-                    v-if="extension.remoteService.startsWith('dataset:') && dataset.isRest"
-                    v-model="extension.autoUpdate"
-                    :label="t('autoUpdate')"
-                  />
-                </v-card-text>
-                <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
-                  <confirm-menu
-                    v-if="can('writeDescriptionBreaking') && dataset.isRest"
-                    yes-color="primary"
-                    :btn-props="{ color: 'primary', icon: true }"
-                    :text="t('confirmRefreshText')"
-                    :tooltip="t('confirmRefreshTooltip')"
-                    @confirm="emit('refresh', extension)"
-                  />
-                  <confirm-menu
-                    v-if="can('writeDescriptionBreaking')"
-                    yes-color="warning"
-                    :text="t('confirmDeleteText')"
-                    :tooltip="t('confirmDeleteTooltip')"
-                    @confirm="removeExtension(idx)"
-                  />
-                </v-card-actions>
-              </template>
-              <template v-else>
-                <v-card-text style="margin-bottom: 40px;">
-                  <v-alert
-                    variant="outlined"
-                    type="warning"
-                  >
-                    {{ t('unavailableService', { service: extension.remoteService, action: extension.action?.replace?.('masterData_bulkSearch_', '') ?? extension.action }) }}
-                    <br>
-                    {{ t('unavailableServiceDetail') }}
-                  </v-alert>
-                </v-card-text>
-                <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
-                  <confirm-menu
-                    v-if="can('writeDescriptionBreaking')"
-                    yes-color="warning"
-                    :text="t('confirmDeleteText')"
-                    :tooltip="t('confirmDeleteTooltip')"
-                    @confirm="removeExtension(idx)"
-                  />
-                </v-card-actions>
-              </template>
-            </template>
-            <template v-if="extension.type === 'exprEval'">
-              <v-card-title>
-                {{ extension.property?.['x-originalName'] || t('newExprEval') }}
-              </v-card-title>
-              <v-card-text style="margin-bottom: 40px;">
-                <div class="d-flex align-center gap-1">
+          {{ t('addExtension') }}
+        </v-btn>
+      </template>
+
+      <v-list>
+        <template v-if="!availableExtensions">
+          <v-skeleton-loader type="list-item-two-line" />
+          <v-skeleton-loader type="list-item-two-line" />
+          <v-skeleton-loader type="list-item-two-line" />
+        </template>
+
+        <template v-else>
+          <v-list-item
+            v-for="extension in availableExtensions.filter(e => !e.disabled)"
+            :key="extension.id"
+            @click="dataset.extensions.push({
+              active: true,
+              type: extension.type,
+              remoteService: extension.remoteService,
+              action: extension.action.id,
+              select: defaultFields[extension.action.id] || [],
+              overwrite: {}
+            })"
+          >
+            <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
+            <v-list-item-subtitle>{{ extension.linkInfo }}</v-list-item-subtitle>
+          </v-list-item>
+          <v-list-item
+            v-for="extension in availableExtensions.filter(e => e.disabled)"
+            :key="extension.id"
+            disabled
+          >
+            <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
+            <v-list-item-subtitle>{{ extension.disabled }}</v-list-item-subtitle>
+          </v-list-item>
+        </template>
+      </v-list>
+    </v-menu>
+    <br>
+    <dataset-add-column-dialog
+      :schema="dataset.schema"
+      :button-label="t('addExprEvalExtension')"
+      @add="column => dataset.extensions.push({
+        active: true,
+        type: 'exprEval',
+        expr: '',
+        property: column
+      })"
+    />
+  </div>
+
+  <v-row v-if="dataset.extensions">
+    <v-col
+      v-for="(extension, idx) in dataset.extensions"
+      :key="idx"
+      cols="12"
+      md="6"
+    >
+      <v-card height="100%">
+        <template v-if="extension.type === 'remoteService'">
+          <template v-if="remoteServicesMap[extension.remoteService]?.actions[extension.action]">
+            <v-card-title>
+              {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
+            </v-card-title>
+            <v-card-text style="margin-bottom: 40px;">
+              {{ t('link', { info: extensionLinkInfo(extension) }) }}
+              <v-autocomplete
+                v-if="selectFields[extension.remoteService + '_' + extension.action]?.fieldsAndTags"
+                v-model="extension.select"
+                :disabled="!can('writeDescriptionBreaking')"
+                :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
+                item-value="name"
+                item-title="title"
+                :label="t('additionalCols')"
+                multiple
+                :placeholder="t('allColsOut')"
+                persistent-hint
+                chips
+                closable-chips
+              />
+              <v-btn
+                variant="text"
+                @click="showOverwrite = showOverwrite === idx ? null : idx"
+              >
+                {{ t('overwriteKeys') }}
+                <v-icon :icon="showOverwrite === idx ? mdiChevronUp : mdiChevronDown" />
+              </v-btn>
+              <div v-show="showOverwrite === idx">
+                <div
+                  v-for="propKey of extension.select?.length ? extension.select : selectFields[extension.remoteService + '_' + extension.action]?.fieldsAndTags?.map((p: any) => p.name).filter(Boolean)"
+                  :key="propKey"
+                >
                   <v-text-field
-                    v-model="extension.expr"
-                    :disabled="!can('writeDescriptionBreaking')"
-                    :label="t('expr')"
-                    hide-details
-                    class="flex-grow-1"
-                  />
-                  <df-agent-chat-action
-                    v-if="showAgentChat && can('writeDescriptionBreaking')"
-                    :action-id="'help-expression-' + idx"
-                    :visible-prompt="t('helpExpression')"
-                    :hidden-context="getExpressionContext(idx)"
-                    :btn-props="{ class: 'ml-1' }"
+                    :label="propKey"
+                    :model-value="extension.overwrite?.[propKey]?.['x-originalName']"
+                    :placeholder="extension.propertyPrefix + '.' + propKey"
+                    :rules="[v => validPropertyOverwrite(extension, propKey, v) || '']"
+                    validate-on="eager"
+                    @update:model-value="val => setOverwriteOriginalName(extension, propKey, val)"
                   />
                 </div>
-              </v-card-text>
-              <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
-                <confirm-menu
-                  v-if="can('writeDescriptionBreaking')"
-                  yes-color="warning"
-                  :text="t('confirmDeleteText')"
-                  :tooltip="t('confirmDeleteTooltip')"
-                  @confirm="removeExtension(idx)"
-                />
-              </v-card-actions>
-            </template>
-          </v-card>
-        </v-col>
-      </v-row>
+              </div>
+              <v-checkbox
+                v-if="extension.remoteService.startsWith('dataset:') && dataset.isRest"
+                v-model="extension.autoUpdate"
+                :label="t('autoUpdate')"
+              />
+            </v-card-text>
+            <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
+              <confirm-menu
+                v-if="can('writeDescriptionBreaking') && dataset.isRest"
+                yes-color="primary"
+                :btn-props="{ color: 'primary', icon: true }"
+                :text="t('confirmRefreshText')"
+                :tooltip="t('confirmRefreshTooltip')"
+                @confirm="emit('refresh', extension)"
+              />
+              <confirm-menu
+                v-if="can('writeDescriptionBreaking')"
+                yes-color="warning"
+                :text="t('confirmDeleteText')"
+                :tooltip="t('confirmDeleteTooltip')"
+                @confirm="removeExtension(idx)"
+              />
+            </v-card-actions>
+          </template>
+          <template v-else>
+            <v-card-text style="margin-bottom: 40px;">
+              <v-alert
+                variant="outlined"
+                type="warning"
+              >
+                {{ t('unavailableService', { service: extension.remoteService, action: extension.action?.replace?.('masterData_bulkSearch_', '') ?? extension.action }) }}
+                <br>
+                {{ t('unavailableServiceDetail') }}
+              </v-alert>
+            </v-card-text>
+            <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
+              <confirm-menu
+                v-if="can('writeDescriptionBreaking')"
+                yes-color="warning"
+                :text="t('confirmDeleteText')"
+                :tooltip="t('confirmDeleteTooltip')"
+                @confirm="removeExtension(idx)"
+              />
+            </v-card-actions>
+          </template>
+        </template>
+        <template v-if="extension.type === 'exprEval'">
+          <v-card-title>
+            {{ extension.property?.['x-originalName'] || t('newExprEval') }}
+          </v-card-title>
+          <v-card-text style="margin-bottom: 40px;">
+            <div class="d-flex align-center gap-1">
+              <v-text-field
+                v-model="extension.expr"
+                :disabled="!can('writeDescriptionBreaking')"
+                :label="t('expr')"
+                hide-details
+                class="flex-grow-1"
+              />
+              <df-agent-chat-action
+                v-if="showAgentChat && can('writeDescriptionBreaking')"
+                :action-id="'help-expression-' + idx"
+                :visible-prompt="t('helpExpression')"
+                :hidden-context="getExpressionContext(idx)"
+                :btn-props="{ class: 'ml-1' }"
+              />
+            </div>
+          </v-card-text>
+          <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
+            <confirm-menu
+              v-if="can('writeDescriptionBreaking')"
+              yes-color="warning"
+              :text="t('confirmDeleteText')"
+              :tooltip="t('confirmDeleteTooltip')"
+              @confirm="removeExtension(idx)"
+            />
+          </v-card-actions>
+        </template>
+      </v-card>
     </v-col>
   </v-row>
 </template>
 
 <i18n lang="yaml">
 fr:
-  addExtension: Ajouter des colonnes de donnees de reference
-  addExprEvalExtension: Ajouter une colonne calculee
+  addExtension: Ajouter des colonnes de données de référence
+  addExprEvalExtension: Ajouter une colonne calculée
   additionalCols: Colonnes additionnelles
   allColsOut: Toutes les colonnes
   confirmDeleteTooltip: Supprimer l'extension
   confirmDeleteText: Souhaitez-vous confirmer la suppression ?
   confirmRefreshTooltip: Relancer l'enrichissement
   confirmRefreshText: Souhaitez-vous confirmer la relance de l'enrichissement ?
-  extensionExists: Cette extension a deja ete configuree
-  missingConcepts: "Il faut associer au moins l'un des concepts suivants a vos colonnes : {concepts}"
-  newExprEval: Nouvelle colonne calculee
+  extensionExists: Cette extension a déjà été configurée
+  missingConcepts: "Il faut associer au moins l'un des concepts suivants à vos colonnes : {concepts}"
+  newExprEval: Nouvelle colonne calculée
   expr: Expression
-  helpExpression: Aider a ecrire l'expression
-  autoUpdate: Mise a jour automatique si la source change
+  helpExpression: Aider à écrire l'expression
+  autoUpdate: Mise à jour automatique si la source change
   link: "Lien : {info}"
-  unavailableService: "Donnee de reference non disponible ({service} / {action})."
-  unavailableServiceDetail: Soit la donnee de reference n'existe plus, soit le concept servant de liaison n'est plus present dans votre jeu de donnees.
-  overwriteKeys: Surcharger les cles des colonnes
+  unavailableService: "donnée de référence non disponible ({service} / {action})."
+  unavailableServiceDetail: Soit la donnée de référence n'existe plus, soit le concept servant de liaison n'est plus présent dans votre jeu de données.
+  overwriteKeys: Surcharger les clés des colonnes
 en:
   addExtension: Add columns from master-data sources
   addExprEvalExtension: Add a calculated column
@@ -255,7 +242,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiChevronDown, mdiChevronUp } from '@mdi/js'
+import { mdiChevronDown, mdiChevronUp, mdiPlus } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { escapeKey } from '~/utils/escape-key'
 import { useRemoteServices } from '~/composables/use-remote-services'
@@ -275,7 +262,6 @@ const { remoteServices, remoteServicesMap } = useRemoteServices(owner)
 const { vocabulary } = useStore()
 
 const addExtensionDialog = ref(false)
-const addPropertyDialog = ref(false)
 const showOverwrite = ref<number | null>(null)
 
 const defaultFields: Record<string, string[]> = {

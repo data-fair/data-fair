@@ -103,6 +103,3 @@ const emit = defineEmits(['confirm'])
 const { t } = useI18n()
 const menu = ref(false)
 </script>
-
-<style lang="css" scoped>
-</style>

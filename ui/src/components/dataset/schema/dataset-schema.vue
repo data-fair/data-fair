@@ -142,7 +142,7 @@ function onSort (sorted: SchemaProperty[]) {
   const sortedKeys = sorted.map(s => s.key)
   const reordered = sortedKeys
     .map(key => props.modelValue.find(p => p.key === key))
-    .filter(Boolean)
+    .filter((col): col is SchemaProperty => col !== undefined)
   emit('update:modelValue', [...reordered, ...calculated])
 }
 

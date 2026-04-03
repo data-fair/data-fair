@@ -55,8 +55,8 @@
 <i18n lang="yaml">
 fr:
   title: "Cle d'API en lecture"
-  description: "Permettez a vos utilisateurs d'utiliser l'API de ce jeu de donnees en dehors d'une session. Cette fonctionnalite est utile par exemple pour consommer les donnees dans Excel."
-  warning: "Cette fonctionnalite baisse la securisation de l'acces a ce jeu de donnees. Evitez de l'utiliser sur les donnees les plus sensibles. Si vous pensez que la cle a trop circule vous pouvez desactiver et re-activer l'acces pour forcer le renouvellement."
+  description: "Permettez a vos utilisateurs d'utiliser l'API de ce jeu de données en dehors d'une session. Cette fonctionnalite est utile par exemple pour consommer les données dans Excel."
+  warning: "Cette fonctionnalite baisse la securisation de l'acces a ce jeu de données. Evitez de l'utiliser sur les données les plus sensibles. Si vous pensez que la cle a trop circule vous pouvez desactiver et re-activer l'acces pour forcer le renouvellement."
   save: Enregistrer
   key: Cle
   expiresAt: expirera le
