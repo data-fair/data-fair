@@ -36,9 +36,10 @@
 
       <template #windows>
         <v-tabs-window-item value="schema">
-          <dataset-schema
+          <dataset-schema-edit
             v-model="structureEditFetch.data.value.schema"
             :dataset="structureEditFetch.data.value"
+            :original-schema="structureEditFetch.serverData.value?.schema"
             :primary-key="structureEditFetch.data.value.primaryKey"
             :projection="structureEditFetch.data.value.projection ?? null"
             @update:primary-key="pk => { if (structureEditFetch.data.value) structureEditFetch.data.value.primaryKey = pk }"
@@ -135,7 +136,10 @@
       <template #content="{ tab }">
         <v-tabs-window :model-value="tab">
           <v-tabs-window-item value="table">
-            <dataset-table :height="windowHeight - 300" />
+            <dataset-table
+              :height="windowHeight - 300"
+              :pagination="true"
+            />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="map">
@@ -668,7 +672,7 @@ watch(dataset, (d) => {
       { text: d.title || d.id }
     ]
   })
-  if (can('readJournal').value && !journalFetch.initialized.value) journalFetch.refresh()
+  if (can('readJournal').value && !d.isMetaOnly && !journalFetch.initialized.value) journalFetch.refresh()
   if (!taskProgressFetch.initialized.value) taskProgressFetch.refresh()
   if (d.finalizedAt && !applicationsFetch.initialized.value) applicationsFetch.refresh()
   if (d.draftReason?.key === 'file-updated' && !publishedDatasetFetch.initialized.value) publishedDatasetFetch.refresh()
@@ -828,7 +832,7 @@ const sections = computedDeepDiff(() => {
 
   // Activity section
   const activityTabs = []
-  if (can('readJournal').value) {
+  if (can('readJournal').value && !d.isMetaOnly) {
     activityTabs.push({ key: 'journal', title: t('journal'), icon: mdiCalendarText })
   }
   if ($uiConfig.eventsIntegration) {

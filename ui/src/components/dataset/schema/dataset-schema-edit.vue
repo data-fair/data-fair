@@ -20,6 +20,7 @@
       density="compact"
       max-width="200"
       hide-details
+      rounded
     />
   </div>
 
@@ -64,6 +65,7 @@
   <dataset-columns-list
     v-if="filteredColumns.length"
     :columns="filteredColumns"
+    :original-schema="props.originalSchema"
     :sortable="(dataset?.isRest || !!dataset?.file) && !searchQuery"
     :active-column-key="activeColumnKey"
     class="mb-4"
@@ -110,6 +112,7 @@ const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
 const props = defineProps<{
   modelValue: SchemaProperty[]
+  originalSchema?: SchemaProperty[]
   primaryKey?: string[]
   projection?: { title?: string, code?: string } | null
 }>()

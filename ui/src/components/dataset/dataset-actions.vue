@@ -45,7 +45,6 @@
 
     <!-- Source files downloads for file datasets -->
     <template v-if="isFileDataset && sourceFiles.length">
-      <v-divider />
       <v-list-subheader class="text-uppercase">
         {{ t('downloads') }}
       </v-list-subheader>

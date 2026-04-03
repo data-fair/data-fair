@@ -33,6 +33,22 @@
       class="flex-grow-1"
     />
     <v-spacer />
+    <template v-if="pagination">
+      <v-btn
+        :disabled="!canPrevPage"
+        :icon="mdiChevronLeft"
+        size="small"
+        variant="text"
+        @click="paginationPage--"
+      />
+      <v-btn
+        :disabled="!canNextPage || fetchResults.loading.value"
+        :icon="mdiChevronRight"
+        size="small"
+        variant="text"
+        @click="nextPage"
+      />
+    </template>
     <v-btn-group
       class="mx-2"
       density="compact"
@@ -140,7 +156,8 @@
           </td>
         </tr>
       </thead>
-      <tbody>
+      <!-- Infinite scroll mode -->
+      <tbody v-if="!pagination">
         <v-virtual-scroll
           ref="virtualScroll"
           :item-height="lineHeight"
@@ -149,13 +166,6 @@
         >
           <template #default="{ item, index }">
             <tr v-intersect.quiet="(isIntersecting: boolean) => isIntersecting && onScrollItem(index)">
-              <!--<td
-                  v-for="header of headers"
-                  :key="header.key"
-                  class="text-no-wrap"
-                >
-                  {{ item.__formatted[header.key] }}
-                </td>-->
               <dataset-table-cell
                 v-for="header of headers"
                 :key="header.key"
@@ -182,6 +192,37 @@
             </tr>
           </template>
         </v-virtual-scroll>
+      </tbody>
+      <!-- Pagination mode -->
+      <tbody v-else>
+        <tr
+          v-for="item in paginatedResults"
+          :key="item._id"
+        >
+          <dataset-table-cell
+            v-for="header of headers"
+            :key="header.key"
+            v-model:selected-results="selectedResults"
+            :dense="displayMode === 'table-dense'"
+            :filter="header.property && findEqFilter(filters, header.property, item)"
+            :filters="filters"
+            :header="header"
+            :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+            :line-height="lineHeight"
+            :no-interaction="noInteraction"
+            :result="item"
+            :selectable="selectable"
+            :selected="selectedItem === item._id"
+            @hoverstart="hoverStart"
+            @hoverstop="hoverStop"
+            @show-map-preview="showMapPreview = item._id"
+            @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
+            @filter="f => !noInteraction && addFilter(f)"
+            @edit="showEditDialog = item"
+            @delete="showDeleteDialog = item"
+            @select="selectedItem = selectedItem === item._id ? '' : item._id"
+          />
+        </tr>
       </tbody>
       <df-scroll-to-top selector=".v-table__wrapper" />
     </v-table>
@@ -233,9 +274,9 @@
         </v-col>
       </v-row>
 
-      <!-- list mode show more -->
+      <!-- list mode show more (infinite scroll only) -->
       <v-row
-        v-if="results.length"
+        v-if="results.length && !pagination"
         v-intersect.quiet="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
         align="center"
         class="my-0"
@@ -372,7 +413,7 @@
 </i18n>
 
 <script setup lang="ts">
-import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose } from '@mdi/js'
+import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
@@ -385,11 +426,12 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, edit, selectable } = defineProps({
+const { height, noInteraction, edit, selectable, pagination } = defineProps({
   height: { type: Number, default: 800 },
   noInteraction: { type: Boolean, default: false },
   edit: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
+  pagination: { type: Boolean, default: false },
 })
 
 const displayMode = defineModel<string>('display', { default: 'table' })
@@ -444,7 +486,20 @@ const { filters, addFilter, queryParams: filtersQueryParams } = useFilters(datas
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const indexedAt = ref<string>()
-const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+const { baseFetchUrl, total, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+
+// Pagination mode: slice results into pages, fetch more via next when needed
+const paginationPage = ref(0)
+const paginatedResults = computed(() => results.value.slice(paginationPage.value * pageSize.value, (paginationPage.value + 1) * pageSize.value))
+const canPrevPage = computed(() => paginationPage.value > 0)
+const canNextPage = computed(() => (paginationPage.value + 1) * pageSize.value < results.value.length || !!next.value)
+const nextPage = async () => {
+  const end = (paginationPage.value + 1) * pageSize.value
+  if (end >= results.value.length && next.value) {
+    await fetchResults.execute()
+  }
+  paginationPage.value++
+}
 const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed)
 const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
@@ -465,6 +520,7 @@ watch(selectedCols, () => { colsWidths.value = [] })
 watch(baseFetchUrl, () => {
   if (!baseFetchUrl.value) return
   // colsWidths.value = []
+  paginationPage.value = 0
   virtualScroll.value?.scrollToIndex(0)
 })
 const onScrollItem = async (index: number) => {
