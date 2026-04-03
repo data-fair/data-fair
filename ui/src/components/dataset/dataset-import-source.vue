@@ -1,17 +1,7 @@
 <template>
   <div v-if="dataset">
     <!-- File dataset -->
-    <template v-if="isFileDataset">
-      <v-btn
-        v-if="can('writeData').value"
-        color="primary"
-        variant="flat"
-        class="mb-4"
-        :prepend-icon="mdiFileUpload"
-        :to="`/dataset/${dataset.id}/edit-data`"
-      >
-        {{ t('updateData') }}
-      </v-btn>
+    <div v-if="isFileDataset">
       <v-row>
         <v-col
           v-for="file in sourceFiles"
@@ -43,41 +33,22 @@
           </v-card>
         </v-col>
       </v-row>
-    </template>
+    </div>
 
     <!-- REST dataset -->
-    <template v-else-if="dataset.isRest">
-      <v-btn
-        v-if="can('createLine').value"
-        color="primary"
-        variant="flat"
-        class="mb-4"
-        :prepend-icon="mdiFileUpload"
-        :to="`/dataset/${dataset.id}/edit-data`"
-      >
-        {{ t('updateData') }}
-      </v-btn>
-    </template>
+    <div v-else-if="dataset.isRest" />
 
     <!-- Virtual dataset -->
-    <template v-else-if="dataset.isVirtual">
+    <div v-else-if="dataset.isVirtual">
       <dataset-virtual-children />
-    </template>
+    </div>
   </div>
 </template>
 
-<i18n lang="yaml">
-fr:
-  updateData: Mettre à jour les données
-en:
-  updateData: Update data
-</i18n>
-
 <script setup lang="ts">
-import { mdiFileDownload, mdiFileUpload } from '@mdi/js'
+import { mdiFileDownload } from '@mdi/js'
 
-const { t } = useI18n()
-const { dataset, dataFiles, can } = useDatasetStore()
+const { dataset, dataFiles } = useDatasetStore()
 
 const isFileDataset = computed(() => {
   const d = dataset.value

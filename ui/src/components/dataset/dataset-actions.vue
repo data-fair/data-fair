@@ -30,6 +30,20 @@
     </v-list-subheader>
 
     <v-list-item
+      v-if="canUpdateData"
+      :to="`/dataset/${dataset.id}/edit-data`"
+      link
+    >
+      <template #prepend>
+        <v-icon
+          :icon="mdiFileUpload"
+          color="primary"
+        />
+      </template>
+      {{ t('updateData') }}
+    </v-list-item>
+
+    <v-list-item
       v-if="dataset.isRest && user?.adminMode"
       :href="resourceUrl + '/raw'"
       link
@@ -64,6 +78,7 @@
 fr:
   navigation: Navigation
   viewOnPortal: "Voir sur {title}"
+  updateData: Mettre à jour les données
   downloadRawRest: Export brut
   downloadRawRestSubtitle: Téléchargement de l'export brut des données originales (admin)
   actions: Actions
@@ -71,6 +86,7 @@ fr:
 en:
   navigation: Navigation
   viewOnPortal: "View on {title}"
+  updateData: Update data
   downloadRawRest: Raw export
   downloadRawRestSubtitle: Download the raw export of original data (admin)
   actions: Actions
@@ -80,6 +96,7 @@ en:
 <script setup lang="ts">
 import {
   mdiCloud,
+  mdiFileUpload,
   mdiProgressDownload,
   mdiWeb
 } from '@mdi/js'
@@ -89,6 +106,15 @@ const { t } = useI18n()
 const { dataset, can, resourceUrl } = useDatasetStore()
 const session = useSession()
 const user = computed(() => session.state.user)
+
+const canUpdateData = computed(() => {
+  if (!dataset.value) return false
+  const d = dataset.value
+  const isFileDataset = d && !d.isRest && !d.isVirtual && !d.isMetaOnly && d.file
+  if (isFileDataset) return can('writeData').value
+  if (d.isRest) return can('createLine').value
+  return false
+})
 
 const owner = computed(() => dataset.value?.owner)
 const publicationSitesFetch = useFetch<any[]>(() => {
@@ -112,7 +138,8 @@ const portalUrls = computed(() => {
 
 const hasActions = computed(() => {
   if (!dataset.value) return false
-  return (can('readApiDoc').value && !!dataset.value.finalizedAt) ||
+  return canUpdateData.value ||
+    (can('readApiDoc').value && !!dataset.value.finalizedAt) ||
     (dataset.value.isRest && user.value?.adminMode)
 })
 </script>

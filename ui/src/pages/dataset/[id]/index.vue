@@ -3,37 +3,6 @@
     <!-- Show dataset status -->
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
-    <!-- Import section -->
-    <df-section-tabs
-      v-if="sections.import"
-      id="import"
-      v-model="importTab"
-      :min-height="200"
-      :title="sections.import.title"
-      :tabs="sections.import.tabs"
-      :svg="importSvg"
-    >
-      <template #content="{ tab }">
-        <v-tabs-window
-          :model-value="tab"
-          class="pa-4"
-        >
-          <v-tabs-window-item value="source">
-            <dataset-import-source />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="journal">
-            <journal-view
-              v-if="journal"
-              :journal="journal"
-              :task-progress="taskProgress"
-              type="dataset"
-            />
-          </v-tabs-window-item>
-        </v-tabs-window>
-      </template>
-    </df-section-tabs>
-
     <!-- Metadata section -->
     <df-section-tabs
       v-if="sections.metadata"
@@ -145,6 +114,27 @@
             <p v-else>
               {{ t('noApplications') }}
             </p>
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </template>
+    </df-section-tabs>
+
+    <!-- Import section -->
+    <df-section-tabs
+      v-if="sections.import"
+      id="import"
+      :min-height="200"
+      :title="sections.import.title"
+      :tabs="sections.import.tabs"
+      :svg="importSvg"
+    >
+      <template #content="{ tab }">
+        <v-tabs-window
+          :model-value="tab"
+          class="pa-4"
+        >
+          <v-tabs-window-item value="source">
+            <dataset-import-source />
           </v-tabs-window-item>
         </v-tabs-window>
       </template>
@@ -537,7 +527,6 @@ const router = useRouter()
 const { sendUiNotif } = useUiNotif()
 
 const breadcrumbs = useBreadcrumbs()
-const importTab = ref('source')
 const metadataTab = ref('informations')
 const explorationTab = ref('generic-views')
 const activityTab = ref('journal')
@@ -591,17 +580,6 @@ const sections = computedDeepDiff(() => {
   const d = dataset.value
   const result: Record<string, { title: string, tabs: any[] }> = {}
 
-  // Import section (first in order)
-  if (!d.isMetaOnly) {
-    const importTabs = [
-      { key: 'source', title: t('source'), icon: mdiFileDownload }
-    ]
-    if (can('readJournal').value) {
-      importTabs.push({ key: 'journal', title: t('journal'), icon: mdiCalendarText })
-    }
-    result.import = { title: t('import'), tabs: importTabs }
-  }
-
   // Metadata section
   const metadataTabs = [
     { key: 'informations', title: t('informations'), icon: mdiInformation },
@@ -630,6 +608,14 @@ const sections = computedDeepDiff(() => {
     if (explorationTabs.length) {
       result.exploration = { title: t('exploration'), tabs: explorationTabs }
     }
+  }
+
+  // Import section
+  if (!d.isMetaOnly) {
+    const importTabs = [
+      { key: 'source', title: t('source'), icon: mdiFileDownload }
+    ]
+    result.import = { title: t('import'), tabs: importTabs }
   }
 
   // Share section
@@ -689,7 +675,6 @@ const genericViewCards = computed(() => {
 })
 
 const tabModels: Record<string, Ref<string>> = {
-  import: importTab,
   metadata: metadataTab,
   exploration: explorationTab,
   activity: activityTab
