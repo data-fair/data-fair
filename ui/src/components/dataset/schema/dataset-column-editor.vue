@@ -54,11 +54,11 @@
     >
       <!-- Action buttons row -->
       <div
-        v-if="editable && !dataset.isVirtual"
+        v-if="editable && dataset && !dataset.isVirtual"
         class="d-flex justify-end ga-1 mb-2"
       >
         <confirm-menu
-          v-if="editable && dataset.isRest"
+          v-if="editable && dataset && dataset.isRest"
           :title="t('deleteColumnTitle')"
           :text="t('deleteColumnText')"
           :tooltip="t('deleteColumnTitle')"
@@ -69,23 +69,23 @@
         />
         <dataset-property-capabilities
           :property="column"
-          :editable="editable && !dataset.isVirtual"
+          :editable="editable && dataset && !dataset.isVirtual"
         />
         <dataset-property-transform
-          v-if="dataset.file && !column['x-calculated'] && !column['x-extension']"
+          v-if="dataset && dataset.file && !column['x-calculated'] && !column['x-extension']"
           :property="column"
           :editable="editable"
         />
         <dataset-property-validation
           v-if="!column['x-calculated'] && !column['x-extension']"
           :property="column"
-          :editable="editable && !dataset.isVirtual"
+          :editable="editable && dataset && !dataset.isVirtual"
         />
         <dataset-property-labels
           v-if="column.type === 'string' && (!column.format || column.format === 'uri-reference') || column.type === 'boolean'"
           :property="column"
-          :editable="editable && !dataset.isVirtual"
-          :is-rest="dataset.isRest"
+          :editable="editable && dataset && !dataset.isVirtual"
+          :is-rest="dataset && dataset.isRest"
         />
       </div>
 
@@ -123,7 +123,7 @@
       <v-autocomplete
         v-model="column['x-refersTo']"
         :items="filteredVocabularyItems"
-        :disabled="!editable || dataset.isVirtual"
+        :disabled="!editable || (dataset && dataset.isVirtual)"
         :label="t('concept')"
         clearable
         hide-details
@@ -148,7 +148,7 @@
         v-if="column.type === 'string'"
         v-model="column.separator"
         :items="[', ', '; ', ' - ', ' / ', ' | ']"
-        :disabled="!editable || dataset.isVirtual"
+        :disabled="!editable || (dataset && dataset.isVirtual)"
         :label="t('sep')"
         hide-details
         class="mb-3"
@@ -244,8 +244,8 @@ const emit = defineEmits<{
 }>()
 
 const currentFileColumn = computed(() => {
-  if (!props.column || !props.dataset.file?.schema) return null
-  return props.dataset.file.schema.find((c: any) => c.key === props.column.key)
+  if (!props.column || !dataset.value?.file?.schema) return null
+  return dataset.value.file.schema.find((c: any) => c.key === props.column.key)
 })
 
 const vocabularyItems = computed(() => {
