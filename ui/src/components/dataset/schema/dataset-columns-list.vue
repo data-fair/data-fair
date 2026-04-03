@@ -32,6 +32,7 @@
 </template>
 
 <script setup lang="ts">
+import { nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import type { SchemaProperty } from '#api/types'
 import { propTypeIcon } from '~/utils/dataset'
