@@ -119,27 +119,6 @@
       </template>
     </df-section-tabs>
 
-    <!-- Import section -->
-    <df-section-tabs
-      v-if="sections.import"
-      id="import"
-      :min-height="200"
-      :title="sections.import.title"
-      :tabs="sections.import.tabs"
-      :svg="importSvg"
-    >
-      <template #content="{ tab }">
-        <v-tabs-window
-          :model-value="tab"
-          class="pa-4"
-        >
-          <v-tabs-window-item value="source">
-            <dataset-import-source />
-          </v-tabs-window-item>
-        </v-tabs-window>
-      </template>
-    </df-section-tabs>
-
     <!-- Share section -->
     <df-section-tabs
       v-if="sections.share"
@@ -413,7 +392,7 @@
 
     <df-navigation-right>
       <dataset-actions />
-      <toc-local :sections="tocSections" />
+      <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -508,7 +487,6 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import importSvg from '~/assets/svg/Data Process_Two Color.svg?raw'
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
 import metadataSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
@@ -516,7 +494,7 @@ import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiAttachment, mdiBell, mdiCalendarText, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiFileDownload, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPencil, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAttachment, mdiBell, mdiCalendarText, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiEyeArrowRight, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPencil, mdiPresentation, mdiSecurity, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -610,14 +588,6 @@ const sections = computedDeepDiff(() => {
     }
   }
 
-  // Import section
-  if (!d.isMetaOnly) {
-    const importTabs = [
-      { key: 'source', title: t('source'), icon: mdiFileDownload }
-    ]
-    result.import = { title: t('import'), tabs: importTabs }
-  }
-
   // Share section
   if (!d.draftReason || d.draftReason.key === 'file-updated') {
     const shareTabs = []
@@ -674,18 +644,10 @@ const genericViewCards = computed(() => {
   return cards
 })
 
-const tabModels: Record<string, Ref<string>> = {
-  metadata: metadataTab,
-  exploration: explorationTab,
-  activity: activityTab
-}
-
 const tocSections = computed(() => {
   return Object.entries(sections.value).map(([id, s]) => ({
     id: id === 'dangerZone' ? 'danger-zone' : id,
-    title: s.title,
-    tabs: s.tabs,
-    tabModel: tabModels[id]
+    title: s.title
   }))
 })
 </script>

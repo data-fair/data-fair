@@ -278,12 +278,12 @@
 
     <!-- Events section -->
     <df-section-tabs
-      v-if="sections.events"
-      id="events"
-      v-model="eventsTab"
+      v-if="sections.activity"
+      id="activity"
+      v-model="activityTab"
       :min-height="550"
-      :title="sections.events.title"
-      :tabs="sections.events.tabs"
+      :title="sections.activity.title"
+      :tabs="sections.activity.tabs"
       :svg="settingsSvg"
       svg-no-margin
     >
@@ -422,7 +422,7 @@
 
     <df-navigation-right>
       <application-actions />
-      <toc-local :sections="tocSections" />
+      <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
 </template>
@@ -536,7 +536,7 @@ const router = useRouter()
 
 const breadcrumbs = useBreadcrumbs()
 const metadataTab = ref('config')
-const eventsTab = ref('traceability')
+const activityTab = ref('traceability')
 
 const store = provideApplicationStore(route.params.id)
 const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
@@ -634,14 +634,14 @@ const sections = computedDeepDiff(() => {
   }
 
   if ($uiConfig.eventsIntegration) {
-    const eventsTabs = [
+    const activityTabs = [
       { key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock }
     ]
-    eventsTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
     if (can('setPermissions')) {
-      eventsTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
+      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
-    result.events = { title: t('tracking'), tabs: eventsTabs }
+    result.activity = { title: t('tracking'), tabs: activityTabs }
   }
 
   if (can('setOwner') || can('delete')) {
@@ -651,17 +651,10 @@ const sections = computedDeepDiff(() => {
   return result
 })
 
-const tabModels: Record<string, Ref<string>> = {
-  metadata: metadataTab,
-  events: eventsTab
-}
-
 const tocSections = computed(() => {
   return Object.entries(sections.value).map(([id, s]) => ({
     id: id === 'dangerZone' ? 'danger-zone' : id,
-    title: s.title,
-    tabs: s.tabs,
-    tabModel: tabModels[id]
+    title: s.title
   }))
 })
 </script>

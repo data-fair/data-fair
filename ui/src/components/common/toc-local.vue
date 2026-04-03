@@ -1,3 +1,4 @@
+<!--- Keep it as backup (not used for the moment)-->
 <template>
   <v-list
     v-if="sections && sections.length"
