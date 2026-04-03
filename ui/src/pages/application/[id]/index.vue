@@ -99,13 +99,13 @@
 
             <!-- Topics -->
             <v-autocomplete
-              v-if="$uiConfig.owner?.topics?.length"
+              v-if="topicsFetch.data.value?.length"
               v-model="application.topics"
               :disabled="!can('writeDescription')"
-              :items="$uiConfig.owner.topics"
+              :items="topicsFetch.data.value ?? []"
               item-title="title"
               item-value="id"
-              label="Thématiques"
+              :label="t('topics')"
               multiple
               return-object
               chips
@@ -496,6 +496,7 @@ fr:
   upgradeConfirm: "Voulez-vous mettre à jour l'application vers la version {version} ? L'application sera reconfigurée avec la nouvelle version."
   cancel: Annuler
   upgrade: Mettre à jour
+  topics: Thématiques
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer cette application à un autre propriétaire.
@@ -536,6 +537,7 @@ en:
   upgradeConfirm: "Do you want to upgrade the application to version {version}? The application will be reconfigured with the new version."
   cancel: Cancel
   upgrade: Upgrade
+  topics: Topics
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this application to another owner.
@@ -559,7 +561,7 @@ import { provideApplicationStore } from '~/composables/application/store'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
-import { $uiConfig } from '~/context'
+import { $uiConfig, $apiPath } from '~/context'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/application/[id]/'>()
@@ -575,6 +577,8 @@ const { application, applicationLink, can, patch, remove, configFetch, datasetsF
 const { availableVersions } = useApplicationVersions(store)
 
 useApplicationWatch(['draft-error'], store)
+
+const topicsFetch = useFetch<any[]>(() => application.value?.owner ? `${$apiPath}/settings/${application.value.owner.type}/${application.value.owner.id}/topics` : null)
 
 const showUpgradeDialog = ref(false)
 const showOwnerDialog = ref(false)

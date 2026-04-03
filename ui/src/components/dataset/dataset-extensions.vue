@@ -97,12 +97,12 @@
               />
               <v-btn
                 variant="text"
-                @click="showOverwrite = showOverwrite === idx ? null : idx"
+                @click="showOverwrite = showOverwrite === (idx as number) ? null : (idx as number)"
               >
                 {{ t('overwriteKeys') }}
-                <v-icon :icon="showOverwrite === idx ? mdiChevronUp : mdiChevronDown" />
+                <v-icon :icon="showOverwrite === (idx as number) ? mdiChevronUp : mdiChevronDown" />
               </v-btn>
-              <div v-show="showOverwrite === idx">
+              <div v-show="showOverwrite === (idx as number)">
                 <div
                   v-for="propKey of extension.select?.length ? extension.select : selectFields[extension.remoteService + '_' + extension.action]?.fieldsAndTags?.map((p: any) => p.name).filter(Boolean)"
                   :key="propKey"
@@ -137,7 +137,7 @@
                 yes-color="warning"
                 :text="t('confirmDeleteText')"
                 :tooltip="t('confirmDeleteTooltip')"
-                @confirm="removeExtension(idx)"
+                @confirm="removeExtension(idx as number)"
               />
             </v-card-actions>
           </template>
@@ -158,7 +158,7 @@
                 yes-color="warning"
                 :text="t('confirmDeleteText')"
                 :tooltip="t('confirmDeleteTooltip')"
-                @confirm="removeExtension(idx)"
+                @confirm="removeExtension(idx as number)"
               />
             </v-card-actions>
           </template>
@@ -180,7 +180,7 @@
                 v-if="showAgentChat && can('writeDescriptionBreaking')"
                 :action-id="'help-expression-' + idx"
                 :visible-prompt="t('helpExpression')"
-                :hidden-context="getExpressionContext(idx)"
+                :hidden-context="getExpressionContext(idx as number)"
                 :btn-props="{ class: 'ml-1' }"
               />
             </div>
@@ -191,7 +191,7 @@
               yes-color="warning"
               :text="t('confirmDeleteText')"
               :tooltip="t('confirmDeleteTooltip')"
-              @confirm="removeExtension(idx)"
+              @confirm="removeExtension(idx as number)"
             />
           </v-card-actions>
         </template>

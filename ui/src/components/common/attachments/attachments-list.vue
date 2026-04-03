@@ -141,7 +141,7 @@ interface AttachmentItem {
   mimetype?: string
   updatedAt?: string
   url?: string
-  type?: 'file' | 'url'
+  type?: 'file' | 'url' | 'remoteFile'
   description?: string
   includeInCatalogPublications?: boolean
 }

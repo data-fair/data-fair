@@ -22,7 +22,7 @@ const route = useRoute<'/extra/[id]'>()
 const breadcrumbs = useBreadcrumbs()
 
 const extra = computed(() => {
-  return $uiConfig.extraNavigationItems.find(e => e.id === route.params.id)
+  return $uiConfig.extraNavigationItems.find((e: any) => e.id === route.params.id)
 })
 
 const iframeUrl = computed(() => {

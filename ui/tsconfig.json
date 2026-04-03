@@ -28,7 +28,6 @@
     },
 
     "allowJs": true,
-    "checkJs": true,
   },
   "include": [
     "dts/*.d.ts",

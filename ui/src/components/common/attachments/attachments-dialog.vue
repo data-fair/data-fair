@@ -192,7 +192,7 @@ interface AttachmentItem {
   mimetype?: string
   updatedAt?: string
   url?: string
-  type?: 'file' | 'url'
+  type?: 'file' | 'url' | 'remoteFile'
   description?: string
   includeInCatalogPublications?: boolean
 }
@@ -228,7 +228,7 @@ const editIncludeInCatalog = ref(false)
 
 const onToggle = () => {
   editTitle.value = props.attachment.title || ''
-  editType.value = props.attachment.type ?? 'file'
+  editType.value = (props.attachment.type === 'url') ? 'url' : 'file'
   editName.value = props.attachment.name || ''
   editSize.value = props.attachment.size || 0
   editMimetype.value = props.attachment.mimetype || ''

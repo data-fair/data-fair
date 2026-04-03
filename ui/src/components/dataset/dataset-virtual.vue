@@ -99,7 +99,7 @@
                 <v-icon
                   color="warning"
                   :title="t('delete')"
-                  @click="deleteChild(index)"
+                  @click="deleteChild(index as number)"
                 >
                   {{ mdiDelete }}
                 </v-icon>

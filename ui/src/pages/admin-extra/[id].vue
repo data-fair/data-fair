@@ -19,7 +19,7 @@ const { t } = useI18n()
 const route = useRoute<'/admin-extra/[id]'>()
 
 const extra = computed(() => {
-  return $uiConfig.extraAdminNavigationItems.find(e => e.id === route.params.id)
+  return $uiConfig.extraAdminNavigationItems.find((e: any) => e.id === route.params.id)
 })
 
 const iframeUrl = computed(() => {
