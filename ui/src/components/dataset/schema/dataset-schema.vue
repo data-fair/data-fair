@@ -1,68 +1,66 @@
 <template>
   <div class="d-flex align-center flex-wrap ga-2 mb-2">
     <h3
-      v-if="editableProperties.length"
+      v-if="editableColumns.length"
       class="text-headline-small"
     >
-      {{ editableProperties.length.toLocaleString() }} {{ t('column', editableProperties.length) }}
+      {{ editableColumns.length.toLocaleString() }} {{ t('column', editableColumns.length) }}
     </h3>
-    <v-btn
-      v-if="dataset.isRest"
-      color="primary"
-      size="small"
-      density="compact"
-      :icon="mdiPlus"
-      @click="addPropertyDialog = true"
+    <dataset-add-column-dialog
+      v-if="dataset?.isRest"
+      :schema="modelValue"
+      @add="addColumn"
     />
     <v-text-field
-      v-if="editableProperties.length > 10"
+      v-if="editableColumns.length > 10"
       v-model="searchQuery"
       :placeholder="t('search')"
+      :append-inner-icon="mdiMagnify"
       variant="outlined"
       density="compact"
-      rounded
       max-width="200"
-      :append-inner-icon="mdiMagnify"
       hide-details
     />
   </div>
 
   <v-select
-    v-if="editableProperties.length && dataset.isRest"
+    v-if="editableColumns.length && dataset?.isRest"
     :model-value="primaryKey ?? []"
     :label="t('primaryKey')"
-    :disabled="!!dataset.count"
-    :messages="dataset.count ? t('primaryKeyMsgData') : t('primaryKeyMsgNoData')"
+    :disabled="!!dataset?.count"
+    :messages="dataset?.count ? t('primaryKeyMsgData') : t('primaryKeyMsgNoData')"
     :items="primaryKeyItems"
     item-title="title"
     item-value="value"
     max-width="500"
     multiple
-    class="mb-3"
+    class="mb-4"
     @update:model-value="emit('update:primaryKey', $event)"
   />
 
   <p
-    v-if="dataset.isRest"
-    class="text-body-medium text-medium-emphasis mb-2"
+    v-if="dataset?.isRest"
+    class="text-body-medium mb-2"
   >
     {{ t('sortProperties') }}
   </p>
 
-  <dataset-properties-slide
-    v-if="filteredProperties.length"
-    :model-value="filteredProperties"
-    :dataset="dataset"
-    :editable="true"
-    :sortable="(dataset.isRest || !!dataset.file) && !searchQuery"
+  <dataset-columns-list
+    v-if="filteredColumns.length"
+    :columns="filteredColumns"
+    :sortable="(dataset?.isRest || !!dataset?.file) && !searchQuery"
+    :active-column-key="activeColumnKey"
+    class="mb-4"
     @update:model-value="onSort"
-    @remove="removeProperty"
+    @update:active-column-key="activeColumnKey = $event"
   />
 
-  <dataset-add-property-dialog
-    v-model="addPropertyDialog"
-    :schema="modelValue"
-    @add="addProperty"
+  <dataset-column-editor
+    :column="activeColumn"
+    :all-columns="props.modelValue"
+    :dataset="dataset"
+    :editable="true"
+    @remove="removeColumn"
   />
 </template>
 
@@ -71,9 +69,9 @@ fr:
   column: colonne | colonnes
   search: Rechercher
   primaryKey: Cle primaire
-  primaryKeyMsgData: La cle primaire ne peut pas etre modifiee une fois que des donnees ont ete inserees.
-  primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schema pour construire une cle primaire qui identifiera de maniere unique chaque ligne de la donnee.
-  sortProperties: Vous pouvez changer l'ordre des colonnes par glisse-depose.
+  primaryKeyMsgData: La cle primaire ne peut pas être modifiée une fois que des données ont été insérées.
+  primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schema pour construire une cle primaire qui identifiera de manière unique chaque ligne de la donnée.
+  sortProperties: Vous pouvez changer l'ordre des colonnes par glisser-déposer.
 en:
   column: column | columns
   search: Search
@@ -84,57 +82,62 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import {
-  mdiMagnify,
-  mdiPlus
-} from '@mdi/js'
+import { mdiMagnify } from '@mdi/js'
+import type { SchemaProperty } from '#api/types'
+import { useDatasetStore } from '~/composables/dataset/store'
 
 const props = defineProps<{
-  modelValue: any[]
-  dataset: any
+  modelValue: SchemaProperty[]
   primaryKey?: string[]
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: any[]]
+  'update:modelValue': [value: SchemaProperty[]]
   'update:primaryKey': [value: string[]]
 }>()
 
 const { t } = useI18n({ useScope: 'local' })
 
-const searchQuery = ref('')
-const addPropertyDialog = ref(false)
+const { dataset } = useDatasetStore()
 
-const editableProperties = computed(() => {
+const searchQuery = ref('')
+const activeColumnKey = ref<string | null>(null)
+
+const editableColumns = computed(() => {
   return props.modelValue.filter(p => !p['x-calculated'])
 })
 
-const filteredProperties = computed(() => {
+const filteredColumns = computed(() => {
   const filter = searchQuery.value?.toLowerCase()
-  if (!filter) return editableProperties.value
-  return editableProperties.value.filter(p => {
+  if (!filter) return editableColumns.value
+  return editableColumns.value.filter(p => {
     const search = `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`
     return search.includes(filter)
   })
 })
 
 const primaryKeyItems = computed(() => {
-  return editableProperties.value.map(p => ({
+  return editableColumns.value.map(p => ({
     title: p.title || p['x-originalName'] || p.key,
     value: p.key
   }))
 })
 
-function addProperty (property: any) {
-  emit('update:modelValue', [...props.modelValue, property])
+const activeColumn = computed(() => {
+  if (!activeColumnKey.value) return null
+  return props.modelValue.find(c => c.key === activeColumnKey.value) ?? null
+})
+
+function addColumn (column: any) {
+  emit('update:modelValue', [...props.modelValue, column])
 }
 
-function removeProperty (key: string) {
+function removeColumn (key: string) {
   emit('update:modelValue', props.modelValue.filter(p => p.key !== key))
 }
 
 function onSort (sorted: any[]) {
-  // Merge sorted editable properties with non-editable (calculated) ones
+  // Merge sorted editable columns with non-editable (calculated) ones
   const calculated = props.modelValue.filter(p => p['x-calculated'])
   const sortedKeys = sorted.map(s => s.key)
   const reordered = sortedKeys
@@ -142,4 +145,8 @@ function onSort (sorted: any[]) {
     .filter(Boolean)
   emit('update:modelValue', [...reordered, ...calculated])
 }
+
+watch(() => props.modelValue.length, () => {
+  activeColumnKey.value = null
+})
 </script>
