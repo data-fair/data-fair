@@ -31,7 +31,7 @@ export function useAgentDatasetSummaryTools (locale: Ref<string>, datasetData: R
     },
     execute: async () => {
       const dataset = datasetData.value
-      const info = serializeDatasetInfo(dataset)
+      const info = serializeDatasetInfo(dataset, { includeOwner: true })
       let sampleCsv = ''
       if (dataset?.id) {
         try {

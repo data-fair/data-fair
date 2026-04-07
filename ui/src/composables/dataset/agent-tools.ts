@@ -1,117 +1,34 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
-import { createAgentTranslator, buildPaginatedQuery } from '~/composables/agent/utils'
+import * as listDatasets from '@data-fair/agent-tools-data-fair/list-datasets'
+import * as describeDataset from '@data-fair/agent-tools-data-fair/describe-dataset'
 
-const messages: Record<string, Record<string, string>> = {
-  fr: {
-    listDatasets: 'Lister les jeux de données',
-    describeDataset: 'Décrire un jeu de données'
-  },
-  en: {
-    listDatasets: 'List datasets',
-    describeDataset: 'Describe a dataset'
-  }
-}
-
-export function serializeDatasetInfo (dataset: any): string {
-  const meta: string[] = [
-    `# ${dataset.title}`,
-    `- **ID:** \`${dataset.id}\``,
-    `- **Status:** ${dataset.status || 'unknown'}`,
-    `- **Rows:** ${dataset.count ?? '?'}`,
-    `- **Owner:** ${dataset.owner?.name || '?'}`,
-    `- **Visibility:** ${dataset.visibility || '?'}`
-  ]
-  if (dataset.slug) meta.push(`- **Slug:** ${dataset.slug}`)
-  if (dataset.description) meta.push(`- **Description:** ${dataset.description.length > 2000 ? dataset.description.slice(0, 2000) + '…' : dataset.description}`)
-  if (dataset.summary) meta.push(`- **Summary:** ${dataset.summary}`)
-  if (dataset.topics?.length) meta.push(`- **Topics:** ${dataset.topics.map((t: any) => t.title).join(', ')}`)
-  if (dataset.keywords?.length) meta.push(`- **Keywords:** ${dataset.keywords.join(', ')}`)
-  if (dataset.license) meta.push(`- **License:** ${dataset.license.title}`)
-  if (dataset.frequency) meta.push(`- **Frequency:** ${dataset.frequency}`)
-  if (dataset.spatial) meta.push(`- **Spatial:** ${typeof dataset.spatial === 'string' ? dataset.spatial : JSON.stringify(dataset.spatial)}`)
-  if (dataset.temporal) meta.push(`- **Temporal:** ${JSON.stringify(dataset.temporal)}`)
-  if (Array.isArray(dataset.bbox) && dataset.bbox.length > 0) {
-    meta.push(`- **Geolocalized:** yes (bbox: [${dataset.bbox.join(', ')}])`)
-  }
-  if (dataset.timePeriod) {
-    meta.push(`- **Temporal dataset:** yes (${dataset.timePeriod.startDate} to ${dataset.timePeriod.endDate})`)
-  }
-  if (dataset.page) meta.push(`- **Link:** ${dataset.page}`)
-
-  const schema = dataset.schema
-    ?.filter((col: any) => !['_i', '_id', '_rand'].includes(col.key))
-    .map((col: any) => {
-      let line = `| \`${col.key}\` | ${col.type} | ${col.title || ''} |`
-      const notes: string[] = []
-      if (col.description) notes.push(col.description)
-      if (col['x-concept']?.title) notes.push(`concept: ${col['x-concept'].title}`)
-      if (col.enum) {
-        const shown = col.enum.slice(0, 20).join(', ')
-        notes.push(col.enum.length > 20 ? `enum: ${shown}… (${col.enum.length} total)` : `enum: ${shown}`)
-      }
-      line += ` ${notes.join(' — ')} |`
-      return line
-    })
-
-  const sections = [...meta]
-  if (schema?.length) {
-    sections.push('', '## Schema', '| Key | Type | Title | Notes |', '|-----|------|-------|-------|', ...schema)
-  }
-
-  return sections.join('\n')
+export function serializeDatasetInfo (dataset: any, options?: { includeOwner?: boolean }): string {
+  return describeDataset.formatResult(dataset, options).text
 }
 
 export function useAgentDatasetTools (locale: Ref<string>) {
-  const t = createAgentTranslator(messages, locale)
-
   useAgentTool({
-    name: 'list_datasets',
-    description: 'List datasets accessible to the current user with optional text search. Returns id, title, status, row count, and last update.',
-    annotations: { title: t('listDatasets'), readOnlyHint: true },
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        q: { type: 'string' as const, description: 'Optional text search keywords' },
-        page: { type: 'number' as const, description: 'Page number (default 1)' },
-        size: { type: 'number' as const, description: 'Page size (default 10, max 50)' }
-      }
-    },
+    ...listDatasets.schema,
+    annotations: { title: (listDatasets.annotations as any)[locale.value]?.title ?? listDatasets.annotations.en.title, readOnlyHint: true },
     execute: async (params) => {
-      const { query, page, size } = buildPaginatedQuery(params, { select: 'title,status,topics,count,updatedAt' })
-
-      const data = await $fetch<any>('datasets', { query })
-
-      const lines = data.results.map((d: any) => {
-        const parts = [`- **${d.title || d.id}** (id: \`${d.id}\`)`,
-          `  Status: ${d.status || 'unknown'}, ${d.count ?? '?'} rows, updated ${d.updatedAt || '?'}`]
-        if (d.topics?.length) parts.push(`  Topics: ${d.topics.map((t: any) => t.title).join(', ')}`)
-        return parts.join('\n')
-      })
-
-      return [
-        `**${data.count}** datasets found (page ${page}, ${size} per page)`,
-        '',
-        ...lines
-      ].join('\n')
+      const { path, query } = listDatasets.buildQuery(params)
+      const data = await $fetch<any>(path, { query })
+      const page = Math.max(params.page || 1, 1)
+      const size = Math.min(Math.max(params.size || 10, 1), 50)
+      const result = listDatasets.formatResult(data, page, size)
+      return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
     }
   })
 
   useAgentTool({
-    name: 'describe_dataset',
-    description: 'Get detailed metadata and column schema for a dataset. Returns title, description, status, owner, visibility, topics, and full column schema with types.',
-    annotations: { title: t('describeDataset'), readOnlyHint: true },
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        datasetId: { type: 'string' as const, description: 'The exact dataset ID' }
-      },
-      required: ['datasetId'] as const
-    },
+    ...describeDataset.schema,
+    annotations: { title: (describeDataset.annotations as any)[locale.value]?.title ?? describeDataset.annotations.en.title, readOnlyHint: true },
     execute: async (params) => {
       const dataset = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}`)
-      return serializeDatasetInfo(dataset)
+      const result = describeDataset.formatResult(dataset, { includeOwner: true })
+      return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
     }
   })
 }

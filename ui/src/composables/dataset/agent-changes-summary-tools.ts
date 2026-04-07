@@ -28,8 +28,8 @@ export function useAgentDatasetChangesSummaryTools (locale: Ref<string>, data: R
       properties: {}
     },
     execute: async () => {
-      const original = serverData.value ? serializeDatasetInfo(serverData.value) : ''
-      const current = data.value ? serializeDatasetInfo(data.value) : ''
+      const original = serverData.value ? serializeDatasetInfo(serverData.value, { includeOwner: true }) : ''
+      const current = data.value ? serializeDatasetInfo(data.value, { includeOwner: true }) : ''
       if (original === current) return 'No changes detected.'
       return createPatch('dataset', original, current, 'original', 'edited')
     }

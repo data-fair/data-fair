@@ -69,6 +69,7 @@ COPY --from=package-strip /app/package-lock.json package-lock.json
 ADD ui/package.json ui/package.json
 ADD api/package.json api/package.json
 ADD shared/package.json shared/package.json
+ADD agent-tools/package.json agent-tools/package.json
 ADD patches patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
@@ -96,6 +97,7 @@ ADD api/src/config.ts api/src/config.ts
 ADD /api/src/ui-config.ts api/src/ui-config.ts
 ADD shared shared
 COPY --from=installer /app/shared/node_modules /app/shared/node_modules
+ADD agent-tools agent-tools
 ENV NODE_ENV=production
 RUN npm run build
 

@@ -20,8 +20,8 @@ declare global {
   const agentToolError: typeof import('../src/composables/agent/utils')['agentToolError']
   const applicationStore: typeof import('../src/composables/application-store')['default']
   const applicationVersions: typeof import('../src/composables/application-versions')['default']
-  const applyDateMatchParam: typeof import('../src/composables/dataset/agent-data-tools')['applyDateMatchParam']
-  const applyGeoParams: typeof import('../src/composables/dataset/agent-data-tools')['applyGeoParams']
+  const applyDateMatchParam: typeof import('../src/composables/dataset/agent-data-tools-logic')['applyDateMatchParam']
+  const applyGeoParams: typeof import('../src/composables/dataset/agent-data-tools-logic')['applyGeoParams']
   const breadcrumbs: typeof import('../src/utils/breadcrumbs')['default']
   const buildPaginatedQuery: typeof import('../src/composables/agent/utils')['buildPaginatedQuery']
   const capabilitiesDefaultFalse: typeof import('../src/composables/dataset/agent-property-config-tools-logic')['capabilitiesDefaultFalse']
@@ -56,13 +56,13 @@ declare global {
   const diffCapabilities: typeof import('../src/composables/dataset/agent-property-config-tools')['diffCapabilities']
   const effectScope: typeof import('vue')['effectScope']
   const escapeKey: typeof import('../src/utils/escape-key')['escapeKey']
-  const executeAggregateData: typeof import('../src/composables/dataset/agent-data-tools')['executeAggregateData']
-  const executeCalculateMetric: typeof import('../src/composables/dataset/agent-data-tools')['executeCalculateMetric']
-  const executeGetDatasetSchema: typeof import('../src/composables/dataset/agent-data-tools')['executeGetDatasetSchema']
+  const executeAggregateData: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeAggregateData']
+  const executeCalculateMetric: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeCalculateMetric']
+  const executeGetDatasetSchema: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeGetDatasetSchema']
   const executeGetExpressionContext: typeof import('../src/composables/dataset/agent-expression-tools')['executeGetExpressionContext']
-  const executeGetFieldValues: typeof import('../src/composables/dataset/agent-data-tools')['executeGetFieldValues']
+  const executeGetFieldValues: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeGetFieldValues']
   const executeReadPropertyConfig: typeof import('../src/composables/dataset/agent-property-config-tools')['executeReadPropertyConfig']
-  const executeSearchData: typeof import('../src/composables/dataset/agent-data-tools')['executeSearchData']
+  const executeSearchData: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeSearchData']
   const executeSetPropertyConfig: typeof import('../src/composables/dataset/agent-property-config-tools')['executeSetPropertyConfig']
   const fetchSampleRows: typeof import('../src/composables/agent/utils')['fetchSampleRows']
   const findEqFilter: typeof import('../src/composables/dataset/filters')['findEqFilter']
@@ -83,7 +83,7 @@ declare global {
   const lines: typeof import('../src/composables/dataset/lines')['default']
   const markRaw: typeof import('vue')['markRaw']
   const nextTick: typeof import('vue')['nextTick']
-  const normalizeSort: typeof import('../src/composables/dataset/agent-data-tools')['normalizeSort']
+  const normalizeSort: typeof import('../src/composables/dataset/agent-data-tools-logic')['normalizeSort']
   const onActivated: typeof import('vue')['onActivated']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
   const onBeforeRouteLeave: typeof import('vue-router')['onBeforeRouteLeave']
@@ -228,8 +228,8 @@ declare module 'vue' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly accepted: UnwrapRef<typeof import('../src/utils/dataset')['accepted']>
     readonly agentToolError: UnwrapRef<typeof import('../src/composables/agent/utils')['agentToolError']>
-    readonly applyDateMatchParam: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['applyDateMatchParam']>
-    readonly applyGeoParams: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['applyGeoParams']>
+    readonly applyDateMatchParam: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['applyDateMatchParam']>
+    readonly applyGeoParams: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['applyGeoParams']>
     readonly breadcrumbs: UnwrapRef<typeof import('../src/utils/breadcrumbs')['default']>
     readonly buildPaginatedQuery: UnwrapRef<typeof import('../src/composables/agent/utils')['buildPaginatedQuery']>
     readonly capabilitiesDefaultFalse: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools-logic')['capabilitiesDefaultFalse']>
@@ -249,13 +249,13 @@ declare module 'vue' {
     readonly diffCapabilities: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['diffCapabilities']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly escapeKey: UnwrapRef<typeof import('../src/utils/escape-key')['escapeKey']>
-    readonly executeAggregateData: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['executeAggregateData']>
-    readonly executeCalculateMetric: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['executeCalculateMetric']>
-    readonly executeGetDatasetSchema: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['executeGetDatasetSchema']>
+    readonly executeAggregateData: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeAggregateData']>
+    readonly executeCalculateMetric: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeCalculateMetric']>
+    readonly executeGetDatasetSchema: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeGetDatasetSchema']>
     readonly executeGetExpressionContext: UnwrapRef<typeof import('../src/composables/dataset/agent-expression-tools')['executeGetExpressionContext']>
-    readonly executeGetFieldValues: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['executeGetFieldValues']>
+    readonly executeGetFieldValues: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeGetFieldValues']>
     readonly executeReadPropertyConfig: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['executeReadPropertyConfig']>
-    readonly executeSearchData: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['executeSearchData']>
+    readonly executeSearchData: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeSearchData']>
     readonly executeSetPropertyConfig: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['executeSetPropertyConfig']>
     readonly fetchSampleRows: UnwrapRef<typeof import('../src/composables/agent/utils')['fetchSampleRows']>
     readonly findEqFilter: UnwrapRef<typeof import('../src/composables/dataset/filters')['findEqFilter']>
@@ -276,7 +276,7 @@ declare module 'vue' {
     readonly lines: UnwrapRef<typeof import('../src/composables/dataset/lines')['default']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
-    readonly normalizeSort: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['normalizeSort']>
+    readonly normalizeSort: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['normalizeSort']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>
