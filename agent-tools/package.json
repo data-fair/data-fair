@@ -2,7 +2,7 @@
   "name": "@data-fair/agent-tools-data-fair",
   "type": "module",
   "license": "AGPL-3.0-only",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "npm run build"
