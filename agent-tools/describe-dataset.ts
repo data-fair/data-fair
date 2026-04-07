@@ -1,4 +1,4 @@
-import { formatSchemaColumns, cleanRow, toCsv, datasetIdProperty } from './_utils.ts'
+import { formatSchemaColumns, cleanRow, toCsv, datasetIdProperty } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Décrire un jeu de données' },

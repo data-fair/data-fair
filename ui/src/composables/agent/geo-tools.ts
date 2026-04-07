@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
-import * as geocodeAddress from '@data-fair/agent-tools-data-fair/geocode-address.ts'
+import * as geocodeAddress from '@data-fair/agent-tools-data-fair/geocode-address'
 
 const getUserGeolocationTitle: Record<string, string> = {
   fr: 'Obtenir la géolocalisation de l\'utilisateur',

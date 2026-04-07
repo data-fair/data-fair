@@ -1,12 +1,12 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
-import * as searchData from '@data-fair/agent-tools-data-fair/search-data.ts'
-import * as aggregateData from '@data-fair/agent-tools-data-fair/aggregate-data.ts'
-import * as calculateMetric from '@data-fair/agent-tools-data-fair/calculate-metric.ts'
-import * as getFieldValues from '@data-fair/agent-tools-data-fair/get-field-values.ts'
-import * as getDatasetSchema from '@data-fair/agent-tools-data-fair/get-dataset-schema.ts'
-import * as datasetDataSubagent from '@data-fair/agent-tools-data-fair/dataset-data-subagent.ts'
+import * as searchData from '@data-fair/agent-tools-data-fair/search-data'
+import * as aggregateData from '@data-fair/agent-tools-data-fair/aggregate-data'
+import * as calculateMetric from '@data-fair/agent-tools-data-fair/calculate-metric'
+import * as getFieldValues from '@data-fair/agent-tools-data-fair/get-field-values'
+import * as getDatasetSchema from '@data-fair/agent-tools-data-fair/get-dataset-schema'
+import * as datasetDataSubagent from '@data-fair/agent-tools-data-fair/dataset-data-subagent'
 
 function title (annotations: Record<string, { title: string }>, locale: string): string {
   return annotations[locale]?.title ?? annotations.en.title

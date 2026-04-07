@@ -1,4 +1,4 @@
-import { cleanRow, toCsv, formatSchemaColumns, datasetIdProperty } from './_utils.ts'
+import { cleanRow, toCsv, formatSchemaColumns, datasetIdProperty } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Obtenir le schéma du jeu de données' },

@@ -1,8 +1,8 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
-import * as listDatasets from '@data-fair/agent-tools-data-fair/list-datasets.ts'
-import * as describeDataset from '@data-fair/agent-tools-data-fair/describe-dataset.ts'
+import * as listDatasets from '@data-fair/agent-tools-data-fair/list-datasets'
+import * as describeDataset from '@data-fair/agent-tools-data-fair/describe-dataset'
 
 export function serializeDatasetInfo (dataset: any, options?: { includeOwner?: boolean }): string {
   return describeDataset.formatResult(dataset, options).text

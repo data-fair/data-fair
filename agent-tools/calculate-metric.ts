@@ -1,4 +1,4 @@
-import { datasetIdProperty, filterProperties } from './_utils.ts'
+import { datasetIdProperty, filterProperties } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Calculer une métrique' },

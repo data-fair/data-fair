@@ -2,19 +2,27 @@
   "name": "@data-fair/agent-tools-data-fair",
   "type": "module",
   "license": "AGPL-3.0-only",
-  "exports": {
-    "./_utils.ts": "./_utils.ts",
-    "./search-data.ts": "./search-data.ts",
-    "./aggregate-data.ts": "./aggregate-data.ts",
-    "./calculate-metric.ts": "./calculate-metric.ts",
-    "./get-field-values.ts": "./get-field-values.ts",
-    "./get-dataset-schema.ts": "./get-dataset-schema.ts",
-    "./list-datasets.ts": "./list-datasets.ts",
-    "./describe-dataset.ts": "./describe-dataset.ts",
-    "./geocode-address.ts": "./geocode-address.ts",
-    "./dataset-data-subagent.ts": "./dataset-data-subagent.ts",
-    ".": "./index.ts"
+  "version": "0.3.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build"
   },
-  "dependencies": {},
-  "version": "0.2.0"
+  "exports": {
+    "./_utils": "./_utils.js",
+    "./search-data": "./search-data.js",
+    "./aggregate-data": "./aggregate-data.js",
+    "./calculate-metric": "./calculate-metric.js",
+    "./get-field-values": "./get-field-values.js",
+    "./get-dataset-schema": "./get-dataset-schema.js",
+    "./list-datasets": "./list-datasets.js",
+    "./describe-dataset": "./describe-dataset.js",
+    "./geocode-address": "./geocode-address.js",
+    "./dataset-data-subagent": "./dataset-data-subagent.js",
+    ".": "./index.js"
+  },
+  "files": [
+    "**/*.js",
+    "**/*.d.ts"
+  ],
+  "dependencies": {}
 }

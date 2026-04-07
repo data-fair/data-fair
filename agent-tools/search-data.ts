@@ -1,4 +1,4 @@
-import { normalizeSort, cleanRow, toCsv, datasetIdProperty, filterProperties } from './_utils.ts'
+import { normalizeSort, cleanRow, toCsv, datasetIdProperty, filterProperties } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Rechercher des lignes de données' },
