@@ -5,7 +5,7 @@
 
     <!-- Structure section -->
     <section-tabs-local
-      v-if="sections.structure && structureEditFetch.data.value"
+      v-if="sections.structure"
       id="structure"
       v-model="structureTab"
       :title="sections.structure.title"
@@ -37,6 +37,7 @@
       <template #windows>
         <v-tabs-window-item value="schema">
           <dataset-schema-edit
+            v-if="structureEditFetch.data.value"
             v-model="structureEditFetch.data.value.schema"
             :dataset="structureEditFetch.data.value"
             :original-schema="structureEditFetch.serverData.value?.schema"
@@ -49,6 +50,7 @@
 
         <v-tabs-window-item value="extensions">
           <dataset-extensions
+            v-if="structureEditFetch.data.value"
             v-model="structureEditFetch.data.value"
             @refresh="onRefreshExtension"
           />
@@ -56,7 +58,7 @@
 
         <v-tabs-window-item value="rest-config">
           <dataset-rest-config
-            v-if="dataset?.isRest"
+            v-if="structureEditFetch.data.value && dataset?.isRest"
             :rest="structureEditFetch.data.value.rest"
             :dataset="structureEditFetch.data.value"
             @update:rest="r => { if (structureEditFetch.data.value) structureEditFetch.data.value.rest = r }"
@@ -64,18 +66,24 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="virtual">
-          <dataset-virtual v-model="structureEditFetch.data.value" />
+          <dataset-virtual
+            v-if="structureEditFetch.data.value"
+            v-model="structureEditFetch.data.value"
+          />
         </v-tabs-window-item>
 
         <v-tabs-window-item value="master-data">
-          <dataset-master-data v-model="structureEditFetch.data.value" />
+          <dataset-master-data
+            v-if="structureEditFetch.data.value"
+            v-model="structureEditFetch.data.value"
+          />
         </v-tabs-window-item>
       </template>
     </section-tabs-local>
 
     <!-- Metadata section -->
     <section-tabs-local
-      v-if="sections.metadata && metadataEditFetch.data.value"
+      v-if="sections.metadata"
       id="metadata"
       v-model="metadataTab"
       :title="sections.metadata.title"
@@ -855,6 +863,3 @@ const tocSections = computed(() => {
   }))
 })
 </script>
-
-<style>
-</style>

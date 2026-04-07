@@ -72,10 +72,10 @@
   <v-sheet class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
-      :height="height - (noInteraction ? 0 : 48)"
+      :height="pagination ? undefined : height - (noInteraction ? 0 : 48)"
       :loading="fetchResults.loading.value"
       class="dataset-table"
-      fixed-header
+      :fixed-header="!pagination"
     >
       <thead ref="thead">
         <tr>
@@ -448,7 +448,16 @@ const onFixCol = (key: string) => {
 }
 
 const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
-const pageSize = computed(() => Math.ceil(((height / lineHeight.value) + 4) / 20) * 20)
+const pageSize = computed(() => {
+  if (pagination) {
+    // In pagination mode, fit exactly in visible area to avoid scrollbar
+    const toolbarHeight = noInteraction ? 0 : 48
+    const theadHeight = displayMode.value === 'table-dense' ? 38 : 50
+    const availableHeight = height - toolbarHeight - theadHeight
+    return Math.max(5, Math.floor(availableHeight / lineHeight.value))
+  }
+  return Math.ceil(((height / lineHeight.value) + 4) / 20) * 20
+})
 
 const editQ = ref('')
 watch(q, () => { editQ.value = q.value }, { immediate: true })

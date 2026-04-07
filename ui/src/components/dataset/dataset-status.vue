@@ -50,79 +50,66 @@
       :type="(draftError || draftValidationError) ? 'warning' : 'info'"
       variant="outlined"
     >
-      <v-row align="center">
-        <v-col>
-          <p v-if="dataset.draftReason.key === 'file-new'">
-            {{ t('draftNew1') }}
-          </p>
+      <p v-if="dataset.draftReason.key === 'file-new'">
+        {{ t('draftNew1') }}
+      </p>
 
-          <p v-else-if="dataset.draftReason.key === 'file-updated'">
-            {{ t('draftUpdated1') }}
-          </p>
+      <p v-else-if="dataset.draftReason.key === 'file-updated'">
+        {{ t('draftUpdated1') }}
+      </p>
 
-          <p v-else>
-            {{ dataset.draftReason.message }}
-          </p>
+      <p v-else>
+        {{ dataset.draftReason.message }}
+      </p>
 
-          <template v-if="dataset.status === 'finalized'">
-            <p
-              v-if="draftError"
-              class="mt-4 mb-0 font-weight-bold"
-              v-html="draftError.data"
-            />
-            <p
-              v-if="draftValidationError"
-              class="mt-4 mb-0 font-weight-bold"
-              v-html="draftValidationError.data"
-            />
-            <p
-              class="mt-4 mb-0"
-            >
-              <span
-                v-if="dataset.draftReason.key === 'file-new'"
-              >
-                {{ t('draftNew2') }}
-              </span>
-              <span
-                v-if="dataset.draftReason.key === 'file-updated'"
-              >
-                {{ t('draftUpdated2') }}
-              </span>
-              <span
-                v-if="can('validateDraft').value"
-              >
-                {{ t('draftValidateCan') }}
-              </span>
-              <span
-                v-else
-              >
-                {{ t('draftValidateCannot') }}
-              </span>
-            </p>
-          </template>
-        </v-col>
-        <v-col cols="12">
-          <div class="d-flex justify-end ga-2 mt-4">
-            <v-btn
-              v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
-              :disabled="!can('cancelDraft').value"
-              :color="(draftError || draftValidationError) ? 'default' : 'warning'"
-              elevation="0"
-              @click="cancelDraft.execute()"
-            >
-              {{ t('cancelDraft') }}
-            </v-btn>
-            <v-btn
-              v-if="dataset.status === 'finalized'"
-              :disabled="!can('validateDraft').value"
-              :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
-              @click="validateDraft.execute()"
-            >
-              {{ t('validateDraft') }}
-            </v-btn>
-          </div>
-        </v-col>
-      </v-row>
+      <template v-if="dataset.status === 'finalized'">
+        <p
+          v-if="draftError"
+          class="mt-4 font-weight-bold"
+          v-html="draftError.data"
+        />
+        <p
+          v-if="draftValidationError"
+          class="mt-4 font-weight-bold"
+          v-html="draftValidationError.data"
+        />
+        <p class="mt-4">
+          <span v-if="dataset.draftReason.key === 'file-new'">
+            {{ t('draftNew2') }}&nbsp;
+          </span>
+          <span v-if="dataset.draftReason.key === 'file-updated'">
+            {{ t('draftUpdated2') }}&nbsp;
+          </span>
+
+          <span v-if="can('validateDraft').value">
+            {{ t('draftValidateCan') }}
+          </span>
+          <span v-else>
+            {{ t('draftValidateCannot') }}
+          </span>
+        </p>
+      </template>
+
+      <template #append>
+        <v-btn
+          v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
+          :disabled="!can('cancelDraft').value"
+          :color="(draftError || draftValidationError) ? 'default' : 'warning'"
+          variant="flat"
+          @click="cancelDraft.execute()"
+        >
+          {{ t('cancelDraft') }}
+        </v-btn>
+        <v-btn
+          v-if="dataset.status === 'finalized'"
+          :disabled="!can('validateDraft').value"
+          :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
+          variant="flat"
+          @click="validateDraft.execute()"
+        >
+          {{ t('validateDraft') }}
+        </v-btn>
+      </template>
     </v-alert>
   </template>
 </template>
@@ -130,7 +117,7 @@
 <i18n lang="yaml">
 fr:
   draftNew1: Le jeu de données a été créé en mode brouillon. Cet état vous permet de travailler son paramétrage.
-  draftNew2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc..
+  draftNew2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc...
   draftUpdated1: Le jeu de données est passé en mode brouillon suite au chargement d'un nouveau fichier.
   draftUpdated2: Vérifiez que le fichier a bien été lu et que le schéma est correct, parcourez les 100 premières lignes de la donnée, etc.
   draftValidateCan: Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
@@ -141,7 +128,7 @@ en:
   draftNew1: The dataset was created in draft mode. This state allow you to work on its configuration.
   draftNew2: Check that the file was property read, browse the first 100 lines, add concepts to the schema, configure extensions, etc.
   draftUpdated1: The dataset was switched to draft mode following the upload of a new file.
-  draftUpdated2: Check that the file was property read, browse the first 100 lines, etc. When satisfied, walidate the draft and the dataset will be processed entirely.
+  draftUpdated2: Check that the file was property read, browse the first 100 lines, etc. When satisfied, validate the draft and the dataset will be processed entirely.
   draftValidationCan:  When satisfied, validate the draft and the dataset will be processed entirely.
   draftValidationCannot: You lack the permission to validate this draft, you should contact an admin.
   cancelDraft: Cancel the draft

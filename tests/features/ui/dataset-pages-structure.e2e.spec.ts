@@ -12,23 +12,23 @@ test.describe('dataset page restructuring', () => {
     datasetId = dataset.id
   })
 
-  test('main page shows metadata-view, schema, data, share and activity sections', async ({ page, goToWithAuth }) => {
+  test('main page shows structure, exploration, share and activity sections', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    // Metadata view shows title in text-headline-large
-    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
-    // Sections are visible (schema is a tab within #data, not a separate section)
-    await expect(page.locator('#data')).toBeVisible()
+    // Metadata section is visible when dataset data is loaded
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    // Other sections are visible
+    await expect(page.locator('#exploration')).toBeVisible()
     await expect(page.locator('#share')).toBeVisible()
     await expect(page.locator('#activity')).toBeVisible()
   })
 
-  test('data section has data and applications tabs', async ({ page, goToWithAuth }) => {
+  test('exploration section has table and applications tabs', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#data')).toBeVisible({ timeout: 10000 })
-    // Data tab (Données) should be present
-    await expect(page.locator('#data').getByRole('tab', { name: /Données|Data/ })).toBeVisible()
+    await expect(page.locator('#exploration')).toBeVisible({ timeout: 10000 })
+    // Table tab should be present
+    await expect(page.locator('#exploration').getByRole('tab', { name: /Tableau|Table/ })).toBeVisible()
     // Applications tab should be visible
-    await expect(page.locator('#data').getByRole('tab', { name: /Applications/ })).toBeVisible()
+    await expect(page.locator('#exploration').getByRole('tab', { name: /Applications/ })).toBeVisible()
   })
 
   test('table visualization route loads', async ({ page, goToWithAuth }) => {
@@ -37,11 +37,11 @@ test.describe('dataset page restructuring', () => {
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
 
-  test('data section has schema tab', async ({ page, goToWithAuth }) => {
+  test('structure section has schema tab', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#data')).toBeVisible({ timeout: 10000 })
-    // Schema is a tab within the data section
-    await expect(page.locator('#data').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
+    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
+    // Schema is a tab within the structure section
+    await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
   })
 
   test('share section has integration and API key tabs', async ({ page, goToWithAuth }) => {
@@ -57,37 +57,36 @@ test.describe('dataset page restructuring', () => {
     await expect(page.locator('#activity').getByRole('tab', { name: /Journal/ })).toBeVisible()
   })
 
-  test('actions menu does not contain moved items', async ({ page, goToWithAuth }) => {
+  test('actions menu does not contain inline section items', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 15000 })
-    // The right navigation drawer contains the actions menu (second nav on the page)
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
+    // The right navigation drawer contains the actions menu
     const actionsList = page.locator('nav').filter({ hasText: 'ACTIONS' })
     await expect(actionsList).toBeVisible({ timeout: 5000 })
-    // Edit metadata should be visible in the actions menu
-    await expect(actionsList.getByText(/Éditer les métadonnées|Edit metadata/)).toBeVisible()
     // These should NOT be in the actions list (moved to inline tabs in the page)
+    await expect(actionsList.getByText(/Éditer les métadonnées|Edit metadata/)).not.toBeVisible()
     await expect(actionsList.getByText(/Intégrer dans un site|Embed in a website/)).not.toBeVisible()
     await expect(actionsList.getByText('Notifications')).not.toBeVisible()
     await expect(actionsList.getByText('Webhooks')).not.toBeVisible()
   })
 
-  test('edit-metadata has metadata tab', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
-    await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#info').getByRole('tab', { name: /Métadonnées|Metadata/ })).toBeVisible()
+  test('metadata section has details tab', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#metadata').getByRole('tab', { name: /Détails|Details/ })).toBeVisible()
   })
 
-  test('/data route redirects to /table', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/data`, 'test_user1')
-    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}/table`), { timeout: 10000 })
+  test('/table route loads table view', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
+    await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
 
   // Mutating test last — modifies the dataset title
-  test('edit-metadata save works', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_user1')
-    await expect(page.locator('#info')).toBeVisible({ timeout: 10000 })
+  test('inline metadata save works', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
     // Edit the title
-    const titleInput = page.locator('#info').getByRole('textbox', { name: /Titre|Title/ })
+    const titleInput = page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })
     await titleInput.click()
     await titleInput.fill('Modified For Save Test')
     // Save button should appear
