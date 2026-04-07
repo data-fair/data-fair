@@ -55,7 +55,7 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
   const size = Math.min(Math.max(params.size || 10, 1), 50)
   const query: Record<string, string> = { size: String(size) }
   if (params.q) { query.q = params.q; query.q_mode = 'complete' }
-  if (params.select) query.select = params.select
+  if (params.select) query.select = params.select.split(',').map(s => s.trim()).join(',')
   if (params.sort) {
     const normalized = normalizeSort(params.sort)
     if (normalized) query.sort = normalized
