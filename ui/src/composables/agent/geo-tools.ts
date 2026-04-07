@@ -35,7 +35,7 @@ export function useAgentGeoTools (locale: Ref<string>) {
       }
 
       return {
-        content: [{ type: 'text' as const, text: geocodeAddress.formatResult(data, params.q) }]
+        content: [{ type: 'text' as const, text: geocodeAddress.formatResult(data, params).text }]
       }
     }
   })

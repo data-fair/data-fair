@@ -12,15 +12,29 @@ export const schema = {
     type: 'object' as const,
     properties: {
       datasetId: datasetIdProperty,
-      q: { type: 'string' as const, description: 'Full-text search keywords (optional)' },
+      q: { type: 'string' as const, description: 'French keywords for full-text search across all dataset columns (simple keywords, not sentences). Can be combined with filters, but prefer filters alone when criteria target specific columns. Use query for broad keyword matching across all columns. Examples: "Jean Dupont", "Paris", "2025"' },
       ...filterProperties,
-      select: { type: 'string' as const, description: 'Comma-separated column keys to return (optional, defaults to all)' },
-      sort: { type: 'string' as const, description: 'Sort order: column keys, prefix with - for desc. Special: _score, _i, _updatedAt, _rand, _geo_distance:lon:lat (distance from point, for geolocalized datasets)' },
-      size: { type: 'number' as const, description: 'Page size (default 10, max 50)' },
+      select: { type: 'string' as const, description: 'Optional comma-separated list of column keys to include in the results. Useful when the dataset has many columns to reduce output size. If not provided, all columns are returned. Use column keys from describe_dataset. Format: column1,column2,column3 (No spaces after commas). Example: "nom,age,ville"' },
+      sort: { type: 'string' as const, description: 'Sort order for results. Comma-separated list of column keys. Prefix with - for descending order. Special keys: _score (relevance), _i (index order), _updatedAt, _rand (random), _geo_distance:lon:lat (distance from point, for geolocalized datasets). Examples: "population" (ascending), "-population" (descending), "_geo_distance:2.35:48.85" (closest first)' },
+      size: { type: 'number' as const, description: 'Number of rows to return per page (default: 10, max: 50). Increase when you know you need more results upfront to avoid multiple pagination round-trips.' },
       page: { type: 'number' as const, description: 'Page number (default 1)' },
-      next: { type: 'string' as const, description: 'URL from a previous search_data response to fetch the next page. When provided, all other parameters are ignored.' }
+      next: { type: 'string' as const, description: 'URL from a previous search_data response to fetch the next page of results. When provided, all other parameters (query, filters, select, sort, size) are ignored since the URL already contains them.' }
     },
     required: ['datasetId'] as const
+  },
+  outputSchema: {
+    type: 'object' as const,
+    properties: {
+      datasetId: { type: 'string' as const, description: 'The dataset ID that was searched' },
+      total: { type: 'number' as const, description: 'Number of data rows matching the search criteria and filters' },
+      results: {
+        type: 'array' as const,
+        items: { type: 'object' as const, description: 'Data row object containing column keys as object keys with their values' },
+        description: 'An array of data rows matching the search criteria (up to the requested size).'
+      },
+      next: { type: 'string' as const, description: 'URL to fetch the next page of results. Absent when there are no more results. Pass this value as the next input parameter to get the next page.' }
+    },
+    required: ['datasetId', 'total', 'results'] as const
   }
 } as const
 
@@ -58,7 +72,7 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
   }
 }
 
-export function formatResult (data: any, params: { page?: number }): string {
+export function formatResult (data: any, params: Params): { text: string, structuredContent: Record<string, any> } {
   const rows = (data.results ?? []).map(cleanRow)
   const lines = [
     `**${data.total}** rows found (showing ${rows.length}, page ${params.page || 1})`,
@@ -68,5 +82,11 @@ export function formatResult (data: any, params: { page?: number }): string {
   if (data.next) {
     lines.push('', 'Next page available.')
   }
-  return lines.join('\n')
+  const structuredContent: Record<string, any> = {
+    datasetId: params.datasetId,
+    total: data.total,
+    results: rows
+  }
+  if (data.next) structuredContent.next = data.next
+  return { text: lines.join('\n'), structuredContent }
 }

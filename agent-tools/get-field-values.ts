@@ -12,12 +12,25 @@ export const schema = {
     type: 'object' as const,
     properties: {
       datasetId: datasetIdProperty,
-      fieldKey: { type: 'string' as const, description: 'Column key to get values for' },
-      q: { type: 'string' as const, description: 'Optional text to filter values' },
-      sort: { type: 'string' as const, description: 'asc or desc (default asc)' },
-      size: { type: 'number' as const, description: 'Number of values to return (default 10, max 1000)' }
+      fieldKey: { type: 'string' as const, description: 'The column key to get values for (use keys from describe_dataset)' },
+      q: { type: 'string' as const, description: 'Optional text to filter values (prefix/substring match within this column)' },
+      sort: { type: 'string' as const, description: 'Sort order for the values (default: asc)' },
+      size: { type: 'number' as const, description: 'Number of values to return (default: 10, max: 1000)' }
     },
     required: ['datasetId', 'fieldKey'] as const
+  },
+  outputSchema: {
+    type: 'object' as const,
+    properties: {
+      datasetId: { type: 'string' as const, description: 'The dataset ID that was queried' },
+      fieldKey: { type: 'string' as const, description: 'The column key that was queried' },
+      values: {
+        type: 'array' as const,
+        items: {},
+        description: 'Array of distinct values for the specified column'
+      }
+    },
+    required: ['datasetId', 'fieldKey', 'values'] as const
   }
 } as const
 
@@ -42,10 +55,17 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
   }
 }
 
-export function formatResult (values: any[], fieldKey: string): string {
-  return [
-    `Distinct values of \`${fieldKey}\`:`,
-    '',
-    ...values.map((v: any) => `- ${v}`)
-  ].join('\n')
+export function formatResult (values: any[], params: Params): { text: string, structuredContent: Record<string, any> } {
+  return {
+    text: [
+      `Distinct values of \`${params.fieldKey}\`:`,
+      '',
+      ...values.map((v: any) => `- ${v}`)
+    ].join('\n'),
+    structuredContent: {
+      datasetId: params.datasetId,
+      fieldKey: params.fieldKey,
+      values
+    }
+  }
 }

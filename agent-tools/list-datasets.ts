@@ -9,10 +9,30 @@ export const schema = {
   inputSchema: {
     type: 'object' as const,
     properties: {
-      q: { type: 'string' as const, description: 'Optional text search keywords' },
+      q: { type: 'string' as const, description: 'French keywords for full-text search (simple terms, not sentences). If 0 results, try synonyms or broader terms. Examples: "élus", "DPE", "entreprises", "logement social"' },
       page: { type: 'number' as const, description: 'Page number (default 1)' },
       size: { type: 'number' as const, description: 'Page size (default 10, max 50)' }
     }
+  },
+  outputSchema: {
+    type: 'object' as const,
+    properties: {
+      count: { type: 'number' as const, description: 'Number of datasets matching the search criteria' },
+      results: {
+        type: 'array' as const,
+        items: {
+          type: 'object' as const,
+          properties: {
+            id: { type: 'string' as const, description: 'Unique dataset ID (required for describe_dataset and search_data tools)' },
+            title: { type: 'string' as const, description: 'Dataset title' },
+            page: { type: 'string' as const, description: 'Link to the dataset page (must be included in responses as citation source)' },
+            summary: { type: 'string' as const, description: 'A summary of the dataset content' }
+          }
+        },
+        description: 'An array of datasets matching the search criteria.'
+      }
+    },
+    required: ['count', 'results'] as const
   }
 } as const
 
@@ -26,7 +46,7 @@ export function buildQuery (params: Params, catalogMode?: boolean): { path: stri
   const size = Math.min(Math.max(params.size || 10, 1), 50)
   const page = Math.max(params.page || 1, 1)
   const query: Record<string, string> = {
-    select: 'title,status,topics,count,updatedAt',
+    select: 'id,title,summary,topics,count',
     size: String(size),
     page: String(page)
   }
@@ -38,17 +58,34 @@ export function buildQuery (params: Params, catalogMode?: boolean): { path: stri
   }
 }
 
-export function formatResult (data: any, page: number, size: number): string {
-  const lines = data.results.map((d: any) => {
+export function formatResult (data: any, page: number, size: number): { text: string, structuredContent: Record<string, any> } {
+  const rows = data.results ?? []
+  const results = rows.map((d: any) => {
+    const r: any = {
+      id: d.id,
+      title: d.title,
+      page: d.page
+    }
+    if (d.summary) r.summary = d.summary
+    return r
+  })
+
+  const lines = rows.map((d: any) => {
     const parts = [`- **${d.title || d.id}** (id: \`${d.id}\`)`,
       `  Status: ${d.status || 'unknown'}, ${d.count ?? '?'} rows, updated ${d.updatedAt || '?'}`]
     if (d.topics?.length) parts.push(`  Topics: ${d.topics.map((t: any) => t.title).join(', ')}`)
     return parts.join('\n')
   })
 
-  return [
-    `**${data.count}** datasets found (page ${page}, ${size} per page)`,
-    '',
-    ...lines
-  ].join('\n')
+  return {
+    text: [
+      `**${data.count}** datasets found (page ${page}, ${size} per page)`,
+      '',
+      ...lines
+    ].join('\n'),
+    structuredContent: {
+      count: data.count,
+      results
+    }
+  }
 }

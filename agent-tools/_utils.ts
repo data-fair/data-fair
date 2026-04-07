@@ -28,15 +28,15 @@ export function normalizeSort (sort: string): string {
   }).filter(Boolean).join(',')
 }
 
-export const filtersDescription = 'Column filters as key-value pairs. Key format: column_key + suffix (_eq, _neq, _search, _in, _nin, _starts, _contains, _gte, _gt, _lte, _lt, _exists, _nexists). All values must be strings. Example: {"nom_search":"Jean","age_lte":"30"}'
+export const filtersDescription = 'Column filters as key-value pairs. Key format: column_key + suffix (see server instructions for available suffixes). All values must be strings, even for numbers/dates. If a column key has underscores (e.g., code_postal), just append the suffix: code_postal_eq. Example: { "nom_search": "Jean", "age_lte": "30", "ville_eq": "Paris" }'
 
-const datasetIdProperty = { type: 'string' as const, description: 'The exact dataset ID' }
+const datasetIdProperty = { type: 'string' as const, description: 'The exact dataset ID from the "id" field in list_datasets results. Do not use the title or slug.' }
 
 export const filterProperties = {
   filters: { type: 'object' as const, description: filtersDescription, properties: {} },
-  bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax". Example: "-2.5,43,3,47"' },
-  geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Format: "lon,lat,distance". Example: "2.35,48.85,10km". Use distance "0" for point-in-polygon containment.' },
-  dateMatch: { type: 'string' as const, description: 'Temporal filter (only for temporal datasets). Single date "YYYY-MM-DD" or date range "YYYY-MM-DD,YYYY-MM-DD". ISO datetimes also accepted.' }
+  bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax". Example: "-2.5,43,3,47".' },
+  geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Restricts results to within a distance from a point. Format: "lon,lat,distance". Example: "2.35,48.85,10km". Use distance "0" for point-in-polygon containment.' },
+  dateMatch: { type: 'string' as const, description: 'Temporal filter (only for temporal datasets with date fields). Accepts a single date "YYYY-MM-DD" to match that day, or a date range "YYYY-MM-DD,YYYY-MM-DD" to match an overlapping period. ISO datetimes also accepted. Example: "2023-11-21" or "2023-01-01,2023-12-31".' }
 } as const
 
 export { datasetIdProperty }

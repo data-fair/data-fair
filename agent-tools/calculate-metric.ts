@@ -12,12 +12,22 @@ export const schema = {
     type: 'object' as const,
     properties: {
       datasetId: datasetIdProperty,
-      fieldKey: { type: 'string' as const, description: 'Column key to compute the metric on' },
-      metric: { type: 'string' as const, description: 'One of: avg, sum, min, max, stats, value_count, cardinality, percentiles' },
-      percents: { type: 'string' as const, description: 'For percentiles: comma-separated percentages (default "1,5,25,50,75,95,99")' },
+      fieldKey: { type: 'string' as const, description: 'The column key to calculate the metric on (use keys from describe_dataset)' },
+      metric: { type: 'string' as const, description: 'Metric to calculate. Available: avg, sum, min, max (for numbers); min, max, cardinality, value_count (for strings); value_count (for others); stats returns count/min/max/avg/sum; percentiles returns distribution.' },
+      percents: { type: 'string' as const, description: 'Comma-separated percentages for percentiles metric (default: "1,5,25,50,75,95,99"). Only used when metric is "percentiles".' },
       ...filterProperties
     },
     required: ['datasetId', 'fieldKey', 'metric'] as const
+  },
+  outputSchema: {
+    type: 'object' as const,
+    properties: {
+      datasetId: { type: 'string' as const, description: 'The dataset ID that was queried' },
+      fieldKey: { type: 'string' as const, description: 'The column key that was queried' },
+      total: { type: 'number' as const, description: 'Total number of rows included in the calculation' },
+      metric: { description: 'The calculated metric value. For avg/sum/min/max/value_count/cardinality: a single number. For stats: an object {count, min, max, avg, sum}. For percentiles: an object mapping percentage strings to values, e.g. {"25": 30000, "50": 42000, "75": 55000}.' }
+    },
+    required: ['datasetId', 'fieldKey', 'total', 'metric'] as const
   }
 } as const
 
@@ -49,7 +59,7 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
   }
 }
 
-export function formatResult (data: any, params: { fieldKey: string, metric: string }): string {
+export function formatResult (data: any, params: Params): { text: string, structuredContent: Record<string, any> } {
   let result: string
   if (params.metric === 'stats' && typeof data.metric === 'object') {
     result = Object.entries(data.metric).map(([k, v]) => `${k}: ${v}`).join(', ')
@@ -59,9 +69,17 @@ export function formatResult (data: any, params: { fieldKey: string, metric: str
     result = String(data.metric)
   }
 
-  return [
-    `**${params.metric}** of \`${params.fieldKey}\``,
-    `Total rows: ${data.total}`,
-    `Result: **${result}**`
-  ].join('\n')
+  return {
+    text: [
+      `**${params.metric}** of \`${params.fieldKey}\``,
+      `Total rows: ${data.total}`,
+      `Result: **${result}**`
+    ].join('\n'),
+    structuredContent: {
+      datasetId: params.datasetId,
+      fieldKey: params.fieldKey,
+      total: data.total,
+      metric: data.metric
+    }
+  }
 }

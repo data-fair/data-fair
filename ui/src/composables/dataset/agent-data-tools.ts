@@ -37,7 +37,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
         const { path, query } = searchData.buildQuery(params)
         data = await $fetch<any>(path, { query })
       }
-      return searchData.formatResult(data, params)
+      return searchData.formatResult(data, params).text
     }
   })
 
@@ -47,7 +47,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     execute: async (params) => {
       const { path, query } = aggregateData.buildQuery(params)
       const data = await $fetch<any>(path, { query })
-      return aggregateData.formatResult(data, params.metric)
+      return aggregateData.formatResult(data, params).text
     }
   })
 
@@ -57,7 +57,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     execute: async (params) => {
       const { path, query } = calculateMetric.buildQuery(params)
       const data = await $fetch<any>(path, { query })
-      return calculateMetric.formatResult(data, params)
+      return calculateMetric.formatResult(data, params).text
     }
   })
 
@@ -67,7 +67,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     execute: async (params) => {
       const { path, query } = getFieldValues.buildQuery(params)
       const values = await $fetch<any>(path, { query })
-      return getFieldValues.formatResult(values, params.fieldKey)
+      return getFieldValues.formatResult(values, params).text
     }
   })
 
