@@ -55,15 +55,15 @@
         </v-card-text>
 
         <v-card-actions>
+          <v-spacer />
           <v-btn
             v-if="canThumbnail && canBeThumbnail(attachment)"
+            :icon="mdiImage"
             variant="text"
             size="small"
+            :title="type === 'dataset' ? t('thumbnailDataset') : t('thumbnailApplication')"
             @click="setAsThumbnail(attachment)"
-          >
-            {{ t('thumbnail') }}
-          </v-btn>
-          <v-spacer />
+          />
           <attachments-dialog
             v-if="canEdit"
             :type="type"
@@ -115,14 +115,16 @@
 <i18n lang="yaml">
 fr:
   noAttachment: Vous n'avez pas encore ajouté de pièces jointes.
-  thumbnail: Utiliser comme vignette
+  thumbnailDataset: Utiliser comme vignette du jeu de données
+  thumbnailApplication: Utiliser comme vignette de l'application
   delete: Supprimer la pièce jointe
   deleteText: Souhaitez-vous confirmer la suppression ?
   cancel: Annuler
   confirmDelete: Supprimer
 en:
   noAttachment: You have not added any attachments yet.
-  thumbnail: Use as thumbnail
+  thumbnailDataset: Use as dataset thumbnail
+  thumbnailApplication: Use as application thumbnail
   delete: Delete attachment
   deleteText: Do you really want to delete this attachment?
   cancel: Cancel
@@ -130,7 +132,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiDelete } from '@mdi/js'
+import { mdiDelete, mdiImage } from '@mdi/js'
 
 interface AttachmentItem {
   title?: string

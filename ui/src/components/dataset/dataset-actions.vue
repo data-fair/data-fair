@@ -1,5 +1,30 @@
 <template>
   <template v-if="dataset">
+    <!-- Source files downloads for file datasets -->
+    <template v-if="isFileDataset && sourceFiles.length">
+      <v-list-subheader class="text-uppercase">
+        {{ t('downloads') }}
+      </v-list-subheader>
+      <v-list-item
+        v-for="file in sourceFiles"
+        :key="file.key"
+        :href="file.url"
+        link
+      >
+        <template #prepend>
+          <v-icon
+            :icon="mdiFileDownload"
+            color="primary"
+          />
+        </template>
+        {{ file.title }}
+        <v-list-item-subtitle v-if="file.size">
+          {{ formatBytes(file.size) }}
+        </v-list-item-subtitle>
+      </v-list-item>
+    </template>
+
+    <!-- Links to portals -->
     <template v-if="portalUrls.length">
       <v-list-subheader class="text-uppercase">
         {{ t('navigation') }}
@@ -42,30 +67,6 @@
       </template>
       {{ t('updateData') }}
     </v-list-item>
-
-    <!-- Source files downloads for file datasets -->
-    <template v-if="isFileDataset && sourceFiles.length">
-      <v-list-subheader class="text-uppercase">
-        {{ t('downloads') }}
-      </v-list-subheader>
-      <v-list-item
-        v-for="file in sourceFiles"
-        :key="file.key"
-        :href="file.url"
-        link
-      >
-        <template #prepend>
-          <v-icon
-            :icon="mdiFileDownload"
-            color="primary"
-          />
-        </template>
-        {{ file.title }}
-        <v-list-item-subtitle v-if="file.size">
-          {{ formatBytes(file.size) }}
-        </v-list-item-subtitle>
-      </v-list-item>
-    </template>
 
     <v-list-item
       v-if="dataset.isRest && user?.adminMode"

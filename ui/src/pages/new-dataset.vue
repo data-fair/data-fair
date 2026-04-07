@@ -327,10 +327,9 @@
           >
             <v-progress-linear
               v-model="uploadPercent"
-              class="my-1"
-              rounded
-              height="28"
               color="primary"
+              height="20"
+              rounded
               style="max-width: 500px;"
             >
               <template v-if="uploadProgress.total && uploadPercent !== undefined">
