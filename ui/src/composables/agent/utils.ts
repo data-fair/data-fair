@@ -1,22 +1,22 @@
-import type { Ref } from 'vue'
+import { $fetch } from '~/context'
+import { cleanRow } from './utils-logic'
 
-type Messages = Record<string, Record<string, string>>
+export {
+  createAgentTranslator,
+  agentToolError,
+  csvEscape,
+  toCsv,
+  cleanRow,
+  buildPaginatedQuery
+} from './utils-logic'
 
 /**
- * Create a translation function for agent tool annotations.
- * Falls back to English, then to the key itself.
+ * Fetch sample rows from a dataset, cleaned of internal fields.
  */
-export function createAgentTranslator (messages: Messages, locale: Ref<string>) {
-  return (key: string) => messages[locale.value]?.[key] ?? messages.en[key] ?? key
-}
-
-/**
- * Format an error for agent tool error responses.
- */
-export function agentToolError (label: string, err: unknown) {
-  const message = err instanceof Error ? err.message : String(err)
-  return {
-    content: [{ type: 'text' as const, text: `${label}: ${message}` }],
-    isError: true
-  }
+export async function fetchSampleRows (datasetId: string, size = 5, select?: string): Promise<{ total: number, rows: Record<string, any>[] }> {
+  const query: Record<string, string> = { size: String(size) }
+  if (select) query.select = select
+  const data = await $fetch<any>(`datasets/${encodeURIComponent(datasetId)}/lines`, { query })
+  const rows = (data.results ?? []).map(cleanRow)
+  return { total: data.total, rows }
 }

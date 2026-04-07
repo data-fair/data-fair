@@ -49,6 +49,15 @@
         />
       </v-stepper-header>
 
+      <df-agent-chat-action
+        v-if="showAgentChat"
+        action-id="help-create-dataset"
+        :visible-prompt="t('helpCreatePrompt')"
+        :hidden-context="createDatasetContext"
+        :btn-props="{ variant: 'tonal', density: 'compact', class: 'ma-2', prependIcon: mdiRobotOutline, text: t('helpCreatePrompt') }"
+        :title="t('helpCreatePrompt')"
+      />
+
       <v-stepper-window>
         <!-- Step: Type selection -->
         <v-stepper-window-item value="type">
@@ -381,10 +390,13 @@
 </template>
 
 <script setup lang="ts">
-import { mdiAllInclusive, mdiCancel, mdiCheckAll, mdiChevronDown, mdiChevronUp, mdiCog, mdiContentCopy, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiShape, mdiZipBox } from '@mdi/js'
+import { mdiAllInclusive, mdiCancel, mdiCheckAll, mdiChevronDown, mdiChevronUp, mdiCog, mdiContentCopy, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiRobotOutline, mdiShape, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { $apiPath } from '~/context'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -393,6 +405,7 @@ const session = useSessionAuthenticated()
 const breadcrumbs = useBreadcrumbs()
 const { account } = session
 
+const showAgentChat = useShowAgentChat()
 const isSimple = computed(() => route.query.simple === 'true')
 
 breadcrumbs.receive({
@@ -602,6 +615,41 @@ const paramsValid = computed(() => {
 
 const canCreate = computed(() => {
   return !importing.value && conflictsOk.value && !!owner.value
+})
+
+// ---- Agent tools ----
+useAgentDatasetCreationTools(locale, {
+  step,
+  datasetType,
+  hasInitFromStep,
+  paramsValid,
+  restTitle,
+  restHistory,
+  restAttachments,
+  restAttachmentsAsImage,
+  virtualTitle,
+  metaOnlyTitle,
+  fileTitle
+})
+
+const createDatasetContext = computed(() => {
+  const lines = [
+    'Help the user create a new dataset.',
+    'Start by asking what kind of data they have and what they want to do with it.',
+    '',
+    'Based on their answer, recommend the right dataset type:',
+    '- "file" for uploading CSV, Excel, GeoJSON, or other file formats',
+    '- "rest" (Editable) for data that will be entered manually through forms, or via API',
+    '- "virtual" for creating a combined view over existing datasets',
+    '- "metaOnly" for a metadata-only record with no actual data',
+    '',
+    'Use select_dataset_type to set the type, then set_dataset_title and other configuration tools (set_rest_options, skip_init_from_step, advance_to_confirmation) to fill in the wizard steps.',
+    '',
+    'For "file" type datasets, you cannot upload the file — the user will do that manually. Focus on helping them choose the right type and set a title.',
+    '',
+    'Do NOT create the dataset — the user will review and click the create/import button themselves.'
+  ]
+  return lines.join('\n')
 })
 
 // ---- Upload progress ----
@@ -816,6 +864,7 @@ fr:
   home: Accueil
   datasets: Jeux de données
   newDataset: Créer un jeu de données
+  helpCreatePrompt: Aidez-moi à créer un jeu de données
   choseType: Choisissez le type de jeu de données que vous souhaitez créer.
   stepType: Type de jeu de données
   stepInit: Initialisation
@@ -866,6 +915,7 @@ en:
   home: Home
   datasets: Datasets
   newDataset: Create a dataset
+  helpCreatePrompt: Help me create a dataset
   choseType: Choose the type of dataset you wish to create.
   stepType: Dataset type
   stepInit: Initialization

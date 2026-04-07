@@ -3,10 +3,24 @@
     <p class="mb-4">
       {{ t('intro') }}
     </p>
+    <div
+      v-if="can('writeDescription')"
+      class="d-flex justify-end mb-2"
+    >
+      <df-agent-chat-action
+        action-id="configure-master-data"
+        :visible-prompt="t('configurePrompt')"
+        :hidden-context="configureContext"
+        :title="t('configurePrompt')"
+      />
+    </div>
     <vjsf
       v-model="dataset.masterData"
       :schema="schema"
       :options="vjsfOptions"
+      data-title="Master data"
+      prefix-name="masterData_"
+      :sub-agent="true"
     >
       <template #shareOrgs-before>
         <v-alert
@@ -65,6 +79,7 @@ fr:
   bulkSearchsHelp: Permettez à vos utilisateurs de récupérer un grand nombre de lignes à partir d'une règle de correspondance simple. Cette fonctionnalité permet de créer une nouvelle source d'enrichissement.
   virtualDatasetsHelp: Proposez à vos utilisateurs de créer des jeux virtuels à partir de ce jeu de données. C'est une option intéressante pour faciliter la création de vues filtrées de cette donnée.
   standardSchemaHelp: Proposez à vos utilisateurs d'initialiser des jeux éditables à partir des métadonnées et des données de ce jeu de données.
+  configurePrompt: Aide-moi à configurer les données de référence
 en:
   intro: Transform this dataset into a master data source and increase its reusability in multiple contexts.
   shareOrgsHelp: Sharing with partners only affects the visibility of actions linked to this master data. It has no effect on permissions that you must define separately.
@@ -72,10 +87,13 @@ en:
   bulkSearchsHelp: Allow your users to retrieve a large number of lines from a simple matching rule. This feature creates a new enrichment source.
   virtualDatasetsHelp: Allow your users to create virtual datasets from this dataset. This is useful for creating filtered views of this data.
   standardSchemaHelp: Allow your users to initialize editable datasets from the metadata and data of this dataset.
+  configurePrompt: Help me configure master data
 </i18n>
 
 <script setup lang="ts">
-import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
+import Vjsf from '@koumoul/vjsf/webmcp'
+import { type Options as VjsfOptions } from '@koumoul/vjsf'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { schema as masterDataSchema } from '../../../../api/contract/master-data.js'
 import { $sitePath } from '../../context.js'
 
@@ -109,6 +127,16 @@ const context = computed(() => ({
     .map((p: any) => ({ key: p.key, title: p.title || p['x-originalName'] || p.key, 'x-refersTo': p['x-refersTo'] })) ?? [],
   hasDateIntervalConcepts: !!(dataset.value?.schema?.find((p: any) => p['x-refersTo'] === 'https://schema.org/startDate') && dataset.value?.schema?.find((p: any) => p['x-refersTo'] === 'https://schema.org/endDate'))
 }))
+
+const configureContext = computed(() => {
+  const lines = [
+    'Use the subagent tool masterData_form to help the user configure the master data settings for the current dataset.',
+    'Start the session by asking the user what they want to achieve.',
+  ]
+  if (dataset.value?.title) lines.push(`The dataset title is "${dataset.value.title}".`)
+  if (dataset.value?.description) lines.push(`Dataset description: ${dataset.value.description}`)
+  return lines.join(' ')
+})
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
   locale: locale.value,

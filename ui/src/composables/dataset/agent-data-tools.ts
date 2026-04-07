@@ -2,6 +2,31 @@ import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
 import { $fetch } from '~/context'
 import { createAgentTranslator } from '~/composables/agent/utils'
+import {
+  executeGetDatasetSchema,
+  executeSearchData,
+  executeAggregateData,
+  executeCalculateMetric,
+  executeGetFieldValues
+} from './agent-data-tools-logic'
+import type { SearchDataParams, AggregateDataParams, CalculateMetricParams } from './agent-data-tools-logic'
+
+export {
+  applyGeoParams,
+  applyDateMatchParam,
+  normalizeSort,
+  executeGetDatasetSchema,
+  executeSearchData,
+  executeAggregateData,
+  executeCalculateMetric,
+  executeGetFieldValues
+} from './agent-data-tools-logic'
+
+export type {
+  SearchDataParams,
+  AggregateDataParams,
+  CalculateMetricParams
+} from './agent-data-tools-logic'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
@@ -26,45 +51,6 @@ const messages: Record<string, Record<string, string>> = {
 
 const filtersDescription = 'Column filters as key-value pairs. Key format: column_key + suffix (_eq, _neq, _search, _in, _nin, _starts, _contains, _gte, _gt, _lte, _lt, _exists, _nexists). All values must be strings. Example: {"nom_search":"Jean","age_lte":"30"}'
 
-function csvEscape (value: any): string {
-  if (value == null) return ''
-  const s = String(value)
-  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
-}
-
-function toCsv (rows: Record<string, any>[]): string {
-  if (!rows.length) return ''
-  const keys = Object.keys(rows[0])
-  return [keys.map(csvEscape).join(','), ...rows.map(row => keys.map(k => csvEscape(row[k])).join(','))].join('\n')
-}
-
-function cleanRow (row: any): any {
-  const { _id, _i, _rand, ...clean } = row
-  return clean
-}
-
-function applyGeoParams (query: Record<string, string>, bbox?: string, geoDistance?: string) {
-  if (bbox) query.bbox = bbox
-  if (geoDistance) query.geo_distance = geoDistance
-}
-
-function applyDateMatchParam (query: Record<string, string>, dateMatch?: string) {
-  if (dateMatch) query.date_match = dateMatch
-}
-
-/**
- * Drop incomplete _geo_distance sort entries (without :lon:lat suffix).
- * LLMs sometimes write sort: "_geo_distance" redundantly when a geoDistance filter is already present.
- * The API already auto-sorts by distance when a geo_distance filter is set.
- */
-function normalizeSort (sort: string): string {
-  return sort.split(',').map(part => {
-    const trimmed = part.trim()
-    if (/^-?_geo_distance$/.test(trimmed)) return null
-    return trimmed
-  }).filter(Boolean).join(',')
-}
-
 export function useAgentDatasetDataTools (locale: Ref<string>) {
   const t = createAgentTranslator(messages, locale)
 
@@ -79,43 +65,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId'] as const
     },
-    execute: async (params) => {
-      const [dataset, linesData] = await Promise.all([
-        $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}`, { query: { select: 'schema,title' } }),
-        $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/lines`, { query: { size: '3' } })
-      ])
-
-      const schema = dataset.schema
-        ?.filter((col: any) => !['_i', '_id', '_rand'].includes(col.key))
-        .map((col: any) => {
-          const notes: string[] = []
-          if (col.description) notes.push(col.description)
-          if (col['x-concept']?.title) notes.push(`concept: ${col['x-concept'].title}`)
-          if (col.enum) {
-            const shown = col.enum.slice(0, 20).join(', ')
-            notes.push(col.enum.length > 20 ? `enum: ${shown}… (${col.enum.length} total)` : `enum: ${shown}`)
-          }
-          if (col['x-labels']) {
-            const entries = Object.entries(col['x-labels'])
-            const shown = entries.slice(0, 10).map(([k, v]) => `${k}=${v}`).join(', ')
-            notes.push(entries.length > 10 ? `labels: ${shown}… (${entries.length} total)` : `labels: ${shown}`)
-          }
-          return `| \`${col.key}\` | ${col.type} | ${col.title || ''} | ${notes.join(' — ')} |`
-        })
-
-      const samples = (linesData.results ?? []).map(cleanRow)
-
-      const sections = [
-        `# Schema: ${dataset.title}`,
-        '| Key | Type | Title | Notes |',
-        '|-----|------|-------|-------|',
-        ...(schema || []),
-        '',
-        '## Sample data',
-        toCsv(samples)
-      ]
-      return sections.join('\n')
-    }
+    execute: (params) => executeGetDatasetSchema(params, $fetch)
   })
 
   useAgentTool({
@@ -139,44 +89,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId'] as const
     },
-    execute: async (params) => {
-      let data: any
-
-      if (params.next) {
-        data = await $fetch<any>(params.next)
-      } else {
-        const size = Math.min(Math.max(params.size || 10, 1), 50)
-        const query: Record<string, string> = { size: String(size) }
-        if (params.q) { query.q = params.q; query.q_mode = 'complete' }
-        if (params.select) query.select = params.select
-        if (params.sort) {
-          const normalized = normalizeSort(params.sort)
-          if (normalized) query.sort = normalized
-        }
-        if (params.page) query.page = String(params.page)
-        if (params.filters) {
-          for (const [key, value] of Object.entries(params.filters)) {
-            query[key] = String(value)
-          }
-        }
-        applyGeoParams(query, params.bbox, params.geoDistance)
-        applyDateMatchParam(query, params.dateMatch)
-
-        data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/lines`, { query })
-      }
-
-      const rows = (data.results ?? []).map(cleanRow)
-
-      const lines = [
-        `**${data.total}** rows found (showing ${rows.length}, page ${params.page || 1})`,
-        '',
-        toCsv(rows)
-      ]
-      if (data.next) {
-        lines.push('', 'Next page available.')
-      }
-      return lines.join('\n')
-    }
+    execute: (params) => executeSearchData(params as SearchDataParams, $fetch)
   })
 
   useAgentTool({
@@ -208,42 +121,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId', 'groupByColumns'] as const
     },
-    execute: async (params) => {
-      const query: Record<string, string> = {
-        field: params.groupByColumns.join(';')
-      }
-      if (params.metric && params.metric.type !== 'count') {
-        query.metric = params.metric.type!
-        query.metric_field = params.metric.column!
-      }
-      if (params.sort) query.sort = params.sort
-      if (params.filters) {
-        for (const [key, value] of Object.entries(params.filters)) {
-          query[key] = String(value)
-        }
-      }
-      applyGeoParams(query, params.bbox, params.geoDistance)
-      applyDateMatchParam(query, params.dateMatch)
-
-      const data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/values_agg`, { query })
-
-      const formatAgg = (agg: any, indent: string): string => {
-        let line = `${indent}- **${agg.value}**: ${agg.total} rows`
-        if (params.metric && params.metric.type !== 'count' && agg.metric != null) {
-          line += `, ${params.metric.type}(${params.metric.column}) = ${agg.metric}`
-        }
-        if (agg.aggs?.length) {
-          line += '\n' + agg.aggs.map((sub: any) => formatAgg(sub, indent + '  ')).join('\n')
-        }
-        return line
-      }
-
-      return [
-        `**${data.total}** total rows, **${data.total_values}** groups shown, **${data.total_other}** rows not represented`,
-        '',
-        ...(data.aggs ?? []).map((agg: any) => formatAgg(agg, ''))
-      ].join('\n')
-    }
+    execute: (params) => executeAggregateData(params as AggregateDataParams, $fetch)
   })
 
   useAgentTool({
@@ -264,37 +142,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId', 'fieldKey', 'metric'] as const
     },
-    execute: async (params) => {
-      const query: Record<string, string> = {
-        metric: params.metric,
-        field: params.fieldKey
-      }
-      if (params.percents) query.percents = params.percents
-      if (params.filters) {
-        for (const [key, value] of Object.entries(params.filters)) {
-          query[key] = String(value)
-        }
-      }
-      applyGeoParams(query, params.bbox, params.geoDistance)
-      applyDateMatchParam(query, params.dateMatch)
-
-      const data = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}/metric_agg`, { query })
-
-      let result: string
-      if (params.metric === 'stats' && typeof data.metric === 'object') {
-        result = Object.entries(data.metric).map(([k, v]) => `${k}: ${v}`).join(', ')
-      } else if (params.metric === 'percentiles' && typeof data.metric === 'object') {
-        result = Object.entries(data.metric).map(([k, v]) => `p${k}: ${v}`).join(', ')
-      } else {
-        result = String(data.metric)
-      }
-
-      return [
-        `**${params.metric}** of \`${params.fieldKey}\``,
-        `Total rows: ${data.total}`,
-        `Result: **${result}**`
-      ].join('\n')
-    }
+    execute: (params) => executeCalculateMetric(params as CalculateMetricParams, $fetch)
   })
 
   useAgentTool({
@@ -312,31 +160,31 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
       },
       required: ['datasetId', 'fieldKey'] as const
     },
-    execute: async (params) => {
-      const query: Record<string, string> = {
-        size: String(Math.min(Math.max(params.size || 10, 1), 1000))
-      }
-      if (params.q) query.q = params.q
-      if (params.sort) query.sort = params.sort
-
-      const values = await $fetch<any>(
-        `datasets/${encodeURIComponent(params.datasetId)}/values/${encodeURIComponent(params.fieldKey)}`,
-        { query }
-      )
-
-      return [
-        `Distinct values of \`${params.fieldKey}\`:`,
-        '',
-        ...values.map((v: any) => `- ${v}`)
-      ].join('\n')
-    }
+    execute: (params) => executeGetFieldValues(params, $fetch)
   })
 
-  useAgentSubAgent({
-    name: 'dataset_data',
-    title: t('datasetDataSubAgent'),
-    description: t('datasetDataSubAgentDesc'),
-    prompt: `You are a data analyst assistant for a data platform. You help users explore and understand datasets by querying their content.
+  const datasetDataPrompts: Record<string, string> = {
+    fr: `Tu es un assistant analyste de données pour une plateforme de données. Tu aides les utilisateurs à explorer et comprendre les jeux de données en interrogeant leur contenu.
+
+Processus :
+1. Appelle toujours get_dataset_schema en premier pour comprendre les noms de colonnes, types et exemples de données avant d'utiliser les autres outils.
+2. Choisis le bon outil :
+   - get_field_values : pour découvrir les valeurs distinctes d'une colonne avant de filtrer
+   - search_data : pour récupérer des lignes correspondant à des filtres ou une recherche textuelle. NE PAS utiliser pour des statistiques.
+   - aggregate_data : pour regrouper des lignes par colonnes et compter ou calculer des métriques par groupe (sum, avg, min, max)
+   - calculate_metric : pour calculer une statistique globale unique (avg, sum, min, max, stats, percentiles, cardinality)
+
+Format :
+- Présente les résultats de manière concise avec des libellés clairs
+- Pour les résultats numériques, arrondis à 2 décimales si approprié
+- Pour les données tabulaires, résume les observations clés plutôt que d'afficher les lignes brutes
+- Réponds dans la langue de la question de l'utilisateur
+- Lorsque tu effectues une requête filtrée (search_data avec filters, q, sort, bbox, geoDistance ou dateMatch), inclus toujours à la fin de ta réponse une section "Navigation params" listant les paramètres de requête sous forme clé=valeur (un par ligne). Ces paramètres utilisent le même format et peuvent être utilisés par l'assistant principal pour naviguer vers la page tableau du jeu de données avec les mêmes filtres. Exemple :
+  Navigation params:
+  status_eq=active
+  age_lte=30
+  sort=-date`,
+    en: `You are a data analyst assistant for a data platform. You help users explore and understand datasets by querying their content.
 
 Workflow:
 1. Always call get_dataset_schema first to understand column names, types, and sample data before using other tools.
@@ -350,7 +198,19 @@ Format:
 - Present results concisely with clear labels
 - For numeric results, round to 2 decimal places when appropriate
 - When returning tabular data, summarize key findings rather than just dumping raw rows
-- Respond in the same language as the user's question`,
+- Respond in the same language as the user's question
+- When you perform a filtered query (search_data with filters, q, sort, bbox, geoDistance, or dateMatch), always include at the end of your response a "Navigation params" section listing the query parameters as key=value pairs (one per line). These params use the same format and can be used by the main assistant to navigate the user to the dataset table page with the same filters applied. Example:
+  Navigation params:
+  status_eq=active
+  age_lte=30
+  sort=-date`
+  }
+
+  useAgentSubAgent({
+    name: 'dataset_data',
+    title: t('datasetDataSubAgent'),
+    description: t('datasetDataSubAgentDesc'),
+    prompt: datasetDataPrompts[locale.value] ?? datasetDataPrompts.en,
     tools: ['get_dataset_schema', 'search_data', 'aggregate_data', 'calculate_metric', 'get_field_values']
   })
 }

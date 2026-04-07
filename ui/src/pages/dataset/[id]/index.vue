@@ -110,6 +110,13 @@
         >
           {{ t('save') }}
         </v-btn>
+        <df-agent-chat-action
+          action-id="summarize-metadata-changes"
+          :visible-prompt="t('summarizeChanges')"
+          :hidden-context="'Summarize the pending metadata changes for this dataset using the summarize_metadata_changes tool.'"
+          :btn-props="{ variant: 'tonal', density: 'compact', class: 'ml-2' }"
+          :title="t('summarizeChanges')"
+        />
       </template>
 
       <template #windows>
@@ -487,6 +494,7 @@ fr:
   save: Enregistrer
   cancel: Annuler
   confirmCancelText: Souhaitez-vous annuler vos modifications ?
+  summarizeChanges: Résumer les modifications
   exploration: Exploration des données
   table: Tableau
   map: Carte
@@ -535,6 +543,7 @@ en:
   save: Save
   cancel: Cancel
   confirmCancelText: Do you want to discard your changes?
+  summarizeChanges: Summarize changes
   exploration: Data exploration
   table: Table
   map: Map
@@ -588,6 +597,13 @@ import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
+import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
+import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
+import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
+import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
+import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -634,6 +650,58 @@ watch(metadataEditFetch.serverData, (d) => {
 // Leave guards for unsaved changes
 useLeaveGuard(structureEditFetch.hasDiff, { locale })
 useLeaveGuard(metadataEditFetch.hasDiff, { locale })
+
+// Agent tools for metadata editing
+useAgentDatasetSummaryTools(locale, metadataEditFetch.data, (s) => {
+  if (metadataEditFetch.data.value) metadataEditFetch.data.value.summary = s
+})
+useAgentDatasetDescriptionTools(locale, metadataEditFetch.data, (d) => {
+  if (metadataEditFetch.data.value) metadataEditFetch.data.value.description = d
+})
+useAgentDatasetChangesSummaryTools(locale, metadataEditFetch.data, metadataEditFetch.serverData)
+useAgentExpressionTools(locale, structureEditFetch.data, (extensionIndex, expr) => {
+  if (structureEditFetch.data.value?.extensions?.[extensionIndex]) {
+    structureEditFetch.data.value.extensions[extensionIndex].expr = expr
+  }
+})
+useAgentSchemaAnnotationTools(locale, structureEditFetch.data, (annotations) => {
+  if (!structureEditFetch.data.value?.schema) return
+  for (const ann of annotations) {
+    const prop = structureEditFetch.data.value.schema.find((p: any) => p.key === ann.key)
+    if (prop) {
+      if (ann.title !== undefined) prop.title = ann.title
+      if (ann.description !== undefined) prop.description = ann.description
+    }
+  }
+})
+useAgentPropertyConfigTools(locale, structureEditFetch.data, (configs) => {
+  if (!structureEditFetch.data.value?.schema) return
+  for (const cfg of configs) {
+    const prop = structureEditFetch.data.value.schema.find((p: any) => p.key === cfg.key)
+    if (!prop) continue
+    if (cfg.typeOverride !== undefined) {
+      if (cfg.typeOverride === null) {
+        if (prop['x-transform']) {
+          delete prop['x-transform'].type
+          delete prop['x-transform'].format
+          if (!prop['x-transform'].expr) delete prop['x-transform']
+        }
+      } else {
+        if (!prop['x-transform']) prop['x-transform'] = {}
+        prop['x-transform'].type = cfg.typeOverride.type
+        if (cfg.typeOverride.format) prop['x-transform'].format = cfg.typeOverride.format
+        else delete prop['x-transform'].format
+      }
+    }
+    if (cfg.capabilities !== undefined) {
+      if (cfg.capabilities === null || !Object.keys(cfg.capabilities).length) {
+        delete prop['x-capabilities']
+      } else {
+        prop['x-capabilities'] = cfg.capabilities
+      }
+    }
+  }
+})
 
 // Cancel functions for both editFetch instances
 const cancelStructure = () => {

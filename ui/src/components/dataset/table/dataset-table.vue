@@ -49,6 +49,20 @@
         @click="nextPage"
       />
     </template>
+    <df-agent-chat-action
+      action-id="help-filter-table"
+      :visible-prompt="t('helpFilterPrompt')"
+      :hidden-context="filterHelpContext"
+      :btn-props="{ class: 'mx-1' }"
+      :title="t('helpFilterPrompt')"
+    />
+    <df-agent-chat-action
+      action-id="check-data-quality"
+      :visible-prompt="t('checkDataQualityPrompt')"
+      :hidden-context="dataQualityContext"
+      :btn-props="{ class: 'mx-1' }"
+      :title="t('checkDataQualityPrompt')"
+    />
     <v-btn-group
       class="mx-2"
       density="compact"
@@ -370,6 +384,9 @@
             :extension="true"
             :loading="editLine.loading.value"
             :ro-primary-key="true"
+            :sub-agent="true"
+            prefix-name="editLine_"
+            :data-title="t('editLine')"
             @on-file-upload="(f: File) => {file = f}"
           />
         </v-card-text>
@@ -402,11 +419,15 @@
     editLine: Éditer une ligne
     deleteLine: Supprimer une ligne
     deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
+    helpFilterPrompt: Aide-moi à filtrer ces données
+    checkDataQualityPrompt: Vérifier la qualité de ces données
   en:
     cancel: Cancel
     delete: Delete
     save: Save
     editLine: Edit a line
+    helpFilterPrompt: Help me filter this data
+    checkDataQualityPrompt: Check data quality
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost permanently
 </i18n>
@@ -420,6 +441,8 @@ import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
 import { type VVirtualScroll, type VForm } from 'vuetify/components'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { useAgentTool } from '@data-fair/lib-vue-agents'
 
 const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
@@ -441,7 +464,6 @@ const q = defineModel<string>('q', { default: '' })
 const selectedItem = defineModel<string>('selectedItem', { default: '' })
 
 const { t } = useI18n()
-
 const onFixCol = (key: string) => {
   if (fixed.value === key) fixed.value = undefined
   else fixed.value = key
@@ -491,6 +513,20 @@ const hideHeader = (header: TableHeader) => {
 }
 
 const { filters, addFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
+
+const filterHelpContext = computed(() => {
+  const d = dataset.value
+  if (!d) return ''
+  const activeFilters = filters.value.map(f => `${f.property.title || f.property.key} ${f.operator} ${f.formattedValue || f.value}`).join(', ')
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent. After exploring, use the navigate tool with query parameters to apply filters to this table page.`
+})
+
+const dataQualityContext = computed(() => {
+  const d = dataset.value
+  if (!d) return ''
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}). They clicked the "Check data quality" button. Before running the data_quality_checker subagent, ask the user if they want a full quality analysis or if they want to focus on specific aspects (completeness, duplicates, outliers, or format issues). Once the user confirms, dispatch the data_quality_checker subagent with the dataset ID.`
+})
+
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const indexedAt = ref<string>()
@@ -509,7 +545,40 @@ const nextPage = async () => {
   paginationPage.value++
 }
 const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed)
-const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetchUrl, indexedAt)
+const { selectedResults, saveLine, bulkLines, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
+
+if (edit) {
+  useAgentTool({
+    name: 'open_add_line_dialog',
+    description: 'Open the "Add a new line" dialog on the data editing page. After opening, delegate to the editLine_form subagent to fill the form fields (it becomes available once the dialog opens). The user will click Save manually.',
+    annotations: { title: 'Ouvrir le dialogue d\'ajout de ligne', readOnlyHint: false },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {}
+    },
+    execute: async () => {
+      addLineTrigger.value = true
+      return 'Add line dialog opened. You can now delegate to the editLine_form subagent to fill in the form fields. The user will click Save when ready.'
+    }
+  })
+
+  useAgentTool({
+    name: 'open_edit_line_dialog',
+    description: 'Open the "Edit line" dialog for a specific data row. Provide the line _id. After opening, delegate to the editLine_form subagent to modify form fields (it becomes available once the dialog opens). The user will click Save manually.',
+    annotations: { title: 'Ouvrir le dialogue d\'édition de ligne', readOnlyHint: false },
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        lineId: { type: 'string' as const, description: 'The _id of the line to edit. Use search_data to find valid line IDs.' }
+      },
+      required: ['lineId'] as const
+    },
+    execute: async (params: { lineId: string }) => {
+      showEditDialog.value = { _id: params.lineId } as ExtendedResult
+      return 'Edit line dialog opened. You can now delegate to the editLine_form subagent to modify the form fields. The user will click Save when ready.'
+    }
+  })
+}
 
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])

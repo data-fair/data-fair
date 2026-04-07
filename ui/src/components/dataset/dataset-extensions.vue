@@ -177,11 +177,12 @@
                 class="flex-grow-1"
               />
               <df-agent-chat-action
-                v-if="showAgentChat && can('writeDescriptionBreaking')"
+                v-if="can('writeDescriptionBreaking')"
                 :action-id="'help-expression-' + idx"
                 :visible-prompt="t('helpExpression')"
                 :hidden-context="getExpressionContext(idx as number)"
                 :btn-props="{ class: 'ml-1' }"
+                :title="t('helpExpression')"
               />
             </div>
           </v-card-text>
@@ -214,7 +215,7 @@ fr:
   missingConcepts: "Il faut associer au moins l'un des concepts suivants à vos colonnes : {concepts}"
   newExprEval: Nouvelle colonne calculée
   expr: Expression
-  helpExpression: Aider à écrire l'expression
+  helpExpression: Aide-moi à écrire l'expression
   autoUpdate: Mise à jour automatique si la source change
   link: "Lien : {info}"
   unavailableService: "donnée de référence non disponible ({service} / {action})."
@@ -246,15 +247,12 @@ import { mdiChevronDown, mdiChevronUp, mdiPlus } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { escapeKey } from '~/utils/escape-key'
 import { useRemoteServices } from '~/composables/use-remote-services'
-import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import useStore from '~/composables/use-store'
 
 const dataset = defineModel<any>({ required: true })
 const emit = defineEmits<{ refresh: [extension: any] }>()
 
 const { t } = useI18n()
-const showAgentChat = useShowAgentChat()
-
 const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? false
 
 const owner = computed(() => dataset.value?.owner)
@@ -384,6 +382,7 @@ function getExpressionContext (idx: number): string {
   const name = ext.property?.['x-originalName'] || ext.property?.key || 'calculated column'
   return `The user wants help writing an expr-eval expression for calculated column "${name}" (type: ${ext.property?.type || 'string'}, extension index: ${idx}). ` +
     (ext.expr ? `The current expression is: ${ext.expr}. ` : '') +
-    'Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user\'s intent.'
+    'Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user\'s intent. ' +
+    'Once you receive the expression from the subagent, present it and the test results to the user. If approved, use the set_expression tool to apply it. If the user wants changes, adjust accordingly.'
 }
 </script>

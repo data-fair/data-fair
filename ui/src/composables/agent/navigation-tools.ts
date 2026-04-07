@@ -77,7 +77,7 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
         '**Detail pages** (require an ID, use list_datasets or list_applications to find IDs):\n' +
         '- Dataset overview: /dataset/{id}\n' +
         '- Dataset data: /dataset/{id}/data\n' +
-        '- Dataset table: /dataset/{id}/table\n' +
+        '- Dataset table: /dataset/{id}/table (supports filter query params: {column}_{operator}=value, q for search, sort for sorting)\n' +
         '- Dataset map: /dataset/{id}/map\n' +
         '- Dataset files: /dataset/{id}/files\n' +
         '- Edit dataset data: /dataset/{id}/edit-data\n' +
@@ -111,26 +111,32 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
 
   useAgentTool({
     name: 'navigate',
-    description: 'Navigate to a page in the application. Use list_pages to discover available paths, and list_datasets, list_applications, list_processings, or list_catalogs to find resource IDs.',
+    description: 'Navigate to a page in the application. Use list_pages to discover available paths, and list_datasets, list_applications, list_processings, or list_catalogs to find resource IDs. Optionally pass query parameters — for dataset table/data pages, use the same filter format as data query tools: {column}_{operator} as key (e.g. {"status_eq": "active", "age_lte": "30"}). Also supports "q" for full-text search and "sort" for sorting.',
     annotations: { title: t('navigateToPage') },
     inputSchema: {
       type: 'object' as const,
       properties: {
         path: {
           type: 'string' as const,
-          description: 'The path to navigate to (e.g. "/datasets", "/dataset/abc123")'
+          description: 'The path to navigate to (e.g. "/datasets", "/dataset/abc123", "/dataset/abc123/table")'
+        },
+        query: {
+          type: 'object' as const,
+          description: 'Optional query parameters as key-value string pairs to add to the URL. For dataset table/data pages, use the same filter key format as data query tools: {column}_{operator} (e.g. {"status_eq": "active", "age_lte": "30"}).',
+          properties: {}
         }
       },
       required: ['path'] as const
     },
     execute: async (params) => {
       try {
-        await router.push(params.path)
+        await router.push(params.query ? { path: params.path, query: params.query as Record<string, string> } : params.path)
         await new Promise(resolve => setTimeout(resolve, 500))
+        const currentRoute = router.currentRoute.value
         return {
           content: [{
             type: 'text' as const,
-            text: `**Success**: true\n**New Path**: ${router.currentRoute.value.path}`
+            text: `**Success**: true\n**New Path**: ${currentRoute.path}\n**Query**: ${JSON.stringify({ ...currentRoute.query })}`
           }]
         }
       } catch (error: any) {

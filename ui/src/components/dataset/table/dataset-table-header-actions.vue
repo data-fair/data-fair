@@ -158,6 +158,9 @@
             v-model="newLine"
             :loading="addLine.loading.value"
             :extension="true"
+            :sub-agent="true"
+            prefix-name="editLine_"
+            :data-title="t('addLine')"
             @on-file-upload="(f: File) => {file = f}"
           />
         </v-card-text>
@@ -218,7 +221,14 @@ defineProps({
   selectedCols: { type: Array as () => string[], required: true }
 })
 
-const { selectedResults, bulkLines, saveLine, saving } = useDatasetEdition()
+const { selectedResults, bulkLines, saveLine, saving, addLineTrigger } = useDatasetEdition()
+
+watch(addLineTrigger, (v) => {
+  if (v) {
+    addLineDialog.value = true
+    addLineTrigger.value = false
+  }
+})
 
 const { can, jsonSchemaFetch, id: datasetId } = useDatasetStore()
 const { t } = useI18n()

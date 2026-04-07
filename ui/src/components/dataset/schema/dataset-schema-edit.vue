@@ -22,6 +22,20 @@
       hide-details
       rounded
     />
+    <df-agent-chat-action
+      action-id="help-annotate-schema"
+      :visible-prompt="t('helpAnnotateSchema')"
+      :hidden-context="'Use the schema_annotator subagent to suggest titles and descriptions for the dataset columns.'"
+      :btn-props="{ size: 'small' } as any"
+      :title="t('helpAnnotateSchema')"
+    />
+    <df-agent-chat-action
+      action-id="help-configure-properties"
+      :visible-prompt="t('helpConfigureProperties')"
+      :hidden-context="'The property_config_advisor subagent can help optimize column types and indexing capabilities. Ask the user what they need: type corrections, capability optimization for performance, or both.'"
+      :btn-props="{ size: 'small' } as any"
+      :title="t('helpConfigureProperties')"
+    />
   </div>
 
   <v-select
@@ -91,6 +105,8 @@ fr:
   primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schema pour construire une cle primaire qui identifiera de manière unique chaque ligne de la donnée.
   projection: Projection cartographique
   sortProperties: Vous pouvez changer l'ordre des colonnes par glisser-déposer.
+  helpAnnotateSchema: Aide-moi à annoter le schéma
+  helpConfigureProperties: Optimiser les types et capacités
 en:
   column: column | columns
   search: Search
@@ -99,10 +115,13 @@ en:
   primaryKeyMsgNoData: Optional. Use one or more columns of the schema to build a primary key that will uniquely identify each line of the data.
   projection: Map projection
   sortProperties: You can sort the columns by drag and drop.
+  helpAnnotateSchema: Help annotate schema
+  helpConfigureProperties: Optimize types and capabilities
 </i18n>
 
 <script setup lang="ts">
 import { mdiMagnify } from '@mdi/js'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import type { SchemaProperty } from '#api/types'
 import { useDatasetStore } from '~/composables/dataset/store'
 
