@@ -22,5 +22,15 @@ jobs:
     - name: Init .env
       run: ./dev/init-env.sh
 
+    - name: Start test services
+      run: docker compose --profile test up -d --wait
+
+    - name: Start dev API
+      run: MODE=server_worker NODE_ENV=development node --experimental-strip-types api/index.ts &
+
     - name: Run quality checks
       run: OGR2OGR_SKIP=true npm run quality
+
+    - name: Stop test services
+      if: always()
+      run: docker compose --profile test down
