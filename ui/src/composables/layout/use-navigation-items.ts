@@ -164,6 +164,9 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
         { to: '/admin/owners', icon: mdiBriefcase, title: t('owners') },
         { to: '/admin/errors', icon: mdiAlert, title: t('errors') },
       ]
+      if ($uiConfig.agentsIntegration) {
+        admin.push({ to: '/admin/agents', icon: mdiRobotOutline, title: t('agents') })
+      }
       if (!$uiConfig.disableApplications) {
         admin.push({ to: '/admin/base-apps', icon: mdiApps, title: t('baseApplications') })
       }
@@ -173,9 +176,6 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
       }
       if ($uiConfig.processingsIntegration) {
         admin.push({ to: '/admin/processings-plugins', icon: mdiCogTransferOutline, title: t('processings'), subtitle: 'Plugins' })
-      }
-      if ($uiConfig.agentsIntegration) {
-        admin.push({ to: '/admin/agents', icon: mdiRobotOutline, title: t('agents') })
       }
       for (const extra of ($uiConfig.extraAdminNavigationItems ?? [])) {
         admin.push({

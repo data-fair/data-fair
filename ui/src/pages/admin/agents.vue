@@ -1,31 +1,31 @@
 <i18n lang="yaml">
 fr:
   agents: Agents
+  org: Organisation
 en:
   agents: Agents
+  org: Organization
 </i18n>
 
 <template>
-  <v-container>
-    <h2 class="text-title-large mb-4">
-      {{ t('agents') }}
-    </h2>
-    <v-row>
-      <v-col
-        cols="12"
-        sm="6"
-        md="4"
-      >
-        <v-autocomplete
-          v-model="selectedOwner"
-          :items="owners"
-          item-title="name"
-          :item-value="(o: any) => o"
-          label="Organisation"
-          :loading="ownersFetch.loading.value"
-        />
-      </v-col>
-    </v-row>
+  <div class="d-flex flex-column fill-height">
+    <div class="d-flex align-center ga-4 pa-4">
+      <h2 class="text-title-large">
+        {{ t('agents') }}
+      </h2>
+      <v-autocomplete
+        v-model="selectedOwner"
+        :items="owners"
+        item-title="name"
+        :item-value="(o: any) => o"
+        :label="t('org')"
+        :loading="ownersFetch.loading.value"
+        density="compact"
+        hide-details
+        max-width="300"
+        variant="outlined"
+      />
+    </div>
     <d-frame
       v-if="selectedOwner"
       id="agents"
@@ -40,7 +40,7 @@ en:
       @iframe-message="onMessage"
       @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
-  </v-container>
+  </div>
 </template>
 
 <script setup lang="ts">

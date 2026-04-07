@@ -39,7 +39,6 @@
           <dataset-schema-edit
             v-if="structureEditFetch.data.value"
             v-model="structureEditFetch.data.value.schema"
-            :dataset="structureEditFetch.data.value"
             :original-schema="structureEditFetch.serverData.value?.schema"
             :primary-key="structureEditFetch.data.value.primaryKey"
             :projection="structureEditFetch.data.value.projection ?? null"
@@ -111,10 +110,11 @@
           {{ t('save') }}
         </v-btn>
         <df-agent-chat-action
+          v-if="metadataEditFetch.hasDiff.value"
           action-id="summarize-metadata-changes"
           :visible-prompt="t('summarizeChanges')"
           :hidden-context="'Summarize the pending metadata changes for this dataset using the summarize_metadata_changes tool.'"
-          :btn-props="{ variant: 'tonal', density: 'compact', class: 'ml-2' }"
+          :btn-props="{ variant: 'flat', class: 'ml-2' }"
           :title="t('summarizeChanges')"
         />
       </template>
@@ -655,7 +655,7 @@ useLeaveGuard(metadataEditFetch.hasDiff, { locale })
 useAgentDatasetSummaryTools(locale, metadataEditFetch.data, (s) => {
   if (metadataEditFetch.data.value) metadataEditFetch.data.value.summary = s
 })
-useAgentDatasetDescriptionTools(locale, metadataEditFetch.data, (d) => {
+useAgentDatasetDescriptionTools(locale, (d) => {
   if (metadataEditFetch.data.value) metadataEditFetch.data.value.description = d
 })
 useAgentDatasetChangesSummaryTools(locale, metadataEditFetch.data, metadataEditFetch.serverData)

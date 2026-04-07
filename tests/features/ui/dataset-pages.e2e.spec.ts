@@ -80,22 +80,82 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })).toBeVisible()
   })
 
-  test('leave guard warns when navigating away with unsaved changes', async ({ page, goToWithAuth }) => {
+  test('leave guard warns when navigating away with unsaved metadata changes', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
     const titleInput = page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })
     await titleInput.click()
     await titleInput.fill('Unsaved Change E2E')
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
-    page.on('dialog', async dialog => {
-      await dialog.dismiss()
-    })
-    // Try navigating away using browser back - goBack will trigger beforeunload dialog
-    // which we dismiss, so navigation doesn't complete. Use a short timeout to avoid hanging.
-    await page.goBack({ timeout: 3000 }).catch(() => {})
-    // Should still be on the same page after dismissing the dialog
+
+    // Vue Router leave guard uses window.confirm — fire the click without awaiting it,
+    // otherwise the click() would deadlock waiting for navigation while the dialog blocks it
+    const dialogPromise = page.waitForEvent('dialog')
+    page.getByRole('link', { name: /Jeux de données|Datasets/ }).first().click().catch(() => {})
+    const dialog = await dialogPromise
+    expect(dialog.type()).toBe('confirm')
+    await dialog.dismiss()
+
+    // Navigation was cancelled — still on the dataset page
     await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}`), { timeout: 5000 })
     await expect(page.locator('#metadata')).toBeVisible()
+  })
+
+  test('leave guard warns when navigating away with unsaved schema changes', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
+    const adrButton = page.locator('#structure').getByRole('button').filter({ hasText: /adr/ })
+    await adrButton.click()
+    const labelField = page.locator('#structure').getByPlaceholder(/adr/i)
+    await expect(labelField).toBeVisible({ timeout: 5000 })
+    await labelField.fill('Guard Test Schema Label')
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
+
+    const dialogPromise = page.waitForEvent('dialog')
+    page.getByRole('link', { name: /Jeux de données|Datasets/ }).first().click().catch(() => {})
+    const dialog = await dialogPromise
+    expect(dialog.type()).toBe('confirm')
+    await dialog.dismiss()
+
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}`), { timeout: 5000 })
+  })
+
+  test('cancel metadata changes restores original values', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    const titleInput = page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })
+    const originalTitle = await titleInput.inputValue()
+    await titleInput.click()
+    await titleInput.fill('Title To Be Cancelled')
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
+
+    // Click the Annuler button in the metadata section header (confirm-menu)
+    await page.locator('#metadata').getByRole('button', { name: /Annuler|Cancel/ }).click()
+    // Confirm the cancellation in the v-menu popup (teleported, exact: true to avoid the activator button)
+    await page.getByRole('button', { name: 'Oui', exact: true }).click()
+
+    // Diff is cleared — save button disappears and title is restored
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 5000 })
+    await expect(titleInput).toHaveValue(originalTitle)
+  })
+
+  test('cancel schema changes restores original schema', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
+    const adrButton = page.locator('#structure').getByRole('button').filter({ hasText: /adr/ })
+    await adrButton.click()
+    const labelField = page.locator('#structure').getByPlaceholder(/adr/i)
+    await expect(labelField).toBeVisible({ timeout: 5000 })
+    await labelField.fill('Schema Modification Test')
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).toBeVisible({ timeout: 5000 })
+
+    // Click the Annuler button in the structure section header (confirm-menu)
+    await page.locator('#structure').getByRole('button', { name: 'Annuler', exact: true }).click()
+    // Confirm the cancellation in the v-menu popup
+    await page.getByRole('button', { name: 'Oui', exact: true }).click()
+
+    // Diff is cleared — save button disappears
+    await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 5000 })
   })
 
   // Mutating tests last — these modify the dataset

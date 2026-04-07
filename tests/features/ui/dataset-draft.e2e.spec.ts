@@ -41,13 +41,24 @@ async function waitForFinalizedPolling (ax: any, datasetId: string, params?: any
 async function createFileUpdatedDraft (ax: any) {
   const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-  // Upload a new file as draft
+  // Upload a new file as draft — retry on 409 (worker may briefly hold a lock after finalization)
   const form2 = new FormData()
   form2.append('file', fs.readFileSync('./tests/resources/datasets/dataset2.csv'), 'dataset2.csv')
-  await ax.post('/api/v1/datasets/' + dataset.id, form2, {
-    headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
-    params: { draft: true }
-  })
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await ax.post('/api/v1/datasets/' + dataset.id, form2, {
+        headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
+        params: { draft: true }
+      })
+      break
+    } catch (err: any) {
+      if (err.response?.status === 409 && attempt < 4) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      } else {
+        throw err
+      }
+    }
+  }
   // Poll until the DRAFT reaches finalized status (WS events can be missed due to race conditions)
   return waitForFinalizedPolling(ax, dataset.id, { draft: true })
 }
@@ -105,6 +116,16 @@ test.describe('dataset draft mode - file-new', () => {
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
     await expect(page.locator('#metadata').getByRole('tab', { name: /Détails|Details/ })).toBeVisible()
   })
+
+  // Mutating test last — validates the draft (dataset leaves draft mode)
+  test('validate draft publishes the dataset', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const validateBtn = page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })
+    await expect(validateBtn).toBeVisible({ timeout: 15000 })
+    await validateBtn.click()
+    // After validation the worker processes the dataset; the draft banner should disappear
+    await expect(page.getByText(/créé en mode brouillon|created in draft mode/)).not.toBeVisible({ timeout: 30000 })
+  })
 })
 
 test.describe('dataset draft mode - file-updated', () => {
@@ -159,6 +180,16 @@ test.describe('dataset draft mode - file-updated', () => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
     await expect(page.locator('#metadata').getByRole('tab', { name: /Détails|Details/ })).toBeVisible()
+  })
+
+  // Mutating test last — cancels the draft (dataset reverts to pre-update state)
+  test('cancel draft restores dataset to pre-update state', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const cancelDraftBtn = page.getByRole('button', { name: /Annuler le brouillon|Cancel the draft/ })
+    await expect(cancelDraftBtn).toBeVisible({ timeout: 15000 })
+    await cancelDraftBtn.click()
+    // After cancelling, the draft banner should disappear
+    await expect(page.getByText(/passé en mode brouillon|switched to draft mode/)).not.toBeVisible({ timeout: 30000 })
   })
 })
 

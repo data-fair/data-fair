@@ -1,5 +1,8 @@
 <template>
-  <v-list v-if="taskProgress">
+  <v-list
+    v-if="taskProgress"
+    bg-color="rgb(0,0,0,0)"
+  >
     <v-list-item>
       <v-list-item-title>
         {{ t('activity') }} - {{ t('tasks.' + taskProgress.task) }}
@@ -58,28 +61,28 @@ fr:
   draft: Brouillon
   activity: Activité
   tasks:
-    initialize: initialisation
-    store: chargement
-    index: indexation
-    extend: extensions
-    analyze: analyse
-    validate: validation
-    finalize: finalisation
-    normalize: conversion
-    download: téléchargement
+    initialize: Initialisation
+    store: Chargement
+    index: Indexation
+    extend: Extensions
+    analyze: Analyse
+    validate: Validation
+    finalize: Finalisation
+    normalize: Conversion
+    download: Téléchargement
 en:
   draft: Draft
   activity: Activity
   tasks:
-    initialize: initialization
-    store: loading
-    index: indexing
-    extend: extensions
-    analyze: analysis
-    validate: validation
-    finalize: finalization
-    normalize: conversion
-    download: download
+    initialize: Initialization
+    store: Loading
+    index: Indexing
+    extend: Extensions
+    analyze: Analysis
+    validate: Validation
+    finalize: Finalization
+    normalize: Conversion
+    download: Download
 </i18n>
 
 <script setup lang="ts">

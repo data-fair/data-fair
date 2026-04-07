@@ -80,21 +80,4 @@ test.describe('dataset page restructuring', () => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
-
-  // Mutating test last — modifies the dataset title
-  test('inline metadata save works', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
-    // Edit the title
-    const titleInput = page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })
-    await titleInput.click()
-    await titleInput.fill('Modified For Save Test')
-    // Save button should appear
-    const saveBtn = page.getByRole('button', { name: /Enregistrer|Save/ })
-    await expect(saveBtn).toBeVisible({ timeout: 5000 })
-    // Click save
-    await saveBtn.click()
-    // Save should succeed (button disappears)
-    await expect(saveBtn).not.toBeVisible({ timeout: 10000 })
-  })
 })

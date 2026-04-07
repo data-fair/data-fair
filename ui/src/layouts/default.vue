@@ -31,7 +31,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watchEffect, effectScope, onScopeDispose } from 'vue'
+import { ref, shallowRef, computed, watchEffect, effectScope, onScopeDispose } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
@@ -84,6 +84,7 @@ const agentSystemPrompt = computed(() => agentSystemPrompts[locale.value] ?? age
 let toolsScope: ReturnType<typeof effectScope> | null = null
 watchEffect(() => {
   if (showAgentChat.value && !toolsScope) {
+    agentChatState.value = useAgentChatDrawer()
     toolsScope = effectScope()
     toolsScope.run(() => {
       useAgentNavigationTools({ route, router, navigationGroups, breadcrumbItems: breadcrumbs.items, locale })
@@ -121,11 +122,11 @@ const agentChatDrawerProps = computed(() => {
   }
 })
 
-const agentChatState = useAgentChatDrawer()
+const agentChatState = shallowRef<ReturnType<typeof useAgentChatDrawer> | null>(null)
 
 const mainStyle = computed(() => {
   let rightOffset = 0
-  if (showAgentChat.value && !agentChatDrawerProps.value.temporary && agentChatState.drawerOpen.value) {
+  if (showAgentChat.value && agentChatState.value && !agentChatDrawerProps.value.temporary && agentChatState.value.drawerOpen.value) {
     rightOffset = agentChatDrawerProps.value.width
   }
   return { '--nav-right-offset': rightOffset + 'px' }

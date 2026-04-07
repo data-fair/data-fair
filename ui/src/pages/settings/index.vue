@@ -340,7 +340,7 @@ fr:
   privateVocab: Vocabulaire privé
   publicationSites: Portails
   info: Informations de contact
-  agentChat: AI assistant
+  agentChat: Assistant IA
   agentChatDesc: Activez ou désactivez l'assistant IA pour cette organisation.
   agentChatToggle: Activer l'assistant IA
   compat: Gestion des compatibilités

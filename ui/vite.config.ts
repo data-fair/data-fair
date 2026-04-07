@@ -14,7 +14,10 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/data-fair',
-  optimizeDeps: { include: [...commonjsDeps, 'easymde', 'vuedraggable', 'fast-deep-equal'] },
+  optimizeDeps: {
+    // noDiscovery: true,
+    include: [...commonjsDeps, 'easymde', 'vuedraggable', 'fast-deep-equal']
+  },
   build: {
     rolldownOptions: {
       output: {

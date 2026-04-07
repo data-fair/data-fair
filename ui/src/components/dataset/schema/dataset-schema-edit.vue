@@ -90,7 +90,6 @@
   <dataset-column-editor
     :column="activeColumn"
     :all-columns="props.modelValue"
-    :dataset="dataset"
     :editable="true"
     @remove="removeColumn"
   />
