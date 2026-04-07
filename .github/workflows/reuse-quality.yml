@@ -19,6 +19,21 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Lint
+      run: npm run lint
+
+    - name: Build types
+      run: npm run build-types
+
+    - name: Type check
+      run: npm -w ui run check-types
+
+    - name: Build UI
+      run: npm -w ui run build
+
+    - name: Build parquet-writer
+      run: npm -w parquet-writer run build
+
     - name: Init .env
       run: ./dev/init-env.sh
 
@@ -28,8 +43,11 @@ jobs:
     - name: Start dev API
       run: MODE=server_worker NODE_ENV=development node --experimental-strip-types api/index.ts &
 
-    - name: Run quality checks
-      run: OGR2OGR_SKIP=true npm run quality
+    - name: Run tests
+      run: OGR2OGR_SKIP=true npm run test-unit && OGR2OGR_SKIP=true npm run test-api
+
+    - name: Audit
+      run: npm audit --omit=dev --audit-level=critical
 
     - name: Stop test services
       if: always()
