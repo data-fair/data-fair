@@ -1,5 +1,22 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Edit",
+      "Write",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "mcp__*"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": true,
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
   }
 }
