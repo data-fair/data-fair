@@ -89,15 +89,13 @@
 
   <v-dialog
     v-model="showDeleteDialog"
-    max-width="400"
+    max-width="500"
   >
-    <v-card>
-      <v-card-title>{{ t('delete') }}</v-card-title>
+    <v-card :title="t('delete')">
       <v-card-text>{{ t('deleteText') }}</v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="showDeleteDialog = false"
         >
           {{ t('cancel') }}

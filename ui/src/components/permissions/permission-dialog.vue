@@ -107,7 +107,6 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="showDialog = false"
         >
           {{ t('cancel') }}

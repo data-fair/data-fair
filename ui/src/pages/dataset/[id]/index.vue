@@ -235,8 +235,7 @@
           </v-tabs-window-item>
 
           <v-tabs-window-item value="integration">
-            <integration-dialog
-              inline
+            <embed-integration
               resource-type="datasets"
               :resource="dataset"
             />
@@ -410,7 +409,6 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
-            variant="text"
             @click="showDeleteDialog = false"
           >
             {{ t('no') }}
@@ -430,8 +428,7 @@
       v-model="showDeleteAllLinesDialog"
       max-width="500"
     >
-      <v-card>
-        <v-card-title>{{ t('deleteAllLinesTitle') }}</v-card-title>
+      <v-card :title="t('deleteAllLinesTitle')">
         <v-card-text>
           <v-alert
             type="error"
@@ -443,7 +440,6 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
-            variant="text"
             @click="showDeleteAllLinesDialog = false"
           >
             {{ t('no') }}

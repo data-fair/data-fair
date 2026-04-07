@@ -106,11 +106,7 @@
                 </v-btn>
               </template>
               <template #default="{ isActive }">
-                <v-card>
-                  <v-card-title
-                    :title="t('removeDraft')"
-                    primary-title
-                  />
+                <v-card :title="t('removeDraft')">
                   <v-card-text>
                     <v-alert
                       :title="t('removeDraftWarning')"

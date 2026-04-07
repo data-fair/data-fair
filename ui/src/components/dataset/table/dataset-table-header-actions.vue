@@ -76,7 +76,7 @@
 
   <v-dialog
     v-model="editSelectedResultsDialog"
-    max-width="600px"
+    max-width="500"
   >
     <v-card :title="t('editAllLines', {nbLines: editingLines?.length})">
       <v-form
@@ -94,7 +94,6 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
-            variant="text"
             @click="editSelectedResultsDialog = false"
           >
             {{ t('cancel') }}
@@ -115,7 +114,7 @@
 
   <v-dialog
     v-model="deleteSelectedResultsDialog"
-    max-width="500px"
+    max-width="500"
   >
     <v-card :title="t('deleteAllLines', {nbLines: deletingResults?.length})">
       <v-card-text>
@@ -129,7 +128,6 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="deleteSelectedResultsDialog = false"
         >
           {{ t('cancel') }}
@@ -148,7 +146,7 @@
 
   <v-dialog
     v-model="addLineDialog"
-    max-width="700px"
+    max-width="800"
   >
     <v-card :title="t('addLine')">
       <v-form
@@ -167,7 +165,6 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="addLineDialog = false"
         >
           {{ t('cancel') }}

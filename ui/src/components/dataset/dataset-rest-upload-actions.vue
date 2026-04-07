@@ -1,7 +1,7 @@
 <template>
   <v-dialog
     v-model="dialog"
-    max-width="500px"
+    max-width="500"
     persistent
   >
     <template #activator="{props}">
@@ -190,7 +190,6 @@
         </v-btn>
         <template v-else>
           <v-btn
-            variant="text"
             :disabled="upload.loading.value"
             @click="dialog = false"
           >

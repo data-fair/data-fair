@@ -23,21 +23,20 @@
       v-model="showUpgradeDialog"
       max-width="500"
     >
-      <v-card>
-        <v-card-title>{{ t('upgradeTitle') }}</v-card-title>
+      <v-card :title="t('upgradeTitle')">
         <v-card-text>
           {{ t('upgradeConfirm', { version: upgradeAvailable?.version }) }}
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
-            variant="text"
             @click="showUpgradeDialog = false"
           >
             {{ t('cancel') }}
           </v-btn>
           <v-btn
             color="primary"
+            variant="flat"
             :loading="upgrading"
             @click="confirmUpgrade"
           >
@@ -302,8 +301,7 @@
           </v-tabs-window-item>
 
           <v-tabs-window-item value="integration">
-            <integration-dialog
-              inline
+            <embed-integration
               resource-type="applications"
               :resource="application"
             />
@@ -434,13 +432,11 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card>
-        <v-card-title>{{ t('deleteApp') }}</v-card-title>
+      <v-card :title="t('deleteApp')">
         <v-card-text>{{ t('deleteMsg', { title: application?.title }) }}</v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
-            variant="text"
             @click="showDeleteDialog = false"
           >
             {{ t('no') }}

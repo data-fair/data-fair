@@ -1,7 +1,7 @@
 <template>
   <v-dialog
     v-model="showDialog"
-    max-width="600"
+    max-width="500"
     @update:model-value="onToggle"
   >
     <template #activator="{ props: activatorProps }">
@@ -25,19 +25,7 @@
       />
     </template>
 
-    <v-card>
-      <v-toolbar
-        density="compact"
-        flat
-      >
-        <v-toolbar-title>{{ index === -1 ? t('addAttachment') : t('editAttachment') }}</v-toolbar-title>
-        <v-spacer />
-        <v-btn
-          :icon="mdiClose"
-          @click="showDialog = false"
-        />
-      </v-toolbar>
-
+    <v-card :title="index === -1 ? t('addAttachment') : t('editAttachment')">
       <v-card-text v-if="showDialog">
         <v-text-field
           v-model="editTitle"
@@ -126,14 +114,12 @@
 
       <v-card-actions>
         <v-spacer />
-        <v-btn
-          variant="text"
-          @click="showDialog = false"
-        >
+        <v-btn @click="showDialog = false">
           {{ t('cancel') }}
         </v-btn>
         <v-btn
           color="primary"
+          variant="flat"
           :loading="saving"
           :disabled="!isValid"
           @click="save"
@@ -183,7 +169,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiClose, mdiPencil, mdiPlus } from '@mdi/js'
+import { mdiPencil, mdiPlus } from '@mdi/js'
 
 interface AttachmentItem {
   title?: string

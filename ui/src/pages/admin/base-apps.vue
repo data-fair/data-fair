@@ -107,14 +107,12 @@
 
     <v-dialog
       v-model="showEditDialog"
-      max-width="500px"
+      max-width="500"
     >
-      <v-card v-if="currentBaseApp && patch">
-        <v-card-title primary-title>
-          <h3 class="text-title-large mb-0">
-            Édition de {{ currentBaseApp.title }}
-          </h3>
-        </v-card-title>
+      <v-card
+        v-if="currentBaseApp && patch"
+        :title="`Édition de ${currentBaseApp.title}`"
+      >
         <v-card-text>
           <p>URL : {{ currentBaseApp.url }}</p>
           <v-checkbox
@@ -165,13 +163,13 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
-            variant="text"
             @click="showEditDialog = false"
           >
             Annuler
           </v-btn>
           <v-btn
             color="primary"
+            variant="flat"
             @click="applyPatch.execute(currentBaseApp, patch); showEditDialog = false"
           >
             Enregistrer

@@ -1,7 +1,7 @@
 <template>
   <v-dialog
     v-model="showDialog"
-    max-width="900"
+    max-width="800"
   >
     <template #activator="{ props: activatorProps }">
       <slot
@@ -9,8 +9,7 @@
         :props="activatorProps"
       />
     </template>
-    <v-card>
-      <v-card-title>{{ t('changeOwnerTitle') }}</v-card-title>
+    <v-card :title="t('changeOwnerTitle')">
       <v-card-text>
         <df-owner-pick
           v-model="newOwner"
@@ -39,7 +38,6 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="showDialog = false"
         >
           {{ t('cancel') }}

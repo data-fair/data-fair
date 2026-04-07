@@ -2,7 +2,7 @@
 <template>
   <v-dialog
     v-model="show"
-    max-width="700"
+    max-width="800"
     :scrim="false"
   >
     <v-card
@@ -11,7 +11,6 @@
       <v-toolbar
         density="compact"
         flat
-        color="surface"
       >
         <v-spacer />
         <v-btn

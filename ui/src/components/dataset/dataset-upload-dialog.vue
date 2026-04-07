@@ -1,7 +1,7 @@
 <template>
   <v-dialog
     v-model="showDialog"
-    max-width="700"
+    max-width="800"
     persistent
   >
     <template #activator="{ props: activatorProps }">
@@ -204,7 +204,6 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           :disabled="upload.loading.value"
           @click="showDialog = false"
         >

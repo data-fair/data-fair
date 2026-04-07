@@ -15,8 +15,7 @@
       v-model="showDialog"
       max-width="500"
     >
-      <v-card>
-        <v-card-title>{{ t('editSlug') }}</v-card-title>
+      <v-card :title="t('editSlug')">
         <v-card-text>
           <v-alert
             type="warning"
@@ -38,7 +37,6 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
-            variant="text"
             @click="showDialog = false"
           >
             {{ t('cancel') }}

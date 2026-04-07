@@ -1,89 +1,5 @@
 <template>
-  <v-dialog
-    v-if="!inline"
-    v-model="showDialog"
-    max-width="800"
-  >
-    <template #activator="{ props: activatorProps }">
-      <slot
-        name="activator"
-        :props="activatorProps"
-      />
-    </template>
-    <v-card>
-      <v-toolbar
-        density="compact"
-        flat
-      >
-        <v-toolbar-title>{{ t('title') }}</v-toolbar-title>
-        <v-spacer />
-        <v-btn
-          :icon="mdiClose"
-          @click="showDialog = false"
-        />
-      </v-toolbar>
-      <v-card-text>
-        <p class="mb-4">
-          {{ resourceType === 'datasets' ? t('integrationMsgDataset') : t('integrationMsgApp') }}
-        </p>
-
-        <v-select
-          v-model="mode"
-          :label="t('integrationMode')"
-          :items="['iframe', 'd-frame']"
-          variant="outlined"
-          density="compact"
-          hide-details
-          class="mb-4"
-          style="max-width: 300px;"
-        />
-
-        <template v-if="mode === 'd-frame'">
-          <i18n-t
-            keypath="dFrameIntro"
-            tag="p"
-            class="mb-2"
-          >
-            <template #link>
-              <a
-                href="https://data-fair.github.io/frame/latest/"
-                target="_blank"
-              >D-Frame</a>
-            </template>
-          </i18n-t>
-          <v-checkbox
-            v-model="syncParams"
-            :label="t('syncParams')"
-            density="compact"
-            hide-details
-            class="mb-4"
-          />
-        </template>
-
-        <v-textarea
-          :model-value="snippet"
-          readonly
-          variant="outlined"
-          rows="4"
-          auto-grow
-          hide-details
-          class="mb-2"
-          style="font-family: monospace;"
-        />
-
-        <v-btn
-          color="primary"
-          variant="tonal"
-          size="small"
-          :prepend-icon="copied ? mdiCheck : mdiContentCopy"
-          @click="copyToClipboard"
-        >
-          {{ copied ? t('copied') : t('copy') }}
-        </v-btn>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
-  <div v-else>
+  <div>
     <p class="mb-4">
       {{ resourceType === 'datasets' ? t('integrationMsgDataset') : t('integrationMsgApp') }}
     </p>
@@ -146,7 +62,6 @@
 
 <i18n lang="yaml">
 fr:
-  title: Code d'intégration
   integrationMsgDataset: Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant dans le code source HTML.
   integrationMsgApp: Pour intégrer cette application dans un site vous pouvez copier le code suivant dans le code source HTML.
   integrationMode: Mode d'intégration
@@ -155,7 +70,6 @@ fr:
   copy: Copier
   copied: Copié !
 en:
-  title: Integration code
   integrationMsgDataset: To integrate a preview of this dataset in a website you can copy the code below in your HTML source code.
   integrationMsgApp: To integrate this application in a website you can copy the code below in your HTML source code.
   integrationMode: Integration mode
@@ -166,17 +80,15 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiCheck, mdiClose, mdiContentCopy } from '@mdi/js'
+import { mdiCheck, mdiContentCopy } from '@mdi/js'
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
   resource: { id: string, slug?: string, href?: string, previews?: { id?: string, href?: string, title?: string }[] }
-  inline?: boolean
 }>()
 
 const { t } = useI18n()
 
-const showDialog = ref(false)
 const mode = ref<'iframe' | 'd-frame'>('iframe')
 const syncParams = ref(false)
 const copied = ref(false)
@@ -204,10 +116,4 @@ const copyToClipboard = async () => {
   copied.value = true
   setTimeout(() => { copied.value = false }, 2000)
 }
-
-watch(showDialog, () => {
-  mode.value = 'iframe'
-  syncParams.value = false
-  copied.value = false
-})
 </script>

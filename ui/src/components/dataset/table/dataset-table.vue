@@ -290,7 +290,7 @@
   <v-dialog
     :model-value="!!showMapPreview"
     :scrim="false"
-    max-width="700"
+    max-width="800"
   >
     <v-card
       v-if="showMapPreview"
@@ -298,7 +298,8 @@
       <v-btn
         :icon="mdiClose"
         style="position:absolute;top:4px;right:4px;z-index:1000;"
-        variant="text"
+        color="primary"
+        variant="flat"
         @click="showMapPreview = undefined"
       />
       <async-dataset-map
@@ -322,7 +323,7 @@
   <v-dialog
     v-if="edit"
     :model-value="!!showDeleteDialog"
-    max-width="500px"
+    max-width="500"
   >
     <v-card :title="t('deleteLine')">
       <v-card-text>
@@ -333,7 +334,6 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="showDeleteDialog = undefined"
         >
           {{ t('cancel') }}
@@ -353,7 +353,7 @@
   <v-dialog
     v-if="edit"
     :model-value="!!showEditDialog"
-    max-width="700px"
+    max-width="800"
   >
     <v-card
       :loading="!editedLine"
@@ -377,7 +377,6 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="showEditDialog = undefined"
         >
           {{ t('cancel') }}

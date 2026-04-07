@@ -1,8 +1,5 @@
 <template>
-  <v-dialog
-    v-model="openDialog"
-    max-width="500"
-  >
+  <v-dialog max-width="500">
     <template #activator="{ props: dialogProps }">
       <slot
         name="activator"
@@ -18,40 +15,43 @@
         </v-btn>
       </slot>
     </template>
-    <v-card :title="t('addColumn')">
-      <v-card-text>
-        <v-form v-model="isFormValid">
-          <v-text-field
-            v-model="newColumnKey"
-            :label="t('columnName')"
-            :rules="[v => !!v || t('required'), v => validNewColumnKey(v) || t('keyExists')]"
-            hide-details="auto"
-            class="mb-4"
-            autofocus
-          />
-          <v-select
-            v-model="newColumnType"
-            :label="t('columnType')"
-            :items="typeItems"
-            return-object
-            hide-details
-          />
-        </v-form>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn @click="openDialog = false">
-          {{ t('cancel') }}
-        </v-btn>
-        <v-btn
-          color="primary"
-          variant="flat"
-          @click="addColumn"
-        >
-          {{ t('add') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
+    <template #default="{ isActive }">
+      <v-card :title="t('addColumn')">
+        <v-card-text>
+          <v-form v-model="isFormValid">
+            <v-text-field
+              v-model="newColumnKey"
+              :label="t('columnName')"
+              :rules="[v => !!v || t('required'), v => validNewColumnKey(v) || t('keyExists')]"
+              hide-details="auto"
+              class="mb-4"
+              autofocus
+            />
+            <v-select
+              v-model="newColumnType"
+              :label="t('columnType')"
+              :items="typeItems"
+              return-object
+              hide-details
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="isActive.value = false">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :disabled="!isFormValid"
+            @click="addColumn(); isActive.value = false"
+          >
+            {{ t('add') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </template>
   </v-dialog>
 </template>
 
@@ -90,7 +90,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n({ useScope: 'local' })
 
-const openDialog = ref(false)
 const isFormValid = ref(false)
 const newColumnKey = ref('')
 const newColumnType = ref(propertyTypes[0])
@@ -107,7 +106,6 @@ const validNewColumnKey = (name: string) => {
 }
 
 const addColumn = () => {
-  if (!isFormValid.value) return
   const key = escapeKey(newColumnKey.value)
   const type = newColumnType.value
   emit('add', {
@@ -120,6 +118,5 @@ const addColumn = () => {
   })
   newColumnKey.value = ''
   isFormValid.value = false
-  openDialog.value = false
 }
 </script>
