@@ -20,7 +20,13 @@ declare global {
   const agentToolError: typeof import('../src/composables/agent/utils')['agentToolError']
   const applicationStore: typeof import('../src/composables/application-store')['default']
   const applicationVersions: typeof import('../src/composables/application-versions')['default']
+  const applyDateMatchParam: typeof import('../src/composables/dataset/agent-data-tools-logic')['applyDateMatchParam']
+  const applyGeoParams: typeof import('../src/composables/dataset/agent-data-tools-logic')['applyGeoParams']
   const breadcrumbs: typeof import('../src/utils/breadcrumbs')['default']
+  const buildPaginatedQuery: typeof import('../src/composables/agent/utils')['buildPaginatedQuery']
+  const capabilitiesDefaultFalse: typeof import('../src/composables/dataset/agent-property-config-tools-logic')['capabilitiesDefaultFalse']
+  const capabilitiesProperties: typeof import('../src/composables/dataset/agent-property-config-tools-logic')['capabilitiesProperties']
+  const cleanRow: typeof import('../src/composables/agent/utils')['cleanRow']
   const computed: typeof import('vue')['computed']
   const computedDeepDiff: typeof import('@data-fair/lib-vue/deep-diff.js')['computedDeepDiff']
   const createAgentTranslator: typeof import('../src/composables/agent/utils')['createAgentTranslator']
@@ -28,6 +34,7 @@ declare global {
   const createApplicationStore: typeof import('../src/composables/application-store')['createApplicationStore']
   const createBreadcrumbs: typeof import('../src/composables/layout/use-breadcrumbs')['createBreadcrumbs']
   const createDatasetStore: typeof import('../src/composables/dataset/store')['createDatasetStore']
+  const csvEscape: typeof import('../src/composables/agent/utils')['csvEscape']
   const customRef: typeof import('vue')['customRef']
   const datasetLines: typeof import('../src/composables/dataset-lines')['default']
   const datasetStore: typeof import('../src/composables/dataset-store')['default']
@@ -46,14 +53,26 @@ declare global {
   const dfUiNotif: typeof import('@data-fair/lib-vuetify/ui-notif.vue')['default']
   const dfUiNotifAlert: typeof import('@data-fair/lib-vuetify/ui-notif-alert.vue')['default']
   const dfUserAvatar: typeof import('@data-fair/lib-vuetify/ui-user-avatar.vue')['default']
+  const diffCapabilities: typeof import('../src/composables/dataset/agent-property-config-tools')['diffCapabilities']
   const effectScope: typeof import('vue')['effectScope']
   const escapeKey: typeof import('../src/utils/escape-key')['escapeKey']
+  const executeAggregateData: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeAggregateData']
+  const executeCalculateMetric: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeCalculateMetric']
+  const executeGetDatasetSchema: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeGetDatasetSchema']
+  const executeGetExpressionContext: typeof import('../src/composables/dataset/agent-expression-tools')['executeGetExpressionContext']
+  const executeGetFieldValues: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeGetFieldValues']
+  const executeReadPropertyConfig: typeof import('../src/composables/dataset/agent-property-config-tools')['executeReadPropertyConfig']
+  const executeSearchData: typeof import('../src/composables/dataset/agent-data-tools-logic')['executeSearchData']
+  const executeSetPropertyConfig: typeof import('../src/composables/dataset/agent-property-config-tools')['executeSetPropertyConfig']
+  const fetchSampleRows: typeof import('../src/composables/agent/utils')['fetchSampleRows']
   const findEqFilter: typeof import('../src/composables/dataset/filters')['findEqFilter']
   const formatBytes: typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']
   const formatValue: typeof import('../src/composables/dataset/lines')['formatValue']
   const getActiveHead: typeof import('@unhead/vue')['getActiveHead']
+  const getAvailableSchema: typeof import('../src/composables/dataset/agent-expression-tools')['getAvailableSchema']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
+  const getRelevantCapabilities: typeof import('../src/composables/dataset/agent-property-config-tools')['getRelevantCapabilities']
   const h: typeof import('vue')['h']
   const inject: typeof import('vue')['inject']
   const injectHead: typeof import('@unhead/vue')['injectHead']
@@ -64,6 +83,7 @@ declare global {
   const lines: typeof import('../src/composables/dataset/lines')['default']
   const markRaw: typeof import('vue')['markRaw']
   const nextTick: typeof import('vue')['nextTick']
+  const normalizeSort: typeof import('../src/composables/dataset/agent-data-tools-logic')['normalizeSort']
   const onActivated: typeof import('vue')['onActivated']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
   const onBeforeRouteLeave: typeof import('vue-router')['onBeforeRouteLeave']
@@ -93,6 +113,7 @@ declare global {
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
   const ref: typeof import('vue')['ref']
+  const resolveCapabilities: typeof import('../src/composables/dataset/agent-property-config-tools')['resolveCapabilities']
   const resolveComponent: typeof import('vue')['resolveComponent']
   const serializeDatasetInfo: typeof import('../src/composables/dataset/agent-tools')['serializeDatasetInfo']
   const setBreadcrumbs: typeof import('../src/utils/breadcrumbs')['setBreadcrumbs']
@@ -100,21 +121,28 @@ declare global {
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
   const store: typeof import('../src/composables/dataset/store')['default']
+  const toCsv: typeof import('../src/composables/agent/utils')['toCsv']
   const toRaw: typeof import('vue')['toRaw']
   const toRef: typeof import('vue')['toRef']
   const toRefs: typeof import('vue')['toRefs']
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
+  const useAgentApplicationCreationTools: typeof import('../src/composables/application/agent-creation-tools')['useAgentApplicationCreationTools']
   const useAgentApplicationTools: typeof import('../src/composables/application/agent-tools')['useAgentApplicationTools']
   const useAgentConnectorTools: typeof import('../src/composables/agent/connector-tools')['useAgentConnectorTools']
+  const useAgentDataQualityTools: typeof import('../src/composables/dataset/agent-data-quality-tools')['useAgentDataQualityTools']
   const useAgentDatasetChangesSummaryTools: typeof import('../src/composables/dataset/agent-changes-summary-tools')['useAgentDatasetChangesSummaryTools']
+  const useAgentDatasetCreationTools: typeof import('../src/composables/dataset/agent-creation-tools')['useAgentDatasetCreationTools']
   const useAgentDatasetDataTools: typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']
+  const useAgentDatasetDescriptionTools: typeof import('../src/composables/dataset/agent-description-tools')['useAgentDatasetDescriptionTools']
   const useAgentDatasetSummaryTools: typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']
   const useAgentDatasetTools: typeof import('../src/composables/dataset/agent-tools')['useAgentDatasetTools']
   const useAgentExpressionTools: typeof import('../src/composables/dataset/agent-expression-tools')['useAgentExpressionTools']
   const useAgentGeoTools: typeof import('../src/composables/agent/geo-tools')['useAgentGeoTools']
   const useAgentNavigationTools: typeof import('../src/composables/agent/navigation-tools')['useAgentNavigationTools']
+  const useAgentPropertyConfigTools: typeof import('../src/composables/dataset/agent-property-config-tools')['useAgentPropertyConfigTools']
+  const useAgentSchemaAnnotationTools: typeof import('../src/composables/dataset/agent-schema-annotation-tools')['useAgentSchemaAnnotationTools']
   const useAgentSummaryTools: typeof import('../src/composables/use-agent-summary-tools')['useAgentSummaryTools']
   const useApplicationStore: typeof import('../src/composables/application/store')['useApplicationStore']
   const useApplicationVersions: typeof import('../src/composables/application/versions')['useApplicationVersions']
@@ -200,25 +228,44 @@ declare module 'vue' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly accepted: UnwrapRef<typeof import('../src/utils/dataset')['accepted']>
     readonly agentToolError: UnwrapRef<typeof import('../src/composables/agent/utils')['agentToolError']>
+    readonly applyDateMatchParam: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['applyDateMatchParam']>
+    readonly applyGeoParams: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['applyGeoParams']>
     readonly breadcrumbs: UnwrapRef<typeof import('../src/utils/breadcrumbs')['default']>
+    readonly buildPaginatedQuery: UnwrapRef<typeof import('../src/composables/agent/utils')['buildPaginatedQuery']>
+    readonly capabilitiesDefaultFalse: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools-logic')['capabilitiesDefaultFalse']>
+    readonly capabilitiesProperties: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools-logic')['capabilitiesProperties']>
+    readonly cleanRow: UnwrapRef<typeof import('../src/composables/agent/utils')['cleanRow']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedDeepDiff: UnwrapRef<typeof import('@data-fair/lib-vue/deep-diff.js')['computedDeepDiff']>
     readonly createAgentTranslator: UnwrapRef<typeof import('../src/composables/agent/utils')['createAgentTranslator']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createBreadcrumbs: UnwrapRef<typeof import('../src/composables/layout/use-breadcrumbs')['createBreadcrumbs']>
     readonly createDatasetStore: UnwrapRef<typeof import('../src/composables/dataset/store')['createDatasetStore']>
+    readonly csvEscape: UnwrapRef<typeof import('../src/composables/agent/utils')['csvEscape']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly datasetStoreKey: UnwrapRef<typeof import('../src/composables/dataset/store')['datasetStoreKey']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
+    readonly diffCapabilities: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['diffCapabilities']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly escapeKey: UnwrapRef<typeof import('../src/utils/escape-key')['escapeKey']>
+    readonly executeAggregateData: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeAggregateData']>
+    readonly executeCalculateMetric: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeCalculateMetric']>
+    readonly executeGetDatasetSchema: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeGetDatasetSchema']>
+    readonly executeGetExpressionContext: UnwrapRef<typeof import('../src/composables/dataset/agent-expression-tools')['executeGetExpressionContext']>
+    readonly executeGetFieldValues: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeGetFieldValues']>
+    readonly executeReadPropertyConfig: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['executeReadPropertyConfig']>
+    readonly executeSearchData: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['executeSearchData']>
+    readonly executeSetPropertyConfig: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['executeSetPropertyConfig']>
+    readonly fetchSampleRows: UnwrapRef<typeof import('../src/composables/agent/utils')['fetchSampleRows']>
     readonly findEqFilter: UnwrapRef<typeof import('../src/composables/dataset/filters')['findEqFilter']>
     readonly formatBytes: UnwrapRef<typeof import('@data-fair/lib-vue/format/bytes.js')['formatBytes']>
     readonly formatValue: UnwrapRef<typeof import('../src/composables/dataset/lines')['formatValue']>
     readonly getActiveHead: UnwrapRef<typeof import('@unhead/vue')['getActiveHead']>
+    readonly getAvailableSchema: UnwrapRef<typeof import('../src/composables/dataset/agent-expression-tools')['getAvailableSchema']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
+    readonly getRelevantCapabilities: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['getRelevantCapabilities']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectHead: UnwrapRef<typeof import('@unhead/vue')['injectHead']>
@@ -229,6 +276,7 @@ declare module 'vue' {
     readonly lines: UnwrapRef<typeof import('../src/composables/dataset/lines')['default']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly normalizeSort: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools-logic')['normalizeSort']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>
@@ -258,6 +306,7 @@ declare module 'vue' {
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
+    readonly resolveCapabilities: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['resolveCapabilities']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly serializeDatasetInfo: UnwrapRef<typeof import('../src/composables/dataset/agent-tools')['serializeDatasetInfo']>
     readonly setBreadcrumbs: UnwrapRef<typeof import('../src/utils/breadcrumbs')['setBreadcrumbs']>
@@ -265,21 +314,28 @@ declare module 'vue' {
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly store: UnwrapRef<typeof import('../src/composables/dataset/store')['default']>
+    readonly toCsv: UnwrapRef<typeof import('../src/composables/agent/utils')['toCsv']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
+    readonly useAgentApplicationCreationTools: UnwrapRef<typeof import('../src/composables/application/agent-creation-tools')['useAgentApplicationCreationTools']>
     readonly useAgentApplicationTools: UnwrapRef<typeof import('../src/composables/application/agent-tools')['useAgentApplicationTools']>
     readonly useAgentConnectorTools: UnwrapRef<typeof import('../src/composables/agent/connector-tools')['useAgentConnectorTools']>
+    readonly useAgentDataQualityTools: UnwrapRef<typeof import('../src/composables/dataset/agent-data-quality-tools')['useAgentDataQualityTools']>
     readonly useAgentDatasetChangesSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-changes-summary-tools')['useAgentDatasetChangesSummaryTools']>
+    readonly useAgentDatasetCreationTools: UnwrapRef<typeof import('../src/composables/dataset/agent-creation-tools')['useAgentDatasetCreationTools']>
     readonly useAgentDatasetDataTools: UnwrapRef<typeof import('../src/composables/dataset/agent-data-tools')['useAgentDatasetDataTools']>
+    readonly useAgentDatasetDescriptionTools: UnwrapRef<typeof import('../src/composables/dataset/agent-description-tools')['useAgentDatasetDescriptionTools']>
     readonly useAgentDatasetSummaryTools: UnwrapRef<typeof import('../src/composables/dataset/agent-summary-tools')['useAgentDatasetSummaryTools']>
     readonly useAgentDatasetTools: UnwrapRef<typeof import('../src/composables/dataset/agent-tools')['useAgentDatasetTools']>
     readonly useAgentExpressionTools: UnwrapRef<typeof import('../src/composables/dataset/agent-expression-tools')['useAgentExpressionTools']>
     readonly useAgentGeoTools: UnwrapRef<typeof import('../src/composables/agent/geo-tools')['useAgentGeoTools']>
     readonly useAgentNavigationTools: UnwrapRef<typeof import('../src/composables/agent/navigation-tools')['useAgentNavigationTools']>
+    readonly useAgentPropertyConfigTools: UnwrapRef<typeof import('../src/composables/dataset/agent-property-config-tools')['useAgentPropertyConfigTools']>
+    readonly useAgentSchemaAnnotationTools: UnwrapRef<typeof import('../src/composables/dataset/agent-schema-annotation-tools')['useAgentSchemaAnnotationTools']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application/store')['useApplicationStore']>
     readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application/versions')['useApplicationVersions']>
     readonly useApplicationWatch: UnwrapRef<typeof import('../src/composables/application/watch')['useApplicationWatch']>

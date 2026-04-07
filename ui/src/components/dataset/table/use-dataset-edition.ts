@@ -11,6 +11,7 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
     selectedResults.value = []
   })
 
+  const addLineTrigger = ref(false)
   const saving = ref(false)
   const bulkLines = async (body: any) => {
     saving.value = true
@@ -49,6 +50,7 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
 
   return {
     selectedResults,
+    addLineTrigger,
     saving,
     bulkLines,
     saveLine
