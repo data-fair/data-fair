@@ -37,6 +37,9 @@ jobs:
     - name: Init .env
       run: ./dev/init-env.sh
 
+    - name: Add DEV_HOST to /etc/hosts
+      run: echo "127.0.0.1 $(grep DEV_HOST .env | cut -d= -f2)" | sudo tee -a /etc/hosts
+
     - name: Start test services
       run: docker compose --profile test up -d --wait
 
