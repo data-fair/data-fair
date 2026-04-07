@@ -25,7 +25,7 @@ export const schema = {
       datasetId: { type: 'string' as const, description: 'The dataset ID that was queried' },
       fieldKey: { type: 'string' as const, description: 'The column key that was queried' },
       total: { type: 'number' as const, description: 'Total number of rows included in the calculation' },
-      metric: { description: 'The calculated metric value. For avg/sum/min/max/value_count/cardinality: a single number. For stats: an object {count, min, max, avg, sum}. For percentiles: an object mapping percentage strings to values, e.g. {"25": 30000, "50": 42000, "75": 55000}.' }
+      metric: { type: 'object' as const, description: 'The calculated metric value. For avg/sum/min/max/value_count/cardinality: a single number. For stats: an object {count, min, max, avg, sum}. For percentiles: an object mapping percentage strings to values, e.g. {"25": 30000, "50": 42000, "75": 55000}.' }
     },
     required: ['datasetId', 'fieldKey', 'total', 'metric'] as const
   }

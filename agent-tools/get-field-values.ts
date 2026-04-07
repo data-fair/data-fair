@@ -26,7 +26,7 @@ export const schema = {
       fieldKey: { type: 'string' as const, description: 'The column key that was queried' },
       values: {
         type: 'array' as const,
-        items: {},
+        items: { type: 'string' as const },
         description: 'Array of distinct values for the specified column'
       }
     },

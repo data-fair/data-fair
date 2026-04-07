@@ -45,7 +45,7 @@ export const schema = {
             total: { type: 'number' as const, description: 'Total number of rows aggregated for this group' },
             total_values: { type: 'number' as const, description: 'Total number of different values aggregated for this group' },
             total_other: { type: 'number' as const, description: 'Number of rows NOT included in the returned aggregations for this group' },
-            value: { description: 'The value of the aggregated column (string or number)' },
+            value: { type: 'string' as const, description: 'The value of the aggregated column (string or number)' },
             metric: { type: 'number' as const, description: 'The value of the aggregation metric (e.g., sum, avg) on the selected column' },
             aggs: { type: 'array' as const, items: { type: 'object' as const }, description: 'Nested aggregation results when multiple columns are specified (max 3 levels deep)' }
           }

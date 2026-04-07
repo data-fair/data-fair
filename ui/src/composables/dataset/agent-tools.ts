@@ -17,7 +17,8 @@ export function useAgentDatasetTools (locale: Ref<string>) {
       const data = await $fetch<any>(path, { query })
       const page = Math.max(params.page || 1, 1)
       const size = Math.min(Math.max(params.size || 10, 1), 50)
-      return listDatasets.formatResult(data, page, size).text
+      const result = listDatasets.formatResult(data, page, size)
+      return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
     }
   })
 
@@ -26,7 +27,8 @@ export function useAgentDatasetTools (locale: Ref<string>) {
     annotations: { title: (describeDataset.annotations as any)[locale.value]?.title ?? describeDataset.annotations.en.title, readOnlyHint: true },
     execute: async (params) => {
       const dataset = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}`)
-      return describeDataset.formatResult(dataset, { includeOwner: true }).text
+      const result = describeDataset.formatResult(dataset, { includeOwner: true })
+      return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
     }
   })
 }
