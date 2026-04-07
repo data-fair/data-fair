@@ -40,6 +40,9 @@ jobs:
     - name: Start test services
       run: docker compose --profile test up -d --wait
 
+    - name: Start mock server
+      run: node --experimental-strip-types dev/mock-server.ts &
+
     - name: Start dev API
       run: MODE=server_worker NODE_ENV=development NODE_CONFIG_DIR=api/config node --experimental-strip-types api/index.ts &
 
