@@ -11,7 +11,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="baseApplicationItems.length"
       v-model="baseApplication"
       :items="baseApplicationItems"
@@ -22,7 +22,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="visibilityItems.length"
       v-model="visibility"
       :items="visibilityItems"
@@ -33,7 +33,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="topicsItems.length"
       v-model="topics"
       :items="topicsItems"
@@ -44,7 +44,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="publicationSitesItems.length"
       v-model="publicationSites"
       :items="publicationSitesItems"
@@ -55,7 +55,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="requestedPublicationSitesItems.length"
       v-model="requestedPublicationSites"
       :items="requestedPublicationSitesItems"
@@ -73,7 +73,7 @@
 const { t } = useI18n()
 
 const props = defineProps<{
-  facets: Record<string, { count: number, value: string, [key: string]: any }[]>
+  facets: Record<string, { count: number, value: any }[]>
 }>()
 
 const owner = defineModel<string[]>('owner', { default: () => [] })
@@ -96,12 +96,35 @@ const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: a
 
 const ownerValueFn = (f: any) => `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
 const ownerItems = facetToItems('owner', (f) => f.value.departmentName || f.value.name || f.value.id, ownerValueFn)
-const baseApplicationItems = facetToItems('base-application', (f) => f.title || f.value)
+const baseApplicationItems = facetToItems(
+  'base-application',
+  (f) => `${f.value?.title || ''} ${f.value?.version || ''}`.trim() || f.value,
+  (f) => f.value?.url || f.value
+)
 const visibilityItems = facetToItems('visibility', (f) => t('visibilityValues.' + f.value))
-const topicsItems = facetToItems('topics', (f) => f.title || f.value)
+const topicsItems = facetToItems('topics', (f) => f.value?.title || f.value, (f) => f.value?.id || f.value)
+// Fetch publication sites for current account to resolve names
+const session = useSession()
+const publicationSitesById = ref<Record<string, any>>({})
+const pubSitesPath = computed(() => {
+  const a = session.account.value
+  return a ? $apiPath + '/settings/' + a.type + '/' + a.id + '/publication-sites' : null
+})
+const pubSitesFetch = useFetch<any[]>(() => pubSitesPath.value)
+watch(() => pubSitesFetch.data.value, (sites) => {
+  if (!sites) return
+  const map: Record<string, any> = {}
+  for (const site of sites) map[`${site.type}:${site.id}`] = site
+  publicationSitesById.value = map
+})
+
 const nonNullFilter = (f: any) => f.value !== null
-const publicationSitesItems = facetToItems('publicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
-const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
+const publicationSitesLabelFn = (f: any) => {
+  const site = publicationSitesById.value[f.value]
+  return site?.title || site?.url || f.value
+}
+const publicationSitesItems = facetToItems('publicationSites', publicationSitesLabelFn, undefined, nonNullFilter)
+const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', publicationSitesLabelFn, undefined, nonNullFilter)
 </script>
 
 <i18n lang="yaml">

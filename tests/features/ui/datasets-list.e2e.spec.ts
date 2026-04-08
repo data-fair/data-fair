@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, clearPublicationSitesCache } from '../../support/workers.ts'
 
 test.describe('datasets list page', () => {
   test.beforeAll(async () => {
@@ -285,12 +285,13 @@ test.describe('publication sites facet', () => {
     if (testInfo.status === 'passed') await checkPendingTasks()
   })
 
-  test('publication sites facet does not show null values', async ({ page, goToWithAuth }) => {
+  async function setupOrgWithPublicationSite (page: any, goToWithAuth: any) {
     const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
 
     // Create a publication site
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com', title: 'Test Portal' }
     await axOrg.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await clearPublicationSitesCache()
 
     // Create a dataset published on the site
     await sendDataset('datasets/dataset1.csv', axOrg, {}, { title: 'Published Dataset' })
@@ -307,6 +308,10 @@ test.describe('publication sites facet', () => {
     await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
     await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
     await page.goto(`${baseUrl}/data-fair/datasets`)
+  }
+
+  test('publication sites facet does not show null values', async ({ page, goToWithAuth }) => {
+    await setupOrgWithPublicationSite(page, goToWithAuth)
 
     // Wait for datasets to load
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
@@ -325,5 +330,88 @@ test.describe('publication sites facet', () => {
       const text = await options.nth(i).textContent()
       expect(text).not.toMatch(/\bnull\b/)
     }
+  })
+
+  test('publication sites facet shows portal names, not IDs', async ({ page, goToWithAuth }) => {
+    await setupOrgWithPublicationSite(page, goToWithAuth)
+
+    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
+
+    const navRight = page.locator('.v-navigation-drawer--right')
+    const pubSitesFacet = navRight.locator('.v-select').filter({ hasText: 'Sites de publication' })
+    await expect(pubSitesFacet).toBeVisible({ timeout: 5000 })
+    await pubSitesFacet.click()
+
+    const options = page.getByRole('option')
+    await expect(options.first()).toBeVisible({ timeout: 5000 })
+    const count = await options.count()
+    for (let i = 0; i < count; i++) {
+      const text = await options.nth(i).textContent()
+      // Should show the portal title "Test Portal", not the raw ID "data-fair-portals:portal1"
+      expect(text).not.toContain('data-fair-portals:')
+      expect(text).toContain('Test Portal')
+    }
+  })
+})
+
+test.describe('topics facet display', () => {
+  test.beforeAll(async () => {
+    await clean()
+    const ax = await axiosAuth('test_user1@test.com')
+    // Create topics in user settings
+    const settingsRes = await ax.put('/api/v1/settings/user/test_user1', {
+      topics: [{ title: 'Environnement' }, { title: 'Transport' }]
+    })
+    const topics = settingsRes.data.topics
+    // Create datasets with topics
+    await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'Env Dataset' })
+    await sendDataset('datasets/dataset2.csv', ax, {}, { title: 'Transport Dataset' })
+    const datasets = (await ax.get('/api/v1/datasets')).data
+    await ax.patch(`/api/v1/datasets/${datasets.results[0].id}`, { topics: [topics[0]] })
+    await ax.patch(`/api/v1/datasets/${datasets.results[1].id}`, { topics: [topics[1]] })
+  })
+
+  test.afterAll(async () => {
+    await checkPendingTasks()
+  })
+
+  test('topics facet displays topic titles, not [object Object]', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
+
+    const navRight = page.locator('.v-navigation-drawer--right')
+    const topicsFacet = navRight.locator('.v-select').filter({ hasText: 'Thématiques' })
+    await expect(topicsFacet).toBeVisible({ timeout: 5000 })
+    await topicsFacet.click()
+
+    const options = page.getByRole('option')
+    await expect(options.first()).toBeVisible({ timeout: 5000 })
+    const count = await options.count()
+    for (let i = 0; i < count; i++) {
+      const text = await options.nth(i).textContent()
+      expect(text).not.toContain('[object Object]')
+    }
+    // At least one option should contain a known topic title
+    const allTexts = await options.allTextContents()
+    const hasEnv = allTexts.some(t => t.includes('Environnement'))
+    const hasTransport = allTexts.some(t => t.includes('Transport'))
+    expect(hasEnv || hasTransport).toBe(true)
+  })
+
+  test('selecting a topic facet filters datasets', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await expect(page.getByText('2 jeux de données')).toBeVisible({ timeout: 10000 })
+
+    const navRight = page.locator('.v-navigation-drawer--right')
+    const topicsFacet = navRight.locator('.v-select').filter({ hasText: 'Thématiques' })
+    await expect(topicsFacet).toBeVisible({ timeout: 5000 })
+    await topicsFacet.click()
+
+    // Select the first topic option
+    await page.getByRole('option').first().click()
+    await page.keyboard.press('Escape')
+
+    // Should filter to 1 dataset
+    await expect(page.getByText('1 jeux de données')).toBeVisible({ timeout: 10000 })
   })
 })

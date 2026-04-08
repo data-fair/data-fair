@@ -11,7 +11,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="statusItems.length"
       v-model="status"
       :items="statusItems"
@@ -22,7 +22,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="draftStatusItems.length"
       v-model="draftStatus"
       :items="draftStatusItems"
@@ -33,7 +33,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="visibilityItems.length"
       v-model="visibility"
       :items="visibilityItems"
@@ -44,7 +44,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="topicsItems.length"
       v-model="topics"
       :items="topicsItems"
@@ -55,7 +55,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="publicationSitesItems.length"
       v-model="publicationSites"
       :items="publicationSitesItems"
@@ -66,7 +66,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="requestedPublicationSitesItems.length"
       v-model="requestedPublicationSites"
       :items="requestedPublicationSitesItems"
@@ -77,7 +77,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="servicesItems.length"
       v-model="services"
       :items="servicesItems"
@@ -88,7 +88,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="conceptsItems.length"
       v-model="concepts"
       :items="conceptsItems"
@@ -106,7 +106,7 @@
 const { t } = useI18n()
 
 const props = defineProps<{
-  facets: Record<string, { count: number, value: string, [key: string]: any }[]>
+  facets: Record<string, { count: number, value: any }[]>
 }>()
 
 const owner = defineModel<string[]>('owner', { default: () => [] })
@@ -135,12 +135,37 @@ const ownerItems = facetToItems('owner', (f) => f.value.departmentName || f.valu
 const statusItems = facetToItems('status', (f) => t('statusValues.' + f.value))
 const draftStatusItems = facetToItems('draftStatus', (f) => t('draftStatusValues.' + f.value))
 const visibilityItems = facetToItems('visibility', (f) => t('visibilityValues.' + f.value))
-const topicsItems = facetToItems('topics', (f) => f.title || f.value)
+const topicsItems = facetToItems('topics', (f) => f.value?.title || f.value, (f) => f.value?.id || f.value)
+// Fetch publication sites for current account to resolve names
+const session = useSession()
+const publicationSitesById = ref<Record<string, any>>({})
+const pubSitesPath = computed(() => {
+  const a = session.account.value
+  return a ? $apiPath + '/settings/' + a.type + '/' + a.id + '/publication-sites' : null
+})
+const pubSitesFetch = useFetch<any[]>(() => pubSitesPath.value)
+watch(() => pubSitesFetch.data.value, (sites) => {
+  if (!sites) return
+  const map: Record<string, any> = {}
+  for (const site of sites) map[`${site.type}:${site.id}`] = site
+  publicationSitesById.value = map
+})
+
 const nonNullFilter = (f: any) => f.value !== null
-const publicationSitesItems = facetToItems('publicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
-const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
-const servicesItems = facetToItems('services')
-const conceptsItems = facetToItems('concepts', (f) => f.title || f.value)
+const publicationSitesLabelFn = (f: any) => {
+  const site = publicationSitesById.value[f.value]
+  return site?.title || site?.url || f.value
+}
+const publicationSitesItems = facetToItems('publicationSites', publicationSitesLabelFn, undefined, nonNullFilter)
+const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', publicationSitesLabelFn, undefined, nonNullFilter)
+const servicesItems = facetToItems('services', (f) => typeof f.value === 'string' ? f.value.replace('koumoul-', '').replace('-koumoul', '') : f.value)
+const { vocabulary } = useStore()
+const conceptsItems = facetToItems(
+  'concepts',
+  (f) => vocabulary.value[f.value]?.title || f.value,
+  undefined,
+  (f) => !!vocabulary.value[f.value]
+)
 </script>
 
 <i18n lang="yaml">
@@ -152,7 +177,7 @@ fr:
   topics: Thématiques
   publicationSites: Sites de publication
   requestedPublicationSites: Publications demandées
-  services: Services
+  services: Enrichissement
   concepts: Concepts
   statusValues:
     finalized: Finalisé
@@ -177,7 +202,7 @@ en:
   topics: Topics
   publicationSites: Publication sites
   requestedPublicationSites: Requested publications
-  services: Services
+  services: Extensions
   concepts: Concepts
   statusValues:
     finalized: Finalized
