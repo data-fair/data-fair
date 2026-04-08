@@ -55,6 +55,7 @@
                     <v-tab
                       v-if="tabInfo"
                       :value="tabInfo.key"
+                      :append-icon="tabInfo.appendIcon"
                       :base-color="tabInfo.color"
                       :color="tabInfo.color"
                     >
@@ -89,7 +90,7 @@ import { computed } from 'vue'
 import { useDisplay, useTheme } from 'vuetify'
 import DfThemedSvg from '@data-fair/lib-vuetify/themed-svg.vue'
 
-type TabInfo = { key: string, title: string, icon?: string, color?: string } | null
+type TabInfo = { key: string, title: string, icon?: string, appendIcon?: string, color?: string } | null
 
 const { title, tabs, svg, color = 'primary' } = defineProps<{
   id: string,

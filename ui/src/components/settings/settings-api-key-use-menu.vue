@@ -1,8 +1,7 @@
 <template>
   <v-menu
     v-model="menu"
-    max-width="700px"
-    min-width="500px"
+    max-width="800"
     :close-on-content-click="false"
   >
     <template #activator="{ props }">

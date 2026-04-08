@@ -32,10 +32,12 @@ const filters = {
 export const schema = {
   type: 'object',
   title: 'Données de référence',
+  layout: { title: null },
   properties: {
     shareOrgs: {
       type: 'array',
       title: 'Partagez cette donnée de référence avec vos partenaires',
+      description: 'Le partage à des partenaires affecte simplement la visibilité des actions liées à ces données de référence. Il est sans effet sur les permissions que vous devez définir séparément.',
       items: {
         type: 'object',
         properties: {
@@ -57,6 +59,7 @@ export const schema = {
     bulkSearchs: {
       type: 'array',
       title: 'Récupération de lignes en masse',
+      description: 'Permettez à vos utilisateurs de récupérer un grand nombre de lignes à partir d\'une règle de correspondance simple. Cette fonctionnalité permet de créer une nouvelle source d\'enrichissement.',
       items: {
         type: 'object',
         required: ['title'],
@@ -176,6 +179,7 @@ Exemple: ma_colonne,-ma_colonne2`
     singleSearchs: {
       type: 'array',
       title: 'Recherche de paires code / libellé',
+      description: 'Permettez à vos utilisateurs de récupérer une liste de résultats à partir d\'une recherche textuelle sur une colonne de libellés. Cette fonctionnalité permet de créer des champs de recherche dans les formulaires d\'édition de ligne des jeux éditables.',
       items: {
         type: 'object',
         required: ['title', 'output'],
@@ -239,6 +243,7 @@ Exemple: ma_colonne,-ma_colonne2`
     },
     virtualDatasets: {
       type: 'object',
+      description: 'Proposez à vos utilisateurs de créer des jeux virtuels à partir de ce jeu de données. C\'est une option intéressante pour faciliter la création de vues filtrées de cette donnée.',
       properties: {
         active: {
           type: 'boolean',
@@ -248,6 +253,7 @@ Exemple: ma_colonne,-ma_colonne2`
     },
     standardSchema: {
       type: 'object',
+      description: 'Proposez à vos utilisateurs d\'initialiser des jeux éditables à partir des métadonnées et des données de ce jeu de données.',
       properties: {
         active: {
           type: 'boolean',

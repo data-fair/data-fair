@@ -27,6 +27,7 @@
           class="ml-2"
           color="accent"
           variant="flat"
+          :disabled="!masterDataFormValid"
           :loading="structureEditFetch.save.loading.value"
           @click="structureEditFetch.save.execute()"
         >
@@ -75,6 +76,7 @@
           <dataset-master-data
             v-if="structureEditFetch.data.value"
             v-model="structureEditFetch.data.value"
+            @update:valid="v => masterDataFormValid = v"
           />
         </v-tabs-window-item>
       </template>
@@ -472,6 +474,14 @@
 
     <df-navigation-right>
       <dataset-actions />
+      <v-list
+        v-if="taskProgress?.task"
+        density="compact"
+        class="py-0"
+        bg-color="background"
+      >
+        <dataset-task-progress :task-progress="taskProgress" />
+      </v-list>
       <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
@@ -590,7 +600,7 @@ import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import SectionTabsLocal from '~/components/common/section-tabs-local.vue'
 import DatasetRestConfig from '~/components/dataset/dataset-rest-config.vue'
-import { mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/store'
@@ -639,9 +649,22 @@ const metadataEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params
   }
 })
 
+// Normalize structure data to prevent false diffs from child component initialization
+function normalizeStructureData (d: any) {
+  if (!d) return
+  d.extensions = (d.extensions || []).filter((e: any) => e.active !== false)
+  if (!d.masterData) d.masterData = { standardSchema: {}, virtualDatasets: {}, singleSearchs: [], bulkSearchs: [] }
+}
+
+const masterDataFormValid = ref(true)
+
 // Sync store.dataset with both editFetch instances
 watch(structureEditFetch.serverData, (d) => {
-  if (d) dataset.value = d as any
+  if (d) {
+    normalizeStructureData(d)
+    normalizeStructureData(structureEditFetch.data.value)
+    dataset.value = d as any
+  }
 })
 watch(metadataEditFetch.serverData, (d) => {
   if (d) dataset.value = d as any
@@ -839,7 +862,8 @@ const sections = computedDeepDiff(() => {
         key: 'master-data',
         title: t('masterData'),
         icon: mdiDatabase,
-        color: masterDataHasDiff.value ? 'accent' : undefined
+        color: !masterDataFormValid.value ? 'error' : (masterDataHasDiff.value ? 'accent' : undefined),
+        appendIcon: !masterDataFormValid.value ? mdiAlertCircle : undefined
       })
     }
 

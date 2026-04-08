@@ -13,11 +13,11 @@
         />
         <template #append>
           <v-btn
-            :icon="mdiPlay"
-            title="Relancer"
             color="primary"
             @click="patchDataset.execute({})"
-          />
+          >
+            {{ t('restart') }}
+          </v-btn>
         </template>
       </v-alert>
       <v-list-item
@@ -95,7 +95,6 @@
           v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
           :disabled="!can('cancelDraft').value"
           :color="(draftError || draftValidationError) ? 'default' : 'warning'"
-          variant="flat"
           @click="cancelDraft.execute()"
         >
           {{ t('cancelDraft') }}
@@ -104,7 +103,6 @@
           v-if="dataset.status === 'finalized'"
           :disabled="!can('validateDraft').value"
           :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
-          variant="flat"
           @click="validateDraft.execute()"
         >
           {{ t('validateDraft') }}
@@ -122,6 +120,7 @@ fr:
   draftUpdated2: Vérifiez que le fichier a bien été lu et que le schéma est correct, parcourez les 100 premières lignes de la donnée, etc.
   draftValidateCan: Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
   draftValidateCannot: Vous n'avez pas la permission pour publier ce brouillon, peut-être devriez-vous contacter un administrateur ?
+  restart: Relancer
   cancelDraft: Annuler le brouillon
   validateDraft: Valider le brouillon
 en:
@@ -131,12 +130,12 @@ en:
   draftUpdated2: Check that the file was property read, browse the first 100 lines, etc. When satisfied, validate the draft and the dataset will be processed entirely.
   draftValidationCan:  When satisfied, validate the draft and the dataset will be processed entirely.
   draftValidationCannot: You lack the permission to validate this draft, you should contact an admin.
+  restart: Restart
   cancelDraft: Cancel the draft
   validateDraft: Validate the draft
 </i18n>
 
 <script setup lang="ts">
-import { mdiPlay } from '@mdi/js'
 import allEvents from '~/../../shared/events.json'
 
 const events = allEvents.dataset as Record<string, { icon: string, color?: string, text: Record<string, string> }>

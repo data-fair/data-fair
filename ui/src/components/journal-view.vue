@@ -3,17 +3,7 @@
     v-if="taskProgress"
     bg-color="rgb(0,0,0,0)"
   >
-    <v-list-item>
-      <v-list-item-title>
-        {{ t('activity') }} - {{ t('tasks.' + taskProgress.task) }}
-      </v-list-item-title>
-      <v-progress-linear
-        :model-value="taskProgress.progress"
-        :indeterminate="taskProgress.progress === -1"
-        :color="taskProgress.error ? 'error' : 'primary'"
-        class="mt-1"
-      />
-    </v-list-item>
+    <dataset-task-progress :task-progress="taskProgress" />
   </v-list>
   <v-list
     v-for="(group, i) in groupedEvents"
@@ -59,30 +49,8 @@
 <i18n lang="yaml">
 fr:
   draft: Brouillon
-  activity: Activité
-  tasks:
-    initialize: Initialisation
-    store: Chargement
-    index: Indexation
-    extend: Extensions
-    analyze: Analyse
-    validate: Validation
-    finalize: Finalisation
-    normalize: Conversion
-    download: Téléchargement
 en:
   draft: Draft
-  activity: Activity
-  tasks:
-    initialize: Initialization
-    store: Loading
-    index: Indexing
-    extend: Extensions
-    analyze: Analysis
-    validate: Validation
-    finalize: Finalization
-    normalize: Conversion
-    download: Download
 </i18n>
 
 <script setup lang="ts">

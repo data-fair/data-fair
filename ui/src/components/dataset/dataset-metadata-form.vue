@@ -44,11 +44,11 @@
       <div class="d-flex align-start gap-1 mb-3">
         <markdown-editor
           v-model="dataset.description"
-          :disabled="!can('writeDescription')"
+          :read-only="!can('writeDescription')"
           :label="t('description')"
           :locale="locale"
           :csp-nonce="$cspNonce"
-          class="flex-grow-1"
+          :input-props="{ class: 'flex-grow-1' }"
         />
         <df-agent-chat-action
           v-if="can('writeDescription')"

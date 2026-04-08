@@ -21,37 +21,14 @@
     </v-row>
 
     <!-- Empty state -->
-    <div
+    <layout-empty-state
       v-else-if="catalog.initialized.value && !catalog.totalCount.value"
-      class="d-flex flex-column align-center justify-center mt-6"
-    >
-      <template v-if="q">
-        <div class="text-title-medium">
-          {{ t('noResult') }}
-        </div>
-      </template>
-      <template v-else>
-        <v-icon
-          size="64"
-          color="grey"
-          class="mb-4"
-        >
-          {{ mdiImageMultiple }}
-        </v-icon>
-        <div class="text-title-medium">
-          {{ t('noApplication') }}
-        </div>
-        <v-btn
-          v-if="canContribDep"
-          color="primary"
-          :prepend-icon="mdiPlus"
-          to="/new-application"
-          class="mt-4"
-        >
-          {{ t('newApplication') }}
-        </v-btn>
-      </template>
-    </div>
+      :has-search="!!q"
+      :icon="mdiImageMultiple"
+      :no-data-text="t('noApplication')"
+      :btn-text="t('newApplication')"
+      btn-to="/new-application"
+    />
 
     <!-- Content: grid/list -->
     <template v-else>
@@ -184,7 +161,7 @@
 
 <script setup lang="ts">
 import type { Application } from '#api/types'
-import { mdiImageMultiple, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
+import { mdiImageMultiple, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -276,7 +253,6 @@ fr:
   sort: Trier par
   newApplication: Créer une nouvelle application
   noApplication: Vous n'avez pas encore configuré d'application.
-  noResult: Aucun résultat ne correspond à la recherche.
   applications: "{count} applications"
   sortCreatedAtDesc: Création (plus récent)
   sortCreatedAtAsc: Création (plus ancien)
@@ -288,7 +264,6 @@ en:
   sort: Sort by
   newApplication: Create a new application
   noApplication: You haven't configured any application yet.
-  noResult: No result matches the search.
   applications: "{count} applications"
   sortCreatedAtDesc: Creation (newest)
   sortCreatedAtAsc: Creation (oldest)

@@ -21,37 +21,14 @@
     </v-row>
 
     <!-- Empty state -->
-    <div
+    <layout-empty-state
       v-else-if="catalog.initialized.value && !catalog.totalCount.value"
-      class="d-flex flex-column align-center justify-center mt-6"
-    >
-      <template v-if="q">
-        <div class="text-title-medium">
-          {{ t('noResult') }}
-        </div>
-      </template>
-      <template v-else>
-        <v-icon
-          size="64"
-          color="grey"
-          class="mb-4"
-        >
-          {{ mdiDatabaseOff }}
-        </v-icon>
-        <div class="text-title-medium">
-          {{ t('noDataset') }}
-        </div>
-        <v-btn
-          v-if="canContribDep"
-          color="primary"
-          :prepend-icon="mdiPlus"
-          to="/new-dataset"
-          class="mt-4"
-        >
-          {{ t('createDataset') }}
-        </v-btn>
-      </template>
-    </div>
+      :has-search="!!q"
+      :icon="mdiDatabaseOff"
+      :no-data-text="t('noDataset')"
+      :btn-text="t('createDataset')"
+      btn-to="/new-dataset"
+    />
 
     <!-- Content: grid/list -->
     <template v-else>
@@ -187,7 +164,7 @@
 
 <script setup lang="ts">
 import type { Dataset } from '#api/types'
-import { mdiDatabaseOff, mdiPlus, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
+import { mdiDatabaseOff, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -287,7 +264,6 @@ fr:
   sort: Trier par
   createDataset: Créer un nouveau jeu de données
   noDataset: Vous n'avez pas encore créé de jeu de données.
-  noResult: Aucun résultat ne correspond à la recherche.
   sortCreatedAtDesc: Création (plus récent)
   sortCreatedAtAsc: Création (plus ancien)
   sortUpdatedAtDesc: Mise à jour (plus récente)
@@ -301,7 +277,6 @@ en:
   sort: Sort by
   createDataset: Create a dataset
   noDataset: You haven't created a dataset yet.
-  noResult: No result matches the search.
   sortCreatedAtDesc: Creation (newest)
   sortCreatedAtAsc: Creation (oldest)
   sortUpdatedAtDesc: Update (newest)

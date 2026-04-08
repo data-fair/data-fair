@@ -10,15 +10,8 @@
     v-model="drawer"
   />
 
-  <v-main
-    scrollable
-    :style="mainStyle"
-  >
-    <v-layout style="min-height: 100%">
-      <v-main tag="div">
-        <slot />
-      </v-main>
-    </v-layout>
+  <v-main scrollable>
+    <slot />
   </v-main>
 
   <df-agent-chat-drawer
@@ -105,18 +98,15 @@ onScopeDispose(() => { toolsScope?.stop() })
 const agentChatDrawerProps = computed(() => {
   let width = 350
   let temporary = true
-  if (lgAndUp.value) {
-    if (xlAndUp.value) {
-      temporary = false
-      if (xxl.value) {
-        width = 450
-      }
-    }
+  if (xlAndUp.value) {
+    temporary = false
+    if (xxl.value) width = 450
   }
 
   return {
-    class: 'border-secondary border-t-md border-s-md border-opacity-100',
+    class: 'border-secondary border-md border-e-0 border-opacity-100 rounded-lg rounded-e-0',
     style: 'overflow: hidden',
+    disableResizeWatcher: true,
     width,
     temporary
   }
@@ -124,20 +114,4 @@ const agentChatDrawerProps = computed(() => {
 
 const agentChatState = shallowRef<ReturnType<typeof useAgentChatDrawer> | null>(null)
 
-const mainStyle = computed(() => {
-  let rightOffset = 0
-  if (showAgentChat.value && agentChatState.value && !agentChatDrawerProps.value.temporary && agentChatState.value.drawerOpen.value) {
-    rightOffset = agentChatDrawerProps.value.width
-  }
-  return { '--nav-right-offset': rightOffset + 'px' }
-})
 </script>
-
-<style scoped>
-:deep(.v-main__scroller .v-navigation-drawer--right) {
-  position: fixed !important;
-  top: 48px !important;
-  right: var(--nav-right-offset, 0px) !important;
-  height: calc(100dvh - 48px) !important;
-}
-</style>

@@ -1,7 +1,5 @@
 <template>
-  <v-form
-    v-model="valid"
-  >
+  <v-form v-model="valid">
     <vjsf
       v-model="editDatasetsMetadata"
       :schema="settingsSchema.properties.datasetsMetadata"
