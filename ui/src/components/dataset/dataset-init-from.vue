@@ -60,7 +60,7 @@ interface InitFrom {
   parts: string[]
 }
 
-defineProps<{
+const props = defineProps<{
   allowData?: boolean
   owner?: AccountKeys | null
 }>()
@@ -69,6 +69,8 @@ const modelValue = defineModel<InitFrom | null>({ default: null })
 const sourceTitle = defineModel<string | null>('sourceTitle', { default: null })
 
 const { t } = useI18n()
+
+const allowData = computed(() => props.allowData ?? true)
 
 const initFromDataset = ref<any>(null)
 

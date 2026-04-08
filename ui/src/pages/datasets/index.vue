@@ -126,6 +126,16 @@
         rounded="md"
       />
 
+      <!-- Super admin toggle -->
+      <v-switch
+        v-if="session.state.user?.adminMode"
+        v-model="showAllToggle"
+        color="admin"
+        class="mt-4 mx-4 text-admin"
+        :label="t('showAll')"
+        hide-details
+      />
+
       <!-- Facets -->
       <dataset-facets
         v-model:owner="facetOwner"
@@ -138,6 +148,8 @@
         v-model:services="facetServices"
         v-model:concepts="facetConcepts"
         :facets="catalog.facets.value"
+        :show-all="showAll === 'true'"
+        :account="account"
         class="mt-4 mx-4"
       />
 
@@ -206,9 +218,17 @@ const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPubl
 const facetServices = useStringsArraySearchParam('services')
 const facetConcepts = useStringsArraySearchParam('concepts')
 
+// Super admin: show all datasets toggle
+const showAll = useStringSearchParam('showAll')
+const showAllToggle = computed({
+  get: () => showAll.value === 'true',
+  set: (v: boolean) => { showAll.value = v ? 'true' : '' }
+})
+
 // Owner scoping: default to current account unless facet overrides
 const ownerParam = computed(() => {
   if (facetOwner.value?.length) return facetOwner.value.join(',')
+  if (showAll.value === 'true') return undefined
   const a = account.value
   if (!a) return undefined
   let o = a.type + ':' + a.id
@@ -216,7 +236,7 @@ const ownerParam = computed(() => {
   return o
 })
 
-const showOwner = computed(() => !!facetOwner.value?.length)
+const showOwner = computed(() => !!facetOwner.value?.length || showAll.value === 'true')
 
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
@@ -261,6 +281,7 @@ const sortItems = computed(() => [
 
 <i18n lang="yaml">
 fr:
+  showAll: Voir tous les jeux de données
   sort: Trier par
   createDataset: Créer un nouveau jeu de données
   noDataset: Vous n'avez pas encore créé de jeu de données.
@@ -274,6 +295,7 @@ fr:
   sortTitleDesc: Titre (Z → A)
   datasets: "{count} jeux de données"
 en:
+  showAll: Show all datasets
   sort: Sort by
   createDataset: Create a dataset
   noDataset: You haven't created a dataset yet.

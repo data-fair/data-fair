@@ -299,7 +299,7 @@ function goToNext () {
 }
 
 // ---- Owner ----
-const owner = ref(account.value ? { type: account.value.type, id: account.value.id, name: account.value.name, ...(account.value.department ? { department: account.value.department } : {}) } : null)
+const owner = ref<Record<string, any> | null>(null)
 
 const ownerFilter = computed(() => {
   const a = account.value

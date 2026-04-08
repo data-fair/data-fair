@@ -74,6 +74,8 @@ const { t } = useI18n()
 
 const props = defineProps<{
   facets: Record<string, { count: number, value: any }[]>
+  showAll?: boolean
+  account?: { type: string, id: string, department?: string } | null
 }>()
 
 const owner = defineModel<string[]>('owner', { default: () => [] })
@@ -94,8 +96,61 @@ const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: a
   })
 }
 
-const ownerValueFn = (f: any) => `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
-const ownerItems = facetToItems('owner', (f) => f.value.departmentName || f.value.name || f.value.id, ownerValueFn)
+const ownerItems = computed(() => {
+  const values = props.facets.owner
+  if (!values?.length) return []
+
+  if (!props.showAll && props.account) {
+    // Mode normal : filtrer par org courante
+    const orgFacets = values.filter(f =>
+      f.value.type === props.account!.type && f.value.id === props.account!.id
+    )
+    return orgFacets.map(f => ({
+      title: (f.value.department
+        ? (f.value.departmentName || f.value.department)
+        : t('noDepartment')) + ` (${f.count})`,
+      value: `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
+    }))
+  }
+
+  // Mode super admin (showAll) : regrouper par org
+  const byOrg = new Map<string, typeof values>()
+  for (const f of values) {
+    const key = `${f.value.type}:${f.value.id}`
+    if (!byOrg.has(key)) byOrg.set(key, [])
+    byOrg.get(key)!.push(f)
+  }
+
+  const items: { title: string, value: string }[] = []
+  for (const [orgKey, orgFacets] of byOrg) {
+    const orgName = orgFacets[0].value.name || orgFacets[0].value.id
+    const hasDepartments = orgFacets.some(f => f.value.department)
+
+    if (!hasDepartments) {
+      const total = orgFacets.reduce((s, f) => s + f.count, 0)
+      items.push({
+        title: `${orgName} (${total})`,
+        value: `${orgKey}:-`
+      })
+    } else {
+      const total = orgFacets.reduce((s, f) => s + f.count, 0)
+      items.push({
+        title: `${orgName} (${total})`,
+        value: `${orgKey}:*`
+      })
+      for (const f of orgFacets) {
+        const label = f.value.department
+          ? `${orgName} - ${f.value.departmentName || f.value.department}`
+          : `${orgName} - ${t('noDepartment')}`
+        items.push({
+          title: `${label} (${f.count})`,
+          value: `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
+        })
+      }
+    }
+  }
+  return items
+})
 const baseApplicationItems = facetToItems(
   'base-application',
   (f) => `${f.value?.title || ''} ${f.value?.version || ''}`.trim() || f.value,
@@ -130,6 +185,7 @@ const requestedPublicationSitesItems = facetToItems('requestedPublicationSites',
 <i18n lang="yaml">
 fr:
   owner: Propriétaire
+  noDepartment: Aucun département
   baseApplication: Type d'application
   visibility: Visibilité
   topics: Thématiques
@@ -141,6 +197,7 @@ fr:
     protected: Protégé
 en:
   owner: Owner
+  noDepartment: No department
   baseApplication: Application type
   visibility: Visibility
   topics: Topics

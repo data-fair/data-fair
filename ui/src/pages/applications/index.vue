@@ -126,6 +126,16 @@
         rounded="md"
       />
 
+      <!-- Super admin toggle -->
+      <v-switch
+        v-if="session.state.user?.adminMode"
+        v-model="showAllToggle"
+        color="admin"
+        class="mx-4 text-admin"
+        :label="t('showAll')"
+        hide-details
+      />
+
       <!-- Facets -->
       <application-facets
         v-model:owner="facetOwner"
@@ -135,6 +145,8 @@
         v-model:publication-sites="facetPublicationSites"
         v-model:requested-publication-sites="facetRequestedPublicationSites"
         :facets="catalog.facets.value"
+        :show-all="showAll === 'true'"
+        :account="account"
         class="mt-4 mx-4"
       />
 
@@ -200,9 +212,17 @@ const facetTopics = useStringsArraySearchParam('topics')
 const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
 
+// Super admin: show all applications toggle
+const showAll = useStringSearchParam('showAll')
+const showAllToggle = computed({
+  get: () => showAll.value === 'true',
+  set: (v: boolean) => { showAll.value = v ? 'true' : '' }
+})
+
 // Owner scoping: default to current account unless facet overrides
 const ownerParam = computed(() => {
   if (facetOwner.value?.length) return facetOwner.value.join(',')
+  if (showAll.value === 'true') return undefined
   const a = account.value
   if (!a) return undefined
   let o = a.type + ':' + a.id
@@ -210,7 +230,7 @@ const ownerParam = computed(() => {
   return o
 })
 
-const showOwner = computed(() => !!facetOwner.value?.length)
+const showOwner = computed(() => !!facetOwner.value?.length || showAll.value === 'true')
 
 const applicationsQuery = computed(() => {
   const params: Record<string, any> = {
@@ -250,6 +270,7 @@ const sortItems = computed(() => [
 
 <i18n lang="yaml">
 fr:
+  showAll: Voir toutes les applications
   sort: Trier par
   newApplication: Créer une nouvelle application
   noApplication: Vous n'avez pas encore configuré d'application.
@@ -261,6 +282,7 @@ fr:
   sortTitleAsc: Titre (A → Z)
   sortTitleDesc: Titre (Z → A)
 en:
+  showAll: Show all applications
   sort: Sort by
   newApplication: Create a new application
   noApplication: You haven't configured any application yet.

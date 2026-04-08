@@ -111,7 +111,7 @@
           <dataset-init-from
             v-model="initFrom"
             v-model:source-title="initFromSourceTitle"
-            :allow-data="datasetType === 'file'"
+            :allow-data="datasetType === 'file' || datasetType === 'rest'"
           />
         </v-stepper-window-item>
 
@@ -394,13 +394,13 @@ import { $apiPath } from '~/context'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
+import { type AccountKeys } from '@data-fair/lib-vue/session'
 
 const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute<'/new-dataset'>()
 const session = useSessionAuthenticated()
 const breadcrumbs = useBreadcrumbs()
-const { account } = session
 
 const showAgentChat = useShowAgentChat()
 const isSimple = computed(() => route.query.simple === 'true')
@@ -571,7 +571,7 @@ const virtualInitFromAttachments = ref(false)
 const metaOnlyTitle = ref('')
 
 // ---- Owner ----
-const owner = ref(account.value ? { type: account.value.type, id: account.value.id, name: account.value.name, ...(account.value.department ? { department: account.value.department } : {}) } : null)
+const owner = ref<AccountKeys | null>(null)
 
 // ---- Conflicts ----
 const conflictsOk = ref(false)
@@ -709,7 +709,7 @@ async function createFileDataset () {
   }
 
   const body: Record<string, any> = {}
-  if (initFrom.value) {
+  if (initFrom.value && initFrom.value.parts.length > 0) {
     body.initFrom = initFrom.value
   }
   body.title = fileTitle.value
@@ -760,7 +760,7 @@ async function createRestDataset () {
     schema: [] as any[]
   }
 
-  if (initFrom.value) {
+  if (initFrom.value && initFrom.value.parts.length > 0) {
     body.initFrom = initFrom.value
   }
   if (restAttachments.value) {

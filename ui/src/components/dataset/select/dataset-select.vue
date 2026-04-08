@@ -94,14 +94,24 @@ const datasets = ref<(ListedDataset | { header: string })[]>()
 
 const searchDatasets = useAsyncAction(async () => {
   let items: (ListedDataset | { header: string })[] = []
-  let refDatasets: ListedDataset[]
+  let refDatasets: ListedDataset[] = []
   if (value.value) items.push(value.value)
   if (remoteServicesUrl.value) {
     const remoteServicesRes = await $fetch(remoteServicesUrl.value)
-    refDatasets = remoteServicesRes.results.map((r: any) => r[masterData].parent || r[masterData].dataset)
-    if (refDatasets.length) {
-      items.push({ header: t('masterData') })
-      items = items.concat(refDatasets)
+    const refDatasetRefs = remoteServicesRes.results.map((r: any) => r[masterData].parent || r[masterData].dataset)
+    if (refDatasetRefs.length) {
+      const refDatasetsUrl = withQuery(`${$apiPath}/datasets`, {
+        size: 20,
+        select: datasetListSelect,
+        id: refDatasetRefs.map((r: any) => r.id).join(','),
+        ...extraParams
+      })
+      const refDatasetsRes = await $fetch<{ results: ListedDataset[] }>(refDatasetsUrl)
+      refDatasets = refDatasetsRes.results
+      if (refDatasets.length) {
+        items.push({ header: t('masterData') })
+        items = items.concat(refDatasets)
+      }
     }
   }
 
