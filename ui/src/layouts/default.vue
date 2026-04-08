@@ -11,7 +11,14 @@
   />
 
   <v-main scrollable>
-    <slot />
+    <div class="flex-grow-1">
+      <slot />
+    </div>
+    <div
+      id="nav-right-portal"
+      class="position-sticky top-0 flex-shrink-0 align-self-start overflow-y-auto pt-6"
+      style="width: 256px; max-height: 100vh"
+    />
   </v-main>
 
   <df-agent-chat-drawer
@@ -115,3 +122,12 @@ const agentChatDrawerProps = computed(() => {
 const agentChatState = shallowRef<ReturnType<typeof useAgentChatDrawer> | null>(null)
 
 </script>
+
+<style scoped>
+:deep(.v-main__scroller) {
+  display: flex !important;
+}
+#nav-right-portal:empty {
+  display: none;
+}
+</style>

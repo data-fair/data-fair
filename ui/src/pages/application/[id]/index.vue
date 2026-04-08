@@ -47,7 +47,7 @@
     </v-dialog>
 
     <!-- Metadata section -->
-    <section-tabs-local
+    <df-section-tabs
       v-if="sections.metadata"
       id="metadata"
       v-model="metadataTab"
@@ -129,7 +129,7 @@
           </v-row>
         </v-tabs-window-item>
       </template>
-    </section-tabs-local>
+    </df-section-tabs>
 
     <!-- Render section (new) -->
     <df-section-tabs
@@ -468,7 +468,6 @@ en:
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
-import SectionTabsLocal from '~/components/common/section-tabs-local.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
 import { mdiBell, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'

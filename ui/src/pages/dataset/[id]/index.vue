@@ -4,7 +4,7 @@
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
     <!-- Structure section -->
-    <section-tabs-local
+    <df-section-tabs
       v-if="sections.structure"
       id="structure"
       v-model="structureTab"
@@ -80,10 +80,10 @@
           />
         </v-tabs-window-item>
       </template>
-    </section-tabs-local>
+    </df-section-tabs>
 
     <!-- Metadata section -->
-    <section-tabs-local
+    <df-section-tabs
       v-if="sections.metadata"
       id="metadata"
       v-model="metadataTab"
@@ -138,7 +138,7 @@
           <dataset-attachments />
         </v-tabs-window-item>
       </template>
-    </section-tabs-local>
+    </df-section-tabs>
 
     <!-- Exploration section -->
     <df-section-tabs
@@ -237,13 +237,7 @@
           </v-tabs-window-item>
 
           <!-- Catalog publications -->
-          <v-tabs-window-item
-            v-if="$uiConfig.catalogsIntegration && can('admin').value"
-            value="catalog-publications"
-          >
-            <h3 class="text-title-small font-weight-bold mt-4">
-              {{ t('catalogPublications') }}
-            </h3>
+          <v-tabs-window-item value="catalog-publications">
             <d-frame
               :src="catalogPublicationsUrl"
               sync-params
@@ -518,7 +512,7 @@ fr:
   permissions: Permissions
   readApiKey: Clé d'API en lecture
   publicationSites: Portails
-  catalogPublications: Publications dans les catalogues
+  catalogPublications: Catalogues distants
   integration: Intégrer dans un site
   tracking: Suivi
   journal: Journal
@@ -567,7 +561,7 @@ en:
   permissions: Permissions
   readApiKey: Read API key
   publicationSites: Portals
-  catalogPublications: Catalog publications
+  catalogPublications: Remote catalogs
   integration: Embed in a website
   tracking: Tracking
   journal: Journal
@@ -598,7 +592,6 @@ import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
-import SectionTabsLocal from '~/components/common/section-tabs-local.vue'
 import DatasetRestConfig from '~/components/dataset/dataset-rest-config.vue'
 import { mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'

@@ -27,7 +27,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '~': path.resolve(__dirname, 'src/')
+      '~': path.resolve(__dirname, 'src/'),
+      '@data-fair/lib-vuetify/navigation-right.vue': path.resolve(__dirname, 'src/components/common/navigation-right-local.vue'),
+      '@data-fair/lib-vuetify/navigation-right.vue': path.resolve(__dirname, 'src/components/common/section-tabs-local.vue'),
     },
   },
   html: {
