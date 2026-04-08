@@ -908,7 +908,7 @@ const sections = computedDeepDiff(() => {
       shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
     }
     shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
-    if ($uiConfig.catalogsIntegration && can('admin').value) {
+    if ($uiConfig.catalogsIntegration && accountRole.value === 'admin') {
       shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiTransitConnection })
     }
     if (d.finalizedAt) {

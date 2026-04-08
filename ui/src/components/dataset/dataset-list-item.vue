@@ -13,7 +13,7 @@
         size="small"
       />
     </template>
-    <v-list-item-title>
+    <v-list-item-title :title="dataset.title || dataset.id">
       {{ dataset.title || dataset.id }}
       <v-chip
         v-if="dataset.status === 'error'"

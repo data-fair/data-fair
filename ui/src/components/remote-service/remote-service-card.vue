@@ -6,7 +6,10 @@
   >
     <v-card-item class="text-primary">
       <template #title>
-        <span class="font-weight-bold">{{ remoteService.title || remoteService.id }}</span>
+        <span
+          class="font-weight-bold"
+          :title="remoteService.title || remoteService.id"
+        >{{ remoteService.title || remoteService.id }}</span>
       </template>
     </v-card-item>
     <v-divider />

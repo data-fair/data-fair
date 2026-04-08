@@ -5,7 +5,10 @@
   >
     <v-card-item class="text-primary">
       <template #title>
-        <span class="font-weight-bold">{{ dataset.title || dataset.id }}</span>
+        <span
+          class="font-weight-bold"
+          :title="dataset.title || dataset.id"
+        >{{ dataset.title || dataset.id }}</span>
       </template>
       <template #append>
         <owner-avatar

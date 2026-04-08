@@ -3,7 +3,7 @@
     :to="noLink ? undefined : `/application/${application.id}`"
     lines="two"
   >
-    <v-list-item-title>
+    <v-list-item-title :title="application.title || application.id">
       {{ application.title || application.id }}
       <v-chip
         v-if="application.status === 'error'"
