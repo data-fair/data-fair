@@ -1,10 +1,17 @@
 <template>
   <template v-if="extra">
-    <iframe
+    <d-frame
       v-if="iframeUrl"
+      :id="`admin-extra-${route.params.id}`"
       :src="iframeUrl"
-      width="100%"
-      style="height: 100%; border: none;"
+      class="fill-height"
+      resize="no"
+      sync-params
+      emit-iframe-messages
+      :adapter.prop="stateChangeAdapter"
+      @message="onMessage"
+      @iframe-message="onMessage"
+      @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
   </template>
   <v-container v-else>
@@ -15,8 +22,12 @@
 </template>
 
 <script setup lang="ts">
+import { useDFramePage } from '~/composables/layout/use-d-frame-page'
+
 const { t } = useI18n()
 const route = useRoute<'/admin-extra/[id]'>()
+const { sendUiNotif } = useUiNotif()
+const { stateChangeAdapter, onMessage } = useDFramePage()
 
 const extra = computed(() => {
   return $uiConfig.extraAdminNavigationItems.find((e: any) => e.id === route.params.id)

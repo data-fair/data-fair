@@ -13,8 +13,8 @@
       <v-card-text>
         <df-owner-pick
           v-model="newOwner"
-          other-accounts
           :hide-single="false"
+          other-accounts
         />
         <v-alert
           type="warning"

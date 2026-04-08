@@ -47,16 +47,16 @@
           :icon="mdiCheckAll"
           :title="t('stepAction')"
         />
-      </v-stepper-header>
 
-      <df-agent-chat-action
-        v-if="showAgentChat"
-        action-id="help-create-dataset"
-        :visible-prompt="t('helpCreatePrompt')"
-        :hidden-context="createDatasetContext"
-        :btn-props="{ variant: 'tonal', density: 'compact', class: 'ma-2', prependIcon: mdiRobotOutline, text: t('helpCreatePrompt') }"
-        :title="t('helpCreatePrompt')"
-      />
+        <df-agent-chat-action
+          v-if="showAgentChat"
+          action-id="help-create-dataset"
+          :visible-prompt="t('helpCreatePrompt')"
+          :hidden-context="createDatasetContext"
+          :btn-props="{ text: t('helpCreatePrompt'), class: 'mr-4' }"
+          :title="t('helpCreatePrompt')"
+        />
+      </v-stepper-header>
 
       <v-stepper-window>
         <!-- Step: Type selection -->
@@ -306,10 +306,7 @@
 
         <!-- Step: Action / Confirmation -->
         <v-stepper-window-item value="action">
-          <df-owner-pick
-            v-model="owner"
-            hide-single
-          />
+          <df-owner-pick v-model="owner" />
 
           <dataset-conflicts
             v-if="step === 'action' && owner"
@@ -390,7 +387,7 @@
 </template>
 
 <script setup lang="ts">
-import { mdiAllInclusive, mdiCancel, mdiCheckAll, mdiChevronDown, mdiChevronUp, mdiCog, mdiContentCopy, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiRobotOutline, mdiShape, mdiZipBox } from '@mdi/js'
+import { mdiAllInclusive, mdiCancel, mdiCheckAll, mdiChevronDown, mdiChevronUp, mdiCog, mdiContentCopy, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiShape, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { $apiPath } from '~/context'

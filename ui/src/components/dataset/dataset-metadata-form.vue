@@ -36,7 +36,7 @@
           action-id="summarize-dataset"
           :visible-prompt="t('summarizePrompt')"
           :hidden-context="summarizeContext"
-          :btn-props="{ class: 'ml-1 mt-1' }"
+          :btn-props="{ class: 'ml-1' }"
           :title="t('summarizePrompt')"
         />
       </div>
@@ -55,7 +55,7 @@
           action-id="describe-dataset"
           :visible-prompt="t('describePrompt')"
           :hidden-context="describeContext"
-          :btn-props="{ class: 'ml-1 mt-1' }"
+          :btn-props="{ class: 'ml-1 mt-6' }"
           :title="t('describePrompt')"
         />
       </div>

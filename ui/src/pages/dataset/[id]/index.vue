@@ -116,7 +116,7 @@
           action-id="summarize-metadata-changes"
           :visible-prompt="t('summarizeChanges')"
           :hidden-context="'Summarize the pending metadata changes for this dataset using the summarize_metadata_changes tool.'"
-          :btn-props="{ variant: 'flat', class: 'ml-2' }"
+          :btn-props="{ class: 'ml-2' }"
           :title="t('summarizeChanges')"
         />
       </template>

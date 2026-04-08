@@ -1,7 +1,7 @@
 <template>
   <v-container
-    fluid
     class="pa-0"
+    fluid
   >
     <v-stepper
       v-model="step"
@@ -37,16 +37,16 @@
           :icon="mdiTextBox"
           :title="t('info')"
         />
-      </v-stepper-header>
 
-      <df-agent-chat-action
-        v-if="showAgentChat"
-        action-id="help-create-application"
-        :visible-prompt="t('helpCreatePrompt')"
-        :hidden-context="createApplicationContext"
-        :btn-props="{ variant: 'tonal', density: 'compact', class: 'ma-2', prependIcon: mdiRobotOutline, text: t('helpCreatePrompt') }"
-        :title="t('helpCreatePrompt')"
-      />
+        <df-agent-chat-action
+          v-if="showAgentChat"
+          action-id="help-create-application"
+          :visible-prompt="t('helpCreatePrompt')"
+          :hidden-context="createApplicationContext"
+          :btn-props="{ text: t('helpCreatePrompt'), class: 'mr-4' }"
+          :title="t('helpCreatePrompt')"
+        />
+      </v-stepper-header>
 
       <v-stepper-window>
         <!-- Step: Type selection -->
@@ -90,25 +90,22 @@
             <v-autocomplete
               v-model="copyApp"
               v-model:search="copySearch"
-              :items="appSearchResults"
               :loading="appSearchLoading"
-              item-title="title"
-              item-value="id"
-              return-object
-              no-filter
               :label="t('searchApp')"
               :placeholder="t('search')"
+              :items="appSearchResults"
+              item-title="title"
+              item-value="id"
+              class="mt-2"
               variant="outlined"
               density="compact"
-              hide-details
               max-width="600"
+              return-object
+              no-filter
+              hide-details
               clearable
               @update:model-value="onCopyAppSelected"
-            >
-              <template #item="{ props: itemProps }">
-                <v-list-item v-bind="itemProps" />
-              </template>
-            </v-autocomplete>
+            />
           </template>
 
           <!-- Base app mode -->
@@ -142,94 +139,84 @@
             </v-alert>
 
             <template v-if="baseAppsFetch.data.value">
-              <template
+              <div
                 v-for="category in categories"
                 :key="category"
+                class="mb-4"
               >
-                <h3 class="text-headline-small">
-                  {{ t('appType', { category }) }}
-                </h3>
-                <v-row class="mt-0 mb-1">
-                  <v-col
-                    v-for="baseApp in baseAppsByCategory(category)"
-                    :key="baseApp.id"
-                    md="3"
-                    sm="4"
-                    cols="6"
-                  >
-                    <v-card
-                      :color="selectedBaseApp && selectedBaseApp.id === baseApp.id ? 'primary' : ''"
-                      :style="baseApp.disabled?.length ? 'cursor:default' : 'cursor:pointer'"
-                      variant="outlined"
-                      hover
-                      @click="!baseApp.disabled?.length && selectBaseApp(baseApp)"
+                <template v-if="baseAppsByCategory(category).length">
+                  <h3>{{ t('appType', { category }) }}</h3>
+                  <v-row class="d-flex align-stretch">
+                    <v-col
+                      v-for="baseApp in baseAppsByCategory(category)"
+                      :key="baseApp.id"
+                      md="3"
+                      sm="4"
+                      cols="12"
                     >
-                      <v-img
-                        v-if="baseApp.image"
-                        :src="baseApp.image"
-                        :alt="baseApp.title"
-                        aspect-ratio="2.5"
-                      />
-                      <v-card-title :class="{ 'text-error': baseApp.disabled?.length }">
-                        <v-icon
-                          v-if="!baseApp.public"
-                          :icon="mdiSecurity"
-                          :title="t('restrictedAccess')"
-                          class="mr-1"
-                          size="small"
-                        />
-                        {{ baseApp.title }}
-                      </v-card-title>
-                      <v-card-text
-                        v-if="baseApp.description"
-                        class="text-body-small text-medium-emphasis"
+                      <v-card
+                        class="h-100"
+                        :color="selectedBaseApp && selectedBaseApp.id === baseApp.id ? 'primary' : ''"
+                        :style="baseApp.disabled?.length ? 'cursor:default' : 'cursor:pointer'"
+                        @click="!baseApp.disabled?.length && selectBaseApp(baseApp)"
                       >
-                        {{ baseApp.description }}
-                      </v-card-text>
-                      <v-card-text v-if="baseApp.disabled?.length">
-                        <v-alert
-                          v-for="(disabled, i) in baseApp.disabled"
-                          :key="'disabled-' + i"
-                          type="error"
-                          density="compact"
-                          border="start"
-                          class="my-1"
-                        >
-                          {{ disabled }}
-                        </v-alert>
-                      </v-card-text>
-                    </v-card>
-                  </v-col>
-                </v-row>
-              </template>
+                        <v-card-title :class="baseApp.disabled?.length ? 'text-error' : (selectedBaseApp?.id !== baseApp.id ? 'text-primary' : '')">
+                          <v-icon
+                            v-if="!baseApp.public"
+                            :icon="mdiSecurity"
+                            :title="t('restrictedAccess')"
+                            class="mr-1"
+                            size="small"
+                          />
+                          {{ baseApp.title }}
+                        </v-card-title>
+                        <v-img
+                          v-if="baseApp.image"
+                          :src="baseApp.image"
+                          :alt="baseApp.title"
+                          aspect-ratio="2.5"
+                        />
+                        <v-card-text v-if="baseApp.disabled?.length">
+                          <v-alert
+                            v-for="(disabled, i) in baseApp.disabled"
+                            :key="'disabled-' + i"
+                            type="error"
+                            density="compact"
+                            border="start"
+                            class="my-1"
+                          >
+                            {{ disabled }}
+                          </v-alert>
+                        </v-card-text>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                </template>
+              </div>
             </template>
           </template>
         </v-stepper-window-item>
 
         <!-- Step: Info -->
         <v-stepper-window-item value="info">
-          <df-owner-pick
-            v-model="owner"
-            hide-single
-            :current-owner="dataset?.owner"
-          />
+          <df-owner-pick v-model="owner" />
           <v-text-field
             v-model="appTitle"
             max-width="500"
             name="title"
-            :label="t('title')"
+            class="mt-2"
             variant="outlined"
             density="compact"
+            :label="t('title')"
           />
 
           <v-alert
             v-if="createError"
+            :title="createError"
             type="error"
-            class="mt-4 mb-4"
+            class="mt-4"
             max-width="500"
-          >
-            {{ createError }}
-          </v-alert>
+          />
         </v-stepper-window-item>
       </v-stepper-window>
 
@@ -243,7 +230,7 @@
           <v-btn
             color="primary"
             variant="flat"
-            :disabled="step === 'info' && !appTitle"
+            :disabled="(step === 'selection' && !(creationType === 'copy' ? copyApp : selectedBaseApp)) || (step === 'info' && !appTitle)"
             :loading="importing"
             @click="goToNext"
           >
@@ -256,7 +243,7 @@
 </template>
 
 <script setup lang="ts">
-import { mdiApps, mdiContentCopy, mdiRobotOutline, mdiSecurity, mdiShape, mdiTextBox } from '@mdi/js'
+import { mdiApps, mdiContentCopy, mdiSecurity, mdiShape, mdiTextBox } from '@mdi/js'
 import { $apiPath, $uiConfig } from '~/context'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'

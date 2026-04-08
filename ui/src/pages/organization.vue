@@ -1,9 +1,16 @@
 <template>
   <template v-if="authorized">
-    <iframe
+    <d-frame
+      id="organization"
       :src="`${$sdUrl}/organization/${account.id}?embed=true`"
-      width="100%"
-      style="height: 100%; border: none;"
+      class="fill-height"
+      resize="no"
+      sync-params
+      emit-iframe-messages
+      :adapter.prop="stateChangeAdapter"
+      @message="onMessage"
+      @iframe-message="onMessage"
+      @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
   </template>
   <v-container v-else>
@@ -14,8 +21,12 @@
 </template>
 
 <script setup lang="ts">
+import { useDFramePage } from '~/composables/layout/use-d-frame-page'
+
 const { t } = useI18n()
 const { user, account } = useSessionAuthenticated()
+const { sendUiNotif } = useUiNotif()
+const { stateChangeAdapter, onMessage } = useDFramePage()
 
 const authorized = computed(() => {
   if (!user.value) return false

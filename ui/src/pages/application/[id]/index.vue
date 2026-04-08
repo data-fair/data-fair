@@ -47,170 +47,89 @@
     </v-dialog>
 
     <!-- Metadata section -->
-    <df-section-tabs
+    <section-tabs-local
       v-if="sections.metadata"
       id="metadata"
       v-model="metadataTab"
-      :min-height="300"
       :title="sections.metadata.title"
       :tabs="sections.metadata.tabs"
       :svg="checklistSvg"
       svg-no-margin
     >
-      <template #content="{ tab }">
-        <v-tabs-window
-          :model-value="tab"
-          class="pa-4"
+      <template #actions>
+        <confirm-menu
+          v-if="metadataEditFetch.hasDiff.value"
+          :btn-props="{ color: 'warning', variant: 'tonal' }"
+          :label="t('cancel')"
+          :text="t('confirmCancelText')"
+          :icon="mdiCancel"
+          yes-color="warning"
+          @confirm="cancelMetadata"
+        />
+        <v-btn
+          v-if="metadataEditFetch.hasDiff.value"
+          class="ml-2"
+          color="accent"
+          variant="flat"
+          :loading="metadataEditFetch.save.loading.value"
+          @click="metadataEditFetch.save.execute()"
         >
-          <v-tabs-window-item value="info">
-            <!-- Infos éditables inline -->
-            <v-text-field
-              v-model="application.title"
-              :disabled="!can('writeDescription')"
-              label="Titre"
-              variant="outlined"
-              density="compact"
-              hide-details
-              class="mb-3"
-              @change="patch({title: application.title})"
-            />
-            <v-textarea
-              v-model="application.summary"
-              :disabled="!can('writeDescription')"
-              label="Résumé"
-              rows="3"
-              variant="outlined"
-              density="compact"
-              hide-details
-              class="mb-3"
-              @change="patch({summary: application.summary})"
-            />
-            <v-text-field
-              v-model="application.description"
-              :disabled="!can('writeDescription')"
-              label="Description"
-              variant="outlined"
-              density="compact"
-              hide-details
-              class="mb-3"
-              @change="patch({description: application.description})"
-            />
-
-            <!-- Topics -->
-            <v-autocomplete
-              v-if="topicsFetch.data.value?.length"
-              v-model="application.topics"
-              :disabled="!can('writeDescription')"
-              :items="topicsFetch.data.value ?? []"
-              item-title="title"
-              item-value="id"
-              :label="t('topics')"
-              multiple
-              return-object
-              chips
-              class="mb-3"
-              @update:model-value="patch({topics: application.topics})"
-            />
-
-            <!-- Image -->
-            <v-text-field
-              v-model="application.image"
-              :disabled="!can('writeDescription')"
-              label="Image"
-              hide-details
-              class="mb-3"
-              clearable
-              @change="patch({image: application.image})"
-            />
-
-            <!-- Détails (read-only) -->
-            <v-card class="mt-6">
-              <v-list density="compact">
-                <v-list-item
-                  v-if="application.owner"
-                  :prepend-icon="mdiAccount"
-                >
-                  <div class="text-body-small text-medium-emphasis">
-                    {{ t('owner') }}
-                  </div>
-                  <div>{{ application.owner.name }}</div>
-                </v-list-item>
-
-                <v-list-item
-                  v-if="baseAppFetch.data.value"
-                  :prepend-icon="mdiSquareEditOutline"
-                >
-                  <div class="text-body-small text-medium-emphasis">
-                    {{ t('baseApp') }}
-                  </div>
-                  <div>
-                    {{ baseAppFetch.data.value.title || application.url }}
-                    <span v-if="baseAppFetch.data.value.version">
-                      — {{ t('version') }} {{ baseAppFetch.data.value.version }}
-                    </span>
-                  </div>
-                </v-list-item>
-
-                <v-list-item
-                  v-if="application.updatedAt"
-                  :prepend-icon="mdiPencil"
-                >
-                  <div class="text-body-small text-medium-emphasis">
-                    {{ t('metadataUpdated') }}
-                  </div>
-                  <div>{{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}</div>
-                </v-list-item>
-
-                <v-list-item :prepend-icon="mdiPlusCircleOutline">
-                  <div class="text-body-small text-medium-emphasis">
-                    {{ t('created') }}
-                  </div>
-                  <div>{{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}</div>
-                </v-list-item>
-              </v-list>
-            </v-card>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="attachments">
-            <application-attachments />
-          </v-tabs-window-item>
-
-          <v-tabs-window-item
-            v-if="datasets.length"
-            value="datasets"
-          >
-            <v-row>
-              <v-col
-                v-for="dataset in datasets"
-                :key="dataset.id"
-                cols="12"
-                md="6"
-                lg="4"
-              >
-                <dataset-card :dataset="dataset" />
-              </v-col>
-            </v-row>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item
-            v-if="childrenApps.length"
-            value="children-apps"
-          >
-            <v-row>
-              <v-col
-                v-for="app in childrenApps"
-                :key="app.id"
-                cols="12"
-                md="6"
-                lg="4"
-              >
-                <application-card :application="app" />
-              </v-col>
-            </v-row>
-          </v-tabs-window-item>
-        </v-tabs-window>
+          {{ t('save') }}
+        </v-btn>
       </template>
-    </df-section-tabs>
+
+      <template #windows>
+        <v-tabs-window-item value="info">
+          <application-metadata-form
+            v-if="metadataEditFetch.data.value"
+            v-model="metadataEditFetch.data.value"
+            :server-data="metadataEditFetch.serverData.value"
+          />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="details">
+          <application-metadata-details />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item value="attachments">
+          <application-attachments />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item
+          v-if="datasets.length"
+          value="datasets"
+        >
+          <v-row>
+            <v-col
+              v-for="dataset in datasets"
+              :key="dataset.id"
+              cols="12"
+              md="6"
+              lg="4"
+            >
+              <dataset-card :dataset="dataset" />
+            </v-col>
+          </v-row>
+        </v-tabs-window-item>
+
+        <v-tabs-window-item
+          v-if="childrenApps.length"
+          value="children-apps"
+        >
+          <v-row>
+            <v-col
+              v-for="app in childrenApps"
+              :key="app.id"
+              cols="12"
+              md="6"
+              lg="4"
+            >
+              <application-card :application="app" />
+            </v-col>
+          </v-row>
+        </v-tabs-window-item>
+      </template>
+    </section-tabs-local>
 
     <!-- Render section (new) -->
     <df-section-tabs
@@ -223,7 +142,10 @@
       :svg="creativeSvg"
     >
       <template #content="{ tab }">
-        <v-tabs-window :model-value="tab">
+        <v-tabs-window
+          :model-value="tab"
+          class="pa-4"
+        >
           <v-tabs-window-item value="config">
             <v-alert
               v-if="application.errorMessage"
@@ -259,8 +181,10 @@
               class="pa-0"
             >
               <d-frame
-                :src="`${applicationLink}?embed=true`"
+                :src="`${applicationLink}?d-frame=true&primary=${theme.current.value.colors.primary}`"
                 resize="no"
+                aspect-ratio
+                sync-params
               />
             </v-card>
           </v-tabs-window-item>
@@ -470,10 +394,6 @@ fr:
   render: Rendu
   config: Configuration
   editConfig: Éditer la configuration
-  baseApp: Application de base
-  owner: Propriétaire
-  metadataUpdated: Métadonnées mises à jour
-  created: Création
   validatedError: "Erreur dans la {bold}"
   validatedErrorBold: version validée
   share: Permissions & partage
@@ -485,14 +405,16 @@ fr:
   traceability: Traçabilité
   notifications: Notifications
   webhooks: Webhooks
-  version: version
   upgradeAvailable: "Version {version} disponible"
   upgradeAction: Mettre à jour
   upgradeTitle: Mise à jour de version
   upgradeConfirm: "Voulez-vous mettre à jour l'application vers la version {version} ? L'application sera reconfigurée avec la nouvelle version."
+  details: Détails
+  save: Enregistrer
+  saved: Les modifications ont été enregistrées
+  confirmCancelText: Souhaitez-vous annuler vos modifications ?
   cancel: Annuler
   upgrade: Mettre à jour
-  topics: Thématiques
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer cette application à un autre propriétaire.
@@ -511,10 +433,6 @@ en:
   render: Render
   config: Configuration
   editConfig: Edit configuration
-  baseApp: Base application
-  owner: Owner
-  metadataUpdated: Metadata updated
-  created: Created
   validatedError: "Error in the {bold}"
   validatedErrorBold: validated version
   share: Share
@@ -526,14 +444,16 @@ en:
   traceability: Traceability
   notifications: Notifications
   webhooks: Webhooks
-  version: version
   upgradeAvailable: "Version {version} available"
   upgradeAction: Upgrade
   upgradeTitle: Version upgrade
   upgradeConfirm: "Do you want to upgrade the application to version {version}? The application will be reconfigured with the new version."
+  details: Details
+  save: Save
+  saved: Changes were saved
+  confirmCancelText: Do you want to discard your changes?
   cancel: Cancel
   upgrade: Upgrade
-  topics: Topics
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this application to another owner.
@@ -547,7 +467,11 @@ en:
 <script setup lang="ts">
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
-import { mdiAccount, mdiBell, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPencil, mdiPlusCircleOutline, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import ConfirmMenu from '~/components/confirm-menu.vue'
+import SectionTabsLocal from '~/components/common/section-tabs-local.vue'
+import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
+import { useTheme } from 'vuetify'
+import { mdiBell, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
@@ -562,6 +486,7 @@ import { $uiConfig, $apiPath } from '~/context'
 const { t, locale } = useI18n()
 const route = useRoute<'/application/[id]/'>()
 const router = useRouter()
+const theme = useTheme()
 
 const breadcrumbs = useBreadcrumbs()
 const metadataTab = ref('info')
@@ -574,7 +499,23 @@ const { availableVersions } = useApplicationVersions(store)
 
 useApplicationWatch(['draft-error'], store)
 
-const topicsFetch = useFetch<any[]>(() => application.value?.owner ? `${$apiPath}/settings/${application.value.owner.type}/${application.value.owner.id}/topics` : null)
+const metadataEditFetch = useEditFetch<any>(`${$apiPath}/applications/${route.params.id}`, {
+  patch: true,
+  fetchAfterSave: true,
+  saveOptions: {
+    success: t('saved')
+  }
+})
+
+watch(metadataEditFetch.serverData, (d) => {
+  if (d) application.value = d as any
+})
+
+useLeaveGuard(metadataEditFetch.hasDiff, { locale })
+
+const cancelMetadata = () => {
+  metadataEditFetch.data.value = JSON.parse(JSON.stringify(metadataEditFetch.serverData.value))
+}
 
 const showUpgradeDialog = ref(false)
 const showOwnerDialog = ref(false)
@@ -631,11 +572,6 @@ const confirmRemove = async () => {
   router.push('/applications')
 }
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString(locale.value, { dateStyle: 'medium' })
-}
-
 const sections = computedDeepDiff(() => {
   if (!application.value) return {} as Record<string, { title: string, tabs: any[] }>
 
@@ -643,7 +579,8 @@ const sections = computedDeepDiff(() => {
 
   // Metadata section
   const metadataTabs = [
-    { key: 'info', title: t('info'), icon: mdiInformation },
+    { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined },
+    { key: 'details', title: t('details'), icon: mdiCardTextOutline },
     { key: 'attachments', title: t('attachments'), icon: mdiPaperclip }
   ]
   if (datasets.value.length) {

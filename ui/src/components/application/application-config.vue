@@ -27,6 +27,7 @@
           :reload="draftPreviewInc"
         />
       </v-col>
+
       <v-col
         cols="6"
         md="5"

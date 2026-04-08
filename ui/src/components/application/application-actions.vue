@@ -39,6 +39,20 @@
     </v-list-subheader>
 
     <v-list-item
+      v-if="can('writeConfig')"
+      :to="`/application/${application.id}/config`"
+      link
+    >
+      <template #prepend>
+        <v-icon
+          color="primary"
+          :icon="mdiSquareEditOutline"
+        />
+      </template>
+      {{ t('editConfig') }}
+    </v-list-item>
+
+    <v-list-item
       v-if="can('readApiDoc')"
       :to="`/application/${application.id}/api-doc`"
       link
@@ -75,6 +89,7 @@
 fr:
   navigation: Navigation
   actions: Actions
+  editConfig: Éditer la configuration
   capture: Capture d'écran
   fullPage: Ouvrir en pleine page
   viewOnPortal: "Voir sur {title}"
@@ -82,6 +97,7 @@ fr:
 en:
   navigation: Navigation
   actions: Actions
+  editConfig: Edit configuration
   capture: Screenshot
   fullPage: Open fullscreen
   viewOnPortal: "View on {title}"
@@ -89,7 +105,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiCamera, mdiCloud, mdiExitToApp, mdiWeb } from '@mdi/js'
+import { mdiCamera, mdiCloud, mdiExitToApp, mdiSquareEditOutline, mdiWeb } from '@mdi/js'
 import useApplicationStore from '~/composables/application/store'
 
 const { t } = useI18n()
