@@ -1,4 +1,5 @@
-<!--- Keep it as backup (not used for the moment)-->
+<!--- Keep it as backup (not used for the moment) -->
+<!-- It's a version of <df-toc> that show also the tabs of sections-tabs -->
 <template>
   <v-list
     v-if="sections && sections.length"

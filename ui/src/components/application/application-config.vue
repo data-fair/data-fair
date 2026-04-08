@@ -21,9 +21,10 @@
         <d-frame
           v-else
           ref="frame"
-          :height="windowHeight - 64"
           resize="no"
-          :src="applicationLink + '?embed=true&draft=true'"
+          aspect-ratio
+          scrolling="auto"
+          :src="`${applicationLink}?d-frame=true&draft=true&primary=${theme.current.value.colors.primary}`"
           :reload="draftPreviewInc"
         />
       </v-col>
@@ -174,7 +175,7 @@ en:
 
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
-import { useDisplay } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { type Options as VjsfOptions } from '@koumoul/vjsf'
@@ -190,6 +191,7 @@ import Debug from 'debug'
 const debug = Debug('application-config')
 
 const display = useDisplay()
+const theme = useTheme()
 const { sendUiNotif } = useUiNotif()
 const { t } = useI18n()
 const { height: windowHeight } = useWindowSize()
