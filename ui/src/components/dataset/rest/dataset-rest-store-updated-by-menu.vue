@@ -7,7 +7,8 @@
     <template #activator="{ props: activatorProps }">
       <v-btn
         icon
-        color="warning"
+        variant="text"
+        :color="color"
         v-bind="activatorProps"
       >
         <v-icon :icon="mdiPencil" />
@@ -17,10 +18,9 @@
       <v-alert
         :text="storeUpdatedBy ? t('alertDeactivate') : t('alertActivate')"
         :type="storeUpdatedBy ? 'warning' : 'info'"
+        :icon="false"
         variant="tonal"
         density="compact"
-        :icon="false"
-        class="mb-0 mt-1"
       />
       <v-card-actions>
         <v-spacer />
@@ -51,35 +51,37 @@
   </v-menu>
 </template>
 
+<i18n lang="yaml">
+fr:
+  alertActivate: "Si vous activez le stockage des utilisateurs qui font des modifications de ligne tous les utilisateurs ayant accès en lecture à ce jeu de données pourront consulter cette information."
+  alertDeactivate: "Si vous désactivez le stockage des utilisateurs qui font des modifications de ligne cette information sera supprimée et ne sera récupérable."
+  activate: Activer
+  deActivate: Désactiver
+  cancel: Annuler
+en:
+  alertActivate: "If you activate the storage of the users that make line changes all users with read access to this dataset will be able to read this information."
+  alertDeactivate: "If you deactivate the storage of the users that make line changes this information will be deleted and cannot be recovered."
+  activate: Activate
+  deActivate: Deactivate
+  cancel: Cancel
+</i18n>
+
 <script setup lang="ts">
 import { mdiPencil } from '@mdi/js'
 
-const messages = {
-  fr: {
-    alertActivate: 'Si vous activez le stockage des utilisateurs qui font des modifications de ligne tous les utilisateurs ayant accès en lecture à ce jeu de données pourront consulter cette information.',
-    alertDeactivate: 'Si vous désactivez le stockage des utilisateurs qui font des modifications de ligne cette information sera supprimée et ne sera récupérable.',
-    activate: 'activer',
-    deActivate: 'désactiver',
-    cancel: 'Annuler'
-  },
-  en: {
-    alertActivate: 'If you activate the storage of the users that make line changes all users with read access to this dataset will be able to read this information.',
-    alertDeactivate: 'If you deactivate the storage of the users that make line changes this information will be deleted and cannot be recovered.',
-    activate: 'activate',
-    deActivate: 'deactivate',
-    cancel: 'Cancel'
-  }
-}
-
-defineProps<{
-  storeUpdatedBy: boolean
-}>()
+withDefaults(defineProps<{
+  storeUpdatedBy?: boolean
+  color?: string
+}>(), {
+  storeUpdatedBy: false,
+  color: 'primary'
+})
 
 const emit = defineEmits<{
   change: [value: boolean]
 }>()
 
-const { t } = useI18n({ messages })
+const { t } = useI18n()
 
 const show = ref(false)
 

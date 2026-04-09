@@ -60,6 +60,7 @@
           <dataset-rest-config
             v-if="structureEditFetch.data.value && dataset?.isRest"
             :rest="structureEditFetch.data.value.rest"
+            :server-rest="structureEditFetch.serverData.value?.rest"
             :dataset="structureEditFetch.data.value"
             @update:rest="r => { if (structureEditFetch.data.value) structureEditFetch.data.value.rest = r }"
           />
@@ -595,7 +596,7 @@ import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
-import DatasetRestConfig from '~/components/dataset/dataset-rest-config.vue'
+import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
 import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'

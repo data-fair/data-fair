@@ -1,13 +1,19 @@
 <template>
-  <v-form
-    v-model="valid"
+  <v-defaults-provider
+    :defaults="{
+      global: {
+        hideDetails: 'auto'
+      }
+    }"
   >
-    <vjsf
-      v-model="editInfo"
-      :schema="settingsSchema.properties.info"
-      :options="vjsfOptions"
-    />
-  </v-form>
+    <v-form v-model="valid">
+      <vjsf
+        v-model="editInfo"
+        :schema="settingsSchema.properties.info"
+        :options="vjsfOptions"
+      />
+    </v-form>
+  </v-defaults-provider>
 </template>
 
 <script setup lang="ts">
@@ -17,12 +23,15 @@ import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 const valid = ref(true)
 const info = defineModel<Settings['info']>()
 const editInfo = ref<Settings['info']>()
+
 watchDeepDiff(info, () => {
   editInfo.value = info.value
 }, { immediate: true })
+
 watchDeepDiff(editInfo, () => {
   if (valid.value) info.value = editInfo.value
 }, {})
+
 const vjsfOptions: VjsfOptions = {
   validateOn: 'input',
   updateOn: 'blur',

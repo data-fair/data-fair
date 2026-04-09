@@ -139,7 +139,7 @@ const emit = defineEmits<{
   'update:projection': [value: { title?: string, code?: string } | null]
 }>()
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const { dataset } = useDatasetStore()
 

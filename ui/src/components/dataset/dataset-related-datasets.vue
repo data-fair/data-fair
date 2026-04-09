@@ -42,13 +42,9 @@
 <i18n lang="yaml">
 fr:
   selectDataset: Choisissez un jeu de données
-  lines: "aucune ligne | 1 ligne | {count} lignes"
-  error: En erreur
   search: Rechercher
 en:
   selectDataset: Chose a dataset
-  lines: "no line | 1 line | {count} lines"
-  error: Error status
   search: Search
 </i18n>
 

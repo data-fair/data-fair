@@ -7,7 +7,8 @@
     <template #activator="{ props: activatorProps }">
       <v-btn
         icon
-        color="warning"
+        variant="text"
+        :color="color"
         v-bind="activatorProps"
       >
         <v-icon :icon="mdiPencil" />
@@ -20,7 +21,6 @@
         variant="tonal"
         density="compact"
         :icon="false"
-        class="mb-0 mt-1"
       />
       <v-card-actions>
         <v-spacer />
@@ -51,35 +51,37 @@
   </v-menu>
 </template>
 
+<i18n lang="yaml">
+fr:
+  alertActivate: "Si vous activez l'historisation le volume de données consommé sera augmenté de manière importante. En fonction du nombre de lignes du jeu de données cette opération peut prendre du temps."
+  alertDeactivate: "Si vous désactivez l'historisation toutes les révisions de lignes déjà stockées seront supprimées et ne seront pas récupérables."
+  activate: Activer l'historisation
+  deActivate: Désactiver l'historisation
+  cancel: Annuler
+en:
+  alertActivate: "If you activate the history the used data storage will be significantly increased. Depending on the number of lines this operation can take some time."
+  alertDeactivate: "If you deactivate the history all lines revisions already stored will be deleted and cannot be recovered."
+  activate: Activate history
+  deActivate: Deactivate history
+  cancel: Cancel
+</i18n>
+
 <script setup lang="ts">
 import { mdiPencil } from '@mdi/js'
 
-const messages = {
-  fr: {
-    alertActivate: 'Si vous activez l\'historisation le volume de données consommé sera augmenté de manière importante. En fonction du nombre de lignes du jeu de données cette opération peut prendre du temps.',
-    alertDeactivate: 'Si vous désactivez l\'historisation toutes les révisions de lignes déjà stockées seront supprimées et ne seront pas récupérables.',
-    activate: 'activer l\'historisation',
-    deActivate: 'désactiver l\'historisation',
-    cancel: 'Annuler'
-  },
-  en: {
-    alertActivate: 'If you activate the history the used data storage will be significantly increased. Depending on the number of lines this operation can take some time.',
-    alertDeactivate: 'If you deactivate the history all lines revisions already stored will be deleted and cannot be recovered.',
-    activate: 'activate history',
-    deActivate: 'deactivate history',
-    cancel: 'Cancel'
-  }
-}
-
-defineProps<{
-  history: boolean
-}>()
+withDefaults(defineProps<{
+  history?: boolean
+  color?: string
+}>(), {
+  history: false,
+  color: 'primary'
+})
 
 const emit = defineEmits<{
   change: [value: boolean]
 }>()
 
-const { t } = useI18n({ messages })
+const { t } = useI18n()
 
 const show = ref(false)
 

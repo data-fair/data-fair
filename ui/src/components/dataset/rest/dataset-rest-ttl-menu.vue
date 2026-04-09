@@ -1,6 +1,5 @@
 <template>
   <v-menu
-    v-if="editTtl"
     v-model="show"
     :close-on-content-click="false"
     max-width="400"
@@ -8,7 +7,8 @@
     <template #activator="{ props: activatorProps }">
       <v-btn
         icon
-        color="warning"
+        variant="text"
+        :color="color"
         v-bind="activatorProps"
       >
         <v-icon :icon="mdiPencil" />
@@ -17,16 +17,16 @@
     <v-card>
       <v-alert
         :text="revisions ? t('alertRevisions') : t('alert')"
+        :icon="false"
         type="warning"
         variant="tonal"
         density="compact"
-        :icon="false"
-        class="mb-0 mt-1"
       />
       <v-card-text>
         <v-checkbox
           v-model="editTtl.active"
           :label="t('activate')"
+          hide-details
         />
         <v-select
           v-if="!revisions"
@@ -35,6 +35,10 @@
           :items="dateTimeFields"
           item-value="key"
           item-title="title"
+          variant="outlined"
+          density="compact"
+          class="mb-4"
+          hide-details
         />
         <v-text-field
           v-model.number="editTtl.delay.value"
@@ -42,6 +46,7 @@
           density="compact"
           type="number"
           :label="t('days')"
+          hide-details
         />
       </v-card-text>
       <v-card-actions>
@@ -64,41 +69,42 @@
   </v-menu>
 </template>
 
+<i18n lang="yaml">
+fr:
+  alert: "Si vous configurez l'expiration automatique, les lignes supprimées ne pourront pas être récupérées."
+  alertRevisions: "Si vous configurez l'expiration automatique des révisions, les informations supprimées ne pourront pas être récupérées."
+  activate: Activer l'expiration automatique
+  col: Colonne de date de référence
+  days: Nombre de jours avant expiration
+  cancel: Annuler
+  save: Confirmer
+en:
+  alert: "If you configure automatic expiration, the deleted lines cannot be recovered."
+  alertRevisions: "If you configure automatic expiration of revisions, the deleted data cannot be recovered."
+  activate: Activate automatic expiration
+  col: Column containing the reference date
+  days: Number of days before expiration
+  cancel: Cancel
+  save: Confirm
+</i18n>
+
 <script setup lang="ts">
 import { mdiPencil } from '@mdi/js'
 
-const messages = {
-  fr: {
-    alert: 'Si vous configurez l\'expiration automatique, les lignes supprimées ne pourront pas être récupérées.',
-    alertRevisions: 'Si vous configurez l\'expiration automatique des révisions, les informations supprimées ne pourront pas être récupérées.',
-    activate: 'activer l\'expiration automatique',
-    col: 'colonne de date de référence',
-    days: 'nombre de jours avant expiration',
-    cancel: 'Annuler',
-    save: 'Enregistrer'
-  },
-  en: {
-    alert: 'If you configure automatic expiration, the deleted lines cannot be recovered.',
-    alertRevisions: 'If you configure automatic expiration of revisions, the deleted data cannot be recovered.',
-    activate: 'activate automatic expiration',
-    col: 'column containing the reference date',
-    days: 'number of days before expiration',
-    cancel: 'Cancel',
-    save: 'Save'
-  }
-}
-
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   ttl: any
   schema: any[]
   revisions?: boolean
-}>()
+  color?: string
+}>(), {
+  color: 'primary'
+})
 
 const emit = defineEmits<{
   change: [value: any]
 }>()
 
-const { t } = useI18n({ messages })
+const { t } = useI18n()
 
 const show = ref(false)
 const editTtl = ref<any>(null)
@@ -112,13 +118,21 @@ const dateTimeFields = computed(() => {
     }))
 })
 
+const defaultTtl = () => props.revisions
+  ? { active: false, delay: { value: 0 } }
+  : { active: false, prop: '', delay: { value: 0 } }
+
 watch(() => props.ttl, () => {
-  editTtl.value = JSON.parse(JSON.stringify(props.ttl))
+  editTtl.value = props.ttl
+    ? JSON.parse(JSON.stringify(props.ttl))
+    : defaultTtl()
 }, { immediate: true })
 
 function change () {
   editTtl.value.delay.value = editTtl.value.delay.value || 0
-  emit('change', editTtl.value)
+  const result = { ...editTtl.value }
+  if (props.revisions) delete result.prop
+  emit('change', result)
   show.value = false
 }
 </script>

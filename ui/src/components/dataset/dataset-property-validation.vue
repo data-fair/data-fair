@@ -231,7 +231,7 @@ en:
 /* eslint-disable vue/no-mutating-props */
 import { mdiCheckDecagram, mdiClose } from '@mdi/js'
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const props = defineProps<{
   property: any

@@ -1,62 +1,59 @@
 <template>
-  <div>
-    <v-autocomplete
-      v-model:search="search"
-      :model-value="null"
-      :items="items"
-      :loading="searchAction.loading.value"
-      no-filter
-      hide-no-data
-      item-title="title"
-      item-value="id"
-      :label="t('children')"
-      :placeholder="t('search')"
-      variant="outlined"
-      density="compact"
-      return-object
-      hide-details
-      max-width="500px"
-      @update:model-value="addChild"
-    >
-      <template #item="{ item, props: itemProps }">
-        <v-list-subheader
-          v-if="item.raw._header"
-        >
-          {{ item.raw._header }}
-        </v-list-subheader>
-        <v-list-item
-          v-else
-          v-bind="itemProps"
-        >
-          <template #append>
-            <v-chip
-              v-if="item.raw.owner && showOwner(item.raw)"
-              size="x-small"
-              variant="tonal"
-              class="ml-2"
-            >
-              {{ item.raw.owner.name || item.raw.owner.id }}
-            </v-chip>
-          </template>
-        </v-list-item>
-      </template>
-    </v-autocomplete>
-
-    <!-- Selected children chips -->
-    <div
-      v-if="modelValue.length"
-      class="d-flex flex-wrap gap-1 mt-2"
-    >
-      <v-chip
-        v-for="(child, i) in modelValue"
-        :key="child.id"
-        closable
-        size="small"
-        @click:close="removeChild(i)"
+  <v-autocomplete
+    v-model:search="search"
+    :model-value="null"
+    :label="t('children')"
+    :placeholder="t('search')"
+    :loading="searchAction.loading.value"
+    :items="items"
+    item-title="title"
+    item-value="id"
+    class="mt-4"
+    variant="outlined"
+    density="compact"
+    max-width="500"
+    no-filter
+    hide-no-data
+    return-object
+    hide-details
+    @update:model-value="addChild"
+  >
+    <template #item="{ item, props: itemProps }">
+      <v-list-subheader v-if="item.raw._header">
+        {{ item.raw._header }}
+      </v-list-subheader>
+      <v-list-item
+        v-else
+        v-bind="itemProps"
       >
-        {{ child.title }}
-      </v-chip>
-    </div>
+        <template #append>
+          <v-chip
+            v-if="item.raw.owner && showOwner(item.raw)"
+            size="x-small"
+            variant="tonal"
+            class="ml-2"
+          >
+            {{ item.raw.owner.name || item.raw.owner.id }}
+          </v-chip>
+        </template>
+      </v-list-item>
+    </template>
+  </v-autocomplete>
+
+  <!-- Selected children chips -->
+  <div
+    v-if="modelValue.length"
+    class="d-flex flex-wrap ga-1 mt-2"
+  >
+    <v-chip
+      v-for="(child, i) in modelValue"
+      :key="child.id"
+      size="small"
+      closable
+      @click:close="removeChild(i)"
+    >
+      {{ child.title }}
+    </v-chip>
   </div>
 </template>
 

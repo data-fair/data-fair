@@ -88,7 +88,7 @@ const emit = defineEmits<{
   add: [column: any]
 }>()
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const isFormValid = ref(false)
 const newColumnKey = ref('')

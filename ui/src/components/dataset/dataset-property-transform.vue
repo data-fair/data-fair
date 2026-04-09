@@ -112,7 +112,7 @@ en:
 import { mdiClose, mdiDatabaseCog } from '@mdi/js'
 import { propertyTypes } from '~/utils/dataset'
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const props = defineProps<{
   property: any

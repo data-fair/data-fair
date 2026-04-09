@@ -74,7 +74,7 @@ export interface TocSection {
 const { sections } = defineProps<{ sections: TocSection[] }>()
 
 const goTo = useGoTo()
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const onTabClick = async (section: TocSection, tabKey: string) => {
   if (section.tabModel) {

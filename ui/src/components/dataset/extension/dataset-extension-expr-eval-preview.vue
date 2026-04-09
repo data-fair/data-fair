@@ -1,15 +1,46 @@
 <template>
   <div class="extension-expr-eval-preview">
-    <!-- Expression field -->
-    <v-text-field
-      v-model="localExpr"
-      :label="t('expr')"
-      :error-messages="parsingError ?? undefined"
+    <!-- Expression field + AI button -->
+    <div class="d-flex align-center gap-1 mb-2">
+      <v-text-field
+        v-model="localExpr"
+        :label="t('expr')"
+        :error-messages="parsingError ?? undefined"
+        color="primary"
+        density="compact"
+        variant="outlined"
+        hide-details="auto"
+        class="flex-grow-1"
+      />
+      <df-agent-chat-action
+        :action-id="'help-expression-' + idx"
+        :visible-prompt="t('helpExpression')"
+        :hidden-context="expressionContext"
+        :title="t('helpExpression')"
+      />
+    </div>
+
+    <!-- Help documentation -->
+    <v-btn
+      variant="text"
+      size="small"
+      :prepend-icon="mdiInformation"
       class="mb-2"
-      color="primary"
-      density="compact"
-      variant="outlined"
-    />
+      @click="showHelp = !showHelp"
+    >
+      {{ showHelp ? t('hideHelp') : t('showHelp') }}
+    </v-btn>
+    <v-expand-transition>
+      <v-alert
+        v-show="showHelp"
+        type="info"
+        variant="tonal"
+        class="mb-4"
+      >
+        <p v-html="t('exprEvalHelp')" />
+        <dataset-expr-eval-doc />
+      </v-alert>
+    </v-expand-transition>
 
     <!-- Toolbar -->
     <v-toolbar
@@ -187,6 +218,13 @@ fr:
   results: Résultats
   expr: Expression
   emptyExpr: Saisissez une expression
+  helpExpression: Aide-moi à écrire l'expression
+  showHelp: Aide sur les expressions
+  hideHelp: Masquer l'aide
+  exprEvalHelp: "Une expression (ou formule) est utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes.
+    Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.
+    Les valeurs des autres colonnes sont passées en paramètre avec leurs clés comme nom du paramètre.<br><br>
+    Quelques fonctions sont disponibles rappelant des fonctionnalités habituelles de tableurs :"
 en:
   search: Search
   noResults: No results
@@ -196,10 +234,19 @@ en:
   results: Results
   expr: Expression
   emptyExpr: Write an expression
+  helpExpression: Help write the expression
+  showHelp: Expression help
+  hideHelp: Hide help
+  exprEvalHelp: "An expression (or formula) is used to calculate the content of a column based on the values of other columns.
+    It must follow the syntax of the <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a> module.
+    The values of other columns are passed as parameters with their keys as parameter names.<br><br>
+    Some functions are available, similar to usual spreadsheet features:"
 </i18n>
 
 <script setup lang="ts">
-import { mdiMagnify } from '@mdi/js'
+import { mdiInformation, mdiMagnify } from '@mdi/js'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import DatasetExprEvalDoc from './dataset-expr-eval-doc.vue'
 // @ts-ignore -- shared module
 import exprEvalFactory from '#shared/expr-eval.js'
 // @ts-ignore -- shared module
@@ -207,6 +254,7 @@ import { getExtensionKey } from '#shared/utils/extensions.js'
 
 const props = defineProps<{
   extension: any
+  idx: number
   dataset: any
   resourceUrl: string
 }>()
@@ -215,7 +263,7 @@ const emit = defineEmits<{
   'update:expr': [value: string]
 }>()
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 const { sendUiNotif } = useUiNotif()
 
 const defaultTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -227,7 +275,16 @@ const totalLines = ref<number | undefined>(undefined)
 const page = ref(1)
 const pageSize = ref(10)
 const search = ref('')
+const showHelp = ref(false)
 const localExpr = ref(props.extension.expr ?? '')
+
+const expressionContext = computed(() => {
+  const name = props.extension.property?.['x-originalName'] || props.extension.property?.key || 'calculated column'
+  return `The user wants help writing an expr-eval expression for calculated column "${name}" (type: ${props.extension.property?.type || 'string'}, extension index: ${props.idx}). ` +
+    (localExpr.value ? `The current expression is: ${localExpr.value}. ` : '') +
+    'Start by asking the user what they want to compute or achieve with this column. Do NOT call the expression_helper subagent until you understand the user\'s intent. ' +
+    'Once you receive the expression from the subagent, present it and the test results to the user. If approved, use the set_expression tool to apply it. If the user wants changes, adjust accordingly.'
+})
 const parsingError = ref<string | null>(null)
 const parsedExpression = ref<((data: any) => any) | null>(null)
 

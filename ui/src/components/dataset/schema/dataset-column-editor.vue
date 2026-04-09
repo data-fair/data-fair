@@ -133,6 +133,7 @@
         class="mb-3"
         item-title="text"
         item-value="value"
+        :custom-filter="conceptFilter"
         @update:model-value="col => { if (col !== undefined && column) column['x-refersTo'] = col; else if (column) delete column['x-refersTo'] }"
       >
         <template #item="{ internalItem, props: itemProps }">
@@ -236,7 +237,7 @@ import { propTypeTitle } from '~/utils/dataset'
 import { useDatasetStore } from '~/composables/dataset/store'
 import useStore from '~/composables/use-store'
 
-const { t, locale } = useI18n({ useScope: 'local' })
+const { t, locale } = useI18n()
 const { dataset } = useDatasetStore()
 const { vocabulary, vocabularyArray } = useStore()
 
@@ -327,6 +328,13 @@ const displayFormat = computed({
     }
   }
 })
+
+function conceptFilter (itemText: string, queryText: string, item: any) {
+  const search = queryText.toLowerCase()
+  const title = (item.raw.text ?? '').toLowerCase()
+  const description = (item.raw.description ?? '').toLowerCase()
+  return title.includes(search) || description.includes(search)
+}
 
 function onRemoveColumn () {
   if (!props.column) return

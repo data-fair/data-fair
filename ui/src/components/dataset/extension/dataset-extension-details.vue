@@ -191,7 +191,7 @@ const props = defineProps<{
   resourceUrl: string
 }>()
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 const { sendUiNotif } = useUiNotif()
 
 const loading = ref(false)

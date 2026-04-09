@@ -60,7 +60,7 @@ defineProps<{
   resourceUrl: string
 }>()
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const dialog = ref(false)
 </script>

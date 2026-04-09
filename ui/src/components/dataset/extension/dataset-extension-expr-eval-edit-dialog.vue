@@ -30,6 +30,7 @@
         <dataset-extension-expr-eval-preview
           v-if="dialog"
           :extension="extension"
+          :idx="idx"
           :dataset="dataset"
           :resource-url="resourceUrl"
           @update:expr="val => emit('update:expr', val)"
@@ -54,6 +55,7 @@ import DatasetExtensionExprEvalPreview from './dataset-extension-expr-eval-previ
 
 defineProps<{
   extension: any
+  idx: number
   dataset: any
   resourceUrl: string
 }>()
@@ -62,7 +64,7 @@ const emit = defineEmits<{
   'update:expr': [value: string]
 }>()
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const dialog = ref(false)
 </script>

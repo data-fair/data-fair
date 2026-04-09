@@ -302,7 +302,7 @@ import { withQuery } from 'ufo'
 import { $apiPath, $fetch } from '../../context.js'
 
 const dataset = defineModel<any>({ required: true })
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 useSessionAuthenticated()
 
 // Initialize virtual defaults
