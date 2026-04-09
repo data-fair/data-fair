@@ -93,33 +93,43 @@
       min-height: auto => remove default v-card-actions min-height
     -->
     <v-card-actions
-      class="text-body-small py-2"
+      class="flex-column align-start text-body-small py-2"
       style="min-height: auto"
     >
       <!-- Topics list -->
-      <div
+      <v-row
         v-if="dataset.topics?.length"
-        class="d-flex flex-wrap ga-1 mb-1"
+        density="compact"
       >
-        <v-chip
+        <v-col
           v-for="topic in dataset.topics"
           :key="topic.id"
-          size="x-small"
-          :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}"
-          variant="flat"
+          cols="auto"
         >
-          {{ topic.title }}
-        </v-chip>
-      </div>
+          <v-chip
+            :text="topic.title"
+            :color="topic.color"
+            density="compact"
+            size="small"
+            variant="flat"
+          />
+        </v-col>
+      </v-row>
 
       <!-- Visibility + Updated at -->
-      <resource-visibility
-        v-if="dataset.visibility"
-        :visibility="dataset.visibility"
-        size="small"
-        class="mr-1"
-      />
-      <span v-if="dataset.updatedAt">{{ t('updatedAt', { date: formatDate(dataset.updatedAt) }) }}</span>
+      <div class="d-flex align-center flex-wrap">
+        <resource-visibility
+          v-if="dataset.visibility"
+          :visibility="dataset.visibility"
+          size="small"
+        />
+        <span
+          v-if="dataset.updatedAt"
+          class="ml-2"
+        >
+          {{ t('updatedAt', { date: formatDate(dataset.updatedAt) }) }}
+        </span>
+      </div>
     </v-card-actions>
   </v-card>
 </template>

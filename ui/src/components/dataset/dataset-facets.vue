@@ -99,6 +99,16 @@
       clearable
       multiple
     />
+    <v-autocomplete
+      v-model="type"
+      :items="typeItems"
+      :label="t('type')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
   </div>
 </template>
 
@@ -120,6 +130,14 @@ const publicationSites = defineModel<string[]>('publicationSites', { default: ()
 const requestedPublicationSites = defineModel<string[]>('requestedPublicationSites', { default: () => [] })
 const services = defineModel<string[]>('services', { default: () => [] })
 const concepts = defineModel<string[]>('concepts', { default: () => [] })
+const type = defineModel<string[]>('type', { default: () => [] })
+
+const typeItems = computed(() => [
+  { title: t('typeValues.file'), value: 'file' },
+  { title: t('typeValues.rest'), value: 'rest' },
+  { title: t('typeValues.virtual'), value: 'virtual' },
+  { title: t('typeValues.metaOnly'), value: 'metaOnly' },
+])
 
 const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: any) => string, filterFn?: (v: any) => boolean) => {
   return computed(() => {
@@ -235,6 +253,12 @@ fr:
   requestedPublicationSites: Publications demandées
   services: Enrichissement
   concepts: Concepts
+  type: Type
+  typeValues:
+    file: Fichier
+    rest: Éditable
+    virtual: Virtuel
+    metaOnly: Métadonnées
   statusValues:
     finalized: Finalisé
     error: Erreur
@@ -261,6 +285,12 @@ en:
   requestedPublicationSites: Requested publications
   services: Extensions
   concepts: Concepts
+  type: Type
+  typeValues:
+    file: File
+    rest: Editable
+    virtual: Virtual
+    metaOnly: Metadata only
   statusValues:
     finalized: Finalized
     error: Error

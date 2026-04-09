@@ -143,6 +143,7 @@
         v-model:requested-publication-sites="facetRequestedPublicationSites"
         v-model:services="facetServices"
         v-model:concepts="facetConcepts"
+        v-model:type="facetType"
         :facets="catalog.facets.value"
         :show-all="showAll === 'true'"
         :account="account"
@@ -213,6 +214,7 @@ const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
 const facetServices = useStringsArraySearchParam('services')
 const facetConcepts = useStringsArraySearchParam('concepts')
+const facetType = useStringsArraySearchParam('type')
 
 // Virtual datasets filter (children of a specific dataset)
 const children = useStringSearchParam('children')
@@ -253,6 +255,7 @@ const datasetsQuery = computed(() => {
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
   if (facetServices.value?.length) params.services = facetServices.value.join(',')
   if (facetConcepts.value?.length) params.concepts = facetConcepts.value.join(',')
+  if (facetType.value?.length) params.type = facetType.value.join(',')
   if (children.value) params.children = children.value
   if (shared.value) params.shared = shared.value
   return params
