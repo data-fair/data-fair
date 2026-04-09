@@ -110,6 +110,30 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <v-dialog
+    v-model="showThumbnailDialog"
+    max-width="500"
+  >
+    <v-card :title="t('thumbnailConfirmTitle')">
+      <v-card-text>{{ t('thumbnailConfirmText') }}</v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn
+          @click="showThumbnailDialog = false"
+        >
+          {{ t('cancel') }}
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="flat"
+          @click="confirmSetThumbnail(thumbnailAttachment!)"
+        >
+          {{ t('thumbnailConfirm') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <i18n lang="yaml">
@@ -121,6 +145,14 @@ fr:
   deleteText: Souhaitez-vous confirmer la suppression ?
   cancel: Annuler
   confirmDelete: Supprimer
+  saveSuccess: La pièce jointe a été enregistrée
+  deleteSuccess: La pièce jointe a été supprimée
+  deleteError: Erreur lors de la suppression de la pièce jointe
+  thumbnailConfirmTitle: Remplacer la vignette
+  thumbnailConfirmText: Une vignette est déjà définie. Souhaitez-vous la remplacer ?
+  thumbnailConfirm: Remplacer
+  thumbnailSuccess: La vignette a été mise à jour
+  thumbnailError: Erreur lors de la mise à jour de la vignette
 en:
   noAttachment: You have not added any attachments yet.
   thumbnailDataset: Use as dataset thumbnail
@@ -129,6 +161,14 @@ en:
   deleteText: Do you really want to delete this attachment?
   cancel: Cancel
   confirmDelete: Delete
+  saveSuccess: Attachment has been saved
+  deleteSuccess: Attachment has been deleted
+  deleteError: Error while deleting the attachment
+  thumbnailConfirmTitle: Replace thumbnail
+  thumbnailConfirmText: A thumbnail is already set. Do you want to replace it?
+  thumbnailConfirm: Replace
+  thumbnailSuccess: Thumbnail has been updated
+  thumbnailError: Error while updating the thumbnail
 </i18n>
 
 <script setup lang="ts">
@@ -154,13 +194,12 @@ const props = defineProps<{
   canEdit: boolean
   canDelete: boolean
   canThumbnail: boolean
-}>()
-
-const emit = defineEmits<{
-  patch: [data: Record<string, unknown>]
+  currentImage?: string | null
+  onPatch: (data: Record<string, unknown>) => Promise<void>
 }>()
 
 const { t, locale } = useI18n()
+const { sendUiNotif } = useUiNotif()
 
 const attachmentUrl = (attachment: AttachmentItem) => {
   return attachment.url || `${props.uploadUrl}/${attachment.name}`
@@ -190,11 +229,31 @@ const handleSave = async (updatedAttachment: AttachmentItem, index: number) => {
   const newAttachments = [...props.attachments]
   if (index === -1) newAttachments.push(updatedAttachment)
   else newAttachments[index] = updatedAttachment
-  emit('patch', { attachments: newAttachments })
+  await props.onPatch({ attachments: newAttachments })
+  sendUiNotif({ type: 'success', msg: t('saveSuccess') })
 }
 
+const showThumbnailDialog = ref(false)
+const thumbnailAttachment = ref<AttachmentItem | null>(null)
+
 const setAsThumbnail = (attachment: AttachmentItem) => {
-  emit('patch', { image: attachmentUrl(attachment) })
+  if (props.currentImage) {
+    thumbnailAttachment.value = attachment
+    showThumbnailDialog.value = true
+  } else {
+    confirmSetThumbnail(attachment)
+  }
+}
+
+const confirmSetThumbnail = async (attachment: AttachmentItem) => {
+  try {
+    await props.onPatch({ image: attachmentUrl(attachment) })
+    sendUiNotif({ type: 'success', msg: t('thumbnailSuccess') })
+  } catch (error: any) {
+    sendUiNotif({ type: 'error', msg: t('thumbnailError'), error })
+  }
+  showThumbnailDialog.value = false
+  thumbnailAttachment.value = null
 }
 
 const showDeleteDialog = ref(false)
@@ -207,14 +266,19 @@ const openDeleteConfirm = (i: number) => {
 
 const doDelete = async () => {
   if (deleteIndex.value === null) return
-  const attachment = props.attachments[deleteIndex.value]
-  // Supprimer le fichier physique si c'est un fichier (pas une URL)
-  if (attachment.name && (attachment.type === 'file' || !attachment.type)) {
-    await $fetch(`${props.uploadUrl}/${attachment.name}`, { method: 'DELETE' })
+  try {
+    const attachment = props.attachments[deleteIndex.value]
+    // Supprimer le fichier physique si c'est un fichier (pas une URL)
+    if (attachment.name && (attachment.type === 'file' || !attachment.type)) {
+      await $fetch(`${props.uploadUrl}/${attachment.name}`, { method: 'DELETE' })
+    }
+    const newAttachments = [...props.attachments]
+    newAttachments.splice(deleteIndex.value, 1)
+    await props.onPatch({ attachments: newAttachments })
+    sendUiNotif({ type: 'success', msg: t('deleteSuccess') })
+  } catch (error: any) {
+    sendUiNotif({ type: 'error', msg: t('deleteError'), error })
   }
-  const newAttachments = [...props.attachments]
-  newAttachments.splice(deleteIndex.value, 1)
-  emit('patch', { attachments: newAttachments })
   showDeleteDialog.value = false
   deleteIndex.value = null
 }

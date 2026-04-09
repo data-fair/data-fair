@@ -157,10 +157,7 @@ const projectionsFetch = useFetch<{ title: string, code: string }[]>(() => showP
 
 const searchQuery = ref('')
 const activeColumnKey = ref<string | null>(null)
-
-const editableColumns = computed(() => {
-  return props.modelValue.filter(p => !p['x-calculated'])
-})
+const editableColumns = computed(() => props.modelValue.filter(p => !p['x-calculated']))
 
 const filteredColumns = computed(() => {
   const filter = searchQuery.value?.toLowerCase()

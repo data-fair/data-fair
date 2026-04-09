@@ -92,7 +92,7 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="attachments">
-          <application-attachments />
+          <application-metadata-attachments />
         </v-tabs-window-item>
 
         <v-tabs-window-item
@@ -290,7 +290,8 @@
       <template #content>
         <v-list>
           <v-list-item
-            v-if="can('setOwner')"
+            v-if="can('delete')"
+            :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
             <div>
@@ -314,11 +315,12 @@
           </v-list-item>
 
           <v-divider
-            v-if="can('setOwner') && can('delete')"
+            v-if="can('delete')"
           />
 
           <v-list-item
             v-if="can('delete')"
+            :prepend-icon="mdiDelete"
             class="py-4"
           >
             <div>
@@ -345,7 +347,7 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('setOwner')"
+      v-if="can('delete')"
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
@@ -470,7 +472,7 @@ import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiBell, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
@@ -508,6 +510,17 @@ const metadataEditFetch = useEditFetch<any>(`${$apiPath}/applications/${route.pa
 
 watch(metadataEditFetch.serverData, (d) => {
   if (d) application.value = d as any
+})
+
+// Sync store.application.image back to metadataEditFetch when changed externally (e.g. thumbnail set from attachments tab)
+watch(() => application.value?.image, (newImage) => {
+  if (metadataEditFetch.serverData.value && metadataEditFetch.serverData.value.image !== newImage) {
+    const wasUnchanged = metadataEditFetch.data.value?.image === metadataEditFetch.serverData.value.image
+    metadataEditFetch.serverData.value.image = newImage
+    if (wasUnchanged && metadataEditFetch.data.value) {
+      metadataEditFetch.data.value.image = newImage
+    }
+  }
 })
 
 useLeaveGuard(metadataEditFetch.hasDiff, { locale })
@@ -622,7 +635,7 @@ const sections = computedDeepDiff(() => {
     result.activity = { title: t('tracking'), tabs: activityTabs }
   }
 
-  if (can('setOwner') || can('delete')) {
+  if (can('delete')) {
     result.dangerZone = { title: t('dangerZone'), tabs: [] }
   }
 

@@ -7,7 +7,8 @@
     :can-edit="canEdit"
     :can-delete="canDelete"
     :can-thumbnail="canThumbnail"
-    @patch="handlePatch"
+    :current-image="dataset?.image"
+    :on-patch="handlePatch"
   />
 </template>
 
@@ -25,5 +26,6 @@ const canThumbnail = computed(() => can('writeDescription').value)
 
 const handlePatch = async (data: Record<string, unknown>) => {
   await patchDataset.execute(data)
+  if (patchDataset.error.value) throw new Error(patchDataset.error.value)
 }
 </script>

@@ -1,7 +1,7 @@
 <template>
   <template v-if="dataset">
     <!-- Source files downloads for file datasets -->
-    <template v-if="isFileDataset && sourceFiles.length">
+    <template v-if="(isFileDataset && sourceFiles.length) || (dataset.isRest && user?.adminMode)">
       <v-list-subheader class="text-uppercase">
         {{ t('downloads') }}
       </v-list-subheader>
@@ -21,6 +21,20 @@
         <v-list-item-subtitle v-if="file.size">
           {{ formatBytes(file.size) }}
         </v-list-item-subtitle>
+      </v-list-item>
+
+      <v-list-item
+        v-if="dataset.isRest && user?.adminMode"
+        :href="resourceUrl + '/raw'"
+        link
+      >
+        <template #prepend>
+          <v-icon
+            :icon="mdiProgressDownload"
+            color="admin"
+          />
+        </template>
+        {{ t('downloadRawRest') }}
       </v-list-item>
     </template>
 
@@ -69,21 +83,6 @@
     </v-list-item>
 
     <v-list-item
-      v-if="dataset.isRest && user?.adminMode"
-      :href="resourceUrl + '/raw'"
-      link
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiProgressDownload"
-          color="admin"
-        />
-      </template>
-      {{ t('downloadRawRest') }}
-      <v-list-item-subtitle>{{ t('downloadRawRestSubtitle') }}</v-list-item-subtitle>
-    </v-list-item>
-
-    <v-list-item
       v-if="can('readApiDoc').value && dataset.finalizedAt"
       :to="`/dataset/${dataset.id}/api-doc`"
       link
@@ -106,7 +105,6 @@ fr:
   updateData: Mettre à jour les données
   downloads: Téléchargements
   downloadRawRest: Export brut
-  downloadRawRestSubtitle: Téléchargement de l'export brut des données originales (admin)
   actions: Actions
   useAPI: Utiliser l'API
 en:
@@ -115,7 +113,6 @@ en:
   updateData: Update data
   downloads: Downloads
   downloadRawRest: Raw export
-  downloadRawRestSubtitle: Download the raw export of original data (admin)
   actions: Actions
   useAPI: Use the API
 </i18n>

@@ -7,7 +7,8 @@
     :can-edit="canEdit"
     :can-delete="canDelete"
     :can-thumbnail="canThumbnail"
-    @patch="handlePatch"
+    :current-image="application?.image"
+    :on-patch="handlePatch"
   />
 </template>
 

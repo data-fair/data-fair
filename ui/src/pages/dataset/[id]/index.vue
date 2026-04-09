@@ -135,7 +135,7 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="attachments">
-          <dataset-attachments />
+          <dataset-metadata-attachments />
         </v-tabs-window-item>
       </template>
     </df-section-tabs>
@@ -320,7 +320,8 @@
       <template #content>
         <v-list>
           <v-list-item
-            v-if="can('setOwner').value"
+            v-if="can('changeOwner').value"
+            :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
             <div>
@@ -344,11 +345,12 @@
           </v-list-item>
 
           <v-divider
-            v-if="can('setOwner').value && (canDeleteAllLines || can('delete').value)"
+            v-if="can('changeOwner').value && (canDeleteAllLines || can('delete').value)"
           />
 
           <v-list-item
             v-if="canDeleteAllLines"
+            :prepend-icon="mdiDeleteSweep"
             class="py-4"
           >
             <div>
@@ -377,6 +379,7 @@
 
           <v-list-item
             v-if="can('delete').value"
+            :prepend-icon="mdiDelete"
             class="py-4"
           >
             <div>
@@ -403,7 +406,7 @@
     </df-section-tabs>
 
     <owner-change-dialog
-      v-if="can('setOwner').value"
+      v-if="can('changeOwner').value"
       v-model="showOwnerDialog"
       :resource="dataset"
       resource-type="datasets"
@@ -593,7 +596,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/dataset-rest-config.vue'
-import { mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/store'
@@ -661,6 +664,17 @@ watch(structureEditFetch.serverData, (d) => {
 })
 watch(metadataEditFetch.serverData, (d) => {
   if (d) dataset.value = d as any
+})
+
+// Sync store.dataset.image back to metadataEditFetch when changed externally (e.g. thumbnail set from attachments tab)
+watch(() => dataset.value?.image, (newImage) => {
+  if (metadataEditFetch.serverData.value && metadataEditFetch.serverData.value.image !== newImage) {
+    const wasUnchanged = metadataEditFetch.data.value?.image === metadataEditFetch.serverData.value.image
+    metadataEditFetch.serverData.value.image = newImage
+    if (wasUnchanged && metadataEditFetch.data.value) {
+      metadataEditFetch.data.value.image = newImage
+    }
+  }
 })
 
 // Leave guards for unsaved changes
@@ -934,7 +948,7 @@ const sections = computedDeepDiff(() => {
   }
 
   // Danger zone section
-  if (can('setOwner').value || canDeleteAllLines.value || can('delete').value) {
+  if (can('changeOwner').value || canDeleteAllLines.value || can('delete').value) {
     result.dangerZone = { title: t('dangerZone'), tabs: [] }
   }
 

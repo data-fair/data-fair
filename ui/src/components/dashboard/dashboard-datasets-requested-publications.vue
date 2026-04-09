@@ -1,6 +1,6 @@
 <template>
   <dashboard-svg-link
-    :to="nbDatasets ? { path: '/datasets', query: { requestedPublicationSites: publicationSitesFilter } } : undefined"
+    :to="nbDatasets ? { path: '/datasets', query: { requestedPublicationSites: requestedPublicationSitesFilter } } : undefined"
     :title="t('requestedPublications', nbDatasets ?? 0)"
     :svg="checklistSvg"
     :color="nbDatasets ? 'primary' : 'grey'"
@@ -33,9 +33,13 @@ const publicationSitesFilter = computed(() => {
   return publicationSitesFetch.data.value?.map(p => `${p.type}:${p.id}`).join(',') ?? ''
 })
 
-const datasetsFetch = useFetch<{ count: number }>(
-  () => publicationSitesFilter.value ? `${$apiPath}/datasets?size=0&shared=false&requestedPublicationSites=${publicationSitesFilter.value}` : null
+const datasetsFetch = useFetch<{ count: number, facets: { requestedPublicationSites: { value: string }[] } }>(
+  () => publicationSitesFilter.value ? `${$apiPath}/datasets?size=0&shared=false&requestedPublicationSites=${publicationSitesFilter.value}&facets=requestedPublicationSites` : null
 )
 
 const nbDatasets = computed(() => datasetsFetch.data.value?.count ?? null)
+
+const requestedPublicationSitesFilter = computed(() => {
+  return datasetsFetch.data.value?.facets?.requestedPublicationSites?.map(f => f.value).join(',') ?? ''
+})
 </script>

@@ -24,8 +24,8 @@ const createApplicationStore = (id: string) => {
   })
 
   const patch = async (patch: Partial<ApplicationRuntime>) => {
-    await $fetch<Application>('/applications/' + id, { method: 'PATCH', body: patch })
-    if (applicationFetch.data.value) Object.assign(applicationFetch.data.value, patch)
+    const patchedApplication = await $fetch<ApplicationRuntime>('/applications/' + id, { method: 'PATCH', body: patch })
+    application.value = patchedApplication
   }
 
   const canWriteConfig = computed(() => application.value?.userPermissions.includes('writeConfig'))

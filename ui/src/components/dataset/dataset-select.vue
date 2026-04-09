@@ -33,9 +33,11 @@ import { $fetch } from '~/context'
 const props = withDefaults(defineProps<{
   owner?: { type: string, id: string, department?: string } | null
   label?: string
+  extraParams?: Record<string, any>
 }>(), {
   owner: null,
-  label: ''
+  label: '',
+  extraParams: () => ({})
 })
 
 const model = defineModel<Record<string, any> | null>({ default: null })
@@ -71,7 +73,8 @@ async function searchDatasets () {
         q: searchText.value,
         size: 20,
         select: 'id,title,slug,publicationSites,requestedPublicationSites',
-        owner: ownerFilter
+        owner: ownerFilter,
+        ...props.extraParams
       }
     })
     datasets.value = res.results

@@ -1,6 +1,6 @@
 <template>
   <dashboard-svg-link
-    :to="nbApplications ? { path: '/applications', query: { requestedPublicationSites: publicationSitesFilter } } : undefined"
+    :to="nbApplications ? { path: '/applications', query: { requestedPublicationSites: requestedPublicationSitesFilter } } : undefined"
     :title="t('requestedPublications', nbApplications ?? 0)"
     :svg="checklistSvg"
     :color="nbApplications ? 'primary' : 'grey'"
@@ -33,9 +33,13 @@ const publicationSitesFilter = computed(() => {
   return publicationSitesFetch.data.value?.map(p => `${p.type}:${p.id}`).join(',') ?? ''
 })
 
-const applicationsFetch = useFetch<{ count: number }>(
-  () => publicationSitesFilter.value ? `${$apiPath}/applications?size=0&shared=false&requestedPublicationSites=${publicationSitesFilter.value}` : null
+const applicationsFetch = useFetch<{ count: number, facets: { requestedPublicationSites: { value: string }[] } }>(
+  () => publicationSitesFilter.value ? `${$apiPath}/applications?size=0&shared=false&requestedPublicationSites=${publicationSitesFilter.value}&facets=requestedPublicationSites` : null
 )
 
 const nbApplications = computed(() => applicationsFetch.data.value?.count ?? null)
+
+const requestedPublicationSitesFilter = computed(() => {
+  return applicationsFetch.data.value?.facets?.requestedPublicationSites?.map(f => f.value).join(',') ?? ''
+})
 </script>
