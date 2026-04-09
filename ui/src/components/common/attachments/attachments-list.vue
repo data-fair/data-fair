@@ -73,43 +73,20 @@
             :upload-url="uploadUrl"
             @save="(att) => handleSave(att, i)"
           />
-          <v-btn
+          <confirm-menu
             v-if="canDelete"
-            :icon="mdiDelete"
-            variant="text"
-            size="small"
-            color="warning"
-            :title="t('delete')"
-            @click="openDeleteConfirm(i)"
+            :title="t('deleteTitle')"
+            :text="t('deleteText')"
+            :tooltip="t('deleteTitle')"
+            yes-color="warning"
+            :btn-props="{ color: 'warning', icon: true, variant: 'text', size: 'small' }"
+            :confirm-label="t('confirmDelete')"
+            @confirm="doDelete(i)"
           />
         </v-card-actions>
       </v-card>
     </v-col>
   </v-row>
-
-  <v-dialog
-    v-model="showDeleteDialog"
-    max-width="500"
-  >
-    <v-card :title="t('delete')">
-      <v-card-text>{{ t('deleteText') }}</v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          @click="showDeleteDialog = false"
-        >
-          {{ t('cancel') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          variant="flat"
-          @click="doDelete"
-        >
-          {{ t('confirmDelete') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
 
   <v-dialog
     v-model="showThumbnailDialog"
@@ -141,8 +118,8 @@ fr:
   noAttachment: Vous n'avez pas encore ajouté de pièces jointes.
   thumbnailDataset: Utiliser comme vignette du jeu de données
   thumbnailApplication: Utiliser comme vignette de l'application
-  delete: Supprimer la pièce jointe
-  deleteText: Souhaitez-vous confirmer la suppression ?
+  deleteTitle: Supprimer la pièce jointe
+  deleteText: Êtes-vous sûr de vouloir supprimer cette pièce jointe ? Cette action est irréversible.
   cancel: Annuler
   confirmDelete: Supprimer
   saveSuccess: La pièce jointe a été enregistrée
@@ -157,8 +134,8 @@ en:
   noAttachment: You have not added any attachments yet.
   thumbnailDataset: Use as dataset thumbnail
   thumbnailApplication: Use as application thumbnail
-  delete: Delete attachment
-  deleteText: Do you really want to delete this attachment?
+  deleteTitle: Delete attachment
+  deleteText: Are you sure you want to delete this attachment? This action cannot be undone.
   cancel: Cancel
   confirmDelete: Delete
   saveSuccess: Attachment has been saved
@@ -172,7 +149,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiDelete, mdiImage } from '@mdi/js'
+import { mdiImage } from '@mdi/js'
 
 interface AttachmentItem {
   title?: string
@@ -257,30 +234,19 @@ const confirmSetThumbnail = async (attachment: AttachmentItem) => {
   thumbnailAttachment.value = null
 }
 
-const showDeleteDialog = ref(false)
-const deleteIndex = ref<number | null>(null)
-
-const openDeleteConfirm = (i: number) => {
-  deleteIndex.value = i
-  showDeleteDialog.value = true
-}
-
-const doDelete = async () => {
-  if (deleteIndex.value === null) return
+const doDelete = async (index: number) => {
   try {
-    const attachment = props.attachments[deleteIndex.value]
+    const attachment = props.attachments[index]
     // Supprimer le fichier physique si c'est un fichier (pas une URL)
     if (attachment.name && (attachment.type === 'file' || !attachment.type)) {
       await $fetch(`${props.uploadUrl}/${attachment.name}`, { method: 'DELETE' })
     }
     const newAttachments = [...props.attachments]
-    newAttachments.splice(deleteIndex.value, 1)
+    newAttachments.splice(index, 1)
     await props.onPatch({ attachments: newAttachments })
     sendUiNotif({ type: 'success', msg: t('deleteSuccess') })
   } catch (error: any) {
     sendUiNotif({ type: 'error', msg: t('deleteError'), error })
   }
-  showDeleteDialog.value = false
-  deleteIndex.value = null
 }
 </script>

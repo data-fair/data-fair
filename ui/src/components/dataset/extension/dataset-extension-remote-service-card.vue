@@ -51,11 +51,12 @@
       <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
         <confirm-menu
           v-if="canWrite && dataset.isRest"
+          :title="t('confirmRefreshTitle')"
+          :text="t('confirmRefreshText')"
+          :tooltip="t('confirmRefreshTooltip')"
           yes-color="primary"
           :btn-props="{ color: 'primary', icon: true }"
           :icon="mdiRefresh"
-          :text="t('confirmRefreshText')"
-          :tooltip="t('confirmRefreshTooltip')"
           @confirm="emit('refresh')"
         />
         <dataset-extension-details-dialog
@@ -66,9 +67,10 @@
         />
         <confirm-menu
           v-if="canWrite"
-          yes-color="warning"
+          :title="t('confirmDeleteTitle')"
           :text="t('confirmDeleteText')"
           :tooltip="t('confirmDeleteTooltip')"
+          yes-color="warning"
           @confirm="emit('remove')"
         />
       </v-card-actions>
@@ -87,9 +89,10 @@
       <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
         <confirm-menu
           v-if="canWrite"
-          yes-color="warning"
+          :title="t('confirmDeleteTitle')"
           :text="t('confirmDeleteText')"
           :tooltip="t('confirmDeleteTooltip')"
+          yes-color="warning"
           @confirm="emit('remove')"
         />
       </v-card-actions>
@@ -102,9 +105,11 @@ fr:
   additionalCols: Colonnes additionnelles
   allColsOut: Toutes les colonnes
   confirmDeleteTooltip: Supprimer l'extension
-  confirmDeleteText: Souhaitez-vous confirmer la suppression ?
+  confirmDeleteTitle: Supprimer l'extension
+  confirmDeleteText: Êtes-vous sûr de vouloir supprimer cette extension ? Les colonnes ajoutées par cet enrichissement seront supprimées.
   confirmRefreshTooltip: Relancer l'enrichissement
-  confirmRefreshText: Souhaitez-vous confirmer la relance de l'enrichissement ?
+  confirmRefreshTitle: Relancer l'enrichissement
+  confirmRefreshText: Souhaitez-vous relancer l'enrichissement ? Les données enrichies seront recalculées.
   link: "Lien : {info}"
   unavailableService: "donnée de référence non disponible ({service} / {action})."
   unavailableServiceDetail: Soit la donnée de référence n'existe plus, soit le concept servant de liaison n'est plus présent dans votre jeu de données.
@@ -114,9 +119,11 @@ en:
   additionalCols: Additional columns
   allColsOut: All the columns
   confirmDeleteTooltip: Delete the extension
-  confirmDeleteText: Do you want to confirm the deletion?
+  confirmDeleteTitle: Delete the extension
+  confirmDeleteText: Are you sure you want to delete this extension? The columns added by this enrichment will be removed.
   confirmRefreshTooltip: Update extension
-  confirmRefreshText: Do you want to confirm the update of the extension?
+  confirmRefreshTitle: Update extension
+  confirmRefreshText: Do you want to update the extension? The enriched data will be recalculated.
   link: "Link: {info}"
   unavailableService: "Master data not available ({service} / {action})."
   unavailableServiceDetail: Either the master data no longer exists, or the linking concept is no longer present in your dataset.

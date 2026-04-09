@@ -51,8 +51,8 @@ export const useMap = (
     // Disable map rotation using touch rotation gesture
     map.touchZoomRotate.disableRotation()
 
-    map.on('error', (error) => {
-      sendUiNotif({ type: 'error', error, msg: t('mapError') })
+    map.on('error', (e) => {
+      sendUiNotif({ type: 'error', error: e.error, msg: t('mapError') })
     })
 
     map.once('load', () => { initCustomSource() })

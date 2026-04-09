@@ -134,6 +134,45 @@
       </df-section-tabs>
 
       <df-section-tabs
+        v-if="sections.privateVocabulary"
+        id="privateVocabulary"
+        :svg="checklistSvg"
+        svg-no-margin
+        :title="sections.privateVocabulary.title"
+      >
+        <template #extension>
+          <p>
+            Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter
+            les colonnes de vos jeux de données.
+          </p>
+        </template>
+        <template #content>
+          <v-container>
+            <v-alert
+              type="warning"
+              variant="outlined"
+              density="compact"
+              class="mb-2"
+            >
+              Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des
+              dysfonctionnements.
+            </v-alert>
+            <v-row>
+              <v-col
+                cols="12"
+                md="6"
+              >
+                <settings-private-vocabulary
+                  v-model="settings.privateVocabulary"
+                  @update:model-value="patch.execute({ privateVocabulary: settings.privateVocabulary })"
+                />
+              </v-col>
+            </v-row>
+          </v-container>
+        </template>
+      </df-section-tabs>
+
+      <df-section-tabs
         v-if="sections['api-keys']"
         id="api-keys"
         :svg="securitySvg"
@@ -179,43 +218,6 @@
                 <settings-webhooks
                   v-model="settings.webhooks"
                   @update:model-value="patch.execute({webhooks: settings.webhooks})"
-                />
-              </v-col>
-            </v-row>
-          </v-container>
-        </template>
-      </df-section-tabs>
-
-      <df-section-tabs
-        v-if="sections.privateVocabulary"
-        id="privateVocabulary"
-        :svg="checklistSvg"
-        svg-no-margin
-        :title="sections.privateVocabulary.title"
-      >
-        <template #extension>
-          <p>
-            Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
-          </p>
-        </template>
-        <template #content>
-          <v-container>
-            <v-alert
-              type="warning"
-              variant="outlined"
-              density="compact"
-              class="mb-2"
-            >
-              Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
-            </v-alert>
-            <v-row>
-              <v-col
-                cols="12"
-                md="6"
-              >
-                <settings-private-vocabulary
-                  v-model="settings.privateVocabulary"
-                  @update:model-value="patch.execute({privateVocabulary: settings.privateVocabulary})"
                 />
               </v-col>
             </v-row>

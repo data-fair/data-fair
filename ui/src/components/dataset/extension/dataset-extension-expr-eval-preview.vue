@@ -37,7 +37,7 @@
         variant="tonal"
         class="mb-4"
       >
-        <p v-html="t('exprEvalHelp')" />
+        <p v-html="/*eslint-disable-line vue/no-v-html*/t('exprEvalHelp')" />
         <dataset-expr-eval-doc />
       </v-alert>
     </v-expand-transition>
@@ -180,7 +180,7 @@
               <!-- Parameter columns -->
               <td
                 v-else
-                :key="header.value"
+                :key="header.value + '-param'"
                 style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
                 :title="String(row[header.value] ?? '')"
               >

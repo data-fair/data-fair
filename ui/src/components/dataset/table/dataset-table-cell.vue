@@ -26,6 +26,7 @@
         position="absolute"
         size="x-small"
         variant="flat"
+        style="right: 4px; top: 50%; transform: translateY(-50%); z-index: 100;"
         @click="emit('showMapPreview')"
       />
     </template>

@@ -23,9 +23,10 @@
       />
       <confirm-menu
         v-if="canWrite"
-        yes-color="warning"
+        :title="t('confirmDeleteTitle')"
         :text="t('confirmDeleteText')"
         :tooltip="t('confirmDeleteTooltip')"
+        yes-color="warning"
         @confirm="emit('remove')"
       />
     </v-card-actions>
@@ -36,13 +37,15 @@
 fr:
   newExprEval: Nouvelle colonne calculée
   expr: Expression
-  confirmDeleteTooltip: Supprimer l'extension
-  confirmDeleteText: Souhaitez-vous confirmer la suppression ?
+  confirmDeleteTooltip: Supprimer la colonne calculée
+  confirmDeleteTitle: Supprimer la colonne calculée
+  confirmDeleteText: Êtes-vous sûr de vouloir supprimer cette colonne calculée ? Les données seront perdues.
 en:
   newExprEval: New calculated column
   expr: Expression
-  confirmDeleteTooltip: Delete the extension
-  confirmDeleteText: Do you want to confirm the deletion?
+  confirmDeleteTooltip: Delete the calculated column
+  confirmDeleteTitle: Delete the calculated column
+  confirmDeleteText: Are you sure you want to delete this calculated column? The data will be lost.
 </i18n>
 
 <script setup lang="ts">

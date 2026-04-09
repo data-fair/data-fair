@@ -7,12 +7,15 @@
     <template #activator="{ props: activatorProps }">
       <v-btn
         v-bind="{ ...activatorProps, ...filteredBtnProps }"
-        :icon="label ? undefined : icon"
         :title="tooltip"
       >
         <template v-if="label">
           {{ label }}
         </template>
+        <v-icon
+          v-else
+          :icon="icon"
+        />
       </v-btn>
     </template>
 
@@ -102,11 +105,14 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const dialog = ref(false)
 
-/** btnProps without `icon` to avoid conflict with the explicit `:icon` binding */
+/** btnProps without `icon` when label is set, to avoid icon-button styling on text buttons */
 const filteredBtnProps = computed(() => {
   if (!props.btnProps) return {}
-  const { icon: _, ...rest } = props.btnProps
-  return rest
+  if (props.label) {
+    const { icon: _, ...rest } = props.btnProps
+    return rest
+  }
+  return props.btnProps
 })
 
 function onConfirm () {

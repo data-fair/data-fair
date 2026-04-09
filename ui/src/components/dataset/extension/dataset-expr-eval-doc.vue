@@ -8,7 +8,7 @@
       <code>{{ fn.key }}({{ fn.params }})</code>
       <p
         class="mb-0"
-        v-html="fn.description"
+        v-html="/*eslint-disable-line vue/no-v-html*/fn.description"
       />
       <ul
         v-if="fn.examples"
