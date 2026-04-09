@@ -77,7 +77,7 @@ export const schema = {
             title: 'Titre',
             minLength: 3,
             layout: {
-              props: { placeholder: 'exemple "récupérer les informations de plusieurs produits"' }
+              props: { placeholder: 'Exemple "Récupérer les informations de plusieurs produits"' }
             }
           },
           description: {
@@ -85,7 +85,7 @@ export const schema = {
             title: 'Description',
             layout: {
               comp: 'textarea',
-              props: { placeholder: 'exemple "cet enrichissement vous permet de récupérer les informations de plusieurs produits à partir d\'une liste de codes produits."' }
+              props: { placeholder: 'Exemple "Cet enrichissement vous permet de récupérer les informations de plusieurs produits à partir d\'une liste de codes produits."' }
             }
           },
           filters,
@@ -197,7 +197,7 @@ Exemple: ma_colonne,-ma_colonne2`
             title: 'Titre',
             minLength: 3,
             layout: {
-              props: { placeholder: 'exemple "recherche d\'un produit"' }
+              props: { placeholder: 'Exemple "Recherche d\'un produit"' }
             }
           },
           description: {
@@ -205,7 +205,7 @@ Exemple: ma_colonne,-ma_colonne2`
             title: 'Description',
             layout: {
               comp: 'textarea',
-              props: { placeholder: 'exemple "récupérez un code produit en effectuant une recherche dans son code ou son libellé"' }
+              props: { placeholder: 'Exemple "Récupérez un code produit en effectuant une recherche dans son code ou son libellé"' }
             }
           },
           output: {
@@ -441,7 +441,7 @@ export const endpoints = (dataset) => {
             }
           },
           400: {
-            description: 'Mauvais formattage de la requête',
+            description: 'Mauvais formatage de la requête',
             content: {
               'application/json': {
                 schema: {

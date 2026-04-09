@@ -86,31 +86,19 @@
           </template>
           {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
         </v-list-item>
-
-        <!-- Visibility -->
-        <v-list-item v-if="dataset.visibility === 'public'">
-          <template #prepend>
-            <v-icon
-              :icon="mdiLockOpen"
-              color="primary"
-            />
-          </template>
-          {{ t('public') }}
-        </v-list-item>
-        <v-list-item v-else-if="dataset.visibility">
-          <template #prepend>
-            <v-icon
-              :icon="mdiLock"
-              color="warning"
-            />
-          </template>
-          {{ t('private') }}
-        </v-list-item>
       </v-list>
     </v-card-text>
-    <v-card-subtitle class="text-body-small pb-3">
+
+    <!--
+      min-height: auto => remove default v-card-actions min-height
+    -->
+    <v-card-actions
+      class="text-body-small py-2"
+      style="min-height: auto"
+    >
+      <!-- Topics list -->
       <div
-        v-if="showTopics && dataset.topics?.length"
+        v-if="dataset.topics?.length"
         class="d-flex flex-wrap ga-1 mb-1"
       >
         <v-chip
@@ -123,8 +111,16 @@
           {{ topic.title }}
         </v-chip>
       </div>
+
+      <!-- Visibility + Updated at -->
+      <resource-visibility
+        v-if="dataset.visibility"
+        :visibility="dataset.visibility"
+        size="small"
+        class="mr-1"
+      />
       <span v-if="dataset.updatedAt">{{ t('updatedAt', { date: formatDate(dataset.updatedAt) }) }}</span>
-    </v-card-subtitle>
+    </v-card-actions>
   </v-card>
 </template>
 
@@ -132,9 +128,8 @@
 import type { Dataset } from '#api/types'
 import truncateMiddle from 'truncate-middle'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
+
 import {
-  mdiLockOpen,
-  mdiLock,
   mdiPictureInPictureBottomRightOutline,
   mdiAllInclusive,
   mdiInformationOutline,
@@ -148,12 +143,9 @@ const { t, locale } = useI18n()
 const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   dataset: Dataset
-  showTopics?: boolean
-}>(), {
-  showTopics: true,
-})
+}>()
 
 const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||
@@ -173,8 +165,6 @@ const formatDate = (dateStr: string) => {
 
 <i18n lang="yaml">
 fr:
-  public: Public
-  private: Privé
   virtual: Virtuel
   editable: Éditable
   metaOnly: Métadonnées
@@ -183,8 +173,6 @@ fr:
   records: "0 enregistrement | 1 enregistrement | {count} enregistrements"
   updatedAt: Mis à jour le {date}
 en:
-  public: Public
-  private: Private
   virtual: Virtual
   editable: Editable
   metaOnly: Metadata only

@@ -1,5 +1,6 @@
 <template>
   <div v-if="dataset">
+    <!-- Intro + agent chat action -->
     <div class="d-flex align-start mb-4">
       <p class="flex-grow-1 mr-2 mb-0">
         {{ t('intro') }}
@@ -12,6 +13,7 @@
         :title="t('configurePrompt')"
       />
     </div>
+
     <v-form v-model="formValid">
       <vjsf
         v-model="dataset.masterData"
@@ -89,6 +91,7 @@ const configureContext = computed(() => {
 const vjsfOptions = computed<VjsfOptions>(() => ({
   locale: locale.value,
   readOnly: !can('writeDescription'),
-  context: context.value
+  context: context.value,
+  density: 'comfortable'
 }))
 </script>

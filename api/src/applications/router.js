@@ -231,7 +231,7 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 
 // PUT used to create or update
 const attemptInsert = async (req, res, next) => {
-  const { returnValid } = await import('#types/application/index.js')
+  const { returnValid } = await import('#types/application/index.ts')
   const newApplication = returnValid(await initNew(req, req.params.applicationId))
   const sessionState = reqSession(req)
 

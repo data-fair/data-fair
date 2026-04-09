@@ -3,6 +3,7 @@
   <Teleport
     v-if="display.lgAndUp.value"
     to="#nav-right-portal"
+    defer
   >
     <v-list
       data-iframe-height

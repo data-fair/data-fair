@@ -213,8 +213,8 @@ const configureContext = computed(() => {
     'Use the subagent tool appConfig_form to help the user configure the current application.',
     'Start the session by asking the user what they want to achieve.',
   ]
-  if (baseApp?.title) lines.push(`The base application type is "${baseApp.title}".`)
-  if (baseApp?.description) lines.push(`Description of the base application: ${baseApp.description}`)
+  if (baseApp?.title) lines.push(`The application model is "${baseApp.title}".`)
+  if (baseApp?.description) lines.push(`Application model description: ${baseApp.description}`)
   if (baseApp?.category) lines.push(`Category: ${baseApp.category}`)
   if (application.value?.title) lines.push(`The application title is "${application.value.title}".`)
   return lines.join(' ')

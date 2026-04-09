@@ -12,7 +12,7 @@ const messages: Record<string, Record<string, string>> = {
   en: {
     listApplications: 'List applications',
     describeApplication: 'Describe an application',
-    listBaseApplications: 'List base applications'
+    listBaseApplications: 'List application models'
   }
 }
 
@@ -26,9 +26,9 @@ function serializeApplicationInfo (app: any): string {
   ]
   if (app.slug) meta.push(`- **Slug:** ${app.slug}`)
   if (app.description) meta.push(`- **Description:** ${app.description.length > 2000 ? app.description.slice(0, 2000) + '…' : app.description}`)
-  if (app.url) meta.push(`- **Base application URL:** ${app.url}`)
+  if (app.url) meta.push(`- **Application model URL:** ${app.url}`)
   if (app.baseApp) {
-    meta.push(`- **Base application:** ${app.baseApp.title || app.baseApp.url || '?'}`)
+    meta.push(`- **Application model:** ${app.baseApp.title || app.baseApp.url || '?'}`)
     if (app.baseApp.version) meta.push(`- **Version:** ${app.baseApp.version}`)
   }
   if (app.topics?.length) meta.push(`- **Topics:** ${app.topics.map((t: any) => t.title).join(', ')}`)
@@ -52,7 +52,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
 
   useAgentTool({
     name: 'list_applications',
-    description: 'List applications accessible to the current user with optional text search. Returns id, title, status, base application, and last update.',
+    description: 'List applications accessible to the current user with optional text search. Returns id, title, status, application model, and last update.',
     annotations: { title: t('listApplications'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,
@@ -70,7 +70,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
       const lines = data.results.map((a: any) => {
         const parts = [`- **${a.title || a.id}** (id: \`${a.id}\`)`,
           `  Status: ${a.status || 'unknown'}, updated ${a.updatedAt || '?'}`]
-        if (a.baseApp?.title) parts.push(`  Base app: ${a.baseApp.title}`)
+        if (a.baseApp?.title) parts.push(`  App model: ${a.baseApp.title}`)
         if (a.topics?.length) parts.push(`  Topics: ${a.topics.map((t: any) => t.title).join(', ')}`)
         return parts.join('\n')
       })
@@ -85,7 +85,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
 
   useAgentTool({
     name: 'describe_application',
-    description: 'Get detailed metadata for an application. Returns title, description, status, owner, base application info, configured datasets, and topics.',
+    description: 'Get detailed metadata for an application. Returns title, description, status, owner, application model info, configured datasets, and topics.',
     annotations: { title: t('describeApplication'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,
@@ -102,7 +102,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
 
   useAgentTool({
     name: 'list_base_applications',
-    description: 'List available base application templates (models). Returns id, title, category, and URL.',
+    description: 'List available application models. Returns id, title, category, and URL.',
     annotations: { title: t('listBaseApplications'), readOnlyHint: true },
     inputSchema: {
       type: 'object' as const,
@@ -126,7 +126,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
       })
 
       return [
-        `**${data.count}** base applications found (page ${page}, ${size} per page)`,
+        `**${data.count}** application models found (page ${page}, ${size} per page)`,
         '',
         ...lines
       ].join('\n')

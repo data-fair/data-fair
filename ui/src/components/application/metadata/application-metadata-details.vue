@@ -57,7 +57,7 @@ fr:
   created: Création
 en:
   owner: Owner
-  baseApp: Base application
+  baseApp: Application model
   version: version
   metadataUpdated: Metadata updated
   created: Created

@@ -14,7 +14,7 @@
     >
       <template #actions>
         <confirm-menu
-          v-if="structureEditFetch.hasDiff.value"
+          v-if="structureHasRealDiff"
           :btn-props="{ color: 'warning', variant: 'tonal' }"
           :label="t('cancel')"
           :text="t('confirmCancelText')"
@@ -23,7 +23,7 @@
           @confirm="cancelStructure"
         />
         <v-btn
-          v-if="structureEditFetch.hasDiff.value"
+          v-if="structureHasRealDiff"
           class="ml-2"
           color="accent"
           variant="flat"
@@ -652,7 +652,12 @@ const metadataEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params
 function normalizeStructureData (d: any) {
   if (!d) return
   d.extensions = (d.extensions || []).filter((e: any) => e.active !== false)
-  if (!d.masterData) d.masterData = { standardSchema: {}, virtualDatasets: {}, singleSearchs: [], bulkSearchs: [] }
+  if (!d.masterData) d.masterData = {}
+  if (!d.masterData.standardSchema) d.masterData.standardSchema = {}
+  if (!d.masterData.virtualDatasets) d.masterData.virtualDatasets = {}
+  if (!d.masterData.singleSearchs) d.masterData.singleSearchs = []
+  if (!d.masterData.bulkSearchs) d.masterData.bulkSearchs = []
+  if (!d.masterData.shareOrgs) d.masterData.shareOrgs = []
 }
 
 const masterDataFormValid = ref(true)
@@ -679,10 +684,6 @@ watch(() => dataset.value?.image, (newImage) => {
     }
   }
 })
-
-// Leave guards for unsaved changes
-useLeaveGuard(structureEditFetch.hasDiff, { locale })
-useLeaveGuard(metadataEditFetch.hasDiff, { locale })
 
 // Agent tools for metadata editing
 useAgentDatasetSummaryTools(locale, metadataEditFetch.data, (s) => {
@@ -768,6 +769,12 @@ const confirmDeleteAllLines = async () => {
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 
+// Re-sync editFetch instances when the store refreshes (e.g., after finalize-end, analyze-end)
+watch(store.datasetFetch.data, () => {
+  if (!structureHasRealDiff.value) structureEditFetch.fetch.refresh()
+  if (!metadataEditFetch.hasDiff.value) metadataEditFetch.fetch.refresh()
+})
+
 // Fetch additional data once dataset is loaded
 watch(dataset, (d) => {
   if (!d) return
@@ -812,11 +819,27 @@ const restHasDiff = computed(() => {
   return !equal(d.rest, s.rest)
 })
 
+// Check if a value is an empty default (undefined, null, empty array, or empty object)
+function isEmptyDefault (val: any) {
+  if (val == null) return true
+  if (Array.isArray(val)) return val.length === 0
+  if (typeof val === 'object') return Object.keys(val).length === 0
+  return false
+}
+
 const masterDataHasDiff = computed(() => {
-  const d = structureEditFetch.data.value
-  const s = structureEditFetch.serverData.value
-  if (!d || !s) return false
-  return !equal(d.masterData, s.masterData)
+  const d = structureEditFetch.data.value?.masterData
+  const s = structureEditFetch.serverData.value?.masterData
+  if (!d && !s) return false
+  // Compare property by property, ignoring values that go from empty to empty
+  const allKeys = new Set([...Object.keys(d || {}), ...Object.keys(s || {})])
+  for (const key of allKeys) {
+    const dVal = d?.[key]
+    const sVal = s?.[key]
+    if (isEmptyDefault(dVal) && isEmptyDefault(sVal)) continue
+    if (!equal(dVal, sVal)) return true
+  }
+  return false
 })
 
 const virtualHasDiff = computed(() => {
@@ -825,6 +848,12 @@ const virtualHasDiff = computed(() => {
   if (!d || !s) return false
   return !equal(d.virtual, s.virtual) || !equal(d.schema, s.schema)
 })
+
+const structureHasRealDiff = computed(() => schemaHasDiff.value || extensionsHasDiff.value || restHasDiff.value || masterDataHasDiff.value || virtualHasDiff.value)
+
+// Leave guards for unsaved changes
+useLeaveGuard(structureHasRealDiff, { locale })
+useLeaveGuard(metadataEditFetch.hasDiff, { locale })
 
 const sections = computedDeepDiff(() => {
   if (!dataset.value) return {} as Record<string, { title: string, tabs: any[] }>

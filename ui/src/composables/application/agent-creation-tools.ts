@@ -12,7 +12,7 @@ const messages: Record<string, Record<string, string>> = {
   },
   en: {
     selectCreationType: 'Select creation type',
-    selectBaseApplication: 'Select a base application',
+    selectBaseApplication: 'Select an application model',
     selectCopyApplication: 'Select an application to copy',
     setApplicationTitle: 'Set application title'
   }
@@ -52,12 +52,12 @@ export function useAgentApplicationCreationTools (locale: Ref<string>, state: Ap
 
   useAgentTool({
     name: 'select_base_application',
-    description: 'Select a base application template by its ID. The creation type must be "baseApp" first. Sets the title and advances the wizard to step 3.',
+    description: 'Select an application model by its ID. The creation type must be "baseApp" first. Sets the title and advances the wizard to step 3.',
     annotations: { title: t('selectBaseApplication') },
     inputSchema: {
       type: 'object' as const,
       properties: {
-        id: { type: 'string' as const, description: 'The base application ID' }
+        id: { type: 'string' as const, description: 'The application model ID' }
       },
       required: ['id'] as const
     },
@@ -66,18 +66,18 @@ export function useAgentApplicationCreationTools (locale: Ref<string>, state: Ap
         return agentToolError('select_base_application', 'Creation type must be "baseApp". Call select_creation_type first.')
       }
 
-      // Wait for base apps to be fetched if not yet loaded
+      // Wait for application models to be fetched if not yet loaded
       const apps = state.baseAppsFetch.data.value?.results
       if (!apps) {
-        return agentToolError('select_base_application', 'Base applications are still loading. Try again shortly.')
+        return agentToolError('select_base_application', 'Application models are still loading. Try again shortly.')
       }
 
       const baseApp = apps.find((a: any) => a.id === params.id)
       if (!baseApp) {
-        return agentToolError('select_base_application', `Base application "${params.id}" not found. Use list_base_applications to see available options.`)
+        return agentToolError('select_base_application', `Application model "${params.id}" not found. Use list_base_applications to see available options.`)
       }
       if (baseApp.disabled?.length) {
-        return agentToolError('select_base_application', `Base application "${baseApp.title}" is disabled: ${baseApp.disabled.join(', ')}`)
+        return agentToolError('select_base_application', `Application model "${baseApp.title}" is disabled: ${baseApp.disabled.join(', ')}`)
       }
 
       state.selectedBaseApp.value = baseApp
@@ -87,7 +87,7 @@ export function useAgentApplicationCreationTools (locale: Ref<string>, state: Ap
         state.appTitle.value = baseApp.title || ''
       }
       state.step.value = 'info'
-      return `Selected base application "${baseApp.title}". Title set to "${state.appTitle.value}". The wizard is now on step 3 (confirmation). The user can review and click Save.`
+      return `Selected application model "${baseApp.title}". Title set to "${state.appTitle.value}". The wizard is now on step 3 (confirmation). The user can review and click Save.`
     }
   })
 
