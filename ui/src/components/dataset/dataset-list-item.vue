@@ -26,7 +26,7 @@
       </v-chip>
     </v-list-item-title>
     <v-list-item-subtitle>
-      <span v-if="showOwner && dataset.owner">{{ ownerName }} · </span>
+      <span v-if="(showAll || !!(dataset.owner?.department && !session.state.account?.department)) && dataset.owner">{{ ownerName }} · </span>
       <span v-if="dataset.isVirtual">{{ t('virtual') }} · </span>
       <span v-if="dataset.isRest">{{ t('editable') }} · </span>
       <span v-if="dataset.isMetaOnly">{{ t('metaOnly') }} · </span>
@@ -58,14 +58,14 @@
 import type { Dataset } from '#api/types'
 
 const { t, locale } = useI18n()
+const session = useSession()
+const showAll = useBooleanSearchParam('showAll')
 
 const props = withDefaults(defineProps<{
   dataset: Dataset
   showTopics?: boolean
-  showOwner?: boolean
 }>(), {
   showTopics: true,
-  showOwner: false,
 })
 
 const fileInfo = computed(() => {

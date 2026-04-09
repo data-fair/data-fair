@@ -16,7 +16,7 @@
       </v-chip>
     </v-list-item-title>
     <v-list-item-subtitle>
-      <span v-if="showOwner && application.owner">{{ ownerName }} · </span>
+      <span v-if="(showAll || !!(application.owner?.department && !session.state.account?.department)) && application.owner">{{ ownerName }} · </span>
       <span v-if="application.status">{{ t('status.' + application.status) }} · </span>
       <span v-if="application.updatedAt">{{ formatDate(application.updatedAt) }}</span>
     </v-list-item-subtitle>
@@ -43,15 +43,15 @@
 import type { Application } from '#api/types'
 
 const { t, locale } = useI18n()
+const session = useSession()
+const showAll = useBooleanSearchParam('showAll')
 
 const props = withDefaults(defineProps<{
   application: Application
   showTopics?: boolean
-  showOwner?: boolean
   noLink?: boolean
 }>(), {
   showTopics: true,
-  showOwner: false,
   noLink: false,
 })
 

@@ -247,7 +247,8 @@ const setAsThumbnail = (attachment: AttachmentItem) => {
 
 const confirmSetThumbnail = async (attachment: AttachmentItem) => {
   try {
-    await props.onPatch({ image: attachmentUrl(attachment) })
+    const imageUrl = attachment.url || `${window.location.origin}${props.uploadUrl}/${attachment.name}`
+    await props.onPatch({ image: imageUrl })
     sendUiNotif({ type: 'success', msg: t('thumbnailSuccess') })
   } catch (error: any) {
     sendUiNotif({ type: 'error', msg: t('thumbnailError'), error })

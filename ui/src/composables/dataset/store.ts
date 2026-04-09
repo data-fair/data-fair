@@ -1,5 +1,5 @@
 import { provide, inject } from 'vue'
-import type { Event, Dataset } from '#api/types'
+import type { Event, Dataset, Application } from '#api/types'
 import { isRestDataset } from '#shared/types-utils'
 import type { PatchDatasetReq } from '#api-doc/datasets/patch-req/index.js'
 
@@ -61,14 +61,14 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
 
   const resourceUrl = computed(() => `${$apiPath}/datasets/${id}`)
 
-  const applicationsFetch = useFetch<{ results: { id: string, title: string }[], count: number }>(() => {
+  const applicationsFetch = useFetch<{ results: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics'>[], count: number }>(() => {
     if (!dataset.value?.finalizedAt) return null
     return `${$apiPath}/applications`
   }, {
     query: computed(() => ({
       dataset: id,
       size: 100,
-      select: 'title,id'
+      select: 'title,id,status,description,updatedAt,owner,topics'
     })),
     immediate: false,
     watch: false

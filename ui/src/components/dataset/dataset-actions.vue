@@ -172,7 +172,7 @@ const portalUrls = computed(() => {
     .filter((site: any) => site.datasetUrlTemplate && published.includes(`${site.type}:${site.id}`))
     .map((site: any) => ({
       title: site.title || site.url || site.id,
-      url: site.datasetUrlTemplate.replace('{id}', dataset.value!.id).replace('{slug}', dataset.value!.slug ?? dataset.value!.id)
+      url: site.datasetUrlTemplate.replace('{id}', dataset.value!.id).replace('{slug}', dataset.value!.slug)
     }))
 })
 

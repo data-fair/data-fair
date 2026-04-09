@@ -332,6 +332,7 @@
 <i18n lang="yaml">
 fr:
   pageTitle: Paramètres - Data Fair
+  settings: Paramètres
   licences: Licences
   topics: Thématiques
   datasetsMetadata: Métadonnées des jeux de données
@@ -347,6 +348,7 @@ fr:
   compatODS: Activer la compatibilité ODS
 en:
   pageTitle: Parameters - Data Fair
+  settings: Settings
   licences: Licenses
   topics: Topics
   datasetsMetadata: Datasets metadata
@@ -364,6 +366,7 @@ en:
 
 <script setup lang="ts">
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import qualitySvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import flagsSvg from '~/assets/svg/Crossed flags_Two Color.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
@@ -378,6 +381,8 @@ import { useDisplay } from 'vuetify'
 const { t } = useI18n()
 const session = useSessionAuthenticated()
 const display = useDisplay()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('settings') }] })
 
 // TODO: manage authorization
 // session.accountRole === 'admin'

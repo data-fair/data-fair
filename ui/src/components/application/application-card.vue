@@ -12,8 +12,9 @@
       </template>
       <template #append>
         <owner-avatar
-          v-if="showOwner && application.owner"
+          v-if="showAll || !!(application.owner?.department && !session.state.account?.department)"
           :owner="application.owner"
+          :omit-owner-name="!showAll"
         />
       </template>
     </v-card-item>
@@ -65,14 +66,14 @@ import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 import { mdiPlay, mdiAlert, mdiProgressWrench, mdiCog } from '@mdi/js'
 
 const { t, locale } = useI18n()
+const session = useSession()
+const showAll = useBooleanSearchParam('showAll')
 
 const props = withDefaults(defineProps<{
-  application: Application
+  application: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics'>
   showTopics?: boolean
-  showOwner?: boolean
 }>(), {
   showTopics: true,
-  showOwner: false,
 })
 
 const statusColor = computed(() => {

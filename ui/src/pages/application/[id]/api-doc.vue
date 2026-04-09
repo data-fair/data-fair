@@ -7,16 +7,41 @@
     sync-params
     emit-iframe-messages
     :adapter.prop="stateChangeAdapter"
-    @message="onMessage"
-    @iframe-message="onMessage"
     @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
   />
 </template>
 
-<script setup lang="ts">
-import { useDFramePage } from '~/composables/layout/use-d-frame-page'
+<i18n lang="yaml">
+fr:
+  applications: Applications
+  apiDoc: Documentation API
+en:
+  applications: Applications
+  apiDoc: API Documentation
+</i18n>
 
+<script setup lang="ts">
+import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
+import { provideApplicationStore } from '~/composables/application/store'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+
+const { t } = useI18n()
 const route = useRoute<'/application/[id]/api-doc'>()
+const router = useRouter()
 const { sendUiNotif } = useUiNotif()
-const { stateChangeAdapter, onMessage } = useDFramePage()
+const breadcrumbs = useBreadcrumbs()
+const stateChangeAdapter = createStateChangeAdapter(router)
+
+const { application } = provideApplicationStore(route.params.id)
+
+watch(application, (app) => {
+  if (!app) return
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: t('applications'), to: '/applications' },
+      { text: app.title || app.id, to: `/application/${app.id}` },
+      { text: t('apiDoc') }
+    ]
+  })
+}, { immediate: true })
 </script>

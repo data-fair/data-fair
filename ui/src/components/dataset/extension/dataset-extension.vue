@@ -136,6 +136,12 @@
                   :tooltip="t('confirmRefreshTooltip')"
                   @confirm="emit('refresh', extension)"
                 />
+                <dataset-extension-details-dialog
+                  :extension="extension"
+                  :dataset="dataset"
+                  :remote-services-map="remoteServicesMap"
+                  :resource-url="resourceUrl"
+                />
                 <confirm-menu
                   v-if="can('writeDescriptionBreaking')"
                   yes-color="warning"
@@ -174,11 +180,18 @@
             <v-card-text style="margin-bottom: 40px;">
               <div class="d-flex align-center gap-1">
                 <v-text-field
-                  v-model="extension.expr"
-                  :disabled="!can('writeDescriptionBreaking')"
+                  :model-value="extension.expr"
+                  disabled
                   :label="t('expr')"
                   hide-details
                   class="flex-grow-1"
+                />
+                <dataset-extension-expr-eval-preview-dialog
+                  v-if="can('writeDescriptionBreaking')"
+                  :extension="extension"
+                  :dataset="dataset"
+                  :resource-url="resourceUrl"
+                  @update:expr="(val: string) => extension.expr = val"
                 />
                 <df-agent-chat-action
                   v-if="can('writeDescriptionBreaking')"
@@ -255,6 +268,8 @@ import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { escapeKey } from '~/utils/escape-key'
 import { useRemoteServices } from '~/composables/use-remote-services'
 import useStore from '~/composables/use-store'
+import DatasetExtensionDetailsDialog from './dataset-extension-details-dialog.vue'
+import DatasetExtensionExprEvalPreviewDialog from './dataset-extension-expr-eval-preview-dialog.vue'
 
 const dataset = defineModel<any>({ required: true })
 const emit = defineEmits<{ refresh: [extension: any] }>()
@@ -265,6 +280,7 @@ const can = (op: string) => dataset.value?.userPermissions?.includes(op) ?? fals
 const owner = computed(() => dataset.value?.owner)
 const { remoteServices, remoteServicesMap } = useRemoteServices(owner)
 const { vocabulary } = useStore()
+const { resourceUrl } = useDatasetStore()
 
 const addExtensionDialog = ref(false)
 const showOverwrite = ref<number | null>(null)

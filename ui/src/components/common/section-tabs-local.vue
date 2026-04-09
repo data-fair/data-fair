@@ -73,6 +73,7 @@
       </div>
     </v-card>
     <v-tabs-window
+      v-if="$slots.windows"
       :model-value="tab"
       class="pa-4"
     >

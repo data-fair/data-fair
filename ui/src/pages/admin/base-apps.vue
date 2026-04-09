@@ -81,7 +81,7 @@
               <v-list-item-subtitle>{{ baseApp.description }}</v-list-item-subtitle>
               <v-list-item-subtitle>
                 <a
-                  :href="withQuery('/data-fair/applications', {url: baseApp.url, showAll: 'true'})"
+                  :href="withQuery('/data-fair/applications', {'base-application': baseApp.url, showAll: 'true'})"
                   target="_top"
                   class="simple-link"
                 >
@@ -180,10 +180,22 @@
   </v-container>
 </template>
 
+<i18n lang="yaml">
+fr:
+  baseApps: Modèles d'application
+en:
+  baseApps: Application templates
+</i18n>
+
 <script setup lang="ts">
 import type { BaseApp } from '#api/types'
 import { mdiEyeOff, mdiLock, mdiLockOpen, mdiMagnify, mdiPencil } from '@mdi/js'
 import { withQuery } from 'ufo'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+
+const { t } = useI18n()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('baseApps') }] })
 
 const q = ref('')
 const baseAppsFetch = useFetch<{ results: BaseApp[] }>($apiPath + '/admin/base-applications', {

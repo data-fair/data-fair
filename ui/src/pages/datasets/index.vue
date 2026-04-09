@@ -44,10 +44,7 @@
           sm="6"
           md="4"
         >
-          <dataset-card
-            :dataset="dataset"
-            :show-owner="showOwner"
-          />
+          <dataset-card :dataset="dataset" />
         </v-col>
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-col
@@ -75,7 +72,6 @@
           v-for="dataset in catalog.displayedItems.value"
           :key="dataset.id"
           :dataset="dataset"
-          :show-owner="showOwner"
         />
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-skeleton-loader
@@ -218,6 +214,12 @@ const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPubl
 const facetServices = useStringsArraySearchParam('services')
 const facetConcepts = useStringsArraySearchParam('concepts')
 
+// Virtual datasets filter (children of a specific dataset)
+const children = useStringSearchParam('children')
+
+// Include shared datasets for a given owner
+const shared = useStringSearchParam('shared')
+
 // Super admin: show all datasets toggle
 const showAll = useStringSearchParam('showAll')
 const showAllToggle = computed({
@@ -236,8 +238,6 @@ const ownerParam = computed(() => {
   return o
 })
 
-const showOwner = computed(() => !!facetOwner.value?.length || showAll.value === 'true')
-
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
     select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason',
@@ -253,6 +253,8 @@ const datasetsQuery = computed(() => {
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
   if (facetServices.value?.length) params.services = facetServices.value.join(',')
   if (facetConcepts.value?.length) params.concepts = facetConcepts.value.join(',')
+  if (children.value) params.children = children.value
+  if (shared.value) params.shared = shared.value
   return params
 })
 

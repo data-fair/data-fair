@@ -7,20 +7,42 @@
     sync-params
     emit-iframe-messages
     :adapter.prop="stateChangeAdapter"
-    @message="onMessage"
-    @iframe-message="onMessage"
     @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
   />
 </template>
 
+<i18n lang="yaml">
+fr:
+  datasets: Jeux de données
+  apiDoc: Documentation API
+en:
+  datasets: Datasets
+  apiDoc: API Documentation
+</i18n>
+
 <script setup lang="ts">
-import { useDFramePage } from '~/composables/layout/use-d-frame-page'
+import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
 import { provideDatasetStore } from '~/composables/dataset/store'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
+const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/api-doc'>()
+const router = useRouter()
 const { sendUiNotif } = useUiNotif()
-const { stateChangeAdapter, onMessage } = useDFramePage()
+const breadcrumbs = useBreadcrumbs()
+const stateChangeAdapter = createStateChangeAdapter(router)
 
-const { can } = provideDatasetStore(route.params.id)
+const { dataset, can } = provideDatasetStore(route.params.id)
 const urlType = computed(() => can('readPrivateApiDoc').value ? 'privateDataset' : 'dataset')
+
+watch(dataset, (d) => {
+  if (!d) return
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: t('datasets'), to: '/datasets' },
+      { text: d.title || d.id, to: `/dataset/${d.id}` },
+      { text: t('apiDoc') }
+    ]
+  })
+}, { immediate: true })
 </script>

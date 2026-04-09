@@ -12,8 +12,9 @@
       </template>
       <template #append>
         <owner-avatar
-          v-if="showOwner && dataset.owner"
+          v-if="showAll || !!(dataset.owner?.department && !session.state.account?.department)"
           :owner="dataset.owner"
+          :omit-owner-name="!showAll"
         />
       </template>
     </v-card-item>
@@ -144,14 +145,14 @@ import {
 } from '@mdi/js'
 
 const { t, locale } = useI18n()
+const session = useSession()
+const showAll = useBooleanSearchParam('showAll')
 
 const props = withDefaults(defineProps<{
   dataset: Dataset
   showTopics?: boolean
-  showOwner?: boolean
 }>(), {
   showTopics: true,
-  showOwner: false,
 })
 
 const fileInfo = computed(() => {

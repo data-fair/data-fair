@@ -44,10 +44,7 @@
           sm="6"
           md="4"
         >
-          <application-card
-            :application="application"
-            :show-owner="showOwner"
-          />
+          <application-card :application="application" />
         </v-col>
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-col
@@ -75,7 +72,6 @@
           v-for="application in catalog.displayedItems.value"
           :key="application.id"
           :application="application"
-          :show-owner="showOwner"
         />
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-skeleton-loader
@@ -131,7 +127,7 @@
         v-if="session.state.user?.adminMode"
         v-model="showAllToggle"
         color="admin"
-        class="mx-4 text-admin"
+        class="mt-4 mx-4 text-admin"
         :label="t('showAll')"
         hide-details
       />
@@ -212,6 +208,9 @@ const facetTopics = useStringsArraySearchParam('topics')
 const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
 
+// Include shared applications for a given owner
+const shared = useStringSearchParam('shared')
+
 // Super admin: show all applications toggle
 const showAll = useStringSearchParam('showAll')
 const showAllToggle = computed({
@@ -230,8 +229,6 @@ const ownerParam = computed(() => {
   return o
 })
 
-const showOwner = computed(() => !!facetOwner.value?.length || showAll.value === 'true')
-
 const applicationsQuery = computed(() => {
   const params: Record<string, any> = {
     select: 'title,description,status,updatedAt,publicationSites,topics,visibility,owner,url',
@@ -244,6 +241,7 @@ const applicationsQuery = computed(() => {
   if (facetTopics.value?.length) params.topics = facetTopics.value.join(',')
   if (facetPublicationSites.value?.length) params.publicationSites = facetPublicationSites.value.join(',')
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
+  if (shared.value) params.shared = shared.value
   return params
 })
 

@@ -47,10 +47,10 @@
               class="mb-2"
             >
               <a
-                :href="site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug ?? application.id)"
+                :href="site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug)"
                 target="_blank"
               >
-                {{ site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug ?? application.id) }}
+                {{ site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug) }}
               </a>
             </v-list-item-subtitle>
 

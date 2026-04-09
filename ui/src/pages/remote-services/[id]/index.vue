@@ -154,7 +154,7 @@ import { mdiAlert, mdiInformation, mdiMerge, mdiPencil, mdiPictureInPictureBotto
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
-import setBreadcrumbs from '~/utils/breadcrumbs'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import equal from 'fast-deep-equal'
 
 const { t, locale } = useI18n()
@@ -167,12 +167,15 @@ const remoteServiceEditFetch = useEditFetch<RemoteService>(`${$apiPath}/remote-s
 })
 useLeaveGuard(remoteServiceEditFetch.hasDiff, { locale })
 
+const breadcrumbs = useBreadcrumbs()
 watch(remoteServiceEditFetch.data, (remoteService) => {
   if (!remoteService) return
-  setBreadcrumbs([
-    { text: t('remoteServices'), to: '/remote-services' },
-    { text: remoteService.title }
-  ])
+  breadcrumbs.receive({
+    breadcrumbs: [
+      { text: t('remoteServices'), to: '/remote-services' },
+      { text: remoteService.title }
+    ]
+  })
 }, { immediate: true })
 
 const infoHasDiff = computed(() => remoteServiceEditFetch.data.value?.title !== remoteServiceEditFetch.serverData.value?.title || remoteServiceEditFetch.data.value?.description !== remoteServiceEditFetch.serverData.value?.description)

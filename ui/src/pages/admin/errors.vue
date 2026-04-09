@@ -148,8 +148,20 @@
   </v-container>
 </template>
 
+<i18n lang="yaml">
+fr:
+  errors: Erreurs
+en:
+  errors: Errors
+</i18n>
+
 <script setup lang="ts">
 import { mdiPlay } from '@mdi/js'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+
+const { t } = useI18n()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('errors') }] })
 
 const { dayjs } = useLocaleDayjs()
 

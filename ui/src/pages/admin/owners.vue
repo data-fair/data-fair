@@ -36,7 +36,7 @@
               </v-list-item-subtitle>
               <v-list-item-subtitle>
                 <a
-                  :href="withQuery('/data-fair/datasets', {'ownerExt': `${owner.type}:${owner.id}`, shared: 'true'})"
+                  :href="withQuery('/data-fair/datasets', {owner: `${owner.type}:${owner.id}`, shared: 'true'})"
                   target="_top"
                   class="simple-link"
                 >
@@ -44,7 +44,7 @@
                 </a>
                 -
                 <a
-                  :href="withQuery('/data-fair/applications', {'ownerExt': `${owner.type}:${owner.id}`, shared: 'true'})"
+                  :href="withQuery('/data-fair/applications', {owner: `${owner.type}:${owner.id}`, shared: 'true'})"
                   target="_top"
                   class="simple-link"
                 >
@@ -59,8 +59,20 @@
   </v-container>
 </template>
 
+<i18n lang="yaml">
+fr:
+  owners: Propriétaires
+en:
+  owners: Owners
+</i18n>
+
 <script setup lang="ts">
 import { withQuery } from 'ufo'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+
+const { t } = useI18n()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('owners') }] })
 
 const q = ref('')
 const ownersFetch = useFetch<{ results: any[] }>($apiPath + '/admin/owners', {

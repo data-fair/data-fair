@@ -49,7 +49,7 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="extensions">
-          <dataset-extensions
+          <dataset-extension
             v-if="structureEditFetch.data.value"
             v-model="structureEditFetch.data.value"
             @refresh="onRefreshExtension"
@@ -150,58 +150,56 @@
       :tabs="sections.exploration.tabs"
       :svg="dataSvg"
     >
-      <template #content="{ tab }">
-        <v-tabs-window :model-value="tab">
-          <v-tabs-window-item value="table">
-            <dataset-table
-              :height="windowHeight - 300"
-              :pagination="true"
-            />
-          </v-tabs-window-item>
+      <template #windows>
+        <v-tabs-window-item value="table">
+          <dataset-table
+            :height="windowHeight - 300"
+            :pagination="true"
+          />
+        </v-tabs-window-item>
 
-          <v-tabs-window-item value="map">
-            <dataset-map :height="windowHeight - 300" />
-          </v-tabs-window-item>
+        <v-tabs-window-item value="map">
+          <dataset-map :height="windowHeight - 300" />
+        </v-tabs-window-item>
 
-          <v-tabs-window-item value="files">
-            <dataset-search-files :height="windowHeight - 300" />
-          </v-tabs-window-item>
+        <v-tabs-window-item value="files">
+          <dataset-search-files :height="windowHeight - 300" />
+        </v-tabs-window-item>
 
-          <v-tabs-window-item value="thumbnails">
-            <dataset-thumbnails :height="windowHeight - 300" />
-          </v-tabs-window-item>
+        <v-tabs-window-item value="thumbnails">
+          <dataset-thumbnails :height="windowHeight - 300" />
+        </v-tabs-window-item>
 
-          <v-tabs-window-item value="revisions">
-            <dataset-history />
-          </v-tabs-window-item>
+        <v-tabs-window-item value="revisions">
+          <dataset-history />
+        </v-tabs-window-item>
 
-          <v-tabs-window-item value="applications">
-            <v-row
-              v-if="applications.length"
-              class="pa-4"
+        <v-tabs-window-item value="applications">
+          <v-btn
+            v-if="canContribDep"
+            :to="`/new-application?dataset=${dataset.id}`"
+            :prepend-icon="mdiPlus"
+            class="mb-4"
+            color="primary"
+            variant="flat"
+          >
+            {{ t('configureApp') }}
+          </v-btn>
+          <v-row v-if="applications.length">
+            <v-col
+              v-for="app in applications"
+              :key="app.id"
+              cols="12"
+              sm="6"
+              md="4"
             >
-              <v-col
-                v-for="app in applications"
-                :key="app.id"
-                cols="12"
-                md="6"
-                lg="4"
-              >
-                <v-card :to="`/application/${app.id}`">
-                  <v-card-title class="text-body-large font-weight-bold">
-                    {{ app.title || app.id }}
-                  </v-card-title>
-                </v-card>
-              </v-col>
-            </v-row>
-            <p
-              v-else
-              class="pa-4"
-            >
-              {{ t('noApplications') }}
-            </p>
-          </v-tabs-window-item>
-        </v-tabs-window>
+              <application-card :application="app" />
+            </v-col>
+          </v-row>
+          <p v-else>
+            {{ t('noApplications') }}
+          </p>
+        </v-tabs-window-item>
       </template>
     </df-section-tabs>
 
@@ -509,6 +507,7 @@ fr:
   thumbnails: Vignettes
   revisions: Révisions
   applications: Applications
+  configureApp: Configurer une application
   noApplications: Aucune application n'utilise ce jeu de données.
   relatedDatasets: Voir aussi
   share: Permissions & partage
@@ -558,6 +557,7 @@ en:
   thumbnails: Thumbnails
   revisions: Revisions
   applications: Applications
+  configureApp: Configure an application
   noApplications: No application uses this dataset.
   relatedDatasets: See also
   share: Share
@@ -596,7 +596,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/store'
@@ -604,6 +604,7 @@ import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
+import { usePermissions } from '~/composables/use-permissions'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
@@ -616,6 +617,7 @@ const route = useRoute<'/dataset/[id]/'>()
 const router = useRouter()
 const { sendUiNotif } = useUiNotif()
 const { accountRole } = useSessionAuthenticated()
+const { canContribDep } = usePermissions()
 const { height: windowHeight } = useWindowSize()
 
 const breadcrumbs = useBreadcrumbs()

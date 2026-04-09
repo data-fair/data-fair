@@ -34,9 +34,11 @@ en:
 
 <script setup lang="ts">
 import { RemoteService } from '#api/types'
-import setBreadcrumbs from '~/utils/breadcrumbs'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('remoteServices') }] })
 
 const params = computed(() => ({
   size: 10000,
@@ -45,8 +47,4 @@ const params = computed(() => ({
   html: 'true'
 }))
 const remoteServicesFetch = useFetch<{ count: number, results: RemoteService[] }>(`${$apiPath}/remote-services`, { query: params })
-
-setBreadcrumbs([
-  { text: t('remoteServices') }
-])
 </script>

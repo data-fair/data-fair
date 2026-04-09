@@ -80,6 +80,7 @@
 
 <i18n lang="yaml">
 fr:
+  storage: Stockage
   nbDatasets: Nombre de jeux de données
   storedBytes: Données stockées
   indexedBytes: Données indexées
@@ -90,6 +91,7 @@ fr:
   allowed: autorisés
   storageType: Trier par catégorie de stockage
 en:
+  storage: Storage
   nbDatasets: Number of datasets
   storedBytes: Stored data
   indexedBytes: Indexed data
@@ -104,11 +106,14 @@ en:
 <script setup lang="ts">
 import type { Dataset } from '#api/types'
 import type { DataTableHeader } from 'vuetify'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const storageType = ref('indexed')
 
 const { account } = useSessionAuthenticated()
 const { t, locale } = useI18n()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('storage') }] })
 
 const datasetsQuery = computed(() => ({
   size: 10000,

@@ -127,7 +127,7 @@ const portalUrls = computed(() => {
     .filter((site: any) => site.applicationUrlTemplate && published.includes(`${site.type}:${site.id}`))
     .map((site: any) => ({
       title: site.title || site.url || site.id,
-      url: site.applicationUrlTemplate.replace('{id}', application.value!.id).replace('{slug}', application.value!.slug ?? application.value!.id)
+      url: site.applicationUrlTemplate.replace('{id}', application.value!.id).replace('{slug}', application.value!.slug)
     }))
 })
 </script>
