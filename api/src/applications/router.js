@@ -657,7 +657,7 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
 })
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {
-  await filesStorage.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
+  await filesStorage.removeFile(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
   await updateStorage(req.application)
   res.status(204).send()
 })
