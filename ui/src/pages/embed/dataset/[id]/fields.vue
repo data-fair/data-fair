@@ -1,8 +1,10 @@
 <template>
-  <div class="text-center">
-    <dataset-schema-download />
-  </div>
-  <dataset-schema-view data-iframe-height />
+  <v-container data-iframe-height>
+    <div class="text-center">
+      <dataset-schema-download />
+    </div>
+    <dataset-schema-view />
+  </v-container>
 </template>
 
 <script setup lang="ts">

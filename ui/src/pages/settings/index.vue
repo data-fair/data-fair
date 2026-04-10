@@ -313,7 +313,7 @@
       </df-section-tabs>
     </template>
 
-    <df-navigation-right v-if="display.lgAndUp.value">
+    <df-navigation-right>
       <v-list-item
         :href="'https://data-fair.github.io/3/user-guide-backoffice/parameters'"
         target="_blank"
@@ -382,11 +382,9 @@ import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import checklist2Svg from '~/assets/svg/Checklist_Two Color2.svg?raw'
 import infoSvg from '~/assets/svg/Sending emails_Monochromatic.svg?raw'
 import compatSvg from '~/assets/svg/Team building _Two Color.svg?raw'
-import { useDisplay } from 'vuetify'
 
 const { t } = useI18n()
 const session = useSessionAuthenticated()
-const display = useDisplay()
 const breadcrumbs = useBreadcrumbs()
 breadcrumbs.receive({ breadcrumbs: [{ text: t('settings') }] })
 

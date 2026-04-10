@@ -1,109 +1,105 @@
 <template>
   <v-container>
+    <h2 class="text-title-large mb-4">
+      Modèles d'application
+    </h2>
     <v-row>
-      <v-col>
-        <h2 class="text-title-large mb-4">
-          Modèles d'application
-        </h2>
-        <v-row>
-          <v-col
-            cols="12"
-            sm="6"
-            md="4"
-          >
-            <v-text-field
-              v-model="q"
-              name="q"
-              label="Rechercher"
-              hide-details
-              variant="outlined"
-              density="compact"
-              :append-icon="mdiMagnify"
-              @keypress.enter="baseAppsFetch.refresh()"
-            />
-          </v-col>
-        </v-row>
-
-        <v-row>
-          <v-col
-            cols="12"
-            sm="6"
-            md="4"
-          >
-            <v-text-field
-              v-model="urlToAdd"
-              label="Ajouter"
-              placeholder="Saisissez l'URL d'une nouvelle application"
-              @keypress.enter="add.execute()"
-            />
-          </v-col>
-        </v-row>
-
-        <v-sheet v-if="baseApps">
-          <v-list lines="three">
-            <v-list-item
-              v-for="baseApp in baseApps"
-              :key="baseApp.id"
-            >
-              <template #prepend>
-                <v-avatar rounded="0">
-                  <img :src="baseApp.thumbnail as string">
-                </v-avatar>
-              </template>
-
-              <v-list-item-title>
-                {{ baseApp.title }}
-                <v-chip size="small">
-                  {{ baseApp.category || 'autre' }}
-                </v-chip>
-                <a
-                  :href="baseApp.url"
-                  class="simple-link"
-                  target="_blank"
-                >{{ baseApp.applicationName }} ({{ baseApp.version }})</a>
-                <v-icon
-                  v-if="baseApp.public"
-                  color="green"
-                  :icon="mdiLockOpen"
-                />
-                <template v-else>
-                  <v-icon
-                    color="red"
-                    :icon="mdiLock"
-                  />
-                  <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
-                </template>
-                <v-icon
-                  v-if="baseApp.deprecated"
-                  :icon="mdiEyeOff"
-                />
-              </v-list-item-title>
-              <v-list-item-subtitle>{{ baseApp.description }}</v-list-item-subtitle>
-              <v-list-item-subtitle>
-                <a
-                  :href="withQuery('/data-fair/applications', {'base-application': baseApp.url, showAll: 'true'})"
-                  target="_top"
-                  class="simple-link"
-                >
-                  {{ baseApp.nbApplications }} application{{ (baseApp.nbApplications as number) > 1 ? 's' : '' }}
-                </a>
-                - Jeux de données : {{ baseApp.datasetsFilters }}
-              </v-list-item-subtitle>
-
-              <template #append>
-                <v-list-item-action>
-                  <v-icon
-                    color="primary"
-                    :icon="mdiPencil"
-                    @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;"
-                  />
-                </v-list-item-action>
-              </template>
-            </v-list-item>
-          </v-list>
-        </v-sheet>
+      <v-col
+        cols="12"
+        sm="6"
+        md="4"
+      >
+        <v-text-field
+          v-model="q"
+          name="q"
+          label="Rechercher"
+          hide-details
+          variant="outlined"
+          density="compact"
+          :append-icon="mdiMagnify"
+          @keypress.enter="baseAppsFetch.refresh()"
+        />
       </v-col>
     </v-row>
+
+    <v-row>
+      <v-col
+        cols="12"
+        sm="6"
+        md="4"
+      >
+        <v-text-field
+          v-model="urlToAdd"
+          label="Ajouter"
+          placeholder="Saisissez l'URL d'une nouvelle application"
+          @keypress.enter="add.execute()"
+        />
+      </v-col>
+    </v-row>
+
+    <v-sheet v-if="baseApps">
+      <v-list lines="three">
+        <v-list-item
+          v-for="baseApp in baseApps"
+          :key="baseApp.id"
+        >
+          <template #prepend>
+            <v-avatar rounded="0">
+              <img :src="baseApp.thumbnail as string">
+            </v-avatar>
+          </template>
+
+          <v-list-item-title>
+            {{ baseApp.title }}
+            <v-chip size="small">
+              {{ baseApp.category || 'autre' }}
+            </v-chip>
+            <a
+              :href="baseApp.url"
+              class="simple-link"
+              target="_blank"
+            >{{ baseApp.applicationName }} ({{ baseApp.version }})</a>
+            <v-icon
+              v-if="baseApp.public"
+              color="green"
+              :icon="mdiLockOpen"
+            />
+            <template v-else>
+              <v-icon
+                color="red"
+                :icon="mdiLock"
+              />
+              <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
+            </template>
+            <v-icon
+              v-if="baseApp.deprecated"
+              :icon="mdiEyeOff"
+            />
+          </v-list-item-title>
+          <v-list-item-subtitle>{{ baseApp.description }}</v-list-item-subtitle>
+          <v-list-item-subtitle>
+            <a
+              :href="withQuery('/data-fair/applications', {'base-application': baseApp.url, showAll: 'true'})"
+              target="_top"
+              class="simple-link"
+            >
+              {{ baseApp.nbApplications }} application{{ (baseApp.nbApplications as number) > 1 ? 's' : '' }}
+            </a>
+            - Jeux de données : {{ baseApp.datasetsFilters }}
+          </v-list-item-subtitle>
+
+          <template #append>
+            <v-list-item-action>
+              <v-icon
+                color="primary"
+                :icon="mdiPencil"
+                @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;"
+              />
+            </v-list-item-action>
+          </template>
+        </v-list-item>
+      </v-list>
+    </v-sheet>
 
     <v-dialog
       v-model="showEditDialog"

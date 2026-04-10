@@ -11,16 +11,32 @@
   />
 
   <v-main scrollable>
-    <div class="flex-grow-1">
+    <!--
+      flex-grow-1: prend tout l'espace restant à côté du navigation-right
+      min-width: 0: empêche le contenu flex de déborder (par défaut min-width: auto empêche le rétrécissement en dessous du contenu intrinsèque)
+    -->
+    <div
+      class="flex-grow-1"
+      style="min-width: 0"
+    >
       <slot />
     </div>
+    <!--
+      Cible du Teleport de navigation-right-local.vue
+      position-sticky top-0: reste visible en haut pendant le scroll du contenu
+      flex-shrink-0: ne se réduit jamais, garde sa largeur fixe
+      align-self-start: aligné en haut du conteneur flex
+      overflow-y-auto: scroll interne si le contenu dépasse la hauteur de l'écran
+      Largeur et hauteur max identiques à un v-navigation-drawer Vuetify (256px, 100vh)
+    -->
     <div
-      id="nav-right-portal"
+      id="navigation-right-local"
       class="position-sticky top-0 flex-shrink-0 align-self-start overflow-y-auto pt-6"
       style="width: 256px; max-height: 100vh"
     />
   </v-main>
 
+  <!-- Agent chat drawer: order=1 to render after the v-main scrollbar -->
   <df-agent-chat-drawer
     v-if="showAgentChat && session.account.value"
     :account-type="session.account.value.type"
@@ -127,7 +143,7 @@ const agentChatState = shallowRef<ReturnType<typeof useAgentChatDrawer> | null>(
 :deep(.v-main__scroller) {
   display: flex !important;
 }
-#nav-right-portal:empty {
+#navigation-right-local:empty {
   display: none;
 }
 </style>

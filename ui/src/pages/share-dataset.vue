@@ -1,16 +1,19 @@
 <template>
   <v-container
-    fluid
     class="pa-0"
+    fluid
   >
     <v-stepper
       v-model="currentStep"
+      class="bg-background"
       flat
     >
-      <v-stepper-header>
+      <v-stepper-header class="bg-surface">
         <v-stepper-item
           :value="1"
           :complete="!!publicationSite"
+          :color="currentStep === 1 ? 'primary' : ''"
+          :icon="mdiPublish"
           :title="t('stepPortal')"
           :subtitle="publicationSite ? truncate(publicationSite.title || publicationSite.url || publicationSite.id, 30) : undefined"
           editable
@@ -19,6 +22,8 @@
         <v-stepper-item
           :value="2"
           :complete="!!dataset"
+          :color="currentStep === 2 ? 'primary' : ''"
+          :icon="mdiDatabase"
           :title="t('stepDataset')"
           :subtitle="dataset ? truncate(dataset.title, 30) : undefined"
           :editable="!!publicationSite"
@@ -26,6 +31,8 @@
         <v-divider />
         <v-stepper-item
           :value="3"
+          :color="currentStep === 3 ? 'primary' : ''"
+          :icon="mdiLock"
           :title="t('stepPermissions')"
           :editable="!!dataset && !alreadyPublished"
         />
@@ -33,6 +40,8 @@
         <v-stepper-item
           :value="4"
           :complete="metadataValid"
+          :color="currentStep === 4 ? 'primary' : ''"
+          :icon="mdiFileDocument"
           :title="t('stepMetadata')"
           :subtitle="metadataValid ? t('completed') : undefined"
           :editable="!!publicationSite && !!dataset"
@@ -40,6 +49,8 @@
         <v-divider />
         <v-stepper-item
           :value="5"
+          :color="currentStep === 5 ? 'primary' : ''"
+          :icon="mdiCheckAll"
           :title="t('stepAction')"
           :editable="metadataValid"
         />
@@ -48,163 +59,125 @@
       <v-stepper-window>
         <!-- Step 1: Portal selection -->
         <v-stepper-window-item :value="1">
-          <div class="pa-4">
-            <v-alert
-              v-if="publicationSitesFetch.data.value && !publicationSites.length"
-              type="warning"
+          <v-alert
+            v-if="publicationSitesFetch.data.value && !publicationSites.length"
+            type="warning"
+            variant="outlined"
+            max-width="500"
+          >
+            {{ t('noPublicationSite') }}
+          </v-alert>
+          <template v-if="publicationSites.length">
+            <p class="text-body-large mb-2">
+              {{ t('selectPortal') }}
+            </p>
+            <v-card
               variant="outlined"
               max-width="500"
             >
-              {{ t('noPublicationSite') }}
-            </v-alert>
-            <template v-if="publicationSites.length">
-              <p class="text-body-large mb-2">
-                {{ t('selectPortal') }}
-              </p>
-              <v-card
-                variant="outlined"
-                max-width="500"
-              >
-                <v-list>
-                  <v-list-item
-                    v-for="(site, i) in publicationSites"
-                    :key="i"
-                    :active="!!(publicationSite && site.type === publicationSite.type && site.id === publicationSite.id)"
-                    color="primary"
-                    @click="selectSite(site)"
-                  >
-                    <v-list-item-title>{{ site.title || site.url || site.id }}</v-list-item-title>
-                    <v-list-item-subtitle v-if="site.department">
-                      {{ site.departmentName || site.department }}
-                    </v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
-              </v-card>
-            </template>
-
-            <v-btn
-              color="primary"
-              class="mt-4"
-              :disabled="!publicationSite"
-              @click="currentStep = 2"
-            >
-              {{ t('continue') }}
-            </v-btn>
-          </div>
+              <v-list>
+                <v-list-item
+                  v-for="(site, i) in publicationSites"
+                  :key="i"
+                  :active="!!(publicationSite && site.type === publicationSite.type && site.id === publicationSite.id)"
+                  color="primary"
+                  @click="selectSite(site)"
+                >
+                  <v-list-item-title>{{ site.title || site.url || site.id }}</v-list-item-title>
+                  <v-list-item-subtitle v-if="site.department">
+                    {{ site.departmentName || site.department }}
+                  </v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+            </v-card>
+          </template>
         </v-stepper-window-item>
 
         <!-- Step 2: Dataset selection -->
         <v-stepper-window-item :value="2">
-          <div class="pa-4">
-            <dataset-select
-              v-model="selectedDataset"
-              :owner="datasetOwner"
-              @update:model-value="onDatasetSelected"
-            />
+          <dataset-select
+            v-model="selectedDataset"
+            :owner="datasetOwner"
+            @update:model-value="onDatasetSelected"
+          />
 
-            <v-alert
-              v-if="alreadyPublished"
-              type="warning"
-              variant="outlined"
-              density="compact"
-              class="mt-4"
-              max-width="600"
-            >
-              {{ t('alreadyPublished') }}
-            </v-alert>
-
-            <v-btn
-              color="primary"
-              class="mt-4"
-              :disabled="!dataset || alreadyPublished"
-              @click="currentStep = 3"
-            >
-              {{ t('continue') }}
-            </v-btn>
-          </div>
+          <v-alert
+            v-if="alreadyPublished"
+            type="warning"
+            variant="outlined"
+            density="compact"
+            class="mt-4"
+            max-width="600"
+          >
+            {{ t('alreadyPublished') }}
+          </v-alert>
         </v-stepper-window-item>
 
         <!-- Step 3: Permissions -->
         <v-stepper-window-item :value="3">
-          <div class="pa-4">
-            <permissions-editor
-              v-if="dataset"
-              :resource="dataset"
-              resource-type="datasets"
-              :can-get-permissions="dataset.userPermissions?.includes('getPermissions')"
-              :can-set-permissions="dataset.userPermissions?.includes('setPermissions')"
-            />
-          </div>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn
-              color="primary"
-              @click="currentStep = 4"
-            >
-              {{ t('next') }}
-            </v-btn>
-          </v-card-actions>
+          <permissions-editor
+            v-if="dataset"
+            :resource="dataset"
+            resource-type="datasets"
+            :can-get-permissions="dataset.userPermissions?.includes('getPermissions')"
+            :can-set-permissions="dataset.userPermissions?.includes('setPermissions')"
+          />
         </v-stepper-window-item>
 
         <!-- Step 4: Metadata -->
         <v-stepper-window-item :value="4">
-          <div class="pa-4">
-            <v-form
-              v-if="dataset && publicationSite"
-              v-model="metadataFormValid"
-            >
-              <v-text-field
-                v-model="datasetTitle"
-                :label="t('datasetTitle')"
-                :rules="[v => !!v || t('required')]"
-                variant="outlined"
-                density="compact"
-                class="mb-2"
-                max-width="600"
-              />
-              <v-textarea
-                v-model="datasetDescription"
-                :label="t('datasetDescription')"
-                variant="outlined"
-                density="compact"
-                rows="4"
-                max-width="600"
-              />
-            </v-form>
-
-            <v-btn
-              color="primary"
-              class="mt-4"
-              :disabled="!metadataValid"
-              @click="saveMetadataAndContinue"
-            >
-              {{ t('continue') }}
-            </v-btn>
-          </div>
+          <v-form
+            v-if="dataset && publicationSite"
+            v-model="metadataFormValid"
+          >
+            <v-text-field
+              v-model="datasetTitle"
+              :label="t('datasetTitle')"
+              :rules="[v => !!v || t('required')]"
+              variant="outlined"
+              density="compact"
+              class="mb-2"
+              max-width="600"
+            />
+            <v-textarea
+              v-model="datasetDescription"
+              :label="t('datasetDescription')"
+              variant="outlined"
+              density="compact"
+              rows="4"
+              max-width="600"
+            />
+          </v-form>
         </v-stepper-window-item>
 
         <!-- Step 5: Action / Confirmation -->
         <v-stepper-window-item :value="5">
-          <div class="pa-4">
-            <template v-if="dataset && publicationSite">
-              <v-btn
-                v-if="canPublishDirectly"
-                color="primary"
-                @click="publish"
-              >
-                {{ t('publish') }}
-              </v-btn>
-              <v-btn
-                v-else
-                color="primary"
-                @click="requestPublication"
-              >
-                {{ t('requestPublication') }}
-              </v-btn>
-            </template>
-          </div>
+          <template v-if="dataset && publicationSite">
+            <p class="text-body-large mb-4">
+              {{ t('confirmPublication') }}
+            </p>
+          </template>
         </v-stepper-window-item>
       </v-stepper-window>
+
+      <v-stepper-actions
+        v-if="currentStep > 1"
+        :prev-text="t('back')"
+        class="justify-start ga-2"
+        @click:prev="goToPrev"
+      >
+        <template #next>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :disabled="!isNextEnabled"
+            :loading="publishing"
+            @click="goToNext"
+          >
+            {{ nextButtonText }}
+          </v-btn>
+        </template>
+      </v-stepper-actions>
     </v-stepper>
   </v-container>
 </template>
@@ -231,6 +204,8 @@ fr:
   datasetTitle: Titre
   datasetDescription: Description
   required: Ce champ est requis
+  confirmPublication: Confirmez la publication du jeu de données
+  back: Retour
 en:
   datasets: Datasets
   shareDataset: Share a dataset
@@ -252,9 +227,12 @@ en:
   datasetTitle: Title
   datasetDescription: Description
   required: This field is required
+  confirmPublication: Confirm publication of the dataset
+  back: Back
 </i18n>
 
 <script setup lang="ts">
+import { mdiCheckAll, mdiDatabase, mdiFileDocument, mdiLock, mdiPublish } from '@mdi/js'
 import { $fetch, $apiPath } from '~/context'
 import type { ListedDataset } from '~/components/dataset/select/utils'
 
@@ -425,5 +403,46 @@ async function requestPublication () {
     }
   })
   router.push({ path: '/' })
+}
+
+const publishing = ref(false)
+
+const isNextEnabled = computed(() => {
+  if (currentStep.value === 1) return !!publicationSite.value
+  if (currentStep.value === 2) return !!dataset.value && !alreadyPublished.value
+  if (currentStep.value === 3) return true
+  if (currentStep.value === 4) return metadataValid.value
+  if (currentStep.value === 5) return true
+  return false
+})
+
+const nextButtonText = computed(() => {
+  if (currentStep.value === 5) return canPublishDirectly.value ? t('publish') : t('requestPublication')
+  return t('continue')
+})
+
+function goToPrev () {
+  if (currentStep.value > 1) {
+    currentStep.value -= 1
+  }
+}
+
+async function goToNext () {
+  if (currentStep.value === 4) {
+    await saveMetadataAndContinue()
+  } else if (currentStep.value === 5) {
+    publishing.value = true
+    try {
+      if (canPublishDirectly.value) {
+        await publish()
+      } else {
+        await requestPublication()
+      }
+    } finally {
+      publishing.value = false
+    }
+  } else {
+    currentStep.value += 1
+  }
 }
 </script>

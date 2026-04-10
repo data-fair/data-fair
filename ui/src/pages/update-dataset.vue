@@ -1,8 +1,13 @@
 <template>
-  <workflow-update-dataset
-    v-model:updated="updated"
-    :dataset-params="datasetParams"
-  />
+  <v-container
+    class="pa-0"
+    fluid
+  >
+    <workflow-update-dataset
+      v-model:updated="updated"
+      :dataset-params="datasetParams"
+    />
+  </v-container>
 </template>
 
 <script setup lang="ts">

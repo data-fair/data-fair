@@ -5,10 +5,10 @@
   >
     <v-stepper
       v-model="step"
-      style="background-color: transparent"
+      class="bg-background"
       flat
     >
-      <v-stepper-header>
+      <v-stepper-header class="bg-surface">
         <v-stepper-item
           v-if="!datasetId"
           value="type"

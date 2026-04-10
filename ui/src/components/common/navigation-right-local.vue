@@ -2,7 +2,7 @@
   <!-- Right-side panel teleported into the layout's #nav-right-portal (sticky inside v-main scroll container) -->
   <Teleport
     v-if="display.lgAndUp.value"
-    to="#nav-right-portal"
+    to="#navigation-right-local"
     defer
   >
     <v-list

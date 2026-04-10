@@ -1,8 +1,8 @@
 <template>
   <v-container
     v-if="dataset"
-    fluid
     class="pa-0"
+    fluid
   >
     <dataset-history />
   </v-container>

@@ -1,9 +1,9 @@
 <template>
   <workflow-update-dataset
     v-model:updated="updated"
-    data-iframe-height
     :dataset-params="datasetParams"
-    style="min-height:600px;"
+    style="min-height:500px;"
+    data-iframe-height
   />
 </template>
 

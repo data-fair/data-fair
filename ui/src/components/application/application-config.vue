@@ -1,7 +1,7 @@
 <template>
   <v-container
     v-if="application"
-    :class="display.lgAndDown.value ? 'pa-0' : ''"
+    fluid
   >
     <v-row :class="display.lgAndDown.value ? 'ma-0' : ''">
       <v-col

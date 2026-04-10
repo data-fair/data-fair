@@ -1,8 +1,8 @@
 <template>
   <v-toolbar
-    flat
     density="compact"
     color="surface"
+    flat
   >
     <dataset-nb-results
       :total="total"

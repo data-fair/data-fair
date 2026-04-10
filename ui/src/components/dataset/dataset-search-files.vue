@@ -1,10 +1,9 @@
 <!-- eslint-disable vue/no-v-html -->
-<!-- eslint-disable vue/no-lone-template -->
 <template>
   <v-toolbar
-    flat
     density="compact"
     color="surface"
+    flat
   >
     <dataset-nb-results
       :total="total"

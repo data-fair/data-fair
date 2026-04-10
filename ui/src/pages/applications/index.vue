@@ -1,5 +1,5 @@
 <template>
-  <v-container data-iframe-height>
+  <v-container>
     <!-- Skeleton loader (initial load) -->
     <v-row
       v-if="!catalog.initialized.value"

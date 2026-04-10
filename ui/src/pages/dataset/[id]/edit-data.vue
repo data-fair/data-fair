@@ -1,8 +1,8 @@
 <template>
   <v-container
     v-if="dataset"
-    fluid
     class="pa-0"
+    fluid
   >
     <!-- REST dataset: editable table -->
     <template v-if="dataset.isRest">
@@ -41,6 +41,7 @@ en:
 
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
+import { useLayout } from 'vuetify'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -49,6 +50,7 @@ import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/edit-data'>()
 const { height: windowHeight } = useWindowSize()
+const { mainRect } = useLayout()
 const breadcrumbs = useBreadcrumbs()
 
 const store = provideDatasetStore(route.params.id, undefined, true)
@@ -56,7 +58,7 @@ const { dataset } = store
 
 useDatasetWatch(store, ['info'])
 
-const contentHeight = computed(() => windowHeight.value - 48)
+const contentHeight = computed(() => windowHeight.value - mainRect.value.top - mainRect.value.bottom)
 
 const dataEntryContext = computed(() => {
   const d = dataset.value

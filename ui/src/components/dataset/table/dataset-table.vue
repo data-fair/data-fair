@@ -306,14 +306,13 @@
     :scrim="false"
     max-width="800"
   >
-    <v-card
-      v-if="showMapPreview"
-    >
+    <v-card v-if="showMapPreview">
       <v-btn
         :icon="mdiClose"
         style="position:absolute;top:4px;right:4px;z-index:1000;"
         color="primary"
         variant="flat"
+        size="small"
         @click="showMapPreview = undefined"
       />
       <async-dataset-map

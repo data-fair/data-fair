@@ -1,15 +1,17 @@
 <template>
   <v-stepper
     v-model="currentStep"
-    class="elevation-0 bg-background"
+    class="bg-background"
+    flat
   >
     <v-stepper-header class="bg-surface">
       <v-stepper-item
         v-if="!props.initialDatasetId"
         :value="1"
         :complete="!!currentDataset"
+        :color="currentStep === 1 ? 'primary' : ''"
+        :icon="mdiDatabase"
         editable
-        color="primary"
         :title="t('stepDataset')"
         :subtitle="currentDataset ? truncateMiddle(currentDataset.title, 26, 4, '...') : undefined"
       />
@@ -20,8 +22,9 @@
         <v-stepper-item
           :value="2"
           :complete="!!file"
+          :color="currentStep === 2 ? 'primary' : ''"
+          :icon="mdiPaperclip"
           editable
-          color="primary"
           :title="t('stepFile')"
           :subtitle="file && truncateMiddle(file.name, 26, 4, '...')"
         />
@@ -31,8 +34,9 @@
           <v-stepper-item
             :value="3"
             :complete="!!attachments"
+            :color="currentStep === 3 ? 'primary' : ''"
+            :icon="mdiZipBox"
             editable
-            color="primary"
             :title="t('stepAttachment')"
             :subtitle="attachments && t('loaded')"
           />
@@ -43,7 +47,8 @@
           :value="digitalDocumentField ? 4 : 3"
           :complete="!!imported"
           :editable="!!file"
-          color="primary"
+          :color="currentStep === (digitalDocumentField ? 4 : 3) ? 'primary' : ''"
+          :icon="mdiCheckAll"
           :title="t('stepAction')"
         />
         <v-divider />
@@ -62,26 +67,23 @@
         <v-stepper-item
           :value="2"
           :editable="!!currentDataset"
-          color="primary"
+          :color="currentStep === 2 ? 'primary' : ''"
+          :icon="mdiTable"
           :title="t('editTable')"
         />
       </template>
     </v-stepper-header>
 
-    <v-stepper-window class="mx-0 mb-0 mt-2">
+    <v-stepper-window>
       <v-stepper-window-item
         v-if="!props.initialDatasetId"
         :value="1"
       >
-        <v-row
+        <dataset-select-cards
           v-if="!initialFetch"
-          class="mt-4 mb-1 mx-0"
-        >
-          <dataset-select-cards
-            v-model="selectedDataset"
-            :extra-params="datasetsFilter"
-          />
-        </v-row>
+          v-model="selectedDataset"
+          :extra-params="datasetsFilter"
+        />
       </v-stepper-window-item>
 
       <dataset-store-provider
@@ -398,7 +400,7 @@ import { type ListedDataset } from '../dataset/select/utils'
 import { type DatasetStore } from '~/composables/dataset/store'
 import DatasetStoreProvider from '~/components/provide/dataset-store-provider.vue'
 import Debug from 'debug'
-import { mdiCancel } from '@mdi/js'
+import { mdiCancel, mdiCheckAll, mdiDatabase, mdiPaperclip, mdiTable, mdiZipBox } from '@mdi/js'
 import { useWindowSize } from '@vueuse/core'
 
 const debug = Debug('workflow-update-dataset')

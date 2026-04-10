@@ -1,5 +1,5 @@
 <template>
-  <v-container class="home">
+  <v-container>
     <!-- Missing subscription: show alert -->
     <v-alert
       v-if="user && missingSubscription"
@@ -199,29 +199,6 @@
   </v-container>
 </template>
 
-<script setup lang="ts">
-import { mdiAlert } from '@mdi/js'
-import { usePermissions } from '~/composables/use-permissions'
-import dataSvg from '~/assets/svg/Data Arranging_Two Color.svg?raw'
-import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
-import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
-import dataProcessSvg from '~/assets/svg/Data Process_Two Color.svg?raw'
-
-const { t } = useI18n()
-const session = useSession()
-const user = session.user
-const account = session.account
-
-// usePermissions uses useSession() internally, so it can be called unconditionally
-const { canContribDep, canAdminDep, missingSubscription } = usePermissions()
-
-const accountOrgRole = computed(() => {
-  if (!user.value || account.value?.type !== 'organization') return ''
-  const org = user.value.organizations.find((o: any) => o.id === account.value?.id)
-  return org?.role ?? ''
-})
-</script>
-
 <i18n lang="yaml">
 fr:
   authRequired: Vous devez être authentifié pour utiliser ce service.
@@ -264,3 +241,26 @@ en:
   manageDatasets: Manage datasets
   manageApplications: Manage applications
 </i18n>
+
+<script setup lang="ts">
+import { mdiAlert } from '@mdi/js'
+import { usePermissions } from '~/composables/use-permissions'
+import dataSvg from '~/assets/svg/Data Arranging_Two Color.svg?raw'
+import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
+import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
+import dataProcessSvg from '~/assets/svg/Data Process_Two Color.svg?raw'
+
+const { t } = useI18n()
+const session = useSession()
+const user = session.user
+const account = session.account
+
+// usePermissions uses useSession() internally, so it can be called unconditionally
+const { canContribDep, canAdminDep, missingSubscription } = usePermissions()
+
+const accountOrgRole = computed(() => {
+  if (!user.value || account.value?.type !== 'organization') return ''
+  const org = user.value.organizations.find((o: any) => o.id === account.value?.id)
+  return org?.role ?? ''
+})
+</script>

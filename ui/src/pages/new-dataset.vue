@@ -1,14 +1,14 @@
 <template>
   <v-container
-    fluid
     class="pa-0"
+    fluid
   >
     <v-stepper
       v-model="step"
-      style="background-color: transparent"
+      class="bg-background"
       flat
     >
-      <v-stepper-header>
+      <v-stepper-header class="bg-surface">
         <v-stepper-item
           value="type"
           :complete="!!datasetType"

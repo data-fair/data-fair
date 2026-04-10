@@ -1,18 +1,17 @@
 <template>
-  <template v-if="authorized">
-    <d-frame
-      id="department"
-      :src="`${$sdUrl}/organization/${account.id}/department/${account.department}?embed=true`"
-      class="fill-height"
-      resize="no"
-      sync-params
-      emit-iframe-messages
-      :adapter.prop="stateChangeAdapter"
-      @message="onMessage"
-      @iframe-message="onMessage"
-      @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
-    />
-  </template>
+  <d-frame
+    v-if="authorized"
+    id="department"
+    :src="`${$sdUrl}/organization/${account.id}/department/${account.department}?embed=true`"
+    class="fill-height"
+    resize="no"
+    sync-params
+    emit-iframe-messages
+    :adapter.prop="stateChangeAdapter"
+    @message="onMessage"
+    @iframe-message="onMessage"
+    @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+  />
   <v-container v-else>
     <v-alert type="error">
       {{ t('notAuthorized') }}

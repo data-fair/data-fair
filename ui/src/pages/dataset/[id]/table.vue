@@ -19,6 +19,7 @@ en:
 
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
+import { useLayout } from 'vuetify'
 import { provideDatasetStore } from '~/composables/dataset/store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -26,6 +27,7 @@ import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/table'>()
 const { height: windowHeight } = useWindowSize()
+const { mainRect } = useLayout()
 const breadcrumbs = useBreadcrumbs()
 
 const store = provideDatasetStore(route.params.id, true, true)
@@ -33,7 +35,7 @@ const { dataset } = store
 
 useDatasetWatch(store, ['info'])
 
-const contentHeight = computed(() => windowHeight.value - 48)
+const contentHeight = computed(() => windowHeight.value - mainRect.value.top - mainRect.value.bottom)
 
 watch(dataset, (d) => {
   if (!d) return

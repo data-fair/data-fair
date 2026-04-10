@@ -152,14 +152,20 @@
       :svg="dataSvg"
     >
       <template #windows>
-        <v-tabs-window-item value="table">
+        <v-tabs-window-item
+          value="table"
+          class="rounded border overflow-hidden"
+        >
           <dataset-table
             :height="windowHeight - 300"
             :pagination="true"
           />
         </v-tabs-window-item>
 
-        <v-tabs-window-item value="map">
+        <v-tabs-window-item
+          value="map"
+          class="rounded border overflow-hidden"
+        >
           <dataset-map :height="windowHeight - 300" />
         </v-tabs-window-item>
 
