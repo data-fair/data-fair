@@ -34,8 +34,8 @@ Your response will be read by a parent assistant that may need to ask you follow
    - **datasetId**: the dataset ID(s) you queried
    - **datasetTitle**: the dataset title(s) from the schema
    - **columns**: the column keys and titles that were relevant to the query
-   - **filters**: the exact filters, bbox, geoDistance, or dateMatch parameters you used (as key-value pairs), so the parent assistant can reconstruct a link to a filtered table view
-   - **sort**: the sort order used, if any
+   - **filters**: the exact filters, q, bbox, geoDistance, dateMatch, and sort parameters you used (as key-value pairs), so the parent assistant can refine or extend them in follow-up queries
+   - **filterQuery**: copy the "Filter query:" line from the tool output verbatim (URL query string format). The parent assistant uses this to link to a filtered table view.
    - **totalResults**: the total number of matching rows
    - **relatedColumns**: other columns from the schema that were not directly used but could be useful for follow-up exploration (e.g. if the user asked about cities, mention that a region or department column also exists)
    - **suggestions**: 1-3 brief ideas for follow-up analyses the data could support

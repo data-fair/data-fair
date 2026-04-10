@@ -1,4 +1,4 @@
-import { normalizeSort, cleanRow, toCsv, datasetIdProperty, filterProperties } from './_utils.js'
+import { normalizeSort, cleanRow, toCsv, datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Rechercher des lignes de données' },
@@ -74,6 +74,7 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
 
 export function formatResult (data: any, params: Params): { text: string, structuredContent: Record<string, any> } {
   const rows = (data.results ?? []).map(cleanRow)
+  const filterQueryString = buildFilterQueryString(params)
   const lines = [
     `**${data.total}** rows found (showing ${rows.length}, page ${params.page || 1})`,
     '',
@@ -81,6 +82,9 @@ export function formatResult (data: any, params: Params): { text: string, struct
   ]
   if (data.next) {
     lines.push('', 'Next page available.')
+  }
+  if (filterQueryString) {
+    lines.push('', `Filter query: ${filterQueryString}`)
   }
   const structuredContent: Record<string, any> = {
     datasetId: params.datasetId,

@@ -1,4 +1,4 @@
-import { datasetIdProperty, filterProperties } from './_utils.js'
+import { datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Calculer une métrique' },
@@ -69,12 +69,18 @@ export function formatResult (data: any, params: Params): { text: string, struct
     result = String(data.metric)
   }
 
+  const filterQueryString = buildFilterQueryString(params)
+  const lines = [
+    `**${params.metric}** of \`${params.fieldKey}\``,
+    `Total rows: ${data.total}`,
+    `Result: **${result}**`
+  ]
+  if (filterQueryString) {
+    lines.push('', `Filter query: ${filterQueryString}`)
+  }
+
   return {
-    text: [
-      `**${params.metric}** of \`${params.fieldKey}\``,
-      `Total rows: ${data.total}`,
-      `Result: **${result}**`
-    ].join('\n'),
+    text: lines.join('\n'),
     structuredContent: {
       datasetId: params.datasetId,
       fieldKey: params.fieldKey,
