@@ -37,7 +37,7 @@
             density="comfortable"
             hide-details
           />
-          <tutorial-alert
+          <df-tutorial-alert
             id="api-key-scope"
             :text="t('scopeMsg')"
             persistent
@@ -136,7 +136,7 @@
           >
             {{ t('scope') }} : {{ apiKey.scopes?.map(s => t(s)).join(', ') }}
           </p>
-          <tutorial-alert
+          <df-tutorial-alert
             id="api-key-email"
             :text="t('emailMsg')"
             persistent

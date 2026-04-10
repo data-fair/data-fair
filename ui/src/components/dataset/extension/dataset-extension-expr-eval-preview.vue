@@ -1,7 +1,17 @@
 <template>
   <div class="extension-expr-eval-preview">
+    <!-- Help documentation -->
+    <df-tutorial-alert
+      id="expr-eval-extension"
+      persistent
+    >
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <p v-html="t('exprEvalHelp')" />
+      <dataset-expr-eval-doc />
+    </df-tutorial-alert>
+
     <!-- Expression field + AI button -->
-    <div class="d-flex align-center gap-1 mb-2">
+    <div class="d-flex align-start ga-1 my-2">
       <v-text-field
         v-model="localExpr"
         :label="t('expr')"
@@ -20,28 +30,6 @@
       />
     </div>
 
-    <!-- Help documentation -->
-    <v-btn
-      variant="text"
-      size="small"
-      :prepend-icon="mdiInformation"
-      class="mb-2"
-      @click="showHelp = !showHelp"
-    >
-      {{ showHelp ? t('hideHelp') : t('showHelp') }}
-    </v-btn>
-    <v-expand-transition>
-      <v-alert
-        v-show="showHelp"
-        type="info"
-        variant="tonal"
-        class="mb-4"
-      >
-        <p v-html="/*eslint-disable-line vue/no-v-html*/t('exprEvalHelp')" />
-        <dataset-expr-eval-doc />
-      </v-alert>
-    </v-expand-transition>
-
     <!-- Toolbar -->
     <v-toolbar
       color="surface"
@@ -51,19 +39,16 @@
       <dataset-nb-results
         :limit="0"
         :total="totalLines"
-        class="ml-2"
-        style="min-width:80px;max-width:80px;"
       />
       <v-text-field
         v-model="search"
         :append-inner-icon="mdiMagnify"
         :label="t('search')"
-        :max-width="250"
-        :min-width="170"
-        class="mx-2"
+        class="ml-2"
         color="primary"
         density="compact"
         variant="outlined"
+        max-width="250"
         clearable
         hide-details
         rounded
@@ -76,11 +61,10 @@
         v-model="pageSize"
         :items="pageSizeItems"
         :label="t('lines')"
-        :max-width="120"
-        :min-width="100"
-        class="mx-2"
+        class="mt-1"
         density="compact"
         variant="outlined"
+        max-width="120"
         hide-details
         @update:model-value="page = 1; refresh()"
       />
@@ -219,8 +203,6 @@ fr:
   expr: Expression
   emptyExpr: Saisissez une expression
   helpExpression: Aide-moi à écrire l'expression
-  showHelp: Aide sur les expressions
-  hideHelp: Masquer l'aide
   exprEvalHelp: "Une expression (ou formule) est utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes.
     Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.
     Les valeurs des autres colonnes sont passées en paramètre avec leurs clés comme nom du paramètre.<br><br>
@@ -235,8 +217,6 @@ en:
   expr: Expression
   emptyExpr: Write an expression
   helpExpression: Help write the expression
-  showHelp: Expression help
-  hideHelp: Hide help
   exprEvalHelp: "An expression (or formula) is used to calculate the content of a column based on the values of other columns.
     It must follow the syntax of the <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a> module.
     The values of other columns are passed as parameters with their keys as parameter names.<br><br>
@@ -244,7 +224,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiInformation, mdiMagnify } from '@mdi/js'
+import { mdiMagnify } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import DatasetExprEvalDoc from './dataset-expr-eval-doc.vue'
 // @ts-ignore -- shared module
@@ -275,7 +255,6 @@ const totalLines = ref<number | undefined>(undefined)
 const page = ref(1)
 const pageSize = ref(10)
 const search = ref('')
-const showHelp = ref(false)
 const localExpr = ref(props.extension.expr ?? '')
 
 const expressionContext = computed(() => {

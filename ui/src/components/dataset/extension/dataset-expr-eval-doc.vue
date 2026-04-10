@@ -191,5 +191,16 @@ const functions: Record<string, { description: string, params: string, examples?
   }
 }
 
-const functionsArray = Object.entries(functions).map(([key, fn]) => ({ key, ...fn }))
+const props = withDefaults(defineProps<{
+  /** List of function names to exclude from the documentation */
+  exclude?: string[]
+}>(), {
+  exclude: () => []
+})
+
+const functionsArray = computed(() =>
+  Object.entries(functions)
+    .filter(([key]) => !props.exclude.includes(key))
+    .map(([key, fn]) => ({ key, ...fn }))
+)
 </script>

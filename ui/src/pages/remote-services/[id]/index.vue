@@ -61,13 +61,7 @@
       <template #content="{tab}">
         <v-container
           class="pb-0"
-        >
-          <tutorial-alert
-            id="dataset-share-portal"
-            :text="t('permissions')"
-            persistent
-          />
-        </v-container>
+        />
         <v-tabs-window :model-value="tab">
           <v-tabs-window-item value="permissions">
             <v-container>
@@ -121,7 +115,7 @@ fr:
   extensions: Extensions supportées
   params: Paramètres
   visibility: Visibilité
-  permissions: Contrôlez l'utilisation de ce service distant par vos utilisateurs.
+  permissions: Visibilité
   services: Services
   metadata: Métadonnées
   configuration: Configuration
@@ -135,7 +129,7 @@ en:
   extensions: Handled extensions
   params: Parameters
   visibility: Visibility
-  permissions: Control the use of this service by your users.
+  permissions: Visibility
   services: Services
   metadata: Metadata
   configuration: Configuration

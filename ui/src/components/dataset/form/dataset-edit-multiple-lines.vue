@@ -2,7 +2,7 @@
   <template
     v-if="editSchema && patch"
   >
-    <tutorial-alert
+    <df-tutorial-alert
       id="edit-multiple-lines"
       :text="t('warning')"
       persistent

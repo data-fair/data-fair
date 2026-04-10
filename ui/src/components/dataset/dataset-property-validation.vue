@@ -7,13 +7,11 @@
     <template #activator="{ props: activatorProps }">
       <v-btn
         v-bind="activatorProps"
-        icon
-        size="small"
-        variant="flat"
         :title="t('validationConfig')"
-      >
-        <v-icon :icon="mdiCheckDecagram" />
-      </v-btn>
+        :icon="mdiCheckDecagram"
+        variant="text"
+        size="small"
+      />
     </template>
     <v-card v-if="dialog">
       <v-toolbar
@@ -31,22 +29,18 @@
       </v-toolbar>
       <v-card-text class="px-3">
         <v-form>
-          <v-alert
+          <df-tutorial-alert
             v-if="isRest"
-            type="info"
-            variant="tonal"
-            class="mb-4"
-          >
-            {{ t('validationRestMessage') }}
-          </v-alert>
-          <v-alert
+            id="validation-rest"
+            :text="t('validationRestMessage')"
+            persistent
+          />
+          <df-tutorial-alert
             v-else
-            type="info"
-            variant="tonal"
-            class="mb-4"
-          >
-            {{ t('validationFileMessage') }}
-          </v-alert>
+            id="validation-file"
+            :text="t('validationFileMessage')"
+            persistent
+          />
 
           <v-checkbox
             v-model="property['x-required']"
@@ -112,13 +106,11 @@
           />
 
           <template v-if="property.type === 'string' && !property.format">
-            <v-alert
-              type="info"
-              variant="tonal"
-              class="mb-4"
-            >
-              {{ t('validationRegexpMessage') }}
-            </v-alert>
+            <df-tutorial-alert
+              id="validation-regexp"
+              :text="t('validationRegexpMessage')"
+              persistent
+            />
             <v-text-field
               v-model="property.pattern"
               :label="t('pattern')"
@@ -144,13 +136,11 @@
           </template>
 
           <template v-if="property.type === 'string' && property.format === 'date'">
-            <v-alert
-              type="info"
-              variant="tonal"
-              class="mb-4"
-            >
-              {{ t('dateFormatMessage') }}
-            </v-alert>
+            <df-tutorial-alert
+              id="validation-date-format"
+              :text="t('dateFormatMessage')"
+              persistent
+            />
             <v-select
               v-model="property.dateFormat"
               :label="t('dateFormat')"
@@ -164,13 +154,11 @@
           </template>
 
           <template v-if="property.type === 'string' && property.format === 'date-time'">
-            <v-alert
-              type="info"
-              variant="tonal"
-              class="mb-4"
-            >
-              {{ t('dateTimeFormatMessage') }}
-            </v-alert>
+            <df-tutorial-alert
+              id="validation-date-time-format"
+              :text="t('dateTimeFormatMessage')"
+              persistent
+            />
             <v-select
               v-model="property.dateTimeFormat"
               :label="t('dateTimeFormat')"

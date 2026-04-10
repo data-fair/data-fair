@@ -20,7 +20,7 @@
         :label="t('label')"
         :disabled="!editable"
         variant="outlined"
-        density="compact"
+        density="comfortable"
         class="mb-2"
         hide-details
         autofocus
@@ -61,9 +61,8 @@
           :title="t('deleteColumnTitle')"
           :text="t('deleteColumnText')"
           :tooltip="t('deleteColumnTitle')"
+          :btn-props="{ color: 'warning', icon: true, variant: 'text', size: 'small' }"
           yes-color="warning"
-          alert="error"
-          :btn-props="{ color: 'warning', icon: true, variant: 'text' }"
           @confirm="onRemoveColumn"
         />
         <dataset-property-capabilities
@@ -144,7 +143,7 @@
           </v-list-item>
         </template>
         <template #append>
-          <help-tooltip>{{ conceptHelp }}</help-tooltip>
+          <help-tooltip :text="conceptHelp" />
         </template>
       </v-autocomplete>
 
@@ -161,7 +160,7 @@
         @update:model-value="val => { if (column) (column as any).separator = val; }"
       >
         <template #append>
-          <help-tooltip>{{ t('separatorHelp') }}</help-tooltip>
+          <help-tooltip :text="t('separatorHelp')" />
         </template>
       </v-select>
 
@@ -175,7 +174,7 @@
         hide-details
       >
         <template #append>
-          <help-tooltip>{{ t('xDisplayHelp') }}</help-tooltip>
+          <help-tooltip :text="t('xDisplayHelp')" />
         </template>
       </v-select>
     </v-col>
@@ -192,7 +191,7 @@ fr:
   description: Description
   descriptionHelp: Un contenu markdown ou HTML qui sera utilisé pour décrire cette colonne aux utilisateurs des applications de données et de la documentation d'API.
   distinctValues: Nombre de valeurs distinctes
-  distinctValuesHelp: approximatif dans le cas de données volumineuses
+  distinctValuesHelp: Approximatif dans le cas de données volumineuses
   values: Valeurs
   sep: Séparateur
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
@@ -214,7 +213,7 @@ en:
   description: Description
   descriptionHelp: A markdown or HTML content that will be used to describe this column to the users of data applications and API documentations.
   distinctValues: Number of distinct values
-  distinctValuesHelp: approximative in the case of a large dataset
+  distinctValuesHelp: Approximative in the case of a large dataset
   values: Values
   sep: Separator
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
@@ -329,7 +328,7 @@ const displayFormat = computed({
   }
 })
 
-function conceptFilter (itemText: string, queryText: string, item: any) {
+function conceptFilter (_itemText: string, queryText: string, item: any) {
   const search = queryText.toLowerCase()
   const title = (item.raw.text ?? '').toLowerCase()
   const description = (item.raw.description ?? '').toLowerCase()

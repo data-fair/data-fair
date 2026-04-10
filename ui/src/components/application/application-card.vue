@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ApplicationExt } from '#api/types'
+import type { Application } from '#api/types'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 
 const { t, locale } = useI18n()
@@ -79,7 +79,7 @@ const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
 const props = defineProps<{
-  application: ApplicationExt
+  application: Partial<Application> & Pick<Application, 'id' | 'title' | 'updatedAt' | 'owner'> & { visibility?: 'public' | 'private' | 'protected', thumbnail?: string }
 }>()
 
 const captureUrl = computed(() => {

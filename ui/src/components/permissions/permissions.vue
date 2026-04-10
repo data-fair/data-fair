@@ -4,19 +4,13 @@
       {{ t('description') }}
     </p>
 
-    <v-alert
+    <df-tutorial-alert
       v-if="resource.owner?.department"
-      type="info"
-      variant="tonal"
-      density="compact"
-      class="mb-3"
-    >
-      {{ t('readDepPermissionsDoc') }}
-      <a
-        href="https://data-fair.github.io/3/user-guide-backoffice/department"
-        target="_blank"
-      >{{ t('readDepPermissionsDoc') }}</a>
-    </v-alert>
+      id="permissions-deps"
+      :text="t('readDepPermissionsDoc')"
+      href="https://data-fair.github.io/3/user-guide-backoffice/department"
+      persistent
+    />
 
     <v-progress-linear
       v-if="!permissions"

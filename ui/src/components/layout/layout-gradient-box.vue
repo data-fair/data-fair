@@ -12,7 +12,6 @@ import { useTheme } from 'vuetify'
 import microTemplate from '@data-fair/lib-utils/micro-template.js'
 
 const {
-
   gradient = 'linear-gradient(180deg, {primary} 0%, {secondary} 100%',
   sides = 'trbl',
   width = 2,

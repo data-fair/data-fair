@@ -120,7 +120,6 @@ fr:
   org: Gestion de l'organisation
   dep: Gestion du département
   params: Paramètres
-  paramsSub: Licences, thématiques ...
   catalogs: Catalogues distants
   processings: Traitements périodiques
   agents: Agents
@@ -132,7 +131,7 @@ fr:
   metricsSub: Téléchargements, API
   events: Traçabilité (bêta)
   subscription: Abonnement
-  services: Services
+  services: Services distants
   serviceInfo: Informations du service
   owners: Propriétaires
   errors: Erreurs
@@ -154,7 +153,6 @@ en:
   org: Manage organization
   dep: Manage department
   params: Parameters
-  paramsSub: Licenses, topics ...
   catalogs: Remote catalogs
   processings: Periodic processings
   agents: Agents
@@ -166,7 +164,7 @@ en:
   metricsSub: Downloads, API
   events: Traceability (beta)
   subscription: Subscription
-  services: Services
+  services: Remote services
   serviceInfo: Service information
   owners: Owners
   errors: Errors

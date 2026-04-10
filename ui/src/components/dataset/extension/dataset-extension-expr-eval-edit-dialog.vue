@@ -43,10 +43,10 @@
 <i18n lang="yaml">
 fr:
   preview: Prévisualisation
-  newExprEval: nouvelle colonne calculée
+  newExprEval: Nouvelle colonne calculée
 en:
   preview: Preview
-  newExprEval: new calculated column
+  newExprEval: New calculated column
 </i18n>
 
 <script setup lang="ts">

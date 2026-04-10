@@ -7,14 +7,12 @@
     <template #activator="{ props: activatorProps }">
       <v-btn
         v-bind="activatorProps"
-        icon
-        size="small"
-        variant="flat"
         :color="hasTransform ? 'success' : undefined"
         :title="t('transform')"
-      >
-        <v-icon :icon="mdiDatabaseCog" />
-      </v-btn>
+        :icon="mdiDatabaseCog"
+        size="text"
+        variant="flat"
+      />
     </template>
     <v-card v-if="dialog">
       <v-toolbar
@@ -31,16 +29,17 @@
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3">
-        <v-alert
-          type="info"
-          variant="tonal"
-          class="mb-4"
+        <df-tutorial-alert
+          id="transform-type"
+          persistent
+          :initial="true"
+          class="mb-2"
         >
           <p>{{ t('typeOverrideHelp1') }}</p>
           <p class="mb-0">
             {{ t('typeOverrideHelp2') }}
           </p>
-        </v-alert>
+        </df-tutorial-alert>
 
         <v-select
           v-model="overwritePropertyType"
@@ -57,10 +56,10 @@
           :disabled="!editable"
         />
 
-        <v-alert
-          type="info"
-          variant="tonal"
-          class="mb-4"
+        <df-tutorial-alert
+          id="expr-eval-transform"
+          persistent
+          :initial="true"
         >
           <i18n-t
             keypath="exprEvalHelp"
@@ -73,7 +72,8 @@
               >expr-eval</a>
             </template>
           </i18n-t>
-        </v-alert>
+          <dataset-expr-eval-doc :exclude="['SUM', 'AVERAGE']" />
+        </df-tutorial-alert>
 
         <v-text-field
           v-model="property['x-transform'].expr"

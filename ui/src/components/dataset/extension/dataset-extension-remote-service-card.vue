@@ -4,28 +4,30 @@
       <v-card-title>
         {{ actionData.summary }}
       </v-card-title>
-      <v-card-text style="margin-bottom: 40px;">
+      <v-card-text>
         {{ t('link', { info: linkInfo }) }}
         <v-autocomplete
           v-if="selectFieldsData?.fieldsAndTags"
           v-model="extension.select"
+          :label="t('additionalCols')"
+          :placeholder="t('allColsOut')"
           :disabled="!canWrite"
           :items="selectFieldsData.fieldsAndTags"
           item-value="name"
           item-title="title"
-          :label="t('additionalCols')"
-          multiple
-          :placeholder="t('allColsOut')"
-          persistent-hint
+          class="mt-2"
           chips
+          multiple
           closable-chips
+          persistent-hint
+          hide-details
         />
         <v-btn
+          :append-icon="showOverwrite ? mdiChevronUp : mdiChevronDown"
           variant="text"
           @click="showOverwrite = !showOverwrite"
         >
           {{ t('overwriteKeys') }}
-          <v-icon :icon="showOverwrite ? mdiChevronUp : mdiChevronDown" />
         </v-btn>
         <div v-show="showOverwrite">
           <div
@@ -48,7 +50,8 @@
           :label="t('autoUpdate')"
         />
       </v-card-text>
-      <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
+      <v-card-actions>
+        <v-spacer />
         <confirm-menu
           v-if="canWrite && dataset.isRest"
           :title="t('confirmRefreshTitle')"
@@ -76,7 +79,7 @@
       </v-card-actions>
     </template>
     <template v-else>
-      <v-card-text style="margin-bottom: 40px;">
+      <v-card-text>
         <v-alert
           variant="outlined"
           type="warning"
@@ -86,7 +89,7 @@
           {{ t('unavailableServiceDetail') }}
         </v-alert>
       </v-card-text>
-      <v-card-actions style="position: absolute; bottom: 0px; width: 100%;">
+      <v-card-actions>
         <confirm-menu
           v-if="canWrite"
           :title="t('confirmDeleteTitle')"

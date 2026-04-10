@@ -323,19 +323,17 @@
       :title="sections.dangerZone.title"
     >
       <template #content>
-        <v-list>
+        <v-list class="py-0">
           <v-list-item
             v-if="can('changeOwner').value"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
-            <div>
-              <div class="text-body-1 font-weight-bold">
-                {{ t('changeOwner') }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ t('changeOwnerDesc') }}
-              </div>
+            <div class="text-body-1 font-weight-bold">
+              {{ t('changeOwner') }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis">
+              {{ t('changeOwnerDesc') }}
             </div>
             <template #append>
               <v-btn
@@ -349,22 +347,18 @@
             </template>
           </v-list-item>
 
-          <v-divider
-            v-if="can('changeOwner').value && (canDeleteAllLines || can('delete').value)"
-          />
+          <v-divider v-if="can('changeOwner').value && (canDeleteAllLines || can('delete').value)" />
 
           <v-list-item
             v-if="canDeleteAllLines"
             :prepend-icon="mdiDeleteSweep"
             class="py-4"
           >
-            <div>
-              <div class="text-body-1 font-weight-bold">
-                {{ t('deleteAllLines') }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ t('deleteAllLinesDesc') }}
-              </div>
+            <div class="text-body-1 font-weight-bold">
+              {{ t('deleteAllLines') }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis">
+              {{ t('deleteAllLinesDesc') }}
             </div>
             <template #append>
               <v-btn
@@ -378,9 +372,7 @@
             </template>
           </v-list-item>
 
-          <v-divider
-            v-if="canDeleteAllLines && can('delete').value"
-          />
+          <v-divider v-if="canDeleteAllLines && can('delete').value" />
 
           <v-list-item
             v-if="can('delete').value"

@@ -1,18 +1,26 @@
 <template>
-  <v-container
-    v-if="application && publicationSitesFetch.data.value"
-    fluid
-  >
+  <template v-if="application && publicationSitesFetch.data.value">
     <slug-edit-dialog
       :slug="application.slug ?? application.id"
       :can-edit="can('writeDescriptionBreaking')"
       @update:slug="slug => patch({ slug })"
     />
 
-    <p
-      v-if="!publicationSitesFetch.data.value.length"
-      class="mb-2"
-    >
+    <df-tutorial-alert
+      id="app-share-prefer-large"
+      :text="t('preferLargeDisplayTutorial')"
+      persistent
+    />
+
+    <v-switch
+      :model-value="application.preferLargeDisplay"
+      :label="t('preferLargeDisplay')"
+      density="compact"
+      hide-details
+      @update:model-value="(val: boolean | null) => patch({ preferLargeDisplay: !!val })"
+    />
+
+    <p v-if="!publicationSitesFetch.data.value.length">
       {{ t('noPublicationSite') }}
     </p>
     <template v-else>
@@ -79,30 +87,25 @@
           </v-list-item>
         </v-list>
       </v-card>
-
-      <v-switch
-        :model-value="application.preferLargeDisplay"
-        :label="t('preferLargeDisplay')"
-        class="mx-4 mt-4"
-        @update:model-value="(val: boolean | null) => patch({ preferLargeDisplay: !!val })"
-      />
     </template>
-  </v-container>
+  </template>
 </template>
 
 <i18n lang="yaml">
 fr:
   noPublicationSite: Vous n'avez pas configuré de portail sur lequel publier cette application.
   publishThisApp: Publiez cette application sur un ou plusieurs de vos portails.
-  published: publié
-  publicationRequested: publication demandée par un contributeur
-  preferLargeDisplay: privilégier un rendu large
+  published: Publié
+  publicationRequested: Publication demandée par un contributeur
+  preferLargeDisplay: Privilégier un rendu large
+  preferLargeDisplayTutorial: En cochant l'option ci-dessous vous indiquez aux portails que cette application est à afficher sur une largeur importante autant que possible. Ceci pourra changer l'affichage dans les pages des jeux de données ou les tableaux de bords par exemple.
 en:
   noPublicationSite: You haven't configured a portal to publish this application on.
   publishThisApp: Publish this application on one or more of your portals.
-  published: published
-  publicationRequested: publication requested by a contributor
-  preferLargeDisplay: prefer a large display
+  published: Published
+  publicationRequested: Publication requested by a contributor
+  preferLargeDisplay: Prefer a large display
+  preferLargeDisplayTutorial: By checking the following option you indicate to the portals that this application should be rendered on a large section of page as much as possible. This will change the rendering in dataset pages and dashboards.
 </i18n>
 
 <script setup lang="ts">

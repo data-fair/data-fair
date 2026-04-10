@@ -7,13 +7,11 @@
     <template #activator="{ props: activatorProps }">
       <v-btn
         v-bind="activatorProps"
-        icon
-        size="small"
-        variant="flat"
         :title="t('labels')"
-      >
-        <v-icon :icon="mdiTagTextOutline" />
-      </v-btn>
+        :icon="mdiTagTextOutline"
+        variant="text"
+        size="small"
+      />
     </template>
     <v-card v-if="dialog">
       <v-toolbar

@@ -288,19 +288,17 @@
       :title="sections.dangerZone.title"
     >
       <template #content>
-        <v-list>
+        <v-list class="py-0">
           <v-list-item
             v-if="can('delete')"
             :prepend-icon="mdiAccountSwitch"
             class="py-4"
           >
-            <div>
-              <div class="text-body-1 font-weight-bold">
-                {{ t('changeOwner') }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ t('changeOwnerDesc') }}
-              </div>
+            <div class="text-body-1 font-weight-bold">
+              {{ t('changeOwner') }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis">
+              {{ t('changeOwnerDesc') }}
             </div>
             <template #append>
               <v-btn
@@ -314,22 +312,18 @@
             </template>
           </v-list-item>
 
-          <v-divider
-            v-if="can('delete')"
-          />
+          <v-divider v-if="can('delete')" />
 
           <v-list-item
             v-if="can('delete')"
             :prepend-icon="mdiDelete"
             class="py-4"
           >
-            <div>
-              <div class="text-body-1 font-weight-bold">
-                {{ t('deleteApp') }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ t('deleteAppDesc') }}
-              </div>
+            <div class="text-body-1 font-weight-bold">
+              {{ t('deleteApp') }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis">
+              {{ t('deleteAppDesc') }}
             </div>
             <template #append>
               <v-btn
@@ -381,6 +375,20 @@
     <df-navigation-right>
       <application-actions />
       <df-toc :sections="tocSections" />
+      <v-list-item
+        v-if="baseAppFetch.data.value?.documentation"
+        :href="baseAppFetch.data.value.documentation"
+        target="_blank"
+        link
+      >
+        <template #prepend>
+          <v-icon
+            color="primary"
+            :icon="mdiBookOpenVariant"
+          />
+        </template>
+        {{ t('documentation') }}
+      </v-list-item>
     </df-navigation-right>
   </v-container>
 </template>
@@ -424,6 +432,7 @@ fr:
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
   deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
   yes: Oui
+  documentation: Documentation
   no: Non
 en:
   applications: Applications
@@ -463,6 +472,7 @@ en:
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
   deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
   yes: Yes
+  documentation: Documentation
   no: No
 </i18n>
 
@@ -472,7 +482,7 @@ import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiBookOpenVariant, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
