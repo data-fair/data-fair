@@ -140,7 +140,7 @@ import {
   mdiUpload
 } from '@mdi/js'
 import formatBytes from '@data-fair/lib-vue/format/bytes'
-import useDatasetStore from '~/composables/dataset/store'
+import useDatasetStore from '~/composables/dataset/dataset-store'
 
 const { dataset, nbVirtualDatasets } = useDatasetStore()
 

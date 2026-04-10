@@ -95,7 +95,7 @@ en:
 <script setup lang="ts">
 import { mdiCamera } from '@mdi/js'
 import '@data-fair/frame/lib/d-frame.js'
-import useApplicationStore from '~/composables/application/store'
+import useApplicationStore from '~/composables/application/application-store'
 
 const { t } = useI18n()
 const { application, applicationLink, baseAppFetch } = useApplicationStore()

@@ -432,6 +432,7 @@
 </i18n>
 
 <script setup lang="ts">
+import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'
@@ -439,7 +440,6 @@ import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
-import { type VVirtualScroll, type VForm } from 'vuetify/components'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 

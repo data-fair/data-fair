@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import useApplicationStore from '~/composables/application/store'
+import useApplicationStore from '~/composables/application/application-store'
 
 const { application, can, patch } = useApplicationStore()
 

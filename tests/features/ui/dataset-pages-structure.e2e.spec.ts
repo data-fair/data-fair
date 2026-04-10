@@ -60,8 +60,8 @@ test.describe('dataset page restructuring', () => {
   test('actions menu does not contain inline section items', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
-    // The right navigation drawer contains the actions menu
-    const actionsList = page.locator('nav').filter({ hasText: 'ACTIONS' })
+    // The right navigation panel contains the actions menu
+    const actionsList = page.locator('#navigation-right-local')
     await expect(actionsList).toBeVisible({ timeout: 5000 })
     // These should NOT be in the actions list (moved to inline tabs in the page)
     await expect(actionsList.getByText(/Éditer les métadonnées|Edit metadata/)).not.toBeVisible()

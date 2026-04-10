@@ -1,13 +1,13 @@
 <template>
-  <v-form
-    v-model="valid"
-  >
-    <vjsf
-      v-model="editWebhooks"
-      :schema="settingsSchema.properties.webhooks"
-      :options="vjsfOptions"
-    />
-  </v-form>
+  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+    <v-form v-model="valid">
+      <vjsf
+        v-model="editWebhooks"
+        :schema="settingsSchema.properties.webhooks"
+        :options="vjsfOptions"
+      />
+    </v-form>
+  </v-defaults-provider>
 </template>
 
 <script setup lang="ts">
@@ -24,11 +24,14 @@ watchDeepDiff(editWebhooks, () => {
   if (valid.value) webhooks.value = editWebhooks.value
 }, {})
 
-const vjsfOptions: VjsfOptions = {
+const { locale } = useI18n()
+
+const vjsfOptions = computed<VjsfOptions>(() => ({
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',
-  xI18n: true
-}
+  xI18n: true,
+  locale: locale.value
+}))
 
 </script>

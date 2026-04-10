@@ -1,4 +1,4 @@
-import useApplicationStore, { type ApplicationStore } from './store'
+import useApplicationStore, { type ApplicationStore } from './application-store'
 import { compare as compareVersions, validate as validateVersion } from 'compare-versions'
 
 export const useApplicationVersions = (storeOverride?: ApplicationStore) => {

@@ -19,7 +19,7 @@
         :min-height="32"
         @click="goTo('#' + section.id, { offset: -20, container: '.v-main__scroller' })"
       >
-        <v-list-item-title class="text-body-2">
+        <v-list-item-title class="text-body-medium">
           {{ section.title }}
         </v-list-item-title>
       </v-list-item>

@@ -15,7 +15,6 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 export default defineConfig({
   base: '/data-fair',
   optimizeDeps: {
-    // noDiscovery: true,
     include: [...commonjsDeps, 'easymde', 'vuedraggable', 'fast-deep-equal']
   },
   build: {
@@ -57,7 +56,10 @@ export default defineConfig({
       ],
       dirs: [
         'src/utils',
-        'src/composables/**'
+        'src/composables/**',
+        // standalone logic files (without Vue/runtime deps) are excluded to avoid duplicate auto-imports,
+        // they are re-exported by their parent composable and only imported directly in unit tests
+        '!src/composables/**/*-logic*'
       ]
     }),
     Components({

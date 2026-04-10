@@ -9,9 +9,10 @@
       border="0"
     >
       <div
-        class="d-flex flex-no-wrap"
-        style="height: 112px; width: 100%"
+        class="d-flex flex-no-wrap w-100"
+        style="height: 112px;"
       >
+        <!-- SVG Image -->
         <div
           v-if="svg && display.mdAndUp.value"
           :class="`pa-${svgNoMargin ? 0 : 2} flex-grow-0`"
@@ -21,24 +22,35 @@
             :color="color"
           />
         </div>
+
         <div
           class="pl-4 flex-grow-1"
           style="min-width: 0"
         >
           <v-toolbar
+            style="background-color:transparent"
             extended
             flat
-            style="background-color:transparent"
           >
             <v-toolbar-title class="text-title-large">
               {{ title }}
+              <div
+                v-if="subtitle"
+                class="text-body-medium"
+              >
+                {{ subtitle }}
+              </div>
             </v-toolbar-title>
+
+            <!-- Slot for actions butons (like save or discard)-->
             <template
               v-if="$slots.actions"
               #append
             >
               <slot name="actions" />
             </template>
+
+            <!-- Tab navigation -->
             <template #extension>
               <slot name="extension">
                 <v-tabs
@@ -55,15 +67,12 @@
                     <v-tab
                       v-if="tabInfo"
                       :value="tabInfo.key"
+                      :prepend-icon="tabInfo.icon"
                       :append-icon="tabInfo.appendIcon"
                       :base-color="tabInfo.color"
                       :color="tabInfo.color"
-                    >
-                      <v-icon
-                        v-if="tabInfo.icon"
-                        :icon="tabInfo.icon"
-                      />&nbsp;&nbsp;{{ tabInfo.title }}
-                    </v-tab>
+                      :text="tabInfo.title"
+                    />
                   </template>
                 </v-tabs>
               </slot>
@@ -72,6 +81,8 @@
         </div>
       </div>
     </v-card>
+
+    <!-- Tab windows -->
     <v-tabs-window
       v-if="$slots.windows"
       :model-value="tab"
@@ -79,6 +90,11 @@
     >
       <slot name="windows" />
     </v-tabs-window>
+
+    <!--
+      Content for tabs without windows
+      (or compatibility with older versions)
+    -->
     <slot
       name="content"
       :tab="tab"
@@ -96,6 +112,7 @@ type TabInfo = { key: string, title: string, icon?: string, appendIcon?: string,
 const { title, tabs, svg, color = 'primary' } = defineProps<{
   id: string,
   title: string,
+  subtitle?: string,
   tabs?: TabInfo[],
   svg?: string,
   svgNoMargin?: boolean,
@@ -106,5 +123,5 @@ const tab = defineModel({ type: String })
 const display = useDisplay()
 const theme = useTheme()
 
-const cardStyle = computed(() => `background: linear-gradient(90deg, ${theme.current.value.colors.surface} 0%, ${theme.current.value.colors.background} 20%`)
+const cardStyle = computed(() => `background: linear-gradient(90deg, ${theme.current.value.colors.surface} 0%, ${theme.current.value.colors.background} 90%`)
 </script>

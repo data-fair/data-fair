@@ -314,7 +314,7 @@ export default {
           title: { type: 'string', title: 'Titre', minLength: 3 },
           description: { type: 'string', title: 'Description' },
           tag: { type: 'string', title: 'Catégorie' },
-          type: { type: 'string', default: 'string', oneOf: [{ title: 'chaîne de caractère', const: 'string' }, { title: 'nombre', const: 'number' }] }
+          type: { type: 'string', title: 'Type', default: 'string', oneOf: [{ title: 'Chaîne de caractère', const: 'string' }, { title: 'Nombre', const: 'number' }] }
         }
       }
     },
@@ -330,18 +330,18 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'couverture géographique',
+              title: 'Couverture géographique',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
             },
             title: {
-              title: 'libellé personnalisé',
+              title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Couverture géographique', hideDetails: true }
+                props: { variant: 'outlined', placeholder: 'Couverture géographique' }
               }
             }
           }
@@ -351,18 +351,18 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'couverture temporelle',
+              title: 'Couverture temporelle',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
             },
             title: {
-              title: 'libellé personnalisé',
+              title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Couverture temporelle', hideDetails: true }
+                props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
               }
             }
           }
@@ -372,18 +372,18 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'fréquence des mises à jour',
+              title: 'Fréquence des mises à jour',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
             },
             title: {
-              title: 'libellé personnalisé',
+              title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour', hideDetails: true }
+                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour' }
               }
             }
           }
@@ -392,18 +392,18 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'personne ou organisme créateur',
+              title: 'Personne ou organisme créateur',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
             },
             title: {
-              title: 'libellé personnalisé',
+              title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur', hideDetails: true }
+                props: { variant: 'outlined', placeholder: 'Personne ou organisme créateur' }
               }
             }
           }
@@ -412,18 +412,18 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'date de dernière modification de la source',
+              title: 'Date de dernière modification de la source',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
             },
             title: {
-              title: 'libellé personnalisé',
+              title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source', hideDetails: true }
+                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source' }
               }
             }
           }
@@ -432,18 +432,18 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'mots clés',
+              title: 'Mots clés',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
             },
             title: {
-              title: 'libellé personnalisé',
+              title: 'Libellé personnalisé',
               type: 'string',
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Mots clés', hideDetails: true }
+                props: { variant: 'outlined', placeholder: 'Mots clés' }
               }
             }
           }
@@ -455,7 +455,7 @@ export default {
             messages: {
               addItem: 'Add a custom metadata',
               'x-i18n-addItem': {
-                fr: 'Ajouter une nouvelle métadonnée'
+                fr: 'Ajouter une métadonnée'
               }
             },
             itemTitle: '(item.title ?? "") + (item.key ? (" (" + item.key + ")") : "")'
@@ -471,13 +471,13 @@ export default {
             },
             properties: {
               key: {
-                title: 'clé',
+                title: 'Clé',
                 type: 'string',
                 readOnly: true,
                 layout: 'none'
               },
               title: {
-                title: 'libellé',
+                title: 'Libellé',
                 type: 'string',
                 minLength: 3
               }

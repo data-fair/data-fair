@@ -332,7 +332,7 @@
             <div class="text-body-1 font-weight-bold">
               {{ t('changeOwner') }}
             </div>
-            <div class="text-body-2 text-medium-emphasis">
+            <div class="text-body-medium text-medium-emphasis">
               {{ t('changeOwnerDesc') }}
             </div>
             <template #append>
@@ -357,7 +357,7 @@
             <div class="text-body-1 font-weight-bold">
               {{ t('deleteAllLines') }}
             </div>
-            <div class="text-body-2 text-medium-emphasis">
+            <div class="text-body-medium text-medium-emphasis">
               {{ t('deleteAllLinesDesc') }}
             </div>
             <template #append>
@@ -383,7 +383,7 @@
               <div class="text-body-1 font-weight-bold">
                 {{ t('deleteDataset') }}
               </div>
-              <div class="text-body-2 text-medium-emphasis">
+              <div class="text-body-medium text-medium-emphasis">
                 {{ t('deleteDatasetDesc') }}
               </div>
             </div>
@@ -598,7 +598,7 @@ import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue
 import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
-import { provideDatasetStore } from '~/composables/dataset/store'
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'

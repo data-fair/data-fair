@@ -1,13 +1,13 @@
 <template>
-  <v-form
-    v-model="valid"
-  >
-    <vjsf
-      v-model="editPrivateVocabulary"
-      :schema="settingsSchema.properties.privateVocabulary"
-      :options="vjsfOptions"
-    />
-  </v-form>
+  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+    <v-form v-model="valid">
+      <vjsf
+        v-model="editPrivateVocabulary"
+        :schema="settingsSchema.properties.privateVocabulary"
+        :options="vjsfOptions"
+      />
+    </v-form>
+  </v-defaults-provider>
 </template>
 
 <script setup lang="ts">
@@ -23,10 +23,13 @@ watchDeepDiff(privateVocabulary, () => {
 watchDeepDiff(editPrivateVocabulary, () => {
   if (valid.value) privateVocabulary.value = editPrivateVocabulary.value
 }, {})
-const vjsfOptions: VjsfOptions = {
+const { locale } = useI18n()
+
+const vjsfOptions = computed<VjsfOptions>(() => ({
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',
-  xI18n: true
-}
+  xI18n: true,
+  locale: locale.value
+}))
 </script>

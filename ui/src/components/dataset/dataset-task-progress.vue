@@ -1,6 +1,6 @@
 <template>
   <v-list-item v-if="taskProgress?.task">
-    <v-list-item-title class="text-body-2">
+    <v-list-item-title class="text-body-medium">
       {{ t('activity') }} - {{ t('tasks.' + taskProgress.task) }}
     </v-list-item-title>
     <v-progress-linear
@@ -42,7 +42,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { type TaskProgress } from '~/composables/dataset/store'
+import { type TaskProgress } from '~/composables/dataset/dataset-store'
 
 defineProps<{
   taskProgress?: TaskProgress

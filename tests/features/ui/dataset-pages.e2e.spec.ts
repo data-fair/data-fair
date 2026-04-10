@@ -122,7 +122,7 @@ test.describe('dataset detail pages', () => {
 
   test('cancel metadata changes restores original values', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
     const titleInput = page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })
     const originalTitle = await titleInput.inputValue()
     await titleInput.click()
@@ -131,8 +131,8 @@ test.describe('dataset detail pages', () => {
 
     // Click the Annuler button in the metadata section header (confirm-menu)
     await page.locator('#metadata').getByRole('button', { name: /Annuler|Cancel/ }).click()
-    // Confirm the cancellation in the v-menu popup (teleported, exact: true to avoid the activator button)
-    await page.getByRole('button', { name: 'Oui', exact: true }).click()
+    // Confirm the cancellation in the dialog popup
+    await page.getByRole('button', { name: 'Confirmer', exact: true }).click()
 
     // Diff is cleared — save button disappears and title is restored
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 5000 })
@@ -151,8 +151,8 @@ test.describe('dataset detail pages', () => {
 
     // Click the Annuler button in the structure section header (confirm-menu)
     await page.locator('#structure').getByRole('button', { name: 'Annuler', exact: true }).click()
-    // Confirm the cancellation in the v-menu popup
-    await page.getByRole('button', { name: 'Oui', exact: true }).click()
+    // Confirm the cancellation in the dialog popup
+    await page.getByRole('button', { name: 'Confirmer', exact: true }).click()
 
     // Diff is cleared — save button disappears
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 5000 })

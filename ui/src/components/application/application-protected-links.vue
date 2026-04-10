@@ -57,7 +57,7 @@ en:
 
 <script setup lang="ts">
 import { mdiDelete } from '@mdi/js'
-import useApplicationStore from '~/composables/application/store'
+import useApplicationStore from '~/composables/application/application-store'
 import { $siteUrl, $fetch } from '~/context'
 
 interface ApplicationKey {

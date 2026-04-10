@@ -297,7 +297,7 @@
             <div class="text-body-1 font-weight-bold">
               {{ t('changeOwner') }}
             </div>
-            <div class="text-body-2 text-medium-emphasis">
+            <div class="text-body-medium text-medium-emphasis">
               {{ t('changeOwnerDesc') }}
             </div>
             <template #append>
@@ -322,7 +322,7 @@
             <div class="text-body-1 font-weight-bold">
               {{ t('deleteApp') }}
             </div>
-            <div class="text-body-2 text-medium-emphasis">
+            <div class="text-body-medium text-medium-emphasis">
               {{ t('deleteAppDesc') }}
             </div>
             <template #append>
@@ -488,7 +488,7 @@ import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
-import { provideApplicationStore } from '~/composables/application/store'
+import { provideApplicationStore } from '~/composables/application/application-store'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'

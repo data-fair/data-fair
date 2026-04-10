@@ -1,11 +1,13 @@
 <template>
-  <v-form v-model="valid">
-    <vjsf
-      v-model="editDatasetsMetadata"
-      :schema="settingsSchema.properties.datasetsMetadata"
-      :options="vjsfOptions"
-    />
-  </v-form>
+  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+    <v-form v-model="valid">
+      <vjsf
+        v-model="editDatasetsMetadata"
+        :schema="settingsSchema.properties.datasetsMetadata"
+        :options="vjsfOptions"
+      />
+    </v-form>
+  </v-defaults-provider>
 </template>
 
 <script setup lang="ts">
@@ -21,12 +23,15 @@ watchDeepDiff(datasetsMetadata, () => {
 watchDeepDiff(editDatasetsMetadata, () => {
   if (valid.value) datasetsMetadata.value = editDatasetsMetadata.value
 }, {})
-const vjsfOptions: VjsfOptions = {
+const { locale } = useI18n()
+
+const vjsfOptions = computed<VjsfOptions>(() => ({
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',
-  xI18n: true
-}
+  xI18n: true,
+  locale: locale.value
+}))
 
 // http://localhost:5600/data-fair/embed/settings/user/superadmin/datasetsMetadata
 </script>

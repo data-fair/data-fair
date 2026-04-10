@@ -12,7 +12,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { provideApplicationStore } from '~/composables/application/store'
+import { provideApplicationStore } from '~/composables/application/application-store'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()

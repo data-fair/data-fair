@@ -88,7 +88,7 @@
       </div>
 
       <!-- Column info -->
-      <div class="text-body-2 mb-3">
+      <div class="text-body-medium mb-3">
         <div class="mb-1">
           <span class="text-medium-emphasis">{{ t('sourceKey') }}:</span>
           {{ column.key }}
@@ -233,7 +233,7 @@ en:
 import type { SchemaProperty } from '#api/types'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { propTypeTitle } from '~/utils/dataset'
-import { useDatasetStore } from '~/composables/dataset/store'
+import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import useStore from '~/composables/use-store'
 
 const { t, locale } = useI18n()

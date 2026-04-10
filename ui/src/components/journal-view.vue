@@ -57,7 +57,7 @@ en:
 import type { Event } from '#api/types'
 import eventsJson from '#shared/events.json'
 import { mdiAlert, mdiAlertDecagram, mdiCheck, mdiClipboardText, mdiContentSave, mdiDelete, mdiFileCancel, mdiFileCheck, mdiFileDownload, mdiFileSearch, mdiFileSwap, mdiMerge, mdiPencil, mdiPlusCircleOutline, mdiPublish, mdiReloadAlert, mdiTableOfContents, mdiWrench } from '@mdi/js'
-import { type TaskProgress } from '~/composables/dataset/store'
+import { type TaskProgress } from '~/composables/dataset/dataset-store'
 const eventsList = eventsJson as Record<string, Record<string, { icon: string, text: Record<string, string>, color?: string }>>
 
 const session = useSession()

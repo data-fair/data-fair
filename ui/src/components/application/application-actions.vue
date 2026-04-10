@@ -106,7 +106,7 @@ en:
 
 <script setup lang="ts">
 import { mdiCamera, mdiCloud, mdiExitToApp, mdiSquareEditOutline, mdiWeb } from '@mdi/js'
-import useApplicationStore from '~/composables/application/store'
+import useApplicationStore from '~/composables/application/application-store'
 
 const { t } = useI18n()
 const { application, applicationLink, can } = useApplicationStore()

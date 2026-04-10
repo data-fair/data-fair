@@ -100,10 +100,8 @@ test.describe('dataset publication sites', () => {
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'test dataset', schema: [] })).data
 
     await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id)
-    await expect(page.getByText(/métadonnées manquantes/)).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText(/licence/)).toBeVisible()
-    await expect(page.getByText(/description/)).toBeVisible()
-    await expect(page.getByLabel('publié')).toBeDisabled()
+    await expect(page.getByText(/Métadonnées manquantes.*licence.*description/i)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByLabel('Publié')).toBeDisabled()
   })
 
   test('contrib can request publication', async ({ page, goToWithAuth }) => {

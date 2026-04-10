@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 import { withQuery } from 'ufo'
-import { provideDatasetStore } from '~/composables/dataset/store'
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 
 const route = useRoute<'/embed/dataset/[id]/download'>()
 

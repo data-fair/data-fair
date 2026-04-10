@@ -120,7 +120,7 @@ en:
 import { mdiMagnify } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import type { SchemaProperty } from '#api/types'
-import { useDatasetStore } from '~/composables/dataset/store'
+import { useDatasetStore } from '~/composables/dataset/dataset-store'
 
 const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'

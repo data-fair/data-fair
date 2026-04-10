@@ -210,9 +210,9 @@
 </i18n>
 
 <script setup lang="ts">
+import type { VForm } from 'vuetify/components'
+import type { ExtendedResult } from '~/composables/dataset/lines'
 import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline, mdiPlusCircle, mdiUpload } from '@mdi/js'
-import { type VForm } from 'vuetify/components'
-import { type ExtendedResult } from '~/composables/dataset/lines'
 import useDatasetEdition from './use-dataset-edition'
 
 defineProps({

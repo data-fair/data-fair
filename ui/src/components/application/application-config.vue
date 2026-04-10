@@ -183,10 +183,8 @@ import Vjsf from '@koumoul/vjsf/webmcp'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
-import { VForm } from 'vuetify/components'
 import { setProperty } from 'dot-prop'
 import Debug from 'debug'
-// import { diff } from 'deep-object-diff'
 
 const debug = Debug('application-config')
 
@@ -316,7 +314,6 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
   if (toRaw(configDraft.value) === toRaw(editConfig.value)) return
-  // debug('save draft', diff(configDraft.value ?? {}, editConfig.value))
   const wasInError = !!application.value?.errorMessageDraft
   await writeConfigDraft(editConfig.value)
   if (baseAppDraft.value?.meta?.['df:sync-config'] === 'true') {

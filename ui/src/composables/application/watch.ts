@@ -1,4 +1,4 @@
-import type { ApplicationStore } from './store'
+import type { ApplicationStore } from './application-store'
 
 type WatchKey = 'draft-error' | 'journal'
 

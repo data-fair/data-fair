@@ -113,12 +113,13 @@ test.describe('base-application facet display', () => {
     await goToWithAuth('/data-fair/applications', 'test_user1')
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
 
-    const navRight = page.locator('.v-navigation-drawer--right')
-    const baseAppFacet = navRight.locator('.v-select').filter({ hasText: "Type d'application" })
+    const navRight = page.locator('#navigation-right-local')
+    const baseAppFacet = navRight.getByRole('combobox', { name: "Type d'application" })
     await expect(baseAppFacet).toBeVisible({ timeout: 5000 })
     await baseAppFacet.click()
 
-    const options = page.getByRole('option')
+    const listbox = page.getByRole('listbox', { name: "Type d'application" })
+    const options = listbox.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
     const count = await options.count()
     for (let i = 0; i < count; i++) {
@@ -150,12 +151,13 @@ test.describe('application topics facet display', () => {
     await goToWithAuth('/data-fair/applications', 'test_user1')
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
 
-    const navRight = page.locator('.v-navigation-drawer--right')
-    const topicsFacet = navRight.locator('.v-select').filter({ hasText: 'Thématiques' })
+    const navRight = page.locator('#navigation-right-local')
+    const topicsFacet = navRight.getByRole('combobox', { name: 'Thématiques' })
     await expect(topicsFacet).toBeVisible({ timeout: 5000 })
     await topicsFacet.click()
 
-    const options = page.getByRole('option')
+    const listbox = page.getByRole('listbox', { name: 'Thématiques' })
+    const options = listbox.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
     const count = await options.count()
     for (let i = 0; i < count; i++) {

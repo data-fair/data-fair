@@ -1,11 +1,5 @@
 <template>
-  <v-defaults-provider
-    :defaults="{
-      global: {
-        hideDetails: 'auto'
-      }
-    }"
-  >
+  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
     <v-form v-model="valid">
       <vjsf
         v-model="editInfo"
@@ -32,10 +26,13 @@ watchDeepDiff(editInfo, () => {
   if (valid.value) info.value = editInfo.value
 }, {})
 
-const vjsfOptions: VjsfOptions = {
+const { locale } = useI18n()
+
+const vjsfOptions = computed<VjsfOptions>(() => ({
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',
-  xI18n: true
-}
+  xI18n: true,
+  locale: locale.value
+}))
 </script>

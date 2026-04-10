@@ -1,13 +1,13 @@
 <template>
-  <v-form
-    v-model="valid"
-  >
-    <vjsf
-      v-model="editPublicationSites"
-      :schema="schema"
-      :options="vjsfOptions"
-    />
-  </v-form>
+  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+    <v-form v-model="valid">
+      <vjsf
+        v-model="editPublicationSites"
+        :schema="schema"
+        :options="vjsfOptions"
+      />
+    </v-form>
+  </v-defaults-provider>
 </template>
 
 <i18n lang="yaml">
@@ -31,7 +31,7 @@ import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 const publicationSites = defineModel<Settings['publicationSites']>()
 const { datasetsMetadata } = defineProps<{ datasetsMetadata: Settings['datasetsMetadata'] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { user } = useSessionAuthenticated()
 const publicationSitesSchema = publicationSitesContract(false)
 const publicationSitesAdminSchema = publicationSitesContract(true)
@@ -66,6 +66,7 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   updateOn: 'blur',
   density: 'comfortable',
   xI18n: true,
+  locale: locale.value,
   context: context.value
 }))
 </script>

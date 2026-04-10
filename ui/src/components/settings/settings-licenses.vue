@@ -1,13 +1,13 @@
 <template>
-  <v-form
-    v-model="valid"
-  >
-    <vjsf
-      v-model="editLicenses"
-      :schema="settingsSchema.properties.licenses"
-      :options="vjsfOptions"
-    />
-  </v-form>
+  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+    <v-form v-model="valid">
+      <vjsf
+        v-model="editLicenses"
+        :schema="settingsSchema.properties.licenses"
+        :options="vjsfOptions"
+      />
+    </v-form>
+  </v-defaults-provider>
 </template>
 
 <script setup lang="ts">
@@ -23,12 +23,15 @@ watchDeepDiff(licenses, () => {
 watchDeepDiff(editLicenses, () => {
   if (valid.value) licenses.value = editLicenses.value
 }, {})
-const vjsfOptions: VjsfOptions = {
+const { locale } = useI18n()
+
+const vjsfOptions = computed<VjsfOptions>(() => ({
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',
-  xI18n: true
-}
+  xI18n: true,
+  locale: locale.value
+}))
 
 // http://localhost:5600/data-fair/embed/settings/user/superadmin/licenses
 </script>

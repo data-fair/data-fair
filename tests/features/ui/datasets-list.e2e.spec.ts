@@ -19,7 +19,7 @@ test.describe('datasets list page', () => {
   test('page loads and shows search and sort controls in right navigation', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
     // Controls are in the right navigation drawer
-    const navRight = page.locator('.v-navigation-drawer--right')
+    const navRight = page.locator('#navigation-right-local')
     await expect(navRight.getByRole('textbox', { name: 'Rechercher' })).toBeVisible({ timeout: 10000 })
     await expect(navRight.locator('.v-select').filter({ hasText: 'Trier par' })).toBeVisible({ timeout: 10000 })
   })
@@ -36,7 +36,7 @@ test.describe('datasets list page', () => {
 
   test('search filters results (q param appears in URL)', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    const searchField = page.locator('.v-navigation-drawer--right').getByRole('textbox', { name: 'Rechercher' })
+    const searchField = page.locator('#navigation-right-local').getByRole('textbox', { name: 'Rechercher' })
     await expect(searchField).toBeVisible({ timeout: 10000 })
 
     await searchField.fill('Alpha')
@@ -48,7 +48,7 @@ test.describe('datasets list page', () => {
 
   test('search with no match shows empty state', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    const searchField = page.locator('.v-navigation-drawer--right').getByRole('textbox', { name: 'Rechercher' })
+    const searchField = page.locator('#navigation-right-local').getByRole('textbox', { name: 'Rechercher' })
     await expect(searchField).toBeVisible({ timeout: 10000 })
 
     await searchField.fill('__no_match_xyz_12345__')
@@ -59,7 +59,7 @@ test.describe('datasets list page', () => {
 
   test('sort changes URL param', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    const sortSelect = page.locator('.v-navigation-drawer--right .v-select').filter({ hasText: 'Trier par' })
+    const sortSelect = page.locator('#navigation-right-local .v-select').filter({ hasText: 'Trier par' })
     await expect(sortSelect).toBeVisible({ timeout: 10000 })
 
     await sortSelect.click()
@@ -74,7 +74,7 @@ test.describe('datasets list page', () => {
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Toggle to list view (button is in the right navigation)
-    const listToggle = page.locator('.v-navigation-drawer--right button[value="list"]')
+    const listToggle = page.locator('#navigation-right-local button[value="list"]')
     await listToggle.click()
 
     // In list view the items should be rendered in a v-list
@@ -83,12 +83,12 @@ test.describe('datasets list page', () => {
 
   test('"Créer un nouveau jeu de données" action is visible for contributors', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    await expect(page.locator('.v-navigation-drawer--right').getByText('Créer un nouveau jeu de données')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#navigation-right-local').getByText('Créer un nouveau jeu de données')).toBeVisible({ timeout: 10000 })
   })
 
   test('"Créer un nouveau jeu de données" action navigates to new-dataset page', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    await page.locator('.v-navigation-drawer--right').getByText('Créer un nouveau jeu de données').click()
+    await page.locator('#navigation-right-local').getByText('Créer un nouveau jeu de données').click()
     await page.waitForURL(/new-dataset/, { timeout: 10000 })
   })
 
@@ -111,7 +111,7 @@ test.describe('datasets list page', () => {
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Switch to list view
-    await page.locator('.v-navigation-drawer--right button[value="list"]').click()
+    await page.locator('#navigation-right-local button[value="list"]').click()
     await expect(page.locator('.v-container .v-list .v-list-item').first()).toBeVisible({ timeout: 5000 })
 
     // Reload and verify list view persists
@@ -123,7 +123,7 @@ test.describe('datasets list page', () => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
-    const searchField = page.locator('.v-navigation-drawer--right').getByRole('textbox', { name: 'Rechercher' })
+    const searchField = page.locator('#navigation-right-local').getByRole('textbox', { name: 'Rechercher' })
     await searchField.fill('Alpha')
     await page.waitForURL(/[?&]q=Alpha/, { timeout: 5000 })
     // Wait for results to update (count is in breadcrumbs)
@@ -141,7 +141,7 @@ test.describe('datasets list page', () => {
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Sort by title A→Z
-    const sortSelect = page.locator('.v-navigation-drawer--right .v-select').filter({ hasText: 'Trier par' })
+    const sortSelect = page.locator('#navigation-right-local .v-select').filter({ hasText: 'Trier par' })
     await sortSelect.click()
     await page.getByRole('option', { name: 'Titre (A → Z)' }).click()
     await page.waitForURL(/sort=title/, { timeout: 5000 })
@@ -155,7 +155,7 @@ test.describe('datasets list page', () => {
     // Initially should show all datasets (count is in breadcrumbs)
     await expect(page.getByText('3 jeux de données')).toBeVisible({ timeout: 10000 })
 
-    const searchField = page.locator('.v-navigation-drawer--right').getByRole('textbox', { name: 'Rechercher' })
+    const searchField = page.locator('#navigation-right-local').getByRole('textbox', { name: 'Rechercher' })
     await searchField.fill('Beta')
     await page.waitForURL(/[?&]q=Beta/, { timeout: 5000 })
 
@@ -174,7 +174,7 @@ test.describe('datasets list page', () => {
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Switch to list view
-    await page.locator('.v-navigation-drawer--right button[value="list"]').click()
+    await page.locator('#navigation-right-local button[value="list"]').click()
     await expect(page.locator('.v-container .v-list .v-list-item').first()).toBeVisible({ timeout: 5000 })
 
     // Visibility icon should be present in list items
@@ -189,11 +189,11 @@ test.describe('datasets list page', () => {
 
   test('facets are visible in right navigation', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    const navRight = page.locator('.v-navigation-drawer--right')
+    const navRight = page.locator('#navigation-right-local')
     // Wait for data to load and facets to appear
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
     // At least the visibility facet should be present
-    await expect(navRight.locator('.v-select, .v-autocomplete').first()).toBeVisible({ timeout: 5000 })
+    await expect(navRight.getByRole('combobox').first()).toBeVisible({ timeout: 5000 })
   })
 })
 
@@ -228,15 +228,16 @@ test.describe('owner facet filtering', () => {
     await switchToOrg(page, goToWithAuth)
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
-    const navRight = page.locator('.v-navigation-drawer--right')
-    const ownerFacet = navRight.locator('.v-autocomplete').first()
+    const navRight = page.locator('#navigation-right-local')
+    const ownerFacet = navRight.getByRole('combobox').first()
     await expect(ownerFacet).toBeVisible({ timeout: 5000 })
 
     // Open the owner autocomplete
     await ownerFacet.click()
 
     // Verify that options show readable names, not [object Object]
-    const options = page.getByRole('option')
+    const listbox = page.getByRole('listbox').first()
+    const options = listbox.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
     const count = await options.count()
     for (let i = 0; i < count; i++) {
@@ -249,13 +250,13 @@ test.describe('owner facet filtering', () => {
     await switchToOrg(page, goToWithAuth)
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
-    const navRight = page.locator('.v-navigation-drawer--right')
-    const ownerFacet = navRight.locator('.v-autocomplete').first()
+    const navRight = page.locator('#navigation-right-local')
+    const ownerFacet = navRight.getByRole('combobox').first()
     await expect(ownerFacet).toBeVisible({ timeout: 5000 })
 
     // Open and select the first owner option
     await ownerFacet.click()
-    await page.getByRole('option').first().click()
+    await page.getByRole('listbox').first().getByRole('option').first().click()
     // Close the dropdown
     await page.keyboard.press('Escape')
 
@@ -317,13 +318,14 @@ test.describe('publication sites facet', () => {
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Open the publication sites facet
-    const navRight = page.locator('.v-navigation-drawer--right')
-    const pubSitesFacet = navRight.locator('.v-select').filter({ hasText: 'Sites de publication' })
+    const navRight = page.locator('#navigation-right-local')
+    const pubSitesFacet = navRight.getByRole('combobox', { name: 'Sites de publication' })
     await expect(pubSitesFacet).toBeVisible({ timeout: 5000 })
     await pubSitesFacet.click()
 
     // Verify that no option contains "null"
-    const options = page.getByRole('option')
+    const listbox = page.getByRole('listbox', { name: 'Sites de publication' })
+    const options = listbox.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
     const count = await options.count()
     for (let i = 0; i < count; i++) {
@@ -337,12 +339,13 @@ test.describe('publication sites facet', () => {
 
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
-    const navRight = page.locator('.v-navigation-drawer--right')
-    const pubSitesFacet = navRight.locator('.v-select').filter({ hasText: 'Sites de publication' })
+    const navRight = page.locator('#navigation-right-local')
+    const pubSitesFacet = navRight.getByRole('combobox', { name: 'Sites de publication' })
     await expect(pubSitesFacet).toBeVisible({ timeout: 5000 })
     await pubSitesFacet.click()
 
-    const options = page.getByRole('option')
+    const listbox2 = page.getByRole('listbox', { name: 'Sites de publication' })
+    const options = listbox2.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
     const count = await options.count()
     for (let i = 0; i < count; i++) {
@@ -379,12 +382,13 @@ test.describe('topics facet display', () => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
-    const navRight = page.locator('.v-navigation-drawer--right')
-    const topicsFacet = navRight.locator('.v-select').filter({ hasText: 'Thématiques' })
+    const navRight = page.locator('#navigation-right-local')
+    const topicsFacet = navRight.getByRole('combobox', { name: 'Thématiques' })
     await expect(topicsFacet).toBeVisible({ timeout: 5000 })
     await topicsFacet.click()
 
-    const options = page.getByRole('option')
+    const listbox = page.getByRole('listbox', { name: 'Thématiques' })
+    const options = listbox.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
     const count = await options.count()
     for (let i = 0; i < count; i++) {
@@ -402,13 +406,13 @@ test.describe('topics facet display', () => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
     await expect(page.getByText('2 jeux de données')).toBeVisible({ timeout: 10000 })
 
-    const navRight = page.locator('.v-navigation-drawer--right')
-    const topicsFacet = navRight.locator('.v-select').filter({ hasText: 'Thématiques' })
+    const navRight = page.locator('#navigation-right-local')
+    const topicsFacet = navRight.getByRole('combobox', { name: 'Thématiques' })
     await expect(topicsFacet).toBeVisible({ timeout: 5000 })
     await topicsFacet.click()
 
     // Select the first topic option
-    await page.getByRole('option').first().click()
+    await page.getByRole('listbox', { name: 'Thématiques' }).getByRole('option').first().click()
     await page.keyboard.press('Escape')
 
     // Should filter to 1 dataset

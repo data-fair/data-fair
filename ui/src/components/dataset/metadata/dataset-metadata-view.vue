@@ -214,7 +214,7 @@ import {
   mdiTag,
   mdiUpdate
 } from '@mdi/js'
-import useDatasetStore from '~/composables/dataset/store'
+import useDatasetStore from '~/composables/dataset/dataset-store'
 import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 
 const { dataset, can } = useDatasetStore()

@@ -22,7 +22,7 @@ en:
 
 <script setup lang="ts">
 import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
-import { provideApplicationStore } from '~/composables/application/store'
+import { provideApplicationStore } from '~/composables/application/application-store'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()

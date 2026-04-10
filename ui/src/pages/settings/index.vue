@@ -30,12 +30,8 @@
         id="info"
         :svg="infoSvg"
         :title="sections.info.title"
+        :subtitle="t('infoDesc')"
       >
-        <template #extension>
-          <p>
-            Permettez aux utilisateurs de vos APIs et de vos applications de vous contacter en renseignant ces informations.
-          </p>
-        </template>
         <template #content>
           <v-container>
             <v-row>
@@ -58,12 +54,8 @@
         id="licences"
         :svg="qualitySvg"
         :title="sections.licences.title"
+        :subtitle="t('licencesDesc')"
       >
-        <template #extension>
-          <p>
-            Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.
-          </p>
-        </template>
         <template #content>
           <v-container>
             <v-row>
@@ -87,15 +79,8 @@
         :svg="flagsSvg"
         svg-no-margin
         :title="sections.topics.title"
+        :subtitle="$uiConfig.disableApplications ? t('topicsDescNoApps') : t('topicsDesc')"
       >
-        <template #extension>
-          <p v-if="$uiConfig.disableApplications">
-            Les thématiques sont une manière simple d'organiser vos jeux de données.
-          </p>
-          <p v-else>
-            Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
-          </p>
-        </template>
         <template #content>
           <v-container>
             <v-row>
@@ -119,10 +104,8 @@
         :svg="checklist2Svg"
         svg-no-margin
         :title="sections.datasetsMetadata.title"
+        :subtitle="t('datasetsMetadataDesc')"
       >
-        <template #extension>
-          Configurez des métadonnées additionnelles pour vos jeux de données.
-        </template>
         <template #content>
           <v-container>
             <settings-datasets-metadata
@@ -139,13 +122,8 @@
         :svg="checklistSvg"
         svg-no-margin
         :title="sections.privateVocabulary.title"
+        :subtitle="t('privateVocabDesc')"
       >
-        <template #extension>
-          <p>
-            Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter
-            les colonnes de vos jeux de données.
-          </p>
-        </template>
         <template #content>
           <v-container>
             <v-alert
@@ -178,13 +156,8 @@
         :svg="securitySvg"
         svg-no-margin
         :title="sections['api-keys'].title"
+        :subtitle="t('apiKeysDesc')"
       >
-        <template #extension>
-          <p>
-            Les clés d'API sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
-            Il s'agit d'une configuration technique pour personne avertie.
-          </p>
-        </template>
         <template #content>
           <v-container>
             <settings-api-keys
@@ -201,13 +174,8 @@
         :svg="wwwSvg"
         svg-no-margin
         :title="sections.webhooks.title"
+        :subtitle="t('webhooksDesc')"
       >
-        <template #extension>
-          <p>
-            Les <i>webhooks</i> sont un moyen d'avertir d'autres services Web d'événements internes à Data Fair.
-            Il s'agit d'une configuration technique pour personne avertie.
-          </p>
-        </template>
         <template #content>
           <v-container>
             <v-row>
@@ -231,13 +199,8 @@
         :svg="uiSvg"
         svg-no-margin
         :title="sections.publicationSites.title"
+        :subtitle="t('publicationSitesDesc')"
       >
-        <template #extension>
-          <p>
-            Les <i>portails</i> sont vos sites de publication de ressources.
-            Cette liste est surtout gérée depuis l'onglet Portails mais certains paramètres sont édités ici.
-          </p>
-        </template>
         <template #content>
           <v-container>
             <v-row>
@@ -263,12 +226,8 @@
         svg-no-margin
         color="admin"
         :title="sections.agentChat.title"
+        :subtitle="t('agentChatDesc')"
       >
-        <template #extension>
-          <p>
-            {{ t('agentChatDesc') }}
-          </p>
-        </template>
         <template #content>
           <v-container>
             <v-row>
@@ -291,12 +250,8 @@
         svg-no-margin
         color="admin"
         :title="sections.compat.title"
+        :subtitle="t('compatDesc')"
       >
-        <template #extension>
-          <p>
-            Gérez les compatibilités de votre organisation avec d'autres services. Peut-être particulièrement utile en période de transition.
-          </p>
-        </template>
         <template #content>
           <v-container>
             <v-row>
@@ -336,35 +291,55 @@
 fr:
   pageTitle: Paramètres - Data Fair
   settings: Paramètres
-  licences: Licences
-  topics: Thématiques
-  datasetsMetadata: Métadonnées des jeux de données
-  apiKeys: "Clés d'API"
-  webhooks: "Appels extérieurs (Webhooks)"
-  privateVocab: Vocabulaire privé
-  publicationSites: Portails
   info: Informations de contact
+  infoDesc: Informations de contact pour les utilisateurs de vos APIs et applications.
+  licences: Licences
+  licencesDesc: Licences additionnelles pour préciser les conditions d'utilisation de vos jeux de données, en complément de celles proposées par défaut.
+  topics: Thématiques
+  topicsDesc: Les thématiques permettent de catégoriser vos jeux de données et applications pour en faciliter la recherche et la navigation.
+  topicsDescNoApps: Les thématiques permettent de catégoriser vos jeux de données pour en faciliter la recherche et la navigation.
+  datasetsMetadata: Métadonnées des jeux de données
+  datasetsMetadataDesc: Métadonnées additionnelles pour vos jeux de données.
+  privateVocab: Vocabulaire privé
+  privateVocabDesc: Concepts personnalisés pour annoter les colonnes de vos jeux de données.
+  apiKeys: "Clés d'API"
+  apiKeysDesc: "Les clés d'API permettent d'accéder à l'API Data Fair de manière sécurisée. Configuration technique destinée aux utilisateurs avancés."
+  webhooks: "Appels extérieurs (Webhooks)"
+  webhooksDesc: "Les webhooks permettent de notifier des services externes lorsqu'un événement survient dans Data Fair. Configuration technique destinée aux utilisateurs avancés."
+  publicationSites: Portails
+  publicationSitesDesc: Paramètres de vos portails de publication de ressources.
   agentChat: Assistant IA
-  agentChatDesc: Activez ou désactivez l'assistant IA pour cette organisation.
+  agentChatDesc: Paramètres d'activation de l'assistant IA.
   agentChatToggle: Activer l'assistant IA
   compat: Gestion des compatibilités
+  compatDesc: Compatibilité des APIs avec d'autres services. Peut être utile en période de transition.
   compatODS: Activer la compatibilité ODS
   docLink: Documentation
 en:
   pageTitle: Parameters - Data Fair
   settings: Settings
-  licences: Licenses
-  topics: Topics
-  datasetsMetadata: Datasets metadata
-  apiKeys: API keys
-  webhooks: "External requests (Webhooks)"
-  privateVocab: Private vocabulary
-  publicationSites: Portals
   info: Contact information
-  agentChat: Agent chat
-  agentChatDesc: Enable or disable the agent chat for this organization.
-  agentChatToggle: Enable agent chat
+  infoDesc: Contact information for users of your APIs and applications.
+  licences: Licenses
+  licencesDesc: Additional licenses to specify the terms of use for your datasets, in addition to those offered by default.
+  topics: Topics
+  topicsDesc: Topics allow you to categorize your datasets and applications to make them easier to find and browse.
+  topicsDescNoApps: Topics allow you to categorize your datasets to make them easier to find and browse.
+  datasetsMetadata: Datasets metadata
+  datasetsMetadataDesc: Additional metadata for your datasets.
+  privateVocab: Private vocabulary
+  privateVocabDesc: Custom concepts to annotate the columns of your datasets.
+  apiKeys: API keys
+  apiKeysDesc: API keys provide secure access to the Data Fair API. Technical configuration intended for advanced users.
+  webhooks: "External requests (Webhooks)"
+  webhooksDesc: Webhooks notify external services when an event occurs in Data Fair. Technical configuration intended for advanced users.
+  publicationSites: Portals
+  publicationSitesDesc: Settings for your resource publication portals.
+  agentChat: AI Assistant
+  agentChatDesc: AI assistant activation settings.
+  agentChatToggle: Enable AI assistant
   compat: Compatibility management
+  compatDesc: API compatibility with other services. Can be useful during transition periods.
   compatODS: Enable ODS compatibility
   docLink: Documentation
 </i18n>

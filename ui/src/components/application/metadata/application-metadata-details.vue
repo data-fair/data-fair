@@ -65,7 +65,7 @@ en:
 
 <script setup lang="ts">
 import { mdiAccount, mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline } from '@mdi/js'
-import useApplicationStore from '~/composables/application/store'
+import useApplicationStore from '~/composables/application/application-store'
 
 const { application, baseAppFetch } = useApplicationStore()
 

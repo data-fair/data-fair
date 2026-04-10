@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import useDatasetStore from '~/composables/dataset/store'
+import useDatasetStore from '~/composables/dataset/dataset-store'
 
 const { dataset, patchDataset, resourceUrl, can } = useDatasetStore()
 
