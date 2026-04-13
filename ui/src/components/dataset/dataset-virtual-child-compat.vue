@@ -24,7 +24,7 @@
   </ul>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import capabilitiesSchema from '../../../../api/contract/capabilities.js'
 import { propertyTypes } from '~/utils/dataset'
 import useStore from '~/composables/use-store'

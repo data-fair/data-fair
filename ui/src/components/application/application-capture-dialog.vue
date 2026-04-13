@@ -1,7 +1,7 @@
 <template>
   <v-dialog
-    v-model="showDialog"
-    :max-width="syncState ? 900 : 500"
+    max-width="800"
+    @update:model-value="val => val && resetCapture()"
   >
     <template #activator="{ props: activatorProps }">
       <slot
@@ -9,76 +9,67 @@
         :props="activatorProps"
       />
     </template>
-    <v-card>
-      <v-toolbar
-        density="compact"
-        flat
-      >
-        <v-toolbar-title>{{ t('capture') }}</v-toolbar-title>
-        <v-spacer />
-        <v-btn
-          :icon="mdiClose"
-          @click="showDialog = false"
-        />
-      </v-toolbar>
-      <v-card-text
-        v-if="showDialog"
-        class="pb-0 pt-2"
-      >
-        <p>{{ t('captureMsg') }}</p>
-        <v-row density="comfortable">
-          <v-col>
-            <v-text-field
-              v-model.number="width"
-              :label="t('width')"
-              type="number"
+    <template #default="{ isActive }">
+      <v-card :title="t('capture')">
+        <v-card-text class="pb-0 pt-2">
+          <p>{{ t('captureMsg') }}</p>
+          <v-row density="comfortable">
+            <v-col>
+              <v-text-field
+                v-model.number="width"
+                :label="t('width')"
+                type="number"
+                variant="outlined"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col>
+              <v-text-field
+                v-model.number="height"
+                :label="t('height')"
+                type="number"
+                variant="outlined"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+          </v-row>
+          <template v-if="syncState">
+            <p class="mt-2">
+              {{ t('setState') }}
+            </p>
+            <v-card
               variant="outlined"
-              density="compact"
-              hide-details
-            />
-          </v-col>
-          <v-col>
-            <v-text-field
-              v-model.number="height"
-              :label="t('height')"
-              type="number"
-              variant="outlined"
-              density="compact"
-              hide-details
-            />
-          </v-col>
-        </v-row>
-        <template v-if="syncState">
-          <p class="mt-2">
-            {{ t('setState') }}
-          </p>
-          <v-card
-            variant="outlined"
-            class="pa-0"
+              class="pa-0"
+            >
+              <d-frame
+                :src="applicationLink"
+                state-change-events
+                resize="no"
+                height="400px"
+                @state-change="onStateChange"
+              />
+            </v-card>
+          </template>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="isActive.value = false">
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :loading="downloading"
+            :prepend-icon="mdiCamera"
+            @click="download"
           >
-            <d-frame
-              :src="applicationLink"
-              state-change-events
-              resize="no"
-              height="400px"
-              @state-change="onStateChange"
-            />
-          </v-card>
-        </template>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          color="primary"
-          :loading="downloading"
-          :icon="mdiCamera"
-          size="small"
-          :title="t('downloadCapture')"
-          @click="download"
-        />
-        <v-spacer />
-      </v-card-actions>
-    </v-card>
+            {{ t('downloadCapture') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </template>
   </v-dialog>
 </template>
 
@@ -90,6 +81,7 @@ fr:
   setState: Naviguez pour choisir l'état de l'application dans la capture.
   width: Largeur
   height: Hauteur
+  cancel: Annuler
 en:
   capture: Screenshot
   captureMsg: A static image with PNG format will be created based on this application.
@@ -97,17 +89,17 @@ en:
   setState: Navigate to choose the state of the application in the screenshot.
   width: Width
   height: Height
+  cancel: Cancel
 </i18n>
 
-<script lang="ts" setup>
-import { mdiCamera, mdiClose } from '@mdi/js'
+<script setup lang="ts">
+import { mdiCamera } from '@mdi/js'
 import '@data-fair/frame/lib/d-frame.js'
-import useApplicationStore from '~/composables/application/store'
+import useApplicationStore from '~/composables/application/application-store'
 
 const { t } = useI18n()
 const { application, applicationLink, baseAppFetch } = useApplicationStore()
 
-const showDialog = ref(false)
 const width = ref(800)
 const height = ref(450)
 const stateSrc = ref<string | null>(null)
@@ -118,14 +110,12 @@ const syncState = computed(() => {
   return meta?.['df:sync-state'] && meta['df:sync-state'] !== 'false'
 })
 
-watch(showDialog, (val) => {
-  if (val) {
-    const meta = baseAppFetch.data.value?.meta as Record<string, string> | undefined
-    width.value = Number(meta?.['df:capture-width'] || 800)
-    height.value = Number(meta?.['df:capture-height'] || 450)
-    stateSrc.value = null
-  }
-})
+const resetCapture = () => {
+  const meta = baseAppFetch.data.value?.meta as Record<string, string> | undefined
+  width.value = Number(meta?.['df:capture-width'] || 800)
+  height.value = Number(meta?.['df:capture-height'] || 450)
+  stateSrc.value = null
+}
 
 const onStateChange = (e: CustomEvent) => {
   // detail is [action, href]

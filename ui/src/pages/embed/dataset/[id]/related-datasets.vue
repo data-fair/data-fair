@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container
     data-iframe-height
     style="min-height:500px;"
@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { provideDatasetStore } from '~/composables/dataset/store'
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 
 const route = useRoute<'/embed/dataset/[id]/related-datasets'>()
 

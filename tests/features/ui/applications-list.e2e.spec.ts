@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth, clean } from '../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 
 test.describe('applications list page', () => {
   let applicationId: string
@@ -81,17 +81,89 @@ test.describe('applications list page', () => {
   test('"Nouvelle application" button is visible for contributors', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/applications', 'test_user1')
     // There may be two "Nouvelle application" links: one in the empty state and one in the right navigation
-    await expect(page.getByRole('link', { name: /Nouvelle application/ }).first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: /nouvelle application/i }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('"Nouvelle application" button navigates to new-application page', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/applications', 'test_user1')
-    await page.getByRole('link', { name: /Nouvelle application/ }).first().click()
+    await page.getByRole('link', { name: /nouvelle application/i }).first().click()
     await page.waitForURL(/new-application/, { timeout: 10000 })
   })
 
   test('empty state shown when no applications match search', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/applications?q=__nothing__', 'test_user1')
     await expect(page.getByText(/Aucun résultat ne correspond/)).toBeVisible({ timeout: 10000 })
+  })
+})
+
+test.describe('base-application facet display', () => {
+  test.beforeAll(async () => {
+    await clean()
+    const ax = await axiosAuth('test_user1@test.com')
+    // Create 2 applications from mock app so the base-application facet appears
+    await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'App One' })
+    await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'App Two' })
+  })
+
+  test.afterAll(async () => {
+    await checkPendingTasks()
+  })
+
+  test('base-application facet shows app names, not [object Object]', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
+
+    const navRight = page.locator('#navigation-right-local')
+    const baseAppFacet = navRight.getByRole('combobox', { name: "Type d'application" })
+    await expect(baseAppFacet).toBeVisible({ timeout: 5000 })
+    await baseAppFacet.click()
+
+    const listbox = page.getByRole('listbox', { name: "Type d'application" })
+    const options = listbox.getByRole('option')
+    await expect(options.first()).toBeVisible({ timeout: 5000 })
+    const count = await options.count()
+    for (let i = 0; i < count; i++) {
+      const text = await options.nth(i).textContent()
+      expect(text).not.toContain('[object Object]')
+    }
+  })
+})
+
+test.describe('application topics facet display', () => {
+  test.beforeAll(async () => {
+    await clean()
+    const ax = await axiosAuth('test_user1@test.com')
+    // Create topics
+    const settingsRes = await ax.put('/api/v1/settings/user/test_user1', {
+      topics: [{ title: 'Environnement' }]
+    })
+    const topics = settingsRes.data.topics
+    // Create an application and assign a topic
+    const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Topic App' })).data
+    await ax.patch(`/api/v1/applications/${app.id}`, { topics: [topics[0]] })
+  })
+
+  test.afterAll(async () => {
+    await checkPendingTasks()
+  })
+
+  test('topics facet displays topic titles, not [object Object]', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
+
+    const navRight = page.locator('#navigation-right-local')
+    const topicsFacet = navRight.getByRole('combobox', { name: 'Thématiques' })
+    await expect(topicsFacet).toBeVisible({ timeout: 5000 })
+    await topicsFacet.click()
+
+    const listbox = page.getByRole('listbox', { name: 'Thématiques' })
+    const options = listbox.getByRole('option')
+    await expect(options.first()).toBeVisible({ timeout: 5000 })
+    const count = await options.count()
+    for (let i = 0; i < count; i++) {
+      const text = await options.nth(i).textContent()
+      expect(text).not.toContain('[object Object]')
+      expect(text).toContain('Environnement')
+    }
   })
 })

@@ -1,4 +1,4 @@
-import type { Ref, ComputedRef, MaybeRefOrGetter } from 'vue'
+import type { Ref, ComputedRef } from 'vue'
 
 type FacetValue = { count: number, value: string }
 type CatalogResponse<T> = { count: number, results: T[], facets?: Record<string, FacetValue[]> }
@@ -7,17 +7,17 @@ interface UseCatalogListOptions {
   fetchUrl: ComputedRef<string>
   query: ComputedRef<Record<string, string | number | boolean | undefined>>
   facetsFields: string
-  pageSize?: MaybeRefOrGetter<number>
 }
 
 export function useCatalogList<T> (options: UseCatalogListOptions) {
-  const { fetchUrl, query, facetsFields, pageSize = 20 } = options
+  const { fetchUrl, query, facetsFields } = options
 
   const displayedItems = ref<T[]>([]) as Ref<T[]>
   const currentPage = ref(1)
   const totalCount = ref(0)
   const facets = ref<Record<string, FacetValue[]>>({}) as Ref<Record<string, FacetValue[]>>
   const loading = ref(false)
+  const initialized = ref(false)
   let resetVersion = 0
 
   const hasMore = computed(() => displayedItems.value.length < totalCount.value)
@@ -26,7 +26,7 @@ export function useCatalogList<T> (options: UseCatalogListOptions) {
   const fullQuery = computed(() => {
     const q: Record<string, string | number | boolean | undefined> = {
       ...query.value,
-      size: toValue(pageSize),
+      size: 20,
       page: currentPage.value,
     }
     if (currentPage.value === 1) {
@@ -36,17 +36,6 @@ export function useCatalogList<T> (options: UseCatalogListOptions) {
   })
 
   const catalogFetch = useFetch<CatalogResponse<T>>(fetchUrl, { query: fullQuery, watch: false, immediate: false })
-
-  // Auto-fill: if the viewport isn't filled after loading, load more
-  const autoFillPage = async () => {
-    await nextTick()
-    await nextTick()
-    const el = document.documentElement
-    if (el.clientHeight >= el.scrollHeight - 200 && hasMore.value && !loading.value) {
-      await loadMore()
-      await autoFillPage()
-    }
-  }
 
   const reset = async () => {
     const version = ++resetVersion
@@ -60,7 +49,7 @@ export function useCatalogList<T> (options: UseCatalogListOptions) {
         facets.value = catalogFetch.data.value.facets
       }
     }
-    await autoFillPage()
+    initialized.value = true
   }
 
   const loadMore = async () => {
@@ -91,7 +80,7 @@ export function useCatalogList<T> (options: UseCatalogListOptions) {
     facets,
     loadMore,
     reset,
-    initialized: catalogFetch.initialized,
+    initialized,
     error: catalogFetch.error,
   }
 }

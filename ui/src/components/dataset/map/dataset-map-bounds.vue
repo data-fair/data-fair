@@ -1,10 +1,8 @@
-<template lang="html">
-  <v-card>
-    <div
-      id="map"
-      :style="'height:' + height + 'px'"
-    />
-  </v-card>
+<template>
+  <div
+    id="map"
+    :style="'height:' + height + 'px'"
+  />
 </template>
 
 <i18n lang="yaml">

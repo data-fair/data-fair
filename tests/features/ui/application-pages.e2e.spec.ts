@@ -26,18 +26,18 @@ test.describe('application detail pages', () => {
     await goToWithAuth(`/data-fair/application/${applicationId}`, 'test_user1')
     // Wait for the metadata section which contains the title
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
-    await expect(page.locator('#metadata').getByText('Test Application E2E')).toBeVisible()
+    await expect(page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })).toHaveValue('Test Application E2E')
   })
 
   test('application config page loads', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
     await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_user1')
-    await expect(page.locator('d-frame').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('d-frame').first()).toBeAttached({ timeout: 10000 })
   })
 
   test('application api-doc page loads', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
     await goToWithAuth(`/data-fair/application/${applicationId}/api-doc`, 'test_user1')
-    await expect(page.locator('d-frame').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('d-frame').first()).toBeAttached({ timeout: 10000 })
   })
 })

@@ -2,19 +2,17 @@
 <template>
   <v-dialog
     v-model="dialog"
-    max-width="800px"
+    max-width="800"
   >
     <template #activator="{ props: activatorProps }">
       <v-btn
         v-if="relevantCapabilities.length"
         v-bind="activatorProps"
-        icon
-        size="small"
-        variant="flat"
         :title="t('technicalConfig')"
-      >
-        <v-icon :icon="mdiTune" />
-      </v-btn>
+        :icon="mdiTune"
+        variant="text"
+        size="small"
+      />
     </template>
     <v-card v-if="dialog">
       <v-toolbar
@@ -31,16 +29,15 @@
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3 pb-0">
-        <v-alert
-          type="info"
-          variant="tonal"
-          class="mb-4"
+        <df-tutorial-alert
+          id="capabilities"
+          persistent
         >
           <p>{{ t('tutorialCapabilities') }}</p>
           <p class="mb-0">
             {{ t('tutorialEnergy') }}
           </p>
-        </v-alert>
+        </df-tutorial-alert>
 
         <v-form>
           <vjsf
@@ -67,14 +64,14 @@ en:
   tutorialEnergy: Processing time is synonymous to energy consumption. By disabling some options you contribute making this platform more energy efficient.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
+import type { SchemaProperty } from '#api/types'
 import { mdiClose, mdiTune } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import capabilitiesSchema from '~/../../api/contract/capabilities.js'
-import type { SchemaProperty } from '#api/types'
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const props = defineProps<{
   property: SchemaProperty
@@ -116,7 +113,8 @@ const schema = computed(() => {
 })
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
-  disableAll: !props.editable
+  disableAll: !props.editable,
+  density: 'compact'
 }))
 
 watch(dialog, (show) => {

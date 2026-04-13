@@ -1,20 +1,20 @@
 <template>
   <d-frame
-    id="portals-manager"
-    :src="$sitePath + '/portals-manager/pages/'"
-    sync-params
-    :sync-path="$sitePath + '/data-fair/pages/'"
-    emit-iframe-messages
-    resize="no"
+    id="portals-manager-pages"
     :adapter.prop="stateChangeAdapter"
+    src="/portals-manager/pages/"
+    sync-path="/data-fair/pages/"
+    class="fill-height"
+    resize="no"
+    sync-params
+    emit-iframe-messages
     @message="onMessage"
     @iframe-message="onMessage"
     @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
   />
-  <RouterView />
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useDFramePage } from '~/composables/layout/use-d-frame-page'
 
 const { sendUiNotif } = useUiNotif()

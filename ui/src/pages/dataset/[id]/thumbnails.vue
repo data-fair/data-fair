@@ -1,8 +1,8 @@
 <template>
   <v-container
     v-if="dataset"
-    fluid
     class="pa-0"
+    fluid
   >
     <dataset-thumbnails :height="contentHeight" />
   </v-container>
@@ -17,15 +17,17 @@ en:
   thumbnails: Thumbnails
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
-import { provideDatasetStore } from '~/composables/dataset/store'
+import { useLayout } from 'vuetify'
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/dataset/[id]/thumbnails'>()
 const { height: windowHeight } = useWindowSize()
+const { mainRect } = useLayout()
 const breadcrumbs = useBreadcrumbs()
 
 const store = provideDatasetStore(route.params.id, true, true)
@@ -33,7 +35,7 @@ const { dataset } = store
 
 useDatasetWatch(store, ['info'])
 
-const contentHeight = computed(() => windowHeight.value - 48)
+const contentHeight = computed(() => windowHeight.value - mainRect.value.top - mainRect.value.bottom)
 
 watch(dataset, (d) => {
   if (!d) return

@@ -11,7 +11,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="baseApplicationItems.length"
       v-model="baseApplication"
       :items="baseApplicationItems"
@@ -22,7 +22,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="visibilityItems.length"
       v-model="visibility"
       :items="visibilityItems"
@@ -33,7 +33,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="topicsItems.length"
       v-model="topics"
       :items="topicsItems"
@@ -44,7 +44,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="publicationSitesItems.length"
       v-model="publicationSites"
       :items="publicationSitesItems"
@@ -55,7 +55,7 @@
       clearable
       multiple
     />
-    <v-select
+    <v-autocomplete
       v-if="requestedPublicationSitesItems.length"
       v-model="requestedPublicationSites"
       :items="requestedPublicationSitesItems"
@@ -69,11 +69,13 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const { t } = useI18n()
 
 const props = defineProps<{
-  facets: Record<string, { count: number, value: string, [key: string]: any }[]>
+  facets: Record<string, { count: number, value: any }[]>
+  showAll?: boolean
+  account?: { type: string, id: string, department?: string } | null
 }>()
 
 const owner = defineModel<string[]>('owner', { default: () => [] })
@@ -94,19 +96,96 @@ const facetToItems = (key: string, labelFn?: (v: any) => string, valueFn?: (v: a
   })
 }
 
-const ownerValueFn = (f: any) => `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
-const ownerItems = facetToItems('owner', (f) => f.value.departmentName || f.value.name || f.value.id, ownerValueFn)
-const baseApplicationItems = facetToItems('base-application', (f) => f.title || f.value)
+const ownerItems = computed(() => {
+  const values = props.facets.owner
+  if (!values?.length) return []
+
+  if (!props.showAll && props.account) {
+    // Mode normal : filtrer par org courante
+    const orgFacets = values.filter(f =>
+      f.value.type === props.account!.type && f.value.id === props.account!.id
+    )
+    return orgFacets.map(f => ({
+      title: (f.value.department
+        ? (f.value.departmentName || f.value.department)
+        : t('noDepartment')) + ` (${f.count})`,
+      value: `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
+    }))
+  }
+
+  // Mode super admin (showAll) : regrouper par org
+  const byOrg = new Map<string, typeof values>()
+  for (const f of values) {
+    const key = `${f.value.type}:${f.value.id}`
+    if (!byOrg.has(key)) byOrg.set(key, [])
+    byOrg.get(key)!.push(f)
+  }
+
+  const items: { title: string, value: string }[] = []
+  for (const [orgKey, orgFacets] of byOrg) {
+    const orgName = orgFacets[0].value.name || orgFacets[0].value.id
+    const hasDepartments = orgFacets.some(f => f.value.department)
+
+    if (!hasDepartments) {
+      const total = orgFacets.reduce((s, f) => s + f.count, 0)
+      items.push({
+        title: `${orgName} (${total})`,
+        value: `${orgKey}:-`
+      })
+    } else {
+      const total = orgFacets.reduce((s, f) => s + f.count, 0)
+      items.push({
+        title: `${orgName} (${total})`,
+        value: `${orgKey}:*`
+      })
+      for (const f of orgFacets) {
+        const label = f.value.department
+          ? `${orgName} - ${f.value.departmentName || f.value.department}`
+          : `${orgName} - ${t('noDepartment')}`
+        items.push({
+          title: `${label} (${f.count})`,
+          value: `${f.value.type}:${f.value.id}:${f.value.department || '-'}`
+        })
+      }
+    }
+  }
+  return items
+})
+const baseApplicationItems = facetToItems(
+  'base-application',
+  (f) => `${f.value?.title || ''} ${f.value?.version || ''}`.trim() || f.value,
+  (f) => f.value?.url || f.value
+)
 const visibilityItems = facetToItems('visibility', (f) => t('visibilityValues.' + f.value))
-const topicsItems = facetToItems('topics', (f) => f.title || f.value)
+const topicsItems = facetToItems('topics', (f) => f.value?.title || f.value, (f) => f.value?.id || f.value)
+// Fetch publication sites for current account to resolve names
+const session = useSession()
+const publicationSitesById = ref<Record<string, any>>({})
+const pubSitesPath = computed(() => {
+  const a = session.account.value
+  return a ? $apiPath + '/settings/' + a.type + '/' + a.id + '/publication-sites' : null
+})
+const pubSitesFetch = useFetch<any[]>(() => pubSitesPath.value)
+watch(() => pubSitesFetch.data.value, (sites) => {
+  if (!sites) return
+  const map: Record<string, any> = {}
+  for (const site of sites) map[`${site.type}:${site.id}`] = site
+  publicationSitesById.value = map
+})
+
 const nonNullFilter = (f: any) => f.value !== null
-const publicationSitesItems = facetToItems('publicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
-const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', (f) => f.title || f.value, undefined, nonNullFilter)
+const publicationSitesLabelFn = (f: any) => {
+  const site = publicationSitesById.value[f.value]
+  return site?.title || site?.url || f.value
+}
+const publicationSitesItems = facetToItems('publicationSites', publicationSitesLabelFn, undefined, nonNullFilter)
+const requestedPublicationSitesItems = facetToItems('requestedPublicationSites', publicationSitesLabelFn, undefined, nonNullFilter)
 </script>
 
 <i18n lang="yaml">
 fr:
   owner: Propriétaire
+  noDepartment: Aucun département
   baseApplication: Type d'application
   visibility: Visibilité
   topics: Thématiques
@@ -118,6 +197,7 @@ fr:
     protected: Protégé
 en:
   owner: Owner
+  noDepartment: No department
   baseApplication: Application type
   visibility: Visibility
   topics: Topics

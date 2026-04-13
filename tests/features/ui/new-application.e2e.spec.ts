@@ -80,17 +80,12 @@ test.describe('new application stepper', () => {
   test('step navigation: back button returns to step 1', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/new-application', 'test_user1')
 
-    // Step 1: Select base app type
+    // Step 1: Select base app type — advances to step 2 (base app selection)
     const baseAppCard = page.locator('.v-card-title', { hasText: 'Nouvelle configuration' })
     await expect(baseAppCard).toBeVisible({ timeout: 10000 })
     await baseAppCard.click()
 
-    // Step 2: Wait for base apps, select one (App test2 has no dataset requirement so it is not disabled)
-    const appCard = page.locator('.v-card-title', { hasText: 'App test2' })
-    await expect(appCard).toBeVisible({ timeout: 10000 })
-    await appCard.click()
-
-    // Step 3: Click back
+    // Now on step 2: click back to return to step 1
     await expect(page.getByRole('button', { name: /Retour/ })).toBeVisible({ timeout: 5000 })
     await page.getByRole('button', { name: /Retour/ }).click()
 

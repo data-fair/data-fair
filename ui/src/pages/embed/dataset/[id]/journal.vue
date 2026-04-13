@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <journal-view
     v-if="journal"
     :journal="journal"
@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { provideDatasetStore } from '~/composables/dataset/store'
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 
 const route = useRoute<'/embed/dataset/[id]/journal'>()
 

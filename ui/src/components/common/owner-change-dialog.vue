@@ -1,7 +1,7 @@
 <template>
   <v-dialog
     v-model="showDialog"
-    max-width="900"
+    max-width="800"
   >
     <template #activator="{ props: activatorProps }">
       <slot
@@ -9,13 +9,12 @@
         :props="activatorProps"
       />
     </template>
-    <v-card>
-      <v-card-title>{{ t('changeOwnerTitle') }}</v-card-title>
+    <v-card :title="t('changeOwnerTitle')">
       <v-card-text>
         <df-owner-pick
           v-model="newOwner"
-          other-accounts
           :hide-single="false"
+          other-accounts
         />
         <v-alert
           type="warning"
@@ -39,13 +38,13 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="showDialog = false"
         >
           {{ t('cancel') }}
         </v-btn>
         <v-btn
           color="warning"
+          variant="flat"
           :disabled="!newOwner"
           @click="confirmChangeOwner"
         >
@@ -83,7 +82,7 @@ en:
   confirm: Confirm
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const props = defineProps<{
   resource: { id: string, owner: Record<string, any> }
   resourceType: 'datasets' | 'applications'
@@ -95,7 +94,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const showDialog = ref(false)
+const showDialog = defineModel<boolean>({ default: false })
 const newOwner = ref<Record<string, any> | null>(null)
 
 const confirmChangeOwner = async () => {

@@ -1,7 +1,7 @@
 <template>
   <v-dialog
     v-model="showDialog"
-    max-width="700"
+    max-width="800"
     persistent
   >
     <template #activator="{ props: activatorProps }">
@@ -10,28 +10,37 @@
         :props="activatorProps"
       />
     </template>
-    <v-card>
-      <v-card-title>{{ t('title') }}</v-card-title>
+    <v-card :title="t('title')">
       <v-card-text>
         <v-stepper
           v-model="step"
+          class="bg-background"
           flat
         >
-          <v-stepper-header>
+          <v-stepper-header class="bg-surface">
             <v-stepper-item
               :value="1"
               :complete="!!file"
+              :editable="true"
+              :color="step === 1 ? 'primary' : ''"
+              :icon="mdiPaperclip"
               :title="t('stepFile')"
             />
             <v-divider />
             <v-stepper-item
               :value="2"
               :complete="step > 2"
+              :editable="!!file"
+              :color="step === 2 ? 'primary' : ''"
+              :icon="mdiCog"
               :title="t('stepOptions')"
             />
             <v-divider />
             <v-stepper-item
               :value="3"
+              :editable="step > 2"
+              :color="step === 3 ? 'primary' : ''"
+              :icon="mdiUpload"
               :title="t('stepUpload')"
             />
           </v-stepper-header>
@@ -39,172 +48,153 @@
           <v-stepper-window>
             <!-- Step 1: File selection -->
             <v-stepper-window-item :value="1">
-              <div class="pa-4">
-                <p class="text-body-large mb-4">
-                  {{ t('selectFileMsg') }}
-                </p>
-                <v-file-input
-                  v-model="fileInputValue"
-                  :label="t('selectFile')"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  style="max-width: 500px;"
-                  prepend-icon=""
-                  :prepend-inner-icon="mdiPaperclip"
-                  @update:model-value="onFileChange"
-                />
-                <v-file-input
-                  v-model="attachmentsInputValue"
-                  :label="t('selectAttachments')"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  accept=".zip"
-                  class="mt-4"
-                  style="max-width: 500px;"
-                  prepend-icon=""
-                  :prepend-inner-icon="mdiZipBox"
-                  clearable
-                />
-                <div class="mt-6">
-                  <v-btn
-                    color="primary"
-                    :disabled="!file"
-                    @click="step = 2"
-                  >
-                    {{ t('continue') }}
-                  </v-btn>
-                </div>
+              <p class="text-body-large mb-4">
+                {{ t('selectFileMsg') }}
+              </p>
+              <v-file-input
+                v-model="fileInputValue"
+                :label="t('selectFile')"
+                variant="outlined"
+                density="compact"
+                hide-details
+                max-width="500"
+                prepend-icon=""
+                :prepend-inner-icon="mdiPaperclip"
+                @update:model-value="onFileChange"
+              />
+              <v-file-input
+                v-model="attachmentsInputValue"
+                :label="t('selectAttachments')"
+                variant="outlined"
+                density="compact"
+                hide-details
+                accept=".zip"
+                class="mt-4"
+                max-width="500"
+                prepend-icon=""
+                :prepend-inner-icon="mdiZipBox"
+                clearable
+              />
+              <div class="mt-6">
+                <v-btn
+                  color="primary"
+                  :disabled="!file"
+                  @click="step = 2"
+                >
+                  {{ t('continue') }}
+                </v-btn>
               </div>
             </v-stepper-window-item>
 
             <!-- Step 2: Options -->
             <v-stepper-window-item :value="2">
-              <div class="pa-4">
-                <p class="text-body-large mb-4">
-                  {{ t('optionsMsg') }}
-                </p>
-                <v-select
-                  v-if="isTextFile"
-                  v-model="encoding"
-                  :items="encodingOptions"
-                  :label="t('encoding')"
-                  variant="outlined"
-                  density="compact"
-                  style="max-width: 400px;"
-                  class="mb-4"
-                />
-                <v-select
-                  v-model="escapeKeyAlgorithm"
-                  :items="escapeKeyOptions"
-                  :label="t('escapeKeyAlgorithm')"
-                  variant="outlined"
-                  density="compact"
-                  style="max-width: 400px;"
-                />
-                <div class="d-flex gap-2 mt-6">
-                  <v-btn
-                    variant="text"
-                    @click="step = 1"
-                  >
-                    {{ t('back') }}
-                  </v-btn>
-                  <v-btn
-                    color="primary"
-                    @click="step = 3"
-                  >
-                    {{ t('continue') }}
-                  </v-btn>
-                </div>
-              </div>
+              <p class="text-body-large mb-4">
+                {{ t('optionsMsg') }}
+              </p>
+              <v-select
+                v-if="isTextFile"
+                v-model="encoding"
+                :items="encodingOptions"
+                :label="t('encoding')"
+                variant="outlined"
+                density="compact"
+                max-width="400"
+                class="mb-4"
+              />
+              <v-select
+                v-model="escapeKeyAlgorithm"
+                :items="escapeKeyOptions"
+                :label="t('escapeKeyAlgorithm')"
+                variant="outlined"
+                density="compact"
+                max-width="400"
+              />
             </v-stepper-window-item>
 
             <!-- Step 3: Upload -->
             <v-stepper-window-item :value="3">
-              <div class="pa-4">
-                <v-alert
-                  v-if="upload.error.value"
-                  type="error"
-                  class="mb-4"
+              <v-alert
+                v-if="upload.error.value"
+                type="error"
+                class="mb-4"
+                style="max-width: 500px;"
+              >
+                {{ upload.error.value }}
+              </v-alert>
+              <v-list
+                v-if="file"
+                density="compact"
+                class="mb-4"
+                style="max-width: 500px;"
+              >
+                <v-list-item>
+                  <template #prepend>
+                    <v-icon :icon="mdiFile" />
+                  </template>
+                  <v-list-item-title>{{ file.name }}</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatBytes(file.size, locale) }}</v-list-item-subtitle>
+                </v-list-item>
+                <v-list-item v-if="attachments">
+                  <template #prepend>
+                    <v-icon :icon="mdiZipBox" />
+                  </template>
+                  <v-list-item-title>{{ attachments.name }}</v-list-item-title>
+                  <v-list-item-subtitle>{{ formatBytes(attachments.size, locale) }}</v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+              <v-row
+                v-if="upload.loading.value"
+                class="my-2"
+                align="center"
+              >
+                <v-progress-linear
+                  v-model="uploadPercent"
+                  class="my-1"
+                  rounded
+                  height="28"
+                  color="primary"
                   style="max-width: 500px;"
                 >
-                  {{ upload.error.value }}
-                </v-alert>
-                <v-list
-                  v-if="file"
+                  <template v-if="uploadProgress.total && uploadPercent !== undefined">
+                    {{ Math.floor(uploadPercent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
+                  </template>
+                </v-progress-linear>
+                <v-btn
+                  :icon="mdiCancel"
+                  color="warning"
                   density="compact"
-                  class="mb-4"
-                  style="max-width: 500px;"
-                >
-                  <v-list-item>
-                    <template #prepend>
-                      <v-icon :icon="mdiFile" />
-                    </template>
-                    <v-list-item-title>{{ file.name }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ formatBytes(file.size, locale) }}</v-list-item-subtitle>
-                  </v-list-item>
-                  <v-list-item v-if="attachments">
-                    <template #prepend>
-                      <v-icon :icon="mdiZipBox" />
-                    </template>
-                    <v-list-item-title>{{ attachments.name }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ formatBytes(attachments.size, locale) }}</v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
-                <v-row
-                  v-if="upload.loading.value"
-                  class="mx-0 my-3"
-                  align="center"
-                >
-                  <v-progress-linear
-                    v-model="uploadPercent"
-                    class="my-1"
-                    rounded
-                    height="28"
-                    color="primary"
-                    style="max-width: 500px;"
-                  >
-                    <template v-if="uploadProgress.total && uploadPercent !== undefined">
-                      {{ Math.floor(uploadPercent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
-                    </template>
-                  </v-progress-linear>
-                  <v-btn
-                    :icon="mdiCancel"
-                    color="warning"
-                    density="compact"
-                    variant="text"
-                    class="ml-2"
-                    :title="t('cancel')"
-                    @click="cancelUpload"
-                  />
-                </v-row>
-                <div class="d-flex gap-2 mt-2">
-                  <v-btn
-                    variant="text"
-                    :disabled="upload.loading.value"
-                    @click="step = 2"
-                  >
-                    {{ t('back') }}
-                  </v-btn>
-                  <v-btn
-                    color="primary"
-                    :loading="upload.loading.value"
-                    :disabled="!file"
-                    @click="upload.execute()"
-                  >
-                    {{ t('upload') }}
-                  </v-btn>
-                </div>
-              </div>
+                  variant="text"
+                  class="ml-2"
+                  :title="t('cancel')"
+                  @click="cancelUpload"
+                />
+              </v-row>
             </v-stepper-window-item>
           </v-stepper-window>
+
+          <v-stepper-actions
+            v-if="step > 1"
+            :prev-text="t('back')"
+            class="justify-start ga-2"
+            @click:prev="goToPrev"
+          >
+            <template #next>
+              <v-btn
+                color="primary"
+                variant="flat"
+                :disabled="!isNextEnabled"
+                :loading="upload.loading.value"
+                @click="goToNext"
+              >
+                {{ nextButtonText }}
+              </v-btn>
+            </template>
+          </v-stepper-actions>
         </v-stepper>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           :disabled="upload.loading.value"
           @click="showDialog = false"
         >
@@ -258,16 +248,18 @@ en:
   fileTooLarge: The file is too large to be imported
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import {
   mdiCancel,
+  mdiCog,
   mdiFile,
   mdiPaperclip,
+  mdiUpload,
   mdiZipBox
 } from '@mdi/js'
 import axios, { type AxiosRequestConfig, type CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
-import useDatasetStore from '~/composables/dataset/store'
+import useDatasetStore from '~/composables/dataset/dataset-store'
 
 const { t, locale } = useI18n()
 const { sendUiNotif } = useUiNotif()
@@ -386,5 +378,31 @@ const upload = useAsyncAction(async () => {
 
 const cancelUpload = () => {
   cancelSource?.cancel(t('cancel'))
+}
+
+const isNextEnabled = computed(() => {
+  if (step.value === 1) return !!file.value
+  if (step.value === 2) return true
+  if (step.value === 3) return !!file.value && !upload.loading.value
+  return false
+})
+
+const nextButtonText = computed(() => {
+  if (step.value === 3) return t('upload')
+  return t('continue')
+})
+
+function goToPrev () {
+  if (step.value > 1) {
+    step.value -= 1
+  }
+}
+
+async function goToNext () {
+  if (step.value === 3) {
+    await upload.execute()
+  } else {
+    step.value += 1
+  }
 }
 </script>

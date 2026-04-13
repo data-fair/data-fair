@@ -16,7 +16,7 @@
         variant="outlined"
         density="compact"
         hide-details
-        style="max-width: 600px"
+        max-width="600"
         chips
         closable-chips
         @update:model-value="datasets => {value = datasets.map(d => ({ id: d.id, title: d.title }))}"
@@ -42,17 +42,13 @@
 <i18n lang="yaml">
 fr:
   selectDataset: Choisissez un jeu de données
-  lines: "aucune ligne | 1 ligne | {count} lignes"
-  error: En erreur
   search: Rechercher
 en:
   selectDataset: Chose a dataset
-  lines: "no line | 1 line | {count} lines"
-  error: Error status
   search: Search
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { withQuery } from 'ufo'
 import { datasetListSelect, type ListedDataset } from './select/utils'
 

@@ -1,8 +1,10 @@
 <template>
   <v-autocomplete
-    v-model="model"
+    v-model:search="search"
+    :model-value="value"
     :items="datasets"
-    :loading="loading"
+    :loading="searchDatasets.loading.value"
+    no-filter
     item-title="title"
     item-value="id"
     :label="label || t('selectDataset')"
@@ -11,76 +13,110 @@
     variant="outlined"
     density="compact"
     hide-details
+    max-width="600"
     clearable
-    no-filter
-    style="max-width: 600px"
-    @update:search="onSearch"
-  />
+    @update:model-value="dataset => {value = dataset}"
+  >
+    <template #item="{internalItem}">
+      <dataset-list-item
+        :dataset="(internalItem.raw as any)"
+        :dense="true"
+        :show-topics="true"
+        :no-link="true"
+      />
+    </template>
+  </v-autocomplete>
 </template>
 
 <i18n lang="yaml">
 fr:
   selectDataset: Choisissez un jeu de données
-  search: Rechercher...
+  masterData: Données de référence
+  ownerDatasets: Vos jeux de données
 en:
   selectDataset: Chose a dataset
-  search: Search...
+  masterData: Master data
+  ownerDatasets: Your datasets
 </i18n>
 
-<script lang="ts" setup>
-import { $fetch } from '~/context'
+<script setup lang="ts">
+import { type AccountKeys } from '@data-fair/lib-vue/session'
+import { withQuery } from 'ufo'
+import { datasetListSelect, type ListedDataset } from './select/utils'
 
-const props = withDefaults(defineProps<{
-  owner?: { type: string, id: string, department?: string } | null
-  label?: string
-}>(), {
-  owner: null,
-  label: ''
+const { extraParams, masterData, owner: _owner } = defineProps({
+  label: { type: String, default: '' },
+  extraParams: { type: Object, default: () => ({}) },
+  owner: { type: Object as () => AccountKeys | null, default: null },
+  masterData: { type: String, default: null }
 })
 
-const model = defineModel<Record<string, any> | null>({ default: null })
+const value = defineModel({ type: Object as () => ListedDataset })
 
+const { account } = useSessionAuthenticated()
 const { t } = useI18n()
-const { account } = useSession()
 
-const effectiveOwner = computed(() => props.owner || account.value)
+const owner = computed(() => _owner ?? account.value)
 
-const loading = ref(false)
-const datasets = ref<Record<string, any>[]>([])
-const searchText = ref('')
+const search = ref('')
 
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-
-function onSearch (val: string) {
-  searchText.value = val ?? ''
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    searchDatasets()
-  }, 300)
-}
-
-async function searchDatasets () {
-  const owner = effectiveOwner.value
-  if (!owner) return
-  loading.value = true
-  try {
-    let ownerFilter = `${owner.type}:${owner.id}`
-    if (owner.department) ownerFilter += `:${owner.department}`
-    const res = await $fetch<{ results: Record<string, any>[] }>('datasets', {
-      params: {
-        q: searchText.value,
-        size: 20,
-        select: 'id,title,slug,publicationSites,requestedPublicationSites',
-        owner: ownerFilter
-      }
-    })
-    datasets.value = res.results
-  } finally {
-    loading.value = false
+const remoteServicesUrl = computed(() => {
+  if (!masterData) return null
+  const query: Record<string, any> = {
+    size: 1000,
+    select: 'id,title,' + masterData,
+    privateAccess: `${owner.value.type}:${owner.value.id}`,
+    [masterData]: true
   }
-}
+  if (search.value) query.q = search.value
+  return withQuery(`${$apiPath}/remote-services`, query)
+})
 
-watch(effectiveOwner, () => searchDatasets())
+const datasetsUrl = computed(() => {
+  let ownerFilter = `${owner.value.type}:${owner.value.id}`
+  if (owner.value.department) ownerFilter += `:${owner.value.department}`
+  // WARNING: order is important here, extraParams can overwrite the owner filter
+  const query: Record<string, any> = {
+    size: 20,
+    select: datasetListSelect,
+    owner: ownerFilter,
+    ...extraParams
+  }
+  if (search.value) query.q = search.value
+  return withQuery(`${$apiPath}/datasets`, query)
+})
 
-onMounted(() => searchDatasets())
+const datasets = ref<(ListedDataset | { header: string })[]>()
+
+const searchDatasets = useAsyncAction(async () => {
+  let items: (ListedDataset | { header: string })[] = []
+  let refDatasets: ListedDataset[]
+  if (value.value) items.push(value.value)
+  if (remoteServicesUrl.value) {
+    const remoteServicesRes = await $fetch(remoteServicesUrl.value)
+    refDatasets = remoteServicesRes.results.map((r: any) => r[masterData].parent || r[masterData].dataset)
+    if (refDatasets.length) {
+      items.push({ header: t('masterData') })
+      items = items.concat(refDatasets)
+    }
+  }
+
+  const res = await $fetch<{ results: ListedDataset[] }>(datasetsUrl.value)
+
+  const ownerDatasets = res.results.filter(d => !refDatasets.find(rd => rd.id === d.id))
+
+  if (items.length && ownerDatasets.length) {
+    items.push({ header: t('ownerDatasets') })
+  }
+  items = items.concat(ownerDatasets)
+
+  datasets.value = items
+})
+
+watch(remoteServicesUrl, () => searchDatasets.execute())
+watch(datasetsUrl, () => searchDatasets.execute())
 </script>
+
+<style>
+
+</style>

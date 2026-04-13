@@ -1,4 +1,3 @@
-<!-- eslint-disable vue/no-v-html -->
 <template>
   <v-slide-group
     show-arrows
@@ -25,10 +24,7 @@
         <div :style="`max-width: ${maxWidth - 56}px;`">
           <span style="display:inline-block;white-space:nowrap;">{{ (filter.property.title || filter.property['x-originalName'] || filter.property.key) }}</span>
           <br>
-          <span
-            style="display:inline-block;max-width:100%;overflow:hidden;text-overflow: ellipsis;"
-            v-html="t(filter.operator) + ' ' + filter.formattedValue"
-          />
+          <span style="display:inline-block;max-width:100%;overflow:hidden;text-overflow: ellipsis;">{{ t(filter.operator) + ' ' + filter.formattedValue }}</span>
         </div>
       </v-chip>
     </v-slide-group-item>
@@ -40,17 +36,17 @@
     in: 'parmi'
     nin: 'hors'
     eq: '='
-    neq: '&ne;'
+    neq: '≠'
     starts: 'commence par'
-    lte: '&leq;'
-    gte: '&GreaterEqual;'
+    lte: '≤'
+    gte: '≥'
     search: recherche textuelle
     contains: contient les caractères
     exists: 'existe'
     nexists: "n'existe pas"
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useCurrentElement, useElementSize } from '@vueuse/core'
 import { type DatasetFilter } from '~/composables/dataset/filters'
 

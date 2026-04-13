@@ -14,7 +14,7 @@ en:
   datasetsError: No dataset in error | 1 dataset in error | {n} datasets in error
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import errorSvg from '~/assets/svg/Under Constructions_Two Color.svg?raw'
 
 const { t } = useI18n()

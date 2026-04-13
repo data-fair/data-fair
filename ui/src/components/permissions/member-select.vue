@@ -32,7 +32,7 @@ en:
   member: Member of {org}
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { $sdUrl } from '~/context'
 
 const props = defineProps<{

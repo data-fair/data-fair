@@ -1,11 +1,16 @@
 <template>
-  <workflow-update-dataset
-    v-model:updated="updated"
-    :dataset-params="datasetParams"
-  />
+  <v-container
+    class="pa-0"
+    fluid
+  >
+    <workflow-update-dataset
+      v-model:updated="updated"
+      :dataset-params="datasetParams"
+    />
+  </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 const route = useRoute<'/update-dataset'>()
 const { t } = useI18n()
 const { account } = useSessionAuthenticated()

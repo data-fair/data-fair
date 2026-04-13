@@ -9,14 +9,21 @@
       v-if="remoteService.apiDoc?.externalDocs?.url"
       :href="remoteService.apiDoc.externalDocs.url"
       target="_blank"
-      :prepend-icon="mdiInformation"
+      link
     >
-      <v-list-item-title>{{ t('externalDoc') }}</v-list-item-title>
+      <template #prepend>
+        <v-icon
+          :icon="mdiInformation"
+          color="primary"
+        />
+      </template>
+      {{ t('externalDoc') }}
     </v-list-item>
 
     <v-list-item
       :href="`/data-fair/remote-service/${remoteService.id}/api-doc`"
       target="_top"
+      link
     >
       <template #prepend>
         <v-icon
@@ -24,17 +31,22 @@
           :icon="mdiCloud"
         />
       </template>
-      <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
+      {{ t('useAPI') }}
     </v-list-item>
 
     <v-list-item
       v-if="remoteService.url"
       color="admin"
       :disabled="refresh.loading.value"
-      :prepend-icon="mdiRefresh"
       @click="refresh.execute()"
     >
-      <v-list-item-title>{{ t('updateAPI') }}</v-list-item-title>
+      <template #prepend>
+        <v-icon
+          :icon="mdiRefresh"
+          color="primary"
+        />
+      </template>
+      {{ t('updateAPI') }}
     </v-list-item>
 
     <!--
@@ -60,7 +72,6 @@
       </template>
       <template #default="{ isActive }">
         <v-card
-          variant="elevated"
           :title="t('deleteTitle')"
           :text="t('deleteMsg', {title: remoteService.title})"
           :loading="confirmDelete.loading.value ? 'warning' : undefined"
@@ -96,7 +107,7 @@ fr:
   updateAPI: Mettre a jour la description de l'API
   delete: Supprimer
   deleteTitle: Suppression de la configuration du service
-  deleteMsg: Voulez vous vraiment supprimer la configuration du service "{title}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
+  deleteMsg: Voulez-vous vraiment supprimer la configuration du service "{title}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
   yes: Oui
   no: Non
   refreshOk: La définition de l'API a été mise à jour
@@ -106,13 +117,13 @@ en:
   updateAPI: Update API description
   delete: Delete
   deleteTitle: Delete the service configuration
-  deleteMsg: Do you really want to delete the service configuration "{title}" ? Deletion is definitive.
+  deleteMsg: Do you really want to delete the service configuration "{title}"? Deletion is permanent and data cannot be recovered.
   yes: Yes
   no: No
   refreshOk: The API definition was updated
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { RemoteService } from '#api/types'
 import { mdiCloud, mdiInformation, mdiRefresh } from '@mdi/js'
 

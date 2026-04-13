@@ -3,15 +3,13 @@
     class="pa-0"
     :style="`height: ${windowHeight}px`"
   >
-    <dataset-map-bounds
-      :height="windowHeight"
-    />
+    <dataset-map-bounds :height="windowHeight" />
   </v-container>
 </template>
 
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
-import { provideDatasetStore } from '~/composables/dataset/store'
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 
 const { height: windowHeight } = useWindowSize()
 
@@ -20,6 +18,3 @@ const draft = useBooleanSearchParam('draft')
 
 provideDatasetStore(route.params.id, draft.value ?? undefined)
 </script>
-
-<style>
-</style>

@@ -1,7 +1,8 @@
 <template>
   <v-container
-    class="pa-0"
     :style="`height: ${windowHeight}px`"
+    class="pa-0"
+    fluid
   >
     <dataset-table
       v-model:cols="cols"
@@ -22,7 +23,7 @@
 // https://koumoul.com/data-fair/embed/dataset/rr6wq5gxjqpm-89iyna6n4dz/table
 
 import { useWindowSize } from '@vueuse/core'
-import { provideDatasetStore } from '~/composables/dataset/store'
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 
 const { height: windowHeight } = useWindowSize()
 

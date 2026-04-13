@@ -1,16 +1,15 @@
 <template>
-  <v-list
-    v-if="dataset"
-    density="compact"
-    bg-color="background"
-  >
-    <template v-if="dataFiles.length">
-      <v-list-subheader>{{ t('downloads') }}</v-list-subheader>
+  <template v-if="dataset">
+    <!-- Source files downloads for file datasets -->
+    <template v-if="(isFileDataset && sourceFiles.length) || (dataset.isRest && user?.adminMode)">
+      <v-list-subheader class="text-uppercase">
+        {{ t('downloads') }}
+      </v-list-subheader>
       <v-list-item
-        v-for="dataFile in dataFiles"
-        :key="dataFile.key"
-        :disabled="!can('downloadFullData').value"
-        :href="dataFile.url"
+        v-for="file in sourceFiles"
+        :key="file.key"
+        :href="file.url"
+        link
       >
         <template #prepend>
           <v-icon
@@ -18,71 +17,75 @@
             color="primary"
           />
         </template>
-        <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
+        {{ file.title }}
+        <v-list-item-subtitle v-if="file.size">
+          {{ formatBytes(file.size) }}
+        </v-list-item-subtitle>
+      </v-list-item>
+
+      <v-list-item
+        v-if="dataset.isRest && user?.adminMode"
+        :href="resourceUrl + '/raw'"
+        link
+      >
+        <template #prepend>
+          <v-icon
+            :icon="mdiProgressDownload"
+            color="admin"
+          />
+        </template>
+        {{ t('downloadRawRest') }}
       </v-list-item>
     </template>
 
-    <v-list-item
-      v-if="dataset.isRest && user?.adminMode"
-      :href="resourceUrl + '/raw'"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiProgressDownload"
-          color="admin"
-        />
-      </template>
-      <v-list-item-title>{{ t('downloadRawRest') }}</v-list-item-title>
-      <v-list-item-subtitle>{{ t('downloadRawRestSubtitle') }}</v-list-item-subtitle>
-    </v-list-item>
+    <!-- Links to portals -->
+    <template v-if="portalUrls.length">
+      <v-list-subheader class="text-uppercase">
+        {{ t('navigation') }}
+      </v-list-subheader>
 
-    <dataset-upload-dialog
-      v-if="can('writeData').value && !dataset.isRest && !dataset.isVirtual && !dataset.isMetaOnly"
-    >
-      <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
-          <template #prepend>
-            <v-icon
-              :icon="mdiFileUpload"
-              color="primary"
-            />
-          </template>
-          <v-list-item-title>{{ t('updateFile') }}</v-list-item-title>
-        </v-list-item>
-      </template>
-    </dataset-upload-dialog>
+      <v-list-item
+        v-for="portalUrl in portalUrls"
+        :key="portalUrl.url"
+        :href="portalUrl.url"
+        target="_blank"
+        link
+      >
+        <template #prepend>
+          <v-icon
+            color="primary"
+            :icon="mdiWeb"
+          />
+        </template>
+        {{ t('viewOnPortal', { title: portalUrl.title }) }}
+      </v-list-item>
+    </template>
 
-    <v-list-subheader>{{ t('actions') }}</v-list-subheader>
+    <v-list-subheader
+      v-if="hasActions"
+      class="text-uppercase"
+    >
+      {{ t('actions') }}
+    </v-list-subheader>
 
     <v-list-item
-      v-if="can('writeDescription').value"
-      :to="`/dataset/${dataset.id}/edit-metadata`"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiPencil"
-          color="primary"
-        />
-      </template>
-      <v-list-item-title>{{ t('editMetadata') }}</v-list-item-title>
-    </v-list-item>
-
-    <v-list-item
-      v-if="dataset.isRest && can('createLine').value"
+      v-if="canUpdateData"
       :to="`/dataset/${dataset.id}/edit-data`"
+      link
     >
       <template #prepend>
         <v-icon
-          :icon="mdiTableEdit"
+          :icon="mdiFileUpload"
           color="primary"
         />
       </template>
-      <v-list-item-title>{{ t('editData') }}</v-list-item-title>
+      {{ t('updateData') }}
     </v-list-item>
 
     <v-list-item
       v-if="can('readApiDoc').value && dataset.finalizedAt"
       :to="`/dataset/${dataset.id}/api-doc`"
+      link
     >
       <template #prepend>
         <v-icon
@@ -90,259 +93,94 @@
           color="primary"
         />
       </template>
-      <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
+      {{ t('useAPI') }}
     </v-list-item>
-
-    <owner-change-dialog
-      v-if="can('setOwner').value"
-      :resource="dataset"
-      resource-type="datasets"
-      @changed="router.push('/datasets')"
-    >
-      <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
-          <template #prepend>
-            <v-icon
-              :icon="mdiAccountSwitch"
-              color="admin"
-            />
-          </template>
-          <v-list-item-title>{{ t('changeOwner') }}</v-list-item-title>
-        </v-list-item>
-      </template>
-    </owner-change-dialog>
-
-    <v-list-item
-      v-if="can('writeDescriptionBreaking').value"
-      @click="showSlugDialog = true"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiPencilOutline"
-          color="primary"
-        />
-      </template>
-      <v-list-item-title>{{ t('editSlug') }}</v-list-item-title>
-    </v-list-item>
-
-    <v-list-item
-      v-if="can('delete').value"
-      @click="showDeleteDialog = true"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiDelete"
-          color="warning"
-        />
-      </template>
-      <v-list-item-title>{{ t('delete') }}</v-list-item-title>
-    </v-list-item>
-
-    <v-list-item
-      v-if="dataset.isRest && can('deleteLine').value"
-      @click="showDeleteAllLinesDialog = true"
-    >
-      <template #prepend>
-        <v-icon
-          :icon="mdiDeleteSweep"
-          color="warning"
-        />
-      </template>
-      <v-list-item-title>{{ t('deleteAllLines') }}</v-list-item-title>
-    </v-list-item>
-  </v-list>
-
-  <v-dialog
-    v-model="showDeleteDialog"
-    max-width="500"
-  >
-    <v-card>
-      <v-card-title>{{ t('deleteDataset') }}</v-card-title>
-      <v-card-text>{{ t('deleteMsg', { title: dataset?.title }) }}</v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          @click="showDeleteDialog = false"
-        >
-          {{ t('no') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          @click="confirmRemove"
-        >
-          {{ t('yes') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <v-dialog
-    v-model="showDeleteAllLinesDialog"
-    max-width="500"
-  >
-    <v-card>
-      <v-card-title>{{ t('deleteAllLinesTitle') }}</v-card-title>
-      <v-card-text>
-        <v-alert
-          type="error"
-          variant="outlined"
-        >
-          {{ t('deleteAllLinesWarning', { title: dataset?.title }) }}
-        </v-alert>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          @click="showDeleteAllLinesDialog = false"
-        >
-          {{ t('no') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          @click="confirmDeleteAllLines"
-        >
-          {{ t('yes') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <v-dialog
-    v-model="showSlugDialog"
-    max-width="500"
-    @update:model-value="val => { if (val) newSlug = dataset?.slug ?? '' }"
-  >
-    <v-card>
-      <v-card-title>{{ t('editSlug') }}</v-card-title>
-      <v-card-text>
-        <v-alert
-          type="warning"
-          variant="outlined"
-          class="mb-4"
-        >
-          {{ t('slugWarning') }}
-        </v-alert>
-        <v-text-field
-          v-model="newSlug"
-          :label="t('newSlug')"
-          variant="outlined"
-          density="compact"
-          hide-details
-          :rules="[val => !!val, val => !!val?.match(slugRegex)]"
-        />
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          @click="showSlugDialog = false"
-        >
-          {{ t('cancel') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          :disabled="newSlug === dataset?.slug || !newSlug || !newSlug.match(slugRegex)"
-          @click="confirmSlug"
-        >
-          {{ t('validate') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  </template>
 </template>
 
 <i18n lang="yaml">
 fr:
-  downloads: TÉLÉCHARGEMENTS
-  updateFile: Mettre à jour le fichier
+  navigation: Navigation
+  viewOnPortal: "Voir sur {title}"
+  updateData: Mettre à jour les données
+  downloads: Téléchargements
   downloadRawRest: Export brut
-  downloadRawRestSubtitle: Téléchargement de l'export brut des données originales (admin)
-  actions: ACTIONS
-  editMetadata: Éditer les métadonnées
-  editData: Éditer les données
+  actions: Actions
   useAPI: Utiliser l'API
-  changeOwner: Changer le propriétaire
-  editSlug: Modifier l'identifiant
-  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
-  newSlug: Nouvel identifiant
-  cancel: Annuler
-  validate: Valider
-  delete: Supprimer
-  deleteAllLines: Supprimer toutes les lignes
-  deleteAllLinesTitle: Suppression des lignes du jeu de données
-  deleteAllLinesWarning: Voulez vous vraiment supprimer toutes les lignes du jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
-  deleteDataset: Suppression du jeu de données
-  deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
-  yes: Oui
-  no: Non
 en:
-  downloads: DOWNLOADS
-  updateFile: Update data file
+  navigation: Navigation
+  viewOnPortal: "View on {title}"
+  updateData: Update data
+  downloads: Downloads
   downloadRawRest: Raw export
-  downloadRawRestSubtitle: Download the raw export of original data (admin)
-  actions: ACTIONS
-  editMetadata: Edit metadata
-  editData: Edit data
+  actions: Actions
   useAPI: Use the API
-  changeOwner: Change owner
-  editSlug: Edit slug
-  slugWarning: "This unique and readable id is used in portal pages URLs, data APIs, etc. Warning: if you modify it you can break existing links and applications."
-  newSlug: New slug
-  cancel: Cancel
-  validate: Validate
-  delete: Delete
-  deleteAllLines: Delete all lines
-  deleteAllLinesTitle: Delete all the lines of the dataset
-  deleteAllLinesWarning: Do you really want to delete all the lines of the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
-  deleteDataset: Dataset deletion
-  deleteMsg: Do you really want to delete the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
-  yes: Yes
-  no: No
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import {
-  mdiAccountSwitch,
   mdiCloud,
-  mdiDelete,
-  mdiDeleteSweep,
   mdiFileDownload,
   mdiFileUpload,
-  mdiPencil,
-  mdiPencilOutline,
   mdiProgressDownload,
-  mdiTableEdit
+  mdiWeb
 } from '@mdi/js'
-import useDatasetStore from '~/composables/dataset/store'
+import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
+import useDatasetStore from '~/composables/dataset/dataset-store'
 
 const { t } = useI18n()
-const router = useRouter()
-const { dataset, dataFiles, can, remove, id, resourceUrl, patchDataset } = useDatasetStore()
+const { dataset, can, resourceUrl, dataFiles } = useDatasetStore()
 const session = useSession()
 const user = computed(() => session.state.user)
 
-const showDeleteDialog = ref(false)
-const showDeleteAllLinesDialog = ref(false)
+const isFileDataset = computed(() => {
+  const d = dataset.value
+  return d && !d.isRest && !d.isVirtual && !d.isMetaOnly && d.file
+})
 
-const confirmRemove = async () => {
-  showDeleteDialog.value = false
-  await remove()
-  router.push('/datasets')
-}
+const sourceFiles = computed(() => {
+  if (!isFileDataset.value) return []
+  return dataFiles.value.filter(f => f.key === 'original' || f.key === 'converted').map(f => {
+    const d = dataset.value!
+    const size = f.key === 'original' ? d.originalFile?.size : d.file?.size
+    return { ...f, size }
+  })
+})
 
-const confirmDeleteAllLines = async () => {
-  showDeleteAllLinesDialog.value = false
-  await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
-}
+const canUpdateData = computed(() => {
+  if (!dataset.value) return false
+  const d = dataset.value
+  const isFile = d && !d.isRest && !d.isVirtual && !d.isMetaOnly && d.file
+  if (isFile) return can('writeData').value
+  if (d.isRest) return can('createLine').value
+  return false
+})
 
-const slugRegex = /^[a-z0-9]{1}[a-z0-9_-]*[a-z0-9]{1}$/
-const showSlugDialog = ref(false)
-const newSlug = ref('')
+const owner = computed(() => dataset.value?.owner)
+const publicationSitesFetch = useFetch<any[]>(() => {
+  if (!owner.value) return null
+  let path = `${$apiPath}/settings/${owner.value.type}/${owner.value.id}`
+  if (owner.value.department) path += ':' + owner.value.department
+  path += '/publication-sites'
+  return path
+}, { immediate: true })
 
-const confirmSlug = async () => {
-  showSlugDialog.value = false
-  await patchDataset.execute({ slug: newSlug.value })
-}
+const portalUrls = computed(() => {
+  if (!dataset.value || !publicationSitesFetch.data.value) return []
+  const published = dataset.value.publicationSites ?? []
+  return publicationSitesFetch.data.value
+    .filter((site: any) => site.datasetUrlTemplate && published.includes(`${site.type}:${site.id}`))
+    .map((site: any) => ({
+      title: site.title || site.url || site.id,
+      url: site.datasetUrlTemplate.replace('{id}', dataset.value!.id).replace('{slug}', dataset.value!.slug)
+    }))
+})
+
+const hasActions = computed(() => {
+  if (!dataset.value) return false
+  return canUpdateData.value ||
+    (isFileDataset.value && sourceFiles.value.length > 0) ||
+    (can('readApiDoc').value && !!dataset.value.finalizedAt) ||
+    (dataset.value.isRest && user.value?.adminMode)
+})
 </script>

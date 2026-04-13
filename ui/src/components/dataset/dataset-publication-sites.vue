@@ -3,6 +3,12 @@
     v-if="dataset && publicationSitesFetch.data.value"
     fluid
   >
+    <slug-edit-dialog
+      :slug="dataset.slug ?? dataset.id"
+      :can-edit="can('writeDescriptionBreaking').value"
+      @update:slug="slug => patchDataset.execute({ slug })"
+    />
+
     <p
       v-if="!publicationSitesFetch.data.value.length"
       class="mb-2"
@@ -94,9 +100,9 @@
 fr:
   noPublicationSite: Vous n'avez pas configuré de portail sur lequel publier ce jeu de données.
   publishThisDataset: Publiez ce jeu de données sur un ou plusieurs de vos portails.
-  published: publié
-  publicationRequested: publication demandée par un contributeur
-  hasWarning: "métadonnées manquantes : "
+  published: Publié
+  publicationRequested: Publication demandée par un contributeur
+  hasWarning: "Métadonnées manquantes : "
   warning:
     title: titre
     summary: résumé
@@ -109,13 +115,13 @@ fr:
     frequency: fréquence des mises à jour
     creator: personne ou organisme créateur
     modified: date de dernière modification de la source
-  contribPermission: permission trop large accordée aux contributeurs (risque de rupture de compatibilité)
+  contribPermission: Permission trop large accordée aux contributeurs (risque de rupture de compatibilité)
 en:
   noPublicationSite: You haven't configured a portal to publish this dataset on.
   publishThisDataset: Publish this dataset on one or more of your portals.
-  published: published
-  publicationRequested: publication requested by a contributor
-  hasWarning: "missing metadata : "
+  published: Published
+  publicationRequested: Publication requested by a contributor
+  hasWarning: "Missing metadata : "
   warning:
     title: title
     summary: summary
@@ -128,10 +134,10 @@ en:
     frequency: update frequency
     creator: creator person or entity
     modified: date of last modification of the source
-  contribPermission: too broad permission granted to contribs (risk of compatibility breakage)
+  contribPermission: Too broad permission granted to contribs (risk of compatibility breakage)
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset, Permission, PublicationSite } from '#api/types'
 import permissionsUtils from '~/utils/permissions'
 

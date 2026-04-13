@@ -1,5 +1,5 @@
-import { computed, type ComputedRef } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, type ComputedRef, type Ref } from 'vue'
+import { type ComposerTranslation } from 'vue-i18n'
 import { usePermissions } from '~/composables/use-permissions'
 import { $uiConfig, $sdUrl } from '~/context'
 import {
@@ -39,16 +39,14 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[]> } {
-  const { t, locale } = useI18n()
-  const session = useSession()
-  const org = session.organization
+export function useNavigationItems (options: { t: ComposerTranslation, locale: Ref<string> }): { navigationGroups: ComputedRef<NavGroup[]> } {
+  const { t, locale } = options
+  const { site, account, user, organization } = useSession()
   const { canContrib, canAdmin, canContribDep, canAdminDep } = usePermissions()
 
   const extraNavigationItems = computed(() => {
-    const site = session.site
     const isMain = !site.value || site.value.main !== false
-    return ($uiConfig.extraNavigationItems ?? []).filter((extra) => {
+    return ($uiConfig.extraNavigationItems ?? []).filter((extra: any) => {
       if (extra.mainOnly && !isMain) return false
       if (!extra.can) return true
       if (extra.can === 'contrib') return canContrib.value
@@ -66,8 +64,7 @@ export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[
 
   const navigationGroups = computed<NavGroup[]>(() => {
     const groups: NavGroup[] = []
-    const account = session.account.value
-    const user = session.user.value
+    const org = organization.value
 
     // Content group
     const content: NavItem[] = [
@@ -83,21 +80,20 @@ export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[
     groups.push({ key: 'content', title: t('group.content'), items: content })
 
     // Management group
-    const currentOrg = org.value
     const management: NavItem[] = []
-    if (account?.type === 'organization' && currentOrg?.role === $uiConfig.adminRole && !currentOrg?.department) {
-      management.push({ to: '/organization', icon: mdiAccountGroup, title: t('org'), subtitle: account.name })
+    if (account.value?.type === 'organization' && org?.role === $uiConfig.adminRole && !org?.department) {
+      management.push({ to: '/organization', icon: mdiAccountGroup, title: t('org'), subtitle: account.value.name })
     }
-    if (account?.type === 'organization' && currentOrg?.role === $uiConfig.adminRole && currentOrg?.department) {
+    if (account.value?.type === 'organization' && org?.role === $uiConfig.adminRole && org?.department) {
       management.push({
         to: '/department',
         icon: mdiAccountGroup,
         title: t('dep'),
-        subtitle: `${account.name} / ${currentOrg.departmentName || currentOrg.department}`
+        subtitle: `${account.value.name} / ${org.departmentName || org.department}`
       })
     }
     if (canAdminDep.value) {
-      management.push({ to: '/settings', icon: mdiCog, title: t('params'), subtitle: account?.department ? t('paramsSub') : undefined })
+      management.push({ to: '/settings', icon: mdiCog, title: t('params'), subtitle: account.value?.department ? t('paramsSub') : undefined })
     }
     if (canAdminDep.value && $uiConfig.portalsIntegration) {
       management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })
@@ -146,7 +142,8 @@ export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[
         to: extra.iframe ? `/extra/${extra.id}` : extra.to,
         href: extra.href,
         icon: extra.icon || mdiCloud,
-        title: resolveTitle(extra.title)
+        title: resolveTitle(extra.title),
+        subtitle: extra.subtitle ? resolveTitle(extra.subtitle) : undefined
       }
       if (extra.group) {
         const group = groups.find(g => g.key === extra.group)
@@ -160,13 +157,16 @@ export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[
     }
 
     // Admin group
-    if (user?.adminMode) {
+    if (user.value?.adminMode) {
       const admin: NavItem[] = [
         { to: '/admin/info', icon: mdiInformation, title: t('serviceInfo') },
         { to: '/remote-services', icon: mdiCloud, title: t('services') },
         { to: '/admin/owners', icon: mdiBriefcase, title: t('owners') },
         { to: '/admin/errors', icon: mdiAlert, title: t('errors') },
       ]
+      if ($uiConfig.agentsIntegration) {
+        admin.push({ to: '/admin/agents', icon: mdiRobotOutline, title: t('agents') })
+      }
       if (!$uiConfig.disableApplications) {
         admin.push({ to: '/admin/base-apps', icon: mdiApps, title: t('baseApplications') })
       }
@@ -177,15 +177,13 @@ export function useNavigationItems (): { navigationGroups: ComputedRef<NavGroup[
       if ($uiConfig.processingsIntegration) {
         admin.push({ to: '/admin/processings-plugins', icon: mdiCogTransferOutline, title: t('processings'), subtitle: 'Plugins' })
       }
-      if ($uiConfig.agentsIntegration) {
-        admin.push({ to: '/admin/agents', icon: mdiRobotOutline, title: t('agents') })
-      }
       for (const extra of ($uiConfig.extraAdminNavigationItems ?? [])) {
         admin.push({
           to: extra.iframe ? `/admin-extra/${extra.id}` : extra.to,
           href: extra.href,
           icon: extra.icon || mdiCloud,
-          title: resolveTitle(extra.title)
+          title: resolveTitle(extra.title),
+          subtitle: extra.subtitle ? resolveTitle(extra.subtitle) : undefined
         })
       }
       groups.push({ key: 'admin', title: t('group.admin'), items: admin })

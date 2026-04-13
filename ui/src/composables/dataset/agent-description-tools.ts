@@ -1,40 +1,22 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator } from '~/composables/agent/utils'
-import { serializeDatasetInfo } from './agent-tools'
 
 const messages: Record<string, Record<string, string>> = {
   fr: {
-    readDatasetInfo: 'Lire les informations du jeu de données',
     setDatasetDescription: 'Définir la description du jeu de données',
     descriptionWriterSubAgent: 'Rédiger une description de jeu de données',
     descriptionWriterSubAgentDesc: 'Lire les métadonnées et le schéma du jeu de données, puis rédiger une description détaillée.'
   },
   en: {
-    readDatasetInfo: 'Read dataset info',
     setDatasetDescription: 'Set the dataset description',
     descriptionWriterSubAgent: 'Write a dataset description',
     descriptionWriterSubAgentDesc: 'Read the dataset metadata and schema, then write a detailed description.'
   }
 }
 
-export function useAgentDatasetDescriptionTools (locale: Ref<string>, datasetData: Ref<any>, setDescription: (description: string) => void) {
+export function useAgentDatasetDescriptionTools (locale: Ref<string>, setDescription: (description: string) => void) {
   const t = createAgentTranslator(messages, locale)
-
-  // Also register read_dataset_info here so this composable is self-contained
-  // (the tool may also be registered by agent-summary-tools.ts — duplicate names are idempotent)
-  useAgentTool({
-    name: 'read_dataset_info',
-    description: 'Read the full metadata and schema of the current dataset being edited. Returns title, description, status, owner, column schema, etc.',
-    annotations: { title: t('readDatasetInfo'), readOnlyHint: true },
-    inputSchema: {
-      type: 'object' as const,
-      properties: {}
-    },
-    execute: async () => {
-      return serializeDatasetInfo(datasetData.value)
-    }
-  })
 
   useAgentTool({
     name: 'set_dataset_description',

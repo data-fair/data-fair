@@ -1,93 +1,91 @@
 <template>
-  <v-row class="ma-0">
-    <v-btn
-      v-if="!createToggle"
-      color="primary"
-      class="mb-3"
-      density="comfortable"
-      @click="createToggle = true"
-    >
-      {{ t('addApiKey') }}
-    </v-btn>
-    <v-slide-y-transition v-if="createToggle">
-      <v-card
-        :title="t('addNewApiKey')"
-      >
-        <v-card-text>
-          <v-form v-model="newApiKeyValid">
-            <v-text-field
-              v-model="newApiKey.title"
-              :rules="[v => !!v || '']"
-              :label="t('title')"
-              density="comfortable"
-              required
-            />
-            <v-checkbox
-              v-if="session.state.user.adminMode"
-              v-model="newApiKey.adminMode"
-              :label="t('superadminKey')"
-              class="text-warning"
-              density="comfortable"
-              hide-details
-            />
-            <v-checkbox
-              v-if="session.state.user.adminMode && newApiKey.adminMode"
-              v-model="newApiKey.asAccount"
-              :label="t('asAccountKey')"
-              class="text-warning"
-              density="comfortable"
-              hide-details
-            />
-            <tutorial-alert
-              id="api-key-scope"
-              :text="t('scopeMsg')"
-              persistent
-              initial
-            />
-            <v-select
-              v-if="filteredScopes.length > 1"
-              v-model="newApiKey.scopes"
-              :label="t('scope')"
-              :items="filteredScopes"
-              :item-title="t"
-              :item-value="v => v"
-              :item-props="v => (v.startsWith('datasets-') && newApiKey.scopes.includes('datasets')) ? {disabled: true} : {}"
-              multiple
-              density="comfortable"
-            />
-            <v-date-input
-              :model-value="new Date(newApiKey.expireAt)"
-              :label="t('expireAt')"
-              :rules="[v => !!v || '']"
-              required
-              :min="new Date()"
-              :max="new Date(maxDate)"
-              density="comfortable"
-              @update:model-value="v => newApiKey.expireAt = dayjs(v).format('YYYY-MM-DD')"
-            />
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
+  <v-btn
+    v-if="!createToggle"
+    :prepend-icon="mdiPlus"
+    color="primary"
+    variant="flat"
+    class="mb-3"
+    density="comfortable"
+    @click="createToggle = true"
+  >
+    {{ t('addApiKey') }}
+  </v-btn>
+  <v-slide-y-transition v-if="createToggle">
+    <v-card :title="t('addNewApiKey')">
+      <v-card-text>
+        <v-form v-model="newApiKeyValid">
+          <v-text-field
+            v-model="newApiKey.title"
+            :rules="[v => !!v || '']"
+            :label="t('title')"
             density="comfortable"
-            @click="createToggle = false"
-          >
-            {{ t('cancel') }}
-          </v-btn>
-          <v-btn
-            color="primary"
-            variant="elevated"
-            :disabled="!newApiKeyValid"
+            required
+          />
+          <v-checkbox
+            v-if="session.state.user.adminMode"
+            v-model="newApiKey.adminMode"
+            :label="t('superadminKey')"
+            class="text-warning"
             density="comfortable"
-            @click="addApiKey"
-          >
-            {{ t('add') }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-slide-y-transition>
-  </v-row>
+            hide-details
+          />
+          <v-checkbox
+            v-if="session.state.user.adminMode && newApiKey.adminMode"
+            v-model="newApiKey.asAccount"
+            :label="t('asAccountKey')"
+            class="text-warning"
+            density="comfortable"
+            hide-details
+          />
+          <df-tutorial-alert
+            id="api-key-scope"
+            :text="t('scopeMsg')"
+            persistent
+            initial
+          />
+          <v-select
+            v-if="filteredScopes.length > 1"
+            v-model="newApiKey.scopes"
+            :label="t('scope')"
+            :items="filteredScopes"
+            :item-title="t"
+            :item-value="v => v"
+            :item-props="v => (v.startsWith('datasets-') && newApiKey.scopes.includes('datasets')) ? {disabled: true} : {}"
+            multiple
+            density="comfortable"
+          />
+          <v-date-input
+            :model-value="new Date(newApiKey.expireAt)"
+            :label="t('expireAt')"
+            :rules="[v => !!v || '']"
+            required
+            :min="new Date()"
+            :max="new Date(maxDate)"
+            density="comfortable"
+            @update:model-value="v => newApiKey.expireAt = dayjs(v).format('YYYY-MM-DD')"
+          />
+        </v-form>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn
+          density="comfortable"
+          @click="createToggle = false"
+        >
+          {{ t('cancel') }}
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="flat"
+          :disabled="!newApiKeyValid"
+          density="comfortable"
+          @click="addApiKey"
+        >
+          {{ t('add') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-slide-y-transition>
 
   <v-row>
     <v-col
@@ -138,7 +136,7 @@
           >
             {{ t('scope') }} : {{ apiKey.scopes?.map(s => t(s)).join(', ') }}
           </p>
-          <tutorial-alert
+          <df-tutorial-alert
             id="api-key-email"
             :text="t('emailMsg')"
             persistent
@@ -190,7 +188,7 @@ fr:
   emailMsg: Ce pseudo email peut être utilisé pour affecter des permissions fines à cette clé d'API.
   expireAt: Date d'expiration
   deleteKey: Supprimer cette clé d'API
-  deleteKeyDetails: Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
+  deleteKeyDetails: Voulez-vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
   datasets: Jeux de données - toutes opérations
   datasets-read: Jeux de données - lecture
   datasets-write: Jeux de données - écriture
@@ -226,7 +224,8 @@ en:
   stats: Stats
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
+import { mdiPlus } from '@mdi/js'
 import { VDateInput } from 'vuetify/labs/VDateInput'
 import type { Settings } from '#api/types'
 

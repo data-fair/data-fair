@@ -1,5 +1,8 @@
 <template>
-  <v-list lines="two">
+  <v-list
+    lines="two"
+    bg-color="background"
+  >
     <template
       v-for="(dataset, i) in fullDatasets"
       :key="`tile-${dataset.id}`"
@@ -13,10 +16,7 @@
           >{{ dataset.title || dataset.id }}</a>
           <span v-if="dataset.storage?.indexed?.size"> - <b>{{ formatBytes(dataset.storage.indexed.size, locale) }}</b> de données indexées</span>
           <span v-if="dataset.storage?.size"> - <b>{{ formatBytes(dataset.storage.size, locale) }}</b> de données stockées</span>
-          <span
-            v-if="!dataset.storage"
-            v-t="'noInfo'"
-          />
+          <span v-if="!dataset.storage">{{ t('noInfo') }}</span>
         </v-list-item-title>
         <template v-if="dataset.storage">
           <v-list-item-subtitle v-if="dataset.storageParts.length">
@@ -28,7 +28,7 @@
               <span
                 v-if="part.indexed"
                 :key="'storage-part-indexed-' + j"
-              >({{ t('indexed') }})</span>
+              > ({{ t('indexed') }})</span>
               <span
                 v-if="j < dataset.storageParts.length - 1"
                 :key="'storage-part-sep-' + j"
@@ -72,7 +72,7 @@ en:
 
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset } from '#api/types'
 
 const { t, locale } = useI18n()

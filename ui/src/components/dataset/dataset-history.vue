@@ -89,14 +89,14 @@ en:
   id: Line identifier
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import {
   mdiDeleteCircle,
   mdiPencilCircle,
   mdiPlusCircle,
   mdiRefresh
 } from '@mdi/js'
-import useDatasetStore from '~/composables/dataset/store'
+import useDatasetStore from '~/composables/dataset/dataset-store'
 
 const { t } = useI18n()
 const { dataset, resourceUrl } = useDatasetStore()

@@ -1,16 +1,9 @@
 <template>
-  <v-list v-if="taskProgress">
-    <v-list-item>
-      <v-list-item-title>
-        {{ t('activity') }} - {{ t('tasks.' + taskProgress.task) }}
-      </v-list-item-title>
-      <v-progress-linear
-        :model-value="taskProgress.progress"
-        :indeterminate="taskProgress.progress === -1"
-        :color="taskProgress.error ? 'error' : 'primary'"
-        class="mt-1"
-      />
-    </v-list-item>
+  <v-list
+    v-if="taskProgress"
+    bg-color="rgb(0,0,0,0)"
+  >
+    <dataset-task-progress :task-progress="taskProgress" />
   </v-list>
   <v-list
     v-for="(group, i) in groupedEvents"
@@ -56,37 +49,15 @@
 <i18n lang="yaml">
 fr:
   draft: Brouillon
-  activity: Activité
-  tasks:
-    initialize: initialisation
-    store: chargement
-    index: indexation
-    extend: extensions
-    analyze: analyse
-    validate: validation
-    finalize: finalisation
-    normalize: conversion
-    download: téléchargement
 en:
   draft: Draft
-  activity: Activity
-  tasks:
-    initialize: initialization
-    store: loading
-    index: indexing
-    extend: extensions
-    analyze: analysis
-    validate: validation
-    finalize: finalization
-    normalize: conversion
-    download: download
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Event } from '#api/types'
 import eventsJson from '#shared/events.json'
 import { mdiAlert, mdiAlertDecagram, mdiCheck, mdiClipboardText, mdiContentSave, mdiDelete, mdiFileCancel, mdiFileCheck, mdiFileDownload, mdiFileSearch, mdiFileSwap, mdiMerge, mdiPencil, mdiPlusCircleOutline, mdiPublish, mdiReloadAlert, mdiTableOfContents, mdiWrench } from '@mdi/js'
-import { type TaskProgress } from '~/composables/dataset/store'
+import { type TaskProgress } from '~/composables/dataset/dataset-store'
 const eventsList = eventsJson as Record<string, Record<string, { icon: string, text: Record<string, string>, color?: string }>>
 
 const session = useSession()

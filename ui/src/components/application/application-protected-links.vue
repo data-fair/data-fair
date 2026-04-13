@@ -42,11 +42,11 @@
 
 <i18n lang="yaml">
 fr:
-  message: Creez un lien que vous pourrez communiquer aux personnes avec qui vous souhaitez partager cette application et qui ne sont pas authentifies sur ce service.
-  warning: Attention ! Ce lien donne acces a cette application et au contenu du jeu de donnees reference dans sa configuration. Si vous craignez que ce lien ait trop circule vous pouvez le supprimer, en creer un autre et communiquer ce nouveau lien aux bonnes personnes.
-  protectedLink: "Lien protege :"
+  message: Créez un lien que vous pourrez communiquer aux personnes avec qui vous souhaitez partager cette application et qui ne sont pas authentifies sur ce service.
+  warning: Attention ! Ce lien donne accès à cette application et au contenu du jeu de données reference dans sa configuration. Si vous craignez que ce lien ait trop circule vous pouvez le supprimer, en creer un autre et communiquer ce nouveau lien aux bonnes personnes.
+  protectedLink: "Lien protégé :"
   delete: Supprimer ce lien
-  createProtectedLink: Creer un lien protege
+  createProtectedLink: Créer un lien protégé
 en:
   message: Create a link that you will be able to share with the people to whom you want to give access to this application and who are not authenticated on this service.
   warning: Warning! This link gives access to this application and to the content of the dataset used in its configuration. If you fear this link might have been too widely communicated you can delete it then create another one and communicate this new link to your users.
@@ -55,9 +55,9 @@ en:
   createProtectedLink: Create a protected link
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiDelete } from '@mdi/js'
-import useApplicationStore from '~/composables/application/store'
+import useApplicationStore from '~/composables/application/application-store'
 import { $siteUrl, $fetch } from '~/context'
 
 interface ApplicationKey {

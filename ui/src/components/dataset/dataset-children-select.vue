@@ -1,66 +1,50 @@
 <template>
-  <div>
-    <v-autocomplete
-      v-model:search="search"
-      :model-value="null"
-      :items="items"
-      :loading="searchAction.loading.value"
-      no-filter
-      hide-no-data
-      item-title="title"
-      item-value="id"
-      :label="t('children')"
-      :placeholder="t('search')"
-      variant="outlined"
-      density="compact"
-      return-object
-      hide-details
-      style="max-width: 500px;"
-      @update:model-value="addChild"
-    >
-      <template #item="{ item, props: itemProps }">
-        <v-list-subheader
-          v-if="item.raw._header"
-        >
-          {{ item.raw._header }}
-        </v-list-subheader>
-        <v-list-item
-          v-else
-          v-bind="itemProps"
-        >
-          <template #append>
-            <v-chip
-              v-if="item.raw.owner && showOwner(item.raw)"
-              size="x-small"
-              variant="tonal"
-              class="ml-2"
-            >
-              {{ item.raw.owner.name || item.raw.owner.id }}
-            </v-chip>
-          </template>
-        </v-list-item>
-      </template>
-    </v-autocomplete>
-
-    <!-- Selected children chips -->
-    <div
-      v-if="modelValue.length"
-      class="d-flex flex-wrap gap-1 mt-2"
-    >
+  <v-autocomplete
+    v-model="internalModel"
+    v-model:search="search"
+    :label="t('children')"
+    :placeholder="t('search')"
+    :loading="searchAction.loading.value"
+    :items="items"
+    item-title="title"
+    item-value="id"
+    class="mt-4"
+    variant="outlined"
+    density="compact"
+    max-width="500"
+    no-filter
+    hide-no-data
+    return-object
+    hide-details
+    multiple
+    chips
+    closable-chips
+    clear-on-select
+  >
+    <template #chip="{ props: chipProps }">
       <v-chip
-        v-for="(child, i) in modelValue"
-        :key="child.id"
-        closable
+        v-bind="chipProps"
         size="small"
-        @click:close="removeChild(i)"
-      >
-        {{ child.title }}
-      </v-chip>
-    </div>
-  </div>
+      />
+    </template>
+    <template #item="{ internalItem, props: itemProps }">
+      <v-list-item v-bind="itemProps">
+        <template #append>
+          <v-chip
+            v-if="internalItem.raw.owner && showOwner(internalItem.raw)"
+            size="x-small"
+            variant="tonal"
+            class="ml-2"
+          >
+            {{ internalItem.raw.owner.name || internalItem.raw.owner.id }}
+          </v-chip>
+        </template>
+      </v-list-item>
+    </template>
+  </v-autocomplete>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { withQuery } from 'ufo'
 
 export interface VirtualChild {
@@ -82,6 +66,13 @@ const { account } = useSessionAuthenticated()
 const search = ref('')
 const ownerDatasets = ref<any[]>([])
 const refDatasets = ref<any[]>([])
+
+const internalModel = computed({
+  get: () => props.modelValue,
+  set: (val: any[]) => {
+    emit('update:modelValue', val.map(d => ({ id: d.id, title: d.title })))
+  }
+})
 
 const select = 'id,owner,title,schema,status,attachmentsAsImage'
 
@@ -126,23 +117,22 @@ const searchAction = useAsyncAction(async () => {
   ownerDatasets.value = datasetsRes.results
 })
 
-watch(search, () => searchAction.execute())
+watch(search, () => searchAction.execute(), { immediate: true })
 
 const items = computed(() => {
   const selected = props.modelValue
   const result: any[] = []
 
-  const filteredRef = refDatasets.value.filter(d => !selected.find(c => c.id === d.id))
-  const filteredOwner = ownerDatasets.value.filter(d => !selected.find(c => c.id === d.id))
-
-  if (filteredRef.length) {
-    result.push({ _header: t('masterData'), id: '_header_master', title: t('masterData') })
-    result.push(...filteredRef)
+  if (refDatasets.value.length) {
+    result.push({ type: 'subheader', title: t('masterData') })
+    result.push(...refDatasets.value.filter(d => selected.some(c => c.id === d.id)))
+    result.push(...refDatasets.value.filter(d => !selected.some(c => c.id === d.id)))
   }
-  if (filteredRef.length && filteredOwner.length) {
-    result.push({ _header: t('ownerDatasets'), id: '_header_owner', title: t('ownerDatasets') })
+  if (refDatasets.value.length && ownerDatasets.value.length) {
+    result.push({ type: 'subheader', title: t('ownerDatasets') })
   }
-  result.push(...filteredOwner)
+  result.push(...ownerDatasets.value.filter(d => selected.some(c => c.id === d.id)))
+  result.push(...ownerDatasets.value.filter(d => !selected.some(c => c.id === d.id)))
 
   return result
 })
@@ -152,18 +142,6 @@ function showOwner (dataset: any) {
   return dataset.owner.type !== account.value.type ||
     dataset.owner.id !== account.value.id ||
     (dataset.owner.department || null) !== (account.value.department || null)
-}
-
-function addChild (dataset: any) {
-  if (!dataset?.id || dataset._header) return
-  emit('update:modelValue', [...props.modelValue, { id: dataset.id, title: dataset.title }])
-  search.value = ''
-}
-
-function removeChild (index: number) {
-  const updated = [...props.modelValue]
-  updated.splice(index, 1)
-  emit('update:modelValue', updated)
 }
 </script>
 

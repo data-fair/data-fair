@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-row>
     <div style="height:2px;width:100%;padding:4px 8px 4px 8px;">
       <v-progress-linear
@@ -11,7 +11,7 @@
   </v-row>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 
 defineProps<{ loading: boolean }>()
 </script>

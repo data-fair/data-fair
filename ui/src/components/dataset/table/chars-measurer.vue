@@ -36,7 +36,3 @@ onMounted(async () => {
   charsWidths.value = values
 })
 </script>
-
-<style>
-
-</style>

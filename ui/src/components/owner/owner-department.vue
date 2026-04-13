@@ -19,7 +19,7 @@
   <span v-if="dataset.owner.type === 'organization'"><v-icon>mdi-account-group</v-icon>&nbsp;{{ dataset.owner.name }}<span v-if="dataset.owner.role"> ({{ dataset.owner.role }})</span></span>-->
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { type Account } from '@data-fair/lib-vue/session'
 
 const { owner } = defineProps({ owner: { type: Object as () => Account, required: true } })

@@ -37,7 +37,7 @@ en:
   url: Update URL
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { RemoteService } from '#api/types'
 
 const remoteService = defineModel<RemoteService>()

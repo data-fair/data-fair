@@ -1,11 +1,17 @@
 <template>
-  <template v-if="authorized">
-    <iframe
-      :src="`${$sdUrl}/organization/${account.id}/department/${account.department}?embed=true`"
-      width="100%"
-      style="height: 100%; border: none;"
-    />
-  </template>
+  <d-frame
+    v-if="authorized"
+    id="department"
+    :src="`${$sdUrl}/organization/${account.id}/department/${account.department}?embed=true`"
+    class="fill-height"
+    resize="no"
+    sync-params
+    emit-iframe-messages
+    :adapter.prop="stateChangeAdapter"
+    @message="onMessage"
+    @iframe-message="onMessage"
+    @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+  />
   <v-container v-else>
     <v-alert type="error">
       {{ t('notAuthorized') }}
@@ -13,9 +19,13 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
+import { useDFramePage } from '~/composables/layout/use-d-frame-page'
+
 const { t } = useI18n()
 const { user, account } = useSessionAuthenticated()
+const { sendUiNotif } = useUiNotif()
+const { stateChangeAdapter, onMessage } = useDFramePage()
 
 const authorized = computed(() => {
   if (!user.value) return false

@@ -1,7 +1,7 @@
 <template>
   <v-container
     v-if="application"
-    :class="display.lgAndDown.value ? 'pa-0' : ''"
+    fluid
   >
     <v-row :class="display.lgAndDown.value ? 'ma-0' : ''">
       <v-col
@@ -21,12 +21,14 @@
         <d-frame
           v-else
           ref="frame"
-          :height="windowHeight - 64"
           resize="no"
-          :src="applicationLink + '?embed=true&draft=true'"
+          aspect-ratio
+          scrolling="auto"
+          :src="`${applicationLink}?d-frame=true&draft=true&primary=${theme.current.value.colors.primary}`"
           :reload="draftPreviewInc"
         />
       </v-col>
+
       <v-col
         cols="6"
         md="5"
@@ -107,11 +109,7 @@
                 </v-btn>
               </template>
               <template #default="{ isActive }">
-                <v-card>
-                  <v-card-title
-                    :title="t('removeDraft')"
-                    primary-title
-                  />
+                <v-card :title="t('removeDraft')">
                   <v-card-text>
                     <v-alert
                       :title="t('removeDraftWarning')"
@@ -126,7 +124,7 @@
                       {{ t('cancel') }}
                     </v-btn>
                     <v-btn
-                      variant="elevated"
+                      variant="flat"
                       color="warning"
                       @click="cancelDraft.execute(); isActive.value = false;"
                     >
@@ -175,9 +173,9 @@ en:
   configurePrompt: Help me configure this application
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
-import { useDisplay } from 'vuetify'
+import { useDisplay, useTheme } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { type Options as VjsfOptions } from '@koumoul/vjsf'
@@ -185,14 +183,13 @@ import Vjsf from '@koumoul/vjsf/webmcp'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
-import { VForm } from 'vuetify/components'
 import { setProperty } from 'dot-prop'
 import Debug from 'debug'
-// import { diff } from 'deep-object-diff'
 
 const debug = Debug('application-config')
 
 const display = useDisplay()
+const theme = useTheme()
 const { sendUiNotif } = useUiNotif()
 const { t } = useI18n()
 const { height: windowHeight } = useWindowSize()
@@ -214,8 +211,8 @@ const configureContext = computed(() => {
     'Use the subagent tool appConfig_form to help the user configure the current application.',
     'Start the session by asking the user what they want to achieve.',
   ]
-  if (baseApp?.title) lines.push(`The base application type is "${baseApp.title}".`)
-  if (baseApp?.description) lines.push(`Description of the base application: ${baseApp.description}`)
+  if (baseApp?.title) lines.push(`The application model is "${baseApp.title}".`)
+  if (baseApp?.description) lines.push(`Application model description: ${baseApp.description}`)
   if (baseApp?.category) lines.push(`Category: ${baseApp.category}`)
   if (application.value?.title) lines.push(`The application title is "${application.value.title}".`)
   return lines.join(' ')
@@ -317,7 +314,6 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
   if (toRaw(configDraft.value) === toRaw(editConfig.value)) return
-  // debug('save draft', diff(configDraft.value ?? {}, editConfig.value))
   const wasInError = !!application.value?.errorMessageDraft
   await writeConfigDraft(editConfig.value)
   if (baseAppDraft.value?.meta?.['df:sync-config'] === 'true') {

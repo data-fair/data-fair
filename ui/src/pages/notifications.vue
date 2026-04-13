@@ -75,12 +75,15 @@
   </v-container>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import settingsSchema from '../../../api/types/settings/schema.js'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const { sendUiNotif } = useUiNotif()
 const { account, accountRole } = useSessionAuthenticated()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('notifications') }] })
 
 const webhooksSchema = settingsSchema.properties.webhooks
 
@@ -234,6 +237,7 @@ const userCreationPublicationSiteUrl = computed(() => {
 
 <i18n lang="yaml">
 fr:
+  notifications: Notifications
   devices: Appareils configurés pour recevoir vos notifications
   datasetsOrgEvents: "Événements des jeux de données de l'organisation {name}"
   datasetsUserEvents: Événements des jeux de données de votre compte personnel
@@ -247,6 +251,7 @@ fr:
   sites: "Événements liés à un portail de l'organisation {name}"
   selectSite: "Sélectionnez un portail"
 en:
+  notifications: Notifications
   devices: Devices configured to receive your notifications
   datasetsOrgEvents: "Dataset events for organization {name}"
   datasetsUserEvents: Dataset events for your personal account

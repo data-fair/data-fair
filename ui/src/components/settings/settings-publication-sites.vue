@@ -1,13 +1,13 @@
 <template>
-  <v-form
-    v-model="valid"
-  >
-    <vjsf
-      v-model="editPublicationSites"
-      :schema="schema"
-      :options="vjsfOptions"
-    />
-  </v-form>
+  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+    <v-form v-model="valid">
+      <vjsf
+        v-model="editPublicationSites"
+        :schema="schema"
+        :options="vjsfOptions"
+      />
+    </v-form>
+  </v-defaults-provider>
 </template>
 
 <i18n lang="yaml">
@@ -23,28 +23,28 @@ en:
   topic: topic
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import publicationSitesContract from '~/../../api/contract/publication-sites'
 import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
 const publicationSites = defineModel<Settings['publicationSites']>()
+const valid = defineModel<boolean>('valid', { default: true })
 const { datasetsMetadata } = defineProps<{ datasetsMetadata: Settings['datasetsMetadata'] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { user } = useSessionAuthenticated()
 const publicationSitesSchema = publicationSitesContract(false)
 const publicationSitesAdminSchema = publicationSitesContract(true)
 const schema = computed(() => user.value.adminMode ? publicationSitesAdminSchema : publicationSitesSchema)
 const datasetsMetadataSchema = settingsSchema.properties.datasetsMetadata
 
-const valid = ref(true)
 const editPublicationSites = ref<Settings['publicationSites']>()
 watchDeepDiff(publicationSites, () => {
   editPublicationSites.value = publicationSites.value
 }, { immediate: true })
 watchDeepDiff(editPublicationSites, () => {
-  if (valid.value) publicationSites.value = editPublicationSites.value
+  publicationSites.value = editPublicationSites.value
 }, {})
 
 const context = computed(() => ({
@@ -66,6 +66,7 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   updateOn: 'blur',
   density: 'comfortable',
   xI18n: true,
+  locale: locale.value,
   context: context.value
 }))
 </script>

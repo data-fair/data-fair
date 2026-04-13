@@ -9,14 +9,16 @@
   </v-app>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import uiNotif from '@data-fair/lib-vuetify/ui-notif.vue'
-import DefaultLayout from './layouts/default-layout.vue'
-import EmbedLayout from './layouts/embed-layout.vue'
+import DefaultLayout from './layouts/default.vue'
+import EmbedLayout from './layouts/embed.vue'
+import { useFrameServer } from '@data-fair/lib-vue-agents'
 
-// useSession and useHead are auto-imported via vite.config.ts AutoImport plugin
+useFrameServer('data-fair')
+
 const session = useSession()
 const route = useRoute()
 
@@ -27,18 +29,12 @@ const layout = computed(() => {
   return DefaultLayout
 })
 
-useHead({
-  htmlAttrs: () => ({ lang: session.lang.value ?? 'fr' })
+watchEffect(() => {
+  document.documentElement.lang = session.lang.value ?? 'fr'
 })
 </script>
 
 <style>
-html {
-  overflow: hidden;
-}
-
-/* Vuetify 4 removed heading resets — restore margin:0 so browser defaults don't add spacing */
-h1, h2, h3, h4, h5, h6 {
-  margin: 0;
-}
+/* https://stackoverflow.com/questions/56973002/vuetify-adds-scrollbar-when-its-not-needed */
+html { overflow: hidden; }
 </style>

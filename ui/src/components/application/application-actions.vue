@@ -1,14 +1,13 @@
 <template>
-  <v-list
-    v-if="application"
-    density="compact"
-    bg-color="background"
-  >
-    <v-list-subheader>{{ t('actions') }}</v-list-subheader>
+  <template v-if="application">
+    <v-list-subheader class="text-uppercase">
+      {{ t('navigation') }}
+    </v-list-subheader>
 
     <v-list-item
       :href="applicationLink"
       target="_blank"
+      link
     >
       <template #prepend>
         <v-icon
@@ -16,12 +15,33 @@
           :icon="mdiExitToApp"
         />
       </template>
-      <v-list-item-title>{{ t('fullPage') }}</v-list-item-title>
+      {{ t('fullPage') }}
     </v-list-item>
+
+    <v-list-item
+      v-for="portalUrl in portalUrls"
+      :key="portalUrl.url"
+      :href="portalUrl.url"
+      target="_blank"
+      link
+    >
+      <template #prepend>
+        <v-icon
+          color="primary"
+          :icon="mdiWeb"
+        />
+      </template>
+      {{ t('viewOnPortal', { title: portalUrl.title }) }}
+    </v-list-item>
+
+    <v-list-subheader class="text-uppercase">
+      {{ t('actions') }}
+    </v-list-subheader>
 
     <v-list-item
       v-if="can('writeConfig')"
       :to="`/application/${application.id}/config`"
+      link
     >
       <template #prepend>
         <v-icon
@@ -29,12 +49,13 @@
           :icon="mdiSquareEditOutline"
         />
       </template>
-      <v-list-item-title>{{ t('editConfig') }}</v-list-item-title>
+      {{ t('editConfig') }}
     </v-list-item>
 
     <v-list-item
       v-if="can('readApiDoc')"
       :to="`/application/${application.id}/api-doc`"
+      link
     >
       <template #prepend>
         <v-icon
@@ -42,197 +63,71 @@
           :icon="mdiCloud"
         />
       </template>
-      <v-list-item-title>{{ t('useAPI') }}</v-list-item-title>
+      {{ t('useAPI') }}
     </v-list-item>
 
     <application-capture-dialog>
       <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
+        <v-list-item
+          v-bind="activatorProps"
+          link
+        >
           <template #prepend>
             <v-icon
               color="primary"
               :icon="mdiCamera"
             />
           </template>
-          <v-list-item-title>{{ t('capture') }}</v-list-item-title>
+          {{ t('capture') }}
         </v-list-item>
       </template>
     </application-capture-dialog>
-
-    <owner-change-dialog
-      v-if="can('setOwner')"
-      :resource="application"
-      resource-type="applications"
-      @changed="router.push('/applications')"
-    >
-      <template #activator="{ props: activatorProps }">
-        <v-list-item v-bind="activatorProps">
-          <template #prepend>
-            <v-icon
-              color="admin"
-              :icon="mdiAccountSwitch"
-            />
-          </template>
-          <v-list-item-title>{{ t('changeOwner') }}</v-list-item-title>
-        </v-list-item>
-      </template>
-    </owner-change-dialog>
-
-    <v-list-item
-      v-if="can('writeDescriptionBreaking')"
-      @click="showSlugDialog = true"
-    >
-      <template #prepend>
-        <v-icon
-          color="primary"
-          :icon="mdiPencil"
-        />
-      </template>
-      <v-list-item-title>{{ t('editSlug') }}</v-list-item-title>
-    </v-list-item>
-
-    <v-list-item
-      v-if="can('delete')"
-      @click="showDeleteDialog = true"
-    >
-      <template #prepend>
-        <v-icon
-          color="warning"
-          :icon="mdiDelete"
-        />
-      </template>
-      <v-list-item-title>{{ t('delete') }}</v-list-item-title>
-    </v-list-item>
-  </v-list>
-
-  <v-dialog
-    v-model="showDeleteDialog"
-    max-width="500"
-  >
-    <v-card>
-      <v-card-title>{{ t('deleteApp') }}</v-card-title>
-      <v-card-text>{{ t('deleteMsg', { title: application?.title }) }}</v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          @click="showDeleteDialog = false"
-        >
-          {{ t('no') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          @click="confirmRemove"
-        >
-          {{ t('yes') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <v-dialog
-    v-model="showSlugDialog"
-    max-width="500"
-    @update:model-value="val => { if (val) newSlug = application?.slug ?? '' }"
-  >
-    <v-card>
-      <v-card-title>{{ t('editSlug') }}</v-card-title>
-      <v-card-text>
-        <v-alert
-          type="warning"
-          variant="outlined"
-          class="mb-4"
-        >
-          {{ t('slugWarning') }}
-        </v-alert>
-        <v-text-field
-          v-model="newSlug"
-          :label="t('newSlug')"
-          variant="outlined"
-          density="compact"
-          hide-details
-          :rules="[val => !!val, val => !!val?.match(slugRegex)]"
-        />
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          @click="showSlugDialog = false"
-        >
-          {{ t('cancel') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          :disabled="newSlug === application?.slug || !newSlug || !newSlug.match(slugRegex)"
-          @click="confirmSlug"
-        >
-          {{ t('validate') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  </template>
 </template>
 
 <i18n lang="yaml">
 fr:
-  actions: ACTIONS
+  navigation: Navigation
+  actions: Actions
+  editConfig: Éditer la configuration
   capture: Capture d'écran
   fullPage: Ouvrir en pleine page
-  editConfig: Éditer la configuration
+  viewOnPortal: "Voir sur {title}"
   useAPI: Utiliser l'API
-  changeOwner: Changer le propriétaire
-  editSlug: Modifier l'identifiant
-  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
-  newSlug: Nouvel identifiant
-  cancel: Annuler
-  validate: Valider
-  delete: Supprimer
-  deleteApp: Suppression de l'application
-  deleteMsg: Voulez vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
-  yes: Oui
-  no: Non
 en:
-  actions: ACTIONS
-  capture: Screenshot
-  fullPage: Open in a fullscreen
+  navigation: Navigation
+  actions: Actions
   editConfig: Edit configuration
+  capture: Screenshot
+  fullPage: Open fullscreen
+  viewOnPortal: "View on {title}"
   useAPI: Use the API
-  changeOwner: Change owner
-  editSlug: Edit slug
-  slugWarning: "This unique and readable id is used in portal pages URLs, data APIs, etc. Warning: if you modify it you can break existing links and applications."
-  newSlug: New slug
-  cancel: Cancel
-  validate: Validate
-  delete: Delete
-  deleteApp: Deletion of the application
-  deleteMsg: Do you really want to delete the application "{title}" ? Deletion is definitive and application configuration will not be recoverable.
-  yes: Yes
-  no: No
 </i18n>
 
-<script lang="ts" setup>
-import { mdiAccountSwitch, mdiCamera, mdiCloud, mdiDelete, mdiExitToApp, mdiPencil, mdiSquareEditOutline } from '@mdi/js'
-import useApplicationStore from '~/composables/application/store'
+<script setup lang="ts">
+import { mdiCamera, mdiCloud, mdiExitToApp, mdiSquareEditOutline, mdiWeb } from '@mdi/js'
+import useApplicationStore from '~/composables/application/application-store'
 
 const { t } = useI18n()
-const router = useRouter()
-const { application, applicationLink, can, patch, remove } = useApplicationStore()
+const { application, applicationLink, can } = useApplicationStore()
 
-const showDeleteDialog = ref(false)
+const owner = computed(() => application.value?.owner)
+const publicationSitesFetch = useFetch<any[]>(() => {
+  if (!owner.value) return null
+  let path = `${$apiPath}/settings/${owner.value.type}/${owner.value.id}`
+  if (owner.value.department) path += ':' + owner.value.department
+  path += '/publication-sites'
+  return path
+}, { immediate: true })
 
-const confirmRemove = async () => {
-  showDeleteDialog.value = false
-  await remove()
-  router.push('/applications')
-}
-
-const slugRegex = /^[a-z0-9]{1}[a-z0-9_-]*[a-z0-9]{1}$/
-const showSlugDialog = ref(false)
-const newSlug = ref('')
-
-const confirmSlug = async () => {
-  showSlugDialog.value = false
-  await patch({ slug: newSlug.value })
-}
+const portalUrls = computed(() => {
+  if (!application.value || !publicationSitesFetch.data.value) return []
+  const published = application.value.publicationSites ?? []
+  return publicationSitesFetch.data.value
+    .filter((site: any) => site.applicationUrlTemplate && published.includes(`${site.type}:${site.id}`))
+    .map((site: any) => ({
+      title: site.title || site.url || site.id,
+      url: site.applicationUrlTemplate.replace('{id}', application.value!.id).replace('{slug}', application.value!.slug)
+    }))
+})
 </script>

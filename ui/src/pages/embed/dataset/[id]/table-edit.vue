@@ -20,7 +20,7 @@
 // https://koumoul.com/data-fair/embed/dataset/rr6wq5gxjqpm-89iyna6n4dz/table
 
 import { useWindowSize } from '@vueuse/core'
-import { provideDatasetStore } from '~/composables/dataset/store'
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 
 const { height: windowHeight } = useWindowSize()
 

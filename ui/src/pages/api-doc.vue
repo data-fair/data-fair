@@ -2,9 +2,10 @@
   <d-frame
     id="api-doc"
     :src="`${$sitePath}/openapi-viewer?drawerLocation=right&urlType=general`"
-    sync-params
-    style="height: 100%"
+    class="fill-height"
     resize="no"
+    sync-params
+    emit-iframe-messages
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"
@@ -12,7 +13,7 @@
   />
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useDFramePage } from '~/composables/layout/use-d-frame-page'
 
 const { sendUiNotif } = useUiNotif()

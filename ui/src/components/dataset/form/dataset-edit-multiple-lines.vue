@@ -1,8 +1,8 @@
-<template lang="html">
+<template>
   <template
     v-if="editSchema && patch"
   >
-    <tutorial-alert
+    <df-tutorial-alert
       id="edit-multiple-lines"
       :text="t('warning')"
       persistent
@@ -47,7 +47,7 @@ fr:
 en:
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'

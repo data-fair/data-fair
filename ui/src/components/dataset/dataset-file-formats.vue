@@ -1,29 +1,29 @@
 <template>
-  <div>
-    <v-data-table
-      v-if="!condensed"
-      :headers="headers"
-      :items="formats"
-      hide-default-footer
-      class="elevation-1"
-    >
-      <template #item="props">
-        <tr>
-          <td>{{ props.item.type }}</td>
-          <td>{{ t(props.item.type.replace('/', '').replace(' ', '')) }}</td>
-          <td>{{ props.item.format || '-' }}</td>
-          <td>{{ props.item.formatsInArchive || '-' }}</td>
-        </tr>
-      </template>
-    </v-data-table>
-    <div v-else>
-      {{ formats.map(f => f.type).join(', ') }}
-    </div>
-  </div>
+  <v-data-table
+    :headers="headers"
+    :items="formats"
+    density="compact"
+    :items-per-page="-1"
+  >
+    <template #item.description="{ item }">
+      {{ t(item.type.replace('/', '').replace(' ', '')) }}
+    </template>
+    <template #item.format="{ item }">
+      {{ item.format || '-' }}
+    </template>
+    <template #item.formatsInArchive="{ item }">
+      {{ item.formatsInArchive || '-' }}
+    </template>
+    <template #bottom />
+  </v-data-table>
 </template>
 
 <i18n lang="yaml">
 fr:
+  type: Type
+  description: Description
+  format: Format
+  formatsInArchive: Format archivé
   CSV: Format de fichier textuel pour données tabulaires dans lequel les valeurs sont séparées par des virgules
   TSV: Format de fichier textuel pour données tabulaires dans lequel les valeurs sont séparées par des tabulations
   OpenDocument: Format de fichier ouvert pour les applications bureautique de type tableur
@@ -37,8 +37,12 @@ fr:
   Mapinfo: Archive ZIP de fichiers Mapinfo
   iCalendar: Format de données pour les échanges de données de calendrier
 en:
+  type: Type
+  description: Description
+  format: Format
+  formatsInArchive: Archived format
   CSV: Textual file format for tabular data where values are separated by commas
-  TSB: Textual file format for tabular data where values are separated by tabulations
+  TSV: Textual file format for tabular data where values are separated by tabulations
   OpenDocument: Open file format for spreadsheet type office applications
   XLSX: Spreadsheet file format Office Open XML
   XLS: Excel spreadsheet file format
@@ -51,7 +55,8 @@ en:
   iCalendar: File format for exchanging calendar contents
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
+const { t } = useI18n()
 
 const formats = [
   {
@@ -65,26 +70,12 @@ const formats = [
   }, {
     type: 'OpenDocument',
     format: '.ods, .fods'
-  },
-  {
+  }, {
     type: 'XLSX',
     format: '.xlsx'
   }, {
     type: 'XLS',
     format: '.xls'
-    // }, {
-    //   type: 'DBF',
-    //   description: `Format de fichier de base de données DBase`,
-    //   format: '.dbf'
-    // }, {
-    //   type: 'TXT',
-    //   description: `Format de fichier texte qui ne contient qu'une suite de caractères`,
-    //   format: '.txt'
-    // }, {
-    //   type: 'DIF',
-    //   description: `Format de fichier texte de données ASCII`,
-    //   format: '.dif',
-    //   formatsInArchive: ''
   }, {
     type: 'JSON',
     format: '.json, .ndjson'
@@ -100,11 +91,9 @@ const formats = [
     format: '.gpx'
   }, {
     type: 'ESRI Shapefile',
-    description: 'Format de fichier pour les systèmes d\'informations géographiques',
     formatsInArchive: '.shp, .dbf, .shx (.prj optionel) dans une archive .zip'
   }, {
     type: 'Mapinfo',
-    description: 'MapInfo ZIP archive files',
     formatsInArchive: '.map, .tab, .id .dat dans une archive .zip'
   }, {
     type: 'iCalendar',
@@ -113,13 +102,9 @@ const formats = [
 ]
 
 const headers = [
-  { text: 'Type', sortable: false, value: 'type' },
-  { text: 'Description', sortable: false, value: 'description' },
-  { text: 'Format', sortable: false, value: 'format' },
-  { text: 'Format archivé', sortable: false, value: 'formatsInArchive' }
+  { title: t('type'), key: 'type', sortable: false },
+  { title: t('description'), key: 'description', sortable: false },
+  { title: t('format'), key: 'format', sortable: false },
+  { title: t('formatsInArchive'), key: 'formatsInArchive', sortable: false }
 ]
-
-defineProps({ condensed: { type: Boolean, default: false } })
-
-const { t } = useI18n()
 </script>

@@ -1,28 +1,29 @@
 <template>
   <v-toolbar
     v-if="!noInteraction"
-    flat
-    density="compact"
     color="surface"
+    density="compact"
+    flat
   >
     <dataset-nb-results
-      :total="total"
       :limit="0"
-      style="min-width:80px;max-width:80px;"
+      :total="total"
       class="ml-2"
+      style="min-width:80px;max-width:80px;"
     />
     <v-text-field
       v-model="editQ"
-      placeholder="Rechercher"
       :append-inner-icon="mdiMagnify"
-      variant="outlined"
-      rounded
-      color="primary"
-      hide-details
-      clearable
-      density="compact"
-      style="min-width:170px; max-width:250px;"
+      :max-width="250"
+      :min-width="170"
       class="mx-2"
+      color="primary"
+      density="compact"
+      placeholder="Rechercher"
+      variant="outlined"
+      clearable
+      hide-details
+      rounded
       @keyup.enter="q = editQ"
       @click:append-inner="q = editQ"
       @click:clear="q = ''"
@@ -32,6 +33,22 @@
       class="flex-grow-1"
     />
     <v-spacer />
+    <template v-if="pagination">
+      <v-btn
+        :disabled="!canPrevPage"
+        :icon="mdiChevronLeft"
+        size="small"
+        variant="text"
+        @click="paginationPage--"
+      />
+      <v-btn
+        :disabled="!canNextPage || fetchResults.loading.value"
+        :icon="mdiChevronRight"
+        size="small"
+        variant="text"
+        @click="nextPage"
+      />
+    </template>
     <df-agent-chat-action
       action-id="help-filter-table"
       :visible-prompt="t('helpFilterPrompt')"
@@ -47,10 +64,10 @@
       :title="t('checkDataQualityPrompt')"
     />
     <v-btn-group
-      divided
+      class="mx-2"
       density="compact"
       variant="outlined"
-      class="mx-2"
+      divided
     >
       <dataset-table-select-display
         v-if="display.mdAndUp.value"
@@ -66,13 +83,13 @@
       />
     </v-btn-group>
   </v-toolbar>
-  <div class="pa-0">
+  <v-sheet class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
-      fixed-header
+      :height="pagination ? undefined : height - (noInteraction ? 0 : 48)"
       :loading="fetchResults.loading.value"
-      :height="height - (noInteraction ? 0 : 48)"
       class="dataset-table"
+      :fixed-header="!pagination"
     >
       <thead ref="thead">
         <tr>
@@ -104,9 +121,9 @@
               >
                 <async-dataset-table-header-actions
                   v-if="!selectable"
+                  :dense="displayMode === 'table-dense'"
                   :results="results"
                   :selected-cols="selectedCols"
-                  :dense="displayMode === 'table-dense'"
                 />
               </div>
               <div
@@ -116,21 +133,21 @@
                 <span class="two-lines">{{ header.title }}</span>
                 <v-icon
                   v-if="header.property && (hoveredHeader?.key === header.key || header.key === sort?.key)"
-                  class="action-icon"
                   :color="header.key === sort?.key ? 'primary' : 'default'"
                   :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
+                  class="action-icon"
                 />
               </div>
             </th>
             <dataset-table-header-menu
               v-if="header.property && !noInteraction"
-              :sort="header.key === sort?.key ? sort.direction : undefined"
               :activator="`#header-${header.cssKey ?? header.key}`"
-              :header="header as TableHeaderWithProperty"
-              :filters="filters"
               :filter-height="height - 20"
+              :filters="filters"
               :fixed="fixed === header.key"
+              :header="header as TableHeaderWithProperty"
               :no-fix="selectable || edit"
+              :sort="header.key === sort?.key ? sort.direction : undefined"
               @filter="addFilter"
               @hide="hideHeader(header)"
               @fix-col="onFixCol(header.key)"
@@ -141,49 +158,42 @@
         <tr v-if="fetchResults.loading.value">
           <td
             :colspan="headers?.length"
-            style="position: relative"
             class="pa-0"
+            style="position: relative"
           >
             <v-progress-linear
-              indeterminate
-              style="width: 100%; position: absolute; top: 0;"
               color="primary"
               height="3"
+              style="width: 100%; position: absolute; top: 0;"
+              indeterminate
             />
           </td>
         </tr>
       </thead>
-      <tbody>
+      <!-- Infinite scroll mode -->
+      <tbody v-if="!pagination">
         <v-virtual-scroll
           ref="virtualScroll"
-          :items="results"
           :item-height="lineHeight"
+          :items="results"
           renderless
         >
           <template #default="{ item, index }">
-            <tr v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)">
-              <!--<td
-                  v-for="header of headers"
-                  :key="header.key"
-                  class="text-no-wrap"
-                >
-                  {{ item.__formatted[header.key] }}
-                </td>-->
+            <tr v-intersect.quiet="(isIntersecting: boolean) => isIntersecting && onScrollItem(index)">
               <dataset-table-cell
                 v-for="header of headers"
                 :key="header.key"
                 v-model:selected-results="selectedResults"
-                :result="item"
-                :header="header"
-                :no-interaction="noInteraction"
-                :line-height="lineHeight"
-                :filters="filters"
                 :dense="displayMode === 'table-dense'"
-                :map-preview-height="mapPreviewHeight"
+                :filter="header.property && findEqFilter(filters, header.property, item)"
+                :filters="filters"
+                :header="header"
+                :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+                :line-height="lineHeight"
+                :no-interaction="noInteraction"
+                :result="item"
                 :selectable="selectable"
                 :selected="selectedItem === item._id"
-                :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
-                :filter="header.property && findEqFilter(filters, header.property, item)"
                 @hoverstart="hoverStart"
                 @hoverstop="hoverStop"
                 @show-map-preview="showMapPreview = item._id"
@@ -197,10 +207,41 @@
           </template>
         </v-virtual-scroll>
       </tbody>
+      <!-- Pagination mode -->
+      <tbody v-else>
+        <tr
+          v-for="item in paginatedResults"
+          :key="item._id"
+        >
+          <dataset-table-cell
+            v-for="header of headers"
+            :key="header.key"
+            v-model:selected-results="selectedResults"
+            :dense="displayMode === 'table-dense'"
+            :filter="header.property && findEqFilter(filters, header.property, item)"
+            :filters="filters"
+            :header="header"
+            :hovered="!noInteraction && hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+            :line-height="lineHeight"
+            :no-interaction="noInteraction"
+            :result="item"
+            :selectable="selectable"
+            :selected="selectedItem === item._id"
+            @hoverstart="hoverStart"
+            @hoverstop="hoverStop"
+            @show-map-preview="showMapPreview = item._id"
+            @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
+            @filter="f => !noInteraction && addFilter(f)"
+            @edit="showEditDialog = item"
+            @delete="showDeleteDialog = item"
+            @select="selectedItem = selectedItem === item._id ? '' : item._id"
+          />
+        </tr>
+      </tbody>
       <df-scroll-to-top selector=".v-table__wrapper" />
     </v-table>
 
-    <!--list mode body -->
+    <!-- card mode -->
     <div
       v-if="displayMode === 'list' && headers"
       :style="`height: ${height - (noInteraction ? 0 : 48)}px; overflow-y: scroll;overflow-x: hidden;`"
@@ -209,15 +250,15 @@
       <div style="height:2px;width:100%;">
         <v-progress-linear
           v-if="fetchResults.loading.value"
-          indeterminate
           height="2"
           style="margin:0;"
+          indeterminate
         />
       </div>
 
       <v-row
         class="ma-0"
-        density="comfortable"
+        dense
       >
         <v-col
           v-for="result in results"
@@ -228,16 +269,16 @@
           lg="3"
           xl="2"
         >
-          <dataset-item-card
+          <dataset-table-card
             v-model:sort="sort"
-            :result="result"
-            :filters="filters"
             :filter-height="height - 20"
-            :selected-fields="selectedCols"
+            :filters="filters"
             :headers="headersWithProperty"
-            :truncate="truncate"
-            :no-interaction="noInteraction"
             :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
+            :no-interaction="noInteraction"
+            :result="result"
+            :selected-fields="selectedCols"
+            :truncate="truncate"
             @filter="f => addFilter(f)"
             @hide="header => hideHeader(header)"
             @hoverstart="hoverStart"
@@ -247,10 +288,10 @@
         </v-col>
       </v-row>
 
-      <!-- list mode show more -->
+      <!-- list mode show more (infinite scroll only) -->
       <v-row
-        v-if="results.length"
-        v-intersect:quiet="(intersect: boolean) => intersect && fetchResults.execute()"
+        v-if="results.length && !pagination"
+        v-intersect.quiet="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
         align="center"
         class="my-0"
       >
@@ -258,36 +299,36 @@
       </v-row>
       <df-scroll-to-top selector=".dataset-table-list-wrapper" />
     </div>
-  </div>
+  </v-sheet>
 
   <v-dialog
     :model-value="!!showMapPreview"
-    max-width="700"
     :scrim="false"
+    max-width="800"
   >
-    <v-card
-      v-if="showMapPreview"
-    >
+    <v-card v-if="showMapPreview">
       <v-btn
-        style="position:absolute;top:4px;right:4px;z-index:1000;"
         :icon="mdiClose"
-        variant="text"
+        style="position:absolute;top:4px;right:4px;z-index:1000;"
+        color="primary"
+        variant="flat"
+        size="small"
         @click="showMapPreview = undefined"
       />
       <async-dataset-map
         :height="mapHeight"
-        navigation-position="top-left"
+        :no-interaction="true"
         :search="false"
         :selected-item="showMapPreview"
-        :no-interaction="true"
+        navigation-position="top-left"
       />
     </v-card>
   </v-dialog>
 
-  <dataset-item-detail-dialog
+  <dataset-table-detail-dialog
     v-if="showDetailDialog && showDetailDialog.property"
-    :model-value="!!showDetailDialog"
     :extended-result="showDetailDialog.result"
+    :model-value="!!showDetailDialog"
     :property="showDetailDialog.property"
     @update:model-value="showDetailDialog = undefined"
   />
@@ -295,29 +336,25 @@
   <v-dialog
     v-if="edit"
     :model-value="!!showDeleteDialog"
-    max-width="500px"
+    max-width="500"
   >
     <v-card :title="t('deleteLine')">
       <v-card-text>
-        <v-alert
-          :value="true"
-          type="warning"
-        >
+        <v-alert type="warning">
           {{ t('deleteLineWarning') }}
         </v-alert>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="showDeleteDialog = undefined"
         >
           {{ t('cancel') }}
         </v-btn>
         <v-btn
+          :loading="deleteLine.loading.value"
           color="warning"
           variant="flat"
-          :loading="deleteLine.loading.value"
           @click="deleteLine.execute()"
         >
           {{ t('delete') }}
@@ -329,11 +366,11 @@
   <v-dialog
     v-if="edit"
     :model-value="!!showEditDialog"
-    max-width="700px"
+    max-width="800"
   >
     <v-card
-      :title="t('editLine')"
       :loading="!editedLine"
+      :title="t('editLine')"
     >
       <v-form
         ref="editLineForm"
@@ -343,8 +380,8 @@
           <async-dataset-edit-line-form
             v-if="editedLine"
             v-model="editedLine"
-            :loading="editLine.loading.value"
             :extension="true"
+            :loading="editLine.loading.value"
             :ro-primary-key="true"
             :sub-agent="true"
             prefix-name="editLine_"
@@ -356,15 +393,14 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          variant="text"
           @click="showEditDialog = undefined"
         >
           {{ t('cancel') }}
         </v-btn>
         <v-btn
+          :loading="editLine.loading.value"
           color="primary"
           variant="flat"
-          :loading="editLine.loading.value"
           @click="editLine.execute()"
         >
           {{ t('save') }}
@@ -392,18 +428,18 @@
     helpFilterPrompt: Help me filter this data
     checkDataQualityPrompt: Check data quality
     deleteLine: Delete a line
-    deleteLineWarning: Warning, the data from this line will be lost definitively
+    deleteLineWarning: Warning, the data from this line will be lost permanently
 </i18n>
 
-<script lang="ts" setup>
-import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose } from '@mdi/js'
+<script setup lang="ts">
+import type { VVirtualScroll, VForm } from 'vuetify/components'
+import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset/filters'
-import { type VVirtualScroll, type VForm } from 'vuetify/components'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 
@@ -411,11 +447,12 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, edit, selectable } = defineProps({
+const { height, noInteraction, edit, selectable, pagination } = defineProps({
   height: { type: Number, default: 800 },
   noInteraction: { type: Boolean, default: false },
   edit: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
+  pagination: { type: Boolean, default: false },
 })
 
 const displayMode = defineModel<string>('display', { default: 'table' })
@@ -432,10 +469,16 @@ const onFixCol = (key: string) => {
 }
 
 const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
-const mapPreviewHeight = computed(() => {
-  return Math.max(400, Math.min(700, height * 0.8))
+const pageSize = computed(() => {
+  if (pagination) {
+    // In pagination mode, fit exactly in visible area to avoid scrollbar
+    const toolbarHeight = noInteraction ? 0 : 48
+    const theadHeight = displayMode.value === 'table-dense' ? 38 : 50
+    const availableHeight = height - toolbarHeight - theadHeight
+    return Math.max(5, Math.floor(availableHeight / lineHeight.value))
+  }
+  return Math.ceil(((height / lineHeight.value) + 4) / 20) * 20
 })
-const pageSize = computed(() => Math.ceil(((height / lineHeight.value) + 4) / 20) * 20)
 
 const editQ = ref('')
 watch(q, () => { editQ.value = q.value }, { immediate: true })
@@ -486,7 +529,20 @@ const dataQualityContext = computed(() => {
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const indexedAt = ref<string>()
-const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+const { baseFetchUrl, total, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+
+// Pagination mode: slice results into pages, fetch more via next when needed
+const paginationPage = ref(0)
+const paginatedResults = computed(() => results.value.slice(paginationPage.value * pageSize.value, (paginationPage.value + 1) * pageSize.value))
+const canPrevPage = computed(() => paginationPage.value > 0)
+const canNextPage = computed(() => (paginationPage.value + 1) * pageSize.value < results.value.length || !!next.value)
+const nextPage = async () => {
+  const end = (paginationPage.value + 1) * pageSize.value
+  if (end >= results.value.length && next.value) {
+    await fetchResults.execute()
+  }
+  paginationPage.value++
+}
 const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed)
 const { selectedResults, saveLine, bulkLines, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
@@ -530,7 +586,7 @@ const minColWidth = computed(() => {
   return displayMode.value === 'table-dense' ? 80 : 120
 })
 const incColsWidth = async () => {
-  thead.value?.querySelectorAll('table thead th').forEach((h, i) => {
+  thead.value?.querySelectorAll('th').forEach((h, i) => {
     colsWidths.value[i] = Math.max(colsWidths.value[i] ?? minColWidth.value, Math.round(h.clientWidth))
   })
 }
@@ -540,6 +596,7 @@ watch(selectedCols, () => { colsWidths.value = [] })
 watch(baseFetchUrl, () => {
   if (!baseFetchUrl.value) return
   // colsWidths.value = []
+  paginationPage.value = 0
   virtualScroll.value?.scrollToIndex(0)
 })
 const onScrollItem = async (index: number) => {
@@ -605,9 +662,6 @@ const deleteLine = useAsyncAction(async () => {
 </script>
 
 <style>
-.dataset-table {
-  background: transparent;
-}
 .dataset-table th {
   z-index: 2;
 }

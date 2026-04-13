@@ -3,7 +3,7 @@ import { axiosAuth, clean } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 import path from 'path'
 
-const testFile = path.resolve('tests/resources/datasets/dataset1.csv')
+const testFile = path.resolve('tests/resources/datasets/dataset2.csv')
 
 test.describe('dataset upload dialog stepper', () => {
   let datasetId: string
@@ -17,46 +17,39 @@ test.describe('dataset upload dialog stepper', () => {
 
   test('update file flow: open dialog, select file, configure options, upload', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
 
-    // Open the upload dialog via the actions menu
-    await page.getByText('Mettre à jour le fichier').click()
+    // Navigate to edit-data page via the actions nav
+    await page.getByText('Mettre à jour les données').click()
+    await page.waitForURL(/\/edit-data/, { timeout: 10000 })
 
-    // Dialog should open with stepper
-    await expect(page.getByText('Mettre à jour le fichier de données')).toBeVisible({ timeout: 5000 })
-
-    // Step 1: Select file
-    const fileInput = page.locator('.v-dialog input[type="file"]').first()
+    // Step 2 (file selection): Select file — @change auto-advances to confirmation step
+    const fileInput = page.locator('input[type="file"]').first()
     await fileInput.setInputFiles(testFile)
 
-    // Should auto-advance to step 2 (Options)
-    await expect(page.getByText('Configurez les options avancées')).toBeVisible({ timeout: 5000 })
+    // Should auto-advance to confirmation step
+    await expect(page.getByText(/Après la soumission/)).toBeVisible({ timeout: 5000 })
 
-    // Step 2: Continue to upload (scope to the options step to avoid strict mode)
-    const optionsStep = page.locator('.v-stepper-window-item').filter({ hasText: 'Configurez les options avancées' })
-    await optionsStep.getByRole('button', { name: /Continuer/ }).click()
+    // Click "Mettre à jour" to upload
+    await page.getByRole('button', { name: /^Mettre à jour$/ }).click()
 
-    // Step 3: Upload
-    await expect(page.getByRole('button', { name: /Lancer l'import/ })).toBeVisible({ timeout: 5000 })
-    await page.getByRole('button', { name: /Lancer l'import/ }).click()
-
-    // Dialog should close on success
-    await expect(page.getByText('Mettre à jour le fichier de données')).not.toBeVisible({ timeout: 30000 })
+    // After successful upload, step advances to review — confirmation text disappears
+    await expect(page.getByText(/Après la soumission/)).not.toBeVisible({ timeout: 30000 })
   })
 
   test('dialog can be closed without uploading', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
 
-    // Open the upload dialog
-    await page.getByText('Mettre à jour le fichier').click()
+    // Navigate to edit-data page
+    await page.getByText('Mettre à jour les données').click()
+    await page.waitForURL(/\/edit-data/, { timeout: 10000 })
 
-    await expect(page.getByText('Mettre à jour le fichier de données')).toBeVisible({ timeout: 5000 })
+    // Navigate back without uploading
+    await page.goBack({ timeout: 5000 })
 
-    // Close it
-    await page.getByRole('button', { name: /Fermer/ }).click()
-
-    // Dialog should close
-    await expect(page.getByText('Mettre à jour le fichier de données')).not.toBeVisible({ timeout: 5000 })
+    // Should be back on dataset page
+    await expect(page).toHaveURL(new RegExp(`/dataset/${datasetId}(?!/)`), { timeout: 5000 })
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 5000 })
   })
 })

@@ -2,6 +2,7 @@
   <d-frame
     id="processings"
     :src="$sitePath + '/processings/admin/plugins/'"
+    class="fill-height"
     sync-params
     resize="no"
     :adapter.prop="stateChangeAdapter"
@@ -11,7 +12,7 @@
   />
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useDFramePage } from '~/composables/layout/use-d-frame-page'
 
 const { sendUiNotif } = useUiNotif()

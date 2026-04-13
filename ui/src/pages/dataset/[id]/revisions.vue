@@ -1,8 +1,8 @@
 <template>
   <v-container
     v-if="dataset"
-    fluid
     class="pa-0"
+    fluid
   >
     <dataset-history />
   </v-container>
@@ -17,8 +17,8 @@ en:
   revisions: Revisions
 </i18n>
 
-<script lang="ts" setup>
-import { provideDatasetStore } from '~/composables/dataset/store'
+<script setup lang="ts">
+import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 

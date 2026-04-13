@@ -23,11 +23,9 @@ const messages: Record<string, Record<string, string>> = {
 type DatasetType = 'file' | 'rest' | 'virtual' | 'metaOnly'
 
 interface DatasetCreationState {
-  step: Ref<number>
+  step: Ref<string>
   datasetType: Ref<DatasetType | null>
   hasInitFromStep: Ref<boolean>
-  paramsStep: Ref<number>
-  actionStep: Ref<number>
   paramsValid: Ref<boolean>
   restTitle: Ref<string>
   restHistory: Ref<boolean>
@@ -57,9 +55,9 @@ export function useAgentDatasetCreationTools (locale: Ref<string>, state: Datase
       state.datasetType.value = type
       await nextTick()
       if (type === 'file' || type === 'rest') {
-        state.step.value = 2
+        state.step.value = 'init'
       } else {
-        state.step.value = state.paramsStep.value
+        state.step.value = 'params'
       }
       const typeLabels: Record<DatasetType, string> = {
         file: 'File',
@@ -155,7 +153,7 @@ export function useAgentDatasetCreationTools (locale: Ref<string>, state: Datase
       if (!state.hasInitFromStep.value) {
         return agentToolError('skip_init_from_step', 'No initialization step to skip for this dataset type.')
       }
-      state.step.value = state.paramsStep.value
+      state.step.value = 'params'
       return 'Initialization step skipped. The wizard is now on the parameters step.'
     }
   })
@@ -172,7 +170,7 @@ export function useAgentDatasetCreationTools (locale: Ref<string>, state: Datase
       if (!state.paramsValid.value) {
         return agentToolError('advance_to_confirmation', 'Parameters are not valid yet. Make sure the title is set and all required fields are filled.')
       }
-      state.step.value = state.actionStep.value
+      state.step.value = 'action'
       return 'The wizard is now on the confirmation step. The user can review and click Create.'
     }
   })

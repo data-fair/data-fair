@@ -2,12 +2,13 @@
   <v-navigation-drawer
     v-model="drawer"
     color="primary"
-    class="border-text-primary border-e-md border-opacity-100"
   >
     <v-list
+      v-model:opened="openedGroups"
       density="compact"
       bg-color="primary"
-      class="rounded-te-md pb-0"
+      open-strategy="multiple"
+      nav
     >
       <!-- Portal home link (when not main site) -->
       <v-list-item
@@ -30,48 +31,36 @@
         :prepend-icon="mdiCardAccountDetails"
         :title="t('subscription')"
       />
+
+      <template v-if="!missingSubscription">
+        <v-list-group
+          v-for="group of navigationGroups"
+          :key="group.key"
+          :value="group.key"
+          :class="group.key === 'admin' ? 'bg-admin rounded' : undefined"
+        >
+          <template #activator="{ props: activatorProps }">
+            <v-list-item
+              v-bind="activatorProps"
+              :title="group.title"
+            />
+          </template>
+          <v-list-item
+            v-for="item of group.items"
+            :key="item.to || item.href || item.title"
+            :to="item.to"
+            :href="item.href"
+            :target="item.href ? '_blank' : undefined"
+            :prepend-icon="item.icon"
+            :title="item.title"
+            :subtitle="item.subtitle"
+          />
+        </v-list-group>
+      </template>
     </v-list>
 
-    <!-- Collapsible groups -->
-    <template v-if="!missingSubscription">
-      <template
-        v-for="group of navigationGroups"
-        :key="group.key"
-      >
-        <v-divider class="my-1" />
-        <v-list
-          v-model:opened="openedGroupsModel"
-          open-strategy="multiple"
-          density="compact"
-          :bg-color="group.key === 'admin' ? 'admin' : 'primary'"
-          class="py-0"
-        >
-          <template v-if="group.items.length">
-            <v-list-group :value="group.key">
-              <template #activator="{ props: activatorProps }">
-                <v-list-item
-                  v-bind="activatorProps"
-                  :title="group.title"
-                />
-              </template>
-              <v-list-item
-                v-for="item of group.items"
-                :key="item.to || item.href || item.title"
-                :to="item.to"
-                :href="item.href"
-                :target="item.href ? '_blank' : undefined"
-                :prepend-icon="item.icon"
-                :title="item.title"
-                :subtitle="item.subtitle"
-              />
-            </v-list-group>
-          </template>
-        </v-list>
-      </template>
-    </template>
-
     <template #append>
-      <div class="pa-1 text-center">
+      <div class="pa-2 text-center">
         <a
           href="https://data-fair.github.io/4/"
           class="text-label-small"
@@ -94,13 +83,12 @@ import {
   mdiCardAccountDetails,
 } from '@mdi/js'
 
-const { t } = useI18n()
 const drawer = defineModel<boolean>({ required: true })
+const { t, locale } = useI18n()
 const route = useRoute()
-const session = useSessionAuthenticated()
-const site = session.site
+const { site } = useSessionAuthenticated()
 const { canAdmin, missingSubscription } = usePermissions()
-const { navigationGroups } = useNavigationItems()
+const { navigationGroups } = useNavigationItems({ t, locale })
 
 // Auto-expand the group containing the current route
 const activeGroup = computed(() => {
@@ -114,11 +102,11 @@ const activeGroup = computed(() => {
   return 'content'
 })
 
-const openedGroupsModel = ref<string[]>([activeGroup.value])
+const openedGroups = ref<string[]>([activeGroup.value])
 
 watch(activeGroup, (newGroup) => {
-  if (!openedGroupsModel.value.includes(newGroup)) {
-    openedGroupsModel.value = [...openedGroupsModel.value, newGroup]
+  if (!openedGroups.value.includes(newGroup)) {
+    openedGroups.value = [...openedGroups.value, newGroup]
   }
 })
 </script>
@@ -132,7 +120,6 @@ fr:
   org: Gestion de l'organisation
   dep: Gestion du département
   params: Paramètres
-  paramsSub: Licences, thématiques ...
   catalogs: Catalogues distants
   processings: Traitements périodiques
   agents: Agents
@@ -144,7 +131,7 @@ fr:
   metricsSub: Téléchargements, API
   events: Traçabilité (bêta)
   subscription: Abonnement
-  services: Services
+  services: Services distants
   serviceInfo: Informations du service
   owners: Propriétaires
   errors: Erreurs
@@ -166,7 +153,6 @@ en:
   org: Manage organization
   dep: Manage department
   params: Parameters
-  paramsSub: Licenses, topics ...
   catalogs: Remote catalogs
   processings: Periodic processings
   agents: Agents
@@ -178,7 +164,7 @@ en:
   metricsSub: Downloads, API
   events: Traceability (beta)
   subscription: Subscription
-  services: Services
+  services: Remote services
   serviceInfo: Service information
   owners: Owners
   errors: Errors

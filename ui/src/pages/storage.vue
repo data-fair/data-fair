@@ -1,82 +1,82 @@
-<template lang="html">
+<template>
   <v-container>
-    <v-row>
-      <v-col>
-        <h2 class="text-title-large mb-2">
-          {{ t('statistics') }}
-        </h2>
-        <v-sheet :loading="!stats">
-          <v-data-table
-            :loading="statsFetch.loading.value"
-            :loading-text="t('loading')"
-            :headers="headers"
-            :items="stats ? [stats] : []"
-            hide-default-footer
-          >
-            <template #item="{item}">
-              <tr>
-                <td>
-                  {{ item.limits.nb_datasets.consumption.toLocaleString() }}
-                  <template v-if="item.limits.nb_datasets.limit !== -1">
-                    / {{ item.limits.nb_datasets.limit.toLocaleString() }} {{ t('allowed') }}
-                  </template>
-                </td>
-                <td>
-                  {{ formatBytes(item.limits.indexed_bytes.consumption, locale) }}
-                  <template v-if="item.limits.indexed_bytes.limit !== -1">
-                    / {{ formatBytes(item.limits.indexed_bytes.limit, $i18n.locale) }} {{ t('allowed') }}
-                  </template>
-                </td>
-                <td>
-                  {{ formatBytes(item.limits.store_bytes.consumption, $i18n.locale) }}
-                  <template v-if="item.limits.store_bytes.limit !== -1">
-                    / {{ formatBytes(item.limits.store_bytes.limit, $i18n.locale) }} {{ t('allowed') }}
-                  </template>
-                </td>
-                <td>{{ item.applications.toLocaleString() }}</td>
-              </tr>
-            </template>
-          </v-data-table>
-        </v-sheet>
+    <h2 class="text-title-large mb-2">
+      {{ t('statistics') }}
+    </h2>
+    <v-card class="mb-4">
+      <v-data-table
+        :loading="statsFetch.loading.value"
+        :loading-text="t('loading')"
+        :headers="headers"
+        :items="stats ? [stats] : []"
+        hide-default-footer
+      >
+        <template #item="{item}">
+          <tr>
+            <td>
+              {{ item.limits.nb_datasets.consumption.toLocaleString() }}
+              <template v-if="item.limits.nb_datasets.limit !== -1">
+                / {{ item.limits.nb_datasets.limit.toLocaleString() }} {{ t('allowed') }}
+              </template>
+            </td>
+            <td>
+              {{ formatBytes(item.limits.indexed_bytes.consumption, locale) }}
+              <template v-if="item.limits.indexed_bytes.limit !== -1">
+                / {{ formatBytes(item.limits.indexed_bytes.limit, $i18n.locale) }} {{ t('allowed') }}
+              </template>
+            </td>
+            <td>
+              {{ formatBytes(item.limits.store_bytes.consumption, $i18n.locale) }}
+              <template v-if="item.limits.store_bytes.limit !== -1">
+                / {{ formatBytes(item.limits.store_bytes.limit, $i18n.locale) }} {{ t('allowed') }}
+              </template>
+            </td>
+            <td>{{ item.applications.toLocaleString() }}</td>
+          </tr>
+        </template>
+      </v-data-table>
+    </v-card>
 
-        <h2 class="text-title-large my-3">
-          {{ t('details') }}
-        </h2>
+    <div class="d-flex align-center justify-space-between ga-2 my-4">
+      <h2 class="text-title-large">
+        {{ t('details') }}
+      </h2>
 
-        <v-select
-          v-model="storageType"
-          :items="[{value: 'indexed', title: t('indexedBytes')}, {value: 'stored', title: t('storedBytes')}]"
-          style="max-width: 300px"
-          :label="t('storageType')"
-          variant="outlined"
-          hide-details
-          density="compact"
-        />
+      <v-select
+        v-model="storageType"
+        :items="[{value: 'indexed', title: t('indexedBytes')}, {value: 'stored', title: t('storedBytes')}]"
+        :label="t('storageType')"
+        max-width="300"
+        variant="outlined"
+        density="compact"
+        hide-details
+      />
+    </div>
 
-        <storage-treemap
-          v-if="stats && datasets"
-          :stats="stats"
-          :datasets="{count: datasets.count, results: datasets.results.slice(0, 15)}"
-          :storage-type="storageType"
-          class="mt-2"
-        />
+    <storage-treemap
+      v-if="stats && datasets"
+      :stats="stats"
+      :datasets="{count: datasets.count, results: datasets.results.slice(0, 15)}"
+      :storage-type="storageType"
+      class="mt-2"
+    />
 
-        <storage-details
-          v-if="datasets"
-          :datasets="datasets.results"
-        />
-        <v-progress-linear
-          v-else
-          :height="2"
-          indeterminate
-        />
-      </v-col>
-    </v-row>
+    <storage-details
+      v-if="datasets"
+      :datasets="datasets.results"
+    />
+
+    <v-progress-linear
+      v-else
+      :height="2"
+      indeterminate
+    />
   </v-container>
 </template>
 
 <i18n lang="yaml">
 fr:
+  storage: Stockage
   nbDatasets: Nombre de jeux de données
   storedBytes: Données stockées
   indexedBytes: Données indexées
@@ -87,6 +87,7 @@ fr:
   allowed: autorisés
   storageType: Trier par catégorie de stockage
 en:
+  storage: Storage
   nbDatasets: Number of datasets
   storedBytes: Stored data
   indexedBytes: Indexed data
@@ -98,14 +99,17 @@ en:
   storageType: Sort by storage type
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset } from '#api/types'
 import type { DataTableHeader } from 'vuetify'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const storageType = ref('indexed')
 
 const { account } = useSessionAuthenticated()
 const { t, locale } = useI18n()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('storage') }] })
 
 const datasetsQuery = computed(() => ({
   size: 10000,

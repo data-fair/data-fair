@@ -13,7 +13,7 @@ test.describe('dataset edit-metadata master data tab', () => {
   })
 
   test('master data tab is visible in structure section for admin', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_superadmin')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_superadmin')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
     const masterDataTab = page.locator('#structure').getByRole('tab', { name: /Données de référence|Master data/ })
     await expect(masterDataTab).toBeVisible()
@@ -26,7 +26,7 @@ test.describe('dataset edit-metadata master data tab', () => {
   test.skip('master data tab is NOT visible for non-admin', async () => {})
 
   test('enable virtualDatasets and save', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_superadmin')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_superadmin')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
 
     // Click master data tab
@@ -54,7 +54,7 @@ test.describe('dataset edit-metadata master data tab', () => {
   })
 
   test('add a singleSearch entry via dialog', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/edit-metadata`, 'test_superadmin')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_superadmin')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
 
     // Click master data tab

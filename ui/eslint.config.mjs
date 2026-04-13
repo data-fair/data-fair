@@ -6,15 +6,13 @@ import dfLibRecommended from '@data-fair/lib-utils/eslint/recommended.js'
 export default [
   ...dfLibRecommended,
   ...pluginVue.configs['flat/recommended'],
-  ...pluginVuetify.configs['flat/recommended'].map(c => {
-    // remove vue plugin to avoid "Cannot redefine plugin" conflict
-    const { vue, ...otherPlugins } = c.plugins || {}
-    return { ...c, plugins: otherPlugins }
-  }),
+  ...pluginVuetify.configs['flat/recommended'],
   ...neostandard({ ts: true }),
   {
     rules: {
-      'vue/multi-word-component-names': 'off'
+      'vue/require-default-prop': 'off',
+      'vue/multi-word-component-names': 'off',
+      'no-undef': 'off' // typescript takes care of this with autoImport support
     }
   },
   {
@@ -25,10 +23,5 @@ export default [
       }
     }
   },
-  {
-    rules: {
-      'no-undef': 'off' // typescript takes care of this with autoImport support
-    }
-  },
-  { ignores: ['dist/*', 'dts/*', 'src/components/vjsf/*', 'node_modules/*'] },
+  { ignores: ['dist/*', 'dts/*', 'src/components/vjsf/*'] },
 ]

@@ -5,7 +5,6 @@ import VueRouter from 'vue-router/vite'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { unheadVueComposablesImports } from '@unhead/vue'
 // import webfontDownload from 'vite-plugin-webfont-dl'
 import Vuetify from 'vite-plugin-vuetify'
 import microTemplate from '@data-fair/lib-utils/micro-template.js'
@@ -14,8 +13,10 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/data-fair/',
-  optimizeDeps: { include: [...commonjsDeps, 'easymde', 'vuedraggable', 'fast-deep-equal'] },
+  base: '/data-fair',
+  optimizeDeps: {
+    include: [...commonjsDeps, 'easymde', 'vuedraggable', 'fast-deep-equal']
+  },
   build: {
     rolldownOptions: {
       output: {
@@ -25,7 +26,11 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '~': path.resolve(__dirname, 'src/')
+      '~': path.resolve(__dirname, 'src/'),
+      '@data-fair/lib-vuetify/navigation-right.vue': path.resolve(__dirname, 'src/components/df-local/navigation-right-local.vue'),
+      '@data-fair/lib-vuetify/section-tabs.vue': path.resolve(__dirname, 'src/components/df-local/section-tabs-local.vue'),
+      '@data-fair/lib-vuetify/tutorial-alert.vue': path.resolve(__dirname, 'src/components/df-local/tutorial-alert-local.vue'),
+      '@data-fair/lib-vue/edit-fetch.js': path.resolve(__dirname, 'src/composables/df-local/edit-fetch-local.ts'),
     },
   },
   html: {
@@ -33,7 +38,7 @@ export default defineConfig({
   },
   plugins: [
     VueRouter({
-      dts: 'src/route-map.d.ts',
+      dts: './dts/route-map.d.ts',
       // exclude: process.env.NODE_ENV === 'development' ? [] : ['src/pages/dev.vue']
     }),
     Vue({ template: { compilerOptions: { isCustomElement: (tag) => ['d-frame'].includes(tag) } } }),
@@ -44,7 +49,6 @@ export default defineConfig({
       vueTemplate: true,
       imports: [
         ...(autoImports as any),
-        unheadVueComposablesImports,
         {
           '~/context': ['$uiConfig', '$sitePath', '$cspNonce', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl'],
           'truncate-middle': [['default', '$truncate']],
@@ -53,7 +57,10 @@ export default defineConfig({
       ],
       dirs: [
         'src/utils',
-        'src/composables/**'
+        'src/composables/**',
+        // standalone logic files (without Vue/runtime deps) are excluded to avoid duplicate auto-imports,
+        // they are re-exported by their parent composable and only imported directly in unit tests
+        '!src/composables/**/*-logic*'
       ]
     }),
     Components({

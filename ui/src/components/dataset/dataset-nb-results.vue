@@ -15,10 +15,10 @@
 
 <i18n lang="yaml">
 fr:
-  lines: "aucune ligne | 1 ligne | {total} lignes"
+  lines: "Aucune ligne | 1 ligne | {total} lignes"
   firstLines: "{lines} premières lignes ({total} au total)"
 en:
-  lines: "no line | 1 line | {count} lines"
+  lines: "No line | 1 line | {count} lines"
   firstLines: "{lines} first lines ({total} total)"
 
 </i18n>

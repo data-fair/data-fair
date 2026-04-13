@@ -1,18 +1,19 @@
-<template lang="html">
-  <v-card>
+<template>
+  <div style="position: relative">
     <v-text-field
       v-if="search && !noInteraction"
       v-model="editQ"
-      style="position: absolute;z-index:2;width:250px;"
-      placeholder="Rechercher"
       :append-inner-icon="mdiMagnify"
+      placeholder="Rechercher"
+      style="position:absolute;z-index:2;"
       variant="solo"
       color="primary"
       bg-color="white"
+      density="compact"
+      width="250"
+      class="ma-2"
       hide-details
       clearable
-      density="compact"
-      class="ma-2"
       @keyup.enter="q = editQ"
       @click:append-inner="q = editQ"
       @click:clear="q = ''"
@@ -21,7 +22,7 @@
       id="map"
       :style="'height:' + height + 'px'"
     />
-  </v-card>
+  </div>
 </template>
 
 <i18n lang="yaml">

@@ -1,11 +1,9 @@
 <!-- eslint-disable vue/no-v-html -->
-<!-- eslint-disable vue/no-lone-template -->
-
 <template>
   <v-toolbar
-    flat
     density="compact"
     color="surface"
+    flat
   >
     <dataset-nb-results
       :total="total"
@@ -68,8 +66,8 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import type { VVirtualScroll } from 'vuetify/components'
 import { mdiMagnify } from '@mdi/js'
-import { type VVirtualScroll } from 'vuetify/components'
 
 const { height } = defineProps({ height: { type: Number, required: true } })
 const q = defineModel<string>('q', { default: '' })

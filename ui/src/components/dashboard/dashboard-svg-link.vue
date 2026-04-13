@@ -1,12 +1,12 @@
 <template>
   <v-card
-    v-bind="cardProps"
+    :to="to"
+    :hover="!!to"
     variant="outlined"
   >
     <v-card-title
-      class="text-center justify-center text-title-medium pt-4"
-      style="word-break: normal; line-height: 1.4rem;"
-      :class="{ [`text-${color}`]: !!to, 'pb-0': !!svg }"
+      class="text-center text-title-medium"
+      :class="{ [`text-${color}`]: !!to }"
     >
       {{ title }}
     </v-card-title>
@@ -19,11 +19,11 @@
   </v-card>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useDisplay } from 'vuetify'
 
 const props = defineProps<{
-  to?: string | Record<string, any> | null
+  to?: string | Record<string, any>
   svg?: string
   title: string
   color?: string
@@ -33,8 +33,4 @@ const { smAndUp } = useDisplay()
 
 const color = computed(() => props.color ?? 'primary')
 
-const cardProps = computed(() => {
-  if (!props.to) return {}
-  return { to: props.to, hover: true }
-})
 </script>

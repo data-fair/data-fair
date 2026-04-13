@@ -122,7 +122,7 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
   }
   watch(baseFetchUrl, reset, { immediate: true })
 
-  return { baseFetchUrl, total, results, fetchResults, truncate }
+  return { baseFetchUrl, total, next, results, fetchResults, truncate }
 }
 
 // FieldValue is kept as `any` because dataset field values come from dynamic API responses

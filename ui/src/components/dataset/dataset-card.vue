@@ -1,112 +1,161 @@
 <template>
   <v-card
     :to="`/dataset/${dataset.id}`"
-    class="w-100 h-100 d-flex flex-column"
+    class="h-100 d-flex flex-column"
   >
-    <v-card-title class="text-body-large font-weight-bold text-truncate">
-      {{ dataset.title || dataset.id }}
-    </v-card-title>
-    <v-card-text class="flex-grow-1">
-      <!-- Type badges -->
-      <div class="d-flex flex-wrap ga-1 mb-2">
-        <v-chip
-          v-if="dataset.isVirtual"
-          size="x-small"
-          color="primary"
-          variant="tonal"
-        >
+    <v-card-item class="text-primary">
+      <template #title>
+        <span
+          class="font-weight-bold"
+          :title="dataset.title || dataset.id"
+        >{{ dataset.title || dataset.id }}</span>
+      </template>
+      <template #append>
+        <owner-avatar
+          v-if="showAll || !!(dataset.owner?.department && !session.state.account?.department)"
+          :owner="dataset.owner"
+          :omit-owner-name="!showAll"
+        />
+      </template>
+    </v-card-item>
+    <v-divider />
+    <v-card-text class="pa-0 flex-grow-1">
+      <v-list
+        density="compact"
+        style="background-color: inherit;"
+      >
+        <!-- Type -->
+        <v-list-item v-if="fileInfo">
+          <template #prepend>
+            <v-icon :icon="mdiFile" />
+          </template>
+          {{ fileInfo }}
+        </v-list-item>
+        <v-list-item v-if="dataset.isVirtual">
+          <template #prepend>
+            <v-icon
+              :icon="mdiPictureInPictureBottomRightOutline"
+              color="primary"
+            />
+          </template>
           {{ t('virtual') }}
-        </v-chip>
-        <v-chip
-          v-if="dataset.isRest"
-          size="x-small"
-          color="primary"
-          variant="tonal"
-        >
+        </v-list-item>
+        <v-list-item v-if="dataset.isRest">
+          <template #prepend>
+            <v-icon
+              :icon="mdiAllInclusive"
+              color="primary"
+            />
+          </template>
           {{ t('editable') }}
-        </v-chip>
-        <v-chip
-          v-if="dataset.isMetaOnly"
-          size="x-small"
-          color="primary"
-          variant="tonal"
-        >
+        </v-list-item>
+        <v-list-item v-if="dataset.isMetaOnly">
+          <template #prepend>
+            <v-icon
+              :icon="mdiInformationOutline"
+              color="primary"
+            />
+          </template>
           {{ t('metaOnly') }}
-        </v-chip>
-        <v-chip
-          v-if="dataset.status === 'draft'"
-          size="x-small"
-          color="warning"
-          variant="tonal"
-        >
+        </v-list-item>
+
+        <!-- Status -->
+        <v-list-item v-if="dataset.status === 'draft'">
+          <template #prepend>
+            <v-icon
+              :icon="mdiProgressWrench"
+              color="warning"
+            />
+          </template>
           {{ t('draft') }}
-        </v-chip>
-        <v-chip
-          v-if="dataset.status === 'error'"
-          size="x-small"
-          color="error"
-          variant="tonal"
-        >
+        </v-list-item>
+        <v-list-item v-if="dataset.status === 'error'">
+          <template #prepend>
+            <v-icon
+              :icon="mdiAlert"
+              color="error"
+            />
+          </template>
           {{ t('error') }}
-        </v-chip>
-      </div>
-      <div
-        v-if="fileInfo"
-        class="text-body-medium text-medium-emphasis mb-1"
+        </v-list-item>
+
+        <!-- Record count -->
+        <v-list-item v-if="dataset.count != null">
+          <template #prepend>
+            <v-icon :icon="mdiViewHeadline" />
+          </template>
+          {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
+        </v-list-item>
+      </v-list>
+    </v-card-text>
+
+    <!--
+      min-height: auto => remove default v-card-actions min-height
+    -->
+    <v-card-actions
+      class="flex-column align-start text-body-small py-2"
+      style="min-height: auto"
+    >
+      <!-- Topics list -->
+      <v-row
+        v-if="dataset.topics?.length"
+        density="compact"
       >
-        {{ fileInfo }}
-      </div>
-      <div
-        v-if="dataset.count != null"
-        class="text-body-medium text-medium-emphasis mb-1"
-      >
-        {{ t('records', { count: dataset.count.toLocaleString() }, dataset.count) }}
-      </div>
-      <div
-        v-if="showTopics && dataset.topics?.length"
-        class="d-flex flex-wrap ga-1 mt-1"
-      >
-        <v-chip
+        <v-col
           v-for="topic in dataset.topics"
           :key="topic.id"
-          size="x-small"
-          :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}"
-          variant="flat"
+          cols="auto"
         >
-          {{ topic.title }}
-        </v-chip>
-      </div>
-    </v-card-text>
-    <v-card-subtitle class="text-body-small pb-3 d-flex align-center">
-      <span
-        v-if="dataset.visibility"
-        class="mr-2 d-inline-flex"
-      >
+          <v-chip
+            :text="topic.title"
+            :color="topic.color"
+            density="compact"
+            size="small"
+            variant="flat"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- Visibility + Updated at -->
+      <div class="d-flex align-center flex-wrap">
         <resource-visibility
+          v-if="dataset.visibility"
           :visibility="dataset.visibility"
           size="small"
         />
-      </span>
-      <span v-if="showOwner && dataset.owner">{{ ownerName }} · </span>
-      <span v-if="dataset.updatedAt">{{ t('updatedAt', { date: formatDate(dataset.updatedAt) }) }}</span>
-    </v-card-subtitle>
+        <span
+          v-if="dataset.updatedAt"
+          class="ml-2"
+        >
+          {{ t('updatedAt', { date: formatDate(dataset.updatedAt) }) }}
+        </span>
+      </div>
+    </v-card-actions>
   </v-card>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Dataset } from '#api/types'
 import truncateMiddle from 'truncate-middle'
+import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
+
+import {
+  mdiPictureInPictureBottomRightOutline,
+  mdiAllInclusive,
+  mdiInformationOutline,
+  mdiProgressWrench,
+  mdiAlert,
+  mdiFile,
+  mdiViewHeadline,
+} from '@mdi/js'
 
 const { t, locale } = useI18n()
+const session = useSession()
+const showAll = useBooleanSearchParam('showAll')
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   dataset: Dataset
-  showTopics?: boolean
-  showOwner?: boolean
-}>(), {
-  showTopics: true,
-  showOwner: false,
-})
+}>()
 
 const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||
@@ -117,12 +166,6 @@ const fileInfo = computed(() => {
     info += ` (${formatBytes(file.size)})`
   }
   return info
-})
-
-const ownerName = computed(() => {
-  const o = props.dataset.owner
-  if (!o) return ''
-  return o.departmentName || o.name || o.id
 })
 
 const formatDate = (dateStr: string) => {

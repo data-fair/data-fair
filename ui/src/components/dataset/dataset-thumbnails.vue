@@ -1,10 +1,8 @@
-<!-- eslint-disable vue/no-v-html -->
-<!-- eslint-disable vue/no-lone-template -->
 <template>
   <v-toolbar
-    flat
     density="compact"
     color="surface"
+    flat
   >
     <dataset-nb-results
       :total="total"
@@ -56,7 +54,7 @@
               {{ item.raw[labelField.key] }}
             </v-card-title>
             <v-card-subtitle v-if="descriptionField">
-              <template v-html="item.raw[descriptionField.key]" />
+              <div v-html="/*eslint-disable-line vue/no-v-html*/item.raw[descriptionField.key]" />
             </v-card-subtitle>
           </v-card>
         </v-col>
@@ -75,8 +73,8 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import type { VVirtualScroll } from 'vuetify/components'
 import { mdiMagnify } from '@mdi/js'
-import { type VVirtualScroll } from 'vuetify/components'
 import { useElementSize } from '@vueuse/core'
 import { ExtendedResult } from '~/composables/dataset/lines'
 

@@ -1,7 +1,5 @@
 <template>
-  <v-btn-group
-    density="compact"
-  >
+  <v-btn-group density="compact">
     <v-btn
       v-if="selectedResults.some(r => r._id === result._id)"
       :title="t('unselectLine')"
@@ -58,7 +56,7 @@
     unselectLine: Deselect the line
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline } from '@mdi/js'
 import { type ExtendedResult } from '~/composables/dataset/lines'
 import useDatasetEdition from './use-dataset-edition'

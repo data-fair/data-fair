@@ -2,18 +2,16 @@
 <template>
   <v-dialog
     v-model="dialog"
-    max-width="800px"
+    max-width="800"
   >
     <template #activator="{ props: activatorProps }">
       <v-btn
         v-bind="activatorProps"
-        icon
-        size="small"
-        variant="flat"
         :title="t('labels')"
-      >
-        <v-icon :icon="mdiTagTextOutline" />
-      </v-btn>
+        :icon="mdiTagTextOutline"
+        variant="text"
+        size="small"
+      />
     </template>
     <v-card v-if="dialog">
       <v-toolbar
@@ -61,13 +59,13 @@ en:
   tutorialLabels: Enter some labels associated to values present in the data to improve the display in applications.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
 import { mdiClose, mdiTagTextOutline } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import type { SchemaProperty } from '#api/types'
 
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 
 const props = defineProps<{
   property: SchemaProperty
@@ -78,7 +76,7 @@ const dialog = ref(false)
 const editLabels = ref<Array<{ value: string, label: string }> | null>(null)
 
 const schema = computed(() => {
-  const value: Record<string, unknown> = { type: 'string', title: 'valeur', layout: { cols: 6, class: 'pr-2' } }
+  const value: Record<string, unknown> = { type: 'string', title: 'Valeur', layout: { cols: 6, class: 'pr-2' } }
   if (props.property.type === 'boolean') value.enum = ['true', 'false']
   if (props.property.enum) value.examples = props.property.enum
   return {
@@ -89,7 +87,7 @@ const schema = computed(() => {
       required: ['value'],
       properties: {
         value,
-        label: { type: 'string', title: 'libellé', layout: { cols: 6 } }
+        label: { type: 'string', title: 'Libellé', layout: { cols: 6 } }
       }
     }
   }

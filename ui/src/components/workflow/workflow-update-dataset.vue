@@ -1,16 +1,17 @@
-<!-- eslint-disable vue/no-v-html -->
-<!-- eslint-disable vue/no-v-text-v-html-on-component -->
 <template>
   <v-stepper
     v-model="currentStep"
-    class="elevation-0 bg-background"
+    class="bg-background"
+    flat
   >
     <v-stepper-header class="bg-surface">
       <v-stepper-item
+        v-if="!props.initialDatasetId"
         :value="1"
         :complete="!!currentDataset"
+        :color="currentStep === 1 ? 'primary' : ''"
+        :icon="mdiDatabase"
         editable
-        color="primary"
         :title="t('stepDataset')"
         :subtitle="currentDataset ? truncateMiddle(currentDataset.title, 26, 4, '...') : undefined"
       />
@@ -21,8 +22,9 @@
         <v-stepper-item
           :value="2"
           :complete="!!file"
+          :color="currentStep === 2 ? 'primary' : ''"
+          :icon="mdiPaperclip"
           editable
-          color="primary"
           :title="t('stepFile')"
           :subtitle="file && truncateMiddle(file.name, 26, 4, '...')"
         />
@@ -32,8 +34,9 @@
           <v-stepper-item
             :value="3"
             :complete="!!attachments"
+            :color="currentStep === 3 ? 'primary' : ''"
+            :icon="mdiZipBox"
             editable
-            color="primary"
             :title="t('stepAttachment')"
             :subtitle="attachments && t('loaded')"
           />
@@ -44,7 +47,8 @@
           :value="digitalDocumentField ? 4 : 3"
           :complete="!!imported"
           :editable="!!file"
-          color="primary"
+          :color="currentStep === (digitalDocumentField ? 4 : 3) ? 'primary' : ''"
+          :icon="mdiCheckAll"
           :title="t('stepAction')"
         />
         <v-divider />
@@ -63,23 +67,23 @@
         <v-stepper-item
           :value="2"
           :editable="!!currentDataset"
-          color="primary"
+          :color="currentStep === 2 ? 'primary' : ''"
+          :icon="mdiTable"
           :title="t('editTable')"
         />
       </template>
     </v-stepper-header>
 
-    <v-stepper-window class="mx-0 mb-0 mt-2">
-      <v-stepper-window-item :value="1">
-        <v-row
+    <v-stepper-window>
+      <v-stepper-window-item
+        v-if="!props.initialDatasetId"
+        :value="1"
+      >
+        <dataset-select-cards
           v-if="!initialFetch"
-          class="mt-4 mb-1 mx-0"
-        >
-          <dataset-select-cards
-            v-model="selectedDataset"
-            :extra-params="datasetsFilter"
-          />
-        </v-row>
+          v-model="selectedDataset"
+          :extra-params="datasetsFilter"
+        />
       </v-stepper-window-item>
 
       <dataset-store-provider
@@ -133,7 +137,7 @@
                   variant="outlined"
                   density="compact"
                   hide-details
-                  style="max-width: 400px;"
+                  max-width="400"
                   :accept="accepted.join(', ')"
                   @change="currentStep += 1"
                 />
@@ -143,8 +147,10 @@
                 variant="outlined"
                 type="info"
                 density="compact"
-                v-html="t('suggestArchive', {name: file.name})"
-              />
+              >
+                <p>{{ t('suggestArchive.part1') }}</p>
+                <p>{{ t('suggestArchive.part2', {name: file.name}) }}</p>
+              </v-alert>
               <v-btn
                 class="mt-2"
                 :disabled="!file"
@@ -171,7 +177,7 @@
                 type="info"
                 variant="outlined"
                 density="compact"
-                style="max-width:400px;"
+                max-width="400"
               >
                 {{ t('attachmentInfo') }}
               </v-alert>
@@ -192,7 +198,7 @@
                   :label="t('selectFile')"
                   variant="outlined"
                   density="compact"
-                  style="max-width: 400px;"
+                  max-width="400"
                   accept=".zip"
                   hide-details
                   clearable
@@ -332,9 +338,9 @@ fr:
   attachmentInfo: Cette étape est optionnelle
   attachmentsMsg1: Vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.
   attachmentsMsg2: Le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
-  suggestArchive: |
-    Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
-    <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
+  suggestArchive:
+    part1: "Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée."
+    part2: 'Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.'
   similarDatasets: "Ce jeu de données a le même nom de fichier : | Ces jeux de données ont le même nom de fichier :"
   updateMsg: Après la soumission vous pourrez observer les changements et vous serez averti si il y a un risque d'incompatibilité.
   update: Mettre à jour
@@ -353,7 +359,7 @@ en:
   type_file: Replace a file
   type_desc_file: Load a file among the many supported formats and replace an existing file.
   type_rest: Contribute to an editable file
-  type_desc_rest: Create, update and delete lines. You can also load a file to upadte multiple lines.
+  type_desc_rest: Create, update and delete lines. You can also load a file to update multiple lines.
   dataset: Dataset
   selectDataset: Select a dataset
   stepFile: File
@@ -369,9 +375,9 @@ en:
   attachmentInfo: This step is optional
   attachmentsMsg1: You can load a zip archive containing files to be used as attachments to the lines of the main dataset file.
   attachmentsMsg2: The main data file must have a column that contains paths of the attachments in the archive.
-  suggestArchive: |
-    This file is large. To save and time and energy you can if you wish send a compressed version of it.
-    <br>To do so you must create a file "{name}.gz" or a zip archive containing only this file.
+  suggestArchive:
+    part1: "This file is large. To save time and energy you can if you wish send a compressed version of it."
+    part2: 'To do so you must create a file "{name}.gz" or a zip archive containing only this file.'
   similarDatasets: "This dataset has the same file name: | These datasets have the same file name:"
   updateMsg: After submitting you will be be able to review the changes and you will be warned if there is an incompatibility.
   update: Update
@@ -385,28 +391,29 @@ en:
   draftCancelled: Your file was rejected. You can fix a structure problem in the file before loading it again, or contact an administrator.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import truncateMiddle from 'truncate-middle'
 import { accepted } from '~/utils/dataset'
 import axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { type ListedDataset } from '../dataset/select/utils'
-import { type DatasetStore } from '~/composables/dataset/store'
+import { type DatasetStore } from '~/composables/dataset/dataset-store'
 import DatasetStoreProvider from '~/components/provide/dataset-store-provider.vue'
 import Debug from 'debug'
-import { mdiCancel } from '@mdi/js'
+import { mdiCancel, mdiCheckAll, mdiDatabase, mdiPaperclip, mdiTable, mdiZipBox } from '@mdi/js'
 import { useWindowSize } from '@vueuse/core'
 
 const debug = Debug('workflow-update-dataset')
 
-const { datasetParams } = defineProps({
-  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
+const props = defineProps({
+  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} },
+  initialDatasetId: { type: String, default: undefined }
 })
 const { sendUiNotif } = useUiNotif()
 const { t, locale } = useI18n()
 const { height } = useWindowSize()
 
-const currentStep = ref(1)
+const currentStep = ref(props.initialDatasetId ? 2 : 1)
 
 const file = ref<File>()
 const attachments = ref<File>()
@@ -414,13 +421,13 @@ const attachments = ref<File>()
 const suggestArchive = computed(() => file.value && file.value.size > 50000000 && (file.value.name.endsWith('.csv') || file.value.name.endsWith('.tsv') || file.value.name.endsWith('.txt') || file.value.name.endsWith('.geojson')))
 
 const datasetsFilter = computed(() => ({
-  ...datasetParams,
+  ...props.datasetParams,
   type: 'file,rest',
   can: 'writeData,createLine,updateLine'
 }))
 
 const selectedDataset = ref<ListedDataset>()
-const currentDatasetId = ref<string>()
+const currentDatasetId = ref<string | undefined>(props.initialDatasetId)
 watch(selectedDataset, () => {
   debug('selectedDataset', selectedDataset.value)
   if (selectedDataset.value) {
@@ -430,7 +437,7 @@ watch(selectedDataset, () => {
 watch(currentStep, () => {
   debug('step change', currentStep.value)
   if (!initialized.value) return
-  if (currentStep.value === 1) {
+  if (currentStep.value === 1 && !props.initialDatasetId) {
     selectedDataset.value = undefined
     currentDatasetId.value = undefined
   }

@@ -14,7 +14,7 @@ en:
   datasetsDraft: No draft dataset | 1 draft dataset | {n} draft datasets
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import draftSvg from '~/assets/svg/Under Constructions _Two Color.svg?raw'
 import statuses from '../../../../shared/statuses.json'
 

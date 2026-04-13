@@ -1,79 +1,89 @@
 <template>
   <v-card
     :to="`/application/${application.id}`"
-    class="w-100 h-100 d-flex flex-column"
+    class="h-100 d-flex flex-column"
   >
-    <v-card-title class="text-body-large font-weight-bold text-truncate">
-      {{ application.title || application.id }}
-    </v-card-title>
-    <v-card-text class="flex-grow-1">
-      <p
-        v-if="application.description"
-        class="text-body-medium text-medium-emphasis mb-2"
-        style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+    <v-card-item class="text-primary">
+      <template #title>
+        <span
+          class="font-weight-bold"
+          :title="application.title || application.id"
+        >{{ application.title || application.id }}</span>
+      </template>
+      <template #append>
+        <owner-avatar
+          v-if="showAll || !!(application.owner?.department && !session.state.account?.department)"
+          :owner="application.owner"
+          :omit-owner-name="!showAll"
+        />
+      </template>
+    </v-card-item>
+
+    <v-img
+      :src="captureUrl"
+      :aspect-ratio="1050 / 450"
+      class="flex-grow-1"
+    />
+
+    <!--
+      min-height: auto => remove default v-card-actions min-height
+    -->
+    <v-card-actions
+      class="flex-column align-start text-body-small py-2"
+      style="min-height: auto"
+    >
+      <!-- Topics list -->
+      <v-row
+        v-if="application.topics?.length"
+        density="compact"
       >
-        {{ application.description }}
-      </p>
-      <div class="d-flex flex-wrap ga-1">
-        <v-chip
-          v-if="application.status"
-          size="x-small"
-          :color="statusColor"
-          variant="tonal"
-        >
-          {{ t('status.' + application.status) }}
-        </v-chip>
-      </div>
-      <div
-        v-if="showTopics && application.topics?.length"
-        class="d-flex flex-wrap ga-1 mt-2"
-      >
-        <v-chip
+        <v-col
           v-for="topic in application.topics"
           :key="topic.id"
-          size="x-small"
-          :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}"
-          variant="flat"
+          cols="auto"
         >
-          {{ topic.title }}
-        </v-chip>
+          <v-chip
+            :text="topic.title"
+            :color="topic.color"
+            density="compact"
+            size="small"
+            variant="flat"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- Visibility + Updated at -->
+      <div class="d-flex align-center flex-wrap">
+        <resource-visibility
+          v-if="application.visibility"
+          :visibility="application.visibility"
+          size="small"
+        />
+        <span
+          v-if="application.updatedAt"
+          class="ml-2"
+        >
+          {{ t('updatedAt', { date: formatDate(application.updatedAt) }) }}
+        </span>
       </div>
-    </v-card-text>
-    <v-card-subtitle class="text-body-small pb-3">
-      <span v-if="showOwner && application.owner">{{ ownerName }} · </span>
-      <span v-if="application.updatedAt">{{ t('updatedAt', { date: formatDate(application.updatedAt) }) }}</span>
-    </v-card-subtitle>
+    </v-card-actions>
   </v-card>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { Application } from '#api/types'
+import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 
 const { t, locale } = useI18n()
+const session = useSession()
+const showAll = useBooleanSearchParam('showAll')
 
-const props = withDefaults(defineProps<{
-  application: Application
-  showTopics?: boolean
-  showOwner?: boolean
-}>(), {
-  showTopics: true,
-  showOwner: false,
-})
+const props = defineProps<{
+  application: Partial<Application> & Pick<Application, 'id' | 'title' | 'updatedAt' | 'owner'> & { visibility?: 'public' | 'private' | 'protected', thumbnail?: string }
+}>()
 
-const statusColor = computed(() => {
-  const colors: Record<string, string> = {
-    running: 'success',
-    error: 'error',
-    stopped: 'warning',
-    configured: 'info',
-  }
-  return (props.application.status && colors[props.application.status]) ?? 'default'
-})
-
-const ownerName = computed(() => {
-  const o = props.application.owner
-  if (!o) return ''
-  return o.departmentName || o.name || o.id
+const captureUrl = computed(() => {
+  return props.application.thumbnail || props.application.image || `${props.application.href}/capture?updatedAt=${props.application.updatedAt}`
 })
 
 const formatDate = (dateStr: string) => {
@@ -84,16 +94,6 @@ const formatDate = (dateStr: string) => {
 <i18n lang="yaml">
 fr:
   updatedAt: Mis à jour le {date}
-  status:
-    running: En cours
-    error: Erreur
-    stopped: Arrêté
-    configured: Configuré
 en:
   updatedAt: Updated on {date}
-  status:
-    running: Running
-    error: Error
-    stopped: Stopped
-    configured: Configured
 </i18n>

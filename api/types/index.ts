@@ -2,7 +2,7 @@ import type { Request as ExpressRequest } from 'express'
 import type { Dataset } from './dataset/index.ts'
 import type { BaseApp } from './base-app/index.js'
 
-export type { Application } from './application/index.js'
+export type { Application, ApplicationExt } from './application/index.ts'
 export type { AppConfig } from './app-config/index.js'
 export type { BaseApp } from './base-app/index.js'
 export type { Dataset, DatasetExt, DatasetInternal, RestDataset, DatasetLine, DatasetLineAction, DatasetLineRevision, VirtualDataset, FileDataset, SchemaProperty } from './dataset/index.ts'

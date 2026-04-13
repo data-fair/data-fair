@@ -1,8 +1,7 @@
 <template>
   <v-menu
     v-model="menu"
-    max-width="700px"
-    min-width="500px"
+    max-width="800"
     :close-on-content-click="false"
   >
     <template #activator="{ props }">
@@ -52,7 +51,7 @@ en:
   apiKeyUseDetails: You can refer to the API documentation and use this key by passing its value in the "x-apiKey" header.
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 
 const { t } = useI18n()
 const menu = ref(false)

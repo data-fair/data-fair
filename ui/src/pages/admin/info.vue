@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-container v-if="services && statusFetch.data.value">
     <v-expansion-panels>
       <v-expansion-panel
@@ -55,6 +55,7 @@
 
 <i18n lang="yaml">
   fr:
+    info: Informations
     installed: installé
     available: disponible
     services:
@@ -65,6 +66,7 @@
       data-fair/catalogs: Gestion des catalogues
       data-fair/portals: Portails
   en:
+    info: Information
     installed: installed
     available: available
     services:
@@ -76,8 +78,12 @@
       data-fair/portals: Portals
   </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+
 const { t } = useI18n()
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('info') }] })
 
 // TODO: make this list dynamic when we contractualize the secondary services
 // replace extra_nav_items and other parameters by simple activation params

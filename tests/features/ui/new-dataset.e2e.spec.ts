@@ -37,8 +37,8 @@ test.describe('new dataset stepper', () => {
     // Should redirect to dataset page
     await expect(page).toHaveURL(/\/dataset\//, { timeout: 30000 })
 
-    // Verify dataset page loaded with title
-    await expect(page.locator('.text-headline-large').first()).toBeVisible({ timeout: 30000 })
+    // Verify dataset page loaded
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 30000 })
   })
 
   test('REST dataset creation', async ({ page, goToWithAuth }) => {

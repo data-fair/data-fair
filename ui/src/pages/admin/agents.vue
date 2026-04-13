@@ -1,48 +1,47 @@
+<template>
+  <div class="d-flex align-center ga-4 pa-4">
+    <h2 class="text-title-large">
+      {{ t('agents') }}
+    </h2>
+    <v-autocomplete
+      v-model="selectedOwner"
+      :items="owners"
+      item-title="name"
+      :item-value="(o: any) => o"
+      :label="t('org')"
+      :loading="ownersFetch.loading.value"
+      density="compact"
+      hide-details
+      max-width="300"
+      variant="outlined"
+    />
+  </div>
+  <d-frame
+    v-if="selectedOwner"
+    id="agents"
+    :src="`${$sitePath}/agents/${selectedOwner.type}/${selectedOwner.id}/settings`"
+    class="fill-height"
+    sync-params
+    :sync-path="$sitePath + '/data-fair/admin/agents/'"
+    emit-iframe-messages
+    resize="no"
+    :adapter.prop="stateChangeAdapter"
+    @message="onMessage"
+    @iframe-message="onMessage"
+    @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+  />
+</template>
+
 <i18n lang="yaml">
 fr:
   agents: Agents
+  org: Organisation
 en:
   agents: Agents
+  org: Organization
 </i18n>
 
-<template>
-  <v-container>
-    <h2 class="text-title-large mb-4">
-      {{ t('agents') }}
-    </h2>
-    <v-row>
-      <v-col
-        cols="12"
-        sm="6"
-        md="4"
-      >
-        <v-autocomplete
-          v-model="selectedOwner"
-          :items="owners"
-          item-title="name"
-          :item-value="(o: any) => o"
-          label="Organisation"
-          :loading="ownersFetch.loading.value"
-        />
-      </v-col>
-    </v-row>
-    <d-frame
-      v-if="selectedOwner"
-      id="agents"
-      :src="`${$sitePath}/agents/${selectedOwner.type}/${selectedOwner.id}/settings`"
-      sync-params
-      :sync-path="$sitePath + '/data-fair/admin/agents/'"
-      emit-iframe-messages
-      resize="yes"
-      :adapter.prop="stateChangeAdapter"
-      @message="onMessage"
-      @iframe-message="onMessage"
-      @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
-    />
-  </v-container>
-</template>
-
-<script lang="ts" setup>
+<script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useDFramePage } from '~/composables/layout/use-d-frame-page'
 

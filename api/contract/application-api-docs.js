@@ -1,5 +1,5 @@
 import config from '#config'
-import { resolvedSchema as applicationSchema } from '../types/application/index.js'
+import { resolvedSchema as applicationSchema } from '../types/application/index.ts'
 import { resolvedSchema as appConfigSchema } from '../types/app-config/index.js'
 
 import journalSchema from './journal.js'

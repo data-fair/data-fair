@@ -1,4 +1,4 @@
-<template lang="html">
+<template>
   <v-row v-if="remoteService">
     <v-col
       cols="12"
@@ -66,7 +66,7 @@ en:
   description: Description
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import type { RemoteService } from '#api/types'
 import { mdiEmail, mdiHome, mdiInformationVariant, mdiLabel } from '@mdi/js'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'

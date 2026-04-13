@@ -9,7 +9,7 @@ export default (admin = false) => ({
         fr: 'Ajouter un portail'
       }
     },
-    itemTitle: 'item.title + "(" + item.url + ")"'
+    itemTitle: 'item.title ? item.title + (item.url ? " (" + item.url + ")" : "") : (item.url || "")'
   },
   items: {
     type: 'object',

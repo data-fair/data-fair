@@ -1,108 +1,122 @@
 <template>
-  <v-menu
-    v-model="menu"
+  <v-dialog
+    v-model="dialog"
     max-width="500"
   >
-    <template #activator="{ props }">
+    <!-- Trigger button -->
+    <template #activator="{ props: activatorProps }">
       <v-btn
-        v-bind="{ ...props, ...btnProps }"
+        v-bind="{ ...activatorProps, ...filteredBtnProps }"
         :title="tooltip"
-        :icon="label ? undefined : icon"
       >
-        {{ label }}
+        <template v-if="label">
+          {{ label }}
+        </template>
+        <v-icon
+          v-else
+          :icon="icon"
+        />
       </v-btn>
     </template>
-    <v-card>
-      <v-card-title
-        v-if="title"
-        primary-title
-      >
-        {{ title }}
-      </v-card-title>
+
+    <!-- Confirmation dialog -->
+    <v-card :title="title">
       <v-card-text>
         <v-alert
           v-if="alert"
           variant="outlined"
           :type="alert"
         >
-          {{ text }}
+          {{ text || t('defaultConfirmText') }}
         </v-alert>
         <template v-else>
-          {{ text }}
+          {{ text || t('defaultConfirmText') }}
         </template>
       </v-card-text>
+
       <v-card-actions>
         <v-spacer />
-        <v-btn
-          variant="text"
-          @click="menu = false"
-        >
-          {{ t("no") }}
+        <v-btn @click="dialog = false">
+          {{ cancelLabel || t('cancel') }}
         </v-btn>
         <v-btn
-          variant="elevated"
+          variant="flat"
           :color="yesColor"
-          @click="emit('confirm')"
+          @click="onConfirm"
         >
-          {{ t("yes") }}
+          {{ confirmLabel || t('confirm') }}
         </v-btn>
       </v-card-actions>
     </v-card>
-  </v-menu>
+  </v-dialog>
 </template>
 
 <i18n lang="yaml">
 fr:
-  yes: Oui
-  no: Non
+  cancel: Annuler
+  confirm: Confirmer
+  defaultConfirmText: Souhaitez-vous confirmer cette opération ?
 en:
-  yes: Yes
-  no: No
+  cancel: Cancel
+  confirm: Confirm
+  defaultConfirmText: Do you want to confirm this operation?
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiDelete } from '@mdi/js'
 
-const { btnProps, title, text, tooltip, yesColor, alert, icon, label } = defineProps({
-  title: {
-    type: String,
-    default: ''
-  },
-  text: {
-    type: String,
-    default: 'Souhaitez-vous confirmer cette opération ?'
-  },
-  tooltip: {
-    type: String,
-    default: ''
-  },
-  yesColor: {
-    type: String,
-    default: 'primary'
-  },
-  btnProps: {
-    type: Object,
-    default: () => ({ color: 'warning', icon: true })
-  },
-  alert: {
-    type: String as PropType<'warning' | 'success' | 'info' | 'error' | undefined>,
-    default: undefined
-  },
-  icon: {
-    type: String,
-    default: mdiDelete
-  },
-  label: {
-    type: String,
-    default: undefined
-  }
+/** Props for the ConfirmMenu component */
+interface Props {
+  /** Title displayed at the top of the confirmation dialog */
+  title?: string
+  /** Confirmation text or question shown in the dialog body.
+   *  Falls back to a default translated message if not provided. */
+  text?: string
+  /** Tooltip shown on hover of the trigger button */
+  tooltip?: string
+  /** Color of the confirmation button (e.g. `'warning'` for destructive actions) */
+  yesColor?: string
+  /** Extra props forwarded to the trigger `v-btn`.
+   *  Note: the `icon` key is filtered out — use the `icon` prop instead. */
+  btnProps?: Record<string, any>
+  /** When set, wraps the confirmation text in a `v-alert` of this type */
+  alert?: 'warning' | 'success' | 'info' | 'error'
+  /** Icon displayed on the trigger button (defaults to `mdiDelete`) */
+  icon?: string
+  /** Text label for the trigger button. When set, replaces the icon with text */
+  label?: string
+  /** Custom label for the cancel button (defaults to translated "Annuler" / "Cancel") */
+  cancelLabel?: string
+  /** Custom label for the confirm button (defaults to translated "Confirmer" / "Confirm") */
+  confirmLabel?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  yesColor: 'primary',
+  btnProps: () => ({ color: 'warning', icon: true }),
+  icon: mdiDelete,
 })
 
-const emit = defineEmits(['confirm'])
+const emit = defineEmits<{
+  /** Emitted when the user clicks the confirm button */
+  confirm: []
+}>()
 
 const { t } = useI18n()
-const menu = ref(false)
-</script>
+const dialog = ref(false)
 
-<style lang="css" scoped>
-</style>
+/** btnProps without `icon` when label is set, to avoid icon-button styling on text buttons */
+const filteredBtnProps = computed(() => {
+  if (!props.btnProps) return {}
+  if (props.label) {
+    const { icon: _, ...rest } = props.btnProps
+    return rest
+  }
+  return props.btnProps
+})
+
+function onConfirm () {
+  emit('confirm')
+  dialog.value = false
+}
+</script>

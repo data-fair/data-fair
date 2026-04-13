@@ -20,7 +20,7 @@
         variant="outlined"
         density="compact"
         class="my-2"
-        style="max-width: 400px;"
+        max-width="400px"
         hide-details="auto"
         return-object
         @update:model-value="addChild"
@@ -81,7 +81,7 @@
                   item-value="id"
                   :label="t('addColumn')"
                   return-object
-                  style="max-width: 400px;"
+                  max-width="400"
                   hide-details
                   density="compact"
                   variant="solo"
@@ -99,7 +99,7 @@
                 <v-icon
                   color="warning"
                   :title="t('delete')"
-                  @click="deleteChild(index)"
+                  @click="deleteChild(index as number)"
                 >
                   {{ mdiDelete }}
                 </v-icon>
@@ -175,7 +175,7 @@
           :items="allColumns.map((c: any) => ({ disabled: !!filtersByKey[c.key], value: c.key, title: c.title || c['x-originalName'] || c.key }))"
           hide-no-data
           :label="t('addFilter')"
-          style="max-width: 400px;"
+          max-width="400"
           density="compact"
           variant="outlined"
           class="my-2"
@@ -208,7 +208,7 @@
                 hide-details
                 density="compact"
                 class="mt-4"
-                style="max-width: 300px"
+                max-width="300"
                 @update:model-value="(v: string) => filter.operator = v"
               />
               <v-combobox
@@ -253,9 +253,9 @@
 <i18n lang="yaml">
 fr:
   search: Rechercher
-  children: Jeux de donnees agreges
-  addChild: Ajouter un jeu de donnees
-  noChild: Aucun jeu de donnees agrege.
+  children: Jeux de données agreges
+  addChild: Ajouter un jeu de données
+  noChild: Aucun jeu de données agrege.
   selectedColumns: Colonnes selectionnees
   noColumn: Aucune colonne selectionnee.
   addColumn: ajouter une colonne
@@ -270,8 +270,8 @@ fr:
   addFilter: ajouter un filtre
   noFilter: Aucun filtre defini.
   filterActiveAccount: Filtrer sur les comptes actifs
-  ownerDatasets: Vos jeux de donnees
-  masterData: Donnees de reference
+  ownerDatasets: Vos jeux de données
+  masterData: données de reference
 en:
   search: Search
   children: Aggregated datasets
@@ -295,14 +295,14 @@ en:
   masterData: Master data
 </i18n>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { mdiDelete, mdiSort } from '@mdi/js'
 import draggable from 'vuedraggable'
 import { withQuery } from 'ufo'
 import { $apiPath, $fetch } from '../../context.js'
 
 const dataset = defineModel<any>({ required: true })
-const { t } = useI18n({ useScope: 'local' })
+const { t } = useI18n()
 useSessionAuthenticated()
 
 // Initialize virtual defaults
