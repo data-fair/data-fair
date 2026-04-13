@@ -18,16 +18,16 @@ export default {
     },
     title: {
       type: 'string',
-      title: 'Titre',
+      title: 'Title',
       'x-i18n-title': {
-        en: 'Title'
+        fr: 'Titre'
       }
     },
     color: {
       type: 'string',
-      title: 'Couleur',
+      title: 'Color',
       'x-i18n-title': {
-        en: 'Color'
+        fr: 'Couleur'
       },
       layout: {
         comp: 'color-picker',
@@ -36,9 +36,9 @@ export default {
     },
     icon: {
       type: 'object',
-      title: 'Icône',
+      title: 'Icon',
       'x-i18n-title': {
-        en: 'Icon',
+        fr: 'Icône'
       },
       description: "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site </a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seuls quelques icônes sont chargées initialement pour de meilleures performances.",
       'x-i18n-description': {
