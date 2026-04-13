@@ -214,6 +214,7 @@
     <df-section-tabs
       v-if="sections.share"
       id="share"
+      v-model="shareTab"
       :min-height="200"
       :title="sections.share.title"
       :tabs="sections.share.tabs"
@@ -225,11 +226,13 @@
           class="pa-4"
         >
           <v-tabs-window-item value="permissions">
-            <permissions
+            <Permissions
               v-if="dataset"
+              :model-value="permissions"
               :resource="dataset"
               resource-type="datasets"
               :disabled="!can('setPermissions').value"
+              @save="onSavePermissions"
             />
           </v-tabs-window-item>
 
@@ -244,6 +247,7 @@
           <!-- Catalog publications -->
           <v-tabs-window-item value="catalog-publications">
             <d-frame
+              :key="catalogPublicationsKey"
               :src="catalogPublicationsUrl"
               sync-params
               @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
@@ -490,6 +494,7 @@ fr:
   masterData: Données de référence
   virtual: Jeu de données virtuel
   saved: Les modifications ont été enregistrées
+  permissionsUpdated: Les permissions ont été mises à jour
   metadata: Métadonnées
   informations: Informations
   details: Détails
@@ -540,6 +545,7 @@ en:
   masterData: Master data
   virtual: Virtual dataset
   saved: Changes were saved
+  permissionsUpdated: Permissions were updated
   metadata: Metadata
   informations: Information
   details: Details
@@ -598,11 +604,11 @@ import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue
 import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
+import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
-import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
-import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { usePermissions } from '~/composables/use-permissions'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
@@ -624,9 +630,19 @@ const metadataTab = ref('informations')
 const explorationTab = ref('table')
 const activityTab = ref('journal')
 const structureTab = ref('schema')
+const shareTab = ref('')
+const catalogPublicationsKey = ref(0)
+watch(shareTab, (tab) => {
+  if (tab === 'catalog-publications') catalogPublicationsKey.value++
+})
 
 const store = provideDatasetStore(route.params.id, true, 'vuetify')
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions } = store
+
+const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
+  await savePermissions(newPermissions)
+  sendUiNotif({ type: 'success', msg: t('permissionsUpdated') })
+}
 
 // Separate editFetch for structure (schema, primaryKey, rest, projection, extensions)
 const structureEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.id}`, {
@@ -783,6 +799,7 @@ watch(dataset, (d) => {
     ]
   })
   if (can('readJournal').value && !d.isMetaOnly && !journalFetch.initialized.value) journalFetch.refresh()
+  if (can('getPermissions').value && !permissionsFetch.initialized.value) permissionsFetch.refresh()
   if (!taskProgressFetch.initialized.value) taskProgressFetch.refresh()
   if (d.finalizedAt && !applicationsFetch.initialized.value) applicationsFetch.refresh()
   if (d.draftReason?.key === 'file-updated' && !publishedDatasetFetch.initialized.value) publishedDatasetFetch.refresh()

@@ -1,194 +1,192 @@
 <template>
-  <div>
-    <p class="mb-5">
-      {{ t('description') }}
-    </p>
+  <p class="mb-5">
+    {{ t('description') }}
+  </p>
 
-    <df-tutorial-alert
-      v-if="resource.owner?.department"
-      id="permissions-deps"
-      :text="t('readDepPermissionsDoc')"
-      href="https://data-fair.github.io/3/user-guide-backoffice/department"
-      persistent
+  <df-tutorial-alert
+    v-if="resource.owner?.department"
+    id="permissions-deps"
+    :text="t('readDepPermissionsDoc')"
+    href="https://data-fair.github.io/3/user-guide-backoffice/department"
+    persistent
+  />
+
+  <v-progress-linear
+    v-if="!modelValue"
+    indeterminate
+  />
+  <template v-else>
+    <v-alert
+      v-if="hasPrivateParents && !isPublic"
+      type="warning"
+      variant="outlined"
+      density="compact"
+      class="mb-3"
+    >
+      {{ t('warningPublicApp') }}
+    </v-alert>
+    <v-alert
+      v-if="hasPublicDeps && isPublic"
+      type="warning"
+      variant="outlined"
+      density="compact"
+      class="mb-3"
+    >
+      {{ t('warningPrivateDataset') }}
+    </v-alert>
+
+    <v-select
+      v-model="visibility"
+      :disabled="disabled"
+      :items="visibilityItems"
+      :label="t('visibilityLabel')"
+      variant="outlined"
+      density="compact"
+      style="max-width: 800px;"
+      hide-details
     />
 
-    <v-progress-linear
-      v-if="!permissions"
-      indeterminate
+    <v-select
+      v-if="resource.owner?.type === 'organization'"
+      v-model="contribProfile"
+      :disabled="disabled"
+      :items="contribProfileItems"
+      :label="t('contribProfileLabel')"
+      variant="outlined"
+      density="compact"
+      style="max-width: 800px;"
+      hide-details
+      class="mt-4"
     />
-    <template v-else>
-      <v-alert
-        v-if="hasPrivateParents && !isPublic"
-        type="warning"
-        variant="outlined"
-        density="compact"
-        class="mb-3"
-      >
-        {{ t('warningPublicApp') }}
-      </v-alert>
-      <v-alert
-        v-if="hasPublicDeps && isPublic"
-        type="warning"
-        variant="outlined"
-        density="compact"
-        class="mb-3"
-      >
-        {{ t('warningPrivateDataset') }}
-      </v-alert>
 
-      <v-select
-        v-model="visibility"
-        :disabled="disabled"
-        :items="visibilityItems"
-        :label="t('visibilityLabel')"
-        variant="outlined"
-        density="compact"
-        style="max-width: 800px;"
-        hide-details
-      />
+    <v-switch
+      v-if="resource.rest && resource.rest.lineOwnership"
+      v-model="allUsersManageOwnLines"
+      :disabled="disabled"
+      color="primary"
+      :label="t('allUsersManageOwnLines')"
+      hide-details
+      class="mt-4"
+    />
 
-      <v-select
-        v-if="resource.owner?.type === 'organization'"
-        v-model="contribProfile"
-        :disabled="disabled"
-        :items="contribProfileItems"
-        :label="t('contribProfileLabel')"
-        variant="outlined"
-        density="compact"
-        style="max-width: 800px;"
-        hide-details
-        class="mt-4"
-      />
+    <v-switch
+      v-model="detailedMode"
+      color="primary"
+      :label="t('detailedMode')"
+      class="mt-4"
+    />
+  </template>
 
-      <v-switch
-        v-if="resource.rest && resource.rest.lineOwnership"
-        v-model="allUsersManageOwnLines"
-        :disabled="disabled"
-        color="primary"
-        :label="t('allUsersManageOwnLines')"
-        hide-details
-        class="mt-4"
-      />
+  <template v-if="detailedMode && ownerDetails && api">
+    <permission-dialog
+      v-if="!disabled"
+      :permission-classes="permissionClasses"
+      :owner="ownerDetails"
+      @update:model-value="addPermission"
+    >
+      <template #activator="{ props: activatorProps }">
+        <v-btn
+          color="primary"
+          v-bind="activatorProps"
+        >
+          {{ t('addPermission') }}
+        </v-btn>
+      </template>
+    </permission-dialog>
 
-      <v-switch
-        v-model="detailedMode"
-        color="primary"
-        :label="t('detailedMode')"
-        class="mt-4"
-      />
-    </template>
-
-    <template v-if="detailedMode && ownerDetails && api">
-      <permission-dialog
-        v-if="!disabled"
-        :permission-classes="permissionClasses"
-        :owner="ownerDetails"
-        @update:model-value="addPermission"
-      >
-        <template #activator="{ props: activatorProps }">
-          <v-btn
-            color="primary"
-            v-bind="activatorProps"
-          >
-            {{ t('addPermission') }}
-          </v-btn>
-        </template>
-      </permission-dialog>
-
-      <v-table
-        v-if="permissions && permissions.length"
-        class="elevation-1 mt-3"
-      >
-        <thead>
-          <tr>
-            <th>{{ t('scope') }}</th>
-            <th>{{ t('actions') }}</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(item, index) in permissions"
-            :key="index"
-          >
-            <td>
-              <div v-if="!item.type">
-                {{ t('public') }}
-              </div>
-              <div v-if="item.type === 'user'">
-                {{ t('userName', { name: item.name || item.id || item.email }) }}
-              </div>
-              <div v-if="item.type === 'organization' && !item.department">
-                {{ t('organizationName', { name: item.name }) }}
-              </div>
-              <div v-if="item.type === 'organization' && item.department && item.department !== '-'">
-                {{ t('organizationName', { name: item.name + ' / ' + item.department }) }}
-              </div>
-              <div v-if="item.type === 'organization' && item.department && item.department === '-'">
-                {{ t('organizationName', { name: item.name + ' / ' + t('noDep') }) }}
-              </div>
-              <div v-if="item.type === 'organization' && (!item.roles || !item.roles.length)">
-                {{ t('allRoles') }}
-              </div>
-              <div v-if="item.type === 'organization' && (item.roles && item.roles.length)">
-                {{ t('restrictedRoles', { roles: item.roles.join(', ') }) }}
-              </div>
-            </td>
-            <td>
-              <v-list
-                density="compact"
-                class="py-1"
-                style="background: transparent"
+    <v-table
+      v-if="modelValue && modelValue.length"
+      class="elevation-1 mt-3"
+    >
+      <thead>
+        <tr>
+          <th>{{ t('scope') }}</th>
+          <th>{{ t('actions') }}</th>
+          <th />
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="(item, index) in modelValue"
+          :key="index"
+        >
+          <td>
+            <div v-if="!item.type">
+              {{ t('public') }}
+            </div>
+            <div v-if="item.type === 'user'">
+              {{ t('userName', { name: item.name || item.id || item.email }) }}
+            </div>
+            <div v-if="item.type === 'organization' && !item.department">
+              {{ t('organizationName', { name: item.name }) }}
+            </div>
+            <div v-if="item.type === 'organization' && item.department && item.department !== '-'">
+              {{ t('organizationName', { name: item.name + ' / ' + item.department }) }}
+            </div>
+            <div v-if="item.type === 'organization' && item.department && item.department === '-'">
+              {{ t('organizationName', { name: item.name + ' / ' + t('noDep') }) }}
+            </div>
+            <div v-if="item.type === 'organization' && (!item.roles || !item.roles.length)">
+              {{ t('allRoles') }}
+            </div>
+            <div v-if="item.type === 'organization' && (item.roles && item.roles.length)">
+              {{ t('restrictedRoles', { roles: item.roles.join(', ') }) }}
+            </div>
+          </td>
+          <td>
+            <v-list
+              density="compact"
+              class="py-1"
+              style="background: transparent"
+            >
+              <template
+                v-for="(classOperations, permClass) in permissionClasses"
+                :key="permClass"
               >
-                <template
-                  v-for="(classOperations, permClass) in permissionClasses"
-                  :key="permClass"
+                <v-list-item
+                  v-if="(item.classes || []).includes(permClass as string) || classOperations.filter((o) => (item.operations || []).includes(o.id)).length"
+                  class="pa-0"
+                  style="min-height:25px"
                 >
-                  <v-list-item
-                    v-if="(item.classes || []).includes(permClass as string) || classOperations.filter((o) => (item.operations || []).includes(o.id)).length"
-                    class="pa-0"
-                    style="min-height:25px"
-                  >
-                    {{ t('classNames.' + permClass) }}
-                    <template v-if="!(item.classes || []).includes(permClass as string)">
-                      ({{ classOperations.filter((o) => (item.operations || []).find((oid: string) => o.id && o.id === oid)).map((o) => o.title.toLowerCase().replace('.', '')).join(' - ') }})
-                    </template>
-                  </v-list-item>
-                </template>
-              </v-list>
-            </td>
-            <td class="text-right">
-              <permission-dialog
-                v-if="!disabled"
-                :model-value="item"
-                :permission-classes="permissionClasses"
-                :owner="ownerDetails"
-                @update:model-value="p => editPermission(index, p)"
-              >
-                <template #activator="{ props: activatorProps }">
-                  <v-btn
-                    color="primary"
-                    v-bind="activatorProps"
-                    :icon="mdiPencil"
-                    variant="text"
-                    size="small"
-                  />
-                </template>
-              </permission-dialog>
-              <v-btn
-                v-if="!disabled"
-                :icon="mdiDelete"
-                variant="text"
-                size="small"
-                color="warning"
-                @click="deletePermission(index)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
-    </template>
-  </div>
+                  {{ t('classNames.' + permClass) }}
+                  <template v-if="!(item.classes || []).includes(permClass as string)">
+                    ({{ classOperations.filter((o) => (item.operations || []).find((oid: string) => o.id && o.id === oid)).map((o) => o.title.toLowerCase().replace('.', '')).join(' - ') }})
+                  </template>
+                </v-list-item>
+              </template>
+            </v-list>
+          </td>
+          <td class="text-right">
+            <permission-dialog
+              v-if="!disabled"
+              :model-value="item"
+              :permission-classes="permissionClasses"
+              :owner="ownerDetails"
+              @update:model-value="p => editPermission(index, p)"
+            >
+              <template #activator="{ props: activatorProps }">
+                <v-btn
+                  color="primary"
+                  v-bind="activatorProps"
+                  :icon="mdiPencil"
+                  variant="text"
+                  size="small"
+                />
+              </template>
+            </permission-dialog>
+            <v-btn
+              v-if="!disabled"
+              :icon="mdiDelete"
+              variant="text"
+              size="small"
+              color="warning"
+              @click="deletePermission(index)"
+            />
+          </td>
+        </tr>
+      </tbody>
+    </v-table>
+  </template>
 </template>
 
 <i18n lang="yaml">
@@ -303,6 +301,7 @@ type PermissibleResource = {
 }
 
 const props = defineProps<{
+  modelValue: Permission[] | null
   resource: PermissibleResource
   resourceType: 'datasets' | 'applications'
   disabled: boolean
@@ -310,12 +309,10 @@ const props = defineProps<{
   hasPrivateParents?: boolean
 }>()
 
-const emit = defineEmits<{ permissions: [value: Permission[]] }>()
+const emit = defineEmits<{ save: [value: Permission[]] }>()
 
 const { t } = useI18n()
-const { sendUiNotif } = useUiNotif()
 
-const permissions = ref<Permission[] | null>(null)
 const detailedMode = ref(false)
 const ownerDetails = ref<{ type: string, id: string, name?: string, departments?: { id: string, name: string }[] } | null>(null)
 type ApiEndpoint = { operationId: string, summary: string, 'x-permissionClass'?: string, 'x-altPermissions'?: PermissionClassItem[] }
@@ -405,31 +402,35 @@ const permissionClasses = computed<Record<string, PermissionClassItem[]>>(() => 
 
 // --- Computed states ---
 
-const isPublic = computed(() => !!permissions.value?.find(isPublicPermission))
+const isPublic = computed(() => !!props.modelValue?.find(isPublicPermission))
+
+function save (newPermissions: Permission[]) {
+  emit('save', newPermissions)
+}
 
 const visibility = computed({
   get () {
-    if (!permissions.value) return undefined
+    if (!props.modelValue) return undefined
     if (isPublic.value) return 'public'
-    if (permissions.value.find(isSharedInOrgPermission)) return 'sharedInOrg'
-    if (permissions.value.find(isPrivateOrgContribPermission)) return 'privateOrgContrib'
+    if (props.modelValue.find(isSharedInOrgPermission)) return 'sharedInOrg'
+    if (props.modelValue.find(isPrivateOrgContribPermission)) return 'privateOrgContrib'
     if (props.resource.owner?.type === 'organization') return 'privateOrg'
     return 'privateUser'
   },
   set (v) {
-    if (!permissions.value) return
-    permissions.value = permissions.value
+    if (!props.modelValue) return
+    const next = props.modelValue
       .filter((p) => !isPublicPermission(p) && !isSharedInOrgPermission(p) && !isPrivateOrgContribPermission(p))
 
     if (v === 'sharedInOrg' || v === 'public' || v === 'privateOrgContrib') {
-      permissions.value.push({ type: 'organization', id: props.resource.owner.id, name: orgName.value, roles: ['contrib'], operations: [], classes: ['list', 'read', 'readAdvanced'] })
+      next.push({ type: 'organization', id: props.resource.owner.id, name: orgName.value, roles: ['contrib'], operations: [], classes: ['list', 'read', 'readAdvanced'] })
     }
     if (v === 'sharedInOrg') {
-      permissions.value.push({ type: 'organization', id: props.resource.owner.id, name: orgName.value, operations: [], classes: ['list', 'read'] })
+      next.push({ type: 'organization', id: props.resource.owner.id, name: orgName.value, operations: [], classes: ['list', 'read'] })
     } else if (v === 'public') {
-      permissions.value.push({ operations: [], classes: ['list', 'read'] })
+      next.push({ operations: [], classes: ['list', 'read'] })
     }
-    save()
+    save(next)
   }
 })
 
@@ -449,15 +450,15 @@ const visibilityItems = computed(() => {
 
 const contribProfile = computed({
   get () {
-    if (!permissions.value) return undefined
-    if (permissions.value.find(isContribWriteAllPermission)) return 'contribWriteAll'
-    if (permissions.value.find(isContribWriteNoBreakingPermission)) return 'contribWriteNoBreaking'
-    if (permissions.value.find(isContribWriteDataPermission)) return 'contribWriteData'
+    if (!props.modelValue) return undefined
+    if (props.modelValue.find(isContribWriteAllPermission)) return 'contribWriteAll'
+    if (props.modelValue.find(isContribWriteNoBreakingPermission)) return 'contribWriteNoBreaking'
+    if (props.modelValue.find(isContribWriteDataPermission)) return 'contribWriteData'
     return 'adminOnly'
   },
   set (v) {
-    if (!permissions.value) return
-    permissions.value = permissions.value
+    if (!props.modelValue) return
+    const next = props.modelValue
       .filter((p) => !isContribWriteAllPermission(p) && !isContribWriteDataPermission(p) && !isContribWriteNoBreakingPermission(p))
 
     const dep = props.resource.owner?.department || '-'
@@ -466,13 +467,13 @@ const contribProfile = computed({
       : ['writeData', 'cancelDraft']
 
     if (v === 'contribWriteData') {
-      permissions.value.push({ type: 'organization', id: props.resource.owner.id, department: dep, name: orgName.value, roles: ['contrib'], operations: writeDataOps, classes: [] })
+      next.push({ type: 'organization', id: props.resource.owner.id, department: dep, name: orgName.value, roles: ['contrib'], operations: writeDataOps, classes: [] })
     } else if (v === 'contribWriteNoBreaking') {
-      permissions.value.push({ type: 'organization', id: props.resource.owner.id, department: dep, name: orgName.value, roles: ['contrib'], operations: [...writeDataOps, 'writeDescription', 'postMetadataAttachment', 'deleteMetadataAttachment'], classes: [] })
+      next.push({ type: 'organization', id: props.resource.owner.id, department: dep, name: orgName.value, roles: ['contrib'], operations: [...writeDataOps, 'writeDescription', 'postMetadataAttachment', 'deleteMetadataAttachment'], classes: [] })
     } else if (v === 'contribWriteAll') {
-      permissions.value.push({ type: 'organization', id: props.resource.owner.id, department: dep, name: orgName.value, roles: ['contrib'], operations: ['delete'], classes: ['write'] })
+      next.push({ type: 'organization', id: props.resource.owner.id, department: dep, name: orgName.value, roles: ['contrib'], operations: ['delete'], classes: ['write'] })
     }
-    save()
+    save(next)
   }
 })
 
@@ -492,18 +493,18 @@ const contribProfileItems = computed(() => {
 
 const allUsersManageOwnLines = computed({
   get () {
-    return !!permissions.value?.find(isManageOwnLinesPermission)
+    return !!props.modelValue?.find(isManageOwnLinesPermission)
   },
   set (v) {
-    if (!permissions.value) return
-    permissions.value = permissions.value.filter((p) => !isManageOwnLinesPermission(p))
-    if (v) permissions.value.push({ type: 'user', id: '*', operations: ['readSafeSchema'], classes: ['manageOwnLines'] })
-    save()
+    if (!props.modelValue) return
+    const next = props.modelValue.filter((p) => !isManageOwnLinesPermission(p))
+    if (v) next.push({ type: 'user', id: '*', operations: ['readSafeSchema'], classes: ['manageOwnLines'] })
+    save(next)
   }
 })
 
 const hasDetailedPermission = computed(() => {
-  return !!permissions.value?.find((p) =>
+  return !!props.modelValue?.find((p) =>
     !isPublicPermission(p) &&
     !isSharedInOrgPermission(p) &&
     !isPrivateOrgContribPermission(p) &&
@@ -514,17 +515,14 @@ const hasDetailedPermission = computed(() => {
   )
 })
 
-// --- Fetch permissions on mount ---
+// --- Auto-enable detailed mode on first load if existing detailed permissions ---
 
-onMounted(async () => {
-  const perms = await $fetch<Permission[]>(`${props.resourceType}/${props.resource.id}/permissions`)
-  perms.forEach((p) => { if (!p.type) delete p.type })
-  permissions.value = perms
-  emit('permissions', permissions.value)
-  if (hasDetailedPermission.value) {
-    detailedMode.value = true
-  }
-})
+let detailedModeInitialized = false
+watch(() => props.modelValue, (perms) => {
+  if (!perms || detailedModeInitialized) return
+  detailedModeInitialized = true
+  if (hasDetailedPermission.value) detailedMode.value = true
+}, { immediate: true })
 
 // --- Watch detailed mode to lazily fetch owner details + API doc ---
 
@@ -556,38 +554,24 @@ async function fetchApiDoc () {
   api.value = await $fetch(docPath)
 }
 
-// --- Save permissions ---
-
-async function save () {
-  if (!permissions.value) return
-  const clean = JSON.parse(JSON.stringify(permissions.value))
-  clean.forEach((p: Record<string, unknown>) => {
-    if (!p.type) delete p.type
-    if (!p.id) delete p.id
-    if (!p.department) delete p.department
-  })
-  await $fetch(`${props.resourceType}/${props.resource.id}/permissions`, { method: 'PUT', body: clean })
-  emit('permissions', permissions.value)
-  sendUiNotif({ type: 'success', msg: t('permissionsUpdated') })
-}
-
 // --- Permission CRUD for detailed mode ---
 
 function addPermission (p: Permission) {
-  if (!permissions.value) return
-  permissions.value.push(p)
-  save()
+  if (!props.modelValue) return
+  save([...props.modelValue, p])
 }
 
 function editPermission (index: number, p: Permission) {
-  if (!permissions.value) return
-  permissions.value[index] = p
-  save()
+  if (!props.modelValue) return
+  const next = [...props.modelValue]
+  next[index] = p
+  save(next)
 }
 
 function deletePermission (index: number) {
-  if (!permissions.value) return
-  permissions.value.splice(index, 1)
-  save()
+  if (!props.modelValue) return
+  const next = [...props.modelValue]
+  next.splice(index, 1)
+  save(next)
 }
 </script>

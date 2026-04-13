@@ -1,5 +1,5 @@
 import { provide, inject } from 'vue'
-import type { Event, Dataset, Application } from '#api/types'
+import type { Event, Dataset, Application, Permission } from '#api/types'
 import { isRestDataset } from '#shared/types-utils'
 import type { PatchDatasetReq } from '#api-doc/datasets/patch-req/index.js'
 
@@ -58,6 +58,28 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     const patchedDataset = await $fetch<ExtendedDataset>(`datasets/${id}`, { method: 'PATCH', body: patch })
     dataset.value = patchedDataset
   })
+
+  const permissionsFetch = useFetch<Permission[]>($apiPath + `/datasets/${id}/permissions`, { immediate: false, watch: false })
+  const permissions = ref<Permission[] | null>(null)
+  watch(permissionsFetch.data, () => {
+    const perms = permissionsFetch.data.value
+    if (!perms) {
+      permissions.value = null
+      return
+    }
+    perms.forEach(p => { if (!p.type) delete p.type })
+    permissions.value = perms
+  })
+  const savePermissions = async (newPermissions: Permission[]) => {
+    const clean = JSON.parse(JSON.stringify(newPermissions))
+    clean.forEach((p: Record<string, unknown>) => {
+      if (!p.type) delete p.type
+      if (!p.id) delete p.id
+      if (!p.department) delete p.department
+    })
+    await $fetch(`datasets/${id}/permissions`, { method: 'PUT', body: clean })
+    permissions.value = newPermissions
+  }
 
   const resourceUrl = computed(() => `${$apiPath}/datasets/${id}`)
 
@@ -144,6 +166,9 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     webPageField,
     can,
     patchDataset,
+    permissions,
+    permissionsFetch,
+    savePermissions,
     resourceUrl,
     applicationsFetch,
     nbVirtualDatasetsFetch,

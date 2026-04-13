@@ -138,14 +138,13 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import type { Dataset, Permission, PublicationSite } from '#api/types'
+import type { Dataset, PublicationSite } from '#api/types'
 import permissionsUtils from '~/utils/permissions'
 
-const { id, dataset, patchDataset, can } = useDatasetStore()
+const { dataset, patchDataset, can, permissions } = useDatasetStore()
 const { account } = useSessionAuthenticated()
 const { t } = useI18n()
 
-const permissionsFetch = useFetch<Permission[]>($apiPath + `/datasets/${id}/permissions`)
 const settingsPath = computed(() => {
   if (!dataset.value) return null
   let path = `${dataset.value.owner.type}/${dataset.value.owner.id}`
@@ -204,12 +203,12 @@ const hasWarning = (site: PublicationSite) => {
 }
 
 const sitesContribPermissionsRisk = computed(() => {
-  const permissions = permissionsFetch.data.value
+  const perms = permissions.value
   const d = dataset.value
-  if (!permissions || !d) return {}
+  if (!perms || !d) return {}
   const sitesContribPermissionsRisk: Record<string, boolean> = {}
   for (const site of publicationSitesFetch.data.value ?? []) {
-    if (!site.settings?.staging && permissions.find(p => permissionsUtils.isContribWriteAllPermission(p, d))) {
+    if (!site.settings?.staging && perms.find(p => permissionsUtils.isContribWriteAllPermission(p, d))) {
       sitesContribPermissionsRisk[`${site.type}:${site.id}`] = true
     }
   }

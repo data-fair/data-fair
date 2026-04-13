@@ -17,7 +17,10 @@
     :initial="false"
   />
   <v-slide-y-transition v-if="createToggle">
-    <v-card :title="t('addNewApiKey')">
+    <v-card
+      :title="t('addNewApiKey')"
+      class="mb-2"
+    >
       <v-card-text>
         <v-form v-model="newApiKeyValid">
           <v-text-field

@@ -1,4 +1,4 @@
-import type { Application, BaseApp, AppConfig, Event, Dataset } from '#api/types'
+import type { Application, BaseApp, AppConfig, Event, Dataset, Permission } from '#api/types'
 import { provide } from 'vue'
 import debugModule from 'debug'
 
@@ -131,6 +131,28 @@ const createApplicationStore = (id: string) => {
     watch: false
   })
 
+  const permissionsFetch = useFetch<Permission[]>($apiPath + `/applications/${id}/permissions`, { immediate: false, watch: false })
+  const permissions = ref<Permission[] | null>(null)
+  watch(permissionsFetch.data, () => {
+    const perms = permissionsFetch.data.value
+    if (!perms) {
+      permissions.value = null
+      return
+    }
+    perms.forEach(p => { if (!p.type) delete p.type })
+    permissions.value = perms
+  })
+  const savePermissions = async (newPermissions: Permission[]) => {
+    const clean = JSON.parse(JSON.stringify(newPermissions))
+    clean.forEach((p: Record<string, unknown>) => {
+      if (!p.type) delete p.type
+      if (!p.id) delete p.id
+      if (!p.department) delete p.department
+    })
+    await $fetch(`applications/${id}/permissions`, { method: 'PUT', body: clean })
+    permissions.value = newPermissions
+  }
+
   const remove = async () => {
     await $fetch('/applications/' + id, { method: 'DELETE' })
   }
@@ -159,6 +181,9 @@ const createApplicationStore = (id: string) => {
     can,
     journalFetch,
     journal,
+    permissions,
+    permissionsFetch,
+    savePermissions,
     datasetsFetch,
     childrenAppsFetch,
     remove,
