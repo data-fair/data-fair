@@ -75,6 +75,7 @@
     "api",
     "ui",
     "shared",
+    "agent-tools",
     "parquet-writer",
     "benchmark"
   ],
