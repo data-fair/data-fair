@@ -208,8 +208,32 @@ declare global {
 // for type re-export
 declare global {
   // @ts-ignore
-  export type { Component, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
+  export type { Component, Slot, Slots, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
+  // @ts-ignore
+  export type { ApplicationStore } from '../src/composables/application/application-store'
+  import('../src/composables/application/application-store')
+  // @ts-ignore
+  export type { PropertyConfig } from '../src/composables/dataset/agent-property-config-tools'
+  import('../src/composables/dataset/agent-property-config-tools')
+  // @ts-ignore
+  export type { ExtendedDataset, TaskProgress, DatasetStore } from '../src/composables/dataset/dataset-store'
+  import('../src/composables/dataset/dataset-store')
+  // @ts-ignore
+  export type { Operator, DatasetFilter } from '../src/composables/dataset/filters'
+  import('../src/composables/dataset/filters')
+  // @ts-ignore
+  export type { ExtendedResultValue, ExtendedResult } from '../src/composables/dataset/lines'
+  import('../src/composables/dataset/lines')
+  // @ts-ignore
+  export type { WatchKey } from '../src/composables/dataset/watch'
+  import('../src/composables/dataset/watch')
+  // @ts-ignore
+  export type { BreadcrumbItem } from '../src/composables/layout/use-breadcrumbs'
+  import('../src/composables/layout/use-breadcrumbs')
+  // @ts-ignore
+  export type { NavItem, NavGroup } from '../src/composables/layout/use-navigation-items'
+  import('../src/composables/layout/use-navigation-items')
 }
 
 // for vue template auto import

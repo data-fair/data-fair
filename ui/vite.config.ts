@@ -15,7 +15,29 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 export default defineConfig({
   base: '/data-fair',
   optimizeDeps: {
-    include: [...commonjsDeps, 'easymde', 'vuedraggable', 'fast-deep-equal']
+    // prevent reloading when auto-discovering deps to optimize, everything must be solved before hand
+    noDiscovery: true,
+    include: [
+      ...commonjsDeps,
+      'easymde',
+      'vuedraggable',
+      'fast-deep-equal',
+      'debounce',
+      'maplibre-gl',
+      'http-link-header',
+      'streamsaver',
+      'slugify',
+      'ajv/dist/2020.js',
+      'ajv/dist/runtime/ucs2length.js',
+      'ajv-i18n/localize/en/index.js',
+      'ajv-i18n/localize/fr/index.js',
+      'dayjs',
+      'dayjs/plugin/customParseFormat.js',
+      'dayjs/plugin/timezone.js',
+      'dayjs/plugin/utc.js',
+      'diff',
+      'md5'
+    ]
   },
   build: {
     rolldownOptions: {
