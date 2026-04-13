@@ -2,30 +2,38 @@
   <v-btn
     v-if="!createToggle"
     :prepend-icon="mdiPlus"
+    class="mb-2"
     color="primary"
-    variant="flat"
-    class="mb-3"
     density="comfortable"
+    variant="flat"
     @click="createToggle = true"
   >
     {{ t('addApiKey') }}
   </v-btn>
+  <df-tutorial-alert
+    id="api-key-use"
+    :text="t('apiKeyUseDetails')"
+    persistent
+    :initial="false"
+  />
   <v-slide-y-transition v-if="createToggle">
     <v-card :title="t('addNewApiKey')">
       <v-card-text>
         <v-form v-model="newApiKeyValid">
           <v-text-field
             v-model="newApiKey.title"
-            :rules="[v => !!v || '']"
+            :rules="[v => !!v?.trim() || t('required')]"
             :label="t('title')"
             density="comfortable"
+            hide-details="auto"
             required
           />
           <v-checkbox
             v-if="session.state.user.adminMode"
             v-model="newApiKey.adminMode"
             :label="t('superadminKey')"
-            class="text-warning"
+            color="admin"
+            class="text-admin"
             density="comfortable"
             hide-details
           />
@@ -33,7 +41,8 @@
             v-if="session.state.user.adminMode && newApiKey.adminMode"
             v-model="newApiKey.asAccount"
             :label="t('asAccountKey')"
-            class="text-warning"
+            color="admin"
+            class="text-admin"
             density="comfortable"
             hide-details
           />
@@ -51,34 +60,30 @@
             :item-title="t"
             :item-value="v => v"
             :item-props="v => (v.startsWith('datasets-') && newApiKey.scopes.includes('datasets')) ? {disabled: true} : {}"
-            multiple
             density="comfortable"
+            multiple
           />
+
           <v-date-input
-            :model-value="new Date(newApiKey.expireAt)"
+            v-model="expireDate"
             :label="t('expireAt')"
             :rules="[v => !!v || '']"
-            required
             :min="new Date()"
             :max="new Date(maxDate)"
             density="comfortable"
-            @update:model-value="v => newApiKey.expireAt = dayjs(v).format('YYYY-MM-DD')"
+            required
           />
         </v-form>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn
-          density="comfortable"
-          @click="createToggle = false"
-        >
+        <v-btn @click="createToggle = false">
           {{ t('cancel') }}
         </v-btn>
         <v-btn
+          :disabled="!newApiKeyValid"
           color="primary"
           variant="flat"
-          :disabled="!newApiKeyValid"
-          density="comfortable"
           @click="addApiKey"
         >
           {{ t('add') }}
@@ -99,11 +104,10 @@
         variant="outlined"
         rounded="0"
       >
-        <v-card-title class="d-flex justify-space-between align-center">
+        <v-card-title>
           <h4 class="text-title-large">
             {{ apiKey.title }}
           </h4>
-          <settings-api-key-use-menu />
         </v-card-title>
         <v-card-text>
           <v-alert
@@ -171,19 +175,21 @@
 
 <i18n lang="yaml">
 fr:
+  apiKeyUseDetails: Vous pouvez vous référer aux documentations d'API et utiliser cette clé en passant sa valeur dans le header "x-apiKey".
   addApiKey: Ajouter une clé d'API
   addNewApiKey: Ajout d'une nouvelle clé d'API
   title: Titre
+  required: Champ requis
   superadminKey: Clé de type super-administrateur
   asAccountKey: Clé permettant de travailler dans le contexte d'autres comptes (nécessaire pour configurer le service de traitements périodiques)
   cancel: Annuler
   add: Ajouter
-  newKeyAlert: Cette clé secrète apparait en clair car vous venez de la créer. Notez là, elle ne sera pas lisible par la suite.
+  newKeyAlert: Cette clé secrète apparaît en clair car vous venez de la créer. Copiez-la car elle ne sera plus lisible par la suite.
   superadminKeyAlert: Cette clé est de type super-administrateur
   asAccountKeyAlert: Cette clé permet de travailler dans le contexte d'autres comptes
   secretKey: Clé secrète
   scope: Portée
-  scopeMsg: En attribuant des portées à cette clé d’API, celle-ci pourra effectuer les opérations sélectionnées sur l’ensemble des ressources accessibles aux administrateurs du compte. Sans portée définie, la clé ne bénéficiera que des permissions explicitement associées à son identifiant (pseudo adresse mail).
+  scopeMsg: En attribuant des portées à cette clé d'API, celle-ci pourra effectuer les opérations sélectionnées sur l'ensemble des ressources accessibles aux administrateurs du compte. Sans portée définie, la clé ne bénéficiera que des permissions explicitement associées à son identifiant (pseudo adresse mail).
   email: Email
   emailMsg: Ce pseudo email peut être utilisé pour affecter des permissions fines à cette clé d'API.
   expireAt: Date d'expiration
@@ -197,14 +203,16 @@ fr:
   catalogs: Connecteurs aux catalogues
   stats: Récupération d'informations statistiques
 en:
+  apiKeyUseDetails: You can refer to the API documentation and use this key by passing its value in the "x-apiKey" header.
   addApiKey: Add an API key
   addNewApiKey: Add a new API key
   title: Title
+  required: Required field
   superadminKey: Super-admin key type
   asAccountKey: Key to work in the context of other accounts (required to configure periodic processings service)
   cancel: Cancel
   add: Add
-  newKeyAlert: You can view this key because you just created it. Store it in a secure place, it won't be readable again on this platform.
+  newKeyAlert: You can view this key because you just created it. Copy it, it won't be readable again on this platform.
   superadminKeyAlert: Super-admin key type
   asAccountKeyAlert: Key to work in the context of other accounts
   secretKey: Secret key
@@ -225,9 +233,9 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import type { Settings } from '#api/types'
 import { mdiPlus } from '@mdi/js'
 import { VDateInput } from 'vuetify/labs/VDateInput'
-import type { Settings } from '#api/types'
 
 const { restrictedScopes } = defineProps<{
   restrictedScopes?: string[]
@@ -240,6 +248,14 @@ const session = useSessionAuthenticated()
 const { dayjs } = useLocaleDayjs()
 
 const maxDate = dayjs().add($uiConfig.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')
+
+const expireDate = computed({
+  get: () => newApiKey.value.expireAt ? new Date(newApiKey.value.expireAt) : null,
+  set: (v) => {
+    newApiKey.value.expireAt = v ? dayjs(v).format('YYYY-MM-DD') : ''
+  }
+})
+
 const createNewApiKey = () => ({
   title: '',
   scopes: [],
@@ -269,7 +285,10 @@ onMounted(() => {
 })
 
 const addApiKey = () => {
-  apiKeys.value = [...(apiKeys.value ?? []), newApiKey.value]
+  apiKeys.value = [...(apiKeys.value ?? []), {
+    ...newApiKey.value,
+    title: newApiKey.value.title.trim()
+  }]
   createToggle.value = false
   newApiKey.value = createNewApiKey()
 }

@@ -26,6 +26,7 @@
         {{ $uiConfig.brand.title || 'Data Fair' }}
       </span>
     </div>
+    <v-divider vertical />
 
     <v-breadcrumbs
       v-if="showBreadcrumbs"
