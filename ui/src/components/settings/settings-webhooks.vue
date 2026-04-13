@@ -14,14 +14,14 @@
 import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
-const valid = ref(true)
 const webhooks = defineModel<Settings['webhooks']>()
+const valid = defineModel<boolean>('valid', { default: true })
 const editWebhooks = ref<Settings['webhooks']>()
 watchDeepDiff(webhooks, () => {
   editWebhooks.value = webhooks.value
 }, { immediate: true })
 watchDeepDiff(editWebhooks, () => {
-  if (valid.value) webhooks.value = editWebhooks.value
+  webhooks.value = editWebhooks.value
 }, {})
 
 const { locale } = useI18n()

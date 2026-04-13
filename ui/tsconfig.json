@@ -24,7 +24,8 @@
       "#api/types": ["../api/types/index.ts"],
       "#api-doc/*": ["../api/doc/*"],
       "#shared/*": ["../shared/*"],
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@data-fair/lib-vue/edit-fetch.js": ["./src/composables/df-local/edit-fetch-local.ts"]
     },
 
     "allowJs": true,

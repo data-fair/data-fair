@@ -14,8 +14,8 @@
 import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
-const valid = ref(true)
 const info = defineModel<Settings['info']>()
+const valid = defineModel<boolean>('valid', { default: true })
 const editInfo = ref<Settings['info']>()
 
 watchDeepDiff(info, () => {
@@ -23,7 +23,7 @@ watchDeepDiff(info, () => {
 }, { immediate: true })
 
 watchDeepDiff(editInfo, () => {
-  if (valid.value) info.value = editInfo.value
+  info.value = editInfo.value
 }, {})
 
 const { locale } = useI18n()

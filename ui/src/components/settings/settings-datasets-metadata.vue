@@ -14,14 +14,14 @@
 import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
-const valid = ref(true)
 const datasetsMetadata = defineModel<Settings['datasetsMetadata']>()
+const valid = defineModel<boolean>('valid', { default: true })
 const editDatasetsMetadata = ref<Settings['datasetsMetadata']>()
 watchDeepDiff(datasetsMetadata, () => {
   editDatasetsMetadata.value = datasetsMetadata.value
 }, { immediate: true })
 watchDeepDiff(editDatasetsMetadata, () => {
-  if (valid.value) datasetsMetadata.value = editDatasetsMetadata.value
+  datasetsMetadata.value = editDatasetsMetadata.value
 }, {})
 const { locale } = useI18n()
 

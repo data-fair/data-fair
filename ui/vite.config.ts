@@ -30,6 +30,7 @@ export default defineConfig({
       '@data-fair/lib-vuetify/navigation-right.vue': path.resolve(__dirname, 'src/components/df-local/navigation-right-local.vue'),
       '@data-fair/lib-vuetify/section-tabs.vue': path.resolve(__dirname, 'src/components/df-local/section-tabs-local.vue'),
       '@data-fair/lib-vuetify/tutorial-alert.vue': path.resolve(__dirname, 'src/components/df-local/tutorial-alert-local.vue'),
+      '@data-fair/lib-vue/edit-fetch.js': path.resolve(__dirname, 'src/composables/df-local/edit-fetch-local.ts'),
     },
   },
   html: {

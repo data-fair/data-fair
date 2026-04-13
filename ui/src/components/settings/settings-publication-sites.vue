@@ -29,6 +29,7 @@ import { type Settings, settingsSchema } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
 const publicationSites = defineModel<Settings['publicationSites']>()
+const valid = defineModel<boolean>('valid', { default: true })
 const { datasetsMetadata } = defineProps<{ datasetsMetadata: Settings['datasetsMetadata'] }>()
 
 const { t, locale } = useI18n()
@@ -38,13 +39,12 @@ const publicationSitesAdminSchema = publicationSitesContract(true)
 const schema = computed(() => user.value.adminMode ? publicationSitesAdminSchema : publicationSitesSchema)
 const datasetsMetadataSchema = settingsSchema.properties.datasetsMetadata
 
-const valid = ref(true)
 const editPublicationSites = ref<Settings['publicationSites']>()
 watchDeepDiff(publicationSites, () => {
   editPublicationSites.value = publicationSites.value
 }, { immediate: true })
 watchDeepDiff(editPublicationSites, () => {
-  if (valid.value) publicationSites.value = editPublicationSites.value
+  publicationSites.value = editPublicationSites.value
 }, {})
 
 const context = computed(() => ({

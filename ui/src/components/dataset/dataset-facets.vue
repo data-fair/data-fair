@@ -268,8 +268,17 @@ fr:
     analyzed: Analysé
     schematized: Schématisé
   draftStatusValues:
-    waiting: En attente
-    validationNeeded: Validation nécessaire
+    created: Créé
+    loaded: Chargé
+    stored: Ajouté à l'espace de stockage
+    normalized: Format normalisé
+    analyzed: Analyse de la structure ok
+    'validation-updated': Validation mise à jour
+    validated: Validation ok
+    extended: Extension ok
+    indexed: Indexé
+    finalized: Finalisé
+    error: Erreur
   visibilityValues:
     public: Public
     private: Privé
@@ -300,8 +309,17 @@ en:
     analyzed: Analyzed
     schematized: Schematized
   draftStatusValues:
-    waiting: Waiting
-    validationNeeded: Validation needed
+    created: Created
+    loaded: Loaded
+    stored: Added to storage space
+    normalized: Normalized format
+    analyzed: Structure analysis ok
+    'validation-updated': Validation updated
+    validated: Validation ok
+    extended: Extended
+    indexed: Indexed
+    finalized: Finalized
+    error: Error
   visibilityValues:
     public: Public
     private: Private
