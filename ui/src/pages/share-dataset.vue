@@ -232,9 +232,9 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import type { ListedDataset } from '~/components/dataset/select/utils'
 import { mdiCheckAll, mdiDatabase, mdiFileDocument, mdiLock, mdiPublish } from '@mdi/js'
 import { $fetch, $apiPath } from '~/context'
-import type { ListedDataset } from '~/components/dataset/select/utils'
 
 const { t } = useI18n()
 const { account } = useSessionAuthenticated()

@@ -208,11 +208,13 @@
           class="pa-4"
         >
           <v-tabs-window-item value="permissions">
-            <permissions
+            <Permissions
               v-if="application"
+              :model-value="permissions"
               :resource="application"
               resource-type="applications"
               :disabled="!can('setPermissions')"
+              @save="onSavePermissions"
             />
           </v-tabs-window-item>
 
@@ -422,6 +424,7 @@ fr:
   details: Détails
   save: Enregistrer
   saved: Les modifications ont été enregistrées
+  permissionsUpdated: Les permissions ont été mises à jour
   confirmCancelText: Souhaitez-vous annuler vos modifications ?
   cancel: Annuler
   upgrade: Mettre à jour
@@ -462,6 +465,7 @@ en:
   details: Details
   save: Save
   saved: Changes were saved
+  permissionsUpdated: Permissions were updated
   confirmCancelText: Do you want to discard your changes?
   cancel: Cancel
   upgrade: Upgrade
@@ -505,7 +509,14 @@ const renderTab = ref('config')
 const activityTab = ref('traceability')
 
 const store = provideApplicationStore(route.params.id)
-const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch } = store
+const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions } = store
+
+const { sendUiNotif } = useUiNotif()
+
+const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
+  await savePermissions(newPermissions)
+  sendUiNotif({ type: 'success', msg: t('permissionsUpdated') })
+}
 const { availableVersions } = useApplicationVersions(store)
 
 useApplicationWatch(['draft-error'], store)
@@ -555,6 +566,7 @@ watch(application, (app) => {
   })
   if (!configFetch.initialized.value) configFetch.refresh()
   if (!baseAppFetch.initialized.value) baseAppFetch.refresh()
+  if (can('getPermissions') && !permissionsFetch.initialized.value) permissionsFetch.refresh()
 }, { immediate: true })
 
 // Fetch datasets and children apps once config is loaded

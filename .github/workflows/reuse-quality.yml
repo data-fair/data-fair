@@ -25,11 +25,11 @@ jobs:
     - name: Build types
       run: npm run build-types
 
-    - name: Type check
-      run: npm -w ui run check-types
-
     - name: Build UI
       run: npm -w ui run build
+
+    - name: Type check
+      run: npm -w ui run check-types
 
     - name: Build parquet-writer
       run: npm -w parquet-writer run build
