@@ -53,7 +53,7 @@
     </v-list-item>
 
     <v-list-item
-      v-if="can('readApiDoc')"
+      v-if="$uiConfig.openapiViewerIntegration && can('readApiDoc')"
       :to="`/application/${application.id}/api-doc`"
       link
     >

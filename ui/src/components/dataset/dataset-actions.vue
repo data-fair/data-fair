@@ -83,7 +83,7 @@
     </v-list-item>
 
     <v-list-item
-      v-if="can('readApiDoc').value && dataset.finalizedAt"
+      v-if="$uiConfig.openapiViewerIntegration && can('readApiDoc').value && dataset.finalizedAt"
       :to="`/dataset/${dataset.id}/api-doc`"
       link
     >

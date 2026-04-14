@@ -128,7 +128,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
 
     // Help group
     const help: NavItem[] = []
-    if (canContribDep.value) {
+    if (canContribDep.value && $uiConfig.openapiViewerIntegration) {
       help.push({ to: '/api-doc', icon: mdiCloud, title: t('apiDoc') })
     }
     for (const docLink of ($uiConfig.extraDocLinks ?? [])) {
