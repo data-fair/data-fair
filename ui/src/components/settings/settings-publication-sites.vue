@@ -12,15 +12,15 @@
 
 <i18n lang="yaml">
 fr:
-  summary: résumé
-  description: description
-  license: licence
-  topic: thématique
+  summary: Résumé
+  description: Description
+  license: License
+  topic: Thématique
 en:
-  summary: summary
-  description: description
-  license: license
-  topic: topic
+  summary: Summary
+  description: Description
+  license: License
+  topic: Topic
 </i18n>
 
 <script setup lang="ts">
