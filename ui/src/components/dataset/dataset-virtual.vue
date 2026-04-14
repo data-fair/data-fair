@@ -258,7 +258,7 @@ fr:
   noChild: Aucun jeu de données agrege.
   selectedColumns: Colonnes selectionnees
   noColumn: Aucune colonne selectionnee.
-  addColumn: ajouter une colonne
+  addColumn: Ajouter une colonne
   reorder: Reordonner
   delete: Supprimer
   filterType: Type de filtre
@@ -267,7 +267,7 @@ fr:
     in: Restreindre a des valeurs
     nin: Exclure des valeurs
   filters: Filtres
-  addFilter: ajouter un filtre
+  addFilter: Ajouter un filtre
   noFilter: Aucun filtre defini.
   filterActiveAccount: Filtrer sur les comptes actifs
   ownerDatasets: Vos jeux de données
@@ -279,7 +279,7 @@ en:
   noChild: No dataset aggregated.
   selectedColumns: Selected columns
   noColumn: No column inherited.
-  addColumn: add a column
+  addColumn: Add a column
   reorder: Reorder
   delete: Delete
   filterType: Filter type
@@ -288,7 +288,7 @@ en:
     in: Restrict to some values
     nin: Exclude some values
   filters: Filters
-  addFilter: add a filter
+  addFilter: Add a filter
   noFilter: No filter defined.
   filterActiveAccount: Filter on active accounts
   ownerDatasets: Your datasets

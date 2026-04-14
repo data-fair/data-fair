@@ -193,14 +193,12 @@ fr:
   stepMetadata: Métadonnées
   stepAction: Confirmation
   continue: Continuer
-  next: Suivant
   publish: Publier le jeu de données
   requestPublication: Demander la publication de ce jeu de données à un administrateur
   publicationRequested: La publication sera soumise à un administrateur pour validation.
   completed: complètes
   alreadyPublished: Ce jeu de données est déjà publié sur ce portail.
   noPublicationSite: Aucun portail n'est configuré sur ce compte.
-  permissionsNote: Les permissions du jeu de données seront conservées. Vous pouvez les modifier depuis la page du jeu de données après publication.
   datasetTitle: Titre
   datasetDescription: Description
   required: Ce champ est requis
@@ -216,14 +214,12 @@ en:
   stepMetadata: Metadata
   stepAction: Confirmation
   continue: Continue
-  next: Next
   publish: Publish the dataset
   requestPublication: Submit the publication of this dataset to an admin for approval
   publicationRequested: The publication will be submitted to an admin for validation.
   completed: completed
   alreadyPublished: This dataset is already published on this portal.
   noPublicationSite: No portal is configured for this account.
-  permissionsNote: The dataset permissions will be preserved. You can modify them from the dataset page after publication.
   datasetTitle: Title
   datasetDescription: Description
   required: This field is required

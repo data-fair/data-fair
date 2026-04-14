@@ -28,7 +28,6 @@
 
 <i18n lang="yaml">
 fr:
-  editSchema: Éditer le schéma
   group: Groupe
   key: Clé
   title: Libellé
@@ -36,7 +35,6 @@ fr:
   x-refersTo: Concept
   description: Description
 en:
-  editSchema: Edit schema
   group: Group
   key: Key
   title: Title

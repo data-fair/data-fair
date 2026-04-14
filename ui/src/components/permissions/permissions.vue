@@ -194,17 +194,17 @@ fr:
   description: Permettez à d'autres utilisateurs d'utiliser cette ressource.
   visibilityLabel: Qui peut consulter cette ressource ?
   visibility:
-    public: tout le monde
-    privateOrg: uniquement les administrateurs de l'organisation {org}
-    privateOrgContrib: les administrateurs et contributeurs de l'organisation {org}
-    privateUser: uniquement l'utilisateur {user}
-    sharedInOrg: tous les utilisateurs de l'organisation {org}
+    public: Tout le monde
+    privateOrg: Uniquement les administrateurs de l'organisation {org}
+    privateOrgContrib: Les administrateurs et contributeurs de l'organisation {org}
+    privateUser: Uniquement l'utilisateur {user}
+    sharedInOrg: Tous les utilisateurs de l'organisation {org}
   contribProfileLabel: Qui peut contribuer à cette ressource ?
   contribProfile:
-    adminOnly: uniquement les administrateurs de l'organisation {org}
-    contribWriteData: les contributeurs de l'organisation {org} peuvent modifier uniquement les données et seulement si elles sont compatibles
-    contribWriteNoBreaking: les contributeurs de l'organisation {org} peuvent tout modifier à l'exception de ce qui risquerait de provoquer une rupture de compatibilité
-    contribWriteAll: les contributeurs de l'organisation {org} peuvent tout modifier et supprimer la ressource
+    adminOnly: Uniquement les administrateurs de l'organisation {org}
+    contribWriteData: Les contributeurs de l'organisation {org} peuvent modifier uniquement les données et seulement si elles sont compatibles
+    contribWriteNoBreaking: Les contributeurs de l'organisation {org} peuvent tout modifier à l'exception de ce qui risquerait de provoquer une rupture de compatibilité
+    contribWriteAll: Les contributeurs de l'organisation {org} peuvent tout modifier et supprimer la ressource
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des applications publiques.
   warningPublicApp: Vous ne devriez pas rendre cette application publique, elle utilise des sources de données privées.
   addPermission: Ajouter des permissions
@@ -223,8 +223,6 @@ fr:
   detailedActions: Actions détaillées
   detailedMode: Édition détaillée des permissions
   actions: Actions
-  name: Nom
-  updateError: Erreur pendant la mise à jour des permissions
   permissionsUpdated: Les permissions ont été mises à jour
   noDep: aucun département
   readDepPermissionsDoc: Consultez la documentation sur les départements pour comprend les permissions des différents membres du département.
@@ -241,17 +239,17 @@ en:
   description: Allow other users to use this resource.
   visibilityLabel: Who can read this dataset ?
   visibility:
-    public: anyone
-    privateOrg: only admins of the organization {org}
-    privateOrgContrib: admins and contributors of the organization {org}
-    privateUser: only yourself
-    sharedInOrg: any user of the organization {org}
+    public: Anyone
+    privateOrg: Only admins of the organization {org}
+    privateOrgContrib: Admins and contributors of the organization {org}
+    privateUser: Only yourself
+    sharedInOrg: Any user of the organization {org}
   contribProfileLabel: Who can contribute to this resource ?
   contribProfile:
-    adminOnly: only admins of the organization {org}
-    contribWriteData: contribs of the organization {org} can update only the data and only if it is compatible
-    contribWriteNoBreaking: contribs of the organization {org} can update anything except for what might constitute a breaking change
-    contribWriteAll: contribs of the organization {org} can update anything and delete the resource
+    adminOnly: Only admins of the organization {org}
+    contribWriteData: Contribs of the organization {org} can update only the data and only if it is compatible
+    contribWriteNoBreaking: Contribs of the organization {org} can update anything except for what might constitute a breaking change
+    contribWriteAll: Contribs of the organization {org} can update anything and delete the resource
   warningPrivateDataset: You should not make this dataset private as long as it is used in public applications.
   warningPublicApp: You should not make this application public as long as it uses private datasets.
   addPermission: Add permissions
@@ -270,8 +268,6 @@ en:
   detailedActions: Detailed actions
   detailedMode: Detailed edition of permissions
   actions: Actions
-  name: Name
-  updateError: Error while updating permissions
   permissionsUpdated: Permissions were updated
   noDep: no department
   readDepPermissionsDoc: Read the documentation about departments to understand the permissions applied to members of the departement and of the organization.

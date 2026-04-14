@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <h2 class="text-title-large mb-4">
-      Modèles d'application
+      {{ t('baseApps') }}
     </h2>
     <v-row>
       <v-col
@@ -12,7 +12,7 @@
         <v-text-field
           v-model="q"
           name="q"
-          label="Rechercher"
+          :label="t('search')"
           hide-details
           variant="outlined"
           density="compact"
@@ -30,8 +30,8 @@
       >
         <v-text-field
           v-model="urlToAdd"
-          label="Ajouter"
-          placeholder="Saisissez l'URL d'une nouvelle application"
+          :label="t('add')"
+          :placeholder="t('addPlaceholder')"
           @keypress.enter="add.execute()"
         />
       </v-col>
@@ -52,7 +52,7 @@
           <v-list-item-title>
             {{ baseApp.title }}
             <v-chip size="small">
-              {{ baseApp.category || 'autre' }}
+              {{ baseApp.category || t('other') }}
             </v-chip>
             <a
               :href="baseApp.url"
@@ -83,9 +83,9 @@
               target="_top"
               class="simple-link"
             >
-              {{ baseApp.nbApplications }} application{{ (baseApp.nbApplications as number) > 1 ? 's' : '' }}
+              {{ t('nbApplications', baseApp.nbApplications as number) }}
             </a>
-            - Jeux de données : {{ baseApp.datasetsFilters }}
+            - {{ t('datasets') }} : {{ baseApp.datasetsFilters }}
           </v-list-item-subtitle>
 
           <template #append>
@@ -107,51 +107,51 @@
     >
       <v-card
         v-if="currentBaseApp && patch"
-        :title="`Édition de ${currentBaseApp.title}`"
+        :title="t('editTitle', { title: currentBaseApp.title })"
       >
         <v-card-text>
           <p>URL : {{ currentBaseApp.url }}</p>
           <v-checkbox
             v-model="patch.deprecated"
-            label="Dépréciée"
+            :label="t('deprecated')"
           />
           <v-form>
             <v-text-field
               v-model="patch.applicationName"
               name="applicationName"
-              label="Identifiant d'application"
+              :label="t('applicationName')"
             />
             <v-text-field
               v-model="patch.version"
               name="version"
-              label="Version d'application"
+              :label="t('version')"
             />
             <v-text-field
               v-model="patch.title"
               name="title"
-              label="Titre"
+              :label="t('title')"
             />
             <v-textarea
               v-model="patch.description"
               name="description"
-              label="Description"
+              :label="t('description')"
             />
             <v-text-field
               v-model="patch.image"
               name="image"
-              label="Image"
+              :label="t('image')"
             />
             <v-select
               v-model="patch.category"
               name="category"
-              label="Catégorie"
+              :label="t('category')"
               clearable
               :items="$uiConfig.baseAppsCategories"
             />
             <v-text-field
               v-model="patch.documentation"
               name="documentation"
-              label="Documentation"
+              :label="t('documentation')"
             />
             <private-access v-model="patch" />
           </v-form>
@@ -161,14 +161,14 @@
           <v-btn
             @click="showEditDialog = false"
           >
-            Annuler
+            {{ t('cancel') }}
           </v-btn>
           <v-btn
             color="primary"
             variant="flat"
             @click="applyPatch.execute(currentBaseApp, patch); showEditDialog = false"
           >
-            Enregistrer
+            {{ t('save') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -179,8 +179,42 @@
 <i18n lang="yaml">
 fr:
   baseApps: Modèles d'application
+  search: Rechercher
+  add: Ajouter
+  addPlaceholder: Saisissez l'URL d'une nouvelle application
+  other: autre
+  nbApplications: "{count} application | {count} application | {count} applications"
+  datasets: Jeux de données
+  editTitle: Édition de {title}
+  deprecated: Dépréciée
+  applicationName: Identifiant d'application
+  version: Version d'application
+  title: Titre
+  description: Description
+  image: Image
+  category: Catégorie
+  documentation: Documentation
+  cancel: Annuler
+  save: Enregistrer
 en:
   baseApps: Application templates
+  search: Search
+  add: Add
+  addPlaceholder: Enter the URL of a new application
+  other: other
+  nbApplications: "{count} application | {count} application | {count} applications"
+  datasets: Datasets
+  editTitle: Edit {title}
+  deprecated: Deprecated
+  applicationName: Application identifier
+  version: Application version
+  title: Title
+  description: Description
+  image: Image
+  category: Category
+  documentation: Documentation
+  cancel: Cancel
+  save: Save
 </i18n>
 
 <script setup lang="ts">

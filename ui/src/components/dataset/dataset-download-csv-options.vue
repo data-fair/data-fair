@@ -18,7 +18,7 @@
         color="primary"
         @click="$emit('click')"
       >
-        valider
+        {{ t('validate') }}
       </v-btn>
     </template>
   </v-list-item>
@@ -27,10 +27,10 @@
 <i18n lang="yaml">
 fr:
   separator: Séparateur
-  validate: valider
+  validate: Valider
 en:
   separator: Separator
-  validate: validate
+  validate: Validate
 </i18n>
 
 <script setup lang="ts">

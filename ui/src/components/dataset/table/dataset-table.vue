@@ -19,7 +19,7 @@
       class="mx-2"
       color="primary"
       density="compact"
-      placeholder="Rechercher"
+      :placeholder="t('search')"
       variant="outlined"
       clearable
       hide-details
@@ -415,6 +415,7 @@
     cancel: Annuler
     delete: Supprimer
     save: Enregistrer
+    search: Rechercher
     editLine: Éditer une ligne
     deleteLine: Supprimer une ligne
     deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
@@ -424,6 +425,7 @@
     cancel: Cancel
     delete: Delete
     save: Save
+    search: Search
     editLine: Edit a line
     helpFilterPrompt: Help me filter this data
     checkDataQualityPrompt: Check data quality

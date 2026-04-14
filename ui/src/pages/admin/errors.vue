@@ -1,11 +1,11 @@
 <template>
   <v-container>
     <p v-if="datasetsErrorsFetch.data.value?.count === 0">
-      Aucun jeu de données en erreur
+      {{ t('noDatasetsInError') }}
     </p>
     <template v-else-if="datasetsErrorsFetch.data.value">
       <h3 class="text-title-large">
-        Jeux de données en erreur
+        {{ t('datasetsInError') }}
       </h3>
       <v-sheet
         class="my-4"
@@ -31,7 +31,7 @@
               <v-btn
                 :icon="mdiPlay"
                 color="primary"
-                title="reindex"
+                :title="t('reindex')"
                 variant="text"
                 :loading="reindex.loading.value"
                 @click="reindex.execute(error.id)"
@@ -43,11 +43,11 @@
     </template>
 
     <p v-if="datasetsEsWarningsFetch.data.value?.count === 0">
-      Aucun jeu de données avec avertissements Elasticsearch
+      {{ t('noDatasetsWithEsWarnings') }}
     </p>
     <template v-else-if="datasetsEsWarningsFetch.data.value">
       <h3 class="text-title-large">
-        Jeux de données avec avertissements Elasticsearch
+        {{ t('datasetsWithEsWarnings') }}
       </h3>
       <v-sheet
         class="my-4"
@@ -73,7 +73,7 @@
               <v-btn
                 :icon="mdiPlay"
                 color="primary"
-                title="reindex"
+                :title="t('reindex')"
                 variant="text"
                 :loading="reindex.loading.value"
                 @click="reindex.execute(error.id)"
@@ -85,11 +85,11 @@
     </template>
 
     <p v-if="applicationsErrorsFetch.data.value?.count === 0">
-      Aucune application en erreur
+      {{ t('noApplicationsInError') }}
     </p>
     <template v-else-if="applicationsErrorsFetch.data.value">
       <h3 class="text-title-large">
-        Applications en erreur
+        {{ t('applicationsInError') }}
       </h3>
       <v-sheet
         class="my-4"
@@ -116,11 +116,11 @@
     </template>
 
     <p v-if="applicationsDraftErrorsFetch.data.value?.count === 0">
-      Aucune application avec brouillon en erreur
+      {{ t('noApplicationsWithDraftError') }}
     </p>
     <template v-else-if="applicationsDraftErrorsFetch.data.value">
       <h3 class="text-title-large">
-        Applications avec brouillon en erreur
+        {{ t('applicationsWithDraftError') }}
       </h3>
       <v-sheet
         class="my-4"
@@ -151,8 +151,26 @@
 <i18n lang="yaml">
 fr:
   errors: Erreurs
+  reindex: Réindexer
+  noDatasetsInError: Aucun jeu de données en erreur
+  datasetsInError: Jeux de données en erreur
+  noDatasetsWithEsWarnings: Aucun jeu de données avec avertissements Elasticsearch
+  datasetsWithEsWarnings: Jeux de données avec avertissements Elasticsearch
+  noApplicationsInError: Aucune application en erreur
+  applicationsInError: Applications en erreur
+  noApplicationsWithDraftError: Aucune application avec brouillon en erreur
+  applicationsWithDraftError: Applications avec brouillon en erreur
 en:
   errors: Errors
+  reindex: Reindex
+  noDatasetsInError: No datasets in error
+  datasetsInError: Datasets in error
+  noDatasetsWithEsWarnings: No datasets with Elasticsearch warnings
+  datasetsWithEsWarnings: Datasets with Elasticsearch warnings
+  noApplicationsInError: No applications in error
+  applicationsInError: Applications in error
+  noApplicationsWithDraftError: No applications with draft in error
+  applicationsWithDraftError: Applications with draft in error
 </i18n>
 
 <script setup lang="ts">

@@ -881,7 +881,6 @@ fr:
   selectAttachments: Pièces jointes (archive zip, optionnel)
   title: Titre du jeu de données
   titleTooShort: Le titre doit contenir au moins 4 caractères
-  filenameTitle: Utiliser le nom du fichier pour construire le titre du jeu de données
   attachmentsAsImage: Traiter les pièces jointes comme des images
   formats: Formats supportés
   advancedOptions: Paramètres avancés
@@ -932,7 +931,6 @@ en:
   selectAttachments: Attachments (zip archive, optional)
   title: Dataset title
   titleTooShort: Title must be at least 4 characters
-  filenameTitle: Use the file name to create the title of the dataset
   attachmentsAsImage: Process the attachments as images
   formats: Supported formats
   advancedOptions: Advanced options

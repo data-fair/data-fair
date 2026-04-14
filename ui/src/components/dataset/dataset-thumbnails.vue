@@ -12,7 +12,7 @@
     />
     <v-text-field
       v-model="editQ"
-      placeholder="Rechercher"
+      :placeholder="t('search')"
       :append-inner-icon="mdiMagnify"
       variant="outlined"
       rounded
@@ -66,10 +66,8 @@
 <i18n lang="yaml">
 fr:
   search: Rechercher
-  lines: lignes
 en:
   search: Search
-  lines: lines
 </i18n>
 
 <script setup lang="ts">
@@ -80,6 +78,7 @@ import { ExtendedResult } from '~/composables/dataset/lines'
 
 const { height } = defineProps({ height: { type: Number, required: true } })
 const q = defineModel<string>('q', { default: '' })
+const { t } = useI18n()
 
 const { dataset, descriptionField, labelField, imageField } = useDatasetStore()
 const virtualScroll = ref<VVirtualScroll>()

@@ -49,34 +49,34 @@ fr:
   description: Permettez à d'autres utilisateurs d'utiliser cette ressource.
   visibilityLabel: Qui peut consulter cette ressource ?
   visibility:
-    public: tout le monde
-    privateOrg: uniquement les administrateurs de l'organisation {org}
-    privateOrgContrib: les administrateurs et contributeurs de l'organisation {org}
-    privateUser: uniquement l'utilisateur {user}
-    sharedInOrg: tous les utilisateurs de l'organisation {org}
+    public: Tout le monde
+    privateOrg: Uniquement les administrateurs de l'organisation {org}
+    privateOrgContrib: Les administrateurs et contributeurs de l'organisation {org}
+    privateUser: Uniquement l'utilisateur {user}
+    sharedInOrg: Tous les utilisateurs de l'organisation {org}
   contribProfileLabel: Qui peut contribuer à cette ressource ?
   contribProfile:
-    adminOnly: uniquement les administrateurs de l'organisation {org}
-    contribWriteData: les contributeurs peuvent modifier les données compatibles
-    contribWriteNoBreaking: les contributeurs peuvent tout modifier sauf les changements incompatibles
-    contribWriteAll: les contributeurs peuvent tout modifier et supprimer la ressource
+    adminOnly: Uniquement les administrateurs de l'organisation {org}
+    contribWriteData: Les contributeurs peuvent modifier les données compatibles
+    contribWriteNoBreaking: Les contributeurs peuvent tout modifier sauf les changements incompatibles
+    contribWriteAll: Les contributeurs peuvent tout modifier et supprimer la ressource
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des applications publiques.
   permissionsUpdated: Les permissions ont été mises à jour
 en:
   description: Allow other users to use this resource.
   visibilityLabel: Who can read this resource?
   visibility:
-    public: anyone
-    privateOrg: only admins of the organization {org}
-    privateOrgContrib: admins and contributors of the organization {org}
-    privateUser: only yourself
-    sharedInOrg: any user of the organization {org}
+    public: Anyone
+    privateOrg: Only admins of the organization {org}
+    privateOrgContrib: Admins and contributors of the organization {org}
+    privateUser: Only yourself
+    sharedInOrg: Any user of the organization {org}
   contribProfileLabel: Who can contribute to this resource?
   contribProfile:
-    adminOnly: only admins of the organization {org}
-    contribWriteData: contributors can update only compatible data
-    contribWriteNoBreaking: contributors can update anything except breaking changes
-    contribWriteAll: contributors can update anything and delete the resource
+    adminOnly: Only admins of the organization {org}
+    contribWriteData: Contributors can update only compatible data
+    contribWriteNoBreaking: Contributors can update anything except breaking changes
+    contribWriteAll: Contributors can update anything and delete the resource
   warningPrivateDataset: You should not make this dataset private as long as it is used in public applications.
   permissionsUpdated: Permissions were updated
 </i18n>

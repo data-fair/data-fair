@@ -135,8 +135,8 @@ fr:
   conceptMismatch: "le concept \"{childConcept}\" de la colonne \"{field}\" ne correspond pas au concept dans le jeu virtuel \"{parentConcept}\""
   disabledConfig: "la configuration technique \"{param}\" de la colonne \"{field}\" est désactivée mais active dans le jeu virtuel"
   unusedConfig: "la configuration technique \"{param}\" de la colonne \"{field}\" est activée mais inactive dans le jeu virtuel"
-  warning: avertissement
-  error: erreur
+  warning: Avertissement
+  error: Erreur
 en:
   additionalFields: contains columns absent in the virtual dataset ({fields})
   missingFields: does not contain some columns of the virtual dataset ({fields})
@@ -146,6 +146,6 @@ en:
   conceptMismatch: "the concept \"{childConcept}\" of the column \"{field}\" does not match the concept in the virtual dataset \"{parentConcept}\""
   disabledConfig: "technical configuration \"{param}\" of the column \"{field}\" is disabled but active in the virtual dataset"
   unusedConfig: "technical configuration \"{param}\" of the column \"{field}\" is active but disabled in the virtual dataset"
-  warning: warning
-  error: error
+  warning: Warning
+  error: Error
 </i18n>

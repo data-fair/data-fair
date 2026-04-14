@@ -128,8 +128,8 @@ en:
   draftNew2: Check that the file was property read, browse the first 100 lines, add concepts to the schema, configure extensions, etc.
   draftUpdated1: The dataset was switched to draft mode following the upload of a new file.
   draftUpdated2: Check that the file was property read, browse the first 100 lines, etc. When satisfied, validate the draft and the dataset will be processed entirely.
-  draftValidationCan:  When satisfied, validate the draft and the dataset will be processed entirely.
-  draftValidationCannot: You lack the permission to validate this draft, you should contact an admin.
+  draftValidateCan: When satisfied, validate the draft and the dataset will be processed entirely.
+  draftValidateCannot: You lack the permission to validate this draft, you should contact an admin.
   restart: Restart
   cancelDraft: Cancel the draft
   validateDraft: Validate the draft
