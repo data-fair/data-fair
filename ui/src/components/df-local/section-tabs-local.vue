@@ -4,9 +4,8 @@
     class="mt-2 mb-10"
   >
     <v-card
-      :style="cardStyle"
-      color="primary"
-      border="0"
+      class="rounded-lg"
+      :style="`border-left: 3px solid rgb(var(--v-theme-${color}))`"
     >
       <div
         class="d-flex flex-no-wrap w-100"
@@ -28,7 +27,7 @@
           style="min-width: 0"
         >
           <v-toolbar
-            style="background-color:transparent"
+            color="surface"
             extended
             flat
           >
@@ -42,7 +41,7 @@
               </div>
             </v-toolbar-title>
 
-            <!-- Slot for actions butons (like save or discard)-->
+            <!-- Slot for action buttons (save, discard, ...) -->
             <template
               v-if="$slots.actions"
               #append
@@ -56,7 +55,6 @@
                 <v-tabs
                   v-model="tab"
                   :optional="false"
-                  style="margin-bottom: 1px;"
                   show-arrows
                   :color="color"
                 >
@@ -82,7 +80,7 @@
       </div>
     </v-card>
 
-    <!-- Tab windows -->
+    <!-- Tab windows (rendered below the card, in page flow) -->
     <v-tabs-window
       v-if="$slots.windows"
       :model-value="tab"
@@ -103,13 +101,12 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
-import { useDisplay, useTheme } from 'vuetify'
+import { useDisplay } from 'vuetify'
 import DfThemedSvg from '@data-fair/lib-vuetify/themed-svg.vue'
 
 type TabInfo = { key: string, title: string, icon?: string, appendIcon?: string, color?: string } | null
 
-const { title, tabs, svg, color = 'primary' } = defineProps<{
+const { color = 'primary' } = defineProps<{
   id: string,
   title: string,
   subtitle?: string,
@@ -121,7 +118,4 @@ const { title, tabs, svg, color = 'primary' } = defineProps<{
 const tab = defineModel({ type: String })
 
 const display = useDisplay()
-const theme = useTheme()
-
-const cardStyle = computed(() => `background: linear-gradient(90deg, ${theme.current.value.colors.surface} 0%, ${theme.current.value.colors.background} 90%`)
 </script>
