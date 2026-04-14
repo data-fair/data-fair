@@ -80,6 +80,10 @@
     "benchmark"
   ],
   "dependencies": {
-    "@data-fair/lib-node": "^2.9.1"
+    "@data-fair/lib-node": "^2.9.1",
+    "axios": "^1.9.0"
+  },
+  "overrides": {
+    "axios": "$axios"
   }
 }

@@ -1,4 +1,4 @@
-import { datasetIdProperty, filterProperties } from './_utils.js'
+import { datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Agréger des données' },
@@ -100,11 +100,16 @@ export function formatResult (data: any, params: Params): { text: string, struct
     return line
   }
 
-  const text = [
+  const filterQueryString = buildFilterQueryString(params)
+  const lines = [
     `**${data.total}** total rows, **${data.total_values}** groups shown, **${data.total_other}** rows not represented`,
     '',
     ...(data.aggs ?? []).map((agg: any) => formatAgg(agg, ''))
-  ].join('\n')
+  ]
+  if (filterQueryString) {
+    lines.push('', `Filter query: ${filterQueryString}`)
+  }
+  const text = lines.join('\n')
 
   return {
     text,

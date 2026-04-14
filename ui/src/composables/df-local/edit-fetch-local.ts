@@ -81,10 +81,18 @@ export function useEditFetch<T extends Record<string, any>> (url: OptionalUrl | 
    * Each sub-editor has its own hasDiff, save (PATCH only its keys), and cancel.
    * This allows multiple independent edit sections on the same data object.
    */
+  // Normalize values for diff comparison: treat empty arrays as equivalent to undefined/null.
+  // This prevents VJSF from triggering spurious diffs when it initializes undefined array
+  // fields to empty arrays on component mount.
+  const normalizeForDiff = (v: any): any => {
+    if (Array.isArray(v) && v.length === 0) return undefined
+    return v
+  }
+
   function createSubEdit (keys: (keyof T)[], saveOptions?: AsyncActionOptions): SubEdit<T> {
     const subHasDiff = computed(() => {
       if (!data.value || !serverData.value) return false
-      return keys.some(k => !equal(data.value![k as string], serverData.value![k as string]))
+      return keys.some(k => !equal(normalizeForDiff(data.value![k as string]), normalizeForDiff(serverData.value![k as string])))
     })
 
     const keyHasDiffCache = new Map<keyof T, ComputedRef<boolean>>()
@@ -93,7 +101,7 @@ export function useEditFetch<T extends Record<string, any>> (url: OptionalUrl | 
       if (!c) {
         c = computed(() => {
           if (!data.value || !serverData.value) return false
-          return !equal(data.value![key as string], serverData.value![key as string])
+          return !equal(normalizeForDiff(data.value![key as string]), normalizeForDiff(serverData.value![key as string]))
         })
         keyHasDiffCache.set(key, c)
       }

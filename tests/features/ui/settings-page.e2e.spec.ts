@@ -112,6 +112,7 @@ test.describe('settings quality tabs save/cancel', () => {
     // Add a license in the Licences tab
     await page.locator('#quality').getByRole('button', { name: /ajouter/i }).click()
     await page.locator('#quality').getByLabel(/titre/i).first().fill('MIT License')
+    await page.locator('#quality').getByLabel(/URL/i).first().fill('https://mit.edu/license')
 
     // Save button appears
     await expect(page.locator('#quality').getByRole('button', { name: /Enregistrer/i })).toBeVisible({ timeout: 5000 })
@@ -193,6 +194,7 @@ test.describe('settings cross-subEdit interference', () => {
     await page.locator('#quality').scrollIntoViewIfNeeded()
     await page.locator('#quality').getByRole('button', { name: /ajouter/i }).click()
     await page.locator('#quality').getByLabel(/titre/i).first().fill('Saved License')
+    await page.locator('#quality').getByLabel(/URL/i).first().fill('https://example.com/license')
     await page.locator('#quality').getByRole('button', { name: /Enregistrer/i }).click()
 
     // Wait for save to complete
