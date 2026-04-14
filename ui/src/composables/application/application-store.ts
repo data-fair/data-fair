@@ -25,6 +25,9 @@ const createApplicationStore = (id: string) => {
 
   const patch = async (patch: Partial<ApplicationRuntime>) => {
     const patchedApplication = await $fetch<ApplicationRuntime>('/applications/' + id, { method: 'PATCH', body: patch })
+    // preserve userPermissions: the PATCH response does not include them (unlike GET),
+    // and destroying them locally would hide tabs/actions gated by can()
+    patchedApplication.userPermissions = patchedApplication.userPermissions ?? application.value?.userPermissions ?? []
     application.value = patchedApplication
   }
 
