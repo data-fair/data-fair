@@ -11,23 +11,7 @@
       class="ml-2"
       style="min-width:80px;max-width:80px;"
     />
-    <v-text-field
-      v-model="editQ"
-      :append-inner-icon="mdiMagnify"
-      :max-width="250"
-      :min-width="170"
-      class="mx-2"
-      color="primary"
-      density="compact"
-      :placeholder="t('search')"
-      variant="outlined"
-      clearable
-      hide-details
-      rounded
-      @keyup.enter="q = editQ"
-      @click:append-inner="q = editQ"
-      @click:clear="q = ''"
-    />
+    <search-field v-model="q" />
     <dataset-filters
       v-model="filters"
       class="flex-grow-1"
@@ -415,7 +399,6 @@
     cancel: Annuler
     delete: Supprimer
     save: Enregistrer
-    search: Rechercher
     editLine: Éditer une ligne
     deleteLine: Supprimer une ligne
     deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
@@ -425,7 +408,6 @@
     cancel: Cancel
     delete: Delete
     save: Save
-    search: Search
     editLine: Edit a line
     helpFilterPrompt: Help me filter this data
     checkDataQualityPrompt: Check data quality
@@ -435,7 +417,7 @@
 
 <script setup lang="ts">
 import type { VVirtualScroll, VForm } from 'vuetify/components'
-import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
+import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
@@ -481,9 +463,6 @@ const pageSize = computed(() => {
   }
   return Math.ceil(((height / lineHeight.value) + 4) / 20) * 20
 })
-
-const editQ = ref('')
-watch(q, () => { editQ.value = q.value }, { immediate: true })
 
 const sort = computed<{ key: string, direction: 1 | -1 } | undefined>({
   get () {

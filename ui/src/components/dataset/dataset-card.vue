@@ -97,24 +97,7 @@
       style="min-height: auto"
     >
       <!-- Topics list -->
-      <v-row
-        v-if="dataset.topics?.length"
-        density="compact"
-      >
-        <v-col
-          v-for="topic in dataset.topics"
-          :key="topic.id"
-          cols="auto"
-        >
-          <v-chip
-            :text="topic.title"
-            :color="topic.color"
-            density="compact"
-            size="small"
-            variant="flat"
-          />
-        </v-col>
-      </v-row>
+      <topic-chips :topics="dataset.topics" />
 
       <!-- Visibility + Updated at -->
       <div class="d-flex align-center flex-wrap">

@@ -11,16 +11,10 @@
       :schema="modelValue"
       @add="addColumn"
     />
-    <v-text-field
+    <search-field
       v-if="editableColumns.length > 10"
       v-model="searchQuery"
-      :placeholder="t('search')"
-      :append-inner-icon="mdiMagnify"
-      variant="outlined"
-      density="compact"
-      max-width="200"
-      hide-details
-      rounded
+      immediate
     />
     <df-agent-chat-action
       action-id="help-annotate-schema"
@@ -96,7 +90,6 @@
 <i18n lang="yaml">
 fr:
   column: colonne | colonnes
-  search: Rechercher
   primaryKey: Cle primaire
   primaryKeyMsgData: La cle primaire ne peut pas être modifiée une fois que des données ont été insérées.
   primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schema pour construire une cle primaire qui identifiera de manière unique chaque ligne de la donnée.
@@ -106,7 +99,6 @@ fr:
   helpConfigureProperties: Optimiser les types et capacités
 en:
   column: column | columns
-  search: Search
   primaryKey: Primary key
   primaryKeyMsgData: The primary key cannot be changed once data has been inserted.
   primaryKeyMsgNoData: Optional. Use one or more columns of the schema to build a primary key that will uniquely identify each line of the data.
@@ -117,7 +109,6 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiMagnify } from '@mdi/js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import type { SchemaProperty } from '#api/types'
 import { useDatasetStore } from '~/composables/dataset/dataset-store'

@@ -39,17 +39,7 @@
       v-if="showTopics && dataset.topics?.length"
       #append
     >
-      <div class="d-flex ga-1">
-        <v-chip
-          v-for="topic in dataset.topics"
-          :key="topic.id"
-          size="x-small"
-          :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}"
-          variant="flat"
-        >
-          {{ topic.title }}
-        </v-chip>
-      </div>
+      <topic-chips :topics="dataset.topics" />
     </template>
   </v-list-item>
 </template>
