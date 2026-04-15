@@ -5,12 +5,12 @@ export default {
   type: 'object',
   required: ['title'],
   additionalProperties: false,
-  layout: {
-    switch: [{
-      if: 'summary',
-      children: []
-    }]
-  },
+  // layout: {
+  //   switch: [{
+  //     if: 'summary',
+  //     children: []
+  //   }]
+  // },
   properties: {
     id: {
       type: 'string',
@@ -21,18 +21,8 @@ export default {
       title: 'Title',
       'x-i18n-title': {
         fr: 'Titre'
-      }
-    },
-    color: {
-      type: 'string',
-      title: 'Color',
-      'x-i18n-title': {
-        fr: 'Couleur'
       },
-      layout: {
-        comp: 'color-picker',
-        cols: 6
-      }
+      layout: { cols: { md: 5 } }
     },
     icon: {
       type: 'object',
@@ -52,7 +42,7 @@ export default {
           itemIcon: 'item.svg',
           itemKey: 'item.name'
         },
-        cols: 6
+        cols: { md: 5, sm: 6 }
       },
       required: ['name'],
       properties: {
@@ -60,6 +50,17 @@ export default {
         svg: { type: 'string' },
         svgPath: { type: 'string' }
       }
-    }
+    },
+    color: {
+      type: 'string',
+      title: 'Color',
+      'x-i18n-title': {
+        fr: 'Couleur'
+      },
+      layout: {
+        comp: 'color-picker',
+        cols: { md: 2, sm: 6 }
+      }
+    },
   }
 }

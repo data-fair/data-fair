@@ -81,7 +81,7 @@
           </v-btn>
         </template>
         <template #content>
-          <div class="pa-4 narrow-section">
+          <div class="pa-4">
             <settings-topics
               v-model="settings.topics"
               v-model:valid="topicsValid"
@@ -122,6 +122,13 @@
           </v-btn>
         </template>
         <template #windows>
+          <v-tabs-window-item value="datasetsMetadata">
+            <settings-datasets-metadata
+              v-model="settings.datasetsMetadata"
+              v-model:valid="datasetsMetadataValid"
+            />
+          </v-tabs-window-item>
+
           <v-tabs-window-item value="licenses">
             <div class="pa-4 narrow-section">
               <settings-licenses
@@ -146,13 +153,6 @@
                 v-model:valid="privateVocabularyValid"
               />
             </div>
-          </v-tabs-window-item>
-
-          <v-tabs-window-item value="datasetsMetadata">
-            <settings-datasets-metadata
-              v-model="settings.datasetsMetadata"
-              v-model:valid="datasetsMetadataValid"
-            />
           </v-tabs-window-item>
         </template>
       </df-section-tabs>
@@ -473,7 +473,7 @@ const anyDirty = computed(() =>
   topicsEdit.hasDiff.value || qualityEdit.hasDiff.value || portalsEdit.hasDiff.value
 )
 
-const qualityTab = ref('licenses')
+const qualityTab = ref('datasetsMetadata')
 
 // Validation state from child components
 const topicsValid = ref(true)
@@ -498,9 +498,9 @@ const sections = computed(() => {
     result.quality = {
       title: t('sections.quality.title'),
       tabs: [
+        { key: 'datasetsMetadata', title: t('sections.quality.tabs.datasetsMetadata'), icon: mdiFileDocumentEdit, color: tabColor(qualityEdit.keyHasDiff('datasetsMetadata').value, datasetsMetadataValid.value) },
         { key: 'licenses', title: t('sections.quality.tabs.licenses'), icon: mdiCertificate, color: tabColor(qualityEdit.keyHasDiff('licenses').value, licensesValid.value) },
-        { key: 'privateVocabulary', title: t('sections.quality.tabs.privateVocabulary'), icon: mdiBookAlphabet, color: tabColor(qualityEdit.keyHasDiff('privateVocabulary').value, privateVocabularyValid.value) },
-        { key: 'datasetsMetadata', title: t('sections.quality.tabs.datasetsMetadata'), icon: mdiFileDocumentEdit, color: tabColor(qualityEdit.keyHasDiff('datasetsMetadata').value, datasetsMetadataValid.value) }
+        { key: 'privateVocabulary', title: t('sections.quality.tabs.privateVocabulary'), icon: mdiBookAlphabet, color: tabColor(qualityEdit.keyHasDiff('privateVocabulary').value, privateVocabularyValid.value) }
       ]
     }
   }
@@ -535,7 +535,5 @@ const departments = computed(() => {
 </script>
 
 <style scoped>
-.narrow-section {
-  max-width: max(50%, 500px);
-}
+.narrow-section { max-width: max(50%, 500px); }
 </style>

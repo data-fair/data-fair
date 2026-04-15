@@ -1,16 +1,16 @@
 <template>
   <v-chip
-    :style="topic.color ? { backgroundColor: topic.color, color: '#fff' } : {}"
+    :prepend-icon="topic.icon?.svgPath"
+    :color="topic.color"
+    :text="topic.title"
     size="small"
     density="compact"
     variant="flat"
-  >
-    {{ topic.title }}
-  </v-chip>
+  />
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  topic: { id?: string, title: string, color?: string | null }
-}>()
+import type { Topic } from '#api/types'
+
+defineProps<{ topic: Topic }>()
 </script>

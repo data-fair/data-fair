@@ -9,12 +9,13 @@
     >
       <div
         class="d-flex flex-no-wrap w-100"
-        style="height: 112px;"
+        style="min-height: 112px;"
       >
         <!-- SVG Image -->
         <div
           v-if="svg && display.mdAndUp.value"
           :class="`pa-${svgNoMargin ? 0 : 2} flex-grow-0`"
+          style="height: 112px;"
         >
           <df-themed-svg
             :source="svg"
@@ -23,15 +24,15 @@
         </div>
 
         <div
-          class="pl-4 flex-grow-1"
+          class="pl-4 flex-grow-1 d-flex flex-column"
           style="min-width: 0"
         >
-          <v-toolbar
-            color="surface"
-            extended
-            flat
+          <!-- Title + actions row -->
+          <div
+            class="d-flex align-start flex-grow-1 py-2 pr-4"
+            style="min-height: 64px;"
           >
-            <v-toolbar-title class="text-title-large">
+            <div class="flex-grow-1 text-title-large">
               {{ title }}
               <div
                 v-if="subtitle"
@@ -39,43 +40,41 @@
               >
                 {{ subtitle }}
               </div>
-            </v-toolbar-title>
-
+            </div>
             <!-- Slot for action buttons (save, discard, ...) -->
-            <template
+            <div
               v-if="$slots.actions"
-              #append
+              class="flex-shrink-0 align-self-center"
             >
               <slot name="actions" />
-            </template>
+            </div>
+          </div>
 
-            <!-- Tab navigation -->
-            <template #extension>
-              <slot name="extension">
-                <v-tabs
-                  v-model="tab"
-                  :optional="false"
-                  show-arrows
-                  :color="color"
-                >
-                  <template
-                    v-for="(tabInfo, i) in tabs"
-                    :key="i"
-                  >
-                    <v-tab
-                      v-if="tabInfo"
-                      :value="tabInfo.key"
-                      :prepend-icon="tabInfo.icon"
-                      :append-icon="tabInfo.appendIcon"
-                      :base-color="tabInfo.color"
-                      :color="tabInfo.color"
-                      :text="tabInfo.title"
-                    />
-                  </template>
-                </v-tabs>
-              </slot>
-            </template>
-          </v-toolbar>
+          <!-- Tab navigation -->
+          <slot name="extension">
+            <v-tabs
+              v-if="tabs?.some(Boolean)"
+              v-model="tab"
+              :optional="false"
+              :color="color"
+              show-arrows
+            >
+              <template
+                v-for="(tabInfo, i) in tabs"
+                :key="i"
+              >
+                <v-tab
+                  v-if="tabInfo"
+                  :value="tabInfo.key"
+                  :prepend-icon="tabInfo.icon"
+                  :append-icon="tabInfo.appendIcon"
+                  :base-color="tabInfo.color"
+                  :color="tabInfo.color"
+                  :text="tabInfo.title"
+                />
+              </template>
+            </v-tabs>
+          </slot>
         </div>
       </div>
     </v-card>

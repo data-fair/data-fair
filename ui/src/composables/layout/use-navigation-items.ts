@@ -93,7 +93,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
       })
     }
     if (canAdminDep.value) {
-      management.push({ to: '/settings', icon: mdiCog, title: t('params'), subtitle: account.value?.department ? t('paramsSub') : undefined })
+      management.push({ to: '/settings', icon: mdiCog, title: t('params') })
     }
     if (canAdminDep.value && $uiConfig.portalsIntegration) {
       management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })

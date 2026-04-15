@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  topics?: { id?: string, title: string, color?: string | null }[]
-}>()
+import type { Topic } from '#api/types'
+
+defineProps<{ topics?: Topic[] }>()
 </script>
