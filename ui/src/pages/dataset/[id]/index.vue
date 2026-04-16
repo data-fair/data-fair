@@ -411,7 +411,7 @@
       v-model="showOwnerDialog"
       :resource="dataset"
       resource-type="datasets"
-      @changed="router.push('/datasets')"
+      @changed="store.datasetFetch.refresh()"
     />
 
     <v-dialog
@@ -483,6 +483,10 @@
       <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
+  <resource-fetch-error
+    v-else-if="store.datasetFetch.error.value"
+    :error="store.datasetFetch.error.value"
+  />
 </template>
 
 <i18n lang="yaml">

@@ -14,9 +14,10 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   const keys = id.split(':')
   if (keys.length > 1) id = keys[1]
 
-  const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draft, html } })
+  const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draft, html }, notifError: false })
   const dataset = ref<ExtendedDataset | null>(null)
   const statusOrder = ['loaded', 'stored', 'normalized', 'analyzed', 'validated', 'extended', 'indexed', 'finalized']
+  watch(datasetFetch.error, () => { if (datasetFetch.error.value) dataset.value = null })
   watch(datasetFetch.data, () => {
     if (!datasetFetch.data.value) return
     // Prevent fetch responses from downgrading status set by real-time WS events

@@ -12,8 +12,9 @@ export type ApplicationStore = ReturnType<typeof createApplicationStore>
 const applicationStoreKey = Symbol('application-store')
 
 const createApplicationStore = (id: string) => {
-  const applicationFetch = useFetch<ApplicationRuntime>($apiPath + `/applications/${id}`)
+  const applicationFetch = useFetch<ApplicationRuntime>($apiPath + `/applications/${id}`, { notifError: false })
   const application = ref<ApplicationRuntime | null>(null)
+  watch(applicationFetch.error, () => { if (applicationFetch.error.value) application.value = null })
   watch(applicationFetch.data, () => { application.value = applicationFetch.data.value })
 
   const baseAppDraft = computed(() => {

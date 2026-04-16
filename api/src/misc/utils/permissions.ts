@@ -46,7 +46,7 @@ export const middleware = function (operationId: string, operationClass: string,
           if (org.department) name += ' / ' + (org.departmentName || org.department)
           const altSessionState: SessionState = { ...sessionState, account: { type: 'organization', ...org }, accountRole: org.role }
           if (can(req.resourceType, req.resource, operationId, altSessionState, req.bypassPermissions)) {
-            res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
+            res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} (${org.id}) dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
             return
           }
         }

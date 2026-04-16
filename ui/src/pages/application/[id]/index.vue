@@ -347,7 +347,7 @@
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
-      @changed="router.push('/applications')"
+      @changed="store.applicationFetch.refresh()"
     />
 
     <v-dialog
@@ -393,6 +393,10 @@
       </v-list-item>
     </df-navigation-right>
   </v-container>
+  <resource-fetch-error
+    v-else-if="store.applicationFetch.error.value"
+    :error="store.applicationFetch.error.value"
+  />
 </template>
 
 <i18n lang="yaml">
