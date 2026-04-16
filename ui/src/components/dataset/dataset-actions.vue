@@ -68,8 +68,25 @@
       {{ t('actions') }}
     </v-list-subheader>
 
+    <dataset-upload-dialog v-if="isFileDataset && can('writeData').value">
+      <template #activator="{ props: activatorProps }">
+        <v-list-item
+          v-bind="activatorProps"
+          link
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiFileUpload"
+              color="primary"
+            />
+          </template>
+          {{ t('updateData') }}
+        </v-list-item>
+      </template>
+    </dataset-upload-dialog>
+
     <v-list-item
-      v-if="canUpdateData"
+      v-if="dataset.isRest && can('createLine').value"
       :to="`/dataset/${dataset.id}/edit-data`"
       link
     >
@@ -127,6 +144,7 @@ import {
 } from '@mdi/js'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import useDatasetStore from '~/composables/dataset/dataset-store'
+import DatasetUploadDialog from '~/components/dataset/dataset-upload-dialog.vue'
 
 const { t } = useI18n()
 const { dataset, can, resourceUrl, dataFiles } = useDatasetStore()
@@ -150,8 +168,7 @@ const sourceFiles = computed(() => {
 const canUpdateData = computed(() => {
   if (!dataset.value) return false
   const d = dataset.value
-  const isFile = d && !d.isRest && !d.isVirtual && !d.isMetaOnly && d.file
-  if (isFile) return can('writeData').value
+  if (isFileDataset.value) return can('writeData').value
   if (d.isRest) return can('createLine').value
   return false
 })

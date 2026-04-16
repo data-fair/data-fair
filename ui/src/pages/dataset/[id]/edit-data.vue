@@ -1,29 +1,20 @@
 <template>
   <v-container
-    v-if="dataset"
+    v-if="dataset && dataset.isRest"
     class="pa-0"
     fluid
   >
-    <!-- REST dataset: editable table -->
-    <template v-if="dataset.isRest">
-      <div class="d-flex justify-end pa-2">
-        <df-agent-chat-action
-          action-id="help-edit-data"
-          :visible-prompt="t('helpEditDataPrompt')"
-          :hidden-context="dataEntryContext"
-          :title="t('helpEditDataPrompt')"
-        />
-      </div>
-      <dataset-table
-        :height="contentHeight - 52"
-        :edit="true"
+    <div class="d-flex justify-end pa-2">
+      <df-agent-chat-action
+        action-id="help-edit-data"
+        :visible-prompt="t('helpEditDataPrompt')"
+        :hidden-context="dataEntryContext"
+        :title="t('helpEditDataPrompt')"
       />
-    </template>
-
-    <!-- File dataset: update stepper -->
-    <workflow-update-dataset
-      v-else-if="dataset.file"
-      :initial-dataset-id="dataset.id"
+    </div>
+    <dataset-table
+      :height="contentHeight - 52"
+      :edit="true"
     />
   </v-container>
 </template>

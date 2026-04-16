@@ -6,7 +6,6 @@
   >
     <v-stepper-header class="bg-surface">
       <v-stepper-item
-        v-if="!props.initialDatasetId"
         :value="1"
         :complete="!!currentDataset"
         :color="currentStep === 1 ? 'primary' : ''"
@@ -75,10 +74,7 @@
     </v-stepper-header>
 
     <v-stepper-window>
-      <v-stepper-window-item
-        v-if="!props.initialDatasetId"
-        :value="1"
-      >
+      <v-stepper-window-item :value="1">
         <dataset-select-cards
           v-if="!initialFetch"
           v-model="selectedDataset"
@@ -402,14 +398,13 @@ import { useWindowSize } from '@vueuse/core'
 const debug = Debug('workflow-update-dataset')
 
 const props = defineProps({
-  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} },
-  initialDatasetId: { type: String, default: undefined }
+  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
 })
 const { sendUiNotif } = useUiNotif()
 const { t, locale } = useI18n()
 const { height } = useWindowSize()
 
-const currentStep = ref(props.initialDatasetId ? 2 : 1)
+const currentStep = ref(1)
 
 const file = ref<File>()
 const attachments = ref<File>()
@@ -423,7 +418,7 @@ const datasetsFilter = computed(() => ({
 }))
 
 const selectedDataset = ref<ListedDataset>()
-const currentDatasetId = ref<string | undefined>(props.initialDatasetId)
+const currentDatasetId = ref<string>()
 watch(selectedDataset, () => {
   debug('selectedDataset', selectedDataset.value)
   if (selectedDataset.value) {
@@ -433,7 +428,7 @@ watch(selectedDataset, () => {
 watch(currentStep, () => {
   debug('step change', currentStep.value)
   if (!initialized.value) return
-  if (currentStep.value === 1 && !props.initialDatasetId) {
+  if (currentStep.value === 1) {
     selectedDataset.value = undefined
     currentDatasetId.value = undefined
   }

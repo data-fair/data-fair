@@ -94,7 +94,9 @@
         <v-btn
           v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
           :disabled="!can('cancelDraft').value"
-          :color="(draftError || draftValidationError) ? 'default' : 'warning'"
+          :color="!(draftError || draftValidationError) ? 'warning' : undefined"
+          :class="dataset.status === 'finalized' ? 'mr-2' : ''"
+          variant="flat"
           @click="cancelDraft.execute()"
         >
           {{ t('cancelDraft') }}
@@ -103,6 +105,7 @@
           v-if="dataset.status === 'finalized'"
           :disabled="!can('validateDraft').value"
           :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
+          variant="flat"
           @click="validateDraft.execute()"
         >
           {{ t('validateDraft') }}

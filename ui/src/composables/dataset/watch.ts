@@ -30,23 +30,10 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
         }
       }
 
-      if (keys.includes('info')) {
-        if (event.type === 'finalize-end' || (event.type === 'draft-cancelled' && draft)) {
-          datasetFetch.refresh()
-        }
-      }
-
-      if (keys.includes('journal')) {
-        if (event.store) { // ignore event that is not stored, prevent different render after refresh
-          if (!journal.value?.find(e => e.date === event.date)) {
-            journal.value?.unshift(event)
-          }
-        }
-      }
-
       // Update dataset status based on journal events for real-time progress
       const eventStates: Record<string, string> = {
         'data-updated': 'loaded',
+        'download-end': 'loaded',
         'store-start': 'loaded',
         'store-end': 'stored',
         'normalize-start': 'stored',
@@ -60,6 +47,7 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
         'index-start': 'extended',
         'index-end': 'indexed',
         'finalize-start': 'indexed',
+        'finalize-end': 'finalized',
         error: 'error'
       }
 
@@ -68,9 +56,19 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
         if (newStatus && dataset.value) {
           dataset.value = { ...dataset.value, status: newStatus as typeof dataset.value.status }
         }
-        // Refresh schema after analyze-end or extend-start (schema may have changed)
-        if (event.type === 'analyze-end' || event.type === 'extend-start') {
+      }
+
+      if (keys.includes('info')) {
+        if (event.type === 'finalize-end' || (event.type === 'draft-cancelled' && draft)) {
           datasetFetch.refresh()
+        }
+      }
+
+      if (keys.includes('journal')) {
+        if (event.store) { // ignore event that is not stored, prevent different render after refresh
+          if (!journal.value?.find(e => e.date === event.date)) {
+            journal.value?.unshift(event)
+          }
         }
       }
     })

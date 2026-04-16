@@ -16,7 +16,20 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
 
   const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draft, html } })
   const dataset = ref<ExtendedDataset | null>(null)
-  watch(datasetFetch.data, () => { dataset.value = datasetFetch.data.value })
+  const statusOrder = ['loaded', 'stored', 'normalized', 'analyzed', 'validated', 'extended', 'indexed', 'finalized']
+  watch(datasetFetch.data, () => {
+    if (!datasetFetch.data.value) return
+    // Prevent fetch responses from downgrading status set by real-time WS events
+    if (dataset.value) {
+      const currentRank = statusOrder.indexOf(dataset.value.status ?? '')
+      const fetchedRank = statusOrder.indexOf(datasetFetch.data.value.status ?? '')
+      if (currentRank > fetchedRank && currentRank < statusOrder.length - 1) {
+        dataset.value = { ...datasetFetch.data.value, status: dataset.value.status as typeof dataset.value.status }
+        return
+      }
+    }
+    dataset.value = datasetFetch.data.value
+  })
   const restDataset = computed(() => {
     if (dataset.value && isRestDataset(dataset.value)) return dataset.value
   })
