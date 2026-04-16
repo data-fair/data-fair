@@ -109,7 +109,7 @@ const createApplicationStore = (id: string) => {
       return {
         id: datasetsIds.join(','),
         size: 10000,
-        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft,count,finalizedAt',
+        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft,count,finalizedAt,visibility',
         sort: 'createdAt:-1'
       }
     }),

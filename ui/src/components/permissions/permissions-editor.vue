@@ -17,7 +17,7 @@
   />
   <template v-else>
     <v-alert
-      v-if="hasPrivateParents && !isPublic"
+      v-if="hasPrivateParents && isPublic"
       type="warning"
       variant="outlined"
       density="compact"
@@ -440,7 +440,7 @@ const visibilityItems = computed(() => {
   } else {
     items.push({ value: 'privateUser', title: t('visibility.privateUser', { user: orgName.value }), disabled: privateDisabled })
   }
-  items.push({ value: 'public', title: t('visibility.public'), disabled: !!(props.hasPrivateParents && !isPublic.value) })
+  items.push({ value: 'public', title: t('visibility.public'), disabled: false })
   return items
 })
 

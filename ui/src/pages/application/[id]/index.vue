@@ -208,12 +208,13 @@
           class="pa-4"
         >
           <v-tabs-window-item value="permissions">
-            <Permissions
+            <permissions-editor
               v-if="application"
               :model-value="permissions"
               :resource="application"
               resource-type="applications"
               :disabled="!can('setPermissions')"
+              :has-private-parents="hasPrivateParents"
               @save="onSavePermissions"
             />
           </v-tabs-window-item>
@@ -486,7 +487,6 @@ en:
 
 <script setup lang="ts">
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
@@ -581,6 +581,10 @@ watch(() => store.config.value, (conf) => {
 
 const datasets = computed(() => datasetsFetch.data.value?.results ?? [])
 const childrenApps = computed(() => childrenAppsFetch.data.value?.results ?? [])
+
+const hasPrivateParents = computed(() =>
+  datasets.value.some(d => d.visibility === 'private' || d.visibility === 'protected')
+)
 
 const upgradeAvailable = computed(() => {
   if (!availableVersions.value?.length) return null

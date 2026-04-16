@@ -115,7 +115,7 @@
 
         <!-- Step 3: Permissions -->
         <v-stepper-window-item :value="3">
-          <permissions-editor
+          <permissions-editor-simplified
             v-if="dataset"
             :resource="dataset"
             resource-type="datasets"
