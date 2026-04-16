@@ -26,7 +26,10 @@
         {{ $uiConfig.brand.title || 'Data Fair' }}
       </span>
     </div>
-    <v-divider vertical />
+    <v-divider
+      v-if="user"
+      vertical
+    />
 
     <v-breadcrumbs
       v-if="showBreadcrumbs"
@@ -105,6 +108,7 @@ const { mdAndUp, lgAndUp } = useDisplay()
 const route = useRoute()
 
 const showBreadcrumbs = computed(() => {
+  if (!user.value) return false
   if (!mdAndUp.value) return false
   if (!props.breadcrumbs) return false
   if (props.breadcrumbs.items.value.length === 0) return false

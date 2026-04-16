@@ -22,7 +22,6 @@ en:
 
 <script setup lang="ts">
 import createStateChangeAdapter from '@data-fair/frame/lib/vue-router/state-change-adapter'
-import { provideApplicationStore } from '~/composables/application/application-store'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
@@ -32,7 +31,7 @@ const { sendUiNotif } = useUiNotif()
 const breadcrumbs = useBreadcrumbs()
 const stateChangeAdapter = createStateChangeAdapter(router)
 
-const { application } = provideApplicationStore(route.params.id)
+const { application } = useApplicationStore()
 
 watch(application, (app) => {
   if (!app) return

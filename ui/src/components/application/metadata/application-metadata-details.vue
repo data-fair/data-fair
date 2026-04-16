@@ -51,7 +51,7 @@
 <i18n lang="yaml">
 fr:
   owner: Propriétaire
-  baseApp: Application de base
+  baseApp: Modèle d'application
   version: version
   metadataUpdated: Métadonnées mises à jour
   created: Création

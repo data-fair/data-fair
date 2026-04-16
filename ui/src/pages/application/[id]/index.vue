@@ -496,7 +496,6 @@ import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
-import { provideApplicationStore } from '~/composables/application/application-store'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -512,7 +511,7 @@ const metadataTab = ref('info')
 const renderTab = ref('config')
 const activityTab = ref('traceability')
 
-const store = provideApplicationStore(route.params.id)
+const store = useApplicationStore()
 const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions } = store
 
 const { sendUiNotif } = useUiNotif()
