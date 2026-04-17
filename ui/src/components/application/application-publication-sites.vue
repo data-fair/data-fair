@@ -51,6 +51,12 @@
               <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
             </v-list-item-subtitle>
             <v-list-item-subtitle
+              v-if="site.sharedWithThisDepartment"
+              class="mb-2"
+            >
+              {{ t('sharedPortal') }}
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
               v-if="site.applicationUrlTemplate && isPublished(site)"
               class="mb-2"
             >
@@ -97,6 +103,7 @@ fr:
   publishThisApp: Publiez cette application sur un ou plusieurs de vos portails.
   published: Publié
   publicationRequested: Publication demandée par un contributeur
+  sharedPortal: Portail partagé avec votre département
   preferLargeDisplay: Privilégier un rendu large
   preferLargeDisplayTutorial: En cochant l'option ci-dessous vous indiquez aux portails que cette application est à afficher sur une largeur importante autant que possible. Ceci pourra changer l'affichage dans les pages des jeux de données ou les tableaux de bords par exemple.
 en:
@@ -104,6 +111,7 @@ en:
   publishThisApp: Publish this application on one or more of your portals.
   published: Published
   publicationRequested: Publication requested by a contributor
+  sharedPortal: Portal shared with your department
   preferLargeDisplay: Prefer a large display
   preferLargeDisplayTutorial: By checking the following option you indicate to the portals that this application should be rendered on a large section of page as much as possible. This will change the rendering in dataset pages and dashboards.
 </i18n>
@@ -127,8 +135,10 @@ const publicationSitesFetch = useFetch<any[]>(() => {
 const publicationSites = computed(() => {
   const sites = [...(publicationSitesFetch.data.value ?? [])]
   sites.sort((ps1, ps2) => {
-    if (owner.value?.department && owner.value.department === ps1.department && ps1.department !== ps2.department) return -1
-    if (owner.value?.department && owner.value.department === ps2.department && ps1.department !== ps2.department) return 1
+    const ps1Priority = !!owner.value?.department && (owner.value.department === ps1.department || ps1.sharedWithThisDepartment)
+    const ps2Priority = !!owner.value?.department && (owner.value.department === ps2.department || ps2.sharedWithThisDepartment)
+    if (ps1Priority && !ps2Priority) return -1
+    if (!ps1Priority && ps2Priority) return 1
     if (!owner.value?.department && !ps1.department && !!ps2.department) return -1
     if (!owner.value?.department && !!ps1.department && !ps2.department) return 1
     return 0
@@ -145,7 +155,11 @@ const isRequested = (site: any) => {
 }
 
 const canPublish = (site: any) => {
-  return can('writePublicationSites') && (!account.value?.department || account.value.department === site.department)
+  return can('writePublicationSites') && (
+    !account.value?.department ||
+    account.value.department === site.department ||
+    site.sharedWithThisDepartment
+  )
 }
 
 const canRequestPublication = (_site: any) => {
