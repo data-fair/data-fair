@@ -99,4 +99,24 @@ test.describe('publication sites shared with departments', () => {
       (err: any) => err.status === 400
     )
   })
+
+  test('GET publication-sites decorates shared sites with sharedWithThisDepartment for matching dept users', async () => {
+    const portal = {
+      type: 'data-fair-portals',
+      id: 'shared-portal',
+      url: 'http://portal.com',
+      sharedWithDepartments: ['dep1']
+    }
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+
+    const dep1List = (await testUser4Org.get('/api/v1/settings/organization/test_org1:dep1/publication-sites')).data
+    const shared = dep1List.find((s: any) => s.id === 'shared-portal')
+    assert.ok(shared)
+    assert.equal(shared.sharedWithThisDepartment, true)
+
+    const orgList = (await testUser1Org.get('/api/v1/settings/organization/test_org1/publication-sites')).data
+    const orgShared = orgList.find((s: any) => s.id === 'shared-portal')
+    assert.deepEqual(orgShared.sharedWithDepartments, ['dep1'])
+    assert.equal(orgShared.sharedWithThisDepartment, undefined)
+  })
 })

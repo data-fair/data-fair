@@ -375,6 +375,9 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
   for (const settings of settingsArray) {
     for (const publicationSite of settings.publicationSites || []) {
       if (isDepartmentSettings(settings)) publicationSite.department = settings.department
+      if (req.owner.department && publicationSite.sharedWithDepartments?.includes(req.owner.department)) {
+        (publicationSite as any).sharedWithThisDepartment = true
+      }
       publicationSites.push(publicationSite)
     }
   }
