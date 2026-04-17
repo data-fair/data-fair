@@ -7,11 +7,6 @@ import * as visibilityUtils from './visibility.js'
 import { type AccountKeys, getAccountRole, reqSession, type SessionState } from '@data-fair/lib-express'
 import { type RequestWithResource, type ResourceType, type Permission, type Resource, type BypassPermissions } from '#types'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
-import equal from 'fast-deep-equal'
-
-export type ResourceWithPermissions = {
-  permissions?: Permission[]
-}
 
 const resourceTypesLabels = {
   datasets: 'Le jeu de données',
@@ -191,75 +186,25 @@ const permissionOperations = (resourceType: ResourceType, permission: Permission
 
 // resource is public if there are public permissions for all operations of the classes 'read' and 'use'
 // list is not here as someone can set a resource publicly usable but not appearing in lists
-export const isPublic = function (resourceType: ResourceType, resource: ResourceWithPermissions) {
-  const basicOperations = getResourceBasicOperations(resourceType)
-  const publicPermissions = (resource.permissions ?? []).filter(p => !p.type && !p.id)
-  const publicOperations = publicPermissions.reduce((a, perm) => a.union(permissionOperations(resourceType, perm)), new Set<string>())
-  return basicOperations.every(op => publicOperations.has(op))
-}
-
-export const getResourceBasicOperations = (resourceType: ResourceType): string[] => {
+export const isPublic = function (resourceType: ResourceType, resource: Resource) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
-  const basicOperations = new Set<string>()
+  const publicOperations = new Set<string>()
   if (operationsClasses.read) {
     for (const operationClass of operationsClasses.read) {
-      basicOperations.add(operationClass)
+      publicOperations.add(operationClass)
     }
   }
   if (operationsClasses.use) {
     for (const operationClass of operationsClasses.use) {
-      basicOperations.add(operationClass)
+      publicOperations.add(operationClass)
     }
   }
-  return [...basicOperations]
-}
-
-export type AccessAccountRef = {
-  type: 'user' | 'organization'
-  id: string
-  name?: string
-  email?: string
-  department?: string
-  departmentName?: string
-  role?: string
-}
-type AccessAccountRefWithOperations = { accountRef: AccessAccountRef, operations: Set<string> }
-
-export const getPrivateAccess = (resourceType: ResourceType, resource: ResourceWithPermissions): AccessAccountRef[] => {
-  const basicOperations = getResourceBasicOperations(resourceType)
-  const permissions = resource.permissions || []
-
-  const accountRefs: AccessAccountRefWithOperations[] = []
-
-  for (const p of permissions) {
-    if (!p.type || !p.id) continue
-
-    for (const role of p.roles ?? [undefined]) {
-      const accountRef: AccessAccountRef = {
-        type: p.type,
-        id: p.id,
-        name: p.name,
-        email: p.email,
-        department: p.department,
-        role
-      }
-      let accessAccountRefWithOperations = accountRefs.find(a => equal(a.accountRef, accountRef))
-      if (!accessAccountRefWithOperations) {
-        accessAccountRefWithOperations = { accountRef, operations: new Set() }
-        accountRefs.push(accessAccountRefWithOperations)
-      }
-      accessAccountRefWithOperations.operations = accessAccountRefWithOperations.operations.union(permissionOperations(resourceType, p))
-    }
+  const publicPermissions = (resource.permissions ?? []).filter(p => !p.type && !p.id)
+  for (const op of publicOperations) {
+    const publicPermission = publicPermissions.some(p => permissionOperations(resourceType, p).has(op))
+    if (!publicPermission) return false
   }
-
-  const privateAccess: AccessAccountRef[] = []
-  for (const { accountRef, operations } of accountRefs) {
-    if (basicOperations.every(op => operations.has(op))) {
-      privateAccess.push(accountRef)
-    }
-  }
-
-  return privateAccess
+  return true
 }
 
 // Manage filters for datasets, applications and remote services

@@ -109,8 +109,7 @@ module.exports = {
     limits: 'SECRET_LIMITS',
     catalogs: 'SECRET_CATALOGS',
     events: 'SECRET_EVENTS',
-    ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING',
-    searchPages: 'SECRET_SEARCH_PAGES'
+    ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
   },
   brand: {
     logo: 'BRAND_LOGO',

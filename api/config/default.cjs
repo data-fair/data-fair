@@ -170,8 +170,7 @@ module.exports = {
     catalogs: null,
     notifications: null, // DEPRECATED
     events: null,
-    ignoreRateLimiting: null,
-    searchPages: null
+    ignoreRateLimiting: null
   },
   locks: {
     // in seconds
