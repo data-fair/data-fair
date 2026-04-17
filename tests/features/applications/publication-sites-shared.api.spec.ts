@@ -62,4 +62,29 @@ test.describe('publication sites shared with departments', () => {
       (err: any) => err.status === 403
     )
   })
+
+  test('revoking the share traps already-published resources: dept admin can no longer unpublish', async () => {
+    const portal = {
+      type: 'data-fair-portals',
+      id: 'shared-portal',
+      url: 'http://portal.com',
+      sharedWithDepartments: ['dep1']
+    }
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+
+    const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'ds', schema: [] })).data
+    await testUser4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:shared-portal'] })
+
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', {
+      ...portal,
+      sharedWithDepartments: []
+    })
+
+    await assert.rejects(
+      testUser4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: [] }),
+      (err: any) => err.status === 403
+    )
+
+    await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: [] })
+  })
 })
