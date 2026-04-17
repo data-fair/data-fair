@@ -87,4 +87,16 @@ test.describe('publication sites shared with departments', () => {
 
     await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: [] })
   })
+
+  test('posting sharedWithDepartments on a dept-scoped settings doc is refused', async () => {
+    await assert.rejects(
+      testUser4Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', {
+        type: 'data-fair-portals',
+        id: 'some-portal',
+        url: 'http://portal.com',
+        sharedWithDepartments: ['dep2']
+      }),
+      (err: any) => err.status === 400
+    )
+  })
 })

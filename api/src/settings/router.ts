@@ -384,6 +384,9 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
 router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
   assertSettingsRequest(req)
   debugPublicationSites('post site', req.body)
+  if (req.owner.department && req.body.sharedWithDepartments && req.body.sharedWithDepartments.length) {
+    throw httpError(400, 'sharedWithDepartments is only allowed on org-root publication sites')
+  }
   let settings = (await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0 } })) as Settings | DepartmentSettings
   if (!settings) {
     settings = fillSettings(req.owner, reqUserAuthenticated(req), {})
