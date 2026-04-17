@@ -44,6 +44,12 @@
               <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
             </v-list-item-subtitle>
             <v-list-item-subtitle
+              v-if="(site as any).sharedWithThisDepartment"
+              class="mb-2"
+            >
+              {{ t('sharedPortal') }}
+            </v-list-item-subtitle>
+            <v-list-item-subtitle
               v-if="site.datasetUrlTemplate && isPublishedOnSite(site)"
               class="mb-2"
             >
@@ -102,6 +108,7 @@ fr:
   publishThisDataset: Publiez ce jeu de données sur un ou plusieurs de vos portails.
   published: Publié
   publicationRequested: Publication demandée par un contributeur
+  sharedPortal: Portail partagé avec votre département
   hasWarning: "Métadonnées manquantes : "
   warning:
     title: titre
@@ -121,6 +128,7 @@ en:
   publishThisDataset: Publish this dataset on one or more of your portals.
   published: Published
   publicationRequested: Publication requested by a contributor
+  sharedPortal: Portal shared with your department
   hasWarning: "Missing metadata : "
   warning:
     title: title
@@ -158,12 +166,10 @@ watch(dataset, () => {
 const publicationSites = computed(() => {
   const publicationSites = [...publicationSitesFetch.data.value ?? []]
   publicationSites.sort((ps1, ps2) => {
-    if (dataset.value?.owner.department && dataset.value?.owner.department === ps1.department && ps1.department !== ps2.department) {
-      return -1
-    }
-    if (dataset.value?.owner.department && dataset.value?.owner.department === ps2.department && ps1.department !== ps2.department) {
-      return 1
-    }
+    const ps1Priority = !!dataset.value?.owner.department && (dataset.value.owner.department === ps1.department || (ps1 as any).sharedWithThisDepartment)
+    const ps2Priority = !!dataset.value?.owner.department && (dataset.value.owner.department === ps2.department || (ps2 as any).sharedWithThisDepartment)
+    if (ps1Priority && !ps2Priority) return -1
+    if (!ps1Priority && ps2Priority) return 1
     if (!dataset.value?.owner.department && !ps1.department && !!ps2.department) return -1
     if (!dataset.value?.owner.department && !!ps1.department && !ps2.department) return 1
     return 0
@@ -220,7 +226,11 @@ const isRequestedOnSite = (site: PublicationSite) => dataset.value?.requestedPub
 
 const canPublish = (site: PublicationSite) => {
   const warnings = sitesWarnings.value[`${site.type}:${site.id}`]
-  return warnings && warnings.length === 0 && can('writePublicationSites').value && (!account.value.department || account.value.department === site.department)
+  return warnings && warnings.length === 0 && can('writePublicationSites').value && (
+    !account.value.department ||
+    account.value.department === site.department ||
+    (site as any).sharedWithThisDepartment
+  )
 }
 
 const canRequestPublication = (_site: PublicationSite) => {
