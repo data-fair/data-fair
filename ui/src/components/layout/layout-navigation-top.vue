@@ -29,7 +29,7 @@
 
     <!-- Same condition as drawer activator mobile-->
     <v-divider
-      v-if="user && !lgAndUp"
+      v-if="user && lgAndUp"
       vertical
     />
 
