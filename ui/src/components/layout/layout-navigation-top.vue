@@ -26,8 +26,10 @@
         {{ $uiConfig.brand.title || 'Data Fair' }}
       </span>
     </div>
+
+    <!-- Same condition as drawer activator mobile-->
     <v-divider
-      v-if="user"
+      v-if="user && !lgAndUp"
       vertical
     />
 

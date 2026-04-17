@@ -483,10 +483,6 @@
       <df-toc :sections="tocSections" />
     </df-navigation-right>
   </v-container>
-  <resource-fetch-error
-    v-else-if="store.datasetFetch.error.value"
-    :error="store.datasetFetch.error.value"
-  />
 </template>
 
 <i18n lang="yaml">
@@ -609,7 +605,7 @@ import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { provideDatasetStore } from '~/composables/dataset/dataset-store'
+import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { usePermissions } from '~/composables/use-permissions'
@@ -639,7 +635,7 @@ watch(shareTab, (tab) => {
   if (tab === 'catalog-publications') catalogPublicationsKey.value++
 })
 
-const store = provideDatasetStore(route.params.id, true, 'vuetify')
+const store = useDatasetStore()
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions } = store
 
 const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {

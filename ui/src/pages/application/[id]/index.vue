@@ -394,10 +394,6 @@
       </v-list-item>
     </df-navigation-right>
   </v-container>
-  <resource-fetch-error
-    v-else-if="store.applicationFetch.error.value"
-    :error="store.applicationFetch.error.value"
-  />
 </template>
 
 <i18n lang="yaml">
