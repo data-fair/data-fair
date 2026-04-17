@@ -24,6 +24,7 @@ Publication sites are not stored in their own collection. They live as an array 
 | `datasetUrlTemplate` / `applicationUrlTemplate` | URL templates like `{url}/datasets/{id}` used to deep-link from the back-office. |
 | `private` | Deprecated hint that the portal requires authentication. |
 | `department` | When the owner is an organization, restricts the site to one department. |
+| `sharedWithDepartments` | Array of department ids whose admins may publish on this org-root site as if it were owned by their department (see §4). |
 | `settings.staging` | If true, the site behaves as a pre-production target and bypasses the admin publication check (see §4). |
 | `settings.datasetsRequiredMetadata` | Metadata fields that must be filled before a dataset may be published there. |
 
@@ -91,14 +92,12 @@ Requests (`requestedPublicationSites`) are **not** subject to the admin gate —
 
 When a publication is effectively performed, `applyPatch` emits `published:{site}` and, for each topic on the resource, `published-topic:{site}:{topicId}`. If a resource becomes public after already being on a site, `onPublic` (same file) re-emits the same events so subscribers learn about the new visibility.
 
-> Branch note: `feat-publication-sites-permissions-mode` is where this permissions model is being refined. At the time of writing the branch is rebased on master with no additional commits — the changes are still in the working state and live in the `publication-sites.ts` / contract files above.
-
 ## 5. UI surface
 
 The back-office exposes publication sites at three layers:
 
-- **Settings page** (`ui/src/components/settings/settings-publication-sites.vue`, used from `ui/src/pages/settings/index.vue`). Admins see the full editable form; non-admins see a read-only subset (driven by the `admin` flag passed to `publicationSitesContract`, see `api/contract/publication-sites.js:1`).
-- **Per-resource publication panel** (`ui/src/components/dataset/dataset-publication-sites.vue`, `ui/src/components/application/application-publication-sites.vue`). Fetches the sites the current user may target, renders one switch per site, warns on missing required metadata, and surfaces the `datasetUrlTemplate` / `applicationUrlTemplate` deep link once published.
+- **Settings page** (`ui/src/components/settings/settings-publication-sites.vue`, used from `ui/src/pages/settings/index.vue`). Admins see the full editable form; non-admins see a read-only subset (driven by the `admin` flag passed to `publicationSitesContract`, see `api/contract/publication-sites.js:1`). `sharedWithDepartments` shows up here as a read-only display — it is edited on the portal side and overwritten on every sync.
+- **Per-resource publication panel** (`ui/src/components/dataset/dataset-publication-sites.vue`, `ui/src/components/application/application-publication-sites.vue`). Fetches the sites the current user may target, renders one switch per site, warns on missing required metadata, and surfaces the `datasetUrlTemplate` / `applicationUrlTemplate` deep link once published. When the backend decorates a site with `sharedWithThisDepartment`, the panel renders a "Portail partagé" subtitle and sorts the row next to the user's own dept sites.
 - **Faceted search** (`ui/src/components/dataset/dataset-facets.vue` et al.). Publication sites appear as facets so users can filter listings by where a resource is exposed.
 
 ## 6. Relationship to the `portals` service
@@ -114,6 +113,7 @@ The mirroring happens in `portals/api/src/portals/service.ts`:
   - `url` / `draftUrl` come from the ingress if one is configured, otherwise from a subdomain pattern (`config.portalUrlPattern`).
   - `datasetUrlTemplate` and `applicationUrlTemplate` default to `{url}/datasets/{id|slug}` — `slug` if the portal has its own ingress, `id` otherwise.
   - `private: true` is set when the portal's config demands authentication.
+  - `sharedWithDepartments` is passed through verbatim from `portal.sharedWithDepartments` (default `[]`). This field is set from the portal admin UI and overwrites the data-fair stored value on every sync.
 - `syncPortalUpdate(portal, previousPortal, reqOrigin, forceSync, cookie)` (line 223) is called from `createPortal`, `patchPortal` and `validatePortalDraft`. It diffs the computed publication site against the previous one and, if different, does a synchronous `POST` to `/data-fair/api/v1/settings/{ownerType}/{ownerId}/publication-sites` with the user's cookie as authorisation (line 233). The same function also syncs the portal to `simple-directory` (for session / site scoping) and to the ingress manager, using dedicated secret keys.
 - `deletePortal` calls `syncPortalDelete` which issues the matching `DELETE`, triggering the cascade described in §2.
 
@@ -126,6 +126,8 @@ There is no Data-Fair → portals webhook for publication events. The only inbou
 ### Consequences for the permissions feature
 
 Because portals push themselves through the regular settings API, everything described in §4 automatically applies to them: a portal registered against an organisation-wide owner produces an organisation-wide publication site; a portal registered against a department owner produces a department-scoped site. The staging flag is not currently set by the portals sync — it can only be toggled from the Data Fair settings UI by an admin, which is by design: the portal itself should not be able to claim that it is a pre-production target.
+
+`sharedWithDepartments` follows the opposite convention: it is owned by the portal, not by data-fair. The portal admin sets it via a PATCH on `/portals/:id`, authorised by `assertAccountRole(session, portal.owner, 'admin')`, and refused when the portal owner itself has a department. Data-fair receives the array on every sync and overwrites the stored value — any local edit on the data-fair settings UI is transient.
 
 ## 7. Quick map of the relevant files
 
