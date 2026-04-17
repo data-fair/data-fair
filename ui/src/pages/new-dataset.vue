@@ -270,7 +270,15 @@
               hide-details="auto"
               :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
             />
-            <dataset-children-select v-model="virtualChildren" />
+            <dataset-select
+              v-model="virtualChildren"
+              :extra-params="{ queryable: true }"
+              :label="t('children')"
+              master-data="virtualDatasets"
+              max-width="500"
+              class="mt-4"
+              multiple
+            />
 
             <v-checkbox
               v-model="virtualFillSchema"
@@ -395,6 +403,7 @@ import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { type AccountKeys } from '@data-fair/lib-vue/session'
+import { type ListedDataset } from '~/components/dataset/select/utils'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -562,7 +571,7 @@ const restAttachmentsAsImage = ref(false)
 
 // ---- Virtual params ----
 const virtualTitle = ref('')
-const virtualChildren = ref<Array<{ id: string, title: string }>>([])
+const virtualChildren = ref<ListedDataset[]>([])
 const virtualFillSchema = ref(false)
 const virtualInitFromDesc = ref(false)
 const virtualInitFromAttachments = ref(false)
@@ -892,6 +901,7 @@ fr:
   lineOwnership: Permet de donner la propriété d'une ligne à des utilisateurs (scénarios collaboratifs)
   attachments: Accepter des pièces jointes
   attachment: Document numérique attaché
+  children: Jeux enfants
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
   virtualDatasetInitFromDesc: Copier la description du 1er jeu enfant
   virtualDatasetInitFromAttachments: Copier les pièces jointes du 1er jeu enfant
@@ -942,6 +952,7 @@ en:
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
   attachments: Accept attachments
   attachment: Attachment
+  children: Children datasets
   virtualDatasetFill: Initialize the schema with all columns from children
   virtualDatasetInitFromDesc: Copy the description of the first child
   virtualDatasetInitFromAttachments: Copy the attachments of the first child

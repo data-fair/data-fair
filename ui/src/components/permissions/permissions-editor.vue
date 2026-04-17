@@ -4,7 +4,7 @@
   </p>
 
   <df-tutorial-alert
-    v-if="resource.owner?.department"
+    v-if="!simple && resource.owner?.department"
     id="permissions-deps"
     :text="t('readDepPermissionsDoc')"
     href="https://data-fair.github.io/3/user-guide-backoffice/department"
@@ -17,7 +17,7 @@
   />
   <template v-else>
     <v-alert
-      v-if="hasPrivateParents && isPublic"
+      v-if="!simple && hasPrivateParents && isPublic"
       type="warning"
       variant="outlined"
       density="compact"
@@ -40,6 +40,8 @@
       :disabled="disabled"
       :items="visibilityItems"
       :label="t('visibilityLabel')"
+      :base-color="visibilityModified ? 'accent' : undefined"
+      :color="visibilityModified ? 'accent' : undefined"
       variant="outlined"
       density="compact"
       style="max-width: 800px;"
@@ -52,6 +54,8 @@
       :disabled="disabled"
       :items="contribProfileItems"
       :label="t('contribProfileLabel')"
+      :base-color="contribProfileModified ? 'accent' : undefined"
+      :color="contribProfileModified ? 'accent' : undefined"
       variant="outlined"
       density="compact"
       style="max-width: 800px;"
@@ -60,7 +64,7 @@
     />
 
     <v-switch
-      v-if="resource.rest && resource.rest.lineOwnership"
+      v-if="!simple && resource.rest && resource.rest.lineOwnership"
       v-model="allUsersManageOwnLines"
       :disabled="disabled"
       color="primary"
@@ -70,6 +74,7 @@
     />
 
     <v-switch
+      v-if="!simple"
       v-model="detailedMode"
       color="primary"
       :label="t('detailedMode')"
@@ -77,7 +82,7 @@
     />
   </template>
 
-  <template v-if="detailedMode && ownerDetails && api">
+  <template v-if="!simple && detailedMode && ownerDetails && api">
     <permission-dialog
       v-if="!disabled"
       :permission-classes="permissionClasses"
@@ -303,6 +308,9 @@ const props = defineProps<{
   disabled: boolean
   hasPublicDeps?: boolean
   hasPrivateParents?: boolean
+  simple?: boolean
+  /** Pristine server copy — enables `accent` colouring of the simplified-mode selects when the current value differs. */
+  serverData?: Permission[] | null
 }>()
 
 const emit = defineEmits<{ save: [value: Permission[]] }>()
@@ -404,14 +412,18 @@ function save (newPermissions: Permission[]) {
   emit('save', newPermissions)
 }
 
+function computeVisibility (perms: Permission[] | null | undefined) {
+  if (!perms) return undefined
+  if (perms.find(isPublicPermission)) return 'public'
+  if (perms.find(isSharedInOrgPermission)) return 'sharedInOrg'
+  if (perms.find(isPrivateOrgContribPermission)) return 'privateOrgContrib'
+  if (props.resource.owner?.type === 'organization') return 'privateOrg'
+  return 'privateUser'
+}
+
 const visibility = computed({
   get () {
-    if (!props.modelValue) return undefined
-    if (isPublic.value) return 'public'
-    if (props.modelValue.find(isSharedInOrgPermission)) return 'sharedInOrg'
-    if (props.modelValue.find(isPrivateOrgContribPermission)) return 'privateOrgContrib'
-    if (props.resource.owner?.type === 'organization') return 'privateOrg'
-    return 'privateUser'
+    return computeVisibility(props.modelValue)
   },
   set (v) {
     if (!props.modelValue) return
@@ -444,13 +456,17 @@ const visibilityItems = computed(() => {
   return items
 })
 
+function computeContribProfile (perms: Permission[] | null | undefined) {
+  if (!perms) return undefined
+  if (perms.find(isContribWriteAllPermission)) return 'contribWriteAll'
+  if (perms.find(isContribWriteNoBreakingPermission)) return 'contribWriteNoBreaking'
+  if (perms.find(isContribWriteDataPermission)) return 'contribWriteData'
+  return 'adminOnly'
+}
+
 const contribProfile = computed({
   get () {
-    if (!props.modelValue) return undefined
-    if (props.modelValue.find(isContribWriteAllPermission)) return 'contribWriteAll'
-    if (props.modelValue.find(isContribWriteNoBreakingPermission)) return 'contribWriteNoBreaking'
-    if (props.modelValue.find(isContribWriteDataPermission)) return 'contribWriteData'
-    return 'adminOnly'
+    return computeContribProfile(props.modelValue)
   },
   set (v) {
     if (!props.modelValue) return
@@ -486,6 +502,14 @@ const contribProfileItems = computed(() => {
   items.push({ value: 'contribWriteAll', title: t('contribProfile.contribWriteAll', { org: orgName.value }) })
   return items
 })
+
+const visibilityModified = computed(() =>
+  !!(props.simple && props.serverData && computeVisibility(props.modelValue) !== computeVisibility(props.serverData))
+)
+
+const contribProfileModified = computed(() =>
+  !!(props.simple && props.serverData && computeContribProfile(props.modelValue) !== computeContribProfile(props.serverData))
+)
 
 const allUsersManageOwnLines = computed({
   get () {

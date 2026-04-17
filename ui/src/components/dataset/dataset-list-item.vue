@@ -1,6 +1,6 @@
 <template>
   <v-list-item
-    :to="`/dataset/${dataset.id}`"
+    :to="noLink ? undefined : `/dataset/${dataset.id}`"
     lines="two"
   >
     <template
@@ -15,18 +15,22 @@
     </template>
     <v-list-item-title :title="dataset.title || dataset.id">
       {{ dataset.title || dataset.id }}
-      <v-chip
+      <v-tooltip
         v-if="dataset.status === 'error'"
-        size="x-small"
-        color="error"
-        variant="tonal"
-        class="ml-1"
+        :text="t('error')"
       >
-        {{ t('error') }}
-      </v-chip>
+        <template #activator="{ props: tooltipProps }">
+          <v-icon
+            v-bind="tooltipProps"
+            :icon="mdiAlert"
+            color="error"
+            size="small"
+            class="ml-1"
+          />
+        </template>
+      </v-tooltip>
     </v-list-item-title>
     <v-list-item-subtitle>
-      <span v-if="(showAll || !!(dataset.owner?.department && !session.state.account?.department)) && dataset.owner">{{ ownerName }} · </span>
       <span v-if="dataset.isVirtual">{{ t('virtual') }} · </span>
       <span v-if="dataset.isRest">{{ t('editable') }} · </span>
       <span v-if="dataset.isMetaOnly">{{ t('metaOnly') }} · </span>
@@ -36,26 +40,40 @@
       <span v-if="dataset.updatedAt">{{ formatDate(dataset.updatedAt) }}</span>
     </v-list-item-subtitle>
     <template
-      v-if="showTopics && dataset.topics?.length"
+      v-if="showAppend"
       #append
     >
-      <topic-chips :topics="dataset.topics" />
+      <div class="d-flex align-center ga-2">
+        <topic-chips
+          v-if="showTopics && dataset.topics?.length"
+          :topics="dataset.topics"
+        />
+        <owner-avatar
+          v-if="showOwner && dataset.owner"
+          :owner="dataset.owner"
+          :omit-owner-name="!showAll"
+        />
+      </div>
     </template>
   </v-list-item>
 </template>
 
 <script setup lang="ts">
 import type { Dataset } from '#api/types'
+import { mdiAlert } from '@mdi/js'
+import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 
 const { t, locale } = useI18n()
-const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
 const props = withDefaults(defineProps<{
   dataset: Dataset
   showTopics?: boolean
+  showOwner?: boolean
+  noLink?: boolean
 }>(), {
   showTopics: true,
+  showOwner: false,
 })
 
 const fileInfo = computed(() => {
@@ -69,11 +87,10 @@ const fileInfo = computed(() => {
   return info
 })
 
-const ownerName = computed(() => {
-  const o = props.dataset.owner
-  if (!o) return ''
-  return o.departmentName || o.name || o.id
-})
+const showAppend = computed(() =>
+  (props.showTopics && !!props.dataset.topics?.length) ||
+  (props.showOwner && !!props.dataset.owner)
+)
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString(locale.value)
@@ -86,13 +103,13 @@ fr:
   editable: Éditable
   metaOnly: Métadonnées
   draft: Brouillon
-  error: Erreur
+  error: En erreur
   lines: lignes
 en:
   virtual: Virtual
   editable: Editable
   metaOnly: Metadata only
   draft: Draft
-  error: Error
+  error: Error status
   lines: lines
 </i18n>
