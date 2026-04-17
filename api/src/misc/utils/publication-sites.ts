@@ -47,7 +47,8 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
     if (!previousPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-      if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department) {
+      const isSharedWithUserDept = !!sessionState.account.department && publicationSiteInfo.sharedWithDepartments?.includes(sessionState.account.department)
+      if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department && !isSharedWithUserDept) {
         throw httpError(403, 'fail to publish: publication site does not belong to user department')
       }
       if (!publicationSiteInfo.settings?.staging && !permissions.can(resourceType, resource, 'writePublicationSites', sessionState)) {
@@ -71,7 +72,8 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
     if (!newPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-      if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department) {
+      const isSharedWithUserDept = !!sessionState.account.department && publicationSiteInfo.sharedWithDepartments?.includes(sessionState.account.department)
+      if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department && !isSharedWithUserDept) {
         throw httpError(403, 'fail to unpublish: publication site does not belong to user department')
       }
       if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can(resourceType, resource, 'writePublicationSites', sessionState)) {
