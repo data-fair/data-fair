@@ -90,6 +90,14 @@ export default (admin = false) => ({
             }
           }
         }
+      },
+      sharedWithDepartments: {
+        type: 'array',
+        title: 'Départements partagés',
+        description: 'Départements dont les administrateurs peuvent publier sur ce portail, comme s\'ils en étaient propriétaires.',
+        items: { type: 'string' },
+        default: [],
+        readOnly: !admin
       }
     }
   }
