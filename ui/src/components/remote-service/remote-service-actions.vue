@@ -105,7 +105,7 @@
 fr:
   externalDoc: Documentation externe
   useAPI: Utiliser l'API
-  updateAPI: Mettre a jour la description de l'API
+  updateAPI: Mettre à jour la description de l'API
   delete: Supprimer
   deleteTitle: Suppression de la configuration du service
   deleteMsg: Voulez-vous vraiment supprimer la configuration du service "{title}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.

@@ -2,14 +2,22 @@
   <template v-if="application">
     <v-card>
       <v-list density="compact">
-        <v-list-item
-          v-if="application.owner"
-          :prepend-icon="mdiAccount"
-        >
+        <v-list-item v-if="application.owner">
+          <template #prepend>
+            <df-owner-avatar
+              :owner="application.owner"
+              :show-tooltip="false"
+              class="mr-7"
+            />
+          </template>
           <div class="text-body-small text-medium-emphasis">
             {{ t('owner') }}
           </div>
-          <div>{{ application.owner.name }}</div>
+          <div>
+            {{ application.owner.name }}<template v-if="application.owner.department">
+              - {{ application.owner.departmentName || application.owner.department }}
+            </template>
+          </div>
         </v-list-item>
 
         <v-list-item
@@ -64,7 +72,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiAccount, mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline } from '@mdi/js'
+import { mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline } from '@mdi/js'
 import useApplicationStore from '~/composables/application/application-store'
 
 const { application, baseAppFetch } = useApplicationStore()

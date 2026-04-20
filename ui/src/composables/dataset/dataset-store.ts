@@ -17,20 +17,34 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draft, html }, notifError: false })
   const dataset = ref<ExtendedDataset | null>(null)
   const statusOrder = ['loaded', 'stored', 'normalized', 'analyzed', 'validated', 'extended', 'indexed', 'finalized']
-  watch(datasetFetch.error, () => { if (datasetFetch.error.value) dataset.value = null })
-  watch(datasetFetch.data, () => {
-    if (!datasetFetch.data.value) return
-    // Prevent fetch responses from downgrading status set by real-time WS events
+  // Merge a freshly fetched dataset into the store without downgrading status already advanced by real-time WS events.
+  const mergeFetchedDataset = (fetched: any) => {
+    if (!fetched) return
     if (dataset.value) {
       const currentRank = statusOrder.indexOf(dataset.value.status ?? '')
-      const fetchedRank = statusOrder.indexOf(datasetFetch.data.value.status ?? '')
-      if (currentRank > fetchedRank && currentRank < statusOrder.length - 1) {
-        dataset.value = { ...datasetFetch.data.value, status: dataset.value.status as typeof dataset.value.status }
+      const fetchedRank = statusOrder.indexOf(fetched.status ?? '')
+      if (currentRank > fetchedRank) {
+        dataset.value = { ...fetched, status: dataset.value.status as typeof dataset.value.status }
         return
       }
     }
-    dataset.value = datasetFetch.data.value
-  })
+    dataset.value = fetched
+  }
+  // Edit-fetches are not authoritative for backend-managed pipeline fields — they refresh right after
+  // datasetFetch and can briefly carry a stale draft processing state. Keep the current values of
+  // these fields so WS-advanced status and friends are not clobbered.
+  const pipelineManagedFields = ['status', 'finalizedAt', 'errorStatus', 'errorRetry', 'dataUpdatedAt', 'count', 'bbox', 'timePeriod', 'storage'] as const
+  const applyEditFetchSnapshot = (snapshot: any) => {
+    if (!snapshot || !dataset.value) return
+    const merged = { ...snapshot }
+    for (const f of pipelineManagedFields) {
+      if (f in dataset.value) (merged as any)[f] = (dataset.value as any)[f]
+      else delete (merged as any)[f]
+    }
+    dataset.value = merged
+  }
+  watch(datasetFetch.error, () => { if (datasetFetch.error.value) dataset.value = null })
+  watch(datasetFetch.data, () => { mergeFetchedDataset(datasetFetch.data.value) })
   const restDataset = computed(() => {
     if (dataset.value && isRestDataset(dataset.value)) return dataset.value
   })
@@ -166,6 +180,8 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     draft,
     dataset,
     datasetFetch,
+    mergeFetchedDataset,
+    applyEditFetchSnapshot,
     restDataset,
     journalFetch,
     journal,

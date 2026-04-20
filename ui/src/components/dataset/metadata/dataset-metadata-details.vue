@@ -2,14 +2,22 @@
   <template v-if="dataset">
     <v-card>
       <v-list density="compact">
-        <v-list-item
-          v-if="dataset.owner"
-          :prepend-icon="mdiAccount"
-        >
+        <v-list-item v-if="dataset.owner">
+          <template #prepend>
+            <df-owner-avatar
+              :owner="dataset.owner"
+              :show-tooltip="false"
+              class="mr-7"
+            />
+          </template>
           <div class="text-body-small text-medium-emphasis">
             {{ t('owner') }}
           </div>
-          <div>{{ dataset.owner.name }}</div>
+          <div>
+            {{ dataset.owner.name }}<template v-if="dataset.owner.department">
+              - {{ dataset.owner.departmentName || dataset.owner.department }}
+            </template>
+          </div>
         </v-list-item>
 
         <v-list-item
@@ -128,7 +136,6 @@ en:
 
 <script setup lang="ts">
 import {
-  mdiAccount,
   mdiAllInclusive,
   mdiCounter,
   mdiDatabaseArrowRight,

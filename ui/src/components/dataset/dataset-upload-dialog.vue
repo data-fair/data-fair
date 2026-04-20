@@ -58,9 +58,9 @@
           v-if="upload.loading.value"
           v-model="uploadPercent"
           class="mb-2"
-          rounded
           height="28"
           color="primary"
+          rounded
         >
           <template v-if="uploadProgress.total && uploadPercent">
             {{ Math.floor(uploadPercent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}

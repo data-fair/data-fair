@@ -30,7 +30,6 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
         }
       }
 
-      // Update dataset status based on journal events for real-time progress
       const eventStates: Record<string, string> = {
         'data-updated': 'loaded',
         'download-end': 'loaded',
@@ -53,7 +52,7 @@ export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | Wat
 
       if (keys.includes('info')) {
         const newStatus = eventStates[event.type]
-        if (newStatus && dataset.value) {
+        if (newStatus && dataset.value && dataset.value.status !== newStatus) {
           dataset.value = { ...dataset.value, status: newStatus as typeof dataset.value.status }
         }
       }

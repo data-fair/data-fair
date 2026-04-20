@@ -5,7 +5,7 @@
   >
     <df-themed-svg
       :source="svgSource"
-      class="mx-auto"
+      class="mx-auto mt-8"
       style="max-width: 400px; width: 100%;"
     />
     <p class="text-title-large font-weight-bold mt-4">

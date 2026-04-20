@@ -97,7 +97,7 @@
     />
 
     <dataset-table-value
-      v-else-if="header.property"
+      v-else-if="header.property && result.values[header.key]"
       :filter-loading="filterLoading"
       :filtered="!!filter"
       :hovered="hovered === result.values[header.key]"

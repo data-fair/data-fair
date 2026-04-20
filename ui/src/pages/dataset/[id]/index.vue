@@ -636,7 +636,7 @@ watch(shareTab, (tab) => {
 })
 
 const store = useDatasetStore()
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
 
 const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
   await savePermissions(newPermissions)
@@ -680,11 +680,11 @@ watch(structureEditFetch.serverData, (d) => {
   if (d) {
     normalizeStructureData(d)
     normalizeStructureData(structureEditFetch.data.value)
-    dataset.value = d as any
+    applyEditFetchSnapshot(d as any)
   }
 })
 watch(metadataEditFetch.serverData, (d) => {
-  if (d) dataset.value = d as any
+  if (d) applyEditFetchSnapshot(d as any)
 })
 
 // Sync store.dataset.image back to metadataEditFetch when changed externally (e.g. thumbnail set from attachments tab)

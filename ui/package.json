@@ -21,7 +21,7 @@
     "@data-fair/frame": "^0.18.0",
     "@data-fair/lib-vue": "^1.25.3",
     "@data-fair/lib-vue-agents": "^0.3.0",
-    "@data-fair/lib-vuetify": "^2.1.2",
+    "@data-fair/lib-vuetify": "^2.2.1",
     "@data-fair/lib-vuetify-agents": "^0.5.3",
     "@intlify/unplugin-vue-i18n": "^11.0.7",
     "@koumoul/vjsf": "^4.3.0",
