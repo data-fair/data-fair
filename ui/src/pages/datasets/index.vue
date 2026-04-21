@@ -21,8 +21,9 @@
     </v-row>
 
     <!-- Empty state -->
-    <layout-empty-state
+    <df-layout-empty-state
       v-else-if="catalog.initialized.value && !catalog.totalCount.value"
+      :can-create="canContribDep"
       :has-search="!!q"
       :icon="mdiDatabaseOff"
       :no-data-text="t('noDataset')"
@@ -243,9 +244,9 @@ const ownerParam = computed(() => {
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
     select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason',
-    sort: sort.value,
   }
   if (q.value) params.q = q.value
+  else params.sort = sort.value
   if (ownerParam.value) params.owner = ownerParam.value
   if (facetStatus.value?.length) params.status = facetStatus.value.join(',')
   if (facetDraftStatus.value?.length) params.draftStatus = facetDraftStatus.value.join(',')
@@ -258,6 +259,7 @@ const datasetsQuery = computed(() => {
   if (facetType.value?.length) params.type = facetType.value.join(',')
   if (children.value) params.children = children.value
   if (shared.value) params.shared = shared.value
+  else if (showAll.value !== 'true') params.shared = 'false'
   return params
 })
 

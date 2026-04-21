@@ -109,53 +109,64 @@
         v-if="currentBaseApp && patch"
         :title="t('editTitle', { title: currentBaseApp.title })"
       >
-        <v-card-text>
-          <p>URL : {{ currentBaseApp.url }}</p>
-          <v-checkbox
-            v-model="patch.deprecated"
-            :label="t('deprecated')"
-          />
-          <v-form>
-            <v-text-field
-              v-model="patch.applicationName"
-              name="applicationName"
-              :label="t('applicationName')"
+        <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+          <v-card-text>
+            <p>URL : {{ currentBaseApp.url }}</p>
+            <v-checkbox
+              v-model="patch.deprecated"
+              :label="t('deprecated')"
+              class="mb-2"
             />
-            <v-text-field
-              v-model="patch.version"
-              name="version"
-              :label="t('version')"
-            />
-            <v-text-field
-              v-model="patch.title"
-              name="title"
-              :label="t('title')"
-            />
-            <v-textarea
-              v-model="patch.description"
-              name="description"
-              :label="t('description')"
-            />
-            <v-text-field
-              v-model="patch.image"
-              name="image"
-              :label="t('image')"
-            />
-            <v-select
-              v-model="patch.category"
-              name="category"
-              :label="t('category')"
-              clearable
-              :items="$uiConfig.baseAppsCategories"
-            />
-            <v-text-field
-              v-model="patch.documentation"
-              name="documentation"
-              :label="t('documentation')"
-            />
-            <private-access v-model="patch" />
-          </v-form>
-        </v-card-text>
+            <v-form>
+              <v-text-field
+                v-model="patch.applicationName"
+                :label="t('applicationName')"
+                name="applicationName"
+                class="mb-2"
+              />
+              <v-text-field
+                v-model="patch.version"
+                name="version"
+                :label="t('version')"
+                class="mb-2"
+              />
+              <v-text-field
+                v-model="patch.title"
+                :label="t('title')"
+                name="title"
+                class="mb-2"
+              />
+              <v-textarea
+                v-model="patch.description"
+                :label="t('description')"
+                name="description"
+                class="mb-2"
+              />
+              <v-text-field
+                v-model="patch.image"
+                :label="t('image')"
+                name="image"
+                class="mb-2"
+              />
+              <v-select
+                v-model="patch.category"
+                :items="$uiConfig.baseAppsCategories"
+                :label="t('category')"
+                name="category"
+                class="mb-2"
+                clearable
+              />
+              <v-text-field
+                v-model="patch.documentation"
+                :label="t('documentation')"
+                name="documentation"
+                class="mb-2"
+              />
+              <private-access v-model="patch" />
+            </v-form>
+          </v-card-text>
+        </v-defaults-provider>
+
         <v-card-actions>
           <v-spacer />
           <v-btn

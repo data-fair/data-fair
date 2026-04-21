@@ -6,7 +6,7 @@
     :z-index="2600 /* Higher than agent-chat's 2500 */"
     location="bottom right"
     display-strategy="overflow"
-    max-width="800"
+    max-width="500"
     max-height="500"
     collapsed
     closable
@@ -69,7 +69,7 @@ function toItem (notif: UiNotif): QueueItem {
       msg: notif.msg,
       errorMsg: notif.errorMsg,
       color: notif.clientError ? 'warning' : 'error',
-      timeout: -1,
+      timeout: 60,
       contentClass: 'ui-notif-local__content'
     }
   }

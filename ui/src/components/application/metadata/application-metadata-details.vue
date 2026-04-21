@@ -2,12 +2,14 @@
   <template v-if="application">
     <v-card>
       <v-list density="compact">
-        <v-list-item v-if="application.owner">
+        <v-list-item
+          v-if="application.owner"
+          prepend-gap="28"
+        >
           <template #prepend>
             <df-owner-avatar
               :owner="application.owner"
               :show-tooltip="false"
-              class="mr-7"
             />
           </template>
           <div class="text-body-small text-medium-emphasis">

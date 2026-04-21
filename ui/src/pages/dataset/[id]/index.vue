@@ -418,12 +418,13 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card>
+      <v-card :loading="confirmRemove.loading.value ? 'warning' : undefined">
         <v-card-title>{{ t('deleteDataset') }}</v-card-title>
         <v-card-text>{{ t('deleteMsg', { title: dataset?.title }) }}</v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
+            :disabled="confirmRemove.loading.value"
             @click="showDeleteDialog = false"
           >
             {{ t('no') }}
@@ -431,7 +432,8 @@
           <v-btn
             color="warning"
             variant="flat"
-            @click="confirmRemove"
+            :loading="confirmRemove.loading.value"
+            @click="confirmRemove.execute()"
           >
             {{ t('yes') }}
           </v-btn>
@@ -443,7 +445,10 @@
       v-model="showDeleteAllLinesDialog"
       max-width="500"
     >
-      <v-card :title="t('deleteAllLinesTitle')">
+      <v-card
+        :title="t('deleteAllLinesTitle')"
+        :loading="confirmDeleteAllLines.loading.value ? 'warning' : undefined"
+      >
         <v-card-text>
           <v-alert
             type="error"
@@ -455,6 +460,7 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
+            :disabled="confirmDeleteAllLines.loading.value"
             @click="showDeleteAllLinesDialog = false"
           >
             {{ t('no') }}
@@ -462,7 +468,8 @@
           <v-btn
             color="warning"
             variant="flat"
-            @click="confirmDeleteAllLines"
+            :loading="confirmDeleteAllLines.loading.value"
+            @click="confirmDeleteAllLines.execute()"
           >
             {{ t('yes') }}
           </v-btn>
@@ -535,6 +542,8 @@ fr:
   deleteDataset: Supprimer le jeu de données
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  deleteDatasetSuccess: Le jeu de données a bien été supprimé.
+  deleteAllLinesSuccess: Toutes les lignes ont bien été supprimées.
   yes: Oui
   no: Non
 en:
@@ -586,6 +595,8 @@ en:
   deleteDataset: Delete dataset
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
+  deleteDatasetSuccess: Dataset was deleted successfully.
+  deleteAllLinesSuccess: All lines were deleted successfully.
   yes: Yes
   no: No
 </i18n>
@@ -769,16 +780,16 @@ const showDeleteAllLinesDialog = ref(false)
 
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
-const confirmRemove = async () => {
+const confirmRemove = useAsyncAction(async () => {
   showDeleteDialog.value = false
   await remove()
   router.push('/datasets')
-}
+}, { success: t('deleteDatasetSuccess') })
 
-const confirmDeleteAllLines = async () => {
+const confirmDeleteAllLines = useAsyncAction(async () => {
   showDeleteAllLinesDialog.value = false
   await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
-}
+}, { success: t('deleteAllLinesSuccess') })
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 

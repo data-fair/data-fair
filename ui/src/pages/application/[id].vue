@@ -1,8 +1,9 @@
 <template>
-  <layout-fetch-error
+  <df-layout-fetch-error
     v-if="store.applicationFetch.error.value"
     :error="store.applicationFetch.error.value"
-    resource-type="application"
+    back-to="/applications"
+    :back-label="t('backToApplications')"
   />
   <router-view v-else />
 </template>
@@ -12,6 +13,14 @@ import { provideApplicationStore } from '~/composables/application/application-s
 
 definePage({ alias: '/applications/:id' })
 
+const { t } = useI18n()
 const route = useRoute<'/application/[id]'>()
 const store = provideApplicationStore(route.params.id)
 </script>
+
+<i18n lang="yaml">
+fr:
+  backToApplications: Retour aux applications
+en:
+  backToApplications: Back to applications
+</i18n>

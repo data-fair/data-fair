@@ -20,7 +20,7 @@
 		"dupSlug": "Ce slug est déjà utilisé"
 	},
 	"appRequire": {
-		"noDataset": "n'utilise pas de jeu de données comme source.",
+		"noDataset": "N'utilise pas de jeu de données comme source.",
 		"aDataset": "une source de données",
 		"geoData": "des données géolocalisées (concepts latitude/longitude)",
 		"aConcept": "le concept {{concept}}",
@@ -28,7 +28,7 @@
 		"aType": "le type {{type}}",
 		"oneOfTypes": "un des types {{types}}",
 		"orJoin": " ou ",
-		"requires": "nécessite ",
+		"requires": "Nécessite ",
 		"requiresJoin": " et "
 	},
 	"hasBreakingChanges": "le jeu de données \"{{title}}\" a des ruptures de compatibilité :",
