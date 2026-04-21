@@ -48,7 +48,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, shallowRef, computed, watchEffect, effectScope, onScopeDispose } from 'vue'
+import { ref, shallowRef, computed, watch, watchEffect, effectScope, onScopeDispose } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
@@ -138,6 +138,12 @@ const agentChatDrawerProps = computed(() => {
 })
 
 const agentChatState = shallowRef<ReturnType<typeof useAgentChatDrawer> | null>(null)
+
+// Scroll to top on route change
+watch(() => route.path, () => {
+  document.querySelector('.v-main__scroller')?.scrollTo({ top: 0 })
+  document.getElementById('navigation-right-local')?.scrollTo({ top: 0 })
+})
 
 </script>
 

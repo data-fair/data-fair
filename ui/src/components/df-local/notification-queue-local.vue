@@ -8,13 +8,13 @@
       max-width="500"
       width="100%"
       eager
+      @update:model-value="(open) => refresh(open ? 10 : 0)"
     >
       <template #activator="{ props }">
         <v-btn
           v-bind="props"
           :title="t('openNotificationList')"
           stacked
-          @click="refresh()"
         >
           <v-badge
             :model-value="!!countNew"
@@ -107,10 +107,10 @@ type NotificationsRes = {
 const notifications = ref<NotificationItem[]>([])
 const countNew = ref(0)
 
-async function refresh () {
+async function refresh (size = 10) {
   if (!session.state.user) return
-  const res = await ofetch<NotificationsRes>(`${eventsUrl}/api/notifications`, { query: { size: 10 } })
-  notifications.value = res.results
+  const res = await ofetch<NotificationsRes>(`${eventsUrl}/api/notifications`, { query: { size } })
+  if (size > 0) notifications.value = res.results
   countNew.value = res.countNew
 }
 
