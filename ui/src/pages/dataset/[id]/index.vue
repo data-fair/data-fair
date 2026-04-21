@@ -809,7 +809,7 @@ watch(dataset, (d) => {
     ]
   })
   if (can('readJournal').value && !d.isMetaOnly && !journalFetch.initialized.value) journalFetch.refresh()
-  if (can('getPermissions').value && !permissionsFetch.initialized.value) permissionsFetch.refresh()
+  if (can('getPermissions').value && (!d.draftReason || d.draftReason.key === 'file-updated') && !permissionsFetch.initialized.value) permissionsFetch.refresh()
   if (!taskProgressFetch.initialized.value) taskProgressFetch.refresh()
   if (d.finalizedAt && !applicationsFetch.initialized.value) applicationsFetch.refresh()
   if (d.draftReason?.key === 'file-updated' && !publishedDatasetFetch.initialized.value) publishedDatasetFetch.refresh()

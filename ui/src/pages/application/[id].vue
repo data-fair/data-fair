@@ -2,8 +2,8 @@
   <df-layout-fetch-error
     v-if="store.applicationFetch.error.value"
     :error="store.applicationFetch.error.value"
-    back-to="/applications"
     :back-label="t('backToApplications')"
+    back-to="/applications"
   />
   <router-view v-else />
 </template>

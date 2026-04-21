@@ -2,8 +2,8 @@
   <df-layout-fetch-error
     v-if="store.datasetFetch.error.value"
     :error="store.datasetFetch.error.value"
-    back-to="/datasets"
     :back-label="t('backToDatasets')"
+    back-to="/datasets"
   />
   <router-view v-else />
 </template>
