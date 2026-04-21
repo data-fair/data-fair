@@ -14,7 +14,7 @@ export const uiConfig = {
   compatODS: config.compatODS,
   adminRole: config.adminRole as string,
   contribRole: config.contribRole as string,
-  subscriptionUrl: config.subscriptionUrl as string | null,
+  customersIntegration: !!config.privateCustomersUrl,
   agentsIntegration: !!config.privateAgentsUrl,
   metricsIntegration: !!config.privateMetricsUrl,
   openapiViewerIntegration: !!config.privateOpenapiViewerUrl,

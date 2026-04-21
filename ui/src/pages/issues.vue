@@ -1,10 +1,10 @@
 <template>
   <d-frame
     v-if="$uiConfig.customersIntegration"
-    id="customers-subscriptions"
+    id="customers-issues"
     :adapter.prop="stateChangeAdapter"
-    src="/customers/embed/subscription/?platform=df"
-    sync-path="/data-fair/subscription/"
+    src="/customers/embed/issues/"
+    sync-path="/data-fair/issues/"
     class="fill-height"
     resize="no"
     sync-params

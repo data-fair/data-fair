@@ -32,7 +32,7 @@ module.exports = {
   privateMetricsUrl: null,
   privateAgentsUrl: null,
   privateOpenapiViewerUrl: null,
-  subscriptionUrl: null,
+  privateCustomersUrl: null,
   pluginsDir: './plugins',
   mongo: {
     url: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),

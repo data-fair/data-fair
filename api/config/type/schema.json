@@ -138,7 +138,7 @@
     "privateOpenapiViewerUrl": {
       "type": ["string", "null"]
     },
-    "subscriptionUrl": {
+    "privateCustomersUrl": {
       "type": ["string", "null"]
     },
     "pluginsDir": {
