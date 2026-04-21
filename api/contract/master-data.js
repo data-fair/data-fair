@@ -108,6 +108,9 @@ export const schema = {
                     type: 'object',
                     title: 'Propriété comparée',
                     layout: {
+                      props: {
+                        noDataText: 'Aucune colonne de ce jeu de données n\'a de concept associé. Définissez des concepts dans l\'onglet Schéma.'
+                      },
                       getItems: {
                         type: 'js-eval',
                         expr: 'context.propertiesWithConcepts',
@@ -120,6 +123,7 @@ export const schema = {
                 }
               }, {
                 title: 'Date dans un interval',
+                required: ['type', 'property'],
                 properties: {
                   type: { type: 'string', const: 'date-in-interval' },
                   property: {
@@ -215,6 +219,9 @@ Exemple: ma_colonne,-ma_colonne2`
             type: 'object',
             title: 'Propriété à retourner (code)',
             layout: {
+              props: {
+                noDataText: 'Aucune colonne de ce jeu de données n\'a de concept associé. Définissez des concepts dans l\'onglet Schéma.'
+              },
               getItems: {
                 type: 'js-eval',
                 expr: 'context.propertiesWithConcepts',
@@ -228,6 +235,9 @@ Exemple: ma_colonne,-ma_colonne2`
             type: 'object',
             title: 'Propriété utilisée pour la recherche (libellé)',
             layout: {
+              props: {
+                noDataText: 'Aucune colonne textuelle dans ce jeu de données.'
+              },
               getItems: {
                 type: 'js-eval',
                 expr: 'context.stringProperties',

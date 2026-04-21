@@ -78,6 +78,7 @@ import { ofetch } from 'ofetch'
 import OwnerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 import useSession from '@data-fair/lib-vue/session.js'
 import useLocaleDayjs from '@data-fair/lib-vue/locale-dayjs.js'
+import useWS from '@data-fair/lib-vue/ws.js'
 import { useI18n } from 'vue-i18n'
 import { mdiBell } from '@mdi/js'
 
@@ -113,7 +114,17 @@ async function refresh () {
   countNew.value = res.countNew
 }
 
-onMounted(refresh)
+onMounted(() => {
+  refresh()
+  const userId = session.state.user?.id
+  const ws = useWS(eventsUrl + '/')
+  if (ws && userId) {
+    ws.subscribe<NotificationItem>(`user:${userId}:notifications`, (notif) => {
+      notifications.value = [{ ...notif, new: true }, ...notifications.value]
+      countNew.value += 1
+    })
+  }
+})
 </script>
 
 <i18n lang="yaml">
