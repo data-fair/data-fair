@@ -22,8 +22,7 @@
 
     <v-list-item
       v-if="$uiConfig.openapiViewerIntegration"
-      :href="`/data-fair/remote-service/${remoteService.id}/api-doc`"
-      target="_top"
+      :to="`/remote-service/${remoteService.id}/api-doc`"
       link
     >
       <template #prepend>

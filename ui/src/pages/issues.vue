@@ -1,6 +1,5 @@
 <template>
   <d-frame
-    v-if="$uiConfig.customersIntegration"
     id="customers-issues"
     :adapter.prop="stateChangeAdapter"
     src="/customers/embed/issues/"

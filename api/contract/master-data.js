@@ -47,6 +47,9 @@ export const schema = {
       },
       layout: {
         if: { type: 'js-eval', expr: 'context.ownerOrg', pure: true },
+        props: {
+          noDataText: 'Vous n\'avez pas encore de partenaires configurés pour votre organisation.'
+        },
         getItems: {
           // eslint-disable-next-line no-template-curly-in-string
           url: { type: 'js-tpl', expr: '${context.directoryUrl}/api/${context.dataset.owner.type}s/${context.dataset.owner.id}', pure: true },
