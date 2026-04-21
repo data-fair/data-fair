@@ -18,14 +18,6 @@
         @update:model-value="togglePart('data')"
       />
       <v-checkbox
-        :model-value="modelValue.parts.includes('schema')"
-        hide-details
-        class="pl-2"
-        :label="t('initFromSchema')"
-        :disabled="modelValue.parts.includes('data')"
-        @update:model-value="togglePart('schema')"
-      />
-      <v-checkbox
         v-if="initFromDataset.extensions?.length"
         :model-value="modelValue.parts.includes('extensions')"
         hide-details
@@ -76,7 +68,7 @@ const initFromDataset = ref<any>(null)
 
 watch(initFromDataset, (dataset) => {
   if (dataset) {
-    modelValue.value = { dataset: dataset.id, parts: [] }
+    modelValue.value = { dataset: dataset.id, parts: ['schema'] }
     sourceTitle.value = dataset.title ?? null
   } else {
     modelValue.value = null
@@ -91,9 +83,6 @@ const togglePart = (part: string) => {
     modelValue.value = { ...modelValue.value, parts: parts.filter(p => p !== part) }
   } else {
     const newParts = [...parts, part]
-    if (part === 'data' && !newParts.includes('schema')) {
-      newParts.push('schema')
-    }
     modelValue.value = { ...modelValue.value, parts: newParts }
   }
 }
@@ -103,15 +92,13 @@ const togglePart = (part: string) => {
 fr:
   initFromDataset: Utiliser un jeu de données existant comme modèle
   initFromData: Copier la donnée
-  initFromSchema: Copier le schéma
   initFromExtensions: Copier les extensions
-  initFromDescription: Copier la description
+  initFromDescription: Copier le résumé et la description
   initFromAttachments: Copier les pièces jointes
 en:
   initFromDataset: Use an existing dataset as a model ?
   initFromData: Copy data
-  initFromSchema: Copy schema
   initFromExtensions: Copy extensions
-  initFromDescription: Copy description
+  initFromDescription: Copy summary and description
   initFromAttachments: Copy attachments
 </i18n>

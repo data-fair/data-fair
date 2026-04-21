@@ -718,7 +718,7 @@ async function createFileDataset () {
   }
 
   const body: Record<string, any> = {}
-  if (initFrom.value && initFrom.value.parts.length > 0) {
+  if (initFrom.value) {
     body.initFrom = initFrom.value
   }
   body.title = fileTitle.value
@@ -769,7 +769,7 @@ async function createRestDataset () {
     schema: [] as any[]
   }
 
-  if (initFrom.value && initFrom.value.parts.length > 0) {
+  if (initFrom.value) {
     body.initFrom = initFrom.value
   }
   if (restAttachments.value) {
