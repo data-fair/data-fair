@@ -13,7 +13,7 @@
         class="px-2"
         density="compact"
         variant="flat"
-        :class="{ 'font-weight-bold': !!element['x-refersTo'], 'font-weight-regular': !element['x-refersTo'] }"
+        :class="{ 'font-weight-bold': !!element['x-refersTo'], 'font-weight-regular': !element['x-refersTo'], 'font-italic': !!element['x-extension'] }"
         :color="columnColor(element)"
         :ripple="!sortable"
         @click="switchColumn(element.key)"

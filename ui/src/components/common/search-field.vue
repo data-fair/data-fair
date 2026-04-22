@@ -2,7 +2,7 @@
   <v-text-field
     v-model="pendingQ"
     :append-inner-icon="mdiMagnify"
-    :placeholder="t('search')"
+    :label="t('search')"
     class="mx-2"
     color="primary"
     density="compact"

@@ -1,6 +1,6 @@
 <template>
   <v-card
-    :title="extension.property?.['x-originalName'] || t('newExprEval')"
+    :title="liveProperty?.title || liveProperty?.['x-originalName'] || t('newExprEval')"
     class="h-100"
   >
     <v-card-text>
@@ -50,7 +50,7 @@ en:
 
 <script setup lang="ts">
 
-defineProps<{
+const props = defineProps<{
   extension: any
   idx: number
   dataset: any
@@ -59,6 +59,10 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{ remove: [], 'update:expr': [val: string] }>()
+
+const liveProperty = computed(() =>
+  props.dataset?.schema?.find((f: any) => f.key === props.extension.property?.key) ?? props.extension.property
+)
 
 const { t } = useI18n()
 </script>
