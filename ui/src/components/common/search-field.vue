@@ -10,6 +10,7 @@
     min-width="175"
     variant="outlined"
     hide-details
+    single-line
     clearable
     rounded
     @keyup.enter="q = pendingQ"

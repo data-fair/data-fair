@@ -8,7 +8,14 @@
     @mouseenter="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
     @mouseleave="emit('hoverstop')"
   >
-    <template v-if="header.key === '_thumbnail'">
+    <template v-if="header.synthetic">
+      <span
+        :class="syntheticCell?.class"
+        :title="syntheticCell?.title"
+      >{{ syntheticCell?.text }}</span>
+    </template>
+
+    <template v-else-if="header.key === '_thumbnail'">
       <v-avatar
         v-if="result._thumbnail"
         rounded="0"
@@ -36,10 +43,10 @@
         v-if="result._owner"
         location="top"
       >
-        <template #activator="{ props }">
+        <template #activator="{ props: tooltipProps }">
           <span
             class="text-body-medium"
-            v-bind="props"
+            v-bind="tooltipProps"
           >
             <v-avatar :size="28">
               <img :src="`${$sdUrl}/api/avatars/${result._owner.split(':').join('/')}/avatar.png`">
@@ -148,7 +155,7 @@ const filterValue = async (result: ExtendedResult, header: TableHeader) => {
   }
 }
 
-defineProps({
+const props = defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
   header: { type: Object as () => TableHeader, required: true },
   lineHeight: { type: Number, required: true },
@@ -159,6 +166,8 @@ defineProps({
   selectable: { type: Boolean, default: false },
   selected: { type: Boolean, default: false }
 })
+
+const syntheticCell = computed(() => props.header.synthetic?.render(props.result))
 
 const emit = defineEmits<{
   filter: [filter: any],

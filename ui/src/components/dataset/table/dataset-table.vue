@@ -67,10 +67,24 @@
       />
     </v-btn-group>
   </v-toolbar>
+  <v-toolbar
+    v-else-if="searchOnly"
+    color="surface"
+    density="compact"
+    flat
+  >
+    <dataset-nb-results
+      :limit="0"
+      :total="total"
+      class="ml-2"
+      style="min-width:80px;max-width:80px;"
+    />
+    <search-field v-model="q" />
+  </v-toolbar>
   <v-sheet class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
-      :height="pagination ? undefined : height - (noInteraction ? 0 : 48)"
+      :height="pagination ? undefined : height - ((noInteraction && !searchOnly) ? 0 : 48)"
       :loading="fetchResults.loading.value"
       class="dataset-table"
       :fixed-header="!pagination"
@@ -90,17 +104,24 @@
                 'bg-surface': header.sticky,
                 'border-e-thin': header.sticky,
                 'pr-2': header.sticky,
-                'pl-2': displayMode === 'table-dense'
+                'pl-2': displayMode === 'table-dense',
+                'selectable-header': headerKeys || !!header.synthetic
               }"
               :style="{
-                'min-width': header.property ? (colsWidths[i] ?? minColWidth) + 'px' : '',
+                'min-width': (header.property || header.synthetic) ? (colsWidths[i] ?? minColWidth) + 'px' : '',
                 cursor: header.property && !noInteraction ? 'pointer' : 'default',
               }"
               @mouseenter="hoveredHeader = noInteraction ? undefined : header"
               @mouseleave="hoveredHeader = undefined"
             >
               <div
-                v-if="header.key === '_actions'"
+                v-if="header.synthetic"
+                class="pr-2 header-wrapper"
+              >
+                <span class="two-lines">{{ header.title }}</span>
+              </div>
+              <div
+                v-else-if="header.key === '_actions'"
                 class="header-wrapper"
               >
                 <async-dataset-table-header-actions
@@ -228,7 +249,7 @@
     <!-- card mode -->
     <div
       v-if="displayMode === 'list' && headers"
-      :style="`height: ${height - (noInteraction ? 0 : 48)}px; overflow-y: scroll;overflow-x: hidden;`"
+      :style="`height: ${height - ((noInteraction && !searchOnly) ? 0 : 48)}px; overflow-y: scroll;overflow-x: hidden;`"
       class="dataset-table-list-wrapper"
     >
       <div style="height:2px;width:100%;">
@@ -419,7 +440,7 @@
 import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
-import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'
+import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
@@ -431,12 +452,15 @@ const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
-const { height, noInteraction, edit, selectable, pagination } = defineProps({
+const { height, noInteraction, edit, selectable, pagination, searchOnly, syntheticColumns, headerKeys } = defineProps({
   height: { type: Number, default: 800 },
   noInteraction: { type: Boolean, default: false },
   edit: { type: Boolean, default: false },
   selectable: { type: Boolean, default: false },
   pagination: { type: Boolean, default: false },
+  searchOnly: { type: Boolean, default: false },
+  syntheticColumns: { type: Array as () => SyntheticColumn[], default: () => [] },
+  headerKeys: { type: Boolean, default: false },
 })
 
 const displayMode = defineModel<string>('display', { default: 'table' })
@@ -456,7 +480,7 @@ const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
 const pageSize = computed(() => {
   if (pagination) {
     // In pagination mode, fit exactly in visible area to avoid scrollbar
-    const toolbarHeight = noInteraction ? 0 : 48
+    const toolbarHeight = (noInteraction && !searchOnly) ? 0 : 48
     const theadHeight = displayMode.value === 'table-dense' ? 38 : 50
     const availableHeight = height - toolbarHeight - theadHeight
     return Math.max(5, Math.floor(availableHeight / lineHeight.value))
@@ -524,7 +548,7 @@ const nextPage = async () => {
   }
   paginationPage.value++
 }
-const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed)
+const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
 const { selectedResults, saveLine, bulkLines, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 if (edit) {
@@ -670,5 +694,18 @@ const deleteLine = useAsyncAction(async () => {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
+}
+.dataset-table th.selectable-header {
+  cursor: text !important;
+}
+.dataset-table th.selectable-header .two-lines {
+  user-select: text;
+  cursor: text;
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+  white-space: normal;
+  word-break: break-all;
 }
 </style>
