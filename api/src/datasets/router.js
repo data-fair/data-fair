@@ -250,7 +250,7 @@ router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddleware
     }
   }
 
-  if (req.body.type !== req.dataset.owner.type && req.body.id !== req.dataset.owner.id) {
+  if (req.body.type !== req.dataset.owner.type || req.body.id !== req.dataset.owner.id) {
     const remaining = await limits.remaining(req.body)
     if (remaining.nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })

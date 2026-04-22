@@ -202,10 +202,7 @@ export const updateTotalStorage = async (owner: AccountKeys, checkRemaining = fa
       debugLimits('exceedLimitIndexed/updateTotalStorage', { owner, remaining })
       throw httpError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
     }
-    if (remaining.nbDatasets === 0) {
-      debugLimits('exceedLimitNbDatasets/updateTotalStorage', { owner, remaining })
-      throw httpError(429, 'Vous avez atteint la limite de votre nombre de jeux de données.')
-    }
+    // No check for nb_datasets => Already checked at creation time
   }
   return totalStorage
 }

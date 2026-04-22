@@ -69,7 +69,7 @@ function toItem (notif: UiNotif): QueueItem {
       msg: notif.msg,
       errorMsg: notif.errorMsg,
       color: notif.clientError ? 'warning' : 'error',
-      timeout: 60,
+      timeout: 30 * 1000, // 1 minute for error notif
       contentClass: 'ui-notif-local__content'
     }
   }

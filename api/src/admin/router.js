@@ -22,7 +22,7 @@ router.use(cacheHeaders.noCache)
 let info = { version: process.env.NODE_ENV }
 router.get('/info', async (req, res) => {
   if (process.env.NODE_ENV === 'production') {
-    info = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../../../BUILD.json'), 'utf8'))
+    info = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../../BUILD.json'), 'utf8'))
   }
   res.json(info)
 })
