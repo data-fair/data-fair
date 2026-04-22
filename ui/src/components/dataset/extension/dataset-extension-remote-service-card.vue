@@ -1,9 +1,14 @@
 <template>
-  <v-card height="100%">
-    <template v-if="actionData">
-      <v-card-title>
+  <v-card class="h-100">
+    <template
+      v-if="actionData"
+      #title
+    >
+      <span :title="actionData.summary">
         {{ actionData.summary }}
-      </v-card-title>
+      </span>
+    </template>
+    <template v-if="actionData">
       <v-card-text>
         {{ t('link', { info: linkInfo }) }}
         <v-autocomplete

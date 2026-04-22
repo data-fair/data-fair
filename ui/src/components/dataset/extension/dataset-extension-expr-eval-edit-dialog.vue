@@ -9,7 +9,7 @@
         v-bind="activatorProps"
         :icon="mdiPencil"
         color="primary"
-        :title="t('preview')"
+        :title="t('edit')"
       />
     </template>
     <v-card>
@@ -18,7 +18,7 @@
         color="transparent"
       >
         <v-toolbar-title>
-          {{ t('preview') + ' ' + (extension.property?.['x-originalName'] || t('newExprEval')) }}
+          {{ t('dialogTitle', { title: liveProperty?.title || liveProperty?.['x-originalName'] || t('newExprEval') }) }}
         </v-toolbar-title>
         <v-spacer />
         <v-btn
@@ -42,10 +42,12 @@
 
 <i18n lang="yaml">
 fr:
-  preview: Prévisualisation
+  edit: Éditer l'expression
+  dialogTitle: "Édition de la colonne calculée {title}"
   newExprEval: Nouvelle colonne calculée
 en:
-  preview: Preview
+  edit: Edit the expression
+  dialogTitle: "Editing calculated column {title}"
   newExprEval: New calculated column
 </i18n>
 
@@ -53,7 +55,7 @@ en:
 import { mdiClose, mdiPencil } from '@mdi/js'
 import DatasetExtensionExprEvalPreview from './dataset-extension-expr-eval-preview.vue'
 
-defineProps<{
+const props = defineProps<{
   extension: any
   idx: number
   dataset: any
@@ -67,4 +69,8 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const dialog = ref(false)
+
+const liveProperty = computed(() =>
+  props.dataset?.schema?.find((f: any) => f.key === props.extension.property?.key) ?? props.extension.property
+)
 </script>

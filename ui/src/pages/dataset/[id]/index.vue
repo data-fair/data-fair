@@ -27,7 +27,7 @@
           class="ml-2"
           color="accent"
           variant="flat"
-          :disabled="!masterDataFormValid"
+          :disabled="!masterDataFormValid || hasInvalidExtension"
           :loading="structureEditFetch.save.loading.value"
           @click="structureEditFetch.save.execute()"
         >
@@ -626,6 +626,7 @@ import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
+import { hasInvalidExprEvalExtension } from '~/composables/dataset/expr-eval-validation'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -685,6 +686,7 @@ function normalizeStructureData (d: any) {
 }
 
 const masterDataFormValid = ref(true)
+const hasInvalidExtension = computed(() => hasInvalidExprEvalExtension(structureEditFetch.data.value))
 
 // Sync store.dataset with both editFetch instances
 watch(structureEditFetch.serverData, (d) => {
