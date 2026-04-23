@@ -6,7 +6,7 @@ import moment from 'moment'
 import zlib from 'zlib'
 import iconv from 'iconv-lite'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize } from '../../../support/workers.ts'
+import { waitForFinalize, setConfig } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser5 = await axiosAuth('test_user5@test.com')
@@ -437,6 +437,31 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     const res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', bulkLines)
     assert.equal(res.data.nbOk, 550)
     await waitForFinalize(ax, 'rest2')
+  })
+
+  test('Bulk with more lines than maxBulkLines goes through the partial update worker', async () => {
+    const ax = testUser1
+    await setConfig('elasticsearch.maxBulkLines', 10)
+    try {
+      await ax.put('/api/v1/datasets/restoverflow', {
+        isRest: true,
+        title: 'restoverflow',
+        schema: [{ key: 'attr1', type: 'string' }]
+      })
+      const bulkLines = []
+      for (let i = 0; i < 50; i++) {
+        bulkLines.push({ _id: 'line' + i, attr1: 'test' + i })
+      }
+      const res = await ax.post('/api/v1/datasets/restoverflow/_bulk_lines', bulkLines)
+      assert.equal(res.data.nbOk, 50)
+      // the bulk exceeded maxBulkLines (10) so the realtime path should not have run
+      assert.equal(res.data.indexedAt, undefined)
+      await waitForFinalize(ax, 'restoverflow')
+      const lines = await ax.get('/api/v1/datasets/restoverflow/lines', { params: { size: 100 } })
+      assert.equal(lines.data.total, 50)
+    } finally {
+      await setConfig('elasticsearch.maxBulkLines', 2000)
+    }
   })
 
   test('Use drop option to recreate all data', async () => {
