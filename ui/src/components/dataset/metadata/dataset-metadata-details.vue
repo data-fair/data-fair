@@ -1,11 +1,13 @@
 <template>
   <template v-if="dataset">
-    <v-card>
-      <v-list density="compact">
-        <v-list-item
-          v-if="dataset.owner"
-          prepend-gap="28"
-        >
+    <v-row>
+      <v-col
+        v-if="dataset.owner"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item prepend-gap="28">
           <template #prepend>
             <df-owner-avatar
               :owner="dataset.owner"
@@ -21,74 +23,112 @@
             </template>
           </div>
         </v-list-item>
+      </v-col>
 
-        <v-list-item
-          v-if="dataset.count != null"
-          :prepend-icon="mdiCounter"
-        >
+      <v-col
+        v-if="dataset.count != null"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item :prepend-icon="mdiCounter">
           <div class="text-body-small text-medium-emphasis">
             {{ t('size') }}
           </div>
           <div>{{ dataset.count.toLocaleString(locale) }} {{ t('records') }}</div>
         </v-list-item>
+      </v-col>
 
-        <v-list-item
-          v-if="dataset.file"
-          :prepend-icon="mdiFile"
-        >
+      <v-col
+        v-if="dataset.file"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item :prepend-icon="mdiFile">
           <div class="text-body-small text-medium-emphasis">
             {{ t('file') }}
           </div>
           <div>{{ (dataset.originalFile || dataset.file).name }} {{ formatBytes((dataset.originalFile || dataset.file).size, locale) }}</div>
         </v-list-item>
+      </v-col>
 
-        <v-list-item
-          v-if="dataset.dataUpdatedAt"
-          :prepend-icon="dataset.isRest ? mdiPlaylistEdit : mdiUpload"
-        >
+      <v-col
+        v-if="dataset.dataUpdatedAt"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item :prepend-icon="dataset.isRest ? mdiPlaylistEdit : mdiUpload">
           <div class="text-body-small text-medium-emphasis">
             {{ t('dataUpdated') }}
           </div>
           <div>{{ dataset.dataUpdatedBy?.name }} {{ formatDate(dataset.dataUpdatedAt) }}</div>
         </v-list-item>
+      </v-col>
 
-        <v-list-item
-          v-if="dataset.updatedAt"
-          :prepend-icon="mdiPencil"
-        >
+      <v-col
+        v-if="dataset.updatedAt"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item :prepend-icon="mdiPencil">
           <div class="text-body-small text-medium-emphasis">
             {{ t('metadataUpdated') }}
           </div>
           <div>{{ dataset.updatedBy?.name }} {{ formatDate(dataset.updatedAt) }}</div>
         </v-list-item>
+      </v-col>
 
+      <v-col
+        cols="12"
+        md="6"
+        lg="4"
+      >
         <v-list-item :prepend-icon="mdiPlusCircleOutline">
           <div class="text-body-small text-medium-emphasis">
             {{ t('created') }}
           </div>
           <div>{{ dataset.createdBy?.name }} {{ formatDate(dataset.createdAt) }}</div>
         </v-list-item>
+      </v-col>
 
-        <template v-if="dataset.isRest">
+      <template v-if="dataset.isRest">
+        <v-col
+          cols="12"
+          md="6"
+          lg="4"
+        >
           <v-list-item :prepend-icon="mdiAllInclusive">
             <div class="text-body-small text-medium-emphasis">
               {{ t('typeLabel') }}
             </div>
             <div>{{ t('restDataset') }}</div>
           </v-list-item>
+        </v-col>
 
+        <v-col
+          cols="12"
+          md="6"
+          lg="4"
+        >
           <v-list-item :prepend-icon="mdiHistory">
             <div class="text-body-small text-medium-emphasis">
               {{ t('historyLabel') }}
             </div>
             <div>{{ dataset.rest?.history ? t('history') : t('noHistory') }}</div>
           </v-list-item>
-        </template>
+        </v-col>
+      </template>
 
-        <v-list-item
-          v-if="nbVirtualDatasets > 0"
-          :prepend-icon="mdiDatabaseArrowRight"
-        >
+      <v-col
+        v-if="nbVirtualDatasets > 0"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item :prepend-icon="mdiDatabaseArrowRight">
           <div class="text-body-small text-medium-emphasis">
             {{ t('virtualDatasetsLabel') }}
           </div>
@@ -98,8 +138,8 @@
             </router-link>
           </div>
         </v-list-item>
-      </v-list>
-    </v-card>
+      </v-col>
+    </v-row>
   </template>
 </template>
 

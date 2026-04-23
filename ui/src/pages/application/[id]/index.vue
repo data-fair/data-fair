@@ -46,6 +46,9 @@
       </v-card>
     </v-dialog>
 
+    <!-- Metadata details -->
+    <application-metadata-details class="mb-4" />
+
     <!-- Metadata section -->
     <df-section-tabs
       v-if="sections.metadata"
@@ -85,10 +88,6 @@
             v-model="metadataEditFetch.data.value"
             :server-data="metadataEditFetch.serverData.value"
           />
-        </v-tabs-window-item>
-
-        <v-tabs-window-item value="details">
-          <application-metadata-details />
         </v-tabs-window-item>
 
         <v-tabs-window-item value="attachments">
@@ -486,7 +485,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiBookOpenVariant, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiBookOpenVariant, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
@@ -617,7 +616,6 @@ const sections = computedDeepDiff(() => {
   // Metadata section
   const metadataTabs = [
     { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined },
-    { key: 'details', title: t('details'), icon: mdiCardTextOutline },
     { key: 'attachments', title: t('attachments'), icon: mdiPaperclip }
   ]
   if (datasets.value.length) {

@@ -3,6 +3,9 @@
     <!-- Show dataset status -->
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
+    <!-- Metadata details -->
+    <dataset-metadata-details class="mb-4" />
+
     <!-- Structure section -->
     <df-section-tabs
       v-if="sections.structure"
@@ -129,10 +132,6 @@
             v-model="metadataEditFetch.data.value"
             :server-data="metadataEditFetch.serverData.value"
           />
-        </v-tabs-window-item>
-
-        <v-tabs-window-item value="details">
-          <dataset-metadata-details />
         </v-tabs-window-item>
 
         <v-tabs-window-item value="attachments">
@@ -611,7 +610,7 @@ import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -938,11 +937,10 @@ const sections = computedDeepDiff(() => {
 
   // Metadata section
   const metadataTabs = [
-    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined },
-    { key: 'details', title: t('details'), icon: mdiCardTextOutline }
+    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined }
   ]
   if (!d.draftReason) {
-    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment })
+    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined })
   }
   result.metadata = { title: t('metadata'), tabs: metadataTabs }
 
