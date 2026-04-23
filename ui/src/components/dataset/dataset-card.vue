@@ -1,6 +1,6 @@
 <template>
   <v-card
-    :to="`/dataset/${dataset.id}`"
+    :to="noLink ? undefined : `/dataset/${dataset.id}`"
     class="h-100 d-flex flex-column"
   >
     <v-card-item class="text-primary">
@@ -136,9 +136,12 @@ const { t, locale } = useI18n()
 const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   dataset: Dataset
-}>()
+  noLink?: boolean
+}>(), {
+  noLink: false
+})
 
 const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||

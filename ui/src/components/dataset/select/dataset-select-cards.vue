@@ -49,6 +49,7 @@
       >
         <dataset-card
           :dataset="dataset"
+          :no-link="true"
           @click="value = dataset"
         />
       </v-col>
