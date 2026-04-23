@@ -1,7 +1,9 @@
 <template>
-  <v-dialog
+  <component
+    :is="variant === 'menu' ? VMenu : VDialog"
     v-model="dialog"
     max-width="500"
+    :close-on-content-click="false"
   >
     <!-- Trigger button -->
     <template #activator="{ props: activatorProps }">
@@ -19,7 +21,7 @@
       </v-btn>
     </template>
 
-    <!-- Confirmation dialog -->
+    <!-- Confirmation content -->
     <v-card :title="title">
       <v-card-text>
         <v-alert
@@ -48,7 +50,7 @@
         </v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
+  </component>
 </template>
 
 <i18n lang="yaml">
@@ -64,6 +66,7 @@ en:
 
 <script setup lang="ts">
 import { mdiDelete } from '@mdi/js'
+import { VDialog, VMenu } from 'vuetify/components'
 
 /** Props for the ConfirmMenu component */
 interface Props {
@@ -89,12 +92,16 @@ interface Props {
   cancelLabel?: string
   /** Custom label for the confirm button (defaults to translated "Confirmer" / "Confirm") */
   confirmLabel?: string
+  /** Display mode of the confirmation UI: `'dialog'` opens a centered modal (default),
+   *  `'menu'` opens a popup anchored to the trigger button — cleaner for embeds */
+  variant?: 'dialog' | 'menu'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   yesColor: 'primary',
   btnProps: () => ({ color: 'warning', icon: true }),
   icon: mdiDelete,
+  variant: 'dialog',
 })
 
 const emit = defineEmits<{
