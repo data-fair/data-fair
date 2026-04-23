@@ -33,7 +33,9 @@ const debug = debugModule('df:main');
   })
   Object.assign(vuetify.defaults.value!, {
     VjsfTabs: { VWindowsItem: { eager: true } },
-    VColorPicker: { mode: 'hex', modes: ['hex', 'rgb', 'hsl'] }
+    VColorInput: {
+      ...vuetify.defaults.value?.VColorInput, mode: 'hex'
+    }
   })
   const i18n = createI18n({ locale: session.state.lang })
   const app = createApp(App)

@@ -12,14 +12,12 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { provideApplicationStore } from '~/composables/application/application-store'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
-const route = useRoute<'/application/[id]/config'>()
 const breadcrumbs = useBreadcrumbs()
 
-const { application } = provideApplicationStore(route.params.id)
+const { application } = useApplicationStore()
 
 watch(application, (app) => {
   if (!app) return

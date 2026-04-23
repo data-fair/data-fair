@@ -14,9 +14,9 @@
 
 <i18n lang="yaml">
 fr:
-  saved: Les paramètres ont été mis à jour
+  saved: Les clés API ont été mises à jour
 en:
-  saved: Settings have been updated
+  saved: API keys have been updated
 </i18n>
 
 <script setup lang="ts">

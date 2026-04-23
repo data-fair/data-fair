@@ -65,6 +65,7 @@
       data-fair/events: Gestion des événements/notifications
       data-fair/catalogs: Gestion des catalogues
       data-fair/portals: Portails
+      data-fair/processings: Gestion des traitements
   en:
     info: Information
     installed: installed
@@ -76,6 +77,7 @@
       data-fair/events: Events/notifications management
       data-fair/catalogs: Catalogs management
       data-fair/portals: Portals
+      data-fair/processings: Processings management
   </i18n>
 
 <script setup lang="ts">
@@ -102,6 +104,9 @@ if ($uiConfig.catalogsIntegration) {
 }
 if ($uiConfig.portalsIntegration) {
   services.value.push({ name: 'data-fair/portals', infoUrl: '/portals-manager/api/admin/info' })
+}
+if ($uiConfig.processingsIntegration) {
+  services.value.push({ name: 'data-fair/processings', infoUrl: '/processings/api/admin/info' })
 }
 
 onMounted(async () => {

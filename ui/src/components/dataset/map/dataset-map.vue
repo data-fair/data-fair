@@ -4,7 +4,7 @@
       v-if="search && !noInteraction"
       v-model="editQ"
       :append-inner-icon="mdiMagnify"
-      placeholder="Rechercher"
+      :placeholder="t('search')"
       style="position:absolute;z-index:2;"
       variant="solo"
       color="primary"
@@ -28,13 +28,11 @@
 <i18n lang="yaml">
 fr:
   search: Rechercher
-  noSession: Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies. Les cookies de session sont utilisés par ce service pour protéger notre infrastructure contre les abus.
   noGeoData: Aucune donnée géographique valide.
   noData: Aucune donnée à afficher
   mapError: "Erreur pendant le rendu de la carte :"
 en:
   search: Search
-  noSession: No active session. This error can happen if you use an extension that blocks cookies. Session cookies are used by this service to protect the infrastructure from abuse.
   noGeoData: No valid geo data
   noData: No data to display
   mapError: "Error while rendering the map:"
@@ -47,6 +45,7 @@ import { withQuery } from 'ufo'
 import { useMap } from './use-map'
 import { type ControlPosition } from 'maplibre-gl'
 
+const { t } = useI18n()
 const { search, height, selectable, navigationPosition, noInteraction, sampling, cols } = defineProps({
   search: { type: Boolean, default: true },
   height: { type: Number, required: true },

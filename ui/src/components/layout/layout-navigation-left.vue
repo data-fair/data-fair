@@ -131,6 +131,7 @@ fr:
   metricsSub: Téléchargements, API
   events: Traçabilité (bêta)
   subscription: Abonnement
+  assistance: Assistance
   services: Services distants
   serviceInfo: Informations du service
   owners: Propriétaires
@@ -164,6 +165,7 @@ en:
   metricsSub: Downloads, API
   events: Traceability (beta)
   subscription: Subscription
+  assistance: Support
   services: Remote services
   serviceInfo: Service information
   owners: Owners

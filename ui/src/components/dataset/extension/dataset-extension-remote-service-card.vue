@@ -1,11 +1,20 @@
 <template>
-  <v-card height="100%">
+  <v-card class="h-100 d-flex flex-column">
     <template v-if="actionData">
-      <v-card-title>
-        {{ actionData.summary }}
-      </v-card-title>
-      <v-card-text>
-        {{ t('link', { info: linkInfo }) }}
+      <!-- Card title + subtitle -->
+      <v-card-item>
+        <template #title>
+          <span :title="actionData.summary">
+            {{ actionData.summary }}
+          </span>
+        </template>
+        <template #subtitle>
+          {{ t('link', { info: linkInfo }) }}
+        </template>
+      </v-card-item>
+
+      <!-- Columns selection + overwrite keys -->
+      <v-card-text class="pb-0">
         <v-autocomplete
           v-if="selectFieldsData?.fieldsAndTags"
           v-model="extension.select"
@@ -22,34 +31,42 @@
           persistent-hint
           hide-details
         />
-        <v-btn
-          :append-icon="showOverwrite ? mdiChevronUp : mdiChevronDown"
-          variant="text"
-          @click="showOverwrite = !showOverwrite"
+        <v-expansion-panels
+          class="mt-2"
+          flat
         >
-          {{ t('overwriteKeys') }}
-        </v-btn>
-        <div v-show="showOverwrite">
-          <div
-            v-for="propKey of overwriteKeys"
-            :key="propKey"
+          <v-expansion-panel
+            :title="t('overwriteKeys')"
+            static
           >
-            <v-text-field
-              :label="propKey"
-              :model-value="extension.overwrite?.[propKey]?.['x-originalName']"
-              :placeholder="extension.propertyPrefix + '.' + propKey"
-              :rules="[v => validPropertyOverwrite(propKey, v) || '']"
-              validate-on="eager"
-              @update:model-value="val => setOverwriteOriginalName(propKey, val)"
-            />
-          </div>
-        </div>
+            <v-expansion-panel-text class="py-0">
+              <template
+                v-for="propKey of overwriteKeys"
+                :key="propKey"
+              >
+                <v-text-field
+                  :model-value="extension.overwrite?.[propKey]?.['x-originalName']"
+                  :placeholder="extension.propertyPrefix + '.' + propKey"
+                  :rules="[v => validPropertyOverwrite(propKey, v) || '']"
+                  :label="propKey"
+                  validate-on="eager"
+                  density="comfortable"
+                  hide-details
+                  class="mb-2"
+                  @update:model-value="val => setOverwriteOriginalName(propKey, val)"
+                />
+              </template>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
         <v-checkbox
           v-if="extension.remoteService.startsWith('dataset:') && dataset.isRest"
           v-model="extension.autoUpdate"
           :label="t('autoUpdate')"
         />
       </v-card-text>
+
+      <!-- Refresh, preview and delete -->
       <v-card-actions>
         <v-spacer />
         <confirm-menu
@@ -135,7 +152,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiChevronDown, mdiChevronUp, mdiRefresh } from '@mdi/js'
+import { mdiRefresh } from '@mdi/js'
 import { escapeKey } from '~/utils/escape-key'
 import DatasetExtensionDetailsDialog from './dataset-extension-details-dialog.vue'
 
@@ -152,8 +169,6 @@ const props = defineProps<{
 const emit = defineEmits<{ refresh: [], remove: [] }>()
 
 const { t } = useI18n()
-
-const showOverwrite = ref(false)
 
 const actionData = computed(() =>
   props.remoteServicesMap[extension.value.remoteService]?.actions[extension.value.action]

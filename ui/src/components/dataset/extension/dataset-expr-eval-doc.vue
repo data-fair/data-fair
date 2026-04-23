@@ -1,30 +1,54 @@
 <template>
-  <ul>
+  <ul class="expr-eval-doc-list pl-5">
     <li
       v-for="fn in functionsArray"
       :key="fn.key"
-      class="mb-2"
+      class="mb-3"
     >
-      <code>{{ fn.key }}({{ fn.params }})</code>
+      <v-chip
+        class="expr-eval-code"
+        color="primary"
+        variant="tonal"
+        size="small"
+        label
+      >
+        {{ fn.key }}({{ fn.params }})
+      </v-chip>
       <p
-        class="mb-0"
+        class="my-1"
         v-html="/*eslint-disable-line vue/no-v-html*/fn.description"
       />
-      <ul
+      <div
         v-if="fn.examples"
-        style="list-style-type: none;"
+        class="d-flex flex-wrap align-center ga-2"
       >
-        <li
+        <span class="font-italic text-medium-emphasis">
+          {{ fn.examples.length > 1 ? t('examples') : t('example') }} :
+        </span>
+        <v-chip
           v-for="(example, i) in fn.examples"
           :key="i"
-          class="text-caption"
+          class="expr-eval-code"
+          color="surface-inverse"
+          variant="tonal"
+          size="small"
+          label
         >
-          <code>{{ example[0] }} =&gt; {{ example[1] }}</code>
-        </li>
-      </ul>
+          {{ example[0] }} ⇒ {{ example[1] }}
+        </v-chip>
+      </div>
     </li>
   </ul>
 </template>
+
+<i18n lang="yaml">
+fr:
+  example: Exemple
+  examples: Exemples
+en:
+  example: Example
+  examples: Examples
+</i18n>
 
 <script setup lang="ts">
 const functions: Record<string, { description: string, params: string, examples?: [string, any][] }> = {
@@ -167,7 +191,7 @@ const functions: Record<string, { description: string, params: string, examples?
     params: 'param1, param2, ...'
   },
   TRANSFORM_DATE: {
-    description: 'Transforme une date d\'un format à un autre. La liste des formats est disponible sur la documentation de <a href="https://day.js.org/docs/en/display/format">dayjs</a>. Si un format d\'entrée ou de sortie est laissé vide c\'est un format standard ISO 8601 complet qui est utilisé. "X" est un format spécial pour un timestamp Unix et "x" pour un timestamp Unix en millisecondes. Les paramètres de fuseaux horaires sont optionnels et valent "Europe/Paris" par défaut.',
+    description: 'Transforme une date d\'un format à un autre. La liste des formats est disponible sur la documentation de <a href="https://day.js.org/docs/en/display/format" target="_blank" rel="noopener">dayjs</a>. Si un format d\'entrée ou de sortie est laissé vide c\'est un format standard ISO 8601 complet qui est utilisé. "X" est un format spécial pour un timestamp Unix et "x" pour un timestamp Unix en millisecondes. Les paramètres de fuseaux horaires sont optionnels et valent "Europe/Paris" par défaut.',
     params: 'date, format entrée, format sortie, fuseau horaire entrée, fuseau horaire sortie',
     examples: [
       ['TRANSFORM_DATE("2021-01-01T00:00:00Z", "YYYY-MM-DDTHH:mm:ssZ", "DD/MM/YYYY", "UTC", "Europe/Paris")', '01/01/2021']
@@ -198,9 +222,20 @@ const props = withDefaults(defineProps<{
   exclude: () => []
 })
 
+const { t } = useI18n()
+
 const functionsArray = computed(() =>
   Object.entries(functions)
     .filter(([key]) => !props.exclude.includes(key))
     .map(([key, fn]) => ({ key, ...fn }))
 )
 </script>
+
+<style scoped>
+.expr-eval-doc-list li::marker {
+  color: rgb(var(--v-theme-primary));
+}
+.expr-eval-code :deep(.v-chip__content) {
+  font-family: monospace;
+}
+</style>

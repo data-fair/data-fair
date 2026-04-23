@@ -251,17 +251,15 @@ export default {
       },
       layout: {
         title: '',
+        listEditMode: 'inline',
         messages: {
           addItem: 'Add a topic',
           'x-i18n-addItem': {
             fr: 'Ajouter une thématique'
           }
-        },
-        itemTitle: 'item.title'
+        }
       },
-      items: {
-        $ref: 'https://github.com/data-fair/data-fair/topic'
-      }
+      items: { $ref: 'https://github.com/data-fair/data-fair/topic' }
     },
     publicationSites,
     operationsPermissions: {

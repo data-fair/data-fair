@@ -99,6 +99,10 @@ fr:
   publicationRequested: Publication demandée par un contributeur
   preferLargeDisplay: Privilégier un rendu large
   preferLargeDisplayTutorial: En cochant l'option ci-dessous vous indiquez aux portails que cette application est à afficher sur une largeur importante autant que possible. Ceci pourra changer l'affichage dans les pages des jeux de données ou les tableaux de bords par exemple.
+  publishedNotif: L'application a été publiée sur le portail
+  unpublishedNotif: L'application a été dépubliée du portail
+  requestedNotif: La demande de publication a été envoyée
+  requestCancelledNotif: La demande de publication a été annulée
 en:
   noPublicationSite: You haven't configured a portal to publish this application on.
   publishThisApp: Publish this application on one or more of your portals.
@@ -106,6 +110,10 @@ en:
   publicationRequested: Publication requested by a contributor
   preferLargeDisplay: Prefer a large display
   preferLargeDisplayTutorial: By checking the following option you indicate to the portals that this application should be rendered on a large section of page as much as possible. This will change the rendering in dataset pages and dashboards.
+  publishedNotif: The application was published on the portal
+  unpublishedNotif: The application was unpublished from the portal
+  requestedNotif: The publication request was sent
+  requestCancelledNotif: The publication request was cancelled
 </i18n>
 
 <script setup lang="ts">
@@ -114,6 +122,7 @@ import useApplicationStore from '~/composables/application/application-store'
 const { t } = useI18n()
 const { application, can, patch } = useApplicationStore()
 const { account } = useSessionAuthenticated()
+const { sendUiNotif } = useUiNotif()
 
 const owner = computed(() => application.value?.owner)
 const publicationSitesFetch = useFetch<any[]>(() => {
@@ -164,6 +173,7 @@ const togglePublish = async (site: any, publish: boolean) => {
   await patch({ publicationSites: newSites, requestedPublicationSites: newRequested })
   application.value.publicationSites = newSites
   application.value.requestedPublicationSites = newRequested
+  sendUiNotif({ type: 'success', msg: publish ? t('publishedNotif') : t('unpublishedNotif') })
 }
 
 const toggleRequested = async (site: any, requested: boolean) => {
@@ -175,5 +185,6 @@ const toggleRequested = async (site: any, requested: boolean) => {
     : currentRequested.filter((s: string) => s !== siteKey)
   await patch({ requestedPublicationSites: newRequested })
   application.value.requestedPublicationSites = newRequested
+  sendUiNotif({ type: 'success', msg: requested ? t('requestedNotif') : t('requestCancelledNotif') })
 }
 </script>

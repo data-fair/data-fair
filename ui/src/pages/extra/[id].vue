@@ -7,6 +7,7 @@
       class="fill-height"
       resize="no"
       sync-params
+      sync-path
       emit-iframe-messages
       :adapter.prop="stateChangeAdapter"
       @message="onMessage"
@@ -44,7 +45,7 @@ function getBreadcrumbPath (iframePath: string) {
   if (!extra.value?.iframe) return null
   const base = new URL(extra.value.iframe, window.location.href).pathname
   const relative = iframePath.startsWith(base) ? iframePath.slice(base.length) : iframePath
-  return `/extra/${route.params.id}?p=${encodeURIComponent(relative)}`
+  return `/extra/${route.params.id}#${relative}`
 }
 
 function onMessage (message: { detail?: Record<string, unknown> } & Record<string, unknown>) {
@@ -54,12 +55,7 @@ function onMessage (message: { detail?: Record<string, unknown> } & Record<strin
     text: b.text,
     to: b.to ? getBreadcrumbPath(b.to) : undefined
   }))
-  breadcrumbs.receive({
-    breadcrumbs: [
-      { text: extra.value?.title || route.params.id as string },
-      ...crumbs
-    ]
-  })
+  breadcrumbs.receive({ breadcrumbs: crumbs })
 }
 
 onMounted(() => {

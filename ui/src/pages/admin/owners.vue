@@ -1,7 +1,7 @@
 <template>
   <v-container v-if="ownersFetch.data.value">
     <h2 class="text-title-large mb-4">
-      Propriétaires
+      {{ t('owners') }}
     </h2>
 
     <v-row>
@@ -14,7 +14,7 @@
         <v-text-field
           v-model="q"
           name="q"
-          label="Rechercher par le nom"
+          :label="t('searchByName')"
           @keypress.enter="ownersFetch.refresh()"
         />
       </v-col>
@@ -29,8 +29,8 @@
             {{ owner.name || owner.id }} ({{ owner.type }})
           </v-list-item-title>
           <v-list-item-subtitle>
-            <span v-if="owner.consumption && (owner.consumption.storage !== undefined)">{{ parseFloat(((owner.consumption && owner.consumption.storage || 0) / 1000).toFixed(2)).toLocaleString() }} ko stockés</span>
-            <span v-if="owner.storage !== undefined">pour une limite à {{ parseFloat((owner.storage / 1000).toFixed(2)).toLocaleString() }} ko</span>
+            <span v-if="owner.consumption && (owner.consumption.storage !== undefined)">{{ parseFloat(((owner.consumption && owner.consumption.storage || 0) / 1000).toFixed(2)).toLocaleString() }} {{ t('kbStored') }}</span>
+            <span v-if="owner.storage !== undefined">{{ t('forALimitOf') }} {{ parseFloat((owner.storage / 1000).toFixed(2)).toLocaleString() }} ko</span>
           </v-list-item-subtitle>
           <v-list-item-subtitle>
             <a
@@ -38,7 +38,7 @@
               target="_top"
               class="simple-link"
             >
-              {{ owner.nbDatasets }} jeux de données
+              {{ owner.nbDatasets }} {{ t('datasets') }}
             </a>
             -
             <a
@@ -46,7 +46,7 @@
               target="_top"
               class="simple-link"
             >
-              {{ owner.nbApplications }} applications
+              {{ owner.nbApplications }} {{ t('applications') }}
             </a>
           </v-list-item-subtitle>
         </v-list-item>
@@ -58,8 +58,18 @@
 <i18n lang="yaml">
 fr:
   owners: Propriétaires
+  searchByName: Rechercher par le nom
+  kbStored: ko stockés
+  forALimitOf: pour une limite à
+  datasets: jeux de données
+  applications: applications
 en:
   owners: Owners
+  searchByName: Search by name
+  kbStored: kb stored
+  forALimitOf: for a limit of
+  datasets: datasets
+  applications: applications
 </i18n>
 
 <script setup lang="ts">

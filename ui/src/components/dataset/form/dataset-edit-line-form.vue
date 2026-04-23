@@ -32,10 +32,10 @@
 <i18n lang="yaml">
   fr:
     loadAttachment: Chargez un fichier en pièce jointe.
-    selectFile: sélectionnez un fichier
+    selectFile: Sélectionnez un fichier
   en:
     loadAttachment: Load a file as an attachment
-    selectFile: select a file
+    selectFile: Select a file
 </i18n>
 
 <script setup lang="ts">

@@ -1,14 +1,27 @@
 <template>
   <v-card
-    :title="extension.property?.['x-originalName'] || t('newExprEval')"
-    class="h-100"
+    :class="parsingError ? 'border-error border-opacity-100' : (isModified ? 'border-accent border-opacity-100' : undefined)"
+    class="h-100 d-flex flex-column"
   >
-    <v-card-text>
+    <template #title>
+      <span :title="liveProperty?.title || liveProperty?.['x-originalName'] || t('newExprEval')">
+        {{ liveProperty?.title || liveProperty?.['x-originalName'] || t('newExprEval') }}
+      </span>
+    </template>
+    <v-card-text class="pb-0">
+      <v-alert
+        v-if="parsingError"
+        :text="parsingError"
+        type="error"
+        class="mb-4"
+      />
       <v-text-field
         :model-value="extension.expr"
-        disabled
         :label="t('expr')"
         hide-details
+        variant="outlined"
+        density="compact"
+        disabled
       />
     </v-card-text>
     <v-card-actions>
@@ -37,20 +50,23 @@
 fr:
   newExprEval: Nouvelle colonne calculée
   expr: Expression
+  emptyExpr: Saisissez une expression
   confirmDeleteTooltip: Supprimer la colonne calculée
   confirmDeleteTitle: Supprimer la colonne calculée
   confirmDeleteText: Êtes-vous sûr de vouloir supprimer cette colonne calculée ? Les données seront perdues.
 en:
   newExprEval: New calculated column
   expr: Expression
+  emptyExpr: Write an expression
   confirmDeleteTooltip: Delete the calculated column
   confirmDeleteTitle: Delete the calculated column
   confirmDeleteText: Are you sure you want to delete this calculated column? The data will be lost.
 </i18n>
 
 <script setup lang="ts">
+import useExprEvalValidation from '~/composables/dataset/expr-eval-validation'
 
-defineProps<{
+const props = defineProps<{
   extension: any
   idx: number
   dataset: any
@@ -60,5 +76,22 @@ defineProps<{
 
 const emit = defineEmits<{ remove: [], 'update:expr': [val: string] }>()
 
+const liveProperty = computed(() =>
+  props.dataset?.schema?.find((f: any) => f.key === props.extension.property?.key) ?? props.extension.property
+)
+
 const { t } = useI18n()
+
+const savedExpr = ref(props.extension.expr ?? '')
+watch(() => props.extension, (newExt) => {
+  savedExpr.value = newExt?.expr ?? ''
+})
+const isModified = computed(() => (props.extension.expr ?? '') !== savedExpr.value)
+
+const { parsingError } = useExprEvalValidation(
+  () => props.extension.expr,
+  () => props.dataset,
+  liveProperty,
+  () => t('emptyExpr')
+)
 </script>

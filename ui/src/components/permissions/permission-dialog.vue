@@ -137,12 +137,6 @@ fr:
   detailedActions: Actions détaillées
   expertMode: Mode expert
   actions: Actions
-  name: Nom
-  id: Identifiant
-  ownerOrganization: Membres de l'organisation propriétaire
-  ownerOrganizationNoDep: Membres de l'organisation propriétaire hors département
-  ownerOrganizationDep: Membres de l'organisation propriétaire et du département {name} ({id})
-  otherOrganization: Membres d'une autre organisation
   department: Département
   allDeps: Tous les départements
   noDep: Aucun département (organisation principale seulement)
@@ -172,12 +166,6 @@ en:
   detailedActions: Detailed actions
   expertMode: Expert mode
   actions: Actions
-  name: Name
-  id: Id
-  ownerOrganization: Members of owner organization
-  ownerOrganizationNoDep: Members of owner organization outside a department
-  ownerOrganizationDep: Members of owner organization in department {name} ({id})
-  otherOrganization: Members of another organization
   department: Department
   allDeps: All departments
   noDep: No department (main organization only)

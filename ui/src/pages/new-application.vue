@@ -145,8 +145,8 @@
                 class="mb-4"
               >
                 <template v-if="baseAppsByCategory(category).length">
-                  <h3>{{ t('appType', { category }) }}</h3>
-                  <v-row class="d-flex align-stretch">
+                  <h2>{{ t('appType', { category }) }}</h2>
+                  <v-row class="d-flex align-stretch mt-2">
                     <v-col
                       v-for="baseApp in baseAppsByCategory(category)"
                       :key="baseApp.id"
@@ -154,41 +154,52 @@
                       sm="4"
                       cols="12"
                     >
-                      <v-card
-                        class="h-100"
-                        :color="selectedBaseApp && selectedBaseApp.id === baseApp.id ? 'primary' : ''"
-                        :style="baseApp.disabled?.length ? 'cursor:default' : 'cursor:pointer'"
-                        @click="!baseApp.disabled?.length && selectBaseApp(baseApp)"
+                      <v-tooltip
+                        :disabled="!baseApp.description"
+                        max-width="600"
+                        open-delay="300"
+                        location="bottom"
+                        offset="-50"
                       >
-                        <v-card-title :class="baseApp.disabled?.length ? 'text-error' : (selectedBaseApp?.id !== baseApp.id ? 'text-primary' : '')">
-                          <v-icon
-                            v-if="!baseApp.public"
-                            :icon="mdiSecurity"
-                            :title="t('restrictedAccess')"
-                            class="mr-1"
-                            size="small"
-                          />
-                          {{ baseApp.title }}
-                        </v-card-title>
-                        <v-img
-                          v-if="baseApp.image"
-                          :src="baseApp.image"
-                          :alt="baseApp.title"
-                          aspect-ratio="2.5"
-                        />
-                        <v-card-text v-if="baseApp.disabled?.length">
-                          <v-alert
-                            v-for="(disabled, i) in baseApp.disabled"
-                            :key="'disabled-' + i"
-                            type="error"
-                            density="compact"
-                            border="start"
-                            class="my-1"
+                        <template #activator="{ props: tooltipProps }">
+                          <v-card
+                            class="h-100"
+                            :color="selectedBaseApp && selectedBaseApp.id === baseApp.id ? 'primary' : ''"
+                            :style="baseApp.disabled?.length ? 'cursor:default' : 'cursor:pointer'"
+                            v-bind="tooltipProps"
+                            @click="!baseApp.disabled?.length && selectBaseApp(baseApp)"
                           >
-                            {{ disabled }}
-                          </v-alert>
-                        </v-card-text>
-                      </v-card>
+                            <v-card-title :class="baseApp.disabled?.length ? 'text-error' : (selectedBaseApp?.id !== baseApp.id ? 'text-primary' : '')">
+                              <v-icon
+                                v-if="!baseApp.public"
+                                :icon="mdiSecurity"
+                                :title="t('restrictedAccess')"
+                                class="mr-1"
+                                size="small"
+                              />
+                              <span :title="baseApp.title">{{ baseApp.title }}</span>
+                            </v-card-title>
+                            <v-img
+                              v-if="baseApp.image"
+                              :src="baseApp.image"
+                              :alt="baseApp.title"
+                              height="150"
+                              cover
+                            />
+                            <v-card-text v-if="baseApp.disabled?.length">
+                              <v-alert
+                                v-for="(disabled, i) in baseApp.disabled"
+                                :key="'disabled-' + i"
+                                density="compact"
+                                type="error"
+                              >
+                                {{ disabled }}
+                              </v-alert>
+                            </v-card-text>
+                          </v-card>
+                        </template>
+                        {{ baseApp.description }}
+                      </v-tooltip>
                     </v-col>
                   </v-row>
                 </template>

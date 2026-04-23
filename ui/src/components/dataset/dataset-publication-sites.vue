@@ -116,6 +116,10 @@ fr:
     creator: personne ou organisme créateur
     modified: date de dernière modification de la source
   contribPermission: Permission trop large accordée aux contributeurs (risque de rupture de compatibilité)
+  publishedNotif: Le jeu de données a été publié sur le portail
+  unpublishedNotif: Le jeu de données a été dépublié du portail
+  requestedNotif: La demande de publication a été envoyée
+  requestCancelledNotif: La demande de publication a été annulée
 en:
   noPublicationSite: You haven't configured a portal to publish this dataset on.
   publishThisDataset: Publish this dataset on one or more of your portals.
@@ -135,6 +139,10 @@ en:
     creator: creator person or entity
     modified: date of last modification of the source
   contribPermission: Too broad permission granted to contribs (risk of compatibility breakage)
+  publishedNotif: The dataset was published on the portal
+  unpublishedNotif: The dataset was unpublished from the portal
+  requestedNotif: The publication request was sent
+  requestCancelledNotif: The publication request was cancelled
 </i18n>
 
 <script setup lang="ts">
@@ -144,6 +152,7 @@ import permissionsUtils from '~/utils/permissions'
 const { dataset, patchDataset, can, permissions } = useDatasetStore()
 const { account } = useSessionAuthenticated()
 const { t } = useI18n()
+const { sendUiNotif } = useUiNotif()
 
 const settingsPath = computed(() => {
   if (!dataset.value) return null
@@ -242,8 +251,9 @@ const requestedSwitchDisabled = (site: PublicationSite) => {
   return (hasWarning(site) && !isRequestedOnSite(site)) || isPublishedOnSite(site) || canPublish(site) || !canRequestPublication(site)
 }
 
-const togglePublicationSites = (site: PublicationSite) => {
+const togglePublicationSites = async (site: PublicationSite) => {
   const siteKey = `${site.type}:${site.id}`
+  const wasPublished = isPublishedOnSite(site)
   let publicationSites = [...dataset.value!.publicationSites ?? []]
   let requestedPublicationSites = [...dataset.value!.requestedPublicationSites ?? []]
   if (publicationSites.includes(siteKey)) {
@@ -252,18 +262,21 @@ const togglePublicationSites = (site: PublicationSite) => {
     publicationSites.push(siteKey)
     requestedPublicationSites = requestedPublicationSites.filter(s => s !== siteKey)
   }
-  patchDataset.execute({ publicationSites, requestedPublicationSites })
+  await patchDataset.execute({ publicationSites, requestedPublicationSites })
+  sendUiNotif({ type: 'success', msg: wasPublished ? t('unpublishedNotif') : t('publishedNotif') })
 }
 
-const toggleRequestedPublicationSites = (site: PublicationSite) => {
+const toggleRequestedPublicationSites = async (site: PublicationSite) => {
   const siteKey = `${site.type}:${site.id}`
+  const wasRequested = isRequestedOnSite(site)
   let requestedPublicationSites = [...dataset.value!.requestedPublicationSites ?? []]
   if (requestedPublicationSites.includes(siteKey)) {
     requestedPublicationSites = requestedPublicationSites.filter(s => s !== siteKey)
   } else {
     requestedPublicationSites.push(siteKey)
   }
-  patchDataset.execute({ requestedPublicationSites })
+  await patchDataset.execute({ requestedPublicationSites })
+  sendUiNotif({ type: 'success', msg: wasRequested ? t('requestCancelledNotif') : t('requestedNotif') })
 }
 </script>
 

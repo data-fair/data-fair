@@ -14,6 +14,7 @@
         <template #append>
           <v-btn
             color="primary"
+            variant="flat"
             @click="patchDataset.execute({})"
           >
             {{ t('restart') }}
@@ -90,19 +91,27 @@
         </p>
       </template>
 
-      <template #append>
+      <template
+        v-if="journal"
+        #append
+      >
         <v-btn
           v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
-          :disabled="!can('cancelDraft').value"
-          :color="(draftError || draftValidationError) ? 'default' : 'warning'"
+          :disabled="!can('cancelDraft').value || validateDraft.loading.value"
+          :loading="cancelDraft.loading.value"
+          :color="!(draftError || draftValidationError) ? 'warning' : undefined"
+          :class="dataset.status === 'finalized' ? 'mr-2' : ''"
+          variant="flat"
           @click="cancelDraft.execute()"
         >
           {{ t('cancelDraft') }}
         </v-btn>
         <v-btn
           v-if="dataset.status === 'finalized'"
-          :disabled="!can('validateDraft').value"
+          :disabled="!can('validateDraft').value || cancelDraft.loading.value"
+          :loading="validateDraft.loading.value"
           :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
+          variant="flat"
           @click="validateDraft.execute()"
         >
           {{ t('validateDraft') }}
@@ -123,16 +132,24 @@ fr:
   restart: Relancer
   cancelDraft: Annuler le brouillon
   validateDraft: Valider le brouillon
+  cancelDraftOk: Le brouillon a été annulé.
+  cancelDraftKo: Erreur pendant l'annulation du brouillon
+  validateDraftOk: Le brouillon a été validé, le jeu de données va être traité intégralement.
+  validateDraftKo: Erreur pendant la validation du brouillon
 en:
   draftNew1: The dataset was created in draft mode. This state allow you to work on its configuration.
   draftNew2: Check that the file was property read, browse the first 100 lines, add concepts to the schema, configure extensions, etc.
   draftUpdated1: The dataset was switched to draft mode following the upload of a new file.
   draftUpdated2: Check that the file was property read, browse the first 100 lines, etc. When satisfied, validate the draft and the dataset will be processed entirely.
-  draftValidationCan:  When satisfied, validate the draft and the dataset will be processed entirely.
-  draftValidationCannot: You lack the permission to validate this draft, you should contact an admin.
+  draftValidateCan: When satisfied, validate the draft and the dataset will be processed entirely.
+  draftValidateCannot: You lack the permission to validate this draft, you should contact an admin.
   restart: Restart
   cancelDraft: Cancel the draft
   validateDraft: Validate the draft
+  cancelDraftOk: The draft was cancelled.
+  cancelDraftKo: Error while cancelling the draft
+  validateDraftOk: The draft was validated, the dataset will be processed entirely.
+  validateDraftKo: Error while validating the draft
 </i18n>
 
 <script setup lang="ts">
@@ -144,10 +161,7 @@ const { t, locale } = useI18n()
 
 const datasetStore = useDatasetStore()
 const { dataset, journal, journalFetch, can, patchDataset } = datasetStore
-if (!journalFetch.initialized.value) {
-  journalFetch.refresh()
-  useDatasetWatch(datasetStore, 'journal')
-}
+if (!journalFetch.initialized.value) journalFetch.refresh()
 
 const lastProdEvent = computed(() => {
   for (const event of journal.value ?? []) {
@@ -174,12 +188,12 @@ const getLastDraftEvent = (eventType: string) => {
 const cancelDraft = useAsyncAction(async () => {
   if (!dataset.value) return
   await $fetch(`datasets/${dataset.value.id}/draft`, { method: 'delete' })
-})
+}, { success: t('cancelDraftOk'), error: t('cancelDraftKo') })
 
 const validateDraft = useAsyncAction(async () => {
   if (!dataset.value) return
   await $fetch(`datasets/${dataset.value.id}/draft`, { method: 'post' })
-})
+}, { success: t('validateDraftOk'), error: t('validateDraftKo') })
 
 </script>
 

@@ -33,6 +33,7 @@ module.exports = {
   privateCaptureUrl: `http://localhost:${process.env.CAPTURE_PORT}`,
   privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
   privateAgentsUrl: `http://localhost:${process.env.AGENTS_PORT}`,
+  privateOpenapiViewerUrl: `http://localhost:${process.env.OAV_PORT}`,
   brand: {
     embed: '<div>application embed</div>'
   },

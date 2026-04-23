@@ -18,7 +18,7 @@ test.describe('embed settings pages', () => {
     })
 
     await goToWithAuth('/data-fair/embed/settings/user/test_user1/topics', 'test_user1')
-    await expect(page.getByText('Mon thème test')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByLabel('Titre').first()).toHaveValue('Mon thème test', { timeout: 10000 })
   })
 
   test('displays licenses settings page', async ({ page, goToWithAuth }) => {

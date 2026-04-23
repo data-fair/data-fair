@@ -40,7 +40,18 @@ export const axiosAuth = (email: string, org?: string, adminMode = false, opts =
   })
 }
 
+const waitForWorkerIdle = async (timeoutMs = 5000): Promise<void> => {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`)
+    const allEmpty = Object.values(res.data).every((pending: any) => Object.keys(pending).length === 0)
+    if (allEmpty) return
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+}
+
 export const clean = async () => {
+  await waitForWorkerIdle()
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env`)
 }
 

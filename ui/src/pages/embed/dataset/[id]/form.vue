@@ -4,13 +4,13 @@
       v-if="dataset && !dataset.isRest"
       type="error"
     >
-      Ces données ne sont pas éditables
+      {{ t('notEditable') }}
     </v-alert>
     <v-alert
       v-else-if="dataset && !dataset.userPermissions.includes('createLine')"
       type="error"
     >
-      Vous n'avez pas la permission de saisir ces données
+      {{ t('noPermission') }}
     </v-alert>
     <template v-else-if="jsonSchemaFetch.data.value && queryContext && initialized">
       <v-form
@@ -35,7 +35,7 @@
             :disabled="sent || !valid"
             @click="saveLine.execute()"
           >
-            Enregistrer
+            {{ t('save') }}
           </v-btn>
           <v-spacer />
         </v-row>
@@ -44,9 +44,21 @@
   </v-container>
 </template>
 
+<i18n lang="yaml">
+fr:
+  notEditable: Ces données ne sont pas éditables
+  noPermission: Vous n'avez pas la permission de saisir ces données
+  save: Enregistrer
+en:
+  notEditable: This data is not editable
+  noPermission: You do not have permission to enter this data
+  save: Save
+</i18n>
+
 <script setup lang="ts">
 import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 
+const { t } = useI18n()
 const route = useRoute<'/embed/dataset/[id]/form'>()
 const session = useSession()
 

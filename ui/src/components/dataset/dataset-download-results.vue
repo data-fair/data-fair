@@ -152,11 +152,11 @@ fr:
   downloadTitle: Télécharger les résultats
   alert1: Ces téléchargements tiennent compte du tri et de la recherche.
   alert2: Les formats suivants sont limités aux 10 000 premières lignes.
-  csv: format CSV
-  xlsx: format XLSX
-  ods: format ODS
-  geojson: format GeoJSON
-  shp: format Shapefile
+  csv: Format CSV
+  xlsx: Format XLSX
+  ods: Format ODS
+  geojson: Format GeoJSON
+  shp: Format Shapefile
   cancel: Annuler
 en:
   downloadTitle: Download results

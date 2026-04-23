@@ -12,8 +12,9 @@ export type ApplicationStore = ReturnType<typeof createApplicationStore>
 const applicationStoreKey = Symbol('application-store')
 
 const createApplicationStore = (id: string) => {
-  const applicationFetch = useFetch<ApplicationRuntime>($apiPath + `/applications/${id}`)
+  const applicationFetch = useFetch<ApplicationRuntime>($apiPath + `/applications/${id}`, { notifError: false })
   const application = ref<ApplicationRuntime | null>(null)
+  watch(applicationFetch.error, () => { if (applicationFetch.error.value) application.value = null })
   watch(applicationFetch.data, () => { application.value = applicationFetch.data.value })
 
   const baseAppDraft = computed(() => {
@@ -25,6 +26,9 @@ const createApplicationStore = (id: string) => {
 
   const patch = async (patch: Partial<ApplicationRuntime>) => {
     const patchedApplication = await $fetch<ApplicationRuntime>('/applications/' + id, { method: 'PATCH', body: patch })
+    // preserve userPermissions: the PATCH response does not include them (unlike GET),
+    // and destroying them locally would hide tabs/actions gated by can()
+    patchedApplication.userPermissions = patchedApplication.userPermissions ?? application.value?.userPermissions ?? []
     application.value = patchedApplication
   }
 
@@ -105,7 +109,7 @@ const createApplicationStore = (id: string) => {
       return {
         id: datasetsIds.join(','),
         size: 10000,
-        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft,count,finalizedAt',
+        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft,count,finalizedAt,visibility',
         sort: 'createdAt:-1'
       }
     }),

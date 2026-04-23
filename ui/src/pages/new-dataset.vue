@@ -270,7 +270,15 @@
               hide-details="auto"
               :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
             />
-            <dataset-children-select v-model="virtualChildren" />
+            <dataset-select
+              v-model="virtualChildren"
+              :extra-params="{ queryable: true }"
+              :label="t('children')"
+              master-data="virtualDatasets"
+              max-width="500"
+              class="mt-4"
+              multiple
+            />
 
             <v-checkbox
               v-model="virtualFillSchema"
@@ -316,18 +324,15 @@
             :owner="owner"
           />
 
-          <v-alert
-            v-if="createError"
-            type="error"
+          <df-ui-notif-alert
+            :notif="createAction.notif.value"
             class="mt-4 mb-4"
-            max-width="500"
-          >
-            {{ createError }}
-          </v-alert>
+            :alert-props="{ maxWidth: 500 }"
+          />
 
           <!-- Upload progress for file type -->
           <v-row
-            v-if="importing && datasetType === 'file'"
+            v-if="createAction.loading.value && datasetType === 'file'"
             class="mx-0 my-3"
             align="center"
           >
@@ -367,7 +372,7 @@
             color="primary"
             variant="flat"
             :disabled="isNextDisabled"
-            :loading="step === 'action' && importing"
+            :loading="step === 'action' && createAction.loading.value"
             @click="goToNext"
           >
             {{ nextButtonText }}
@@ -395,6 +400,7 @@ import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { type AccountKeys } from '@data-fair/lib-vue/session'
+import { type ListedDataset } from '~/components/dataset/select/utils'
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -481,7 +487,7 @@ function goToNext () {
   } else if (step.value === 'params') {
     step.value = 'action'
   } else if (step.value === 'action') {
-    create()
+    createAction.execute()
   }
 }
 
@@ -550,7 +556,6 @@ function onFileChange (val: File | File[]) {
     }
     lastAutoFilledTitle.value = title
   }
-  createError.value = null
 }
 
 // ---- REST params ----
@@ -562,7 +567,7 @@ const restAttachmentsAsImage = ref(false)
 
 // ---- Virtual params ----
 const virtualTitle = ref('')
-const virtualChildren = ref<Array<{ id: string, title: string }>>([])
+const virtualChildren = ref<ListedDataset[]>([])
 const virtualFillSchema = ref(false)
 const virtualInitFromDesc = ref(false)
 const virtualInitFromAttachments = ref(false)
@@ -611,7 +616,7 @@ const paramsValid = computed(() => {
 })
 
 const canCreate = computed(() => {
-  return !importing.value && conflictsOk.value && !!owner.value
+  return !createAction.loading.value && conflictsOk.value && !!owner.value
 })
 
 // ---- Agent tools ----
@@ -650,8 +655,6 @@ const createDatasetContext = computed(() => {
 })
 
 // ---- Upload progress ----
-const importing = ref(false)
-const createError = ref<string | null>(null)
 const uploadProgress = ref<{ loaded: number, total?: number }>({ loaded: 0 })
 const uploadPercent = computed(() => {
   if (!uploadProgress.value.total) return 0
@@ -664,10 +667,7 @@ function cancelUpload () {
 }
 
 // ---- Create ----
-async function create () {
-  createError.value = null
-  importing.value = true
-
+const createAction = useAsyncAction(async () => {
   try {
     if (datasetType.value === 'file') {
       await createFileDataset()
@@ -679,15 +679,10 @@ async function create () {
       await createMetaOnlyDataset()
     }
   } catch (error: any) {
-    const status = error.response?.status
-    if (status === 413) {
-      createError.value = t('fileTooLarge')
-    } else {
-      createError.value = error.response?.data?.message || error.message || t('creationError')
-    }
-    importing.value = false
+    if (error.response?.status === 413) throw new Error(t('fileTooLarge'))
+    throw error
   }
-}
+}, { catch: 'all' })
 
 async function createFileDataset () {
   cancelSource = axios.CancelToken.source()
@@ -709,7 +704,7 @@ async function createFileDataset () {
   }
 
   const body: Record<string, any> = {}
-  if (initFrom.value && initFrom.value.parts.length > 0) {
+  if (initFrom.value) {
     body.initFrom = initFrom.value
   }
   body.title = fileTitle.value
@@ -760,7 +755,7 @@ async function createRestDataset () {
     schema: [] as any[]
   }
 
-  if (initFrom.value && initFrom.value.parts.length > 0) {
+  if (initFrom.value) {
     body.initFrom = initFrom.value
   }
   if (restAttachments.value) {
@@ -881,7 +876,6 @@ fr:
   selectAttachments: Pièces jointes (archive zip, optionnel)
   title: Titre du jeu de données
   titleTooShort: Le titre doit contenir au moins 4 caractères
-  filenameTitle: Utiliser le nom du fichier pour construire le titre du jeu de données
   attachmentsAsImage: Traiter les pièces jointes comme des images
   formats: Formats supportés
   advancedOptions: Paramètres avancés
@@ -893,6 +887,7 @@ fr:
   lineOwnership: Permet de donner la propriété d'une ligne à des utilisateurs (scénarios collaboratifs)
   attachments: Accepter des pièces jointes
   attachment: Document numérique attaché
+  children: Jeux enfants
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
   virtualDatasetInitFromDesc: Copier la description du 1er jeu enfant
   virtualDatasetInitFromAttachments: Copier les pièces jointes du 1er jeu enfant
@@ -932,7 +927,6 @@ en:
   selectAttachments: Attachments (zip archive, optional)
   title: Dataset title
   titleTooShort: Title must be at least 4 characters
-  filenameTitle: Use the file name to create the title of the dataset
   attachmentsAsImage: Process the attachments as images
   formats: Supported formats
   advancedOptions: Advanced options
@@ -944,6 +938,7 @@ en:
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
   attachments: Accept attachments
   attachment: Attachment
+  children: Children datasets
   virtualDatasetFill: Initialize the schema with all columns from children
   virtualDatasetInitFromDesc: Copy the description of the first child
   virtualDatasetInitFromAttachments: Copy the attachments of the first child

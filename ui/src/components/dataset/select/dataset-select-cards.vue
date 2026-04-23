@@ -49,6 +49,7 @@
       >
         <dataset-card
           :dataset="dataset"
+          :no-link="true"
           @click="value = dataset"
         />
       </v-col>
@@ -69,20 +70,19 @@
 fr:
   selectDataset: Choisissez un jeu de données
   search: Rechercher
-  sortBy: trier par
-  sortDataUpdatedAtAsc: données plus ancienne
-  sortDataUpdatedAtDesc: données plus récente
-  sortTitleAsc: ordre alphabétique
-  sortTitleDesc: ordre alphabétique inversé
+  sortBy: Trier par
+  sortDataUpdatedAtAsc: Données plus ancienne
+  sortDataUpdatedAtDesc: Données plus récente
+  sortTitleAsc: Ordre alphabétique
+  sortTitleDesc: Ordre alphabétique inversé
 en:
   selectDataset: Chose a dataset
   search: Search
-  sortBy: sort by
-  childDataset: Aggregated dataset
-  sortDataUpdatedAtAsc: data older
-  sortDataUpdatedAtDesc: data newer
-  sortTitleAsc: alphabetic order
-  sortTitleDesc: reverse alphabetic order
+  sortBy: Sort by
+  sortDataUpdatedAtAsc: Data older
+  sortDataUpdatedAtDesc: Data newer
+  sortTitleAsc: Alphabetic order
+  sortTitleDesc: Reverse alphabetic order
 </i18n>
 
 <script setup lang="ts">

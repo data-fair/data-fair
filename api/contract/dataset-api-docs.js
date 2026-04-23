@@ -385,12 +385,12 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   - **json** (défaut)
   - **csv** pour format compatibles tableurs
   - **pbf** pour tuiles vectorielles
-  - **geojson** et **wkt** pour formats géographiques`,
+  - **geojson**, **shp**, **wkt** pour formats géographiques`,
     schema: {
       title: 'Format de sérialisation',
       default: 'json',
       type: 'string',
-      enum: ['json', 'csv', 'xlsx', 'ods'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : [])
+      enum: ['json', 'csv', 'xlsx', 'ods'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'shp', 'wkt'] : [])
     }
   }
 

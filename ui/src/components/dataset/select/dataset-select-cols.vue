@@ -80,15 +80,15 @@
 fr:
   selectColsTitle: Choisir les colonnes visibles
   visibleColumns: Colonnes visibles
-  showAll: tout afficher
-  fold: plier
-  unfold: déplier
+  showAll: Tout afficher
+  fold: Plier
+  unfold: Déplier
 en:
   selectColsTitle: Chose visible columns
   visibleColumns: Visible columns
-  showAll: show all
-  fold: fold
-  unfold: unfold
+  showAll: Show all
+  fold: Fold
+  unfold: Unfold
 </i18n>
 
 <script setup lang="ts">

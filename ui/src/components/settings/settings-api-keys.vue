@@ -10,12 +10,8 @@
   >
     {{ t('addApiKey') }}
   </v-btn>
-  <df-tutorial-alert
-    id="api-key-use"
-    :text="t('apiKeyUseDetails')"
-    persistent
-    :initial="false"
-  />
+
+  <!-- New API Key Form -->
   <v-slide-y-transition v-if="createToggle">
     <v-card
       :title="t('addNewApiKey')"
@@ -95,6 +91,16 @@
     </v-card>
   </v-slide-y-transition>
 
+  <!-- Helper text about API key usage -->
+  <df-tutorial-alert
+    id="api-key-use"
+    :text="t('apiKeyUseDetails')"
+    :initial="false"
+    class="mb-2"
+    persistent
+  />
+
+  <!-- API Keys List -->
   <v-row>
     <v-col
       v-for="(apiKey, rowIndex) in apiKeys"
@@ -104,15 +110,11 @@
       sm="12"
     >
       <v-card
-        variant="outlined"
-        rounded="0"
+        :title="apiKey.title"
+        class="h-100 d-flex flex-column"
       >
-        <v-card-title>
-          <h4 class="text-title-large">
-            {{ apiKey.title }}
-          </h4>
-        </v-card-title>
         <v-card-text>
+          <!-- Alert messages for different API key types -->
           <v-alert
             v-if="!!apiKey.clearKey"
             type="warning"
@@ -131,30 +133,37 @@
             class="mb-2"
             :text="t('asAccountKeyAlert')"
           />
+
+          <!-- Clear api key -->
           <p
             v-if="!!apiKey.clearKey"
             class="mb-4"
           >
             {{ t('secretKey') }} : <strong>{{ apiKey.clearKey }}</strong>
           </p>
+
+          <!-- API key scopes -->
           <p
             v-if="apiKey.scopes?.length"
             class="mb-4"
           >
             {{ t('scope') }} : {{ apiKey.scopes?.map(s => t(s)).join(', ') }}
           </p>
-          <df-tutorial-alert
-            id="api-key-email"
-            :text="t('emailMsg')"
-            persistent
-            :initial="false"
-          />
-          <p
-            v-if="apiKey.email"
-            class="mb-4"
-          >
-            {{ t('email') }} : {{ apiKey.email }}
-          </p>
+
+          <!-- API key email -->
+          <template v-if="apiKey.email">
+            <df-tutorial-alert
+              id="api-key-email"
+              :text="t('emailMsg')"
+              :initial="false"
+              persistent
+            />
+            <p class="mb-4">
+              {{ t('email') }} : {{ apiKey.email }}
+            </p>
+          </template>
+
+          <!-- Expiration date -->
           <p
             v-if="apiKey.expireAt"
             class="mb-4"
@@ -162,9 +171,11 @@
             {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('l') }}
           </p>
         </v-card-text>
+
         <v-card-actions>
           <v-spacer />
           <confirm-menu
+            variant="menu"
             yes-color="warning"
             :tooltip="t('deleteKey')"
             :text="t('deleteKeyDetails')"
