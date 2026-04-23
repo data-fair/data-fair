@@ -441,6 +441,22 @@ const settingsEditFetch = useEditFetch<Settings>(
 )
 const settings = settingsEditFetch.data
 
+// Normalize datasetsMetadata to prevent false diffs caused by VJSF filling
+// schema defaults (active: false) on mount when the server has no value yet
+function normalizeSettings (s: any) {
+  if (!s) return
+  const dm = s.datasetsMetadata = s.datasetsMetadata || {}
+  for (const key of ['spatial', 'temporal', 'frequency', 'creator', 'modified', 'keywords']) {
+    if (!dm[key]) dm[key] = { active: false }
+  }
+}
+watch(settingsEditFetch.serverData, (s) => {
+  if (s) {
+    normalizeSettings(s)
+    normalizeSettings(settingsEditFetch.data.value)
+  }
+})
+
 // Sub-edits for sections with save/cancel
 const topicsEdit = settingsEditFetch.createSubEdit(['topics'], { success: t('saved') })
 const qualityEdit = settingsEditFetch.createSubEdit(

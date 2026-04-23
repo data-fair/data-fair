@@ -692,6 +692,10 @@ function normalizeStructureData (d: any) {
   if (!d.masterData.singleSearchs) d.masterData.singleSearchs = []
   if (!d.masterData.bulkSearchs) d.masterData.bulkSearchs = []
   if (!d.masterData.shareOrgs) d.masterData.shareOrgs = []
+  if (d.virtual) {
+    d.virtual.children = d.virtual.children || []
+    d.virtual.filters = d.virtual.filters || []
+  }
 }
 
 const masterDataFormValid = ref(true)
