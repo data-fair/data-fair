@@ -4,7 +4,17 @@
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
     <!-- Metadata details -->
-    <dataset-metadata-details class="mb-4" />
+    <df-section-tabs
+      v-if="sections.informations"
+      id="informations"
+      :title="sections.informations.title"
+      :subtitle="sections.informations.subtitle"
+      :svg="informationsSvg"
+    >
+      <template #windows>
+        <dataset-metadata-details class="mb-4" />
+      </template>
+    </df-section-tabs>
 
     <!-- Structure section -->
     <df-section-tabs
@@ -272,7 +282,6 @@
       :title="sections.activity.title"
       :tabs="sections.activity.tabs"
       :svg="settingsSvg"
-      svg-no-margin
     >
       <template #content="{ tab }">
         <v-tabs-window
@@ -494,6 +503,7 @@
 <i18n lang="yaml">
 fr:
   datasets: Jeux de données
+  informationsSubtitle: Retrouvez les informations générales et techniques du jeu de données.
   structure: Structure
   extensions: Enrichissements
   restConfig: Jeu éditable
@@ -503,7 +513,6 @@ fr:
   permissionsUpdated: Les permissions ont été mises à jour
   metadata: Métadonnées
   informations: Informations
-  details: Détails
   schema: Schéma
   attachments: Pièces jointes
   save: Enregistrer
@@ -547,6 +556,7 @@ fr:
   no: Non
 en:
   datasets: Datasets
+  informationsSubtitle: Find the general and technical information for this dataset.
   structure: Structure
   extensions: Extensions
   restConfig: REST Configuration
@@ -556,7 +566,6 @@ en:
   permissionsUpdated: Permissions were updated
   metadata: Metadata
   informations: Information
-  details: Details
   schema: Schema
   attachments: Attachments
   save: Save
@@ -601,9 +610,10 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
-import metadataSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
+import metadataSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
@@ -882,9 +892,15 @@ useLeaveGuard(structureHasRealDiff, { locale })
 useLeaveGuard(metadataEditFetch.hasDiff, { locale })
 
 const sections = computedDeepDiff(() => {
-  if (!dataset.value) return {} as Record<string, { title: string, tabs: any[] }>
+  if (!dataset.value) return {}
   const d = dataset.value
-  const result: Record<string, { title: string, tabs: any[] }> = {}
+  const result: Record<string, { title: string, tabs?: any[], subtitle?: string }> = {}
+
+  // Informations section
+  result.informations = {
+    title: t('informations'),
+    subtitle: t('informationsSubtitle')
+  }
 
   // Structure section (new)
   if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual)) {

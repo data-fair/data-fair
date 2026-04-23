@@ -46,8 +46,18 @@
       </v-card>
     </v-dialog>
 
-    <!-- Metadata details -->
-    <application-metadata-details class="mb-4" />
+    <!-- Informations section -->
+    <df-section-tabs
+      v-if="sections.informations"
+      id="informations"
+      :title="sections.informations.title"
+      :subtitle="sections.informations.subtitle"
+      :svg="informationsSvg"
+    >
+      <template #windows>
+        <application-metadata-details class="mb-4" />
+      </template>
+    </df-section-tabs>
 
     <!-- Metadata section -->
     <df-section-tabs
@@ -57,7 +67,6 @@
       :title="sections.metadata.title"
       :tabs="sections.metadata.tabs"
       :svg="checklistSvg"
-      svg-no-margin
     >
       <template #actions>
         <confirm-menu
@@ -236,7 +245,7 @@
       </template>
     </df-section-tabs>
 
-    <!-- Events section -->
+    <!-- Activity section -->
     <df-section-tabs
       v-if="sections.activity"
       id="activity"
@@ -245,7 +254,6 @@
       :title="sections.activity.title"
       :tabs="sections.activity.tabs"
       :svg="settingsSvg"
-      svg-no-margin
     >
       <template #content="{ tab }">
         <v-tabs-window
@@ -398,6 +406,7 @@
 <i18n lang="yaml">
 fr:
   applications: Applications
+  informationsSubtitle: Retrouvez les informations générales et techniques de l'application.
   metadata: Métadonnées
   info: Informations
   attachments: Pièces jointes
@@ -439,6 +448,7 @@ fr:
   no: Non
 en:
   applications: Applications
+  informationsSubtitle: Find the general and technical information for this application.
   metadata: Metadata
   info: Information
   attachments: Attachments
@@ -486,6 +496,7 @@ import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
 import { mdiAccountSwitch, mdiBell, mdiBookOpenVariant, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
@@ -609,9 +620,15 @@ const confirmRemove = async () => {
 }
 
 const sections = computedDeepDiff(() => {
-  if (!application.value) return {} as Record<string, { title: string, tabs: any[] }>
+  if (!application.value) return {} as Record<string, { title: string, subtitle?: string, tabs?: any[] }>
 
-  const result: Record<string, { title: string, tabs: any[] }> = {}
+  const result: Record<string, { title: string, subtitle?: string, tabs?: any[] }> = {}
+
+  // Informations section
+  result.informations = {
+    title: t('info'),
+    subtitle: t('informationsSubtitle')
+  }
 
   // Metadata section
   const metadataTabs = [
