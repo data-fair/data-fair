@@ -128,7 +128,7 @@
         md="6"
         lg="4"
       >
-        <v-list-item :prepend-icon="mdiDatabaseArrowRight">
+        <v-list-item :prepend-icon="mdiPictureInPictureBottomRightOutline">
           <div class="text-body-small text-medium-emphasis">
             {{ t('virtualDatasetsLabel') }}
           </div>
@@ -180,10 +180,10 @@ en:
 import {
   mdiAllInclusive,
   mdiCounter,
-  mdiDatabaseArrowRight,
   mdiFile,
   mdiHistory,
   mdiPencil,
+  mdiPictureInPictureBottomRightOutline,
   mdiPlaylistEdit,
   mdiPlusCircleOutline,
   mdiUpload

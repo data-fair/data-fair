@@ -30,8 +30,20 @@
         </template>
       </v-tooltip>
     </v-list-item-title>
-    <v-list-item-subtitle>
-      <span v-if="subtitleParts.length">{{ subtitleParts.join(' · ') }}</span>
+    <v-list-item-subtitle v-if="subtitleParts.length">
+      <template
+        v-for="(part, i) in subtitleParts"
+        :key="i"
+      >
+        <span v-if="i > 0"> · </span>
+        <v-icon
+          v-if="part.icon"
+          :icon="part.icon"
+          size="small"
+          class="mr-1"
+        />
+        <span>{{ part.text }}</span>
+      </template>
     </v-list-item-subtitle>
     <template
       v-if="showAppend"
@@ -54,7 +66,14 @@
 
 <script setup lang="ts">
 import type { Dataset } from '#api/types'
-import { mdiAlert } from '@mdi/js'
+import {
+  mdiAlert,
+  mdiAllInclusive,
+  mdiFile,
+  mdiInformationVariant,
+  mdiPictureInPictureBottomRightOutline,
+  mdiProgressWrench
+} from '@mdi/js'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 
 const { t, locale } = useI18n()
@@ -82,14 +101,14 @@ const fileInfo = computed(() => {
 })
 
 const subtitleParts = computed(() => {
-  const parts: string[] = []
-  if (props.dataset.isVirtual) parts.push(t('virtual'))
-  if (props.dataset.isRest) parts.push(t('editable'))
-  if (props.dataset.isMetaOnly) parts.push(t('metaOnly'))
-  if (props.dataset.status === 'draft') parts.push(t('draft'))
-  if (fileInfo.value) parts.push(fileInfo.value)
-  if (props.dataset.count != null) parts.push(`${props.dataset.count.toLocaleString()} ${t('lines')}`)
-  if (props.dataset.updatedAt) parts.push(formatDate(props.dataset.updatedAt))
+  const parts: { icon?: string, text: string }[] = []
+  if (props.dataset.status === 'draft') parts.push({ icon: mdiProgressWrench, text: t('draft') })
+  if (props.dataset.isVirtual) parts.push({ icon: mdiPictureInPictureBottomRightOutline, text: t('virtual') })
+  if (props.dataset.isRest) parts.push({ icon: mdiAllInclusive, text: t('editable') })
+  if (props.dataset.isMetaOnly) parts.push({ icon: mdiInformationVariant, text: t('metaOnly') })
+  if (fileInfo.value) parts.push({ icon: mdiFile, text: fileInfo.value })
+  if (props.dataset.count != null) parts.push({ text: `${props.dataset.count.toLocaleString()} ${t('lines')}` })
+  if (props.dataset.updatedAt) parts.push({ text: formatDate(props.dataset.updatedAt) })
   return parts
 })
 

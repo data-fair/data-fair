@@ -6,33 +6,18 @@
       </h2>
 
       <!-- Add child autocomplete -->
-      <v-autocomplete
-        v-model:search="searchDataset"
-        :model-value="null"
-        :items="childrenItems"
-        :loading="searchDatasetsAction.loading.value"
-        no-filter
-        hide-no-data
-        item-title="title"
-        item-value="id"
+      <dataset-select
+        v-model="selectedDatasetToAdd"
+        :extra-params="{ queryable: true }"
+        :owner="dataset.owner"
+        :exclude-ids="[dataset.id, ...(dataset.virtual.children ?? [])]"
         :label="t('addChild')"
-        :placeholder="t('search')"
-        variant="outlined"
-        density="compact"
-        class="my-2"
-        max-width="400px"
+        max-width="400"
         hide-details="auto"
-        return-object
+        master-data="virtualDatasets"
+        class="my-2"
         @update:model-value="addChild"
-      >
-        <template #item="{ internalItem, props: itemProps }">
-          <v-list-item
-            v-bind="itemProps"
-            :title="(internalItem.raw as any).title"
-            :subtitle="(internalItem.raw as any).id"
-          />
-        </template>
-      </v-autocomplete>
+      />
 
       <!-- Loading indicator -->
       <v-progress-linear
@@ -71,14 +56,14 @@
                   {{ childrenById[child].title }} ({{ childrenById[child].id }})
                 </router-link>
               </v-list-item-title>
-              <v-list-item-subtitle v-if="childrenById[child]">
+              <div v-if="childrenById[child]">
                 <v-autocomplete
                   v-model:search="searchCol[child]"
                   :model-value="null"
-                  :items="childrenById[child].schema.filter((f: any) => !f['x-calculated'] && !existingFields.includes(f.key))"
+                  :items="availableFields(child)"
                   :item-title="(field: any) => field.title || field['x-originalName'] || field.key"
+                  no-filter
                   hide-no-data
-                  item-value="id"
                   :label="t('addColumn')"
                   return-object
                   max-width="400"
@@ -88,13 +73,11 @@
                   flat
                   @update:model-value="(field: any) => addField(field, child)"
                 />
-              </v-list-item-subtitle>
-              <v-list-item-subtitle v-if="childrenById[child]">
                 <dataset-virtual-child-compat
                   :parent-schema="dataset.schema"
                   :child="childrenById[child]"
                 />
-              </v-list-item-subtitle>
+              </div>
               <template #append>
                 <v-icon
                   color="warning"
@@ -270,8 +253,6 @@ fr:
   addFilter: Ajouter un filtre
   noFilter: Aucun filtre defini.
   filterActiveAccount: Filtrer sur les comptes actifs
-  ownerDatasets: Vos jeux de données
-  masterData: données de reference
 en:
   search: Search
   children: Aggregated datasets
@@ -291,8 +272,6 @@ en:
   addFilter: Add a filter
   noFilter: No filter defined.
   filterActiveAccount: Filter on active accounts
-  ownerDatasets: Your datasets
-  masterData: Master data
 </i18n>
 
 <script setup lang="ts">
@@ -314,12 +293,10 @@ if (dataset.value.virtual) {
 // Internal state
 const childrenById = ref<Record<string, any>>({})
 const loadingChildren = ref(false)
-const searchDataset = ref('')
 const searchCol = ref<Record<string, string>>({})
 const searchFilter = ref('')
 const searchedFilter = ref<string | null>(null)
-const refDatasets = ref<any[]>([])
-const datasets = ref<any[]>([])
+const selectedDatasetToAdd = ref<any>(null)
 
 // Computed
 const existingFields = computed(() => dataset.value?.schema?.map((f: any) => f.key) ?? [])
@@ -355,55 +332,6 @@ const valuesByKey = computed(() => {
   return result
 })
 
-const childrenItems = computed(() => {
-  let items: any[] = []
-  if (refDatasets.value.length) {
-    items.push({ header: t('masterData') })
-    items = items.concat(refDatasets.value.filter((d: any) => d.id !== dataset.value.id && !dataset.value.virtual.children.includes(d.id)))
-  }
-  if (refDatasets.value.length && datasets.value.length) {
-    items.push({ header: t('ownerDatasets') })
-  }
-  items = items.concat(datasets.value.filter((d: any) => d.id !== dataset.value.id && !dataset.value.virtual.children.includes(d.id)))
-  return items
-})
-
-// Async actions
-const searchDatasetsAction = useAsyncAction(async () => {
-  const owner = dataset.value.owner
-  const select = 'id,owner,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,attachmentsAsImage,-userPermissions,-links'
-
-  const remoteServicesRes = await $fetch<{ results: any[] }>(withQuery(`${$apiPath}/remote-services`, {
-    q: searchDataset.value,
-    size: 1000,
-    select: 'id,title,virtualDatasets',
-    privateAccess: `${owner.type}:${owner.id}`,
-    virtualDatasets: true
-  }))
-
-  if (remoteServicesRes.results.length) {
-    const refDatasetsRes = await $fetch<{ results: any[] }>(withQuery(`${$apiPath}/datasets`, {
-      q: searchDataset.value,
-      size: 20,
-      select,
-      id: remoteServicesRes.results.map((r: any) => r.virtualDatasets.parent.id).join(','),
-      queryable: true
-    }))
-    refDatasets.value = refDatasetsRes.results
-  } else {
-    refDatasets.value = []
-  }
-
-  const datasetsRes = await $fetch<{ results: any[] }>(withQuery(`${$apiPath}/datasets`, {
-    q: searchDataset.value,
-    size: 20,
-    select,
-    owner: `${owner.type}:${owner.id}`,
-    queryable: true
-  }))
-  datasets.value = datasetsRes.results
-})
-
 async function fetchChildren () {
   if (!dataset.value?.virtual?.children?.length) {
     childrenById.value = {}
@@ -427,13 +355,24 @@ async function fetchChildren () {
 // Methods
 async function addChild (child: any) {
   if (!child?.id) return
+  if (dataset.value.virtual.children.includes(child.id)) return
   dataset.value.virtual.children.push(child.id)
-  searchDataset.value = ''
+  nextTick(() => { selectedDatasetToAdd.value = null })
   await fetchChildren()
 }
 
 function deleteChild (i: number) {
   dataset.value.virtual.children.splice(i, 1)
+}
+
+function availableFields (child: string) {
+  const q = (searchCol.value[child] || '').toLowerCase()
+  return (childrenById.value[child]?.schema ?? []).filter((f: any) => {
+    if (f['x-calculated'] || existingFields.value.includes(f.key)) return false
+    if (!q) return true
+    const title = f.title || f['x-originalName'] || f.key
+    return title.toLowerCase().includes(q)
+  })
 }
 
 function addField (field: any, child: string) {
@@ -445,7 +384,7 @@ function addField (field: any, child: string) {
   if (field['x-concept']) newField['x-concept'] = field['x-concept']
   if (field['x-capabilities']) newField['x-capabilities'] = field['x-capabilities']
   dataset.value.schema.push(newField)
-  searchCol.value[child] = ''
+  nextTick(() => { searchCol.value[child] = '' })
 }
 
 function deleteField (field: any) {
@@ -464,9 +403,6 @@ async function addFilter (key: string | null) {
   searchFilter.value = ''
   searchedFilter.value = null
 }
-
-// Watchers
-watch(searchDataset, () => searchDatasetsAction.execute(), { immediate: true })
 
 // Initial fetch
 fetchChildren()

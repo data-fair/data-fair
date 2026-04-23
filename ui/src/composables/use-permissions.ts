@@ -33,7 +33,7 @@ export function usePermissions () {
   const limitsFetch = useFetch<any>(limitsUrl)
 
   const missingSubscription = computed(() => {
-    return !!(limitsFetch.data.value?.defaults && $uiConfig.customersIntegration)
+    return !!(limitsFetch.data.value?.defaults && $uiConfig.subscriptionUrl)
   })
 
   return { canContribDep, canContrib, canAdminDep, canAdmin, missingSubscription }

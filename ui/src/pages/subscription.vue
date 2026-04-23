@@ -1,9 +1,9 @@
 <template>
   <d-frame
-    v-if="$uiConfig.customersIntegration"
+    v-if="$uiConfig.subscriptionUrl"
     id="customers-subscriptions"
     :adapter.prop="stateChangeAdapter"
-    src="/customers/embed/subscription/?platform=df"
+    :src="$uiConfig.subscriptionUrl"
     sync-path="/data-fair/subscription/"
     class="fill-height"
     resize="no"

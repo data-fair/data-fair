@@ -26,7 +26,7 @@
 
       <!-- Subscription link when missing -->
       <v-list-item
-        v-if="missingSubscription && canAdmin && $uiConfig.customersIntegration"
+        v-if="missingSubscription && canAdmin && $uiConfig.subscriptionUrl"
         to="/subscription"
         :prepend-icon="mdiCardAccountDetails"
         :title="t('subscription')"

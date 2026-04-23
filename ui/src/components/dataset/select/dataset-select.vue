@@ -61,12 +61,13 @@ import type { ListedDataset } from './utils'
 import { withQuery } from 'ufo'
 import { watchDebounced } from '@vueuse/core'
 
-const { extraParams, masterData, owner: _owner, multiple } = defineProps<{
+const { extraParams, masterData, owner: _owner, multiple, excludeIds } = defineProps<{
   label?: string,
   extraParams?: Record<string, any>,
   owner?: AccountKeys | null,
   masterData?: string,
-  multiple?: boolean
+  multiple?: boolean,
+  excludeIds?: string[]
 }>()
 
 const value = defineModel<ListedDataset | ListedDataset[]>()
@@ -77,6 +78,12 @@ const { t } = useI18n()
 const owner = computed(() => _owner ?? account.value)
 
 const search = ref('')
+
+const datasetSelect = 'id,owner,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,visibility,-userPermissions,-links'
+
+watch(value, (newVal, oldVal) => {
+  if (newVal == null && oldVal != null) search.value = ''
+})
 
 const selectedIds = computed(() => {
   if (!value.value) return [] as string[]
@@ -99,10 +106,9 @@ const datasetsUrl = computed(() => {
   let ownerFilter = `${owner.value.type}:${owner.value.id}`
   if (owner.value.department) ownerFilter += `:${owner.value.department}`
   // WARNING: order is important here, extraParams can overwrite the owner filter
-  const select = 'id,owner,title,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,count,finalizedAt,-userPermissions,-links'
   const query: Record<string, any> = {
     size: 20,
-    select,
+    select: datasetSelect,
     owner: ownerFilter,
     ...extraParams
   }
@@ -123,16 +129,33 @@ const sortSelectedFirst = (list: ListedDataset[]) => {
   })
 }
 
+const filterExcluded = (list: ListedDataset[]) => {
+  if (!excludeIds?.length) return list
+  return list.filter(d => !excludeIds.includes(d.id))
+}
+
 const searchDatasets = useAsyncAction(async () => {
   let items: (ListedDataset | Subheader)[] = []
   let refDatasets: ListedDataset[] = []
   if (!multiple && value.value && !Array.isArray(value.value)) items.push(value.value)
   if (remoteServicesUrl.value && masterData) {
     const remoteServicesRes = await $fetch(remoteServicesUrl.value)
-    refDatasets = remoteServicesRes.results.map((r: any) => r[masterData].parent || r[masterData].dataset)
+    const refDatasetsRefs = remoteServicesRes.results.map((r: any) => r[masterData].parent || r[masterData].dataset)
+    const refIds = refDatasetsRefs.map((r: any) => r?.id).filter(Boolean)
+    if (refIds.length) {
+      const refQuery: Record<string, any> = {
+        size: 20,
+        select: datasetSelect,
+        id: refIds.join(','),
+        queryable: true
+      }
+      if (search.value) refQuery.q = search.value
+      const refRes = await $fetch<{ results: ListedDataset[] }>(withQuery(`${$apiPath}/datasets`, refQuery))
+      refDatasets = refRes.results
+    }
     if (refDatasets.length) {
       items.push({ type: 'subheader', title: t('masterData') })
-      items = items.concat(sortSelectedFirst(refDatasets))
+      items = items.concat(sortSelectedFirst(filterExcluded(refDatasets)))
     }
   }
 
@@ -141,7 +164,7 @@ const searchDatasets = useAsyncAction(async () => {
   const ownerDatasets = res.results.filter(d => !refDatasets.find(rd => rd.id === d.id))
 
   if (items.length && ownerDatasets.length) items.push({ type: 'subheader', title: t('ownerDatasets') })
-  items = items.concat(sortSelectedFirst(ownerDatasets))
+  items = items.concat(sortSelectedFirst(filterExcluded(ownerDatasets)))
 
   datasets.value = items
 })
@@ -154,7 +177,7 @@ const shouldShowOwner = (item: ListedDataset) => {
 }
 
 watchDebounced(
-  [remoteServicesUrl, datasetsUrl],
+  [remoteServicesUrl, datasetsUrl, () => excludeIds],
   () => searchDatasets.execute(),
   { immediate: true, debounce: 250 }
 )

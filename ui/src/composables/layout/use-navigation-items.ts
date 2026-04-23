@@ -16,7 +16,6 @@ import {
   mdiApps,
   mdiAccountGroup,
   mdiCardAccountDetails,
-  mdiFaceAgent,
   mdiChartBar,
   mdiClipboardTextClock,
   mdiViewDashboardEdit,
@@ -113,7 +112,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
 
     // Monitoring group
     const monitor: NavItem[] = []
-    if (canAdmin.value && $uiConfig.customersIntegration) {
+    if (canAdmin.value && $uiConfig.subscriptionUrl) {
       monitor.push({ to: '/subscription', icon: mdiCardAccountDetails, title: t('subscription') })
     }
     if (canContrib.value) {
@@ -131,9 +130,6 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     const help: NavItem[] = []
     if (canContribDep.value && $uiConfig.openapiViewerIntegration) {
       help.push({ to: '/api-doc', icon: mdiCloud, title: t('apiDoc') })
-    }
-    if (canAdmin.value && $uiConfig.customersIntegration) {
-      help.push({ to: '/issues', icon: mdiFaceAgent, title: t('assistance') })
     }
     for (const docLink of ($uiConfig.extraDocLinks ?? [])) {
       help.push({ href: docLink.href, icon: docLink.icon || mdiCloud, title: resolveTitle(docLink.title) })

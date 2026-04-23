@@ -620,7 +620,7 @@ import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -924,7 +924,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'rest-config',
         title: t('restConfig'),
-        icon: mdiTableCog,
+        icon: mdiAllInclusive,
         color: restHasDiff.value ? 'accent' : undefined
       })
     }
@@ -933,7 +933,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'virtual',
         title: t('virtual'),
-        icon: mdiSetAll,
+        icon: mdiPictureInPictureBottomRightOutline,
         color: virtualHasDiff.value ? 'accent' : undefined
       })
     }
@@ -942,7 +942,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'master-data',
         title: t('masterData'),
-        icon: mdiDatabase,
+        icon: mdiStarFourPoints,
         color: !masterDataFormValid.value ? 'error' : (masterDataHasDiff.value ? 'accent' : undefined),
         appendIcon: !masterDataFormValid.value ? mdiAlertCircle : undefined
       })
