@@ -24,7 +24,7 @@
                 />
               </template>
               <v-card-title class="text-body-large font-weight-bold">
-                {{ file.title }}
+                {{ file.name }}
               </v-card-title>
               <v-card-subtitle v-if="file.size">
                 {{ formatBytes(file.size) }}
@@ -57,10 +57,6 @@ const isFileDataset = computed(() => {
 
 // Only show original and converted files, not the full-csv export
 const sourceFiles = computed(() => {
-  return dataFiles.value.filter(f => f.key === 'original' || f.key === 'converted').map(f => {
-    const d = dataset.value!
-    const size = f.key === 'original' ? d.originalFile?.size : d.file?.size
-    return { ...f, size }
-  })
+  return dataFiles.value.filter(f => f.key === 'original' || f.key === 'converted')
 })
 </script>

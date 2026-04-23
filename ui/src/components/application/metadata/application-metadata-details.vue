@@ -1,6 +1,6 @@
 <template>
   <template v-if="application">
-    <v-row>
+    <v-row density="compact">
       <v-col
         v-if="application.owner"
         cols="12"

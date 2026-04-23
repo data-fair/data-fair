@@ -1,6 +1,6 @@
 <template>
   <template v-if="dataset">
-    <v-row>
+    <v-row density="compact">
       <v-col
         v-if="dataset.owner"
         cols="12"

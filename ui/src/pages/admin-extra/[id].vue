@@ -7,6 +7,7 @@
       class="fill-height"
       resize="no"
       sync-params
+      sync-path="#"
       emit-iframe-messages
       :adapter.prop="stateChangeAdapter"
       @message="onMessage"
@@ -23,11 +24,13 @@
 
 <script setup lang="ts">
 import { useDFramePage } from '~/composables/layout/use-d-frame-page'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute<'/admin-extra/[id]'>()
 const { sendUiNotif } = useUiNotif()
 const { stateChangeAdapter, onMessage } = useDFramePage()
+const breadcrumbs = useBreadcrumbs()
 
 const extra = computed(() => {
   return $uiConfig.extraAdminNavigationItems.find((e: any) => e.id === route.params.id)
@@ -36,6 +39,12 @@ const extra = computed(() => {
 const iframeUrl = computed(() => {
   if (!extra.value?.iframe) return null
   return new URL(extra.value.iframe, window.location.href).href
+})
+
+onMounted(() => {
+  if (extra.value) {
+    breadcrumbs.receive({ breadcrumbs: [{ text: extra.value.title || route.params.id as string }] })
+  }
 })
 </script>
 

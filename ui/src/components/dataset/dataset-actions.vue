@@ -17,9 +17,11 @@
             color="primary"
           />
         </template>
-        {{ file.title }}
+        <v-list-item-title :title="file.tooltip">
+          {{ file.label }}
+        </v-list-item-title>
         <v-list-item-subtitle v-if="file.size">
-          {{ formatBytes(file.size) }}
+          {{ file.name }} · {{ formatBytes(file.size) }}
         </v-list-item-subtitle>
       </v-list-item>
 
@@ -124,6 +126,15 @@ fr:
   downloadRawRest: Export brut
   actions: Actions
   useAPI: Utiliser l'API
+  draftSuffix: Brouillon
+  originalLabel: Fichier d'origine
+  convertedLabel: Fichier converti
+  fullCsvLabel: Fichier enrichi
+  originalLow: le fichier d'origine
+  convertedLow: le fichier converti
+  fullCsvLow: le fichier enrichi
+  downloadFileTooltip: "Télécharger {label} {name} ({size})"
+  downloadFileTooltipNoSize: "Télécharger {label} {name}"
 en:
   navigation: Navigation
   viewOnPortal: "View on {title}"
@@ -132,6 +143,15 @@ en:
   downloadRawRest: Raw export
   actions: Actions
   useAPI: Use the API
+  draftSuffix: Draft
+  originalLabel: Original file
+  convertedLabel: Converted file
+  fullCsvLabel: Enriched file
+  originalLow: the original file
+  convertedLow: the converted file
+  fullCsvLow: the enriched file
+  downloadFileTooltip: "Download {label} {name} ({size})"
+  downloadFileTooltipNoSize: "Download {label} {name}"
 </i18n>
 
 <script setup lang="ts">
@@ -150,18 +170,31 @@ const { t } = useI18n()
 const { dataset, can, resourceUrl, dataFiles } = useDatasetStore()
 const session = useSession()
 const user = computed(() => session.state.user)
+const isDraft = computed(() => !!dataset.value?.draftReason)
 
 const isFileDataset = computed(() => {
   const d = dataset.value
   return d && !d.isRest && !d.isVirtual && !d.isMetaOnly && d.file
 })
 
+const labelKeys: Record<string, string> = {
+  original: 'original',
+  converted: 'converted',
+  'full-csv': 'fullCsv'
+}
+
 const sourceFiles = computed(() => {
   if (!isFileDataset.value) return []
   return dataFiles.value.filter(f => f.key === 'original' || f.key === 'converted').map(f => {
-    const d = dataset.value!
-    const size = f.key === 'original' ? d.originalFile?.size : d.file?.size
-    return { ...f, size }
+    const baseKey = labelKeys[f.key] ?? f.key
+    const label = t(`${baseKey}Label`) + (isDraft.value ? ` - ${t('draftSuffix')}` : '')
+    const tooltipKey = f.size ? 'downloadFileTooltip' : 'downloadFileTooltipNoSize'
+    const tooltip = t(tooltipKey, {
+      label: t(`${baseKey}Low`),
+      name: f.name,
+      size: f.size ? formatBytes(f.size) : ''
+    })
+    return { ...f, label, tooltip }
   })
 })
 

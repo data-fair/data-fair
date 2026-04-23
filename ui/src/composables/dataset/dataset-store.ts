@@ -134,27 +134,30 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
 
   const dataFiles = computed(() => {
     if (!dataset.value) return []
-    const files: { key: string, title: string, url: string }[] = []
+    const files: { key: string, name: string, size?: number, url: string }[] = []
     const d = dataset.value
+    const qs = d.draftReason ? '?draft=true' : ''
     if (d.originalFile) {
       files.push({
         key: 'original',
-        title: d.originalFile.name,
-        url: `${$apiPath}/datasets/${id}/raw`
+        name: d.originalFile.name,
+        size: d.originalFile.size,
+        url: `${$apiPath}/datasets/${id}/raw${qs}`
       })
     }
     if (d.file && d.file.name !== d.originalFile?.name) {
       files.push({
         key: 'converted',
-        title: d.file.name,
-        url: `${$apiPath}/datasets/${id}/convert`
+        name: d.file.name,
+        size: d.file.size,
+        url: `${$apiPath}/datasets/${id}/convert${qs}`
       })
     }
     if (!d.isVirtual && !d.isMetaOnly && !d.isRest && d.finalizedAt) {
       files.push({
         key: 'full-csv',
-        title: `${d.slug || id}.csv`,
-        url: `${$apiPath}/datasets/${id}/full`
+        name: `${d.slug || id}.csv`,
+        url: `${$apiPath}/datasets/${id}/full${qs}`
       })
     }
     return files
