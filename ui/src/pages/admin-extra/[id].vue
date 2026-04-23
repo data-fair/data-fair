@@ -7,7 +7,7 @@
       class="fill-height"
       resize="no"
       sync-params
-      sync-path="#"
+      sync-path
       emit-iframe-messages
       :adapter.prop="stateChangeAdapter"
       @message="onMessage"

@@ -8,7 +8,9 @@
       <v-list-item
         v-for="file in sourceFiles"
         :key="file.key"
+        :title.attr="file.tooltip"
         :href="file.url"
+        :lines="isDraft ? 'three' : undefined"
         link
       >
         <template #prepend>
@@ -17,9 +19,12 @@
             color="primary"
           />
         </template>
-        <v-list-item-title :title="file.tooltip">
+        <v-list-item-title>
           {{ file.label }}
         </v-list-item-title>
+        <v-list-item-subtitle v-if="isDraft">
+          {{ t('draftSuffix') }}
+        </v-list-item-subtitle>
         <v-list-item-subtitle v-if="file.size">
           {{ file.name }} · {{ formatBytes(file.size) }}
         </v-list-item-subtitle>
@@ -187,7 +192,7 @@ const sourceFiles = computed(() => {
   if (!isFileDataset.value) return []
   return dataFiles.value.filter(f => f.key === 'original' || f.key === 'converted').map(f => {
     const baseKey = labelKeys[f.key] ?? f.key
-    const label = t(`${baseKey}Label`) + (isDraft.value ? ` - ${t('draftSuffix')}` : '')
+    const label = t(`${baseKey}Label`)
     const tooltipKey = f.size ? 'downloadFileTooltip' : 'downloadFileTooltipNoSize'
     const tooltip = t(tooltipKey, {
       label: t(`${baseKey}Low`),
