@@ -14,6 +14,7 @@
         <template #append>
           <v-btn
             color="primary"
+            variant="flat"
             @click="patchDataset.execute({})"
           >
             {{ t('restart') }}

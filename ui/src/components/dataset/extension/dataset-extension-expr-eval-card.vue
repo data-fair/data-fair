@@ -1,14 +1,14 @@
 <template>
   <v-card
     :class="parsingError ? 'border-error border-opacity-100' : (isModified ? 'border-accent border-opacity-100' : undefined)"
-    class="h-100"
+    class="h-100 d-flex flex-column"
   >
     <template #title>
       <span :title="liveProperty?.title || liveProperty?.['x-originalName'] || t('newExprEval')">
         {{ liveProperty?.title || liveProperty?.['x-originalName'] || t('newExprEval') }}
       </span>
     </template>
-    <v-card-text>
+    <v-card-text class="pb-0">
       <v-alert
         v-if="parsingError"
         :text="parsingError"

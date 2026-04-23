@@ -31,13 +31,7 @@
       </v-tooltip>
     </v-list-item-title>
     <v-list-item-subtitle>
-      <span v-if="dataset.isVirtual">{{ t('virtual') }} · </span>
-      <span v-if="dataset.isRest">{{ t('editable') }} · </span>
-      <span v-if="dataset.isMetaOnly">{{ t('metaOnly') }} · </span>
-      <span v-if="dataset.status === 'draft'">{{ t('draft') }} · </span>
-      <span v-if="fileInfo">{{ fileInfo }} · </span>
-      <span v-if="dataset.count != null">{{ dataset.count.toLocaleString() }} {{ t('lines') }} · </span>
-      <span v-if="dataset.updatedAt">{{ formatDate(dataset.updatedAt) }}</span>
+      <span v-if="subtitleParts.length">{{ subtitleParts.join(' · ') }}</span>
     </v-list-item-subtitle>
     <template
       v-if="showAppend"
@@ -85,6 +79,18 @@ const fileInfo = computed(() => {
     info += ` (${formatBytes(file.size)})`
   }
   return info
+})
+
+const subtitleParts = computed(() => {
+  const parts: string[] = []
+  if (props.dataset.isVirtual) parts.push(t('virtual'))
+  if (props.dataset.isRest) parts.push(t('editable'))
+  if (props.dataset.isMetaOnly) parts.push(t('metaOnly'))
+  if (props.dataset.status === 'draft') parts.push(t('draft'))
+  if (fileInfo.value) parts.push(fileInfo.value)
+  if (props.dataset.count != null) parts.push(`${props.dataset.count.toLocaleString()} ${t('lines')}`)
+  if (props.dataset.updatedAt) parts.push(formatDate(props.dataset.updatedAt))
+  return parts
 })
 
 const showAppend = computed(() =>

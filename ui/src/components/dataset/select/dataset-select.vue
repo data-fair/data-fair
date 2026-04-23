@@ -59,6 +59,7 @@ en:
 import type { AccountKeys } from '@data-fair/lib-vue/session'
 import type { ListedDataset } from './utils'
 import { withQuery } from 'ufo'
+import { watchDebounced } from '@vueuse/core'
 
 const { extraParams, masterData, owner: _owner, multiple } = defineProps<{
   label?: string,
@@ -152,6 +153,9 @@ const shouldShowOwner = (item: ListedDataset) => {
     (item.owner.department || null) !== (owner.value.department || null)
 }
 
-watch(remoteServicesUrl, () => searchDatasets.execute())
-watch(datasetsUrl, () => searchDatasets.execute())
+watchDebounced(
+  [remoteServicesUrl, datasetsUrl],
+  () => searchDatasets.execute(),
+  { immediate: true, debounce: 250 }
+)
 </script>
