@@ -1,7 +1,8 @@
 <template>
   <v-container
-    class="pa-0"
     :style="`height: ${windowHeight}px`"
+    class="pa-0"
+    fluid
   >
     <dataset-table
       v-model:cols="cols"
@@ -34,6 +35,3 @@ const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
 const interaction = useBooleanSearchParam('interaction', true)
 </script>
-
-<style>
-</style>

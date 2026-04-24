@@ -1,7 +1,8 @@
 <template>
   <v-container
-    class="pa-0"
     :style="`height: ${windowHeight}px`"
+    class="pa-0"
+    fluid
   >
     <dataset-map-bounds :height="windowHeight" />
   </v-container>

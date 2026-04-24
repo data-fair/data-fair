@@ -42,8 +42,8 @@
 
 <i18n lang="yaml">
 fr:
-  message: Créez un lien que vous pourrez communiquer aux personnes avec qui vous souhaitez partager cette application et qui ne sont pas authentifies sur ce service.
-  warning: Attention ! Ce lien donne accès à cette application et au contenu du jeu de données reference dans sa configuration. Si vous craignez que ce lien ait trop circule vous pouvez le supprimer, en creer un autre et communiquer ce nouveau lien aux bonnes personnes.
+  message: Créez un lien que vous pourrez communiquer aux personnes avec qui vous souhaitez partager cette application et qui ne sont pas authentifiées sur ce service.
+  warning: Attention ! Ce lien donne accès à cette application et au contenu du jeu de données référencé dans sa configuration. Si vous craignez que ce lien ait trop circulé vous pouvez le supprimer, en créer un autre et communiquer ce nouveau lien aux bonnes personnes.
   protectedLink: "Lien protégé :"
   delete: Supprimer ce lien
   createProtectedLink: Créer un lien protégé

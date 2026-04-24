@@ -1,7 +1,8 @@
 <template>
   <v-container
-    class="pa-0"
     :style="`height: ${windowHeight}px`"
+    class="pa-0"
+    fluid
   >
     <dataset-search-files
       v-model:q="q"
@@ -23,6 +24,3 @@ provideDatasetStore(route.params.id, draft.value ?? undefined, true)
 
 const q = useStringSearchParam('q')
 </script>
-
-<style>
-</style>
