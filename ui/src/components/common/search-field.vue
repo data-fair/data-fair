@@ -1,7 +1,7 @@
 <template>
   <form
     role="search"
-    :aria-label="t('searchLandmark')"
+    :aria-label="t('search')"
     class="search-field-form mx-2"
     @submit.prevent="q = pendingQ"
   >
@@ -37,11 +37,9 @@
 <i18n lang="yaml">
 fr:
   search: Rechercher
-  searchLandmark: Recherche
   searchSubmit: Lancer la recherche
 en:
   search: Search
-  searchLandmark: Search
   searchSubmit: Submit search
 </i18n>
 

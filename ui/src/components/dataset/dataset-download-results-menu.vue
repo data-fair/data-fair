@@ -2,7 +2,7 @@
   <v-menu
     v-model="menu"
     :close-on-content-click="false"
-    max-width="300"
+    max-width="400"
   >
     <template #activator="{ props }">
       <v-btn
