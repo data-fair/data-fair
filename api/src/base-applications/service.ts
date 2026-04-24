@@ -3,13 +3,63 @@ import mongo from '#mongo'
 import axios from '../misc/utils/axios.js'
 import jsonRefs from 'json-refs'
 import i18n from 'i18n'
-import Extractor from 'html-extractor'
+import * as parse5 from 'parse5'
 import slug from 'slugify'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { clean, prepareQuery, getFragmentFetchUrl } from './operations.ts'
 import type { BaseApp } from '#types'
 
-const htmlExtractor = new Extractor()
+// Meta field names that may appear multiple times with a lang attribute.
+// For these we pick the variant matching the requester's locale, with fallback.
+const langAwareMetaNames = ['description', 'keywords']
+
+// Extract a flat meta map from an application's index.html, respecting
+// `lang` attributes on <title> and lang-aware meta tags.
+// Selection order for lang-aware tags:
+//   1. tag with lang === locale
+//   2. tag with lang === defaultLocale
+//   3. first tag (with or without lang)
+function extractHeadMeta (html: string, locale: string, defaultLocale: string): Record<string, string> {
+  const meta: Record<string, string> = {}
+  const doc = parse5.parse(html) as any
+  const htmlNode = doc.childNodes?.find((c: any) => c.tagName === 'html')
+  const head = htmlNode?.childNodes?.find((c: any) => c.tagName === 'head')
+  if (!head) return meta
+
+  const attr = (node: any, name: string): string | undefined =>
+    node.attrs?.find((a: any) => a.name === name)?.value
+
+  const titles: { lang?: string, text: string }[] = []
+  const metasByName = new Map<string, { lang?: string, content?: string }[]>()
+
+  for (const node of head.childNodes as any[]) {
+    if (node.tagName === 'title') {
+      const text = node.childNodes?.find((c: any) => c.nodeName === '#text')?.value ?? ''
+      titles.push({ lang: attr(node, 'lang'), text })
+    } else if (node.tagName === 'meta') {
+      const name = attr(node, 'name')
+      if (!name) continue
+      if (!metasByName.has(name)) metasByName.set(name, [])
+      metasByName.get(name)!.push({ lang: attr(node, 'lang'), content: attr(node, 'content') })
+    }
+  }
+
+  const pick = <T extends { lang?: string }>(items: T[]): T | undefined =>
+    items.find(i => i.lang === locale) ??
+    items.find(i => i.lang === defaultLocale) ??
+    items[0]
+
+  const pickedTitle = pick(titles)
+  if (pickedTitle) meta.title = pickedTitle.text
+
+  for (const [name, tags] of metasByName) {
+    const picked = langAwareMetaNames.includes(name) ? pick(tags) : tags[0]
+    if (picked?.content != null) meta[name] = picked.content
+  }
+
+  return meta
+}
 
 // Fill the collection using the default base applications from config
 // and cleanup non-public apps that are not used anywhere
@@ -35,13 +85,23 @@ async function failSafeInitBaseApp (app) {
   }
 }
 
-// Attempts to init an application's description from a URL
-export async function initBaseApp (app) {
+// Attempts to init an application's description from a URL.
+// `locale` is the locale of the admin triggering the import — used to pick
+// the right variant when the app declares multiple <title>/<meta> tags with
+// a `lang` attribute. Falls back to the API's default locale when absent.
+export async function initBaseApp (app, locale?: string) {
   if (app.url[app.url.length - 1] !== '/') app.url += '/'
-  const html = (await axios.get(app.url + 'index.html')).data
-  const data: { meta: Record<string, string> } = await new Promise((resolve, reject) => htmlExtractor.extract(html, (err, data) => err ? reject(err) : resolve(data)))
+  const defaultLocale = config.i18n.defaultLocale
+  const effectiveLocale = locale || defaultLocale
+  let html: string
+  try {
+    html = (await axios.get(app.url + 'index.html')).data
+  } catch (err) {
+    throw httpError(400, i18n.__({ phrase: 'errors.noAppAtUrl', locale: effectiveLocale }, { url: app.url }))
+  }
+  const meta = extractHeadMeta(html, effectiveLocale, defaultLocale)
   const patch: Partial<BaseApp> = {
-    meta: data.meta,
+    meta,
     id: slug(app.url, { lower: true }),
     updatedAt: new Date().toISOString(),
     ...app
@@ -76,7 +136,7 @@ export async function initBaseApp (app) {
   }
 
   if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {
-    throw new Error(i18n.__({ phrase: 'errors.noAppAtUrl', locale: config.i18n.defaultLocale }, { url: app.url }))
+    throw httpError(400, i18n.__({ phrase: 'errors.noAppAtUrl', locale: effectiveLocale }, { url: app.url }))
   }
 
   patch.datasetsFilters = patch.datasetsFilters || []
