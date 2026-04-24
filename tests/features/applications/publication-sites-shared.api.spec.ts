@@ -20,7 +20,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
-      sharedWithDepartments: ['dep1']
+      contributorDepartments: ['dep1']
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -36,7 +36,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'other-portal',
       url: 'http://portal.com',
-      sharedWithDepartments: ['dep2']
+      contributorDepartments: ['dep2']
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -52,7 +52,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
-      sharedWithDepartments: ['dep1']
+      contributorDepartments: ['dep1']
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -68,7 +68,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
-      sharedWithDepartments: ['dep1']
+      contributorDepartments: ['dep1']
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -77,7 +77,7 @@ test.describe('publication sites shared with departments', () => {
 
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', {
       ...portal,
-      sharedWithDepartments: []
+      contributorDepartments: []
     })
 
     await assert.rejects(
@@ -88,35 +88,35 @@ test.describe('publication sites shared with departments', () => {
     await testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: [] })
   })
 
-  test('posting sharedWithDepartments on a dept-scoped settings doc is refused', async () => {
+  test('posting contributorDepartments on a dept-scoped settings doc is refused', async () => {
     await assert.rejects(
       testUser4Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', {
         type: 'data-fair-portals',
         id: 'some-portal',
         url: 'http://portal.com',
-        sharedWithDepartments: ['dep2']
+        contributorDepartments: ['dep2']
       }),
       (err: any) => err.status === 400
     )
   })
 
-  test('GET publication-sites decorates shared sites with sharedWithThisDepartment for matching dept users', async () => {
+  test('GET publication-sites decorates shared sites with canContributeAsDepartment for matching dept users', async () => {
     const portal = {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
-      sharedWithDepartments: ['dep1']
+      contributorDepartments: ['dep1']
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
     const dep1List = (await testUser4Org.get('/api/v1/settings/organization/test_org1:dep1/publication-sites')).data
     const shared = dep1List.find((s: any) => s.id === 'shared-portal')
     assert.ok(shared)
-    assert.equal(shared.sharedWithThisDepartment, true)
+    assert.equal(shared.canContributeAsDepartment, true)
 
     const orgList = (await testUser1Org.get('/api/v1/settings/organization/test_org1/publication-sites')).data
     const orgShared = orgList.find((s: any) => s.id === 'shared-portal')
-    assert.deepEqual(orgShared.sharedWithDepartments, ['dep1'])
-    assert.equal(orgShared.sharedWithThisDepartment, undefined)
+    assert.deepEqual(orgShared.contributorDepartments, ['dep1'])
+    assert.equal(orgShared.canContributeAsDepartment, undefined)
   })
 })

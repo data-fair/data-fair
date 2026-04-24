@@ -24,7 +24,7 @@ Publication sites are not stored in their own collection. They live as an array 
 | `datasetUrlTemplate` / `applicationUrlTemplate` | URL templates like `{url}/datasets/{id}` used to deep-link from the back-office. |
 | `private` | Deprecated hint that the portal requires authentication. |
 | `department` | When the owner is an organization, restricts the site to one department. |
-| `sharedWithDepartments` | Array of department ids whose admins may publish on this org-root site as if it were owned by their department (see §4). |
+| `contributorDepartments` | Array of department ids whose admins may publish on this org-root site as if it were owned by their department (see §4). |
 | `settings.staging` | If true, the site behaves as a pre-production target and bypasses the admin publication check (see §4). |
 | `settings.datasetsRequiredMetadata` | Metadata fields that must be filled before a dataset may be published there. |
 
@@ -76,17 +76,17 @@ Publication sites define a publish-gate that sits on top of the normal permissio
 
 The enforcement logic lives in `publication-sites.ts:applyPatch` and is applied whenever `publicationSites` or `requestedPublicationSites` change on a patch. For every **added** or **removed** entry in `publicationSites`, the rules are:
 
-1. **Department boundary** (lines 50, 74). If the session user is not in `adminMode`, the resource owner is an organization, the session account is that same organization with a department, and the publication site has *no* `department` (i.e. it is an organisation-wide site), publishing/unpublishing is refused with `403 publication site does not belong to user department` — **unless** the user's department is listed in the site's `sharedWithDepartments` array (see below). This prevents a department contributor from publishing on a cross-department site they are not explicitly invited to.
+1. **Department boundary** (lines 50, 74). If the session user is not in `adminMode`, the resource owner is an organization, the session account is that same organization with a department, and the publication site has *no* `department` (i.e. it is an organisation-wide site), publishing/unpublishing is refused with `403 publication site does not belong to user department` — **unless** the user's department is listed in the site's `contributorDepartments` array (see below). This prevents a department contributor from publishing on a cross-department site they are not explicitly invited to.
 2. **Admin gate** (lines 53, 77). Publishing or unpublishing on a site where `settings.staging !== true` requires the `writePublicationSites` admin permission on the resource. Non-admin contributors therefore can only publish freely on sites flagged as staging.
 
-### Shared with departments
+### Contributor departments
 
-An org-root publication site may carry `sharedWithDepartments: string[]`. For users whose session department is in that list, the site is treated as if it were owned by their department for the two checks above. This enables co-ownership of a portal across a subset of the organisation's departments without lowering the bar to `staging` level.
+An org-root publication site may carry `contributorDepartments: string[]`. For users whose session department is in that list, the site is treated as if it were owned by their department for the two checks above. This enables co-ownership of a portal across a subset of the organisation's departments without lowering the bar to `staging` level.
 
-- The field is editable on the portal side only (`portals` service), and is mirrored into the data-fair publication site by the existing sync — the sync overwrite is now the source of truth, `sharedWithDepartments` rides along like `title` or `url`.
-- The defensive check at POST `/settings/.../publication-sites` refuses a non-empty `sharedWithDepartments` on a dept-scoped settings document (spec Q4-era constraint: only org-root sites may share).
+- The field is editable on the portal side only (`portals` service), and is mirrored into the data-fair publication site by the existing sync — the sync overwrite is now the source of truth, `contributorDepartments` rides along like `title` or `url`.
+- The defensive check at POST `/settings/.../publication-sites` refuses a non-empty `contributorDepartments` on a dept-scoped settings document (spec Q4-era constraint: only org-root sites may share).
 - Revocation is **not** cascading and does **not** relax subsequent checks. Dept admins lose the ability to unpublish their already-published resources once their dept is removed from the list — only an org-root admin can then clean up. This is deliberate: the list is a capability grant, not a history.
-- GET `/settings/.../publication-sites` decorates each entry with a response-only `sharedWithThisDepartment: true` flag when the requesting user's department is in the list. The UI publication panels consume this flag to enable the publish switch and render a "Portail partagé" label.
+- GET `/settings/.../publication-sites` decorates each entry with a response-only `canContributeAsDepartment: true` flag when the requesting user's department is in the list. The UI publication panels consume this flag to enable the publish switch and render a "Portail contributeur" label.
 
 Requests (`requestedPublicationSites`) are **not** subject to the admin gate — they are explicitly the contributor-facing alternative. Adding a requested publication emits a `publication-requested:{site}` notification (line 87), which the site owner has been subscribed to at registration time (`settings/router.ts:401-416`). A site admin then approves by moving the reference from `requestedPublicationSites` into `publicationSites` via a new patch, which now passes the admin gate.
 
@@ -96,8 +96,8 @@ When a publication is effectively performed, `applyPatch` emits `published:{site
 
 The back-office exposes publication sites at three layers:
 
-- **Settings page** (`ui/src/components/settings/settings-publication-sites.vue`, used from `ui/src/pages/settings/index.vue`). Admins see the full editable form; non-admins see a read-only subset (driven by the `admin` flag passed to `publicationSitesContract`, see `api/contract/publication-sites.js:1`). `sharedWithDepartments` shows up here as a read-only display — it is edited on the portal side and overwritten on every sync.
-- **Per-resource publication panel** (`ui/src/components/dataset/dataset-publication-sites.vue`, `ui/src/components/application/application-publication-sites.vue`). Fetches the sites the current user may target, renders one switch per site, warns on missing required metadata, and surfaces the `datasetUrlTemplate` / `applicationUrlTemplate` deep link once published. When the backend decorates a site with `sharedWithThisDepartment`, the panel renders a "Portail partagé" subtitle and sorts the row next to the user's own dept sites.
+- **Settings page** (`ui/src/components/settings/settings-publication-sites.vue`, used from `ui/src/pages/settings/index.vue`). Admins see the full editable form; non-admins see a read-only subset (driven by the `admin` flag passed to `publicationSitesContract`, see `api/contract/publication-sites.js:1`). `contributorDepartments` shows up here as a read-only display — it is edited on the portal side and overwritten on every sync.
+- **Per-resource publication panel** (`ui/src/components/dataset/dataset-publication-sites.vue`, `ui/src/components/application/application-publication-sites.vue`). Fetches the sites the current user may target, renders one switch per site, warns on missing required metadata, and surfaces the `datasetUrlTemplate` / `applicationUrlTemplate` deep link once published. When the backend decorates a site with `canContributeAsDepartment`, the panel renders a "Portail contributeur" subtitle and sorts the row next to the user's own dept sites.
 - **Faceted search** (`ui/src/components/dataset/dataset-facets.vue` et al.). Publication sites appear as facets so users can filter listings by where a resource is exposed.
 
 ## 6. Relationship to the `portals` service
@@ -113,7 +113,8 @@ The mirroring happens in `portals/api/src/portals/service.ts`:
   - `url` / `draftUrl` come from the ingress if one is configured, otherwise from a subdomain pattern (`config.portalUrlPattern`).
   - `datasetUrlTemplate` and `applicationUrlTemplate` default to `{url}/datasets/{id|slug}` — `slug` if the portal has its own ingress, `id` otherwise.
   - `private: true` is set when the portal's config demands authentication.
-  - `sharedWithDepartments` is passed through verbatim from `portal.sharedWithDepartments` (default `[]`). This field is set from the portal admin UI and overwrites the data-fair stored value on every sync.
+  - `settings.staging` is passed through verbatim from `portal.staging` (default `false`). The portal is the source of truth for the staging flag — see below.
+  - `contributorDepartments` is passed through verbatim from `portal.contributorDepartments` (default `[]`). This field is set from the portal admin UI and overwrites the data-fair stored value on every sync.
 - `syncPortalUpdate(portal, previousPortal, reqOrigin, forceSync, cookie)` (line 223) is called from `createPortal`, `patchPortal` and `validatePortalDraft`. It diffs the computed publication site against the previous one and, if different, does a synchronous `POST` to `/data-fair/api/v1/settings/{ownerType}/{ownerId}/publication-sites` with the user's cookie as authorisation (line 233). The same function also syncs the portal to `simple-directory` (for session / site scoping) and to the ingress manager, using dedicated secret keys.
 - `deletePortal` calls `syncPortalDelete` which issues the matching `DELETE`, triggering the cascade described in §2.
 
@@ -125,9 +126,9 @@ There is no Data-Fair → portals webhook for publication events. The only inbou
 
 ### Consequences for the permissions feature
 
-Because portals push themselves through the regular settings API, everything described in §4 automatically applies to them: a portal registered against an organisation-wide owner produces an organisation-wide publication site; a portal registered against a department owner produces a department-scoped site. The staging flag is not currently set by the portals sync — it can only be toggled from the Data Fair settings UI by an admin, which is by design: the portal itself should not be able to claim that it is a pre-production target.
+Because portals push themselves through the regular settings API, everything described in §4 automatically applies to them: a portal registered against an organisation-wide owner produces an organisation-wide publication site; a portal registered against a department owner produces a department-scoped site.
 
-`sharedWithDepartments` follows the opposite convention: it is owned by the portal, not by data-fair. The portal admin sets it via a PATCH on `/portals/:id`, authorised by `assertAccountRole(session, portal.owner, 'admin')`, and refused when the portal owner itself has a department. Data-fair receives the array on every sync and overwrites the stored value — any local edit on the data-fair settings UI is transient.
+Both the `staging` flag and `contributorDepartments` are **portal-owned**: they live on the portal document, are edited on the portal side (creation wizard + portal actions menu), are authorised by `assertAccountRole(session, portal.owner, 'admin')`, and are mirrored onto the data-fair publication site on every sync. Data-fair treats the sync as authoritative for these two fields — any local edit on the data-fair settings UI is transient and will be overwritten on the next sync. The data-fair upsert at POST `/settings/.../publication-sites` merges the incoming `settings` sub-object into the existing one, so portal-owned keys (`staging`) override, while data-fair-only keys (`datasetsRequiredMetadata`) are preserved across syncs.
 
 ## 7. Quick map of the relevant files
 

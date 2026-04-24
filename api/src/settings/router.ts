@@ -375,8 +375,8 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
   for (const settings of settingsArray) {
     for (const publicationSite of settings.publicationSites || []) {
       if (isDepartmentSettings(settings)) publicationSite.department = settings.department
-      if (req.owner.department && publicationSite.sharedWithDepartments?.includes(req.owner.department)) {
-        (publicationSite as any).sharedWithThisDepartment = true
+      if (req.owner.department && publicationSite.contributorDepartments?.includes(req.owner.department)) {
+        (publicationSite as any).canContributeAsDepartment = true
       }
       publicationSites.push(publicationSite)
     }
@@ -387,8 +387,8 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
 router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
   assertSettingsRequest(req)
   debugPublicationSites('post site', req.body)
-  if (req.owner.department && req.body.sharedWithDepartments && req.body.sharedWithDepartments.length) {
-    throw httpError(400, 'sharedWithDepartments is only allowed on org-root publication sites')
+  if (req.owner.department && req.body.contributorDepartments && req.body.contributorDepartments.length) {
+    throw httpError(400, 'contributorDepartments is only allowed on org-root publication sites')
   }
   let settings = (await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0 } })) as Settings | DepartmentSettings
   if (!settings) {
@@ -421,7 +421,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
       urlTemplate: config.publicUrl + '/application/{id}'
     })
   } else {
-    settings.publicationSites[index] = { ...req.body, settings: settings.publicationSites[index].settings || {} }
+    settings.publicationSites[index] = { ...req.body, settings: { ...(settings.publicationSites[index].settings || {}), ...(req.body.settings || {}) } }
   }
   validate(settings)
   await mongo.settings.replaceOne(req.owner, settings, { upsert: true })

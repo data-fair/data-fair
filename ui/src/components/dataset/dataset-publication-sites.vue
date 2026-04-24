@@ -44,10 +44,10 @@
               <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
             </v-list-item-subtitle>
             <v-list-item-subtitle
-              v-if="(site as any).sharedWithThisDepartment"
+              v-if="(site as any).canContributeAsDepartment"
               class="mb-2"
             >
-              {{ t('sharedPortal') }}
+              {{ t('contributorPortal') }}
             </v-list-item-subtitle>
             <v-list-item-subtitle
               v-if="site.datasetUrlTemplate && isPublishedOnSite(site)"
@@ -108,7 +108,7 @@ fr:
   publishThisDataset: Publiez ce jeu de données sur un ou plusieurs de vos portails.
   published: Publié
   publicationRequested: Publication demandée par un contributeur
-  sharedPortal: Portail partagé avec votre département
+  contributorPortal: Portail ouvert aux contributions de votre département
   hasWarning: "Métadonnées manquantes : "
   warning:
     title: titre
@@ -128,7 +128,7 @@ en:
   publishThisDataset: Publish this dataset on one or more of your portals.
   published: Published
   publicationRequested: Publication requested by a contributor
-  sharedPortal: Portal shared with your department
+  contributorPortal: Portal open to contributions from your department
   hasWarning: "Missing metadata : "
   warning:
     title: title
@@ -166,8 +166,8 @@ watch(dataset, () => {
 const publicationSites = computed(() => {
   const publicationSites = [...publicationSitesFetch.data.value ?? []]
   publicationSites.sort((ps1, ps2) => {
-    const ps1Priority = !!dataset.value?.owner.department && (dataset.value.owner.department === ps1.department || (ps1 as any).sharedWithThisDepartment)
-    const ps2Priority = !!dataset.value?.owner.department && (dataset.value.owner.department === ps2.department || (ps2 as any).sharedWithThisDepartment)
+    const ps1Priority = !!dataset.value?.owner.department && (dataset.value.owner.department === ps1.department || (ps1 as any).canContributeAsDepartment)
+    const ps2Priority = !!dataset.value?.owner.department && (dataset.value.owner.department === ps2.department || (ps2 as any).canContributeAsDepartment)
     if (ps1Priority && !ps2Priority) return -1
     if (!ps1Priority && ps2Priority) return 1
     if (!dataset.value?.owner.department && !ps1.department && !!ps2.department) return -1
@@ -229,7 +229,7 @@ const canPublish = (site: PublicationSite) => {
   return warnings && warnings.length === 0 && can('writePublicationSites').value && (
     !account.value.department ||
     account.value.department === site.department ||
-    (site as any).sharedWithThisDepartment
+    (site as any).canContributeAsDepartment
   )
 }
 

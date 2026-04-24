@@ -80,7 +80,8 @@ export default (admin = false) => ({
             title: 'Pré-production',
             description: 'Si coché les contributeurs pourront publier des ressources sans solliciter les administrateurs',
             type: 'boolean',
-            default: false
+            default: false,
+            readOnly: !admin
           },
           datasetsRequiredMetadata: {
             title: 'Métadonnées requises pour les jeux de données',
@@ -91,9 +92,9 @@ export default (admin = false) => ({
           }
         }
       },
-      sharedWithDepartments: {
+      contributorDepartments: {
         type: 'array',
-        title: 'Départements partagés',
+        title: 'Départements contributeurs',
         description: 'Départements dont les administrateurs peuvent publier sur ce portail, comme s\'ils en étaient propriétaires.',
         items: { type: 'string' },
         default: [],

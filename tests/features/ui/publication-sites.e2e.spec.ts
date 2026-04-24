@@ -147,7 +147,7 @@ test.describe('dataset publication sites', () => {
       url: 'http://portal.com',
       title: 'Shared Portal',
       datasetUrlTemplate: 'http://portal.com/datasets/{id}',
-      sharedWithDepartments: ['dep1']
+      contributorDepartments: ['dep1']
     })
 
     const deptAx = await axiosAuth('test_user4@test.com', 'test_org1')
@@ -163,7 +163,7 @@ test.describe('dataset publication sites', () => {
     await page.locator('#share').scrollIntoViewIfNeeded()
     await page.getByRole('tab', { name: /Portails/i }).click()
     await expect(page.getByRole('link', { name: 'Shared Portal' })).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Portail partagé avec votre département')).toBeVisible()
+    await expect(page.getByText('Portail ouvert aux contributions de votre département')).toBeVisible()
     await expect(page.getByLabel('publié')).toBeEnabled()
     await page.getByLabel('publié').click()
 
