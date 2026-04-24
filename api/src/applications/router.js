@@ -498,11 +498,11 @@ router.put('/:applicationId/configuration', readApplication, permissions.middlew
 
 // Configuration draft management
 router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
-  // enrichment skipped: the only consumer is the config editor (vjsf), which strips fields
-  // not in the app schema. Enriching here caused phantom drafts on mount (diff between
-  // server-enriched configDraft and vjsf-normalized editConfig). Preview iframes go
-  // through proxy.js which handles its own refresh for cache-busting.
-  // await refreshConfigDatasetsRefs(req, req.application, true, true)
+  // schemaOnly: the consumer is the config editor (vjsf), which strips fields not in the
+  // app schema. Full enrichment caused phantom drafts on mount (diff between server-enriched
+  // configDraft and vjsf-normalized editConfig). We keep the refresh for schema-declared keys
+  // (e.g. dataset title) but skip extras like slug and non-schema select fields.
+  await refreshConfigDatasetsRefs(req, req.application, true, true, true)
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {

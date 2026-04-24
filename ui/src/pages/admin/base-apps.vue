@@ -276,6 +276,7 @@ const applyPatch = useAsyncAction(async (baseApp: BaseApp, patch: BaseAppPatch) 
 const urlToAdd = ref('')
 const add = useAsyncAction(async () => {
   await $fetch('base-applications', { method: 'POST', body: { url: urlToAdd.value } })
+  urlToAdd.value = ''
   baseAppsFetch.refresh()
 })
 </script>
