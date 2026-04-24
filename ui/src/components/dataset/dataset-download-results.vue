@@ -152,21 +152,21 @@ fr:
   downloadTitle: Télécharger les résultats
   alert1: Ces téléchargements tiennent compte du tri et de la recherche.
   alert2: Les formats suivants sont limités aux 10 000 premières lignes.
-  csv: Format CSV
-  xlsx: Format XLSX
-  ods: Format ODS
-  geojson: Format GeoJSON
-  shp: Format Shapefile
+  csv: Télécharger au format CSV
+  xlsx: Télécharger au format XLSX
+  ods: Télécharger au format ODS
+  geojson: Télécharger au format GeoJSON
+  shp: Télécharger au format Shapefile
   cancel: Annuler
 en:
   downloadTitle: Download results
   alert1: These downloads take into consideration the current filters and sorting.
   alert2: The next formats are limited to the 10,000 first lines.
-  csv: CSV format
-  xlsx: XLSX format
-  ods: ODS format
-  geojson: GeoJSON format
-  shp: Shapefile format
+  csv: Download as CSV
+  xlsx: Download as XLSX
+  ods: Download as ODS
+  geojson: Download as GeoJSON
+  shp: Download as Shapefile
   cancel: Cancel
 </i18n>
 
