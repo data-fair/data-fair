@@ -164,7 +164,8 @@
 
 <i18n lang="yaml">
 fr:
-  subscriptionRequired: Votre abonnement est requis. Rendez-vous sur la {subscriptionLink}.
+  dashboard: Tableau de bord
+  subscriptionRequired: Un abonnement est requis. Rendez-vous sur la {subscriptionLink}.
   subscriptionPage: page d'abonnement
   organizationSpace: Espace de l'organisation {name}
   departmentSpace: Espace de l'organisation {name} / {departmentName}
@@ -181,7 +182,8 @@ fr:
   manageDatasets: Gérez les jeux de données
   manageApplications: Gérez les applications
 en:
-  subscriptionRequired: Your subscription is required. Please visit the {subscriptionLink}.
+  dashboard: Dashboard
+  subscriptionRequired: A subscription is required. Please visit the {subscriptionLink}.
   subscriptionPage: subscription page
   organizationSpace: Space of organization {name}
   departmentSpace: Space of organization {name} / {departmentName}
@@ -202,6 +204,7 @@ en:
 <script setup lang="ts">
 import { mdiAlert } from '@mdi/js'
 import { usePermissions } from '~/composables/use-permissions'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import dataSvg from '~/assets/svg/Data Arranging_Two Color.svg?raw'
 import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
@@ -210,6 +213,9 @@ const { t } = useI18n()
 const session = useSession()
 const user = session.user
 const account = session.account
+
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('dashboard') }] })
 
 // usePermissions uses useSession() internally, so it can be called unconditionally
 const { canContribDep, canAdminDep, missingSubscription } = usePermissions()
