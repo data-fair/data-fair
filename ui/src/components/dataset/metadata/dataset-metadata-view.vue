@@ -120,7 +120,7 @@
               <div class="text-body-small text-medium-emphasis">
                 {{ t('frequency') }}
               </div>
-              <div>{{ t(`freq_${dataset.frequency}`) }}</div>
+              <div>{{ t(`frequencyItems.${dataset.frequency}`) }}</div>
             </v-list-item>
 
             <template v-if="datasetsMetadata?.custom?.length">
@@ -170,37 +170,59 @@ fr:
   summary: Résumé
   thumbnail: Vignette
   description: Description
-  creator: Producteur
+  creator: Personne ou organisme créateur
   license: Licence
   origin: Provenance
   temporal: Couverture temporelle
   spatial: Couverture spatiale
   frequency: Fréquence de mise à jour
-  freq_realtime: Temps réel
-  freq_daily: Quotidienne
-  freq_weekly: Hebdomadaire
-  freq_monthly: Mensuelle
-  freq_quarterly: Trimestrielle
-  freq_yearly: Annuelle
-  freq_irregular: Irrégulière
+  frequencyItems:
+    triennial: Tous les 3 ans
+    biennial: Tous les 2 ans
+    annual: Tous les ans
+    semiannual: 2 fois par an
+    threeTimesAYear: 3 fois par an
+    quarterly: Chaque trimestre
+    bimonthly: Tous les 2 mois
+    monthly: Tous les mois
+    semimonthly: 2 fois par mois
+    biweekly: Toutes les 2 semaines
+    threeTimesAMonth: 3 fois par mois
+    weekly: Chaque semaine
+    semiweekly: 2 fois par semaine
+    threeTimesAWeek: 3 fois par semaine
+    daily: Tous les jours
+    continuous: En continu
+    irregular: Irrégulière
 en:
   editMetadata: Edit metadata
   summary: Summary
   thumbnail: Thumbnail
   description: Description
-  creator: Producer
+  creator: Creator person or entity
   license: License
   origin: Origin
   temporal: Temporal coverage
   spatial: Spatial coverage
   frequency: Update frequency
-  freq_realtime: Real-time
-  freq_daily: Daily
-  freq_weekly: Weekly
-  freq_monthly: Monthly
-  freq_quarterly: Quarterly
-  freq_yearly: Yearly
-  freq_irregular: Irregular
+  frequencyItems:
+    triennial: Every 3 years
+    biennial: Every 2 years
+    annual: Every year
+    semiannual: Twice a year
+    threeTimesAYear: 3 times a year
+    quarterly: Every quarter
+    bimonthly: Every 2 months
+    monthly: Every month
+    semimonthly: Twice a month
+    biweekly: Every 2 weeks
+    threeTimesAMonth: 3 times a month
+    weekly: Every week
+    semiweekly: Twice a week
+    threeTimesAWeek: 3 times a week
+    daily: Every day
+    continuous: Continuous
+    irregular: Irregular
 </i18n>
 
 <script setup lang="ts">
