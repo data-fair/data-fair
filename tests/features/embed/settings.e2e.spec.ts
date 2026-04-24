@@ -8,7 +8,7 @@ test.describe('embed settings pages', () => {
 
   test('displays api-keys settings page', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/embed/settings/user/test_user1/api-keys', 'test_user1')
-    await expect(page.locator('.bg-surface')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: 'Ajouter une clé d\'API' })).toBeVisible({ timeout: 10000 })
   })
 
   test('displays settings with pre-seeded topics', async ({ page, goToWithAuth }) => {

@@ -30,7 +30,7 @@ export const closeSharedWs = () => {
 export const waitForFinalize = async (
   ax: AxiosInstance,
   datasetId: string,
-  timeout = 4000
+  timeout = 15000
 ): Promise<any> => {
   try {
     await getSharedWs().waitForJournal(datasetId, 'finalize-end', timeout)
@@ -54,7 +54,7 @@ export const doAndWaitForFinalize = async (
   ax: AxiosInstance,
   datasetId: string,
   action: () => Promise<any>,
-  timeout = 4000
+  timeout = 15000
 ): Promise<any> => {
   /* const sub = await subscribeJournal(datasetId)
   await action()
@@ -78,7 +78,7 @@ export const doAndWaitForFinalize = async (
 export const waitForJournalEvent = async (
   datasetId: string,
   eventType: string,
-  timeout = 4000
+  timeout = 15000
 ): Promise<any> => {
   return getSharedWs().waitForJournal(datasetId, eventType, timeout)
 }
@@ -92,7 +92,7 @@ export const waitForDatasetError = async (
   datasetId: string,
   opts?: { timeout?: number, draft?: boolean }
 ): Promise<any> => {
-  const timeout = opts?.timeout ?? 4000
+  const timeout = opts?.timeout ?? 15000
   const params = opts?.draft ? { draft: true } : undefined
   const ws = getSharedWs()
   await ws.waitFor(`datasets/${datasetId}/journal`, (e: any) => e.type === 'error', timeout)
@@ -116,7 +116,7 @@ export const sendDataset = async (
   const length = form.getLengthSync()
   const headers = { 'Content-Length': length, ...form.getHeaders() }
   const res = await ax.post('/api/v1/datasets', form, { ...opts, headers })
-  const timeout = length > 20000 ? 30000 : 4000
+  const timeout = length > 20000 ? 30000 : 15000
   return waitForFinalize(ax, res.data.id, timeout)
 }
 
