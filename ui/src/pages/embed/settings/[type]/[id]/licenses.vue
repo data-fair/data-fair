@@ -1,7 +1,5 @@
 <template>
-  <v-container
-    data-iframe-height
-  >
+  <v-container data-iframe-height>
     <settings-licenses
       v-if="settings"
       v-model="settings.licenses"

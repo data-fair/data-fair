@@ -1,8 +1,5 @@
 <template>
-  <v-container
-    data-iframe-height
-    class="bg-surface"
-  >
+  <v-container data-iframe-height>
     <settings-api-keys
       v-if="settings"
       v-model="settings.apiKeys"
