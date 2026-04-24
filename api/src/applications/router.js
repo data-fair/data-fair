@@ -472,7 +472,9 @@ const writeConfig = async (req, res) => {
     { id: req.params.applicationId },
     {
       $unset: {
-        errorMessage: ''
+        errorMessage: '',
+        configurationDraft: '',
+        errorMessageDraft: ''
       },
       $set: {
         configuration: appConfig,
@@ -496,7 +498,11 @@ router.put('/:applicationId/configuration', readApplication, permissions.middlew
 
 // Configuration draft management
 router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
-  await refreshConfigDatasetsRefs(req, req.application, true, true)
+  // enrichment skipped: the only consumer is the config editor (vjsf), which strips fields
+  // not in the app schema. Enriching here caused phantom drafts on mount (diff between
+  // server-enriched configDraft and vjsf-normalized editConfig). Preview iframes go
+  // through proxy.js which handles its own refresh for cache-busting.
+  // await refreshConfigDatasetsRefs(req, req.application, true, true)
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {

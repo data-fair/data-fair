@@ -106,7 +106,7 @@
               />
               <v-btn
                 v-if="editConfig"
-                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
+                :disabled="hasModification || !hasDraft || !!application?.errorMessageDraft"
                 color="accent"
                 @click="validateDraft.execute()"
               >
@@ -150,6 +150,7 @@ import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
 import { setProperty } from 'dot-prop'
+import equal from 'fast-deep-equal'
 import Debug from 'debug'
 
 const debug = Debug('application-config')
@@ -163,7 +164,7 @@ const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
 })
 
-const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfig, writeConfigDraft, cancelConfigDraft, baseAppDraft } = useApplicationStore()
+const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfig, writeConfigDraft, cancelConfigDraft, baseAppDraft, schemaFetch } = useApplicationStore()
 const { availableVersions } = useApplicationVersions()
 useApplicationWatch('draft-error')
 
@@ -188,10 +189,10 @@ const editConfig = ref<AppConfig | null>(null)
 watch(configDraft, (config) => {
   debug('update editConfig from stored draft', toRaw(editConfig.value) === toRaw(config))
   editConfig.value = config
-})
+}, { immediate: true })
 // return true if some local changes were not yet synced with the server
 const hasModification = computed(() => {
-  if (toRaw(configDraft.value) !== toRaw(editConfig.value)) return true // shallow comparison is ok as vjsf returns immutable objects
+  if (!equal(toRaw(configDraft.value), toRaw(editConfig.value))) return true
   if (application.value?.urlDraft && editUrl.value !== application.value.urlDraft) return true
   return false
 })
@@ -199,18 +200,6 @@ const hasDraft = computed(() => application.value?.status === 'configured-draft'
 
 const showForm = ref(false)
 const draftSchema = ref<any>()
-const schemaUrl = computed(() => editUrl.value && (editUrl.value + 'config-schema.json'))
-const schemaFetch = useFetch<any>(schemaUrl)
-watch(schemaFetch.data, (schema) => {
-  if (schema) {
-    if (typeof schema !== 'object') {
-      sendUiNotif({ type: 'error', msg: 'Schema fetched is not a valid JSON' })
-    } else {
-      draftSchema.value = completeSchema(clone(schema))
-      showForm.value = true
-    }
-  }
-})
 
 const completeSchema = (schema: any) => {
   debug('complete schema for vjsf')
@@ -250,6 +239,18 @@ const completeSchema = (schema: any) => {
   }
 }
 
+if (!schemaFetch.initialized.value) schemaFetch.refresh()
+watch(schemaFetch.data, (schema) => {
+  if (schema) {
+    if (typeof schema !== 'object') {
+      sendUiNotif({ type: 'error', msg: 'Schema fetched is not a valid JSON' })
+    } else {
+      draftSchema.value = completeSchema(clone(schema))
+      showForm.value = true
+    }
+  }
+}, { immediate: true })
+
 const draftPreviewInc = ref(0)
 const formValid = ref(false)
 const showFullOrg = ref(false)
@@ -278,7 +279,7 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 // TODO: editUrl is not saved yet as urlDraft ?
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
-  if (toRaw(configDraft.value) === toRaw(editConfig.value)) return
+  if (equal(toRaw(configDraft.value), toRaw(editConfig.value))) return
   const wasInError = !!application.value?.errorMessageDraft
   await writeConfigDraft(editConfig.value)
   if (baseAppDraft.value?.meta?.['df:sync-config'] === 'true') {

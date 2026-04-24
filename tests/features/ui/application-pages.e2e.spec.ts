@@ -40,4 +40,21 @@ test.describe('application detail pages', () => {
     await goToWithAuth(`/data-fair/application/${applicationId}/api-doc`, 'test_user1')
     await expect(page.locator('d-frame').first()).toBeAttached({ timeout: 10000 })
   })
+
+  test('config page loads when returning without refresh', async ({ page, goToWithAuth }) => {
+    test.skip(!applicationId, 'No base application available')
+    // Navigate to config page
+    await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_user1')
+    // Wait for d-frame to load
+    await expect(page.locator('d-frame').first()).toBeAttached({ timeout: 10000 })
+
+    // Navigate back to the main application page
+    await page.goto(`${page.url().split('/config')[0]}`)
+    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+
+    // Navigate back to config WITHOUT refresh - this is the key test
+    // The d-frame should still load properly (bug would cause form to disappear)
+    await page.goto(`/data-fair/application/${applicationId}/config`)
+    await expect(page.locator('d-frame').first()).toBeAttached({ timeout: 10000 })
+  })
 })
