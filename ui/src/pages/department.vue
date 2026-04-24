@@ -21,11 +21,15 @@
 
 <script setup lang="ts">
 import { useDFramePage } from '~/composables/layout/use-d-frame-page'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const { user, account } = useSessionAuthenticated()
 const { sendUiNotif } = useUiNotif()
 const { stateChangeAdapter, onMessage } = useDFramePage()
+
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('department') }] })
 
 const authorized = computed(() => {
   if (!user.value) return false
@@ -40,7 +44,9 @@ const authorized = computed(() => {
 
 <i18n lang="yaml">
 fr:
+  department: Gestion du département
   notAuthorized: Vous n'êtes pas autorisé à accéder à cette page.
 en:
+  department: Manage department
   notAuthorized: You are not authorized to access this page.
 </i18n>
