@@ -109,8 +109,11 @@ test.describe('settings quality tabs save/cancel', () => {
     await goToSettings(page, goToWithAuth)
     await page.locator('#quality').scrollIntoViewIfNeeded()
 
+    // Switch to the Licences tab (default tab is Métadonnées)
+    await page.getByRole('tab', { name: /Licences/i }).click()
+
     // Add a license in the Licences tab
-    await page.locator('#quality').getByRole('button', { name: /ajouter/i }).click()
+    await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
     await page.locator('#quality').getByLabel(/titre/i).first().fill('MIT License')
     await page.locator('#quality').getByLabel(/URL/i).first().fill('https://mit.edu/license')
 
@@ -135,8 +138,11 @@ test.describe('settings quality tabs save/cancel', () => {
     await goToSettings(page, goToWithAuth)
     await page.locator('#quality').scrollIntoViewIfNeeded()
 
+    // Switch to the Licences tab (default tab is Métadonnées)
+    await page.getByRole('tab', { name: /Licences/i }).click()
+
     // Add a license
-    await page.locator('#quality').getByRole('button', { name: /ajouter/i }).click()
+    await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
     await page.locator('#quality').getByLabel(/titre/i).first().fill('To Cancel')
 
     // Cancel and confirm
@@ -192,7 +198,8 @@ test.describe('settings cross-subEdit interference', () => {
 
     // Add a license and save
     await page.locator('#quality').scrollIntoViewIfNeeded()
-    await page.locator('#quality').getByRole('button', { name: /ajouter/i }).click()
+    await page.getByRole('tab', { name: /Licences/i }).click()
+    await page.locator('#quality').getByRole('button', { name: /ajouter une licence/i }).click()
     await page.locator('#quality').getByLabel(/titre/i).first().fill('Saved License')
     await page.locator('#quality').getByLabel(/URL/i).first().fill('https://example.com/license')
     await page.locator('#quality').getByRole('button', { name: /Enregistrer/i }).click()
