@@ -164,7 +164,7 @@
 
 <i18n lang="yaml">
 fr:
-  subscriptionRequired: Votre abonnement est requis. Rendez-vous sur la {subscriptionLink}.
+  subscriptionRequired: Un abonnement est requis. Rendez-vous sur la {subscriptionLink}.
   subscriptionPage: page d'abonnement
   organizationSpace: Espace de l'organisation {name}
   departmentSpace: Espace de l'organisation {name} / {departmentName}
@@ -181,7 +181,7 @@ fr:
   manageDatasets: Gérez les jeux de données
   manageApplications: Gérez les applications
 en:
-  subscriptionRequired: Your subscription is required. Please visit the {subscriptionLink}.
+  subscriptionRequired: A subscription is required. Please visit the {subscriptionLink}.
   subscriptionPage: subscription page
   organizationSpace: Space of organization {name}
   departmentSpace: Space of organization {name} / {departmentName}
