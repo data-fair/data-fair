@@ -147,7 +147,7 @@ test.describe('dataset publication sites', () => {
       url: 'http://portal.com',
       title: 'Shared Portal',
       datasetUrlTemplate: 'http://portal.com/datasets/{id}',
-      contributorDepartments: ['dep1']
+      settings: { contributorDepartments: ['dep1'] }
     })
 
     const deptAx = await axiosAuth('test_user4@test.com', 'test_org1')

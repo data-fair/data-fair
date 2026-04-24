@@ -375,7 +375,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
   for (const settings of settingsArray) {
     for (const publicationSite of settings.publicationSites || []) {
       if (isDepartmentSettings(settings)) publicationSite.department = settings.department
-      if (req.owner.department && publicationSite.contributorDepartments?.includes(req.owner.department)) {
+      if (req.owner.department && publicationSite.settings?.contributorDepartments?.includes(req.owner.department)) {
         (publicationSite as any).canContributeAsDepartment = true
       }
       publicationSites.push(publicationSite)
@@ -387,7 +387,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
 router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
   assertSettingsRequest(req)
   debugPublicationSites('post site', req.body)
-  if (req.owner.department && req.body.contributorDepartments && req.body.contributorDepartments.length) {
+  if (req.owner.department && req.body.settings?.contributorDepartments && req.body.settings.contributorDepartments.length) {
     throw httpError(400, 'contributorDepartments is only allowed on org-root publication sites')
   }
   let settings = (await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0 } })) as Settings | DepartmentSettings

@@ -20,7 +20,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
-      contributorDepartments: ['dep1']
+      settings: { contributorDepartments: ['dep1'] }
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -36,7 +36,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'other-portal',
       url: 'http://portal.com',
-      contributorDepartments: ['dep2']
+      settings: { contributorDepartments: ['dep2'] }
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -52,7 +52,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
-      contributorDepartments: ['dep1']
+      settings: { contributorDepartments: ['dep1'] }
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -68,7 +68,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
-      contributorDepartments: ['dep1']
+      settings: { contributorDepartments: ['dep1'] }
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -77,7 +77,7 @@ test.describe('publication sites shared with departments', () => {
 
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', {
       ...portal,
-      contributorDepartments: []
+      settings: { contributorDepartments: [] }
     })
 
     await assert.rejects(
@@ -94,7 +94,7 @@ test.describe('publication sites shared with departments', () => {
         type: 'data-fair-portals',
         id: 'some-portal',
         url: 'http://portal.com',
-        contributorDepartments: ['dep2']
+        settings: { contributorDepartments: ['dep2'] }
       }),
       (err: any) => err.status === 400
     )
@@ -105,7 +105,7 @@ test.describe('publication sites shared with departments', () => {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
-      contributorDepartments: ['dep1']
+      settings: { contributorDepartments: ['dep1'] }
     }
     await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
 
@@ -116,7 +116,7 @@ test.describe('publication sites shared with departments', () => {
 
     const orgList = (await testUser1Org.get('/api/v1/settings/organization/test_org1/publication-sites')).data
     const orgShared = orgList.find((s: any) => s.id === 'shared-portal')
-    assert.deepEqual(orgShared.contributorDepartments, ['dep1'])
+    assert.deepEqual(orgShared.settings.contributorDepartments, ['dep1'])
     assert.equal(orgShared.canContributeAsDepartment, undefined)
   })
 })

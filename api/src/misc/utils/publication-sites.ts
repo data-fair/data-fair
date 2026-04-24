@@ -47,7 +47,7 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
     if (!previousPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-      const isContributorDept = !!sessionState.account.department && publicationSiteInfo.contributorDepartments?.includes(sessionState.account.department)
+      const isContributorDept = !!sessionState.account.department && publicationSiteInfo.settings?.contributorDepartments?.includes(sessionState.account.department)
       if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department && !isContributorDept) {
         throw httpError(403, 'fail to publish: publication site does not belong to user department')
       }
@@ -72,7 +72,7 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
     if (!newPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-      const isContributorDept = !!sessionState.account.department && publicationSiteInfo.contributorDepartments?.includes(sessionState.account.department)
+      const isContributorDept = !!sessionState.account.department && publicationSiteInfo.settings?.contributorDepartments?.includes(sessionState.account.department)
       if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department && !isContributorDept) {
         throw httpError(403, 'fail to unpublish: publication site does not belong to user department')
       }

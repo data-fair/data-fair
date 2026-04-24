@@ -26,18 +26,18 @@ export default (admin = false) => ({
         title: 'Type de site',
         description: 'Utilisé pour séparer la gestion des sites par groupes.',
         default: 'data-fair-portals',
-        layout: admin ? 'none' : {}
+        readOnly: true
       },
       id: {
         type: 'string',
         title: 'Identifiant',
         description: 'Cet identifiant doit être unique pour la même valeur de "Type de site".',
-        layout: admin ? 'none' : {}
+        readOnly: true
       },
       department: {
         type: 'string',
         title: 'Département',
-        layout: admin ? 'none' : {}
+        readOnly: true
       },
       title: {
         type: 'string',
@@ -59,19 +59,19 @@ export default (admin = false) => ({
         title: 'Site privé (déprécié)',
         description: 'Dépend de la configuration de l\'authentification sur le portail. Si coché il sera permis de publier des ressources dont les permissions ne permettent pas l\'accès au public.',
         default: false,
-        layout: admin ? 'none' : {}
+        layout: 'none'
       },
       datasetUrlTemplate: {
         type: 'string',
         title: 'Adresse des pages de jeux de données',
         description: 'Exemple: https://mon-portail/datasets/{id}',
-        layout: admin ? 'none' : {}
+        readOnly: true
       },
       applicationUrlTemplate: {
         type: 'string',
         title: 'Adresse des pages de visualisations',
         description: 'Exemple: https://mon-portail/reuses/{id}',
-        layout: admin ? 'none' : {}
+        readOnly: true
       },
       settings: {
         type: 'object',
@@ -83,22 +83,23 @@ export default (admin = false) => ({
             default: false,
             readOnly: !admin
           },
+          contributorDepartments: {
+            type: 'array',
+            title: 'Départements contributeurs',
+            description: 'Départements dont les administrateurs peuvent publier sur ce portail, comme s\'ils en étaient propriétaires.',
+            items: { type: 'string' },
+            default: [],
+            readOnly: !admin
+          },
           datasetsRequiredMetadata: {
             title: 'Métadonnées requises pour les jeux de données',
             type: 'array',
+            layout: { getItems: 'context.DatasetsMetadata' },
             items: {
               type: 'string'
             }
           }
         }
-      },
-      contributorDepartments: {
-        type: 'array',
-        title: 'Départements contributeurs',
-        description: 'Départements dont les administrateurs peuvent publier sur ce portail, comme s\'ils en étaient propriétaires.',
-        items: { type: 'string' },
-        default: [],
-        readOnly: !admin
       }
     }
   }
