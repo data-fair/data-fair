@@ -91,14 +91,16 @@ en:
 
 <script setup lang="ts">
 import { mdiPencil, mdiPlusCircleOutline, mdiSquareEditOutline } from '@mdi/js'
+import useLocaleDayjs from '@data-fair/lib-vue/locale-dayjs.js'
 import useApplicationStore from '~/composables/application/application-store'
 
 const { application, baseAppFetch } = useApplicationStore()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const { dayjs } = useLocaleDayjs()
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString(locale.value, { dateStyle: 'medium' })
+  return dayjs(dateStr).format('lll')
 }
 </script>

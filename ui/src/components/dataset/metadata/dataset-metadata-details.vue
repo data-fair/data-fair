@@ -189,14 +189,16 @@ import {
   mdiUpload
 } from '@mdi/js'
 import formatBytes from '@data-fair/lib-vue/format/bytes'
+import useLocaleDayjs from '@data-fair/lib-vue/locale-dayjs.js'
 import useDatasetStore from '~/composables/dataset/dataset-store'
 
 const { dataset, nbVirtualDatasets } = useDatasetStore()
 
 const { t, locale } = useI18n()
+const { dayjs } = useLocaleDayjs()
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString(locale.value, { dateStyle: 'medium' })
+  return dayjs(dateStr).format('lll')
 }
 </script>
