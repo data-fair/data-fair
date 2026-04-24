@@ -33,13 +33,14 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
   })
 
-  test('main page shows metadata and structure sections with their tabs', async ({ page, goToWithAuth }) => {
+  test('main page shows informations, metadata and structure sections with their tabs', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+    // Top informations section renders the read-only dataset details
+    await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#metadata')).toBeVisible()
     await expect(page.locator('#structure')).toBeVisible()
-    // Metadata section has informations and details tabs (and attachments for finalized datasets)
+    // Metadata section has informations and attachments tabs (attachments only on finalized datasets)
     await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Détails|Details/ })).toBeVisible()
     await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes|Attachments/ })).toBeVisible()
     // Structure section has schema and extensions tabs
     await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
@@ -67,10 +68,9 @@ test.describe('dataset detail pages', () => {
 
   test('dataset home page displays record count', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
-    // Record count is in the Détails tab — click it first
-    await page.locator('#metadata').getByRole('tab', { name: /Détails|Details/ }).click()
-    await expect(page.getByText(/enregistrements|records/)).toBeVisible({ timeout: 5000 })
+    // Record count is rendered in the top-level #informations section (dataset-metadata-details)
+    await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#informations').getByText(/enregistrements|records/)).toBeVisible({ timeout: 5000 })
   })
 
   test('dataset home page shows metadata section with editable form', async ({ page, goToWithAuth }) => {

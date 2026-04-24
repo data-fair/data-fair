@@ -48,7 +48,7 @@ test.describe('permissions editor', () => {
     test('change to sharedInOrg', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.locator('#share .v-select').first().click()
-      await page.getByRole('option', { name: /tous les utilisateurs/ }).click()
+      await page.getByRole('option', { name: /tous les utilisateurs/i }).click()
       await expect.poll(async () => {
         const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
         return perms.find((p: any) => p.type === 'organization' && !p.roles && p.classes?.includes('read') && p.classes?.includes('list'))
@@ -58,7 +58,7 @@ test.describe('permissions editor', () => {
     test('change to public', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.locator('#share .v-select').first().click()
-      await page.getByRole('option', { name: /tout le monde/ }).click()
+      await page.getByRole('option', { name: /tout le monde/i }).click()
       await expect.poll(async () => {
         const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
         return perms.find((p: any) => !p.type && p.classes?.includes('read') && p.classes?.includes('list'))
@@ -68,7 +68,7 @@ test.describe('permissions editor', () => {
     test('change to privateOrg', async ({ page, goToWithAuth }) => {
       await goToPermissions(page, goToWithAuth)
       await page.locator('#share .v-select').first().click()
-      await page.getByRole('option', { name: /uniquement les administrateurs/ }).click()
+      await page.getByRole('option', { name: /uniquement les administrateurs/i }).click()
       await expect.poll(async () => {
         const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
         return perms.find((p: any) =>
@@ -84,11 +84,11 @@ test.describe('permissions editor', () => {
       ])
 
       await goToPermissions(page, goToWithAuth)
-      await expect(page.locator('#share .v-select').first()).toContainText(/tout le monde/)
+      await expect(page.locator('#share .v-select').first()).toContainText(/tout le monde/i)
 
       // Change back to privateOrg
       await page.locator('#share .v-select').first().click()
-      await page.getByRole('option', { name: /uniquement les administrateurs/ }).click()
+      await page.getByRole('option', { name: /uniquement les administrateurs/i }).click()
       await expect.poll(async () => {
         const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
         return perms.find((p: any) => !p.type && p.classes?.includes('read'))
