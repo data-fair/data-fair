@@ -82,7 +82,7 @@ test.describe('Applications', () => {
     const app = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
     assert.equal(app.category, 'autre')
     assert.equal(app.disabled.length, 1)
-    assert.equal(app.disabled[0], 'n\'utilise pas de jeu de données comme source.')
+    assert.equal(app.disabled[0], 'N\'utilise pas de jeu de données comme source.')
   })
 
   test('Get applications when not authenticated', async () => {

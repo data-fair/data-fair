@@ -12,9 +12,9 @@
 
 <i18n lang="yaml">
 fr:
-  saved: Les paramètres ont été mis à jour
+  saved: Les webhooks ont été mis à jour
 en:
-  saved: Settings have been updated
+  saved: Webhooks have been updated
 </i18n>
 
 <script setup lang="ts">

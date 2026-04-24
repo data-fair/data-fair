@@ -89,7 +89,8 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
         '- Application overview: /application/{id}\n' +
         '- Application config: /application/{id}/config\n' +
         '- Application API doc: /application/{id}/api-doc\n' +
-        '- Remote service detail: /remote-services/{id}'
+        '- Remote service detail: /remote-service/{id}\n' +
+        '- Remote service API doc: /remote-service/{id}/api-doc'
       )
 
       pagesByGroup.push(

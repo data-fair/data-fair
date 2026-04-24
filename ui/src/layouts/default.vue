@@ -19,7 +19,8 @@
       class="flex-grow-1"
       style="min-width: 0"
     >
-      <slot />
+      <layout-auth-required v-if="!user" />
+      <slot v-else />
     </div>
     <!--
       Cible du Teleport de navigation-right-local.vue
@@ -47,12 +48,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, shallowRef, computed, watchEffect, effectScope, onScopeDispose } from 'vue'
+import { ref, shallowRef, computed, watch, watchEffect, effectScope, onScopeDispose } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDisplay } from 'vuetify'
 import LayoutNavigationTop from '~/components/layout/layout-navigation-top.vue'
 import LayoutNavigationLeft from '~/components/layout/layout-navigation-left.vue'
+import LayoutAuthRequired from '~/components/layout/layout-auth-required.vue'
 import { provideBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useNavigationItems } from '~/composables/layout/use-navigation-items'
 import { useAgentNavigationTools } from '~/composables/agent/navigation-tools'
@@ -136,6 +138,12 @@ const agentChatDrawerProps = computed(() => {
 })
 
 const agentChatState = shallowRef<ReturnType<typeof useAgentChatDrawer> | null>(null)
+
+// Scroll to top on route change
+watch(() => route.path, () => {
+  document.querySelector('.v-main__scroller')?.scrollTo({ top: 0 })
+  document.getElementById('navigation-right-local')?.scrollTo({ top: 0 })
+})
 
 </script>
 

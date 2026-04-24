@@ -93,7 +93,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
       })
     }
     if (canAdminDep.value) {
-      management.push({ to: '/settings', icon: mdiCog, title: t('params'), subtitle: account.value?.department ? t('paramsSub') : undefined })
+      management.push({ to: '/settings', icon: mdiCog, title: t('params') })
     }
     if (canAdminDep.value && $uiConfig.portalsIntegration) {
       management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })
@@ -128,7 +128,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
 
     // Help group
     const help: NavItem[] = []
-    if (canContribDep.value) {
+    if (canContribDep.value && $uiConfig.openapiViewerIntegration) {
       help.push({ to: '/api-doc', icon: mdiCloud, title: t('apiDoc') })
     }
     for (const docLink of ($uiConfig.extraDocLinks ?? [])) {

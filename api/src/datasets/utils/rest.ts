@@ -650,7 +650,9 @@ const applyReqTransactions = async (req: RequestWithRestDataset, transacs: Datas
   return applyTransactions(req.dataset, reqSessionAuthenticated(req), transacs, validate, req.linesOwner, tmpDataset)
 }
 
-type Summary = RestActionsSummary & { _ids: Set<string> }
+// _ids tracks operation ids so that small bulks can be indexed in the same HTTP request (commitLines).
+// When the bulk overflows maxBulkLines we drop the set entirely to signal the worker path must be used.
+type Summary = RestActionsSummary & { _ids?: Set<string> }
 
 const initSummary = (): Summary => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbWarnings: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [], warnings: [], _ids: new Set() })
 
@@ -677,8 +679,12 @@ class TransactionStream extends Writable {
   async applyTransactions () {
     const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.sessionState, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset)
 
-    if (operations.length + this.options.summary._ids.size < config.elasticsearch.maxBulkLines) {
-      for (const op of operations) this.options.summary._ids.add(op._id)
+    if (this.options.summary._ids) {
+      if (operations.length + this.options.summary._ids.size < config.elasticsearch.maxBulkLines) {
+        for (const op of operations) this.options.summary._ids.add(op._id)
+      } else {
+        this.options.summary._ids = undefined
+      }
     }
 
     this.transactions = []
@@ -1027,7 +1033,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
           await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
-        if (!attachmentsFile && req.query.async !== 'true' && !isNaN(contentLength) && contentLength <= config.elasticsearch.maxBulkChars && summary._ids.size <= config.elasticsearch.maxBulkLines) {
+        if (!attachmentsFile && req.query.async !== 'true' && summary._ids && !isNaN(contentLength) && contentLength <= config.elasticsearch.maxBulkChars) {
           await commitLines(req.dataset, [...summary._ids])
           summary.indexedAt = new Date().toISOString()
         } else {

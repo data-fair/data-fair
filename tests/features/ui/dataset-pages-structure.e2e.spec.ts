@@ -70,10 +70,9 @@ test.describe('dataset page restructuring', () => {
     await expect(actionsList.getByText('Webhooks')).not.toBeVisible()
   })
 
-  test('metadata section has details tab', async ({ page, goToWithAuth }) => {
+  test('page has dataset details section', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Détails|Details/ })).toBeVisible()
+    await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
   })
 
   test('/table route loads table view', async ({ page, goToWithAuth }) => {

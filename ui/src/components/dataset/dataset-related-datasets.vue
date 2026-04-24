@@ -1,3 +1,4 @@
+<!--- Keep it as backup (not used for the moment) -->
 <template>
   <v-row>
     <v-col>

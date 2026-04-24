@@ -1,14 +1,14 @@
 <template>
   <v-container
     v-if="application"
+    class="pa-0"
     fluid
   >
-    <v-row :class="display.lgAndDown.value ? 'ma-0' : ''">
+    <v-row>
       <v-col
         cols="6"
         md="7"
         lg="8"
-        class="pa-0"
       >
         <v-alert
           v-if="!!application.errorMessageDraft"
@@ -21,9 +21,8 @@
         <d-frame
           v-else
           ref="frame"
+          :height="`${windowHeight - 48}px`"
           resize="no"
-          aspect-ratio
-          scrolling="auto"
           :src="`${applicationLink}?d-frame=true&draft=true&primary=${theme.current.value.colors.primary}`"
           :reload="draftPreviewInc"
         />
@@ -33,120 +32,89 @@
         cols="6"
         md="5"
         lg="4"
-        class="pa-0"
       >
-        <v-form
-          v-if="draftSchema"
-          v-model="formValid"
-        >
-          <template v-if="configDraftFetch.error.value">
-            <v-alert
-              type="error"
-              variant="outlined"
-              class="ma-2"
-            >
-              {{ configDraftFetch.error.value }}
-            </v-alert>
-          </template>
-          <v-sheet
-            v-else-if="editConfig"
-            class="pa-4"
-            color="rgb(0,0,0,0)"
-            style="overflow-y: auto; overflow-x:hidden;"
-            :max-height="windowHeight - 60"
+        <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+          <v-form
+            v-if="draftSchema"
+            v-model="formValid"
           >
-            <v-select
-              v-if="availableVersions"
-              :model-value="editUrl"
-              :disabled="!canWriteConfig"
-              :loading="!availableVersions"
-              :items="availableVersions"
-              :item-title="(baseApp => `${baseApp.title} (${baseApp.version})`)"
-              item-value="url"
-              :label="t('changeVersion')"
-              @update:model-value="patch({urlDraft: $event})"
-            />
-
-            <v-checkbox
-              v-if="application.owner?.department"
-              v-model="showFullOrg"
-              :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
-            />
-            <div
-              v-if="canWriteConfig"
-              class="d-flex justify-end mb-1"
-            >
-              <df-agent-chat-action
-                action-id="configure-application"
-                :visible-prompt="t('configurePrompt')"
-                :hidden-context="configureContext"
-                :title="t('configurePrompt')"
+            <template v-if="configDraftFetch.error.value">
+              <v-alert
+                :text="configDraftFetch.error.value"
+                type="error"
+                class="ma-2"
+                variant="outlined"
               />
-            </div>
-            <vjsf
-              v-if="vjsfOptions"
-              v-model="editConfig"
-              :schema="draftSchema"
-              :options="vjsfOptions"
-              :data-title="t('appConfig')"
-              prefix-name="appConfig_"
-              :sub-agent="true"
-              @update:model-value="saveDraft()"
-            />
-          </v-sheet>
-
-          <v-row class="mt-3 ml-0 mr-3">
-            <v-spacer />
-            <v-dialog max-width="500">
-              <template #activator="{ props }">
-                <v-btn
-                  :disabled="!hasDraft"
-                  color="warning"
-                  variant="flat"
-                  v-bind="props"
-                >
-                  {{ t('cancel') }}
-                </v-btn>
-              </template>
-              <template #default="{ isActive }">
-                <v-card :title="t('removeDraft')">
-                  <v-card-text>
-                    <v-alert
-                      :title="t('removeDraftWarning')"
-                      type="warning"
-                    />
-                  </v-card-text>
-                  <v-card-actions>
-                    <v-spacer />
-                    <v-btn
-                      @click="isActive.value = false"
-                    >
-                      {{ t('cancel') }}
-                    </v-btn>
-                    <v-btn
-                      variant="flat"
-                      color="warning"
-                      @click="cancelDraft.execute(); isActive.value = false;"
-                    >
-                      {{ t('confirm') }}
-                    </v-btn>
-                  </v-card-actions>
-                </v-card>
-              </template>
-            </v-dialog>
-
-            <v-btn
-              v-if="editConfig"
-              :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
-              color="accent"
-              class="ml-2"
-              @click="validateDraft.execute()"
+            </template>
+            <v-sheet
+              v-else-if="editConfig"
+              class="pa-4"
+              color="rgb(0,0,0,0)"
+              style="overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable;"
+              :max-height="windowHeight - 110"
             >
-              {{ t('validate') }}
-            </v-btn>
-            <v-spacer />
-          </v-row>
-        </v-form>
+              <v-select
+                v-if="availableVersions"
+                :model-value="editUrl"
+                :disabled="!canWriteConfig"
+                :loading="!availableVersions"
+                :label="t('changeVersion')"
+                :items="availableVersions"
+                :item-title="(baseApp => `${baseApp.title} (${baseApp.version})`)"
+                item-value="url"
+                class="mb-2"
+                @update:model-value="patch({urlDraft: $event})"
+              />
+
+              <v-checkbox
+                v-if="application.owner?.department"
+                v-model="showFullOrg"
+                :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
+              />
+              <div
+                v-if="canWriteConfig"
+                class="d-flex justify-end mb-1"
+              >
+                <df-agent-chat-action
+                  action-id="configure-application"
+                  :visible-prompt="t('configurePrompt')"
+                  :hidden-context="configureContext"
+                  :title="t('configurePrompt')"
+                />
+              </div>
+              <vjsf
+                v-if="vjsfOptions"
+                v-model="editConfig"
+                :schema="draftSchema"
+                :options="vjsfOptions"
+                :data-title="t('appConfig')"
+                prefix-name="appConfig_"
+                :sub-agent="true"
+                @update:model-value="saveDraft()"
+              />
+            </v-sheet>
+
+            <div class="d-flex justify-center mt-3 ga-2">
+              <confirm-menu
+                :label="t('cancel')"
+                :title="t('removeDraft')"
+                :text="t('removeDraftWarning')"
+                alert="warning"
+                yes-color="warning"
+                :btn-props="{ color: 'warning', variant: 'flat', disabled: !hasDraft }"
+                @confirm="cancelDraft.execute()"
+              />
+              <v-btn
+                v-if="editConfig"
+                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
+                color="accent"
+                @click="validateDraft.execute()"
+              >
+                {{ t('validate') }}
+              </v-btn>
+            </div>
+          </v-form>
+        </v-defaults-provider>
       </v-col>
     </v-row>
   </v-container>
@@ -157,7 +125,6 @@ fr:
   changeVersion: Changer de version
   validate: Valider
   cancel: Annuler
-  confirm: Confirmer
   removeDraft: Effacer le brouillon
   removeDraftWarning: Attention ! Le brouillon sera perdu et l'application reviendra à son état validé précédent.
   appConfig: Configuration d'application
@@ -166,7 +133,6 @@ en:
   changeVersion: Change version
   validate: Validate
   cancel: Cancel
-  confirm: Confirm
   removeDraft: Remove draft
   removeDraftWarning: Warning ! The draft will be lost and the application will get back to its previously validated state.
   appConfig: Application configuration
@@ -175,7 +141,7 @@ en:
 
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
-import { useDisplay, useTheme } from 'vuetify'
+import { useTheme } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { type Options as VjsfOptions } from '@koumoul/vjsf'
@@ -188,7 +154,6 @@ import Debug from 'debug'
 
 const debug = Debug('application-config')
 
-const display = useDisplay()
 const theme = useTheme()
 const { sendUiNotif } = useUiNotif()
 const { t } = useI18n()

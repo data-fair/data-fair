@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
   <v-card
-    :to="`/remote-services/${encodeURIComponent(remoteService.id ?? '')}`"
+    :to="`/remote-service/${encodeURIComponent(remoteService.id ?? '')}`"
     class="h-100 d-flex flex-column"
   >
     <v-card-item class="text-primary">

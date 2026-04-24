@@ -11,19 +11,18 @@
       <v-btn
         :key="element.key"
         class="px-2"
-        size="small"
+        density="compact"
         variant="flat"
-        :class="{ 'font-weight-bold': !!element['x-refersTo'] }"
+        :class="{ 'font-weight-bold': !!element['x-refersTo'], 'font-weight-regular': !element['x-refersTo'], 'font-italic': !!element['x-extension'] }"
         :color="columnColor(element)"
         :ripple="!sortable"
         @click="switchColumn(element.key)"
       >
         <v-icon
+          :icon="propTypeIcon(element)"
           size="small"
           start
-        >
-          {{ propTypeIcon(element) }}
-        </v-icon>
+        />
         {{ element.title || element['x-originalName'] || element.key }}
       </v-btn>
     </template>

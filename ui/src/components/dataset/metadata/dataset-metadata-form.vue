@@ -77,44 +77,12 @@
           :disabled="!can('writeDescription')"
           :base-color="fieldColor('license')"
           :color="fieldColor('license')"
-          :label="t('licence')"
+          :label="t('license')"
           item-title="title"
           item-value="href"
           class="mb-4"
           return-object
           clearable
-        />
-
-        <v-select
-          v-if="topicsFetch.data.value?.length"
-          v-model="dataset.topics"
-          :items="topicsFetch.data.value ?? []"
-          :disabled="!can('writeDescription')"
-          :label="t('topics')"
-          :base-color="fieldColor('topics')"
-          :color="fieldColor('topics')"
-          item-title="title"
-          item-value="id"
-          class="mb-4"
-          chips
-          multiple
-          return-object
-          closable-chips
-        />
-
-        <v-combobox
-          v-model="dataset.keywords"
-          :items="keywordsSuggestions"
-          :disabled="!can('writeDescription')"
-          :label="t('keywords')"
-          :base-color="fieldColor('keywords')"
-          :color="fieldColor('keywords')"
-          :loading="loadingKeywords"
-          class="mb-4"
-          chips
-          multiple
-          closable-chips
-          @update:search="fetchKeywordsFacets"
         />
 
         <v-text-field
@@ -137,7 +105,40 @@
           clearable
         />
 
+        <v-select
+          v-if="topicsFetch.data.value?.length"
+          v-model="dataset.topics"
+          :items="topicsFetch.data.value ?? []"
+          :disabled="!can('writeDescription')"
+          :label="t('topics')"
+          :base-color="fieldColor('topics')"
+          :color="fieldColor('topics')"
+          item-title="title"
+          item-value="id"
+          class="mb-4"
+          chips
+          multiple
+          return-object
+          closable-chips
+        />
+
         <!-- Conditional metadata fields based on owner settings -->
+        <v-combobox
+          v-if="datasetsMetadata?.keywords?.active"
+          v-model="dataset.keywords"
+          :items="keywordsSuggestions"
+          :disabled="!can('writeDescription')"
+          :label="t('keywords')"
+          :base-color="fieldColor('keywords')"
+          :color="fieldColor('keywords')"
+          :loading="loadingKeywords"
+          class="mb-4"
+          chips
+          multiple
+          closable-chips
+          @update:search="fetchKeywordsFacets"
+        />
+
         <v-text-field
           v-if="datasetsMetadata?.creator?.active"
           v-model="dataset.creator"
@@ -162,15 +163,18 @@
           clearable
         />
 
-        <v-text-field
+        <v-combobox
           v-if="datasetsMetadata?.spatial?.active"
           v-model="dataset.spatial"
+          :items="spatialSuggestions"
           :disabled="!can('writeDescription')"
           :label="datasetsMetadata.spatial.title || t('spatial')"
           :base-color="fieldColor('spatial')"
           :color="fieldColor('spatial')"
+          :loading="loadingSpatial"
           class="mb-4"
           clearable
+          @update:search="fetchSpatialFacets"
         />
 
         <v-date-input
@@ -265,21 +269,32 @@ fr:
   summarizePrompt: Aide-moi à rédiger un résumé pour ce jeu de données
   description: Description
   describePrompt: Aide-moi à rédiger une description pour ce jeu de données
-  licence: Licence
+  license: Licence
   topics: Thématiques
   origin: Provenance
   image: Adresse d'une image utilisée comme vignette
   keywords: Mots clés
   projection: Système de coordonnées
-  creator: Producteur
+  creator: Personne ou organisme créateur
   frequency: Fréquence de mise à jour
-  freq_realtime: Temps réel
-  freq_daily: Quotidienne
-  freq_weekly: Hebdomadaire
-  freq_monthly: Mensuelle
-  freq_quarterly: Trimestrielle
-  freq_yearly: Annuelle
-  freq_irregular: Irrégulière
+  frequencyItems:
+    triennial: Tous les 3 ans
+    biennial: Tous les 2 ans
+    annual: Tous les ans
+    semiannual: 2 fois par an
+    threeTimesAYear: 3 fois par an
+    quarterly: Chaque trimestre
+    bimonthly: Tous les 2 mois
+    monthly: Tous les mois
+    semimonthly: 2 fois par mois
+    biweekly: Toutes les 2 semaines
+    threeTimesAMonth: 3 fois par mois
+    weekly: Chaque semaine
+    semiweekly: 2 fois par semaine
+    threeTimesAWeek: 3 fois par semaine
+    daily: Tous les jours
+    continuous: En continu
+    irregular: Irrégulière
   spatial: Couverture spatiale
   temporal: Couverture temporelle
   modified: Date de modification de la source
@@ -292,21 +307,32 @@ en:
   summarizePrompt: Help me write a summary for this dataset
   description: Description
   describePrompt: Help me write a description for this dataset
-  licence: License
+  license: License
   topics: Topics
   origin: Origin
   image: URL of an image used as thumbnail
   keywords: Keywords
   projection: Coordinate reference system
-  creator: Producer
+  creator: Creator person or entity
   frequency: Update frequency
-  freq_realtime: Real-time
-  freq_daily: Daily
-  freq_weekly: Weekly
-  freq_monthly: Monthly
-  freq_quarterly: Quarterly
-  freq_yearly: Yearly
-  freq_irregular: Irregular
+  frequencyItems:
+    triennial: Every 3 years
+    biennial: Every 2 years
+    annual: Every year
+    semiannual: Twice a year
+    threeTimesAYear: 3 times a year
+    quarterly: Every quarter
+    bimonthly: Every 2 months
+    monthly: Every month
+    semimonthly: Twice a month
+    biweekly: Every 2 weeks
+    threeTimesAMonth: 3 times a month
+    weekly: Every week
+    semiweekly: Twice a week
+    threeTimesAWeek: 3 times a week
+    daily: Every day
+    continuous: Continuous
+    irregular: Irregular
   spatial: Spatial coverage
   temporal: Temporal coverage
   modified: Source modification date
@@ -355,9 +381,14 @@ const isCustomModified = (key: string): boolean => {
 }
 
 // --- Frequencies ---
-
-const frequencyKeys = ['realtime', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'irregular'] as const
-const frequencies = computed(() => frequencyKeys.map(k => ({ title: t(`freq_${k}`), value: k })))
+// https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
+// Order matches the backend enum in api/types/dataset/schema.js, reversed so the most frequent options appear first.
+const frequencyKeys = [
+  'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly',
+  'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly',
+  'semiweekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular'
+] as const
+const frequencies = computed(() => [...frequencyKeys].reverse().map(k => ({ title: t(`frequencyItems.${k}`), value: k })))
 
 // --- Temporal coverage (VDateInput multiple="range") ---
 
@@ -411,6 +442,27 @@ const fetchKeywordsFacets = async (search: string) => {
     console.error('Failed to fetch keywords facets', e)
   }
   loadingKeywords.value = false
+}
+
+// --- Spatial facets (suggestions from other datasets) ---
+
+const spatialSuggestions = ref<string[]>([])
+const loadingSpatial = ref(false)
+let spatialFetched = false
+
+const fetchSpatialFacets = async (search: string) => {
+  if (spatialFetched || !search || !dataset.value?.owner) return
+  loadingSpatial.value = true
+  try {
+    const response = await $fetch<any>(`${$apiPath}/datasets`, {
+      query: { size: 0, facets: 'spatial', owner: `${dataset.value.owner.type}:${dataset.value.owner.id}` }
+    })
+    spatialSuggestions.value = (response?.facets?.spatial ?? []).map((f: any) => f.value)
+    spatialFetched = true
+  } catch (e) {
+    console.error('Failed to fetch spatial facets', e)
+  }
+  loadingSpatial.value = false
 }
 
 // --- Related datasets autocomplete (search-as-you-type) ---

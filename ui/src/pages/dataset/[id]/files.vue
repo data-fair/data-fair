@@ -20,17 +20,16 @@ en:
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
 import { useLayout } from 'vuetify'
-import { provideDatasetStore } from '~/composables/dataset/dataset-store'
+import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
-const route = useRoute<'/dataset/[id]/files'>()
 const { height: windowHeight } = useWindowSize()
 const { mainRect } = useLayout()
 const breadcrumbs = useBreadcrumbs()
 
-const store = provideDatasetStore(route.params.id, true, true)
+const store = useDatasetStore()
 const { dataset } = store
 
 useDatasetWatch(store, ['info'])

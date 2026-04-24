@@ -127,25 +127,25 @@ const messages = computed(() => {
 
 <i18n lang="yaml">
 fr:
-  additionalFields: contient des colonnes non représentées dans le jeu virtuel ({fields})
-  missingFields: ne contient pas certaines colonnes du jeu virtuel ({fields})
+  additionalFields: Contient des colonnes non représentées dans le jeu virtuel ({fields})
+  missingFields: Ne contient pas certaines colonnes du jeu virtuel ({fields})
   typeMismatch: "le type \"{childType}\" de la colonne {field} ne correspond pas au type dans le jeu virtuel \"{parentType}\""
   statusError: le jeu de données est en erreur
-  none: aucun
+  none: Aucun
   conceptMismatch: "le concept \"{childConcept}\" de la colonne \"{field}\" ne correspond pas au concept dans le jeu virtuel \"{parentConcept}\""
   disabledConfig: "la configuration technique \"{param}\" de la colonne \"{field}\" est désactivée mais active dans le jeu virtuel"
   unusedConfig: "la configuration technique \"{param}\" de la colonne \"{field}\" est activée mais inactive dans le jeu virtuel"
-  warning: avertissement
-  error: erreur
+  warning: Avertissement
+  error: Erreur
 en:
-  additionalFields: contains columns absent in the virtual dataset ({fields})
-  missingFields: does not contain some columns of the virtual dataset ({fields})
+  additionalFields: Contains columns absent in the virtual dataset ({fields})
+  missingFields: Does not contain some columns of the virtual dataset ({fields})
   typeMismatch: "the type \"{childType}\" of the column {field} does not match the type in the virtual dataset \"{parentType}\""
   statusError: the dataset is in error state
-  none: none
+  none: None
   conceptMismatch: "the concept \"{childConcept}\" of the column \"{field}\" does not match the concept in the virtual dataset \"{parentConcept}\""
   disabledConfig: "technical configuration \"{param}\" of the column \"{field}\" is disabled but active in the virtual dataset"
   unusedConfig: "technical configuration \"{param}\" of the column \"{field}\" is active but disabled in the virtual dataset"
-  warning: warning
-  error: error
+  warning: Warning
+  error: Error
 </i18n>

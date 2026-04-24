@@ -251,17 +251,15 @@ export default {
       },
       layout: {
         title: '',
+        listEditMode: 'inline',
         messages: {
           addItem: 'Add a topic',
           'x-i18n-addItem': {
             fr: 'Ajouter une thématique'
           }
-        },
-        itemTitle: 'item.title'
+        }
       },
-      items: {
-        $ref: 'https://github.com/data-fair/data-fair/topic'
-      }
+      items: { $ref: 'https://github.com/data-fair/data-fair/topic' }
     },
     publicationSites,
     operationsPermissions: {
@@ -330,7 +328,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Couverture géographique',
+              title: 'Couverture spatiale',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
@@ -341,7 +339,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Couverture géographique' }
+                props: { variant: 'outlined', placeholder: 'Couverture spatiale' }
               }
             }
           }
@@ -372,7 +370,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Fréquence des mises à jour',
+              title: 'Fréquence de mise à jour',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
@@ -383,7 +381,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Fréquence des mises à jour' }
+                props: { variant: 'outlined', placeholder: 'Fréquence de mise à jour' }
               }
             }
           }
@@ -412,7 +410,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Date de dernière modification de la source',
+              title: 'Date de modification de la source',
               type: 'boolean',
               default: false,
               layout: { cols: 6 }
@@ -423,7 +421,7 @@ export default {
               layout: {
                 if: 'parent.data.active',
                 cols: 6,
-                props: { variant: 'outlined', placeholder: 'Date de dernière modification de la source' }
+                props: { variant: 'outlined', placeholder: 'Date de modification de la source' }
               }
             }
           }

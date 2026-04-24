@@ -2,7 +2,6 @@ import config from '#config'
 import mongo from '#mongo'
 import moment from 'moment'
 import axios from '../misc/utils/axios.js'
-import fs from 'fs-extra'
 import * as clamav from '../misc/utils/clamav.ts'
 import filesStorage from '#files-storage'
 import debugModule from 'debug'
@@ -41,16 +40,6 @@ async function jwksStatus (req: any) {
   debug('jwksStatus ok')
 }
 
-async function nuxtStatus (req: any) {
-  debug('nuxtStatus ?')
-  if (process.env.NODE_ENV === 'development') return
-  const nuxtConfig = (await import('@data-fair/data-fair-ui/nuxt.config.js')).default
-  const dir = nuxtConfig.buildDir || '.nuxt'
-  await fs.writeFile(`${dir}/check-access.txt`, 'ok')
-  if (req.app.get('nuxt')) await req.app.get('nuxt').renderRoute('/')
-  debug('nuxtStatus ok')
-}
-
 async function dataDirStatus (req: any) {
   debug('dataDirStatus ?')
   await filesStorage.checkAccess()
@@ -74,9 +63,6 @@ export async function getStatus (req: any) {
     singleStatus(req, jwksStatus, 'auth-directory'),
     singleStatus(req, dataDirStatus, 'data-dir')
   ]
-  if (!config.proxyNuxt) {
-    promises.push(singleStatus(req, nuxtStatus, 'nuxt'))
-  }
   if (config.clamav.active) {
     promises.push(singleStatus(req, clamav.ping, 'clamav'))
   }

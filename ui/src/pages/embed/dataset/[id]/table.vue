@@ -41,6 +41,3 @@ const interaction = useBooleanSearchParam('interaction', true)
 const selectable = useBooleanSearchParam('selectable', false)
 const selectedItem = useStringSearchParam('_id_eq')
 </script>
-
-<style>
-</style>

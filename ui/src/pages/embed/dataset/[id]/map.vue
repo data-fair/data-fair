@@ -1,7 +1,8 @@
 <template>
   <v-container
-    class="pa-0"
     :style="`height: ${windowHeight}px`"
+    class="pa-0"
+    fluid
   >
     <dataset-map
       v-model:q="q"
@@ -34,6 +35,3 @@ const selectable = useBooleanSearchParam('selectable', false)
 const selectedItem = useStringSearchParam('_id_eq')
 const cols = useStringsArraySearchParam('cols')
 </script>
-
-<style>
-</style>

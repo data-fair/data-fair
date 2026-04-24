@@ -105,11 +105,13 @@
         </div>
         <div
           v-if="column['x-cardinality']"
-          class="mb-1"
+          class="mb-1 d-flex align-center"
         >
           <span class="text-medium-emphasis">{{ t('distinctValues') }}:</span>
           {{ column['x-cardinality'].toLocaleString() }}
-          <help-tooltip>{{ t('distinctValuesHelp') }}</help-tooltip>
+          <help-tooltip small>
+            {{ t('distinctValuesHelp') }}
+          </help-tooltip>
         </div>
         <div
           v-if="column.enum"
@@ -130,15 +132,15 @@
         clearable
         hide-details
         class="mb-3"
-        item-title="text"
         item-value="value"
+        :menu-props="{ maxWidth: 500 }"
         :custom-filter="conceptFilter"
         @update:model-value="col => { if (col !== undefined && column) column['x-refersTo'] = col; else if (column) delete column['x-refersTo'] }"
       >
         <template #item="{ internalItem, props: itemProps }">
           <v-list-item v-bind="itemProps">
-            <v-list-item-subtitle v-if="(internalItem.raw as any).description">
-              {{ (internalItem.raw as any).description }}
+            <v-list-item-subtitle v-if="(internalItem.raw as VocabItem).description">
+              {{ (internalItem.raw as VocabItem).description }}
             </v-list-item-subtitle>
           </v-list-item>
         </template>
@@ -204,6 +206,7 @@ fr:
   markdown: texte formaté
   deleteColumnTitle: Supprimer la colonne
   deleteColumnText: Souhaitez-vous supprimer cette colonne ? Attention, la donnée sera effacée et définitivement perdue !
+  privateVocabulary: Vocabulaire privé
 en:
   noColumnSelected: Click on a column title to display its detailed information.
   sourceKey: Source key
@@ -226,6 +229,7 @@ en:
   markdown: formatted text
   deleteColumnTitle: Delete the column
   deleteColumnText: Do you want to delete this column? Warning, data will be permanently erased!
+  privateVocabulary: Private vocabulary
 </i18n>
 
 <script setup lang="ts">
@@ -256,40 +260,67 @@ const currentFileColumn = computed(() => {
   return dataset.value.file.schema.find((c: any) => c.key === col.key)
 })
 
+type VocabSubheader = { type: 'subheader', title: string }
+type VocabItem = { title: string, value: string, description: string, termType: string, format?: string }
+
 const vocabularyItems = computed(() => {
   const vocabArray = vocabularyArray.data.value ?? []
-  const items: Array<{ text: string, value: string, description: string, type: string, format?: string, header?: boolean }> = []
-  let lastTag = ''
-  for (const term of vocabArray) {
-    if (term.tag !== lastTag) {
-      items.push({ text: term.tag, value: term.tag, description: '', type: '', header: true })
-      lastTag = term.tag
-    }
-    for (const id of term.identifiers) {
-      items.push({
-        text: term.title,
-        value: id,
-        description: term.description,
-        type: term.type,
-        format: term.format
-      })
-    }
+  const items: Array<VocabSubheader | VocabItem> = []
+
+  const makeItem = (term: any): VocabItem => ({
+    title: term.title,
+    value: term.identifiers[0],
+    description: term.description,
+    termType: term.type,
+    format: term.format
+  })
+
+  const privateTerms = vocabArray.filter((t: any) => t.private)
+  const publicTerms = vocabArray.filter((t: any) => !t.private)
+
+  // Private terms first
+  const privateUntagged = privateTerms.filter((t: any) => !t.tag)
+  const privateTags = [...new Set(privateTerms.filter((t: any) => t.tag).map((t: any) => t.tag as string))]
+  if (privateUntagged.length) {
+    items.push({ type: 'subheader', title: t('privateVocabulary') })
+    privateUntagged.forEach((term: any) => items.push(makeItem(term)))
   }
+  privateTags.forEach(tag => {
+    items.push({ type: 'subheader', title: tag })
+    privateTerms.filter((t: any) => t.tag === tag).forEach((term: any) => items.push(makeItem(term)))
+  })
+
+  // Public terms: untagged first (no subheader, legacy behavior), then by tag
+  publicTerms.filter((t: any) => !t.tag).forEach((term: any) => items.push(makeItem(term)))
+  const publicTags = [...new Set(publicTerms.filter((t: any) => t.tag).map((t: any) => t.tag as string))]
+  publicTags.forEach(tag => {
+    items.push({ type: 'subheader', title: tag })
+    publicTerms.filter((t: any) => t.tag === tag).forEach((term: any) => items.push(makeItem(term)))
+  })
+
   return items
 })
 
 const filteredVocabularyItems = computed(() => {
   if (!props.column) return []
   const col = props.column
-  return vocabularyItems.value.filter(item => {
-    if (item.header) return true
+
+  const filtered = vocabularyItems.value.filter(item => {
+    if (!('value' in item)) return true // subheaders are kept in first pass
     // exclude concepts already used by other columns
     if (props.allColumns.find(c => c['x-refersTo'] === item.value && c.key !== col.key)) return false
     // accept different type if the concept's type is String
-    if (col.type === 'integer' && item.type === 'number') return true
-    if (col.type !== item.type && item.type !== 'string') return false
+    if (col.type === 'integer' && item.termType === 'number') return true
+    if (col.type !== item.termType && item.termType !== 'string') return false
     if (item.format === 'date-time' && col.format !== 'date-time' && col.format !== 'date') return false
     return true
+  })
+
+  // Remove subheaders that have no items following them
+  return filtered.filter((item, i) => {
+    if ('value' in item) return true
+    const next = filtered[i + 1]
+    return next !== undefined && !('type' in next && next.type === 'subheader')
   })
 })
 
@@ -329,8 +360,9 @@ const displayFormat = computed({
 })
 
 function conceptFilter (_itemText: string, queryText: string, item: any) {
+  if (item.raw.type === 'subheader') return true
   const search = queryText.toLowerCase()
-  const title = (item.raw.text ?? '').toLowerCase()
+  const title = (item.raw.title ?? '').toLowerCase()
   const description = (item.raw.description ?? '').toLowerCase()
   return title.includes(search) || description.includes(search)
 }

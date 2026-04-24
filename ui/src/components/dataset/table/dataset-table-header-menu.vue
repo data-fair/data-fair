@@ -649,22 +649,20 @@ fr:
   sortAsc: Tri ascendant
   sortDesc: Tri descendant
   addFilter: Ajouter un filtre
-  filter: "Filtrer :"
   applyFilter: Appliquer le filtre
-  info: "Informations :"
   fixLeft: "Fixer la colonne à gauche"
   showHelp: "Description"
-  searchFilter: recherche texte libre
-  eqFilter: égal à une valeur
-  neqFilter: différent d'une valeur
-  inFilter: parmi des valeurs
-  ninFilter: à l'exclusion des valeurs
-  gteFilter: supérieur ou égal à
-  lteFilter: inférieur ou égal à
-  existsFilter: est défini
-  nexistsFilter: n'est pas défini
-  startsFilter: commence par les caractères
-  containsFilter: contient les caractères
+  searchFilter: Recherche texte libre
+  eqFilter: Égal à une valeur
+  neqFilter: Différent d'une valeur
+  inFilter: Parmi des valeurs
+  ninFilter: À l'exclusion des valeurs
+  gteFilter: Supérieur ou égal à
+  lteFilter: Inférieur ou égal à
+  existsFilter: Est défini
+  nexistsFilter: N'est pas défini
+  startsFilter: Commence par les caractères
+  containsFilter: Contient les caractères
   eqLabel: égal à
   orEqLabel: ou égal à
   neqLabel: différent de
@@ -674,22 +672,20 @@ en:
   sortAsc: Ascending sort
   sortDesc: Descending sort
   addFilter: Add a filter
-  filter: "Filter:"
   applyFilter: Apply filter
-  info: "Information:"
   fixLeft: "Fix the column to the left"
   showHelp: "Description"
-  searchFilter: free text search
-  eqFilter: equal to a value
-  neqFilter: different from a value
-  inFilter: among values
-  ninFilter: excluding values
-  gteFilter: greater than or equal to
-  lteFilter: less than or equal to
-  existsFilter: is defined
-  nexistsFilter: is not defined
-  startsFilter: starts with characters
-  containsFilter: contains characters
+  searchFilter: Free text search
+  eqFilter: Equal to a value
+  neqFilter: Different from a value
+  inFilter: Among values
+  ninFilter: Excluding values
+  gteFilter: Greater than or equal to
+  lteFilter: Less than or equal to
+  existsFilter: Is defined
+  nexistsFilter: Is not defined
+  startsFilter: Starts with characters
+  containsFilter: Contains characters
   eqLabel: equal to
   orEqLabel: or equal to
   neqLabel: different from

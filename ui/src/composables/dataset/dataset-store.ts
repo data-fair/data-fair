@@ -14,9 +14,37 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
   const keys = id.split(':')
   if (keys.length > 1) id = keys[1]
 
-  const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draft, html } })
+  const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draft, html }, notifError: false })
   const dataset = ref<ExtendedDataset | null>(null)
-  watch(datasetFetch.data, () => { dataset.value = datasetFetch.data.value })
+  const statusOrder = ['loaded', 'stored', 'normalized', 'analyzed', 'validated', 'extended', 'indexed', 'finalized']
+  // Merge a freshly fetched dataset into the store without downgrading status already advanced by real-time WS events.
+  const mergeFetchedDataset = (fetched: any) => {
+    if (!fetched) return
+    if (dataset.value) {
+      const currentRank = statusOrder.indexOf(dataset.value.status ?? '')
+      const fetchedRank = statusOrder.indexOf(fetched.status ?? '')
+      if (currentRank > fetchedRank) {
+        dataset.value = { ...fetched, status: dataset.value.status as typeof dataset.value.status }
+        return
+      }
+    }
+    dataset.value = fetched
+  }
+  // Edit-fetches are not authoritative for backend-managed pipeline fields — they refresh right after
+  // datasetFetch and can briefly carry a stale draft processing state. Keep the current values of
+  // these fields so WS-advanced status and friends are not clobbered.
+  const pipelineManagedFields = ['status', 'finalizedAt', 'errorStatus', 'errorRetry', 'dataUpdatedAt', 'count', 'bbox', 'timePeriod', 'storage'] as const
+  const applyEditFetchSnapshot = (snapshot: any) => {
+    if (!snapshot || !dataset.value) return
+    const merged = { ...snapshot }
+    for (const f of pipelineManagedFields) {
+      if (f in dataset.value) (merged as any)[f] = (dataset.value as any)[f]
+      else delete (merged as any)[f]
+    }
+    dataset.value = merged
+  }
+  watch(datasetFetch.error, () => { if (datasetFetch.error.value) dataset.value = null })
+  watch(datasetFetch.data, () => { mergeFetchedDataset(datasetFetch.data.value) })
   const restDataset = computed(() => {
     if (dataset.value && isRestDataset(dataset.value)) return dataset.value
   })
@@ -106,27 +134,30 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
 
   const dataFiles = computed(() => {
     if (!dataset.value) return []
-    const files: { key: string, title: string, url: string }[] = []
+    const files: { key: string, name: string, size?: number, url: string }[] = []
     const d = dataset.value
+    const qs = d.draftReason ? '?draft=true' : ''
     if (d.originalFile) {
       files.push({
         key: 'original',
-        title: d.originalFile.name,
-        url: `${$apiPath}/datasets/${id}/raw`
+        name: d.originalFile.name,
+        size: d.originalFile.size,
+        url: `${$apiPath}/datasets/${id}/raw${qs}`
       })
     }
     if (d.file && d.file.name !== d.originalFile?.name) {
       files.push({
         key: 'converted',
-        title: d.file.name,
-        url: `${$apiPath}/datasets/${id}/convert`
+        name: d.file.name,
+        size: d.file.size,
+        url: `${$apiPath}/datasets/${id}/convert${qs}`
       })
     }
     if (!d.isVirtual && !d.isMetaOnly && !d.isRest && d.finalizedAt) {
       files.push({
         key: 'full-csv',
-        title: `${d.slug || id}.csv`,
-        url: `${$apiPath}/datasets/${id}/full`
+        name: `${d.slug || id}.csv`,
+        url: `${$apiPath}/datasets/${id}/full${qs}`
       })
     }
     return files
@@ -152,6 +183,8 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     draft,
     dataset,
     datasetFetch,
+    mergeFetchedDataset,
+    applyEditFetchSnapshot,
     restDataset,
     journalFetch,
     journal,

@@ -11,22 +11,7 @@
       style="min-width:80px;max-width:80px;"
       class="ml-2"
     />
-    <v-text-field
-      v-model="editQ"
-      placeholder="Rechercher"
-      :append-inner-icon="mdiMagnify"
-      variant="outlined"
-      rounded
-      color="primary"
-      hide-details
-      clearable
-      density="compact"
-      style="min-width:170px; max-width:250px;"
-      class="mx-2"
-      @keyup.enter="q = editQ"
-      @click:append-inner="q = editQ"
-      @click:clear="q = ''"
-    />
+    <search-field v-model="q" />
   </v-toolbar>
   <v-virtual-scroll
     ref="virtualScroll"
@@ -56,18 +41,8 @@
   </v-virtual-scroll>
 </template>
 
-<i18n lang="yaml">
-fr:
-  search: Rechercher
-  lines: lignes
-en:
-  search: Search
-  lines: lines
-</i18n>
-
 <script setup lang="ts">
 import type { VVirtualScroll } from 'vuetify/components'
-import { mdiMagnify } from '@mdi/js'
 
 const { height } = defineProps({ height: { type: Number, required: true } })
 const q = defineModel<string>('q', { default: '' })
@@ -80,8 +55,6 @@ const extraParams = computed(() => ({
   highlight: '_file.content',
   qs: `_exists_:${digitalDocumentField.value?.key}`
 }))
-const editQ = ref('')
-watch(q, () => { editQ.value = q.value }, { immediate: true })
 const pageSize = 10
 const { baseFetchUrl, total, results, fetchResults } = useLines('list', pageSize, cols, q, '', extraParams, undefined)
 

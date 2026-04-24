@@ -6,7 +6,6 @@
   >
     <v-stepper-header class="bg-surface">
       <v-stepper-item
-        v-if="!props.initialDatasetId"
         :value="1"
         :complete="!!currentDataset"
         :color="currentStep === 1 ? 'primary' : ''"
@@ -75,10 +74,7 @@
     </v-stepper-header>
 
     <v-stepper-window>
-      <v-stepper-window-item
-        v-if="!props.initialDatasetId"
-        :value="1"
-      >
+      <v-stepper-window-item :value="1">
         <dataset-select-cards
           v-if="!initialFetch"
           v-model="selectedDataset"
@@ -283,7 +279,7 @@
                       variant="flat"
                       @click="currentStep = 2"
                     >
-                      changer de fichier
+                      {{ t('changeFile') }}
                     </v-btn>
                   </template>
                 </v-alert>
@@ -323,7 +319,6 @@ fr:
   type_desc_file: Chargez un fichier parmi les nombreux formats supportés et remplacez le fichier d'un jeu de données existant.
   type_rest: Contribuer à un jeu de données éditable
   type_desc_rest: Créez, supprimez et éditez des lignes. Vous pouvez également charger un fichier pour mettre à jour plusieurs lignes à la fois.
-  dataset: Jeu de données
   selectDataset: Choisissez un jeu de données
   stepFile: Fichier
   stepDataset: Jeu de données
@@ -333,7 +328,7 @@ fr:
   continue: Continuer
   cancel: Annuler
   loadMainFile: Chargez un fichier de données principal.
-  selectFile: sélectionnez ou glissez/déposez un fichier
+  selectFile: Sélectionnez ou glissez/déposez un fichier
   formats: Formats supportés
   attachmentInfo: Cette étape est optionnelle
   attachmentsMsg1: Vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.
@@ -341,17 +336,16 @@ fr:
   suggestArchive:
     part1: "Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée."
     part2: 'Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.'
-  similarDatasets: "Ce jeu de données a le même nom de fichier : | Ces jeux de données ont le même nom de fichier :"
   updateMsg: Après la soumission vous pourrez observer les changements et vous serez averti si il y a un risque d'incompatibilité.
   update: Mettre à jour
   loaded: chargées
   editTable: Édition des lignes
-  datasetsCount: "Vous ne pouvez mettre à jour aucun jeu de données | Vous pouvez mettre à jour 1 jeu de données | Vous pouvez mettre à jour {count} jeux de données"
   missingPermissions: "Vous semblez pouvoir charger des données sur ce jeu de données, mais il vous manque une partie des permissions nécessaires au fonctionnement complet de cette page. Permissions manquantes :"
   permissions:
     readJournal: Lister les événements du journal du jeu de données.
     readLines: Requêter les lignes du jeu de données.
   draftCancelled: Votre fichier a été rejeté automatiquement. Vous pouvez corriger un problème de structure dans le fichier avant de le charger de nouveau, ou contacter un administrateur.
+  changeFile: Changer de fichier
 en:
   updateDataset: Update a dataset
   choseType: What update action do you wish to perform ?
@@ -360,7 +354,6 @@ en:
   type_desc_file: Load a file among the many supported formats and replace an existing file.
   type_rest: Contribute to an editable file
   type_desc_rest: Create, update and delete lines. You can also load a file to update multiple lines.
-  dataset: Dataset
   selectDataset: Select a dataset
   stepFile: File
   stepDataset: Dataset
@@ -370,7 +363,7 @@ en:
   continue: Continue
   cancel: Cancel
   loadMainFile: Load the main data file
-  selectFile: select or drag and drop a file
+  selectFile: Select or drag and drop a file
   formats: Supported formats
   attachmentInfo: This step is optional
   attachmentsMsg1: You can load a zip archive containing files to be used as attachments to the lines of the main dataset file.
@@ -378,17 +371,16 @@ en:
   suggestArchive:
     part1: "This file is large. To save time and energy you can if you wish send a compressed version of it."
     part2: 'To do so you must create a file "{name}.gz" or a zip archive containing only this file.'
-  similarDatasets: "This dataset has the same file name: | These datasets have the same file name:"
   updateMsg: After submitting you will be be able to review the changes and you will be warned if there is an incompatibility.
   update: Update
   loaded: loaded
   editTable: Edit lines
-  datasetsCount: "You can't update any dataset | You can update 1 dataset | You can update {count} datasets"
   missingPermissions: "You seem to be able to load data on this dataset, but you lack some of the permissions necessary for this page. Missing permissions:"
   permissions:
     readJournal: List the events of the dataset's log
     readLines: Query the dataset's lines
   draftCancelled: Your file was rejected. You can fix a structure problem in the file before loading it again, or contact an administrator.
+  changeFile: Change file
 </i18n>
 
 <script setup lang="ts">
@@ -406,14 +398,13 @@ import { useWindowSize } from '@vueuse/core'
 const debug = Debug('workflow-update-dataset')
 
 const props = defineProps({
-  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} },
-  initialDatasetId: { type: String, default: undefined }
+  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
 })
 const { sendUiNotif } = useUiNotif()
 const { t, locale } = useI18n()
 const { height } = useWindowSize()
 
-const currentStep = ref(props.initialDatasetId ? 2 : 1)
+const currentStep = ref(1)
 
 const file = ref<File>()
 const attachments = ref<File>()
@@ -427,7 +418,7 @@ const datasetsFilter = computed(() => ({
 }))
 
 const selectedDataset = ref<ListedDataset>()
-const currentDatasetId = ref<string | undefined>(props.initialDatasetId)
+const currentDatasetId = ref<string>()
 watch(selectedDataset, () => {
   debug('selectedDataset', selectedDataset.value)
   if (selectedDataset.value) {
@@ -437,7 +428,7 @@ watch(selectedDataset, () => {
 watch(currentStep, () => {
   debug('step change', currentStep.value)
   if (!initialized.value) return
-  if (currentStep.value === 1 && !props.initialDatasetId) {
+  if (currentStep.value === 1) {
     selectedDataset.value = undefined
     currentDatasetId.value = undefined
   }

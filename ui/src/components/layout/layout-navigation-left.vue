@@ -10,12 +10,13 @@
       open-strategy="multiple"
       nav
     >
-      <!-- Portal home link (when not main site) -->
+      <!-- Portal home link (when the current site has a configured title) -->
       <v-list-item
-        v-if="site && site.main === false"
+        v-if="siteTitle"
         href="/"
         :prepend-icon="mdiHome"
         :title="t('homePortal')"
+        :subtitle="siteTitle"
       />
       <!-- Dashboard -->
       <v-list-item
@@ -86,9 +87,13 @@ import {
 const drawer = defineModel<boolean>({ required: true })
 const { t, locale } = useI18n()
 const route = useRoute()
-const { site } = useSessionAuthenticated()
+const { fullSite } = useSessionAuthenticated()
 const { canAdmin, missingSubscription } = usePermissions()
 const { navigationGroups } = useNavigationItems({ t, locale })
+
+// FullSiteInfo type in @data-fair/lib-vue/session.d.ts is incomplete — it omits
+// fields like `title` that are present at runtime on window.__PUBLIC_SITE_INFO.
+const siteTitle = computed(() => (fullSite.value as { title?: string } | null)?.title)
 
 // Auto-expand the group containing the current route
 const activeGroup = computed(() => {
@@ -131,6 +136,7 @@ fr:
   metricsSub: Téléchargements, API
   events: Traçabilité (bêta)
   subscription: Abonnement
+  assistance: Assistance
   services: Services distants
   serviceInfo: Informations du service
   owners: Propriétaires
@@ -164,6 +170,7 @@ en:
   metricsSub: Downloads, API
   events: Traceability (beta)
   subscription: Subscription
+  assistance: Support
   services: Remote services
   serviceInfo: Service information
   owners: Owners

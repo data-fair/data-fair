@@ -45,13 +45,11 @@
   fr:
     editLine: Éditer une ligne
     deleteLine: Supprimer une ligne
-    revisionsHistory: Historique des révisions
     selectLine: Sélectionner la ligne
     unselectLine: Désélectionner la ligne
   en:
     editLine: Edit a line
     deleteLine: Delete a line
-    revisionsHistory: Revisions history
     selectLine: Select the line
     unselectLine: Deselect the line
 </i18n>

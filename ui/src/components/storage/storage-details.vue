@@ -14,8 +14,8 @@
             target="_top"
             class="simple-link"
           >{{ dataset.title || dataset.id }}</a>
-          <span v-if="dataset.storage?.indexed?.size"> - <b>{{ formatBytes(dataset.storage.indexed.size, locale) }}</b> de données indexées</span>
-          <span v-if="dataset.storage?.size"> - <b>{{ formatBytes(dataset.storage.size, locale) }}</b> de données stockées</span>
+          <span v-if="dataset.storage?.indexed?.size"> - <b>{{ formatBytes(dataset.storage.indexed.size, locale) }}</b> {{ t('indexedData') }}</span>
+          <span v-if="dataset.storage?.size"> - <b>{{ formatBytes(dataset.storage.size, locale) }}</b> {{ t('storedData') }}</span>
           <span v-if="!dataset.storage">{{ t('noInfo') }}</span>
         </v-list-item-title>
         <template v-if="dataset.storage">
@@ -48,6 +48,8 @@
 <i18n lang="yaml">
 fr:
   noInfo: (pas d'information de stockage)
+  indexedData: de données indexées
+  storedData: de données stockées
   original-file: fichier original
   normalized-file: fichier converti
   full-file: fichier enrichi
@@ -60,11 +62,14 @@ fr:
   indexed: indexé
 en:
   noInfo: (no storage information)
+  indexedData: of indexed data
+  storedData: of stored data
   original-file: original file
   normalized-file: converted file
   full-file: extended file
   export-csv-file: exported file
   attachments: attachments
+  metadata-attachments: attachments to metadata
   collection: lines in database
   revisions: revisions
   master-data: equivalence in master data

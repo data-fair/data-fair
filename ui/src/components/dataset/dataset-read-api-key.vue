@@ -54,11 +54,11 @@
 
 <i18n lang="yaml">
 fr:
-  title: "Cle d'API en lecture"
-  description: "Permettez a vos utilisateurs d'utiliser l'API de ce jeu de données en dehors d'une session. Cette fonctionnalite est utile par exemple pour consommer les données dans Excel."
-  warning: "Cette fonctionnalite baisse la securisation de l'acces a ce jeu de données. Evitez de l'utiliser sur les données les plus sensibles. Si vous pensez que la cle a trop circule vous pouvez desactiver et re-activer l'acces pour forcer le renouvellement."
+  title: "Clé d'API en lecture"
+  description: "Permettez à vos utilisateurs d'utiliser l'API de ce jeu de données en dehors d'une session. Cette fonctionnalité est utile par exemple pour consommer les données dans Excel."
+  warning: "Cette fonctionnalité baisse la sécurisation de l'accès à ce jeu de données. Évitez de l'utiliser sur les données les plus sensibles. Si vous pensez que la clé a trop circulé, vous pouvez désactiver et réactiver l'accès pour forcer le renouvellement."
   save: Enregistrer
-  key: Cle
+  key: Clé
   expiresAt: expirera le
   exampleUsage: "Exemple d'utilisation"
 en:
@@ -83,15 +83,15 @@ const schema = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    active: { type: 'boolean', title: "Activer l'acces par cle d'API", 'x-i18n': { en: { title: 'Enable API key access' } } },
+    active: { type: 'boolean', title: "Activer l'accès par clé d'API", 'x-i18n': { en: { title: 'Enable API key access' } } },
     interval: {
       type: 'string',
-      title: 'Duree de validite des cles',
+      title: 'Durée de validité des clés',
       'x-i18n': { en: { title: 'Key validity duration' } },
       oneOf: [
         { const: 'P1W', title: '1 semaine', 'x-i18n': { en: { title: '1 week' } } },
         { const: 'P1M', title: '1 mois', 'x-i18n': { en: { title: '1 month' } } },
-        { const: 'P1Y', title: '1 annee', 'x-i18n': { en: { title: '1 year' } } }
+        { const: 'P1Y', title: '1 année', 'x-i18n': { en: { title: '1 year' } } }
       ]
     },
     expiresAt: { type: 'string', format: 'date-time', readOnly: true, layout: 'none' },

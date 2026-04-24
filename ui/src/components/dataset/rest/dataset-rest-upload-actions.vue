@@ -213,7 +213,7 @@
 <i18n lang="yaml">
 fr:
   loadLines: Charger plusieurs lignes depuis un fichier
-  selectFile: sélectionnez glissez/déposez un fichier
+  selectFile: Sélectionnez ou glissez/déposez un fichier
   cancel: Annuler
   load: Charger
   ok: Ok
@@ -224,17 +224,17 @@ fr:
   resultWarnings: "{nb} avertissement(s)"
   resultCreated: "{nb} ligne(s) créée(s)"
   resultDeleted: "{nb} ligne(s) supprimées(s)"
-  separator: séparateur
+  separator: Séparateur
   line: ligne
   drop: Cochez pour supprimer toutes les lignes existantes avant d'importer les nouvelles
   dropped: "Toutes les lignes existantes ont été supprimées"
   cancelled: "Suppression des lignes existantes et autres opérations annulées à cause des erreurs"
-  selectAttachmentsFile: sélectionnez un fichier zip de pièces jointes
+  selectAttachmentsFile: Sélectionnez un fichier zip de pièces jointes
   attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
   waitForIndex: Les opérations demandées étant volumineuses, elles seront traitées de manière légèrement différée. Veuillez patienter, la table sera rafraîchie quand les données seront traitées.
 en:
   loadLines: Load multiple lines from a file
-  selectFile: select or drag and drop a file
+  selectFile: Select or drag and drop a file
   cancel: Cancel
   load: Load
   ok: Ok
@@ -245,12 +245,12 @@ en:
   resultWarnings: "{nb} warning(s)"
   resultCreated: "{nb} created line(s)"
   resultDeleted: "{nb} deleted line(s)"
-  separator: separator
+  separator: Separator
   line: line
   drop: Check to delete all existing lines before importing new ones
   dropped: "All existing lines have been deleted"
   cancelled: "Deletion of existing lines and other operations cancelled because of errors"
-  selectAttachmentsFile: select an attachments zip file
+  selectAttachmentsFile: Select an attachments zip file
   attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.
   waitForIndex: The requested operations are large, they will be processed with a slight delay. Please wait, the table will be refreshed when the data is processed.
 </i18n>

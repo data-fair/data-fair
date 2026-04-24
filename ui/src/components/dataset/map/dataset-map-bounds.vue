@@ -7,12 +7,10 @@
 
 <i18n lang="yaml">
 fr:
-  noSession: Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies. Les cookies de session sont utilisés par ce service pour protéger notre infrastructure contre les abus.
   noGeoData: Aucune donnée géographique valide.
   noData: Aucune donnée à afficher
   mapError: "Erreur pendant le rendu de la carte :"
 en:
-  noSession: No active session. This error can happen if you use an extension that blocks cookies. Session cookies are used by this service to protect the infrastructure from abuse.
   noGeoData: No valid geo data
   noData: No data to display
   mapError: "Error while rendering the map:"

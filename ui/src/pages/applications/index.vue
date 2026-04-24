@@ -21,8 +21,9 @@
     </v-row>
 
     <!-- Empty state -->
-    <layout-empty-state
+    <df-layout-empty-state
       v-else-if="catalog.initialized.value && !catalog.totalCount.value"
+      :can-create="canContribDep"
       :has-search="!!q"
       :icon="mdiImageMultiple"
       :no-data-text="t('noApplication')"
@@ -232,9 +233,9 @@ const ownerParam = computed(() => {
 const applicationsQuery = computed(() => {
   const params: Record<string, any> = {
     select: 'title,description,status,updatedAt,publicationSites,topics,visibility,owner,url',
-    sort: sort.value,
   }
   if (q.value) params.q = q.value
+  else params.sort = sort.value
   if (ownerParam.value) params.owner = ownerParam.value
   if (facetBaseApplication.value?.length) params['base-application'] = facetBaseApplication.value.join(',')
   if (facetVisibility.value?.length) params.visibility = facetVisibility.value.join(',')
@@ -242,6 +243,7 @@ const applicationsQuery = computed(() => {
   if (facetPublicationSites.value?.length) params.publicationSites = facetPublicationSites.value.join(',')
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
   if (shared.value) params.shared = shared.value
+  else if (showAll.value !== 'true') params.shared = 'false'
   return params
 })
 

@@ -16,44 +16,7 @@
       </i18n-t>
     </v-alert>
 
-    <!-- Not logged in -->
-    <template v-if="!user">
-      <v-row justify="center">
-        <v-col
-          cols="12"
-          sm="8"
-          md="6"
-          class="text-center"
-        >
-          <h1 class="text-headline-large text-primary mb-3 mt-5">
-            Data Fair
-          </h1>
-          <df-themed-svg
-            :source="dataProcessSvg"
-            style="max-width: 400px; max-height: 250px; width: 100%; margin: 0 auto;"
-          />
-          <p
-            v-if="!$uiConfig.disableApplications"
-            class="text-title-medium"
-          >
-            {{ t('description') }}
-          </p>
-          <p class="text-title-medium mt-4">
-            {{ t('authRequired') }}
-          </p>
-          <v-btn
-            class="mt-4"
-            color="primary"
-            @click="session.login()"
-          >
-            {{ t('login') }}
-          </v-btn>
-        </v-col>
-      </v-row>
-    </template>
-
-    <!-- Logged in -->
-    <template v-else>
+    <template v-if="user">
       <v-row>
         <v-col cols="12">
           <h2 class="mb-4 text-headline-small">
@@ -201,10 +164,8 @@
 
 <i18n lang="yaml">
 fr:
-  authRequired: Vous devez être authentifié pour utiliser ce service.
-  login: Se connecter / S'inscrire
-  description: Enrichissez et publiez facilement vos données. Vous pouvez les utiliser dans des applications dédiées et les mettre à disposition d'autres personnes en mode ouvert ou privé.
-  subscriptionRequired: Votre abonnement est requis. Rendez-vous sur la {subscriptionLink}.
+  dashboard: Tableau de bord
+  subscriptionRequired: Un abonnement est requis. Rendez-vous sur la {subscriptionLink}.
   subscriptionPage: page d'abonnement
   organizationSpace: Espace de l'organisation {name}
   departmentSpace: Espace de l'organisation {name} / {departmentName}
@@ -221,10 +182,8 @@ fr:
   manageDatasets: Gérez les jeux de données
   manageApplications: Gérez les applications
 en:
-  authRequired: You must be logged in to use this service.
-  login: Login / Sign up
-  description: Easily enrich and publish your data. You can use it in dedicated applications and make it available to other people both openly or privately.
-  subscriptionRequired: Your subscription is required. Please visit the {subscriptionLink}.
+  dashboard: Dashboard
+  subscriptionRequired: A subscription is required. Please visit the {subscriptionLink}.
   subscriptionPage: subscription page
   organizationSpace: Space of organization {name}
   departmentSpace: Space of organization {name} / {departmentName}
@@ -245,15 +204,18 @@ en:
 <script setup lang="ts">
 import { mdiAlert } from '@mdi/js'
 import { usePermissions } from '~/composables/use-permissions'
+import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import dataSvg from '~/assets/svg/Data Arranging_Two Color.svg?raw'
 import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
-import dataProcessSvg from '~/assets/svg/Data Process_Two Color.svg?raw'
 
 const { t } = useI18n()
 const session = useSession()
 const user = session.user
 const account = session.account
+
+const breadcrumbs = useBreadcrumbs()
+breadcrumbs.receive({ breadcrumbs: [{ text: t('dashboard') }] })
 
 // usePermissions uses useSession() internally, so it can be called unconditionally
 const { canContribDep, canAdminDep, missingSubscription } = usePermissions()

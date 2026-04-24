@@ -9,11 +9,15 @@
         :props="activatorProps"
       />
     </template>
-    <v-card :title="t('changeOwnerTitle')">
+    <v-card
+      :title="t('changeOwnerTitle')"
+      :loading="changeOwner.loading.value"
+    >
       <v-card-text>
         <df-owner-pick
           v-model="newOwner"
           :hide-single="false"
+          hide-message
           other-accounts
         />
         <v-alert
@@ -22,7 +26,7 @@
           class="mt-4"
         >
           <p>{{ t('warningIntro') }}</p>
-          <ul class="ml-4">
+          <ul class="ml-5">
             <li>{{ t('warningPermissions') }}</li>
             <li>{{ t('warningApps') }}</li>
             <li>{{ t('warningPortals') }}</li>
@@ -38,6 +42,7 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
+          :disabled="changeOwner.loading.value"
           @click="showDialog = false"
         >
           {{ t('cancel') }}
@@ -46,7 +51,8 @@
           color="warning"
           variant="flat"
           :disabled="!newOwner"
-          @click="confirmChangeOwner"
+          :loading="changeOwner.loading.value"
+          @click="changeOwner.execute()"
         >
           {{ t('confirm') }}
         </v-btn>
@@ -68,6 +74,8 @@ fr:
   warningOutro: Après la confirmation vérifiez de nouveau tous ces aspects et effectuez les corrections nécessaires.
   cancel: Annuler
   confirm: Confirmer
+  successMsg: Propriétaire modifié avec succès
+  errorMsg: Échec du changement de propriétaire
 en:
   changeOwnerTitle: Change owner
   warningIntro: "Changing the owner can have many effects. Before confirming, check the following:"
@@ -80,6 +88,8 @@ en:
   warningOutro: After confirmation, review all these aspects again and make the necessary corrections.
   cancel: Cancel
   confirm: Confirm
+  successMsg: Owner successfully changed
+  errorMsg: Failed to change owner
 </i18n>
 
 <script setup lang="ts">
@@ -95,15 +105,21 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const showDialog = defineModel<boolean>({ default: false })
-const newOwner = ref<Record<string, any> | null>(null)
+const newOwner = ref<Record<string, any> | null>({ ...props.resource.owner })
 
-const confirmChangeOwner = async () => {
-  if (!newOwner.value) return
-  await $fetch(`${props.resourceType}/${props.resource.id}/owner`, {
-    method: 'PUT',
-    body: newOwner.value
-  })
-  showDialog.value = false
-  emit('changed')
-}
+const changeOwner = useAsyncAction(
+  async () => {
+    if (!newOwner.value) return
+    await $fetch(`${props.resourceType}/${props.resource.id}/owner`, {
+      method: 'PUT',
+      body: newOwner.value
+    })
+    showDialog.value = false
+    emit('changed')
+  },
+  {
+    success: t('successMsg'),
+    error: t('errorMsg')
+  }
+)
 </script>

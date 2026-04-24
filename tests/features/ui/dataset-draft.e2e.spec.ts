@@ -111,10 +111,9 @@ test.describe('dataset draft mode - file-new', () => {
     await expect(page.getByRole('button', { name: /Annuler le brouillon|Cancel the draft/ })).not.toBeVisible()
   })
 
-  test('metadata section is accessible in draft mode', async ({ page, goToWithAuth }) => {
+  test('dataset details section is accessible in draft mode', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Détails|Details/ })).toBeVisible()
+    await expect(page.locator('#informations')).toBeVisible({ timeout: 15000 })
   })
 
   // Mutating test last — validates the draft (dataset leaves draft mode)
@@ -176,10 +175,9 @@ test.describe('dataset draft mode - file-updated', () => {
     await expect(page.getByRole('button', { name: /Annuler le brouillon|Cancel the draft/ })).toBeVisible()
   })
 
-  test('metadata section is accessible in draft mode', async ({ page, goToWithAuth }) => {
+  test('dataset details section is accessible in draft mode', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Détails|Details/ })).toBeVisible()
+    await expect(page.locator('#informations')).toBeVisible({ timeout: 15000 })
   })
 
   // Mutating test last — cancels the draft (dataset reverts to pre-update state)

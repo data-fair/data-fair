@@ -12,9 +12,9 @@
 
 <i18n lang="yaml">
 fr:
-  saved: Les paramètres ont été mis à jour
+  saved: Les métadonnées de jeux de données ont été mises à jour
 en:
-  saved: Settings have been updated
+  saved: Dataset metadata settings have been updated
 </i18n>
 
 <script setup lang="ts">

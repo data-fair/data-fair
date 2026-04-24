@@ -12,7 +12,7 @@ export function useDFramePage () {
 
   function onMessage (message: { detail?: Record<string, unknown> } & Record<string, unknown>) {
     const detail = message?.detail ?? message
-    if ('breadcrumbs' in detail) {
+    if (detail && typeof detail === 'object' && 'breadcrumbs' in detail) {
       breadcrumbs.receive(detail)
     }
   }

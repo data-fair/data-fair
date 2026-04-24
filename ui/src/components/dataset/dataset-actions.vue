@@ -8,7 +8,9 @@
       <v-list-item
         v-for="file in sourceFiles"
         :key="file.key"
+        :title.attr="file.tooltip"
         :href="file.url"
+        :lines="isDraft ? 'three' : undefined"
         link
       >
         <template #prepend>
@@ -17,9 +19,14 @@
             color="primary"
           />
         </template>
-        {{ file.title }}
+        <v-list-item-title>
+          {{ file.label }}
+        </v-list-item-title>
+        <v-list-item-subtitle v-if="isDraft">
+          {{ t('draftSuffix') }}
+        </v-list-item-subtitle>
         <v-list-item-subtitle v-if="file.size">
-          {{ formatBytes(file.size) }}
+          {{ file.name }} · {{ formatBytes(file.size) }}
         </v-list-item-subtitle>
       </v-list-item>
 
@@ -68,8 +75,25 @@
       {{ t('actions') }}
     </v-list-subheader>
 
+    <dataset-upload-dialog v-if="isFileDataset && can('writeData').value">
+      <template #activator="{ props: activatorProps }">
+        <v-list-item
+          v-bind="activatorProps"
+          link
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiFileUpload"
+              color="primary"
+            />
+          </template>
+          {{ t('updateData') }}
+        </v-list-item>
+      </template>
+    </dataset-upload-dialog>
+
     <v-list-item
-      v-if="canUpdateData"
+      v-if="dataset.isRest && can('createLine').value"
       :to="`/dataset/${dataset.id}/edit-data`"
       link
     >
@@ -83,7 +107,7 @@
     </v-list-item>
 
     <v-list-item
-      v-if="can('readApiDoc').value && dataset.finalizedAt"
+      v-if="$uiConfig.openapiViewerIntegration && can('readApiDoc').value && dataset.finalizedAt"
       :to="`/dataset/${dataset.id}/api-doc`"
       link
     >
@@ -107,6 +131,15 @@ fr:
   downloadRawRest: Export brut
   actions: Actions
   useAPI: Utiliser l'API
+  draftSuffix: Brouillon
+  originalLabel: Fichier d'origine
+  convertedLabel: Fichier converti
+  fullCsvLabel: Fichier enrichi
+  originalLow: le fichier d'origine
+  convertedLow: le fichier converti
+  fullCsvLow: le fichier enrichi
+  downloadFileTooltip: "Télécharger {label} {name} ({size})"
+  downloadFileTooltipNoSize: "Télécharger {label} {name}"
 en:
   navigation: Navigation
   viewOnPortal: "View on {title}"
@@ -115,6 +148,15 @@ en:
   downloadRawRest: Raw export
   actions: Actions
   useAPI: Use the API
+  draftSuffix: Draft
+  originalLabel: Original file
+  convertedLabel: Converted file
+  fullCsvLabel: Enriched file
+  originalLow: the original file
+  convertedLow: the converted file
+  fullCsvLow: the enriched file
+  downloadFileTooltip: "Download {label} {name} ({size})"
+  downloadFileTooltipNoSize: "Download {label} {name}"
 </i18n>
 
 <script setup lang="ts">
@@ -127,31 +169,44 @@ import {
 } from '@mdi/js'
 import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import useDatasetStore from '~/composables/dataset/dataset-store'
+import DatasetUploadDialog from '~/components/dataset/dataset-upload-dialog.vue'
 
 const { t } = useI18n()
 const { dataset, can, resourceUrl, dataFiles } = useDatasetStore()
 const session = useSession()
 const user = computed(() => session.state.user)
+const isDraft = computed(() => !!dataset.value?.draftReason)
 
 const isFileDataset = computed(() => {
   const d = dataset.value
   return d && !d.isRest && !d.isVirtual && !d.isMetaOnly && d.file
 })
 
+const labelKeys: Record<string, string> = {
+  original: 'original',
+  converted: 'converted',
+  'full-csv': 'fullCsv'
+}
+
 const sourceFiles = computed(() => {
   if (!isFileDataset.value) return []
   return dataFiles.value.filter(f => f.key === 'original' || f.key === 'converted').map(f => {
-    const d = dataset.value!
-    const size = f.key === 'original' ? d.originalFile?.size : d.file?.size
-    return { ...f, size }
+    const baseKey = labelKeys[f.key] ?? f.key
+    const label = t(`${baseKey}Label`)
+    const tooltipKey = f.size ? 'downloadFileTooltip' : 'downloadFileTooltipNoSize'
+    const tooltip = t(tooltipKey, {
+      label: t(`${baseKey}Low`),
+      name: f.name,
+      size: f.size ? formatBytes(f.size) : ''
+    })
+    return { ...f, label, tooltip }
   })
 })
 
 const canUpdateData = computed(() => {
   if (!dataset.value) return false
   const d = dataset.value
-  const isFile = d && !d.isRest && !d.isVirtual && !d.isMetaOnly && d.file
-  if (isFile) return can('writeData').value
+  if (isFileDataset.value) return can('writeData').value
   if (d.isRest) return can('createLine').value
   return false
 })

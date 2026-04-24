@@ -3,6 +3,19 @@
     <!-- Show dataset status -->
     <dataset-status v-if="dataset.status === 'error' || !!dataset.draftReason" />
 
+    <!-- Metadata details -->
+    <df-section-tabs
+      v-if="sections.informations"
+      id="informations"
+      :title="sections.informations.title"
+      :subtitle="sections.informations.subtitle"
+      :svg="informationsSvg"
+    >
+      <template #windows>
+        <dataset-metadata-details class="mb-4" />
+      </template>
+    </df-section-tabs>
+
     <!-- Structure section -->
     <df-section-tabs
       v-if="sections.structure"
@@ -27,7 +40,7 @@
           class="ml-2"
           color="accent"
           variant="flat"
-          :disabled="!masterDataFormValid"
+          :disabled="!masterDataFormValid || hasInvalidExtension"
           :loading="structureEditFetch.save.loading.value"
           @click="structureEditFetch.save.execute()"
         >
@@ -131,10 +144,6 @@
           />
         </v-tabs-window-item>
 
-        <v-tabs-window-item value="details">
-          <dataset-metadata-details />
-        </v-tabs-window-item>
-
         <v-tabs-window-item value="attachments">
           <dataset-metadata-attachments />
         </v-tabs-window-item>
@@ -226,7 +235,7 @@
           class="pa-4"
         >
           <v-tabs-window-item value="permissions">
-            <Permissions
+            <permissions-editor
               v-if="dataset"
               :model-value="permissions"
               :resource="dataset"
@@ -273,7 +282,6 @@
       :title="sections.activity.title"
       :tabs="sections.activity.tabs"
       :svg="settingsSvg"
-      svg-no-margin
     >
       <template #content="{ tab }">
         <v-tabs-window
@@ -411,19 +419,20 @@
       v-model="showOwnerDialog"
       :resource="dataset"
       resource-type="datasets"
-      @changed="router.push('/datasets')"
+      @changed="store.datasetFetch.refresh()"
     />
 
     <v-dialog
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card>
+      <v-card :loading="confirmRemove.loading.value ? 'warning' : undefined">
         <v-card-title>{{ t('deleteDataset') }}</v-card-title>
         <v-card-text>{{ t('deleteMsg', { title: dataset?.title }) }}</v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
+            :disabled="confirmRemove.loading.value"
             @click="showDeleteDialog = false"
           >
             {{ t('no') }}
@@ -431,7 +440,8 @@
           <v-btn
             color="warning"
             variant="flat"
-            @click="confirmRemove"
+            :loading="confirmRemove.loading.value"
+            @click="confirmRemove.execute()"
           >
             {{ t('yes') }}
           </v-btn>
@@ -443,7 +453,10 @@
       v-model="showDeleteAllLinesDialog"
       max-width="500"
     >
-      <v-card :title="t('deleteAllLinesTitle')">
+      <v-card
+        :title="t('deleteAllLinesTitle')"
+        :loading="confirmDeleteAllLines.loading.value ? 'warning' : undefined"
+      >
         <v-card-text>
           <v-alert
             type="error"
@@ -455,6 +468,7 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
+            :disabled="confirmDeleteAllLines.loading.value"
             @click="showDeleteAllLinesDialog = false"
           >
             {{ t('no') }}
@@ -462,7 +476,8 @@
           <v-btn
             color="warning"
             variant="flat"
-            @click="confirmDeleteAllLines"
+            :loading="confirmDeleteAllLines.loading.value"
+            @click="confirmDeleteAllLines.execute()"
           >
             {{ t('yes') }}
           </v-btn>
@@ -488,6 +503,7 @@
 <i18n lang="yaml">
 fr:
   datasets: Jeux de données
+  informationsSubtitle: Retrouvez les informations générales et techniques du jeu de données.
   structure: Structure
   extensions: Enrichissements
   restConfig: Jeu éditable
@@ -497,7 +513,6 @@ fr:
   permissionsUpdated: Les permissions ont été mises à jour
   metadata: Métadonnées
   informations: Informations
-  details: Détails
   schema: Schéma
   attachments: Pièces jointes
   save: Enregistrer
@@ -535,10 +550,13 @@ fr:
   deleteDataset: Supprimer le jeu de données
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  deleteDatasetSuccess: Le jeu de données a bien été supprimé.
+  deleteAllLinesSuccess: Toutes les lignes ont bien été supprimées.
   yes: Oui
   no: Non
 en:
   datasets: Datasets
+  informationsSubtitle: Find the general and technical information for this dataset.
   structure: Structure
   extensions: Extensions
   restConfig: REST Configuration
@@ -548,7 +566,6 @@ en:
   permissionsUpdated: Permissions were updated
   metadata: Metadata
   informations: Information
-  details: Details
   schema: Schema
   attachments: Attachments
   save: Save
@@ -586,27 +603,29 @@ en:
   deleteDataset: Delete dataset
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
+  deleteDatasetSuccess: Dataset was deleted successfully.
+  deleteAllLinesSuccess: All lines were deleted successfully.
   yes: Yes
   no: No
 </i18n>
 
 <script setup lang="ts">
+import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
 import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
-import metadataSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
+import metadataSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDatabase, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSetAll, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { provideDatasetStore } from '~/composables/dataset/dataset-store'
+import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { usePermissions } from '~/composables/use-permissions'
@@ -616,6 +635,7 @@ import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
+import { hasInvalidExprEvalExtension } from '~/composables/dataset/expr-eval-validation'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -636,8 +656,8 @@ watch(shareTab, (tab) => {
   if (tab === 'catalog-publications') catalogPublicationsKey.value++
 })
 
-const store = provideDatasetStore(route.params.id, true, 'vuetify')
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions } = store
+const store = useDatasetStore()
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
 
 const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
   await savePermissions(newPermissions)
@@ -672,20 +692,25 @@ function normalizeStructureData (d: any) {
   if (!d.masterData.singleSearchs) d.masterData.singleSearchs = []
   if (!d.masterData.bulkSearchs) d.masterData.bulkSearchs = []
   if (!d.masterData.shareOrgs) d.masterData.shareOrgs = []
+  if (d.virtual) {
+    d.virtual.children = d.virtual.children || []
+    d.virtual.filters = d.virtual.filters || []
+  }
 }
 
 const masterDataFormValid = ref(true)
+const hasInvalidExtension = computed(() => hasInvalidExprEvalExtension(structureEditFetch.data.value))
 
 // Sync store.dataset with both editFetch instances
 watch(structureEditFetch.serverData, (d) => {
   if (d) {
     normalizeStructureData(d)
     normalizeStructureData(structureEditFetch.data.value)
-    dataset.value = d as any
+    applyEditFetchSnapshot(d as any)
   }
 })
 watch(metadataEditFetch.serverData, (d) => {
-  if (d) dataset.value = d as any
+  if (d) applyEditFetchSnapshot(d as any)
 })
 
 // Sync store.dataset.image back to metadataEditFetch when changed externally (e.g. thumbnail set from attachments tab)
@@ -770,16 +795,16 @@ const showDeleteAllLinesDialog = ref(false)
 
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
-const confirmRemove = async () => {
+const confirmRemove = useAsyncAction(async () => {
   showDeleteDialog.value = false
   await remove()
   router.push('/datasets')
-}
+}, { success: t('deleteDatasetSuccess') })
 
-const confirmDeleteAllLines = async () => {
+const confirmDeleteAllLines = useAsyncAction(async () => {
   showDeleteAllLinesDialog.value = false
   await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
-}
+}, { success: t('deleteAllLinesSuccess') })
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 
@@ -799,7 +824,7 @@ watch(dataset, (d) => {
     ]
   })
   if (can('readJournal').value && !d.isMetaOnly && !journalFetch.initialized.value) journalFetch.refresh()
-  if (can('getPermissions').value && !permissionsFetch.initialized.value) permissionsFetch.refresh()
+  if (can('getPermissions').value && (!d.draftReason || d.draftReason.key === 'file-updated') && !permissionsFetch.initialized.value) permissionsFetch.refresh()
   if (!taskProgressFetch.initialized.value) taskProgressFetch.refresh()
   if (d.finalizedAt && !applicationsFetch.initialized.value) applicationsFetch.refresh()
   if (d.draftReason?.key === 'file-updated' && !publishedDatasetFetch.initialized.value) publishedDatasetFetch.refresh()
@@ -871,9 +896,15 @@ useLeaveGuard(structureHasRealDiff, { locale })
 useLeaveGuard(metadataEditFetch.hasDiff, { locale })
 
 const sections = computedDeepDiff(() => {
-  if (!dataset.value) return {} as Record<string, { title: string, tabs: any[] }>
+  if (!dataset.value) return {}
   const d = dataset.value
-  const result: Record<string, { title: string, tabs: any[] }> = {}
+  const result: Record<string, { title: string, tabs?: any[], subtitle?: string }> = {}
+
+  // Informations section
+  result.informations = {
+    title: t('informations'),
+    subtitle: t('informationsSubtitle')
+  }
 
   // Structure section (new)
   if (can('writeDescriptionBreaking').value && (d.finalizedAt || d.isVirtual)) {
@@ -897,7 +928,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'rest-config',
         title: t('restConfig'),
-        icon: mdiTableCog,
+        icon: mdiAllInclusive,
         color: restHasDiff.value ? 'accent' : undefined
       })
     }
@@ -906,7 +937,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'virtual',
         title: t('virtual'),
-        icon: mdiSetAll,
+        icon: mdiPictureInPictureBottomRightOutline,
         color: virtualHasDiff.value ? 'accent' : undefined
       })
     }
@@ -915,7 +946,7 @@ const sections = computedDeepDiff(() => {
       structureTabs.push({
         key: 'master-data',
         title: t('masterData'),
-        icon: mdiDatabase,
+        icon: mdiStarFourPoints,
         color: !masterDataFormValid.value ? 'error' : (masterDataHasDiff.value ? 'accent' : undefined),
         appendIcon: !masterDataFormValid.value ? mdiAlertCircle : undefined
       })
@@ -926,11 +957,10 @@ const sections = computedDeepDiff(() => {
 
   // Metadata section
   const metadataTabs = [
-    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined },
-    { key: 'details', title: t('details'), icon: mdiCardTextOutline }
+    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined }
   ]
   if (!d.draftReason) {
-    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment })
+    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined })
   }
   result.metadata = { title: t('metadata'), tabs: metadataTabs }
 

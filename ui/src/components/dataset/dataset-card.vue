@@ -1,6 +1,6 @@
 <template>
   <v-card
-    :to="`/dataset/${dataset.id}`"
+    :to="noLink ? undefined : `/dataset/${dataset.id}`"
     class="h-100 d-flex flex-column"
   >
     <v-card-item class="text-primary">
@@ -97,24 +97,7 @@
       style="min-height: auto"
     >
       <!-- Topics list -->
-      <v-row
-        v-if="dataset.topics?.length"
-        density="compact"
-      >
-        <v-col
-          v-for="topic in dataset.topics"
-          :key="topic.id"
-          cols="auto"
-        >
-          <v-chip
-            :text="topic.title"
-            :color="topic.color"
-            density="compact"
-            size="small"
-            variant="flat"
-          />
-        </v-col>
-      </v-row>
+      <topic-chips :topics="dataset.topics" />
 
       <!-- Visibility + Updated at -->
       <div class="d-flex align-center flex-wrap">
@@ -153,9 +136,12 @@ const { t, locale } = useI18n()
 const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   dataset: Dataset
-}>()
+  noLink?: boolean
+}>(), {
+  noLink: false
+})
 
 const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||

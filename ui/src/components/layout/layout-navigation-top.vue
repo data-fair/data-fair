@@ -26,7 +26,12 @@
         {{ $uiConfig.brand.title || 'Data Fair' }}
       </span>
     </div>
-    <v-divider vertical />
+
+    <!-- Same condition as drawer activator mobile-->
+    <v-divider
+      v-if="user && lgAndUp"
+      vertical
+    />
 
     <v-breadcrumbs
       v-if="showBreadcrumbs"
@@ -36,8 +41,9 @@
       <template #item="{ item }">
         <v-breadcrumbs-item
           :to="item.to"
-          :disabled="!item.to"
-          :class="item.to ? 'text-primary' : undefined"
+          :href="item.href"
+          :disabled="!item.to && !item.href"
+          :class="(item.to || item.href) ? 'text-primary' : undefined"
           style="opacity: 0.9;"
         >
           {{ item.title }}
@@ -52,7 +58,24 @@
       :events-url="$sitePath + '/events'"
     />
     <df-theme-switcher />
-    <df-personal-menu />
+    <df-personal-menu>
+      <template #actions-before>
+        <v-list-item
+          :prepend-icon="mdiInformationOutline"
+          to="/me"
+        >
+          {{ t('myAccount') }}
+        </v-list-item>
+        <v-list-item
+          v-if="$uiConfig.eventsIntegration && !missingSubscription"
+          :prepend-icon="mdiBellPlus"
+          to="/notifications"
+        >
+          {{ t('notifications') }}
+        </v-list-item>
+        <v-divider />
+      </template>
+    </df-personal-menu>
     <df-agent-chat-toggle
       v-if="showAgentChat"
       size="small"
@@ -61,15 +84,18 @@
 </template>
 
 <script lang="ts" setup>
-import type { createBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+import type { createBreadcrumbs, BreadcrumbItem } from '~/composables/layout/use-breadcrumbs'
 import DfNotificationQueue from '@data-fair/lib-vuetify-events/DfNotificationQueue.vue'
 import DfPersonalMenu from '@data-fair/lib-vuetify/personal-menu.vue'
 import DfThemeSwitcher from '@data-fair/lib-vuetify/theme-switcher.vue'
 import DfAgentChatToggle from '@data-fair/lib-vuetify-agents/DfAgentChatToggle.vue'
 import { useDisplay } from 'vuetify'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { computed } from 'vue'
+import { mdiInformationOutline, mdiBellPlus } from '@mdi/js'
 import { $uiConfig } from '~/context'
+import { usePermissions } from '~/composables/use-permissions'
 import defaultLogo from '~/assets/logo.svg'
 
 const props = defineProps<{
@@ -78,11 +104,18 @@ const props = defineProps<{
 }>()
 
 const drawer = defineModel<boolean>('drawer', { required: true })
-const { user } = useSession()
+const { t } = useI18n()
+const { user, fullSite } = useSession()
+const { missingSubscription } = usePermissions()
 const { mdAndUp, lgAndUp } = useDisplay()
 const route = useRoute()
 
+// FullSiteInfo type in @data-fair/lib-vue/session.d.ts is incomplete — it omits
+// fields like `title` that are present at runtime on window.__PUBLIC_SITE_INFO.
+const siteTitle = computed(() => (fullSite.value as { title?: string } | null)?.title)
+
 const showBreadcrumbs = computed(() => {
+  if (!user.value) return false
   if (!mdAndUp.value) return false
   if (!props.breadcrumbs) return false
   if (props.breadcrumbs.items.value.length === 0) return false
@@ -94,18 +127,33 @@ function truncate (str: string, maxLen: number): string {
   return str.length > maxLen ? str.slice(0, maxLen) + '…' : str
 }
 
-const breadcrumbItems = computed(() => {
+type BreadcrumbRenderItem = {
+  title: string
+  to?: BreadcrumbItem['to']
+  href?: string
+}
+
+const breadcrumbItems = computed<BreadcrumbRenderItem[]>(() => {
   if (!props.breadcrumbs) return []
-  return props.breadcrumbs.items.value.map(item => ({
+  const items: BreadcrumbRenderItem[] = props.breadcrumbs.items.value.map(item => ({
     title: truncate(item.text, 50),
     to: item.to
   }))
+  if (siteTitle.value) {
+    items.unshift({ title: 'Data Fair', to: '/' })
+    items.unshift({ title: truncate(siteTitle.value, 50), href: '/' })
+  }
+  return items
 })
 </script>
 
 <i18n lang="yaml">
 fr:
   title: Data Fair
+  myAccount: Informations personnelles
+  notifications: Notifications
 en:
   title: Data Fair
+  myAccount: Personal info
+  notifications: Notifications
 </i18n>

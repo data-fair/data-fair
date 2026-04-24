@@ -1,3 +1,4 @@
+<!--- Deprecated: prefer @data-fair/lib-vuetify/owner-avatar.vue. Kept as backup (not used for the moment). -->
 <template>
   <v-tooltip
     v-if="owner && owner.department"

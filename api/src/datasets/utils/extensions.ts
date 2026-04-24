@@ -489,6 +489,14 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
         'x-calculated': true
       })
     } else if (extension.property) {
+      // TODO (to be confirmed): `extension.property` is not resynced when the column is edited in the schema
+      // (title, description, etc.) — it is a snapshot frozen at creation time, and this only affects calculated
+      // columns (exprEval). The live title/description is already preserved from `schema` below (see `if (prop.title)
+      // ...`), so it is not blocking on the API side, but storing a duplicated snapshot is a source of confusion.
+      // Possible direction: only store { type, key, expr, active } in `extension` and always read from
+      // `dataset.schema`. This would impact: validation here, service.js (patch dedup), rest.ts, DatasetExtension
+      // types, plus a migration for existing datasets. Likely best done alongside the upcoming refactor that moves
+      // calculated column editing directly into the Schema section.
       const existingProperty = schema.find((p: any) => p.key === extension.property.key)
       if (existingProperty && !existingProperty['x-extension']) throw httpError(400, `Une extension essaie de créer la colonne "${extension.property.key}" mais cette clé est déjà utilisée.`)
       const fullProperty = existingProperty ? { ...existingProperty } : { ...extension.property }

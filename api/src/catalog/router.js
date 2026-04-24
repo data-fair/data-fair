@@ -38,7 +38,7 @@ router.get('/datasets', apiKeyMiddlewareRead, cacheHeaders.listBased, async (req
   for (const r of response.results) {
     datasetUtils.clean(req, r)
     delete r.publicationSites
-    delete r.owner
+    delete r.owner // TODO: dont delete it when owner is explicitly requested
   }
   res.json(response)
 })

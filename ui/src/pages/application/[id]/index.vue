@@ -46,6 +46,19 @@
       </v-card>
     </v-dialog>
 
+    <!-- Informations section -->
+    <df-section-tabs
+      v-if="sections.informations"
+      id="informations"
+      :title="sections.informations.title"
+      :subtitle="sections.informations.subtitle"
+      :svg="informationsSvg"
+    >
+      <template #windows>
+        <application-metadata-details class="mb-4" />
+      </template>
+    </df-section-tabs>
+
     <!-- Metadata section -->
     <df-section-tabs
       v-if="sections.metadata"
@@ -54,7 +67,6 @@
       :title="sections.metadata.title"
       :tabs="sections.metadata.tabs"
       :svg="checklistSvg"
-      svg-no-margin
     >
       <template #actions>
         <confirm-menu
@@ -85,10 +97,6 @@
             v-model="metadataEditFetch.data.value"
             :server-data="metadataEditFetch.serverData.value"
           />
-        </v-tabs-window-item>
-
-        <v-tabs-window-item value="details">
-          <application-metadata-details />
         </v-tabs-window-item>
 
         <v-tabs-window-item value="attachments">
@@ -208,12 +216,13 @@
           class="pa-4"
         >
           <v-tabs-window-item value="permissions">
-            <Permissions
+            <permissions-editor
               v-if="application"
               :model-value="permissions"
               :resource="application"
               resource-type="applications"
               :disabled="!can('setPermissions')"
+              :has-private-parents="hasPrivateParents"
               @save="onSavePermissions"
             />
           </v-tabs-window-item>
@@ -236,7 +245,7 @@
       </template>
     </df-section-tabs>
 
-    <!-- Events section -->
+    <!-- Activity section -->
     <df-section-tabs
       v-if="sections.activity"
       id="activity"
@@ -245,7 +254,6 @@
       :title="sections.activity.title"
       :tabs="sections.activity.tabs"
       :svg="settingsSvg"
-      svg-no-margin
     >
       <template #content="{ tab }">
         <v-tabs-window
@@ -347,7 +355,7 @@
       v-model="showOwnerDialog"
       :resource="application"
       resource-type="applications"
-      @changed="router.push('/applications')"
+      @changed="store.applicationFetch.refresh()"
     />
 
     <v-dialog
@@ -398,6 +406,7 @@
 <i18n lang="yaml">
 fr:
   applications: Applications
+  informationsSubtitle: Retrouvez les informations générales et techniques de l'application.
   metadata: Métadonnées
   info: Informations
   attachments: Pièces jointes
@@ -439,6 +448,7 @@ fr:
   no: Non
 en:
   applications: Applications
+  informationsSubtitle: Find the general and technical information for this application.
   metadata: Metadata
   info: Information
   attachments: Attachments
@@ -482,17 +492,16 @@ en:
 
 <script setup lang="ts">
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
-import Permissions from '~/components/permissions/permissions.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiBookOpenVariant, mdiCancel, mdiCardTextOutline, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiBookOpenVariant, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
-import { provideApplicationStore } from '~/composables/application/application-store'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -508,7 +517,7 @@ const metadataTab = ref('info')
 const renderTab = ref('config')
 const activityTab = ref('traceability')
 
-const store = provideApplicationStore(route.params.id)
+const store = useApplicationStore()
 const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions } = store
 
 const { sendUiNotif } = useUiNotif()
@@ -579,6 +588,10 @@ watch(() => store.config.value, (conf) => {
 const datasets = computed(() => datasetsFetch.data.value?.results ?? [])
 const childrenApps = computed(() => childrenAppsFetch.data.value?.results ?? [])
 
+const hasPrivateParents = computed(() =>
+  datasets.value.some(d => d.visibility === 'private' || d.visibility === 'protected')
+)
+
 const upgradeAvailable = computed(() => {
   if (!availableVersions.value?.length) return null
   const currentVersion = baseAppFetch.data.value?.version
@@ -607,14 +620,19 @@ const confirmRemove = async () => {
 }
 
 const sections = computedDeepDiff(() => {
-  if (!application.value) return {} as Record<string, { title: string, tabs: any[] }>
+  if (!application.value) return {} as Record<string, { title: string, subtitle?: string, tabs?: any[] }>
 
-  const result: Record<string, { title: string, tabs: any[] }> = {}
+  const result: Record<string, { title: string, subtitle?: string, tabs?: any[] }> = {}
+
+  // Informations section
+  result.informations = {
+    title: t('info'),
+    subtitle: t('informationsSubtitle')
+  }
 
   // Metadata section
   const metadataTabs = [
     { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined },
-    { key: 'details', title: t('details'), icon: mdiCardTextOutline },
     { key: 'attachments', title: t('attachments'), icon: mdiPaperclip }
   ]
   if (datasets.value.length) {

@@ -1,7 +1,7 @@
 <template>
   <d-frame
     id="api-doc"
-    :src="`${$sitePath}/openapi-viewer?drawerLocation=right&urlType=general`"
+    :src="`${$sitePath}/openapi-viewer/?drawerLocation=right&urlType=general`"
     class="fill-height"
     resize="no"
     sync-params

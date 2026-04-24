@@ -3,6 +3,7 @@ export default (admin = false) => ({
   title: 'Portails',
   layout: {
     title: '',
+    listActions: admin ? ['add', 'edit', 'delete'] : ['edit'],
     messages: {
       addItem: 'Add a portal',
       'x-i18n-addItem': {
@@ -26,18 +27,18 @@ export default (admin = false) => ({
         title: 'Type de site',
         description: 'Utilisé pour séparer la gestion des sites par groupes.',
         default: 'data-fair-portals',
-        readOnly: true
+        layout: admin ? {} : 'none'
       },
       id: {
         type: 'string',
         title: 'Identifiant',
         description: 'Cet identifiant doit être unique pour la même valeur de "Type de site".',
-        readOnly: true
+        layout: admin ? {} : 'none'
       },
       department: {
         type: 'string',
         title: 'Département',
-        readOnly: true
+        layout: admin ? {} : 'none'
       },
       title: {
         type: 'string',
@@ -65,13 +66,13 @@ export default (admin = false) => ({
         type: 'string',
         title: 'Adresse des pages de jeux de données',
         description: 'Exemple: https://mon-portail/datasets/{id}',
-        readOnly: true
+        layout: admin ? {} : 'none'
       },
       applicationUrlTemplate: {
         type: 'string',
         title: 'Adresse des pages de visualisations',
         description: 'Exemple: https://mon-portail/reuses/{id}',
-        readOnly: true
+        layout: admin ? {} : 'none'
       },
       settings: {
         type: 'object',
@@ -94,9 +95,15 @@ export default (admin = false) => ({
           datasetsRequiredMetadata: {
             title: 'Métadonnées requises pour les jeux de données',
             type: 'array',
-            layout: { getItems: 'context.DatasetsMetadata' },
             items: {
               type: 'string'
+            },
+            layout: {
+              getItems: {
+                expr: 'context.DatasetsMetadata',
+                itemKey: 'item.key',
+                itemTitle: 'item.title'
+              }
             }
           }
         }

@@ -1,35 +1,37 @@
 <template>
-  <div class="d-flex align-center ga-4 pa-4">
-    <h2 class="text-title-large">
-      {{ t('agents') }}
-    </h2>
-    <v-autocomplete
-      v-model="selectedOwner"
-      :items="owners"
-      item-title="name"
-      :item-value="(o: any) => o"
-      :label="t('org')"
-      :loading="ownersFetch.loading.value"
-      density="compact"
-      hide-details
-      max-width="300"
-      variant="outlined"
+  <div class="d-flex flex-column fill-height">
+    <div class="d-flex align-center ga-4 pa-4 flex-shrink-0">
+      <h2 class="text-title-large">
+        {{ t('agents') }}
+      </h2>
+      <v-autocomplete
+        v-model="selectedOwner"
+        :items="owners"
+        item-title="name"
+        :item-value="(o: any) => o"
+        :label="t('org')"
+        :loading="ownersFetch.loading.value"
+        density="compact"
+        hide-details
+        max-width="300"
+        variant="outlined"
+      />
+    </div>
+    <d-frame
+      v-if="selectedOwner"
+      id="agents"
+      :adapter.prop="stateChangeAdapter"
+      :src="`/agents/${selectedOwner.type}/${selectedOwner.id}/settings`"
+      sync-path="/data-fair/admin/agents/"
+      class="flex-grow-1"
+      resize="no"
+      sync-params
+      emit-iframe-messages
+      @message="onMessage"
+      @iframe-message="onMessage"
+      @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
   </div>
-  <d-frame
-    v-if="selectedOwner"
-    id="agents"
-    :src="`${$sitePath}/agents/${selectedOwner.type}/${selectedOwner.id}/settings`"
-    class="fill-height"
-    sync-params
-    :sync-path="$sitePath + '/data-fair/admin/agents/'"
-    emit-iframe-messages
-    resize="no"
-    :adapter.prop="stateChangeAdapter"
-    @message="onMessage"
-    @iframe-message="onMessage"
-    @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
-  />
 </template>
 
 <i18n lang="yaml">
