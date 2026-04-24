@@ -81,14 +81,26 @@
     />
     <search-field v-model="q" />
   </v-toolbar>
+  <div
+    class="dataset-table-live-region"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  >
+    {{ liveMessage }}
+  </div>
   <v-sheet class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
+      ref="tableRoot"
       :height="pagination ? undefined : height - ((noInteraction && !searchOnly) ? 0 : 48)"
       :loading="fetchResults.loading.value"
       class="dataset-table"
       :fixed-header="!pagination"
     >
+      <caption class="dataset-table-caption">
+        {{ tableLabel }}
+      </caption>
       <thead ref="thead">
         <tr>
           <template
@@ -97,6 +109,10 @@
           >
             <th
               :id="`header-${header.cssKey ?? header.key}`"
+              scope="col"
+              :aria-sort="header.property && !noInteraction
+                ? (header.key === sort?.key ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none')
+                : undefined"
               :title="header.title"
               class="text-left"
               :class="{
@@ -131,17 +147,26 @@
                   :selected-cols="selectedCols"
                 />
               </div>
+              <button
+                v-else-if="header.property && !noInteraction"
+                type="button"
+                class="pr-2 header-wrapper dataset-table-th-button"
+                aria-haspopup="menu"
+                :aria-label="t('headerMenuLabel', { column: header.title })"
+              >
+                <span class="two-lines">{{ header.title }}</span>
+                <v-icon
+                  v-if="hoveredHeader?.key === header.key || header.key === sort?.key"
+                  :color="header.key === sort?.key ? 'primary' : 'default'"
+                  :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
+                  class="action-icon"
+                />
+              </button>
               <div
                 v-else
                 class="pr-2 header-wrapper"
               >
                 <span class="two-lines">{{ header.title }}</span>
-                <v-icon
-                  v-if="header.property && (hoveredHeader?.key === header.key || header.key === sort?.key)"
-                  :color="header.key === sort?.key ? 'primary' : 'default'"
-                  :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
-                  class="action-icon"
-                />
               </div>
             </th>
             <dataset-table-header-menu
@@ -425,6 +450,15 @@
     deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
     helpFilterPrompt: Aide-moi à filtrer ces données
     checkDataQualityPrompt: Vérifier la qualité de ces données
+    tableCaption: "Tableau de données : {title}"
+    tableCaptionFallback: Tableau de données
+    announceResults: "Aucun résultat | 1 résultat | {count} résultats"
+    announceSearchResults: "Aucun résultat pour « {query} » | 1 résultat pour « {query} » | {count} résultats pour « {query} »"
+    announceLoading: Chargement des résultats
+    announceSort: "Tri appliqué : colonne {column}, {direction}"
+    sortAscending: ordre croissant
+    sortDescending: ordre décroissant
+    headerMenuLabel: "Colonne {column}, ouvrir les options de tri et de filtre"
   en:
     cancel: Cancel
     delete: Delete
@@ -434,6 +468,15 @@
     checkDataQualityPrompt: Check data quality
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost permanently
+    tableCaption: "Data table: {title}"
+    tableCaptionFallback: Data table
+    announceResults: "No result | 1 result | {count} results"
+    announceSearchResults: "No result for \"{query}\" | 1 result for \"{query}\" | {count} results for \"{query}\""
+    announceLoading: Loading results
+    announceSort: "Sort applied: column {column}, {direction}"
+    sortAscending: ascending order
+    sortDescending: descending order
+    headerMenuLabel: "Column {column}, open sort and filter options"
 </i18n>
 
 <script setup lang="ts">
@@ -441,6 +484,7 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn } from './use-headers'
+import { useTableAnnouncer } from './use-table-announcer'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
@@ -505,6 +549,10 @@ const display = useDisplay()
 const { dataset, id: datasetId } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
+const tableLabel = computed(() => dataset.value?.title
+  ? t('tableCaption', { title: dataset.value.title })
+  : t('tableCaptionFallback'))
+
 const allCols = computed(() => dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName').map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
@@ -551,6 +599,15 @@ const nextPage = async () => {
 const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
 const { selectedResults, saveLine, bulkLines, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
+const { message: liveMessage } = useTableAnnouncer({
+  q,
+  total,
+  loading: fetchResults.loading,
+  sort,
+  headerTitleFor: (key) => headers.value?.find(h => h.key === key)?.title ?? key,
+  t
+})
+
 if (edit) {
   useAgentTool({
     name: 'open_add_line_dialog',
@@ -587,6 +644,18 @@ if (edit) {
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
 const thead = ref<HTMLElement>()
+const tableRoot = ref<{ $el?: HTMLElement } | null>(null)
+
+// The scrollable wrapper is rendered by Vuetify inside v-table and doesn't expose a prop.
+// Make it focusable so keyboard users can reach the grid with Tab and scroll via arrow keys (RGAA 7.3).
+const applyWrapperA11y = () => {
+  const wrapper = tableRoot.value?.$el?.querySelector?.<HTMLElement>('.v-table__wrapper')
+  if (!wrapper) return
+  wrapper.setAttribute('tabindex', '0')
+  wrapper.setAttribute('role', 'region')
+  wrapper.setAttribute('aria-label', tableLabel.value)
+}
+watch([tableRoot, displayMode, tableLabel], () => nextTick(applyWrapperA11y))
 const minColWidth = computed(() => {
   return displayMode.value === 'table-dense' ? 80 : 120
 })
@@ -667,8 +736,42 @@ const deleteLine = useAsyncAction(async () => {
 </script>
 
 <style>
+.dataset-table-caption,
+.dataset-table-live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 .dataset-table th {
   z-index: 2;
+}
+.dataset-table .dataset-table-th-button {
+  background: transparent;
+  border: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+}
+.dataset-table .dataset-table-th-button:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
+}
+.dataset-table .v-table__wrapper:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
 }
 .dataset-table .header-wrapper {
   position: relative;
