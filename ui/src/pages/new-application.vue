@@ -90,7 +90,7 @@
             <v-autocomplete
               v-model="copyApp"
               v-model:search="copySearch"
-              :loading="appSearchLoading"
+              :loading="searchApps.loading.value"
               :label="t('searchApp')"
               :placeholder="t('search')"
               :items="appSearchResults"
@@ -105,7 +105,16 @@
               hide-details
               clearable
               @update:model-value="onCopyAppSelected"
-            />
+            >
+              <template #item="{ props: itemProps, item }">
+                <application-list-item
+                  v-bind="{ ...itemProps, title: undefined }"
+                  :application="(item as any)"
+                  :show-topics="true"
+                  :no-link="true"
+                />
+              </template>
+            </v-autocomplete>
           </template>
 
           <!-- Base app mode -->
@@ -255,6 +264,8 @@
 
 <script setup lang="ts">
 import { mdiApps, mdiContentCopy, mdiSecurity, mdiShape, mdiTextBox } from '@mdi/js'
+import { withQuery } from 'ufo'
+import { watchDebounced } from '@vueuse/core'
 import { $apiPath, $uiConfig } from '~/context'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
@@ -336,26 +347,33 @@ onMounted(async () => {
 const copyApp = ref<any>(null)
 const copySearch = ref('')
 const appSearchResults = ref<any[]>([])
-const appSearchLoading = ref(false)
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-watch(copySearch, (q) => {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  if (!q || q.length < 2) { appSearchResults.value = []; return }
-  searchTimeout = setTimeout(() => {
-    searchApplications()
-  }, 300)
+const copyAppsUrl = computed(() => {
+  if (creationType.value !== 'copy') return null
+  const query: Record<string, any> = {
+    size: 20,
+    select: 'id,title,url,status,updatedAt,topics,-userPermissions,-links',
+    owner: ownerFilter.value
+  }
+  if (copySearch.value) query.q = copySearch.value
+  return withQuery(`${$apiPath}/applications`, query)
 })
 
-async function searchApplications () {
-  appSearchLoading.value = true
-  try {
-    const data = await $fetch<{ results: any[] }>(`${$apiPath}/applications?q=${encodeURIComponent(copySearch.value)}&size=20&select=id,title,url,-userPermissions,-links,-owner&owner=${ownerFilter.value}`)
-    appSearchResults.value = data.results
-  } finally {
-    appSearchLoading.value = false
+const searchApps = useAsyncAction(async () => {
+  if (!copyAppsUrl.value) {
+    appSearchResults.value = []
+    return
   }
-}
+  const items: any[] = []
+  if (copyApp.value) items.push(copyApp.value)
+  const data = await $fetch<{ results: any[] }>(copyAppsUrl.value)
+  for (const r of data.results) {
+    if (!items.find(i => i.id === r.id)) items.push(r)
+  }
+  appSearchResults.value = items
+})
+
+watchDebounced(copyAppsUrl, () => searchApps.execute(), { immediate: true, debounce: 250 })
 
 function onCopyAppSelected (app: any) {
   if (!app) return
