@@ -6,12 +6,20 @@ import type { AxiosInstance } from 'axios'
 test.describe('permissions editor', () => {
   let datasetId: string
   let ax: AxiosInstance
+  let defaultPermissions: any
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     ax = await axiosAuth('test_user1@test.com', 'test_org1')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id
+    // Snapshot the default permissions assigned at creation so we can restore
+    // them between tests instead of re-uploading the dataset.
+    defaultPermissions = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+  })
+
+  test.beforeEach(async () => {
+    await ax.put(`/api/v1/datasets/${datasetId}/permissions`, defaultPermissions)
   })
 
   /**
@@ -19,20 +27,14 @@ test.describe('permissions editor', () => {
    */
   async function goToPermissions (page: any, goToWithAuth: any, user = 'test_user1', orgLabel = 'Test Org 1') {
     const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-    // Login and go to the dashboard first (personal context)
     await goToWithAuth('/data-fair/', user)
-    // Switch to org context via the personal menu
     await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
     await page.getByRole('listitem').filter({ hasText: orgLabel }).click()
-    // Wait for the page to reload after org switch
     await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-    // Navigate to the dataset page
     await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
     await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
     await page.locator('#share').scrollIntoViewIfNeeded()
-    // Click the Permissions tab to ensure it is active
     await page.getByRole('tab', { name: /Permissions/i }).click()
-    // Wait for the permissions component to load (visibility select appears)
     await expect(page.locator('#share .v-select').first()).toBeVisible({ timeout: 10000 })
   }
 
@@ -264,15 +266,12 @@ test.describe('permissions editor', () => {
   test.describe('access control', () => {
     test('non-admin cannot see permissions tab', async ({ page, goToWithAuth }) => {
       const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-      // Login as contrib user and switch to org context
       await goToWithAuth('/data-fair/', 'test_user5')
       await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
       await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
       await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      // Navigate to the dataset page
       await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
-      // The Permissions tab should NOT be visible for a contrib user
       await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
     })
   })
