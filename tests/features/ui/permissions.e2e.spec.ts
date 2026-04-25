@@ -23,15 +23,10 @@ test.describe('permissions editor', () => {
   })
 
   /**
-   * Helper: login, switch to org context via personal menu, then navigate to dataset permissions tab.
+   * Helper: login (in test_org1 context), navigate to dataset, open Permissions tab.
    */
-  async function goToPermissions (page: any, goToWithAuth: any, user = 'test_user1', orgLabel = 'Test Org 1') {
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-    await goToWithAuth('/data-fair/', user)
-    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: orgLabel }).click()
-    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-    await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+  async function goToPermissions (page: any, goToWithAuth: any, user = 'test_user1', org = 'test_org1') {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, user, { org })
     await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
     await page.locator('#share').scrollIntoViewIfNeeded()
     await page.getByRole('tab', { name: /Permissions/i }).click()
@@ -265,12 +260,7 @@ test.describe('permissions editor', () => {
 
   test.describe('access control', () => {
     test('non-admin cannot see permissions tab', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-      await goToWithAuth('/data-fair/', 'test_user5')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+      await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user5', { org: 'test_org1' })
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
     })
