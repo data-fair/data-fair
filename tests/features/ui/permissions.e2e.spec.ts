@@ -259,8 +259,16 @@ test.describe('permissions editor', () => {
   // ===== Test Group 5: Access Control =====
 
   test.describe('access control', () => {
+    // Uses the UI org-switch (personal-menu click) rather than the cookie shortcut
+    // in goToWithAuth: contributor-role tests have shown intermittent failures in
+    // the full e2e suite when relying on the cookie alone for first-time login.
     test('non-admin cannot see permissions tab', async ({ page, goToWithAuth }) => {
-      await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user5', { org: 'test_org1' })
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      await goToWithAuth('/data-fair/', 'test_user5')
+      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
+      await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
+      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
+      await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
     })

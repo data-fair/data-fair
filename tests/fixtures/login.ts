@@ -41,31 +41,33 @@ export const test = base.extend<{
 
       goToWithAuth: async ({ page, context }, use) => {
         const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-        const setOrgCookies = async (org: string, dep?: string) => {
-          const orgCookies: { name: string, value: string, url: string }[] = [
-            { name: 'id_token_org', value: org, url: baseUrl }
-          ]
-          if (dep) orgCookies.push({ name: 'id_token_dep', value: dep, url: baseUrl })
-          await context.addCookies(orgCookies)
+        const applyAccountCookies = async (cached: any[] | undefined, opts: { org?: string, dep?: string }) => {
+          // Strip any cached id_token_org/id_token_dep so opts wins deterministically;
+          // they may have been captured in performLogin from a previous test that
+          // ended in a different active-account state.
+          const base = (cached ?? []).filter(c => c.name !== 'id_token_org' && c.name !== 'id_token_dep')
+          if (opts.org) {
+            base.push({ name: 'id_token_org', value: opts.org, url: baseUrl })
+            if (opts.dep) base.push({ name: 'id_token_dep', value: opts.dep, url: baseUrl })
+          }
+          if (base.length) await context.addCookies(base)
         }
         const goToWithAuth = async (url: string, user: string, opts: { org?: string, dep?: string } = {}) => {
-          const cached = cookieCache.get(user)
-          if (cached) {
-            await context.addCookies(cached)
-            if (opts.org) await setOrgCookies(opts.org, opts.dep)
-            await page.goto(url)
-          } else {
-            // Cold cache. Set the org cookie FIRST so it is present at the very first
-            // data-fair page load (after the login redirect) — that's when session.js
-            // readState() runs and picks the active account from cookies.
-            if (opts.org) await setOrgCookies(opts.org, opts.dep)
-            await performLogin(page, context, baseUrl, url, user)
+          let cached = cookieCache.get(user)
+          if (!cached) {
+            // Login lands on /data-fair/ in personal context; the org cookie set
+            // by applyAccountCookies below switches active account on the next nav.
+            await performLogin(page, context, baseUrl, '/data-fair/', user)
+            cached = cookieCache.get(user)
           }
+          await applyAccountCookies(cached, opts)
+          await page.goto(url)
           // Safety: if redirected to login, cache was stale.
           if (page.url().includes('/simple-directory/login')) {
             cookieCache.delete(user)
-            if (opts.org) await setOrgCookies(opts.org, opts.dep)
-            await performLogin(page, context, baseUrl, url, user)
+            await performLogin(page, context, baseUrl, '/data-fair/', user)
+            await applyAccountCookies(cookieCache.get(user), opts)
+            await page.goto(url)
           }
         }
         await use(goToWithAuth)
