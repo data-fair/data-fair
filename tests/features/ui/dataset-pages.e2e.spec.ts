@@ -12,9 +12,28 @@ test.describe('dataset detail pages', () => {
     datasetId = dataset.id
   })
 
-  test('dataset home page loads with metadata section', async ({ page, goToWithAuth }) => {
+  test('dataset home page shows all sections, tabs, record count and editable metadata', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
+
+    // Top-level sections
+    await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#metadata')).toBeVisible()
+    await expect(page.locator('#structure')).toBeVisible()
+    await expect(page.locator('#exploration')).toBeVisible()
+    await expect(page.locator('#share')).toBeVisible()
+    await expect(page.locator('#activity')).toBeVisible()
+
+    // Metadata section: informations + attachments tabs, editable title
+    await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
+    await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes|Attachments/ })).toBeVisible()
+    await expect(page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })).toBeVisible()
+
+    // Structure section: schema + extensions tabs
+    await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
+    await expect(page.locator('#structure').getByRole('tab', { name: /Enrichissements|Extensions/ })).toBeVisible()
+
+    // Record count rendered in informations
+    await expect(page.locator('#informations').getByText(/enregistrements|records/)).toBeVisible()
   })
 
   test('dataset /table route loads table view', async ({ page, goToWithAuth }) => {
@@ -28,25 +47,6 @@ test.describe('dataset detail pages', () => {
     await expect(page.locator('d-frame')).toBeAttached({ timeout: 10000 })
   })
 
-  test('dataset main page loads with metadata and structure sections', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
-  })
-
-  test('main page shows informations, metadata and structure sections with their tabs', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    // Top informations section renders the read-only dataset details
-    await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#metadata')).toBeVisible()
-    await expect(page.locator('#structure')).toBeVisible()
-    // Metadata section has informations and attachments tabs (attachments only on finalized datasets)
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
-    await expect(page.locator('#metadata').getByRole('tab', { name: /Pièces jointes|Attachments/ })).toBeVisible()
-    // Structure section has schema and extensions tabs
-    await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
-    await expect(page.locator('#structure').getByRole('tab', { name: /Enrichissements|Extensions/ })).toBeVisible()
-  })
-
   test('structure section shows dataset properties', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
@@ -56,28 +56,6 @@ test.describe('dataset detail pages', () => {
     const adrButton = structureSection.getByRole('button').filter({ hasText: /adr/ })
     await adrButton.click()
     await expect(structureSection.getByText(/Clé source|Source key/i)).toBeVisible({ timeout: 5000 })
-  })
-
-  test('dataset home page shows metadata, structure, exploration, share and activity sections', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#exploration')).toBeVisible()
-    await expect(page.locator('#share')).toBeVisible()
-    await expect(page.locator('#activity')).toBeVisible()
-  })
-
-  test('dataset home page displays record count', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    // Record count is rendered in the top-level #informations section (dataset-metadata-details)
-    await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#informations').getByText(/enregistrements|records/)).toBeVisible({ timeout: 5000 })
-  })
-
-  test('dataset home page shows metadata section with editable form', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    // Metadata editing is now inline on the main page
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })).toBeVisible()
   })
 
   test('leave guard warns when navigating away with unsaved metadata changes', async ({ page, goToWithAuth }) => {
