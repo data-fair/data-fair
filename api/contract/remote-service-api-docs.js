@@ -8,6 +8,10 @@ const remoteServicePatchSchema = { ..._remoteServicePatchSchema }
 delete remoteServiceSchema.definitions
 delete remoteServicePatchSchema.definitions
 
+/**
+ * Builds the per-remote-service OpenAPI documentation served at /remote-services/{id}/api-docs.json.
+ * Proxies the upstream API paths under /proxy/* with read-only permissions.
+ */
 export default (remoteService) => {
   const api = {
     openapi: '3.1.0',

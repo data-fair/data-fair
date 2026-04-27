@@ -3,6 +3,7 @@ import pJson from './p-json.js'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as utils from './utils.js'
 
+/** Builds the OpenAPI documentation for a publication site's catalog (the developer-facing dataset listing). */
 export default (publicUrl, publicationSite, info) => {
   const hostname = new URL(publicUrl).hostname
   const servers = [{

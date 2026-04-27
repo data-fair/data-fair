@@ -1,14 +1,15 @@
+import type { Application, Settings } from '#types'
+
 import config from '#config'
 import { resolvedSchema as applicationSchema } from '../types/application/index.ts'
 import { resolvedSchema as appConfigSchema } from '../types/app-config/index.js'
-
 import journalSchema from './journal.js'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import pJson from './p-json.js'
-import { type Application, type Settings } from '#types'
 
 type ApplicationApiDocsInfo = NonNullable<Settings['info']>
 
+/** Wraps a description into a text/plain OpenAPI response object. */
 const textPlainResponse = (description: string) => ({
   description,
   content: {
@@ -16,6 +17,7 @@ const textPlainResponse = (description: string) => ({
   }
 })
 
+/** Builds the per-application OpenAPI documentation served at /applications/{id}/api-docs.json. */
 export default (application: Application, info: ApplicationApiDocsInfo, publicUrl: string = config.publicUrl) => {
   const errorResponses = {
     400: { $ref: '#/components/responses/BadRequest' },
