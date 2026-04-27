@@ -389,7 +389,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     description: `Le format de sérialisation de la donnée.
 
   - **json** (défaut)
-  - **csv** pour formats compatibles tableurs
+  - **csv**, **xlsx**, **ods** pour formats compatibles tableurs
   - **pbf** pour tuiles vectorielles
   - **geojson**, **shp**, **wkt** pour formats géographiques`,
     schema: {
@@ -763,7 +763,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 
 Pour grouper par valeur distincte utilisez "value" (comportement par défaut).
 
-Si la colonne de groupement est de type date vous pouvez utiliser un intervalle de calendrier comme "year", "month", etc (<a href="https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation#calendar_intervals">voir la documentation Elasticsearch</a>).
+Si la colonne de groupement est de type date vous pouvez utiliser un intervalle de calendrier comme "year", "month", etc ([voir la documentation Elasticsearch](https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation#calendar_intervals)).
 
 Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comme intervalle de groupement des valeurs.`,
             required: false,

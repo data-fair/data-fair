@@ -48,7 +48,7 @@ export default (publicUrl, publicationSite, info) => {
           operationId: 'getApiDoc',
           responses: {
             200: {
-              description: 'État de santé du service',
+              description: 'La documentation OpenAPI du catalogue.',
               content: {
                 'application/json': {
                   schema: { type: 'object' }

@@ -222,7 +222,7 @@ Cette documentation interactive à destination des développeurs permet de gére
 
 Les opérations réellement exposées pour un jeu de données particulier dépendent de son type et de sa configuration. Pour un jeu de données précis, sa propre documentation reste accessible via \`/datasets/{id}/api-docs.json\` (publique) ou \`/datasets/{id}/private-api-docs.json\` (privée).
 
-Notez que les API spécifiques aux applications et aux services distants disposent chacune de leur propre documentation séparée.
+Les opérations spécifiques à une application particulière (configuration, journal, pièces jointes, etc.) ainsi que les services distants disposent chacune de leur propre documentation séparée.
 
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur.
 
