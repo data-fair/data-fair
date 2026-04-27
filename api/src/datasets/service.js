@@ -98,7 +98,15 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
     if (options.catalogMode) {
       extraFilters.push({ publicationSites: `${publicationSite.type}:${publicationSite.id}` })
     } else {
-      extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
+      // master-data datasets are cross-domain reference data and must remain reachable
+      // from a per-domain back-office (e.g. as virtual-dataset children, or initFrom source)
+      extraFilters.push({
+        $or: [
+          { 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id },
+          { 'masterData.virtualDatasets.active': true },
+          { 'masterData.standardSchema.active': true }
+        ]
+      })
     }
   }
 
