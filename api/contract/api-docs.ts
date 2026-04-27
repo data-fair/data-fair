@@ -1,17 +1,16 @@
+import type { SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { Dataset } from '#types'
+
 import config from '#config'
 import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
-import { resolvedSchema as remoteServicePatch } from '../doc/remote-services/patch-req/.type/index.js'
-import { resolvedSchema as remoteService } from '#types/remote-service/index.js'
 import { resolvedSchema as application } from '../types/application/.type/index.js'
 import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
-import datasetAPIDocs from './dataset-api-docs.js'
+import datasetAPIDocs from './dataset-api-docs.ts'
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
-import { type Dataset } from '#types'
-import { type SessionStateAuthenticated } from '@data-fair/lib-express'
 
 interface DatasetVariant {
   key: string
@@ -105,6 +104,7 @@ const variants: DatasetVariant[] = [
   }
 ]
 
+/** Builds a synthetic admin session used to render the merged root doc with all admin/private routes visible. */
 const buildAdminSession = (): SessionStateAuthenticated => ({
   user: {
     id: '{adminUserId}',
@@ -126,27 +126,25 @@ const datasetIdParam = {
   schema: { type: 'string', title: 'Identifiant du jeu de données' }
 }
 
+/** Copies schemas, securitySchemes and responses from a per-resource doc into the root doc, without overwriting existing entries. */
 const mergeComponents = (doc: any, sourceApi: any) => {
-  const sourceSchemas = sourceApi?.components?.schemas
-  if (sourceSchemas) {
-    doc.components.schemas = doc.components.schemas || {}
-    for (const [name, schema] of Object.entries(sourceSchemas)) {
-      if (!doc.components.schemas[name]) {
-        doc.components.schemas[name] = schema
-      }
-    }
-  }
-  const sourceSecuritySchemes = sourceApi?.components?.securitySchemes
-  if (sourceSecuritySchemes) {
-    doc.components.securitySchemes = doc.components.securitySchemes || {}
-    for (const [name, scheme] of Object.entries(sourceSecuritySchemes)) {
-      if (!doc.components.securitySchemes[name]) {
-        doc.components.securitySchemes[name] = scheme
+  for (const section of ['schemas', 'securitySchemes', 'responses'] as const) {
+    const sourceEntries = sourceApi?.components?.[section]
+    if (!sourceEntries) continue
+    doc.components[section] = doc.components[section] || {}
+    for (const [name, value] of Object.entries(sourceEntries)) {
+      if (!doc.components[section][name]) {
+        doc.components[section][name] = value
       }
     }
   }
 }
 
+/**
+ * Merges a per-resource doc's paths into the root doc under a given prefix.
+ * Injects the resource id parameter, suffixes operationIds to keep them unique across variants
+ * and merges tags when several variants document the same operation.
+ */
 const mergePaths = (
   doc: any,
   sourcePaths: Record<string, any>,
@@ -192,10 +190,34 @@ const mergePaths = (
   }
 }
 
-export default (publicUrl = config.publicUrl) => {
-  const doc = {
+/** Wraps a description into a text/plain OpenAPI response object. */
+const textPlainResponse = (description: string) => ({
+  description,
+  content: {
+    'text/plain': { schema: { type: 'string' } }
+  }
+})
+
+// Reusable error response refs for top-level routes.
+const readErrorResponses = {
+  401: { $ref: '#/components/responses/Unauthorized' },
+  403: { $ref: '#/components/responses/Forbidden' },
+  404: { $ref: '#/components/responses/NotFound' }
+}
+const errorResponses = {
+  400: { $ref: '#/components/responses/BadRequest' },
+  ...readErrorResponses
+}
+
+/**
+ * Builds the merged root OpenAPI documentation served at /api-docs.json.
+ * Combines top-level CRUD (datasets, applications) with the per-dataset routes generated
+ * from a representative set of dataset variants (file, rest, virtual, meta-only, master-data).
+ */
+export default (publicUrl: string = config.publicUrl) => {
+  const doc: any = {
     openapi: '3.1.0',
-    info: Object.assign({
+    info: {
       title: 'API Data Fair',
       description: `
 Cette documentation interactive à destination des développeurs permet de gérer les ressources de ce service de publication de données et de consommer les opérations applicables aux jeux de données (toutes variantes confondues : fichier, éditable, virtuel, métadonnées seules, master data), incluant les opérations privées et d'administration.
@@ -209,13 +231,11 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="_blank">documentation sur ce sujet</a>.
 `,
       version: pJson.version,
-      'x-api-id': 'data-fair'
-      // @ts-ignore
-    }, config.info),
+      'x-api-id': 'data-fair',
+      ...config.info
+    },
     servers: [{
-      // @ts-ignore
       url: `${publicUrl}/api/v1`,
-      // @ts-ignore
       description: `Instance Data Fair - ${new URL(publicUrl).hostname}`
     }],
     components: {
@@ -223,8 +243,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         dataset,
         datasetPatch: datasetPatch.properties.body,
         datasetPost: datasetPost.properties.body,
-        remoteService,
-        remoteServicePatch: remoteServicePatch.properties.body,
         application,
         applicationPatch: applicationPatchReq.properties.body,
       },
@@ -239,23 +257,26 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           in: 'cookie',
           name: 'id_token'
         }
+      },
+      responses: {
+        BadRequest: textPlainResponse('Requête invalide : corps de requête mal formé, paramètres manquants ou contraintes métier non respectées.'),
+        Unauthorized: textPlainResponse("Non authentifié : aucune session ni clé d'API valide n'a été fournie."),
+        Forbidden: textPlainResponse('Permissions insuffisantes pour effectuer cette opération.'),
+        NotFound: textPlainResponse("La ressource demandée n'existe pas.")
       }
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     paths: {
       '/ping': {
         get: {
-          summary: 'Obtenir l\'état de santé du service',
+          summary: "Obtenir l'état de santé du service",
+          description: 'Vérifier que le service est opérationnel.',
           operationId: 'ping',
           tags: ['Administration'],
           'x-operationType': 'http://schema.org/CheckAction',
           responses: {
-            200: {
-              description: 'Service ok'
-            },
-            500: {
-              description: 'Service ko'
-            }
+            200: textPlainResponse('Service ok.'),
+            500: textPlainResponse('Service ko.')
           }
         }
       },
@@ -267,13 +288,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Administration'],
           responses: {
             200: {
-              description: 'La documentation de l\'API',
+              description: "La documentation de l'API.",
               content: {
-                'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
-                }
+                'application/json': { schema: { type: 'object' } }
               }
             }
           }
@@ -287,6 +304,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Administration'],
           responses: {
             200: {
+              description: 'La liste des concepts.',
               content: {
                 'application/json': {
                   schema: {
@@ -338,7 +356,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           ],
           responses: {
             200: {
-              description: 'Liste des jeux de données que l\'utilisateur est autorisé à voir.',
+              description: "Liste des jeux de données que l'utilisateur est autorisé à voir.",
               content: {
                 'application/json': {
                   schema: {
@@ -346,23 +364,23 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                     properties: {
                       count: {
                         type: 'number',
-                        description: 'Nombre total de jeux de données'
+                        description: 'Nombre total de jeux de données.'
                       },
                       results: {
                         type: 'array',
-                        items: {
-                          $ref: '#/components/schemas/dataset'
-                        }
+                        items: { $ref: '#/components/schemas/dataset' }
                       }
                     }
                   }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         },
         post: {
           summary: 'Créer un jeu de données',
+          description: 'Créer un nouveau jeu de données.',
           operationId: 'postDataset',
           tags: ['Jeux de données (JDD)'],
           requestBody: {
@@ -370,23 +388,21 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             required: true,
             content: {
               'multipart/form-data': {
-                schema: {
-                  $ref: '#/components/schemas/datasetPost'
-                }
+                schema: { $ref: '#/components/schemas/datasetPost' }
               }
             }
           },
           responses: {
             201: {
-              description: 'Métadonnées sur le dataset créé.',
+              description: 'Le jeu de données créé.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
+                  schema: { $ref: '#/components/schemas/dataset' }
                 }
               }
-            }
+            },
+            ...errorResponses,
+            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
           }
         }
       },
@@ -402,9 +418,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             required: true,
             content: {
               'multipart/form-data': {
-                schema: {
-                  $ref: '#/components/schemas/datasetPost'
-                }
+                schema: { $ref: '#/components/schemas/datasetPost' }
               }
             }
           },
@@ -413,9 +427,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               description: 'Jeu de données créé.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
+                  schema: { $ref: '#/components/schemas/dataset' }
                 }
               }
             },
@@ -423,12 +435,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               description: 'Jeu de données modifié.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
+                  schema: { $ref: '#/components/schemas/dataset' }
                 }
               }
-            }
+            },
+            ...errorResponses,
+            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
           }
         }
       },
@@ -451,7 +463,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           ],
           responses: {
             200: {
-              description: 'Liste des applications que l\'utilisateur est autorisé à voir.',
+              description: "Liste des applications que l'utilisateur est autorisé à voir.",
               content: {
                 'application/json': {
                   schema: {
@@ -459,83 +471,77 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                     properties: {
                       count: {
                         type: 'number',
-                        description: 'Nombre total d\'applications'
+                        description: "Nombre total d'applications."
                       },
                       results: {
                         type: 'array',
-                        items: {
-                          $ref: '#/components/schemas/application'
-                        }
+                        items: { $ref: '#/components/schemas/application' }
                       }
                     }
                   }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         },
         post: {
           summary: 'Configurer une application',
+          description: 'Créer une nouvelle application.',
           operationId: 'postApplication',
           tags: ['Applications'],
           requestBody: {
-            description: 'Les informations de configuration de l\'application.',
+            description: "Les informations de configuration de l'application.",
             required: true,
             content: {
               'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/application'
-                }
+                schema: { $ref: '#/components/schemas/application' }
               }
             }
           },
           responses: {
             201: {
-              description: 'Les informations de configuration de l\'application.',
+              description: "Les informations de configuration de l'application.",
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         }
       },
       '/applications/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Lire les informations d\'une application',
-          description: 'Récupérer les informations d\'une application.',
+          summary: "Lire les informations d'une application",
+          description: "Récupérer les informations d'une application.",
           operationId: 'getApplication',
           tags: ['Applications'],
           responses: {
             200: {
-              description: 'Informations d\'une application.',
+              description: "Informations d'une application.",
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
-            }
+            },
+            ...readErrorResponses
           }
         },
         put: {
           summary: 'Créer ou mettre à jour une application',
-          description: 'Créer ou mettre à jour une application.',
+          description: 'Créer ou mettre à jour une application en spécifiant son identifiant.',
           operationId: 'putApplication',
           tags: ['Applications'],
           requestBody: {
-            description: 'Informations de l\'application.',
+            description: "Informations de l'application.",
             required: true,
             content: {
               'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/application'
-                }
+                schema: { $ref: '#/components/schemas/application' }
               }
             }
           },
@@ -544,9 +550,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               description: 'Application créée.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
             },
@@ -554,17 +558,16 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               description: 'Application modifiée.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         },
         patch: {
           summary: 'Modifier une application',
-          description: 'Modifier seulement certaines informations d\'une application.',
+          description: "Modifier seulement certaines informations d'une application.",
           operationId: 'patchApplication',
           tags: ['Applications'],
           requestBody: {
@@ -572,217 +575,41 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             required: true,
             content: {
               'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/applicationPatch'
-                }
+                schema: { $ref: '#/components/schemas/applicationPatch' }
               }
             }
           },
           responses: {
             200: {
-              description: 'Informations de l\'application modifiée.',
+              description: "Informations de l'application modifiée.",
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         },
         delete: {
           summary: 'Supprimer une application',
+          description: 'Supprimer cette application.',
           operationId: 'deleteApplication',
           tags: ['Applications'],
           responses: {
             204: {
               description: 'Application supprimée.'
-            }
-          }
-        }
-      },
-      '/remote-services': {
-        get: {
-          summary: 'Lister les services',
-          description: 'Récupérer la liste des services distants.',
-          operationId: 'listRemoteServices',
-          tags: ['Services distants'],
-          parameters: [
-            utils.qParam,
-            utils.selectParam(Object.keys(remoteService.properties)),
-            utils.filterParam('api-id', 'Restreindre sur l\'identifiant de l\'API d\'origine'),
-            utils.filterParam('input-concepts', 'Restreindre sur les concepts en entrée des routes de l\'API'),
-            utils.filterParam('output-concepts', 'Restreindre sur les concepts en sortie des routes de l\'API'),
-            ...utils.paginationParams
-          ],
-          responses: {
-            200: {
-              description: 'Liste des services distants que l\'utilisateur est autorisé à voir.',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      count: {
-                        type: 'number',
-                        description: 'Nombre total de services distants'
-                      },
-                      results: {
-                        type: 'array',
-                        items: {
-                          $ref: '#/components/schemas/remoteService'
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        post: {
-          summary: 'Configurer un service',
-          description: 'Configurer un service distant.',
-          operationId: 'postRemoteService',
-          tags: ['Services distants'],
-          requestBody: {
-            description: 'Les informations du service distant.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
-          },
-          responses: {
-            201: {
-              description: 'Les informations de configuration du service distant.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      '/remote-services/{id}': {
-        parameters: [utils.idParam],
-        get: {
-          summary: 'Lire les informations d\'un service',
-          description: 'Récupérer les informations d\'un service distant.',
-          operationId: 'getRemoteService',
-          tags: ['Services distants'],
-          responses: {
-            200: {
-              description: 'Informations d\'un service distant.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
-            }
-          }
-        },
-        put: {
-          summary: 'Créer ou mettre à jour un service',
-          description: 'Créer ou mettre à jour un service distant.',
-          operationId: 'putRemoteService',
-          tags: ['Services distants'],
-          requestBody: {
-            description: 'Informations du service distant.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
-          },
-          responses: {
-            201: {
-              description: 'Service distant créé.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
             },
-            200: {
-              description: 'Service distant modifié.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
-            }
-          }
-        },
-        patch: {
-          summary: 'Modifier un service distant',
-          description: 'Modifier seulement certaines informations d\'un service distant.',
-          operationId: 'patchRemoteService',
-          tags: ['Services distants'],
-          requestBody: {
-            description: 'Informations à modifier.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/remoteServicePatch'
-                }
-              }
-            }
-          },
-          responses: {
-            200: {
-              description: 'Informations du service distant modifié.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
-            }
-          }
-        },
-        delete: {
-          summary: 'Supprimer un service',
-          description: 'Supprimer un service distant.',
-          operationId: 'deleteRemoteService',
-          tags: ['Services distants'],
-          responses: {
-            204: {
-              description: 'Service distant supprimé.'
-            }
+            ...readErrorResponses
           }
         }
-      }
+      },
     },
     externalDocs: {
       description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     }
   }
-
-  // TODO: should we keep some of this ?
-  // @ts-ignore
-  delete doc.paths['/remote-services']
-  // @ts-ignore
-  delete doc.paths['/remote-services/{id}']
 
   const adminSession = buildAdminSession()
 
@@ -809,6 +636,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     mergeComponents(doc, publicApi)
     mergeComponents(doc, privateApi)
 
+    /** Maps the per-resource tags to their merged-doc equivalents (with the "JDD / " prefix when no explicit mapping exists). */
     const retag = (operation: any) => {
       const originalTags: string[] = operation.tags || []
       operation.tags = originalTags.map(t => datasetTagMap[t] ?? `JDD / ${t}`)
@@ -836,13 +664,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     '/datasets/{id}/_lock'
   ]
   for (const p of adminPathOrder) {
-    // @ts-ignore
     if (doc.paths[p]) {
-      // @ts-ignore
       const entry = doc.paths[p]
-      // @ts-ignore
       delete doc.paths[p]
-      // @ts-ignore
       doc.paths[p] = entry
     }
   }
@@ -867,7 +691,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     'JDD / Administration',
     'Applications'
   ]
-  // @ts-ignore
   doc.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
 
   return doc

@@ -1,3 +1,5 @@
+import type { Dataset, Settings } from '#types'
+
 import _config from 'config'
 import prettyBytes from 'pretty-bytes'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
@@ -9,37 +11,39 @@ import * as utils from './utils.js'
 import pJson from './p-json.js'
 import { hasCapability } from '../src/datasets/es/commons.js'
 
+type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
+
+const config = _config as any
+
 const dataFiles = datasetSchema.properties.storage.properties.dataFiles
 
-const config = /** @type {any} */(_config)
+/** Wraps a description into a text/plain OpenAPI response object. */
+const textPlainResponse = (description: string) => ({
+  description,
+  content: {
+    'text/plain': { schema: { type: 'string' } }
+  }
+})
 
-/**
- * @param {string} key
- * @param {string} label
- * @returns {string}
- */
-const apiRate = (key, label) => {
-  // @ts-ignore
-  const defaultLimits = config.defaultLimits
-  return `Un utilisateur ${label} ne peut pas effectuer plus de ${defaultLimits.apiRate[key].nb} requêtes par intervalle de ${defaultLimits.apiRate[key].duration} seconde${defaultLimits.apiRate[key].duration > 1 ? 's' : ''}.
-  Sa vitesse de téléchargement totale sera limitée à ${prettyBytes(defaultLimits.apiRate[key].bandwidth.static)}/s pour les contenus statiques (fichiers de données, pièces jointes, etc.) et à ${prettyBytes(defaultLimits.apiRate[key].bandwidth.dynamic)}/s pour les autres appels.`
+/** Renders the rate-limit blurb describing how many requests/sec a given user role can make. */
+const apiRate = (key: 'user' | 'anonymous', label: string): string => {
+  const rate = config.defaultLimits.apiRate[key]
+  return `Un utilisateur ${label} ne peut pas effectuer plus de ${rate.nb} requêtes par intervalle de ${rate.duration} seconde${rate.duration > 1 ? 's' : ''}.
+  Sa vitesse de téléchargement totale sera limitée à ${prettyBytes(rate.bandwidth.static)}/s pour les contenus statiques (fichiers de données, pièces jointes, etc.) et à ${prettyBytes(rate.bandwidth.dynamic)}/s pour les autres appels.`
 }
-const userApiRate = apiRate('user', 'authentifié (session ou clé d\'API)')
+const userApiRate = apiRate('user', "authentifié (session ou clé d'API)")
 const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
 /**
- * @param {any} dataset
- * @param {string} [publicUrl]
- * @param {{ info?: { contact?: Record<string, any> }, compatODS?: boolean }} [settings]
- * @param {any} [publicationSite]
- * @returns {{ api: any, userApiRate: string, anonymousApiRate: string, bulkLineSchema: any }}
+ * Builds the public per-dataset OpenAPI documentation served at /datasets/{id}/api-docs.json.
+ * Routes that don't apply to the dataset variant (virtual, rest, meta-only, no bbox, ...) are pruned.
  */
-export default (dataset, publicUrl = config.publicUrl, settings, publicationSite) => {
+export default (dataset: Dataset, publicUrl: string = config.publicUrl, settings?: DatasetApiDocsSettings, publicationSite?: unknown) => {
   const ownerInfo = settings?.info || {}
-  const schema = dataset.schema || []
+  const schema: any[] = (dataset as any).schema || []
   const datasetLineSchema = datasetUtils.jsonSchema(schema, publicUrl)
 
-  const bulkLineSchema = datasetUtils.jsonSchema(schema.filter((/** @type {any} */ p) => !p['x-calculated'] && !p['x-extension']), publicUrl)
+  const bulkLineSchema = datasetUtils.jsonSchema(schema.filter((p: any) => !p['x-calculated'] && !p['x-extension']), publicUrl)
   bulkLineSchema.properties._action = {
     type: 'string',
     title: 'Action',
@@ -54,22 +58,23 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
   }
 
   const stringProperties = schema
-    .filter((/** @type {any} */ p) => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
+    .filter((p: any) => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
   const textSearchProperties = stringProperties
-    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
+    .filter((p: any) => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
   const textAggProperties = stringProperties
-    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
+    .filter((p: any) => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
   const valuesProperties = schema
-    .filter((/** @type {any} */ p) => !p.key.startsWith('_geo'))
-    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
-  const imageProperty = schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
+    .filter((p: any) => !p.key.startsWith('_geo'))
+    .filter((p: any) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
+  const imageProperty = schema.find((f: any) => f['x-refersTo'] === 'http://schema.org/image')
+  const documentProperty = schema.find((f: any) => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
   // Detect whether we're rendering the merged doc (sample dataset with placeholder id like "{datasetId}")
   // vs an actual per-dataset doc. In the merged case, the column-based filter dropdown would
   // expose sample column names (Nom, Description, ...) that aren't useful, so we hide it.
-  const isSampleDataset = typeof dataset.id === 'string' && dataset.id.startsWith('{')
+  const isSampleDataset = typeof (dataset as any).id === 'string' && (dataset as any).id.startsWith('{')
 
-  const filterItems = []
+  const filterItems: any[] = []
   if (!isSampleDataset) {
     for (const p of schema) {
       if (hasCapability(p, 'index') || hasCapability(p, 'wildcard') || hasCapability(p, 'text') || hasCapability(p, 'textStandard')) {
@@ -97,8 +102,7 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     }
   }
 
-  /** @type {any} */
-  const filterParams = [{
+  const filterParams: any[] = [{
     in: 'query',
     name: 'q',
     description: `
@@ -141,7 +145,7 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
       type: 'array',
       items: {
         type: 'string',
-        enum: textSearchProperties.length ? textSearchProperties.map((/** @type {any} */ p) => p.key) : undefined
+        enum: textSearchProperties.length ? textSearchProperties.map((p: any) => p.key) : undefined
       }
     },
     style: 'form',
@@ -190,8 +194,7 @@ Les types de filtres disponibles peuvent varier par colonne.
         }
       }
     }
-  },
-  {
+  }, {
     in: 'query',
     name: 'qs',
     description: `
@@ -209,7 +212,9 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     }
   }]
 
-  if (dataset.bbox && dataset.bbox.length === 4) {
+  const hasBbox = !!((dataset as any).bbox && (dataset as any).bbox.length === 4)
+
+  if (hasBbox) {
     filterParams.push({
       in: 'query',
       name: 'bbox',
@@ -250,15 +255,9 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     })
   }
 
-  /**
-   * @param {number} [defaultSize]
-   * @param {number} [maxSize]
-   * @param {string} [method]
-   * @returns {any[]}
-   */
-  const hitsParams = (defaultSize = 12, maxSize = 10000, method) => {
-    /** @type {string[]} */
-    let sortItems = []
+  /** Returns the common pagination/sort/select parameters shared by routes that return hits or aggregations. */
+  const hitsParams = (defaultSize = 12, maxSize = 10000, method?: string): any[] => {
+    let sortItems: string[] = []
     if (method === 'values_agg') {
       sortItems = ['metric', '-metric', 'count', '-count', 'key', '-key']
     }
@@ -267,8 +266,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       sortItems.push('-' + valuesProperty.key)
     }
 
-    /** @type {any[]} */
-    const params = [{
+    const params: any[] = [{
       in: 'query',
       name: 'size',
       description: 'Le nombre de résultats à retourner (taille de la pagination).',
@@ -309,13 +307,13 @@ Exemple : \`ma_colonne,-ma_colonne2\``,
     }, {
       in: 'query',
       name: 'select',
-      description: 'La liste des colonnes à retourner',
+      description: 'La liste des colonnes à retourner.',
       schema: {
         title: 'La liste des colonnes à retourner',
         type: 'array',
         items: {
           type: 'string',
-          enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
+          enum: schema.length ? schema.map((p: any) => p.key) : undefined
         },
         default: 'all'
       },
@@ -333,7 +331,7 @@ La valeur est une liste de colonnes séparées par des virgules.
         type: 'array',
         items: {
           type: 'string',
-          enum: textSearchProperties.length ? textSearchProperties.map((/** @type {any} */ p) => p.key) : undefined
+          enum: textSearchProperties.length ? textSearchProperties.map((p: any) => p.key) : undefined
         }
       },
       style: 'form',
@@ -355,13 +353,13 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
         }
       })
     }
-    if (dataset.bbox && dataset.bbox.length === 4) {
+    if (hasBbox) {
       params.push({
         in: 'query',
         name: 'sampling',
         description: `
   **Uniquement avec le paramètre de tuilage xyz**. Configure le mode d'échantillonnage des résultats pour privilégier soit l'exhaustivité des données soit une densité plus homogène sur la carte.
-  
+
     - **neighbors** (défaut) : utilise la densité maximale parmi les tuiles voisines pour réduire la densité de la tuile courante au même niveau d'échantillonnage (coûteux en performance).
     - **max** : retourne le maximum (limité par le paramètre size) de résultat pour chaque tuile.
       `,
@@ -377,7 +375,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   const aggSizeParam = {
     in: 'query',
     name: 'agg_size',
-    description: 'Le nombre de buckets pour l\'agrégation',
+    description: "Le nombre de buckets pour l'agrégation.",
     schema: {
       default: 20,
       type: 'integer',
@@ -389,7 +387,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     in: 'query',
     name: 'format',
     description: `Le format de sérialisation de la donnée.
-  
+
   - **json** (défaut)
   - **csv** pour formats compatibles tableurs
   - **pbf** pour tuiles vectorielles
@@ -398,32 +396,22 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
       title: 'Format de sérialisation',
       default: 'json',
       type: 'string',
-      enum: ['json', 'csv', 'xlsx', 'ods'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'shp', 'wkt'] : [])
+      enum: ['json', 'csv', 'xlsx', 'ods'].concat(hasBbox ? ['pbf', 'geojson', 'shp', 'wkt'] : [])
     }
   }
 
   const htmlParam = {
     in: 'query',
     name: 'html',
-    description: 'Effectuer le rendu des contenus formatés de **markdown** vers **HTML**',
+    description: 'Effectuer le rendu des contenus formatés de **markdown** vers **HTML**.',
     schema: {
       title: 'Rendu HTML des contenus markdown',
       type: 'boolean'
     }
   }
 
-  /* TODO: add this when dataset is public and finalizedAt is filled
-  const finalizedAtParam = {
-    in: 'query',
-    name: 'finalizedAt',
-    description: 'La date de finalisation du jeu de données (propriété finalizedAt). Utilisée pour optimiser l\'utilisation de cache et améliorer la performance',
-    schema: {
-      type: 'string'
-    }
-  } */
-
   const description = `
-Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "**${dataset.title || dataset.slug}**".
+Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "**${dataset.title || (dataset as any).slug}**".
 
 Pour protéger l'infrastructure de publication de données, les appels sont limités par quelques règles simples :
 
@@ -431,11 +419,19 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 - ${userApiRate}
   `
 
-  /**
-   * @param {any} safe
-   * @returns {any}
-   */
-  const readSchema = (safe) => ({
+  // Standard error responses ($refs to components.responses below).
+  const readErrorResponses = {
+    401: { $ref: '#/components/responses/Unauthorized' },
+    403: { $ref: '#/components/responses/Forbidden' },
+    404: { $ref: '#/components/responses/NotFound' }
+  }
+  const errorResponses = {
+    400: { $ref: '#/components/responses/BadRequest' },
+    ...readErrorResponses
+  }
+
+  /** Builds the operation object for /schema and /safe-schema (the safe variant hides cardinality and enums). */
+  const readSchema = (safe: boolean) => ({
     summary: safe ? 'Lire le schéma réduit' : 'Lire le schéma',
     description: safe
       ? 'Récupérer la liste des colonnes et leurs détails.\n*Les valeurs distinctes (`enum`) et la cardinalité (`x-cardinality`) ne sont pas exposées.*'
@@ -447,7 +443,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       {
         in: 'query',
         name: 'mimeType',
-        description: 'Définir le format du schéma',
+        description: 'Définir le format du schéma.',
         required: false,
         schema: {
           title: 'Format du schéma',
@@ -457,11 +453,11 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         }
       },
       utils.filterParam('type', 'Filtre sur le type de colonne', undefined, ['string', 'boolean', 'integer', 'number']),
-      utils.filterParam('format', 'Filtre sur le format d\'une colonne', 'Filtre sur le format d\'une colonne de type chaîne de caractères', ['uri-reference', 'date', 'date-time']),
+      utils.filterParam('format', "Filtre sur le format d'une colonne", "Filtre sur le format d'une colonne de type chaîne de caractères", ['uri-reference', 'date', 'date-time']),
       {
         in: 'query',
         name: 'capability',
-        description: 'Restreindre aux colonnes ayant une capacité particulière',
+        description: 'Restreindre aux colonnes ayant une capacité particulière.',
         required: false,
         schema: {
           title: 'Restreindre par capacité de la colonne',
@@ -472,7 +468,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       {
         in: 'query',
         name: 'enum',
-        description: 'Restreindre aux colonnes ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
+        description: 'Restreindre aux colonnes ayant une énumération de valeurs (moins de 50 valeurs distinctes).',
         required: false,
         schema: {
           title: 'Restreindre par colonnes énumérables',
@@ -483,7 +479,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       {
         in: 'query',
         name: 'calculated',
-        description: 'Inclure les colonnes calculées (non issues du fichier d\'origine)',
+        description: "Inclure les colonnes calculées (non issues du fichier d'origine).",
         required: false,
         schema: {
           title: 'Inclure les colonnes calculées',
@@ -494,44 +490,47 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     ],
     responses: {
       200: {
-        description: 'La liste des colonnes',
+        description: 'La liste des colonnes.',
         content: {
           'application/json': {
             schema: {
               type: 'array',
-              items: {
-                type: 'object'
-              }
+              items: { type: 'object' }
             }
           }
         }
-      }
+      },
+      ...readErrorResponses
     }
   })
 
   const servers = [{
-    url: `${publicUrl}/api/v1/datasets/${publicationSite ? dataset.slug : dataset.id}`,
+    url: `${publicUrl}/api/v1/datasets/${publicationSite ? (dataset as any).slug : (dataset as any).id}`,
     description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${dataset.title}`
   }]
 
-  /** @type {any} */
-  const info = {
-    title: `API publique du jeu de données : ${dataset.title || dataset.slug}`,
+  const info: any = {
+    title: `API publique du jeu de données : ${dataset.title || (dataset as any).slug}`,
     description,
     version: pJson.version,
-    'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
+    'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${(dataset as any).id}`,
     contact: { ...(ownerInfo.contact || {}) }
   }
   if (config.info.termsOfService) info.termsOfService = config.info.termsOfService
 
-  /** @type {any} */
-  const api = {
+  const api: any = {
     openapi: '3.1.0',
     info,
     components: {
       securitySchemes: {},
       schemas: {
         dataset: datasetSchema
+      },
+      responses: {
+        BadRequest: textPlainResponse('Requête invalide : corps de requête mal formé, paramètres manquants ou contraintes métier non respectées.'),
+        Unauthorized: textPlainResponse("Non authentifié : aucune session ni clé d'API valide n'a été fournie."),
+        Forbidden: textPlainResponse('Permissions insuffisantes pour effectuer cette opération sur le jeu de données.'),
+        NotFound: textPlainResponse("Le jeu de données (ou la ressource associée) n'existe pas.")
       }
     },
     security: [],
@@ -552,7 +551,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                   schema: { $ref: '#/components/schemas/dataset' }
                 }
               }
-            }
+            },
+            ...readErrorResponses
           }
         }
       },
@@ -563,7 +563,6 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           operationId: 'readLines',
           'x-permissionClass': 'read',
           tags: ['Données'],
-          // @ts-ignore
           parameters: [{
             in: 'query',
             name: 'after',
@@ -581,20 +580,23 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'integer',
               default: 1
             }
-            // @ts-ignore
-          }].concat(hitsParams()).concat([formatParam, htmlParam]).concat(filterParams).concat([{
+          },
+          ...hitsParams(),
+          formatParam,
+          htmlParam,
+          ...filterParams,
+          {
             in: 'query',
             name: 'collapse',
-            description: 'Afficher une ligne de résultat par valeur distincte d\'un champ.',
+            description: "Afficher une ligne de résultat par valeur distincte d'un champ.",
             schema: {
               type: 'string',
-              // @ts-ignore
-              enum: [null].concat(valuesProperties.map((/** @type {any} */ p) => p.key))
+              enum: [null, ...valuesProperties.map((p: any) => p.key)]
             }
-          }]),
+          }],
           responses: {
             200: {
-              description: 'Le résultat de la requête',
+              description: 'Le résultat de la requête.',
               content: {
                 'application/json': {
                   schema: {
@@ -606,42 +608,44 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                       },
                       results: {
                         type: 'array',
-                        description: 'Le tableau de résultats',
+                        description: 'Le tableau de résultats.',
                         items: datasetLineSchema
                       },
                       next: {
                         type: 'string',
-                        description: 'URL pour continuer la pagination'
+                        description: 'URL pour continuer la pagination.'
                       }
                     }
                   }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         }
       },
       '/values/{field}': {
+        parameters: [{
+          in: 'path',
+          name: 'field',
+          description: 'La colonne pour laquelle récupérer les valeurs distinctes.',
+          required: true,
+          schema: {
+            title: 'Colonne',
+            type: 'string',
+            enum: valuesProperties.length ? valuesProperties.map((p: any) => p.key) : undefined
+          }
+        }],
         get: {
           summary: 'Lister les valeurs distinctes',
-          description: 'Récupérer la liste des valeurs distinctes d\'une colonne.',
+          description: "Récupérer la liste des valeurs distinctes d'une colonne.",
           operationId: 'getValues',
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
-            in: 'path',
-            name: 'field',
-            description: 'La colonne pour laquelle récupérer les valeurs distinctes.',
-            required: true,
-            schema: {
-              title: 'Colonne',
-              type: 'string',
-              enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
-            }
-          }, {
             in: 'query',
             name: 'size',
-            description: 'Le nombre de résultats à retourner (taille de la pagination). 10 par défaut',
+            description: 'Le nombre de résultats à retourner (taille de la pagination). 10 par défaut.',
             schema: {
               title: 'Taille de la pagination',
               default: 10,
@@ -657,30 +661,77 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'string',
               default: 'asc',
               oneOf: [
-                {
-                  const: 'asc',
-                  title: 'Ascendant'
-                },
-                {
-                  const: 'desc',
-                  title: 'Descendant'
-                }
+                { const: 'asc', title: 'Ascendant' },
+                { const: 'desc', title: 'Descendant' }
               ]
             }
-            // @ts-ignore
-          }].concat(filterParams),
-          // TODO: document sort param and interval
+          },
+          ...filterParams],
           responses: {
             200: {
-              description: 'Les valeurs d\'une colonne',
+              description: 'Les valeurs distinctes de la colonne.',
               content: {
                 'application/json': {
                   schema: {
-                    type: 'array'
+                    type: 'array',
+                    items: { type: 'string' }
                   }
                 }
               }
+            },
+            ...errorResponses
+          }
+        }
+      },
+      '/values-labels/{field}': {
+        parameters: [{
+          in: 'path',
+          name: 'field',
+          description: 'La colonne pour laquelle récupérer les valeurs avec leurs libellés.',
+          required: true,
+          schema: {
+            title: 'Colonne',
+            type: 'string',
+            enum: valuesProperties.length ? valuesProperties.map((p: any) => p.key) : undefined
+          }
+        }],
+        get: {
+          summary: 'Lister les valeurs avec libellés',
+          description: "Récupérer la liste des valeurs distinctes d'une colonne avec leurs libellés associés (`x-labels`). Utile pour des champs de type select/autocomplete.",
+          operationId: 'getValuesLabels',
+          'x-permissionClass': 'read',
+          tags: ['Données'],
+          parameters: [{
+            in: 'query',
+            name: 'size',
+            description: 'Le nombre de résultats à retourner. 1000 par défaut.',
+            schema: {
+              title: 'Taille de la pagination',
+              default: 1000,
+              type: 'integer',
+              maximum: 10000
             }
+          },
+          ...filterParams],
+          responses: {
+            200: {
+              description: 'Les valeurs distinctes accompagnées de leurs libellés.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        value: { type: 'string' },
+                        label: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            ...errorResponses
           }
         }
       },
@@ -702,14 +753,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'array',
               items: {
                 type: 'string',
-                enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
+                enum: valuesProperties.length ? valuesProperties.map((p: any) => p.key) : undefined
               }
             }
           }, {
             in: 'query',
             name: 'interval',
             description: `La manière de grouper les valeurs par niveau d'agrégation.
-            
+
 Pour grouper par valeur distincte utilisez "value" (comportement par défaut).
 
 Si la colonne de groupement est de type date vous pouvez utiliser un intervalle de calendrier comme "year", "month", etc (<a href="https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation#calendar_intervals">voir la documentation Elasticsearch</a>).
@@ -720,9 +771,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             schema: {
               title: 'Interval(s) de groupement',
               type: 'array',
-              items: {
-                type: 'string'
-              }
+              items: { type: 'string' }
             }
           }, htmlParam, {
             in: 'query',
@@ -734,7 +783,6 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
   - \`max\` : valeur maximale
   - \`value_count\` : nombre de valeurs
   - \`cardinality\` : nombre de valeurs distinctes (approximatif à partir de 40 000)
-
             `,
             explode: false,
             schema: {
@@ -748,7 +796,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             description: 'La colonne sur laquelle effectuer le calcul de métrique par niveau de groupement.',
             schema: {
               type: 'string',
-              enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
+              enum: schema.length ? schema.map((p: any) => p.key) : undefined
             }
           }, {
             in: 'query',
@@ -758,9 +806,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             schema: {
               title: 'Groupe des valeurs manquantes',
               type: 'array',
-              items: {
-                type: 'string'
-              }
+              items: { type: 'string' }
             }
           }, {
             in: 'query',
@@ -775,19 +821,17 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
                 maximum: 10000
               }
             }
-          }].concat(hitsParams(0, 100, 'values_agg')).concat(filterParams),
-          // TODO: document sort param and interval
+          },
+          ...hitsParams(0, 100, 'values_agg'),
+          ...filterParams],
           responses: {
             200: {
-              description: 'Les informations du jeu de données agrégées par valeurs d\'une colonne',
+              description: "Les informations du jeu de données agrégées par valeurs d'une colonne.",
               content: {
-                'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
-                }
+                'application/json': { schema: { type: 'object' } }
               }
-            }
+            },
+            ...errorResponses
           }
         }
       },
@@ -817,7 +861,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
               schema: {
                 title: 'Colonne pour le calcul de métrique',
                 type: 'string',
-                enum: valuesProperties.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
+                enum: valuesProperties.length ? schema.map((p: any) => p.key) : undefined
               },
               required: true
             },
@@ -831,20 +875,17 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
                 type: 'string',
                 default: '1,5,25,50,75,95,99'
               }
-            }
-            // @ts-ignore
-          ].concat(filterParams),
+            },
+            ...filterParams
+          ],
           responses: {
             200: {
-              description: 'Le résultat du calcul',
+              description: 'Le résultat du calcul.',
               content: {
-                'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
-                }
+                'application/json': { schema: { type: 'object' } }
               }
-            }
+            },
+            ...errorResponses
           }
         }
       },
@@ -863,10 +904,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
               schema: {
                 title: 'Métriques à appliquer',
                 type: 'array',
-                items: {
-                  type: 'string',
-                  enum: acceptedMetricAggs
-                }
+                items: { type: 'string', enum: acceptedMetricAggs }
               }
             },
             {
@@ -878,130 +916,162 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
                 type: 'array',
                 items: {
                   type: 'string',
-                  enum: valuesProperties.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
+                  enum: valuesProperties.length ? schema.map((p: any) => p.key) : undefined
                 }
               },
               style: 'form',
               explode: false
-            }
-            // @ts-ignore
-          ].concat(filterParams),
+            },
+            ...filterParams
+          ],
           responses: {
             200: {
-              description: 'Le résultat du calcul',
+              description: 'Le résultat du calcul.',
               content: {
-                'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
-                }
+                'application/json': { schema: { type: 'object' } }
               }
-            }
+            },
+            ...errorResponses
           }
         }
       },
       '/words_agg': {
         get: {
           summary: 'Lister les mots significatifs',
-          description: 'Récupérer des mots significatifs d\'une colonne dans un jeu de données.',
+          description: "Récupérer des mots significatifs d'une colonne dans un jeu de données.",
           operationId: 'getWordsAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'La colonne sur laquelle effectuer l\'analyse.',
+            description: "La colonne sur laquelle effectuer l'analyse.",
             required: true,
             schema: {
-              title: 'Colonne pour l\'analyse',
+              title: "Colonne pour l'analyse",
               type: 'string',
-              enum: textAggProperties.length ? textAggProperties.map((/** @type {any} */ p) => p.key) : undefined
+              enum: textAggProperties.length ? textAggProperties.map((p: any) => p.key) : undefined
             }
           }, {
             in: 'query',
             name: 'analysis',
-            description: 'Le type d\'analyse textuelle effectuée sur la colonne.\n\nL\'analyse "**lang**" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\n\nL\'analyse "**standard**" effectue un travail plus basique d\'extraction de mots bruts depuis le texte.',
+            description: "Le type d'analyse textuelle effectuée sur la colonne.\n\nL'analyse \"**lang**\" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\n\nL'analyse \"**standard**\" effectue un travail plus basique d'extraction de mots bruts depuis le texte.",
             schema: {
-              title: 'Type d\'analyse à effectuer',
+              title: "Type d'analyse à effectuer",
               type: 'string',
               default: 'lang',
               enum: ['lang', 'standard']
             }
-            // @ts-ignore
-          }].concat(filterParams),
-          // TODO: document sort param and interval
+          },
+          ...filterParams],
           responses: {
             200: {
-              description: 'Le résultat de l\'analyse',
+              description: "Le résultat de l'analyse.",
               content: {
-                'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
-                }
+                'application/json': { schema: { type: 'object' } }
               }
-            }
+            },
+            ...errorResponses
           }
         }
       },
       '/raw': {
         get: {
           summary: 'Télécharger',
-          description: 'Télécharger le jeu de données.',
+          description: "Télécharger le jeu de données dans son format d'origine.",
           operationId: 'downloadOriginalData',
           'x-permissionClass': 'read',
           tags: ['Données'],
           responses: {
             200: {
-              description: 'Le jeu de données',
+              description: 'Le fichier de données.',
               content: {
-                'text/csv': {
-                  schema: {
-                    type: 'string'
-                  }
-                }
+                'application/octet-stream': { schema: { type: 'string', format: 'binary' } }
               }
-            }
+            },
+            ...readErrorResponses
+          }
+        }
+      },
+      '/convert': {
+        get: {
+          summary: 'Télécharger (format converti)',
+          description: 'Télécharger le jeu de données après conversion automatique vers un format standard (CSV typiquement).',
+          operationId: 'downloadConvertedData',
+          'x-permissionClass': 'read',
+          tags: ['Données'],
+          responses: {
+            200: {
+              description: 'Le fichier de données converti.',
+              content: {
+                'application/octet-stream': { schema: { type: 'string', format: 'binary' } }
+              }
+            },
+            ...readErrorResponses
           }
         }
       },
       '/full': {
         get: {
           summary: 'Télécharger (données enrichies)',
-          description: 'Télécharger le jeu de données enrichi.',
+          description: 'Télécharger le jeu de données enrichi avec les colonnes calculées et les extensions.',
           operationId: 'downloadFullData',
           'x-permissionClass': 'read',
           tags: ['Données'],
           responses: {
             200: {
-              description: 'Le jeu de données',
+              description: 'Le fichier de données enrichi.',
               content: {
-                'text/csv': {
-                  schema: {
-                    type: 'string'
-                  }
-                }
+                'application/octet-stream': { schema: { type: 'string', format: 'binary' } }
               }
-            }
+            },
+            ...readErrorResponses
           }
         }
       },
       '/data-files': {
         get: {
           summary: 'Lister les fichiers',
-          description: 'Récupérer la liste des fichiers de données.',
-          operationId: 'readDataFiles',
+          description: 'Récupérer la liste des fichiers de données disponibles (original, converti, enrichi, etc.).',
+          operationId: 'listDataFiles',
           'x-permissionClass': 'read',
           tags: ['Données'],
           responses: {
             200: {
-              description: 'Le résultat de la requête',
+              description: 'La liste des fichiers de données.',
               content: {
-                'application/json': {
-                  schema: dataFiles
-                }
+                'application/json': { schema: dataFiles }
               }
-            }
+            },
+            ...readErrorResponses
+          }
+        }
+      },
+      '/data-files/{filePath}': {
+        parameters: [{
+          in: 'path',
+          name: 'filePath',
+          description: 'Chemin relatif du fichier de données.',
+          required: true,
+          schema: {
+            title: 'Chemin du fichier',
+            type: 'string'
+          }
+        }],
+        get: {
+          summary: 'Télécharger un fichier',
+          description: 'Télécharger un fichier de données spécifique.',
+          operationId: 'downloadDataFile',
+          'x-permissionClass': 'read',
+          tags: ['Données'],
+          responses: {
+            200: {
+              description: 'Le fichier de données.',
+              content: {
+                'application/octet-stream': { schema: { type: 'string', format: 'binary' } }
+              }
+            },
+            ...readErrorResponses
           }
         }
       },
@@ -1020,15 +1090,55 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           tags: ['Métadonnées'],
           responses: {
             200: {
-              description: 'La documentation publique de l\'API',
+              description: "La documentation publique de l'API.",
               content: {
-                'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
-                }
+                'application/json': { schema: { type: 'object' } }
               }
-            }
+            },
+            ...readErrorResponses
+          }
+        }
+      },
+      '/thumbnail': {
+        get: {
+          summary: 'Récupérer la vignette',
+          description: "Récupérer la vignette de l'image de couverture du jeu de données, redimensionnée pour servir d'aperçu.",
+          operationId: 'readThumbnail',
+          'x-permissionClass': 'read',
+          tags: ['Métadonnées'],
+          responses: {
+            200: {
+              description: 'La vignette du jeu de données.',
+              content: { 'image/*': {} }
+            },
+            401: { $ref: '#/components/responses/Unauthorized' },
+            403: { $ref: '#/components/responses/Forbidden' },
+            404: textPlainResponse("Le jeu de données n'existe pas ou ne possède pas d'image associée.")
+          }
+        }
+      },
+      '/attachments/{attachmentId}': {
+        parameters: [{
+          in: 'path',
+          name: 'attachmentId',
+          description: 'Identifiant (chemin relatif) de la pièce jointe de données.',
+          required: true,
+          schema: {
+            title: 'Identifiant de la pièce jointe',
+            type: 'string'
+          }
+        }],
+        get: {
+          summary: 'Télécharger une pièce jointe',
+          description: 'Télécharger une pièce jointe de données référencée par une colonne de type *DigitalDocument*.',
+          operationId: 'downloadAttachment',
+          'x-permissionClass': 'read',
+          tags: ['Données'],
+          responses: {
+            200: {
+              description: 'Le fichier de la pièce jointe.'
+            },
+            ...readErrorResponses
           }
         }
       },
@@ -1040,18 +1150,21 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
     }
   }
 
-  if (dataset.isVirtual || dataset.isRest || dataset.isMetaOnly) {
+  if ((dataset as any).isVirtual || (dataset as any).isRest || (dataset as any).isMetaOnly) {
     delete api.paths['/raw']
+    delete api.paths['/convert']
     delete api.paths['/full']
     delete api.paths['/data-files']
+    delete api.paths['/data-files/{filePath}']
   }
 
-  if (dataset.isMetaOnly) {
+  if ((dataset as any).isMetaOnly) {
     delete api.paths['/lines']
     delete api.paths['/schema']
     delete api.paths['/words_agg']
     delete api.paths['/metric_agg']
     delete api.paths['/values/{field}']
+    delete api.paths['/values-labels/{field}']
     delete api.paths['/values_agg']
   }
 
@@ -1061,11 +1174,18 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
   if (valuesProperties.length === 0) {
     delete api.paths['/values_agg']
     delete api.paths['/values/{field}']
+    delete api.paths['/values-labels/{field}']
     delete api.paths['/metric_agg']
     delete api.paths['/simple_metrics_agg']
   }
+  if (!imageProperty && !((dataset as any).image)) {
+    // image cover handled via /thumbnail; no removal needed since the route returns 404 otherwise
+  }
+  if (!documentProperty) {
+    delete api.paths['/attachments/{attachmentId}']
+  }
 
-  if (dataset.bbox && dataset.bbox.length === 4) {
+  if (hasBbox) {
     api.paths['/geo_agg'] = {
       get: {
         summary: 'Agréger spatialement',
@@ -1073,39 +1193,35 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
-        // @ts-ignore
-        parameters: [aggSizeParam].concat(hitsParams(0, 100)).concat([formatParam, htmlParam]).concat(filterParams),
+        parameters: [aggSizeParam, ...hitsParams(0, 100), formatParam, htmlParam, ...filterParams],
         responses: {
           200: {
-            description: 'Les informations du jeu de données agrégées spatialement',
+            description: 'Les informations du jeu de données agrégées spatialement.',
             content: {
-              'application/json': {
-                schema: {
-                  type: 'object'
-                }
-              }
+              'application/json': { schema: { type: 'object' } }
             }
-          }
+          },
+          ...errorResponses
         }
       }
     }
   }
 
-  if (dataset.rest && dataset.rest.history) {
-    const size = hitsParams().find((/** @type {any} */ p) => p.name === 'size')
+  if ((dataset as any).rest && (dataset as any).rest.history) {
+    const size = hitsParams().find((p: any) => p.name === 'size')
     const before = {
       in: 'query',
       name: 'before',
-      description: 'Pagination pour remonter dans l\'historique.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*',
+      description: "Pagination pour remonter dans l'historique.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*",
       schema: {
-        title: 'Pagination pour remonter dans l\'historique',
+        title: "Pagination pour remonter dans l'historique",
         default: 1,
         type: 'integer'
       }
     }
     const revisionsResponses = {
       200: {
-        description: 'Les révisions',
+        description: 'Les révisions.',
         content: {
           'application/json': {
             schema: {
@@ -1113,7 +1229,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
               properties: {
                 total: {
                   type: 'integer',
-                  description: 'Le nombre total de résultat si on ignore la pagination'
+                  description: 'Le nombre total de résultat si on ignore la pagination.'
                 },
                 results: {
                   type: 'array',
@@ -1121,13 +1237,14 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
                 },
                 next: {
                   type: 'string',
-                  description: 'URL pour continuer la pagination'
+                  description: 'URL pour continuer la pagination.'
                 }
               }
             }
           }
         }
-      }
+      },
+      ...readErrorResponses
     }
     api.paths['/revisions'] = {
       get: {
@@ -1141,22 +1258,23 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
       }
     }
     api.paths['/lines/{lineId}/revisions'] = {
+      parameters: [{
+        in: 'path',
+        name: 'lineId',
+        description: 'Identifiant de la ligne.',
+        required: true,
+        schema: {
+          title: 'Identifiant de la ligne',
+          type: 'string'
+        }
+      }],
       get: {
-        summary: 'Récupérer les révisions d\'une ligne',
-        description: 'Récupérer les révisions d\'une ligne triées du plus récent au plus ancien.',
+        summary: "Récupérer les révisions d'une ligne",
+        description: "Récupérer les révisions d'une ligne triées du plus récent au plus ancien.",
         operationId: 'readLineRevisions',
         'x-permissionClass': 'read',
         tags: ['Données éditables'],
-        parameters: [{
-          in: 'path',
-          name: 'lineId',
-          description: 'L\'identifiant de la ligne',
-          required: true,
-          schema: {
-            title: 'Identifiant de la ligne',
-            type: 'string'
-          }
-        }, size, before],
+        parameters: [size, before],
         responses: revisionsResponses
       }
     }
@@ -1171,61 +1289,36 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
         'x-permissionClass': 'read',
         tags: ['Rétrocompatibilité'],
         deprecated: true,
-        parameters: [{
-          in: 'query',
-          name: 'select',
-          schema: {
-            type: 'string',
-          }
-        }, {
-          in: 'query',
-          name: 'where',
-          schema: {
-            type: 'string'
-          }
-        }, {
-          in: 'query',
-          name: 'group_by',
-          schema: {
-            type: 'string'
-          }
-        }, {
-          in: 'query',
-          name: 'order_by',
-          schema: {
-            type: 'string'
-          }
-        }, {
-          in: 'query',
-          name: 'limit',
-          schema: {
-            type: 'integer',
-            default: 10
-          }
-        }, {
-          in: 'query',
-          name: 'offset',
-          schema: {
-            type: 'integer',
-            default: 0
-          }
-        }],
+        parameters: [
+          { in: 'query', name: 'select', schema: { type: 'string' } },
+          { in: 'query', name: 'where', schema: { type: 'string' } },
+          { in: 'query', name: 'group_by', schema: { type: 'string' } },
+          { in: 'query', name: 'order_by', schema: { type: 'string' } },
+          { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
+          { in: 'query', name: 'offset', schema: { type: 'integer', default: 0 } }
+        ],
         responses: {
           200: {
-            description: 'Les enregistrements',
+            description: 'Les enregistrements.',
             content: {
-              'application/json': {
-                schema: {
-                  type: 'object'
-                }
-              }
+              'application/json': { schema: { type: 'object' } }
             }
-          }
+          },
+          ...errorResponses
         }
       }
     }
 
     api.paths['/compat-ods/exports/{format}'] = {
+      parameters: [{
+        in: 'path',
+        name: 'format',
+        required: true,
+        schema: {
+          type: 'string',
+          enum: ['csv', 'xlsx', 'parquet', 'json', 'jsonl', 'geojson']
+        }
+      }],
       get: {
         summary: 'Exporter les données',
         description: '**AVERTISSEMENT** : Cette opération est un prototype en cours de conception. Elle permettra d\'exporter le contenu du jeu de données de manière identique à l\'API "/exports" du portail précédent.',
@@ -1233,50 +1326,20 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
         'x-permissionClass': 'read',
         tags: ['Rétrocompatibilité'],
         deprecated: true,
-        parameters: [{
-          in: 'path',
-          name: 'format',
-          schema: {
-            type: 'string',
-            enum: ['csv', 'xlsx', 'parquet', 'json', 'jsonl', 'geojson']
-          }
-        }, {
-          in: 'query',
-          name: 'select',
-          schema: {
-            type: 'string'
-          }
-        }, {
-          in: 'query',
-          name: 'where',
-          schema: {
-            type: 'string'
-          }
-        }, {
-          in: 'query',
-          name: 'order_by',
-          schema: {
-            type: 'string'
-          }
-        }, {
-          in: 'query',
-          name: 'limit',
-          schema: {
-            type: 'integer',
-            default: 20
-          }
-        }],
+        parameters: [
+          { in: 'query', name: 'select', schema: { type: 'string' } },
+          { in: 'query', name: 'where', schema: { type: 'string' } },
+          { in: 'query', name: 'order_by', schema: { type: 'string' } },
+          { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 } }
+        ],
         responses: {
           200: {
-            description: 'Les enregistrements',
+            description: 'Les enregistrements exportés.',
             content: {
-              'application/json': {
-                schema: {
-                  type: 'object'
-                }
-              }
+              'application/json': { schema: { type: 'object' } }
             }
-          }
+          },
+          ...errorResponses
         }
       }
     }
@@ -1284,11 +1347,11 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
 
   // Drives the navigation drawer order in the openapi-viewer. Only tags that are
   // actually used by at least one operation are listed.
-  const usedTags = new Set()
-  for (const methods of /** @type {any[]} */ (Object.values(api.paths))) {
+  const usedTags = new Set<string>()
+  for (const methods of Object.values(api.paths) as any[]) {
     for (const [m, op] of Object.entries(methods)) {
       if (m === 'parameters') continue
-      const tags = /** @type {any} */ (op)?.tags
+      const tags = (op as any)?.tags
       if (Array.isArray(tags)) for (const t of tags) usedTags.add(t)
     }
   }
