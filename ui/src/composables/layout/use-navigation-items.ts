@@ -98,7 +98,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     if (canAdminDep.value && $uiConfig.portalsIntegration) {
       management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })
     }
-    groups.push({ key: 'management', title: t('group.management'), items: management })
+    if (management.length) groups.push({ key: 'management', title: t('group.management'), items: management })
 
     // Connectors group
     const connect: NavItem[] = []
