@@ -308,7 +308,7 @@ export default (application, info, publicUrl = config.publicUrl) => {
                       mimetype: { type: 'string' },
                       name: { type: 'string' },
                       size: { type: 'integer' },
-                      updateAt: { type: 'string', format: 'date-time' }
+                      updatedAt: { type: 'string', format: 'date-time' }
                     }
                   }
                 }
@@ -344,7 +344,7 @@ export default (application, info, publicUrl = config.publicUrl) => {
       '/permissions': permissionsDoc
     },
     externalDocs: {
-      description: 'Documentation sur Github',
+      description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     }
   }

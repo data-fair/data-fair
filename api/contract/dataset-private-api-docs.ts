@@ -189,7 +189,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
                   mimetype: { type: 'string' },
                   name: { type: 'string' },
                   size: { type: 'integer' },
-                  updateAt: { type: 'string', format: 'date-time' }
+                  updatedAt: { type: 'string', format: 'date-time' }
                 }
               }
             }
@@ -584,13 +584,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     api.paths['/_sync_attachments_lines'] = {
       post: {
         summary: 'Forcer la synchronisation',
-        description: 'Re-synchroniser les lignes du jeux de données avec les pièces jointes présentes.',
+        description: 'Re-synchroniser les lignes du jeu de données avec les pièces jointes présentes.',
         tags: ['Administration'],
         operationId: 'syncAttachmentsLines',
         'x-permissionClass': 'superadmin',
         responses: {
           200: {
-            description: 'Accusé de réception de la demande re-synchronisation.',
+            description: 'Accusé de réception de la demande de re-synchronisation.',
             content: {
               'application/json': {}
             }

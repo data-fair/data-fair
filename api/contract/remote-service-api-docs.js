@@ -135,13 +135,13 @@ export default (remoteService) => {
       '/permissions': permissionsDoc
     },
     externalDocs: {
-      description: 'Documentation sur Github',
+      description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     },
     definitions: {
       API: {
         type: 'object',
-        description: 'Open API v3 compliant documentation'
+        description: 'OpenAPI v3 compliant documentation'
       }
     }
   }

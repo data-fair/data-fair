@@ -30,10 +30,10 @@ const anonymousApiRate = apiRate('anonymous', 'anonyme')
 /**
  * @param {any} dataset
  * @param {string} [publicUrl]
- * @param {any} [settings]
+ * @param {{ info?: { contact?: Record<string, any> }, compatODS?: boolean }} [settings]
  * @param {any} [publicationSite]
+ * @returns {{ api: any, userApiRate: string, anonymousApiRate: string, bulkLineSchema: any }}
  */
-// @ts-ignore
 export default (dataset, publicUrl = config.publicUrl, settings, publicationSite) => {
   const ownerInfo = settings?.info || {}
   const schema = dataset.schema || []
@@ -102,7 +102,7 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
     in: 'query',
     name: 'q',
     description: `
-  Colonne de recherche simple. Ce paramètre peut-être utilisé pour exposer une fonctionalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.
+  Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.
 
   Exemple : \`"open data" | "open source"\`
 
@@ -217,12 +217,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       schema: {
         title: 'Filtre par zone géographique',
         type: 'string',
-        enum: [
-          'lonMin',
-          'latMin',
-          'lonMax',
-          'latMax'
-        ]
+        examples: ['2.2241,48.8156,2.4699,48.9022']
       }
     })
     filterParams.push({
@@ -255,7 +250,13 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     })
   }
 
-  const hitsParams = (defaultSize = 12, maxSize = 10000, /** @type {string} */method) => {
+  /**
+   * @param {number} [defaultSize]
+   * @param {number} [maxSize]
+   * @param {string} [method]
+   * @returns {any[]}
+   */
+  const hitsParams = (defaultSize = 12, maxSize = 10000, method) => {
     /** @type {string[]} */
     let sortItems = []
     if (method === 'values_agg') {
@@ -359,9 +360,9 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
         in: 'query',
         name: 'sampling',
         description: `
-  **Uniquement avec le paramètre de tuilage xyz**. Configure le mode d'échantillonage des resultats pour privilégier soit l'exhaustivité des données soit une densité plus homogène sur la carte.
+  **Uniquement avec le paramètre de tuilage xyz**. Configure le mode d'échantillonnage des résultats pour privilégier soit l'exhaustivité des données soit une densité plus homogène sur la carte.
   
-    - **neighbors** (défaut) : utilise la densité maximale parmi les tuiles voisines pour réduire la densité de la tuile courante au même niveau d'échantillonage (couteux en performance).
+    - **neighbors** (défaut) : utilise la densité maximale parmi les tuiles voisines pour réduire la densité de la tuile courante au même niveau d'échantillonnage (coûteux en performance).
     - **max** : retourne le maximum (limité par le paramètre size) de résultat pour chaque tuile.
       `,
         schema: {
@@ -390,7 +391,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     description: `Le format de sérialisation de la donnée.
   
   - **json** (défaut)
-  - **csv** pour format compatibles tableurs
+  - **csv** pour formats compatibles tableurs
   - **pbf** pour tuiles vectorielles
   - **geojson**, **shp**, **wkt** pour formats géographiques`,
     schema: {
@@ -404,7 +405,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   const htmlParam = {
     in: 'query',
     name: 'html',
-    description: 'Effectuer le rendu des contenus formattés de **markdown** vers **HTML**',
+    description: 'Effectuer le rendu des contenus formatés de **markdown** vers **HTML**',
     schema: {
       title: 'Rendu HTML des contenus markdown',
       type: 'boolean'
@@ -584,7 +585,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }].concat(hitsParams()).concat([formatParam, htmlParam]).concat(filterParams).concat([{
             in: 'query',
             name: 'collapse',
-            description: 'Afficher une ligne de résultat par valeur distince d\'un champ.',
+            description: 'Afficher une ligne de résultat par valeur distincte d\'un champ.',
             schema: {
               type: 'string',
               // @ts-ignore
@@ -711,9 +712,9 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             
 Pour grouper par valeur distincte utilisez "value" (comportement par défaut).
 
-Si la colonne de groupement est de type date vous pouvez utiliser un interval de calendrier comme "year", "month", etc (<a href="https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation#calendar_intervals">voir la documentation Elasticsearch</a>).
+Si la colonne de groupement est de type date vous pouvez utiliser un intervalle de calendrier comme "year", "month", etc (<a href="https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-datehistogram-aggregation#calendar_intervals">voir la documentation Elasticsearch</a>).
 
-Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comme interval de groupement des valeurs.`,
+Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comme intervalle de groupement des valeurs.`,
             required: false,
             explode: false,
             schema: {
@@ -729,7 +730,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             description: `La métrique à appliquer par niveau de groupement :
   - \`avg\` : moyenne
   - \`sum\` : somme
-  - \`min\` : valeur minimal
+  - \`min\` : valeur minimale
   - \`max\` : valeur maximale
   - \`value_count\` : nombre de valeurs
   - \`cardinality\` : nombre de valeurs distinctes (approximatif à partir de 40 000)
@@ -1034,7 +1035,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
       ...masterData.endpoints(dataset)
     },
     externalDocs: {
-      description: 'Documentation sur Github',
+      description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     }
   }

@@ -14,7 +14,7 @@ export default (publicUrl, publicationSite, info) => {
     openapi: '3.1.0',
     info: {
       title: 'API de catalogue de données',
-      description: `Cette documentation est à destination de développeurs souhaitant explorer ou moissoner le catalogue de données de ${hostname}.`,
+      description: `Cette documentation est à destination de développeurs souhaitant explorer ou moissonner le catalogue de données de ${hostname}.`,
       version: pJson.version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-catalog`,
       termsOfService: config.info.termsOfService,
@@ -47,7 +47,7 @@ export default (publicUrl, publicationSite, info) => {
           operationId: 'getApiDoc',
           responses: {
             200: {
-              description: 'Etat de santé du service',
+              description: 'État de santé du service',
               content: {
                 'application/json': {
                   schema: { type: 'object' }
@@ -100,7 +100,7 @@ export default (publicUrl, publicationSite, info) => {
         get: {
           summary: 'Lister les jeux de données (DCAT)',
           description: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
-          operation: 'dcat',
+          operationId: 'getDcat',
           responses: {
             200: {
               description: 'Liste des jeux de données au format DCAT (JSON-LD)',
@@ -115,13 +115,13 @@ export default (publicUrl, publicationSite, info) => {
       }
     },
     externalDocs: {
-      description: 'Documentation sur Github',
+      description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     },
     definitions: {
       API: {
         type: 'object',
-        description: 'Open API v3 compliant documentation'
+        description: 'OpenAPI v3 compliant documentation'
       }
     }
   }

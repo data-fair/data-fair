@@ -206,7 +206,7 @@ Notez que les API spécifiques aux applications et aux services distants dispose
 
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur.
 
-Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="blank">documentation sur ce sujet</a>.
+Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="_blank">documentation sur ce sujet</a>.
 `,
       version: pJson.version,
       'x-api-id': 'data-fair'
@@ -216,7 +216,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       // @ts-ignore
       url: `${publicUrl}/api/v1`,
       // @ts-ignore
-      description: `Instance DataFair - ${new URL(publicUrl).hostname}`
+      description: `Instance Data Fair - ${new URL(publicUrl).hostname}`
     }],
     components: {
       schemas: {
@@ -323,10 +323,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             ...utils.ownerParams,
             utils.booleanParam('raw', 'Ne pas inclure les champs calculés'),
             utils.selectParam(Object.keys(dataset.properties)),
-            utils.filterParam('ids', 'Identifiants de jeux de données', 'Restreins la liste sur un ou plusieurs identifiants de jeux de données.'),
+            utils.filterParam('ids', 'Identifiants de jeux de données', 'Restreindre sur un ou plusieurs identifiants de jeux de données.'),
             utils.filterParam('filename', 'Restreindre sur les noms de fichier'),
-            utils.filterParam('concepts', 'Identifiants de concepts', 'Restreins les jeux de données sur un ou plusieurs identifiants de concepts.'),
-            utils.filterParam('topics', 'Identifiants de thématiques', 'Restreins les jeux de données sur un ou plusieurs identifiants de thématiques.'),
+            utils.filterParam('concepts', 'Identifiants de concepts', 'Restreindre les jeux de données sur un ou plusieurs identifiants de concepts.'),
+            utils.filterParam('topics', 'Identifiants de thématiques', 'Restreindre les jeux de données sur un ou plusieurs identifiants de thématiques.'),
             utils.filterParam('field-type', 'Restreindre sur les types de colonnes'),
             utils.filterParam('field-format', 'Restreindre sur les formats des colonnes textes'),
             utils.booleanParam('file', 'Restreindre aux jeux avec fichiers attachés'),
@@ -377,7 +377,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             }
           },
           responses: {
-            200: {
+            201: {
               description: 'Métadonnées sur le dataset créé.',
               content: {
                 'application/json': {
@@ -773,12 +773,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       }
     },
     externalDocs: {
-      description: 'Documentation sur Github',
+      description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     }
   }
 
-  // TODO: shoud we keep some of this ?
+  // TODO: should we keep some of this ?
   // @ts-ignore
   delete doc.paths['/remote-services']
   // @ts-ignore
