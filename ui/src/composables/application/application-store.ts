@@ -47,7 +47,11 @@ const createApplicationStore = (id: string) => {
       }
     })
     config.value = newConfig
-    if (application.value) application.value.status = 'configured'
+    configDraft.value = newConfig
+    if (application.value) {
+      application.value.status = 'configured'
+      delete application.value.errorMessageDraft
+    }
   }
 
   const configDraftFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration-draft`, { immediate: false })
@@ -73,6 +77,12 @@ const createApplicationStore = (id: string) => {
     configDraft.value = config.value
     if (application.value) application.value.status = 'configured'
   }
+
+  const schemaUrl = computed(() => {
+    const url = application.value?.urlDraft || application.value?.url
+    return url ? (url + 'config-schema.json') : null
+  })
+  const schemaFetch = useFetch<any>(() => schemaUrl.value, { immediate: false })
 
   const baseAppFetch = useFetch<BaseApp>($apiPath + `/applications/${id}/base-application`, { immediate: false })
   const privateAccess = computed(() => application.value && `${application.value.owner.type}:${application.value.owner.id}`)
@@ -179,6 +189,7 @@ const createApplicationStore = (id: string) => {
     configDraft,
     writeConfigDraft,
     cancelConfigDraft,
+    schemaFetch,
     baseAppFetch,
     baseAppDraft,
     baseAppsFetch,
