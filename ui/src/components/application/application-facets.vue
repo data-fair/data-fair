@@ -186,7 +186,7 @@ const requestedPublicationSitesItems = facetToItems('requestedPublicationSites',
 fr:
   owner: Propriétaire
   noDepartment: Aucun département
-  baseApplication: Type d'application
+  baseApplication: Modèle d'application
   visibility: Visibilité
   topics: Thématiques
   publicationSites: Sites de publication
@@ -198,7 +198,7 @@ fr:
 en:
   owner: Owner
   noDepartment: No department
-  baseApplication: Application type
+  baseApplication: Base application
   visibility: Visibility
   topics: Topics
   publicationSites: Publication sites

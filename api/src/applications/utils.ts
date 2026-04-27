@@ -60,7 +60,7 @@ const memoizedGetFreshDataset = memoize(async (id) => {
   maxAge: 1000 * 60, // 1 minute
 })
 
-export const refreshConfigDatasetsRefs = async (req: Request, application: Application, draft: boolean, checkWithPersonalSession = false) => {
+export const refreshConfigDatasetsRefs = async (req: Request, application: Application, draft: boolean, checkWithPersonalSession = false, schemaOnly = false) => {
   const publicBaseUrl = req.publicBaseUrl
 
   const configuration = (draft ? (application.configurationDraft || application.configuration) : application.configuration) || {}
@@ -80,11 +80,16 @@ export const refreshConfigDatasetsRefs = async (req: Request, application: Appli
         continue
       }
       let refreshKeys = Object.keys(dataset)
-      refreshKeys.push('finalizedAt')
-      refreshKeys.push('slug')
-
       const datasetFilters = application.baseApp?.datasetsFilters?.[i] ?? {}
-      if (datasetFilters.select) refreshKeys = refreshKeys.concat(datasetFilters.select)
+      if (schemaOnly) {
+        // only refresh keys declared by the app config schema, so the payload matches
+        // what vjsf-normalized editConfig will contain and doesn't trigger phantom drafts
+        if (datasetFilters.properties) refreshKeys = refreshKeys.concat(Object.keys(datasetFilters.properties))
+      } else {
+        refreshKeys.push('finalizedAt')
+        refreshKeys.push('slug')
+        if (datasetFilters.select) refreshKeys = refreshKeys.concat(datasetFilters.select)
+      }
 
       const freshDataset = tolerateStale
         ? clone(await memoizedGetFreshDataset(dataset.id))
