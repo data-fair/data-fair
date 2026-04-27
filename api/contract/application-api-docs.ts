@@ -9,6 +9,13 @@ import { type Application, type Settings } from '#types'
 
 type ApplicationApiDocsInfo = NonNullable<Settings['info']>
 
+const textPlainResponse = (description: string) => ({
+  description,
+  content: {
+    'text/plain': { schema: { type: 'string' } }
+  }
+})
+
 export default (application: Application, info: ApplicationApiDocsInfo, publicUrl: string = config.publicUrl) => {
   const errorResponses = {
     400: { $ref: '#/components/responses/BadRequest' },
@@ -40,30 +47,10 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
         }
       },
       responses: {
-        BadRequest: {
-          description: 'Requête invalide : corps de requête mal formé, paramètres manquants ou contraintes métier non respectées.',
-          content: {
-            'text/plain': { schema: { type: 'string' } }
-          }
-        },
-        Unauthorized: {
-          description: "Non authentifié : aucune session ni clé d'API valide n'a été fournie.",
-          content: {
-            'text/plain': { schema: { type: 'string' } }
-          }
-        },
-        Forbidden: {
-          description: "Permissions insuffisantes pour effectuer cette opération sur l'application.",
-          content: {
-            'text/plain': { schema: { type: 'string' } }
-          }
-        },
-        NotFound: {
-          description: "L'application (ou la ressource associée) n'existe pas.",
-          content: {
-            'text/plain': { schema: { type: 'string' } }
-          }
-        }
+        BadRequest: textPlainResponse('Requête invalide : corps de requête mal formé, paramètres manquants ou contraintes métier non respectées.'),
+        Unauthorized: textPlainResponse("Non authentifié : aucune session ni clé d'API valide n'a été fournie."),
+        Forbidden: textPlainResponse("Permissions insuffisantes pour effectuer cette opération sur l'application."),
+        NotFound: textPlainResponse("L'application (ou la ressource associée) n'existe pas.")
       }
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
@@ -360,12 +347,7 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
             },
             401: { $ref: '#/components/responses/Unauthorized' },
             403: { $ref: '#/components/responses/Forbidden' },
-            404: {
-              description: "L'application n'existe pas ou ne possède pas d'image associée.",
-              content: {
-                'text/plain': { schema: { type: 'string' } }
-              }
-            }
+            404: textPlainResponse("L'application n'existe pas ou ne possède pas d'image associée.")
           }
         }
       },
@@ -411,32 +393,27 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
               }
             },
             ...errorResponses,
-            413: {
-              description: 'Quota de stockage dépassé ou fichier trop volumineux.',
-              content: {
-                'text/plain': { schema: { type: 'string' } }
-              }
-            }
+            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
           }
         }
       },
       '/attachments/{attachmentId}': {
+        parameters: [{
+          in: 'path',
+          name: 'attachmentId',
+          description: 'Identifiant (chemin relatif) de la pièce jointe.',
+          required: true,
+          schema: {
+            title: 'Identifiant de la pièce jointe.',
+            type: 'string'
+          }
+        }],
         get: {
           summary: 'Télécharger une pièce jointe',
           description: 'Télécharger une pièce jointe des métadonnées.',
           operationId: 'downloadAttachment',
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
-          parameters: [{
-            in: 'path',
-            name: 'attachmentId',
-            description: 'Identifiant (chemin relatif) de la pièce jointe.',
-            required: true,
-            schema: {
-              title: 'Identifiant de la pièce jointe.',
-              type: 'string'
-            }
-          }],
           responses: {
             200: {
               description: 'Le fichier de la pièce jointe.'
@@ -450,16 +427,6 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
           operationId: 'deleteAttachment',
           'x-permissionClass': 'write',
           tags: ['Métadonnées'],
-          parameters: [{
-            in: 'path',
-            name: 'attachmentId',
-            description: 'Identifiant (chemin relatif) de la pièce jointe.',
-            required: true,
-            schema: {
-              title: 'Identifiant de la pièce jointe.',
-              type: 'string'
-            }
-          }],
           responses: {
             204: {
               description: 'La pièce jointe a été supprimée.'
@@ -470,6 +437,13 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
       },
       '/permissions': permissionsDoc
     },
+    tags: [
+      { name: 'Configuration' },
+      { name: 'Paramétrage' },
+      { name: 'Informations' },
+      { name: 'Métadonnées' },
+      { name: 'Permissions' }
+    ],
     externalDocs: {
       description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
