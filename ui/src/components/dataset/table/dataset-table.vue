@@ -184,7 +184,7 @@
           renderless
         >
           <template #default="{ item, index }">
-            <tr v-intersect.quiet="(isIntersecting: boolean) => isIntersecting && onScrollItem(index)">
+            <tr v-intersect="(isIntersecting: boolean) => isIntersecting && onScrollItem(index)">
               <dataset-table-cell
                 v-for="header of headers"
                 :key="header.key"
@@ -296,7 +296,7 @@
       <!-- list mode show more (infinite scroll only) -->
       <v-row
         v-if="results.length && !pagination"
-        v-intersect.quiet="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
+        v-intersect="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
         align="center"
         class="my-0"
       >
