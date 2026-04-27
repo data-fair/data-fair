@@ -5,14 +5,11 @@ import { resolvedSchema as appConfigSchema } from '../types/app-config/index.js'
 import journalSchema from './journal.js'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import pJson from './p-json.js'
+import { type Application, type Settings } from '#types'
 
-/**
- *
- * @param {any} application
- * @param {any} info
- * @returns any
- */
-export default (application, info, publicUrl = config.publicUrl) => {
+type ApplicationApiDocsInfo = NonNullable<Settings['info']>
+
+export default (application: Application, info: ApplicationApiDocsInfo, publicUrl: string = config.publicUrl) => {
   const errorResponses = {
     400: { $ref: '#/components/responses/BadRequest' },
     401: { $ref: '#/components/responses/Unauthorized' },
@@ -30,7 +27,6 @@ export default (application, info, publicUrl = config.publicUrl) => {
     info: {
       title: `API de l'application : ${application.title || application.id}`,
       version: pJson.version,
-      // @ts-ignore
       termsOfService: config.info.termsOfService,
       contact: { ...(info.contact || {}) }
     },
@@ -72,9 +68,7 @@ export default (application, info, publicUrl = config.publicUrl) => {
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     servers: [{
-      // @ts-ignore
       url: `${publicUrl}/api/v1/applications/${application.id}`,
-      // @ts-ignore
       description: `Application Data Fair - ${new URL(publicUrl).hostname} - ${application.title}`
     }],
     paths: {
