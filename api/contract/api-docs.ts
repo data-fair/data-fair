@@ -142,16 +142,15 @@ const mergeComponents = (doc: any, sourceApi: any) => {
 
 /**
  * Merges a per-resource doc's paths into the root doc under a given prefix.
- * Injects the resource id parameter, suffixes operationIds to keep them unique across variants
- * and merges tags when several variants document the same operation.
+ * Injects the resource id parameter and merges tags when several variants document the same operation.
+ * For a given (path, method) pair, the first variant wins; later variants only contribute their tags.
  */
 const mergePaths = (
   doc: any,
   sourcePaths: Record<string, any>,
   prefix: string,
   injectParam: any,
-  retagAll: (operation: any) => void,
-  operationIdSuffix: string
+  retagAll: (operation: any) => void
 ) => {
   for (const [path, methods] of Object.entries(sourcePaths)) {
     const cleanedPath = path === '/' ? '' : path
@@ -173,7 +172,6 @@ const mergePaths = (
       if (method === 'parameters') continue
       const op: any = operation
       const incoming = { ...op }
-      if (incoming.operationId) incoming.operationId = `${incoming.operationId}_${operationIdSuffix}`
       retagAll(incoming)
 
       const existing = target[method]
@@ -648,8 +646,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       privateApi.paths,
       '/datasets/{id}',
       datasetIdParam,
-      retag,
-      variant.key
+      retag
     )
   }
 

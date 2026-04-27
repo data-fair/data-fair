@@ -1161,6 +1161,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
   if ((dataset as any).isMetaOnly) {
     delete api.paths['/lines']
     delete api.paths['/schema']
+    delete api.paths['/safe-schema']
     delete api.paths['/words_agg']
     delete api.paths['/metric_agg']
     delete api.paths['/values/{field}']
@@ -1177,9 +1178,6 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
     delete api.paths['/values-labels/{field}']
     delete api.paths['/metric_agg']
     delete api.paths['/simple_metrics_agg']
-  }
-  if (!imageProperty && !((dataset as any).image)) {
-    // image cover handled via /thumbnail; no removal needed since the route returns 404 otherwise
   }
   if (!documentProperty) {
     delete api.paths['/attachments/{attachmentId}']

@@ -68,6 +68,11 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       type: 'apiKey',
       in: 'header',
       name: 'x-apiKey'
+    },
+    sdCookie: {
+      type: 'apiKey',
+      in: 'cookie',
+      name: 'id_token'
     }
   }
   api.security = [{ apiKey: [] }, { sdCookie: [] }]

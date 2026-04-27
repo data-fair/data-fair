@@ -46,6 +46,11 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
           type: 'apiKey',
           in: 'header',
           name: 'x-apiKey'
+        },
+        sdCookie: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'id_token'
         }
       },
       responses: {
