@@ -546,7 +546,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           tags: ['Métadonnées'],
           responses: {
             200: {
-              description: 'Les informations du jeu de données',
+              description: 'Les informations du jeu de données.',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/dataset' }
