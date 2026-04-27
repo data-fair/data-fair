@@ -4,7 +4,7 @@ import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.js'
-import * as permissionsDoc from '../src/misc/utils/permissions.ts'
+import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import * as datasetUtils from '../src/datasets/utils/index.js'
 import { type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type Dataset } from '#types'
@@ -84,7 +84,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           description: 'Les informations du jeu de données.',
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/datasetSchema' }
+              schema: { $ref: '#/components/schemas/dataset' }
             }
           }
         }
@@ -124,7 +124,29 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           description: 'Métadonnées sur le dataset modifié.',
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/datasetSchema' }
+              schema: { $ref: '#/components/schemas/dataset' }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  api.paths['/private-api-docs.json'] = {
+    get: {
+      summary: 'Obtenir la documentation privée OpenAPI',
+      description: 'Accéder à cette documentation privée au format OpenAPI v3.',
+      operationId: 'readPrivateApiDoc',
+      'x-permissionClass': 'readAdvanced',
+      tags: ['Métadonnées'],
+      responses: {
+        200: {
+          description: 'La documentation privée de l\'API.',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object'
+              }
             }
           }
         }
@@ -135,7 +157,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   api.paths['/metadata-attachments'] = {
     post: {
       summary: 'Charger une pièce jointe',
-      description: 'Charger une pièce jointe dans les métadonnées.\n**Attention, il faut ensuite ajouter la pièce jointe aux informations du jeu de données via la route <code>operationId: writeDescription</code> pour qu\'elle soit répertoriée.**',
+      description: 'Charger une pièce jointe dans les métadonnées.\n**Attention, il faut ensuite ajouter la pièce jointe aux informations du jeu de données via la route <code>operationId: writeDescription</code> pour qu\'elle soit répertoriée. Pour modifier les métadonnées d\'une pièce jointe existante (titre, description, etc.) il faut également passer par cette même route.**',
       operationId: 'postMetadataAttachment',
       'x-permissionClass': 'write',
       tags: ['Métadonnées'],
@@ -180,7 +202,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   api.paths['/metadata-attachments/{attachmentId}'] = {
     get: {
       summary: 'Télécharger une pièce jointe',
-      description: 'Télécharger Supprimer une pièce jointe des métadonnées.',
+      description: 'Télécharger une pièce jointe des métadonnées.',
       operationId: 'downloadMetadataAttachment',
       'x-permissionClass': 'read',
       tags: ['Métadonnées'],
@@ -219,28 +241,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       responses: {
         204: {
           description: 'La pièce jointe a été supprimée.'
-        }
-      }
-    }
-  }
-
-  api.paths['/private-api-docs.json'] = {
-    get: {
-      summary: 'Obtenir la documentation privée OpenAPI',
-      description: 'Accéder à cette documentation privée au format OpenAPI v3.',
-      operationId: 'readPrivateApiDoc',
-      'x-permissionClass': 'readAdvanced',
-      tags: ['Métadonnées'],
-      responses: {
-        200: {
-          description: 'La documentation privée de l\'API.',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object'
-              }
-            }
-          }
         }
       }
     }
@@ -507,6 +507,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           if (!p.operationId) return
           p['x-permissionClass'] = 'manageOwnLines'
           p.operationId = p.operationId.replace('Line', 'OwnLine')
+          if (p.summary) p.summary += ' (par propriétaire)'
           if (p.description) {
             p.description += ' (restreint par propriétaire de ligne)'
           } else {
@@ -547,13 +548,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       '/_reindex': {
         post: {
-          summary: 'Forcer la reindexation',
+          summary: 'Forcer la réindexation',
           tags: ['Administration'],
           operationId: 'reindex',
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
-              description: 'Accusé de réception de la demande de reindexation.',
+              description: 'Accusé de réception de la demande de réindexation.',
               content: {
                 'application/json': {}
               }
@@ -563,29 +564,16 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       '/_refinalize': {
         post: {
-          summary: 'Forcer la re-finalisation',
+          summary: 'Forcer la refinalisation',
           tags: ['Administration'],
           operationId: 'refinalize',
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
-              description: 'Accusé de réception de la demande de re-finalisation.',
+              description: 'Accusé de réception de la demande de refinalisation.',
               content: {
                 'application/json': {}
               }
-            }
-          }
-        }
-      },
-      '/_lock': {
-        delete: {
-          summary: 'Supprimer les locks',
-          tags: ['Administration'],
-          operationId: 'deleteLocks',
-          'x-permissionClass': 'superadmin',
-          responses: {
-            204: {
-              description: 'Accusé de réception de la demande de suppression des locks.'
             }
           }
         }
@@ -606,6 +594,21 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             content: {
               'application/json': {}
             }
+          }
+        }
+      }
+    }
+  }
+  if (!dataset.isMetaOnly && sessionState.user.adminMode) {
+    api.paths['/_lock'] = {
+      delete: {
+        summary: 'Supprimer les locks',
+        tags: ['Administration'],
+        operationId: 'deleteLocks',
+        'x-permissionClass': 'superadmin',
+        responses: {
+          204: {
+            description: 'Accusé de réception de la demande de suppression des locks.'
           }
         }
       }
@@ -642,6 +645,28 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     }
   }
+
+  // Drives the navigation drawer order in the openapi-viewer. Only tags that are
+  // actually used by at least one operation are listed.
+  const usedTags = new Set<string>()
+  for (const methods of Object.values(api.paths) as any[]) {
+    for (const [m, op] of Object.entries(methods)) {
+      if (m === 'parameters') continue
+      const tags = (op as any)?.tags
+      if (Array.isArray(tags)) for (const t of tags) usedTags.add(t)
+    }
+  }
+  const tagOrder = [
+    'Métadonnées',
+    'Données',
+    'Données éditables',
+    'Données éditables par propriétaire de ligne',
+    'Données de référence',
+    'Permissions',
+    'Rétrocompatibilité',
+    'Administration'
+  ]
+  api.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
 
   return api
 }

@@ -23,7 +23,7 @@ export default (application, info, publicUrl = config.publicUrl) => {
       contact: { ...(info.contact || {}) }
     },
     components: {
-      schemas: { applicationSchema },
+      schemas: { application: applicationSchema },
       securitySchemes: {
         apiKey: {
           type: 'apiKey',
@@ -52,7 +52,7 @@ export default (application, info, publicUrl = config.publicUrl) => {
               description: 'Les informations de configuration de l\'application.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/applicationSchema' }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
             }
@@ -69,7 +69,7 @@ export default (application, info, publicUrl = config.publicUrl) => {
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/applicationSchema' }
+                schema: { $ref: '#/components/schemas/application' }
               }
             }
           },
@@ -78,7 +78,7 @@ export default (application, info, publicUrl = config.publicUrl) => {
               description: 'Les informations de configuration modifiées de l\'application.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/applicationSchema' }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
             }

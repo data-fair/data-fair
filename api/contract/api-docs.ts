@@ -6,18 +6,203 @@ import { resolvedSchema as remoteServicePatch } from '../doc/remote-services/pat
 import { resolvedSchema as remoteService } from '#types/remote-service/index.js'
 import { resolvedSchema as application } from '../types/application/.type/index.js'
 import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
+import datasetAPIDocs from './dataset-api-docs.js'
+import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
+import { type Dataset } from '#types'
+import { type SessionStateAuthenticated } from '@data-fair/lib-express'
+
+interface DatasetVariant {
+  key: string
+  dataset: any
+}
+
+const sampleSchema = [
+  { key: 'name', type: 'string', title: 'Nom', 'x-refersTo': 'http://schema.org/name' },
+  { key: 'description', type: 'string', title: 'Description' },
+  { key: 'category', type: 'string', title: 'Catégorie' },
+  { key: 'value', type: 'number', title: 'Valeur' }
+]
+
+const masterDataSchema = [
+  ...sampleSchema,
+  { key: 'siret', type: 'string', title: 'SIRET', 'x-refersTo': 'http://dbpedia.org/ontology/siret' }
+]
+
+const variants: DatasetVariant[] = [
+  {
+    key: 'file',
+    dataset: {
+      id: '{datasetId}',
+      slug: 'sample-file-dataset',
+      title: 'Sample file dataset',
+      file: { name: 'sample.csv', mimetype: 'text/csv', size: 1024 },
+      schema: sampleSchema,
+      bbox: [-180, -90, 180, 90]
+    }
+  },
+  {
+    key: 'rest',
+    dataset: {
+      id: '{datasetId}',
+      slug: 'sample-rest-dataset',
+      title: 'Sample editable dataset',
+      isRest: true,
+      rest: { history: true, lineOwnership: true },
+      schema: sampleSchema,
+      readApiKey: { active: true }
+    }
+  },
+  {
+    key: 'virtual',
+    dataset: {
+      id: '{datasetId}',
+      slug: 'sample-virtual-dataset',
+      title: 'Sample virtual dataset',
+      isVirtual: true,
+      schema: sampleSchema
+    }
+  },
+  {
+    key: 'metaOnly',
+    dataset: {
+      id: '{datasetId}',
+      slug: 'sample-meta-only-dataset',
+      title: 'Sample meta-only dataset',
+      isMetaOnly: true,
+      schema: []
+    }
+  },
+  {
+    key: 'masterData',
+    dataset: {
+      id: '{datasetId}',
+      slug: 'sample-master-data-dataset',
+      title: 'Sample master-data dataset',
+      isRest: true,
+      rest: {},
+      schema: masterDataSchema,
+      masterData: {
+        singleSearchs: [{
+          id: '{singleSearchId}',
+          title: 'Recherche unitaire',
+          description: 'Récupérer une ligne par recherche unitaire',
+          output: { 'x-refersTo': 'http://schema.org/name' },
+          label: { key: 'name' }
+        }],
+        bulkSearchs: [{
+          id: '{bulkSearchId}',
+          title: 'Recherche en masse',
+          description: 'Récupérer en masse des lignes par lots',
+          input: [{
+            type: 'equals',
+            property: { key: 'siret', type: 'string', 'x-refersTo': 'http://dbpedia.org/ontology/siret' }
+          }]
+        }]
+      }
+    }
+  }
+]
+
+const buildAdminSession = (): SessionStateAuthenticated => ({
+  user: {
+    id: '{adminUserId}',
+    email: 'admin@example.com',
+    name: 'Admin',
+    organizations: [],
+    adminMode: true
+  } as any,
+  account: { type: 'user', id: '{adminUserId}', name: 'Admin' } as any,
+  accountRole: 'admin',
+  lang: 'fr'
+} as any)
+
+const datasetIdParam = {
+  in: 'path',
+  name: 'id',
+  description: 'Identifiant du jeu de données',
+  required: true,
+  schema: { type: 'string', title: 'Identifiant du jeu de données' }
+}
+
+const mergeComponents = (doc: any, sourceApi: any) => {
+  const sourceSchemas = sourceApi?.components?.schemas
+  if (sourceSchemas) {
+    doc.components.schemas = doc.components.schemas || {}
+    for (const [name, schema] of Object.entries(sourceSchemas)) {
+      if (!doc.components.schemas[name]) {
+        doc.components.schemas[name] = schema
+      }
+    }
+  }
+  const sourceSecuritySchemes = sourceApi?.components?.securitySchemes
+  if (sourceSecuritySchemes) {
+    doc.components.securitySchemes = doc.components.securitySchemes || {}
+    for (const [name, scheme] of Object.entries(sourceSecuritySchemes)) {
+      if (!doc.components.securitySchemes[name]) {
+        doc.components.securitySchemes[name] = scheme
+      }
+    }
+  }
+}
+
+const mergePaths = (
+  doc: any,
+  sourcePaths: Record<string, any>,
+  prefix: string,
+  injectParam: any,
+  retagAll: (operation: any) => void,
+  operationIdSuffix: string
+) => {
+  for (const [path, methods] of Object.entries(sourcePaths)) {
+    const cleanedPath = path === '/' ? '' : path
+    const fullPath = `${prefix}${cleanedPath}`
+
+    const target = doc.paths[fullPath] || {}
+    const existingPathParams = methods.parameters || []
+    const incomingParams = [injectParam, ...existingPathParams]
+    if (!target.parameters) {
+      target.parameters = incomingParams
+    } else {
+      for (const param of incomingParams) {
+        const exists = target.parameters.some((p: any) => p.in === param.in && p.name === param.name)
+        if (!exists) target.parameters.push(param)
+      }
+    }
+
+    for (const [method, operation] of Object.entries(methods)) {
+      if (method === 'parameters') continue
+      const op: any = operation
+      const incoming = { ...op }
+      if (incoming.operationId) incoming.operationId = `${incoming.operationId}_${operationIdSuffix}`
+      retagAll(incoming)
+
+      const existing = target[method]
+      if (!existing) {
+        target[method] = incoming
+      } else {
+        const existingTags: string[] = Array.isArray(existing.tags) ? existing.tags : []
+        const incomingTags: string[] = Array.isArray(incoming.tags) ? incoming.tags : []
+        existing.tags = Array.from(new Set([...existingTags, ...incomingTags]))
+      }
+    }
+
+    doc.paths[fullPath] = target
+  }
+}
 
 export default (publicUrl = config.publicUrl) => {
   const doc = {
     openapi: '3.1.0',
     info: Object.assign({
-      title: 'API principale',
+      title: 'API Data Fair',
       description: `
-Cette documentation interactive à destination des développeurs permet de gérer les ressources de ce service de publication de données.
+Cette documentation interactive à destination des développeurs permet de gérer les ressources de ce service de publication de données et de consommer les opérations applicables aux jeux de données (toutes variantes confondues : fichier, éditable, virtuel, métadonnées seules, master data), incluant les opérations privées et d'administration.
 
-Notez que l'API réelle est plus riche, chaque jeu de données et chaque service distant disposant de sa propre API documentée séparément.
+Les opérations réellement exposées pour un jeu de données particulier dépendent de son type et de sa configuration. Pour un jeu de données précis, sa propre documentation reste accessible via \`/datasets/{id}/api-docs.json\` (publique) ou \`/datasets/{id}/private-api-docs.json\` (privée).
+
+Notez que les API spécifiques aux applications et aux services distants disposent chacune de leur propre documentation séparée.
 
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur.
 
@@ -132,7 +317,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Lister les jeux de données',
           description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
-          tags: ['Jeux de données'],
+          tags: ['Jeux de données (JDD)'],
           parameters: [
             utils.qParam,
             ...utils.ownerParams,
@@ -179,7 +364,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         post: {
           summary: 'Créer un jeu de données',
           operationId: 'postDataset',
-          tags: ['Jeux de données'],
+          tags: ['Jeux de données (JDD)'],
           requestBody: {
             description: 'Fichier à charger et autres informations.',
             required: true,
@@ -207,29 +392,11 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/datasets/{id}': {
         parameters: [utils.idParam],
-        get: {
-          summary: 'Lire les informations d\'un jeu de données',
-          description: 'Récupérer les informations d\'un jeu de données.',
-          operationId: 'getDataset',
-          tags: ['Jeux de données'],
-          responses: {
-            200: {
-              description: 'Informations d\'un jeu de données.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
-                }
-              }
-            }
-          }
-        },
         put: {
           summary: 'Créer ou mettre à jour un jeu de données',
-          description: 'Créer ou mettre à jour un jeu de données.',
+          description: 'Créer ou mettre à jour un jeu de données en spécifiant son identifiant.',
           operationId: 'putDataset',
-          tags: ['Jeux de données'],
+          tags: ['JDD / Métadonnées'],
           requestBody: {
             description: 'Fichier à charger et autres informations.',
             required: true,
@@ -261,45 +428,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                   }
                 }
               }
-            }
-          }
-        },
-        patch: {
-          summary: 'Modifier un jeu de données',
-          description: 'Modifier seulement certaines informations d\'un jeu de données.',
-          operationId: 'patchDataset',
-          tags: ['Jeux de données'],
-          requestBody: {
-            description: 'Informations à modifier.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/datasetPatch'
-                }
-              }
-            }
-          },
-          responses: {
-            200: {
-              description: 'Informations du jeu de données modifié.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
-                }
-              }
-            }
-          }
-        },
-        delete: {
-          summary: 'Supprimer un jeu de données',
-          operationId: 'deleteDataset',
-          tags: ['Jeux de données'],
-          responses: {
-            204: {
-              description: 'Jeu de données supprimé.'
             }
           }
         }
@@ -435,7 +563,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier une informations',
+          summary: 'Modifier une application',
           description: 'Modifier seulement certaines informations d\'une application.',
           operationId: 'patchApplication',
           tags: ['Applications'],
@@ -603,7 +731,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier une informations',
+          summary: 'Modifier un service distant',
           description: 'Modifier seulement certaines informations d\'un service distant.',
           operationId: 'patchRemoteService',
           tags: ['Services distants'],
@@ -655,6 +783,92 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
   delete doc.paths['/remote-services']
   // @ts-ignore
   delete doc.paths['/remote-services/{id}']
+
+  const adminSession = buildAdminSession()
+
+  // Tag mapping for the merged root doc:
+  // — Permissions are grouped with Métadonnées
+  // — Données de référence (master-data) is grouped with Données
+  // — Own-line ops merge into the regular Éditable tag
+  // — Dataset tags get a "JDD / " prefix (abréviation de "Jeux de données")
+  const datasetTagMap: Record<string, string> = {
+    Métadonnées: 'JDD / Métadonnées',
+    Permissions: 'JDD / Métadonnées',
+    Données: 'JDD / Données',
+    'Données de référence': 'JDD / Données',
+    'Données éditables': 'JDD / Éditable',
+    'Données éditables par propriétaire de ligne': 'JDD / Éditable',
+    Administration: 'JDD / Administration',
+    Rétrocompatibilité: 'JDD / Rétrocompatibilité'
+  }
+
+  for (const variant of variants) {
+    const { api: publicApi } = datasetAPIDocs(variant.dataset, publicUrl, undefined)
+    const privateApi = privateDatasetAPIDocs(variant.dataset as Dataset, publicUrl, adminSession, undefined)
+
+    mergeComponents(doc, publicApi)
+    mergeComponents(doc, privateApi)
+
+    const retag = (operation: any) => {
+      const originalTags: string[] = operation.tags || []
+      operation.tags = originalTags.map(t => datasetTagMap[t] ?? `JDD / ${t}`)
+      if (originalTags.length === 0) operation.tags = ['Jeux de données (JDD)']
+    }
+
+    mergePaths(
+      doc,
+      privateApi.paths,
+      '/datasets/{id}',
+      datasetIdParam,
+      retag,
+      variant.key
+    )
+  }
+
+  // Reorder admin paths to a deterministic order (read-first, force-actions, then destructive last).
+  // Without this, the merge order of variants leaves _lock before _sync_attachments_lines
+  // because the first variant (file) doesn't define _sync_attachments_lines.
+  const adminPathOrder = [
+    '/datasets/{id}/_diagnose',
+    '/datasets/{id}/_reindex',
+    '/datasets/{id}/_refinalize',
+    '/datasets/{id}/_sync_attachments_lines',
+    '/datasets/{id}/_lock'
+  ]
+  for (const p of adminPathOrder) {
+    // @ts-ignore
+    if (doc.paths[p]) {
+      // @ts-ignore
+      const entry = doc.paths[p]
+      // @ts-ignore
+      delete doc.paths[p]
+      // @ts-ignore
+      doc.paths[p] = entry
+    }
+  }
+
+  // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
+  // Only tags that are actually used by at least one operation are listed.
+  const usedTags = new Set<string>()
+  for (const methods of Object.values(doc.paths) as any[]) {
+    for (const [m, op] of Object.entries(methods)) {
+      if (m === 'parameters') continue
+      const tags = (op as any)?.tags
+      if (Array.isArray(tags)) for (const t of tags) usedTags.add(t)
+    }
+  }
+  const tagOrder = [
+    'Administration',
+    'Jeux de données (JDD)',
+    'JDD / Métadonnées',
+    'JDD / Données',
+    'JDD / Éditable',
+    'JDD / Rétrocompatibilité',
+    'JDD / Administration',
+    'Applications'
+  ]
+  // @ts-ignore
+  doc.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
 
   return doc
 }
