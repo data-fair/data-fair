@@ -105,11 +105,11 @@ test.describe('base-application facet display', () => {
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')
-    const baseAppFacet = navRight.getByRole('combobox', { name: "Type d'application" })
+    const baseAppFacet = navRight.getByRole('combobox', { name: "Modèle d'application" })
     await expect(baseAppFacet).toBeVisible({ timeout: 5000 })
     await baseAppFacet.click()
 
-    const listbox = page.getByRole('listbox', { name: "Type d'application" })
+    const listbox = page.getByRole('listbox', { name: "Modèle d'application" })
     const options = listbox.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
     const count = await options.count()
