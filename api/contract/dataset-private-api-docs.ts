@@ -237,7 +237,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   api.paths['/metadata-attachments'] = {
     post: {
       summary: 'Charger une pièce jointe',
-      description: "Charger une pièce jointe dans les métadonnées.\n\n**Attention** : il faut ensuite ajouter la pièce jointe aux informations du jeu de données via la route `writeDescription` pour qu'elle soit répertoriée.",
+      description: "Charger une pièce jointe dans les métadonnées.\n\n**Attention** : il faut ensuite ajouter la pièce jointe aux informations du jeu de données via l'opération `writeDescription` (`PATCH /`) pour qu'elle soit répertoriée.",
       operationId: 'postMetadataAttachment',
       'x-permissionClass': 'write',
       tags: ['Métadonnées'],
@@ -307,7 +307,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     },
     delete: {
       summary: 'Supprimer une pièce jointe',
-      description: "Supprimer une pièce jointe des métadonnées.\n\n**Attention** : il faut ensuite supprimer la pièce jointe des informations du jeu de données via la route `writeDescription` pour qu'elle ne soit plus répertoriée.",
+      description: "Supprimer une pièce jointe des métadonnées.\n\n**Attention** : il faut ensuite supprimer la pièce jointe des informations du jeu de données via l'opération `writeDescription` (`PATCH /`) pour qu'elle ne soit plus répertoriée.",
       operationId: 'deleteMetadataAttachment',
       'x-permissionClass': 'write',
       tags: ['Métadonnées'],

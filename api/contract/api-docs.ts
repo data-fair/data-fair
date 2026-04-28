@@ -38,9 +38,36 @@ const readErrorResponses = {
   403: { $ref: '#/components/responses/Forbidden' },
   404: { $ref: '#/components/responses/NotFound' }
 }
+// Writes on a collection (POST) or create-or-update where the resource always exists by the end:
+// no 404 since the operation itself produces the resource.
+const writeErrorResponses = {
+  400: { $ref: '#/components/responses/BadRequest' },
+  401: { $ref: '#/components/responses/Unauthorized' },
+  403: { $ref: '#/components/responses/Forbidden' }
+}
 const errorResponses = {
   400: { $ref: '#/components/responses/BadRequest' },
   ...readErrorResponses
+}
+
+/**
+ * Minimal structural type for the OpenAPI v3.1 document we build here.
+ * `paths` and `components.schemas` stay loose (`Record<string, any>`) because they are
+ * mutated dynamically and hold resolved JSON Schema objects whose shape varies.
+ */
+type RootApiDoc = {
+  openapi: string
+  info: Record<string, any>
+  servers: { url: string, description?: string }[]
+  components: {
+    schemas: Record<string, any>
+    securitySchemes: Record<string, any>
+    responses: Record<string, any>
+  }
+  security: Record<string, string[]>[]
+  paths: Record<string, any>
+  externalDocs?: { description?: string, url: string }
+  tags?: { name: string }[]
 }
 
 /**
@@ -50,7 +77,7 @@ const errorResponses = {
  * with tags already prefixed for the merged drawer.
  */
 export default (publicUrl: string = config.publicUrl) => {
-  const api: any = {
+  const api: RootApiDoc = {
     openapi: '3.1.0',
     info: {
       title: 'API Data Fair',
@@ -236,7 +263,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                 }
               }
             },
-            ...errorResponses,
+            ...writeErrorResponses,
             413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
           }
         }
@@ -274,7 +301,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                 }
               }
             },
-            ...errorResponses,
+            ...writeErrorResponses,
             413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
           }
         }
@@ -343,7 +370,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                 }
               }
             },
-            ...errorResponses
+            ...writeErrorResponses
           }
         }
       },

@@ -361,7 +361,7 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
       '/attachments': {
         post: {
           summary: 'Charger une pièce jointe',
-          description: "Charger une pièce jointe dans les métadonnées.\n\n**Attention** : il faut ensuite ajouter la pièce jointe aux informations de l'application via la route `writeDescription` pour qu'elle soit répertoriée.",
+          description: "Charger une pièce jointe dans les métadonnées.\n\n**Attention** : il faut ensuite ajouter la pièce jointe aux informations de l'application via l'opération `writeDescription` (`PATCH /`) pour qu'elle soit répertoriée.",
           operationId: 'postAttachment',
           'x-permissionClass': 'write',
           tags: ['Métadonnées'],
@@ -430,7 +430,7 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
         },
         delete: {
           summary: 'Supprimer une pièce jointe',
-          description: "Supprimer une pièce jointe des métadonnées.\n\n**Attention** : il faut ensuite supprimer la pièce jointe des informations de l'application via la route `writeDescription` pour qu'elle ne soit plus répertoriée.",
+          description: "Supprimer une pièce jointe des métadonnées.\n\n**Attention** : il faut ensuite supprimer la pièce jointe des informations de l'application via l'opération `writeDescription` (`PATCH /`) pour qu'elle ne soit plus répertoriée.",
           operationId: 'deleteAttachment',
           'x-permissionClass': 'write',
           tags: ['Métadonnées'],
@@ -444,17 +444,28 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
       },
       '/permissions': structuredClone(permissionsDoc)
     },
-    tags: [
-      { name: 'Configuration' },
-      { name: 'Paramétrage' },
-      { name: 'Informations' },
-      { name: 'Métadonnées' },
-      { name: 'Permissions' }
-    ],
+    tags: [] as { name: string }[],
     externalDocs: {
       description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     }
   }
+
+  // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
+  // Only tags that are actually used by at least one operation are listed.
+  const usedTags = new Set<string>(
+    Object.values(api.paths)
+      .flatMap((methods: any) => Object.values(methods))
+      .flatMap((op: any) => op?.tags || [])
+  )
+  const tagOrder = [
+    'Configuration',
+    'Paramétrage',
+    'Informations',
+    'Métadonnées',
+    'Permissions'
+  ]
+  api.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
+
   return api
 }
