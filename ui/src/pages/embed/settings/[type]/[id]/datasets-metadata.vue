@@ -1,7 +1,5 @@
 <template>
-  <v-container
-    data-iframe-height
-  >
+  <v-container data-iframe-height>
     <settings-datasets-metadata
       v-if="settings"
       v-model="settings.datasetsMetadata"

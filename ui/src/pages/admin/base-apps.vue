@@ -7,32 +7,31 @@
       <v-col
         cols="12"
         sm="6"
-        md="4"
-      >
-        <v-text-field
-          v-model="q"
-          name="q"
-          :label="t('search')"
-          hide-details
-          variant="outlined"
-          density="compact"
-          :append-icon="mdiMagnify"
-          @keypress.enter="baseAppsFetch.refresh()"
-        />
-      </v-col>
-    </v-row>
-
-    <v-row>
-      <v-col
-        cols="12"
-        sm="6"
-        md="4"
       >
         <v-text-field
           v-model="urlToAdd"
           :label="t('add')"
           :placeholder="t('addPlaceholder')"
+          variant="outlined"
+          density="compact"
+          hide-details
           @keypress.enter="add.execute()"
+        />
+      </v-col>
+
+      <v-col
+        cols="12"
+        sm="6"
+      >
+        <v-text-field
+          v-model="q"
+          :append-inner-icon="mdiMagnify"
+          :label="t('search')"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+          @keypress.enter="baseAppsFetch.refresh()"
         />
       </v-col>
     </v-row>
@@ -277,6 +276,7 @@ const applyPatch = useAsyncAction(async (baseApp: BaseApp, patch: BaseAppPatch) 
 const urlToAdd = ref('')
 const add = useAsyncAction(async () => {
   await $fetch('base-applications', { method: 'POST', body: { url: urlToAdd.value } })
+  urlToAdd.value = ''
   baseAppsFetch.refresh()
 })
 </script>

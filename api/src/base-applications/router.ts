@@ -21,7 +21,7 @@ router.post('', async (req, res) => {
     return
   }
   const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
-  const fullBaseApp = await initBaseApp(baseApp)
+  const fullBaseApp = await initBaseApp(baseApp, req.getLocale())
   await syncBaseApp(fullBaseApp)
   res.send(fullBaseApp)
 })
