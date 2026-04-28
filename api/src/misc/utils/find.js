@@ -543,22 +543,7 @@ export const getByUniqueRef = async (publicationSite, mainPublicationSite, reqPa
   /** @type {any} */
   let filter = { id: paramId }
   if (publicationSite) {
-    if (resourceType === 'dataset') {
-      // master-data datasets are cross-domain reference data and must remain reachable
-      // from a per-domain back-office (e.g. as virtual-dataset children, or initFrom source)
-      // TODO: when remote-services are deprecated and master-data visibility is managed
-      // directly on the datasets make these filters more complete to better reflect account permissions.
-      filter = {
-        _uniqueRefs: paramId,
-        $or: [
-          { 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id },
-          { 'masterData.virtualDatasets.active': true },
-          { 'masterData.standardSchema.active': true }
-        ]
-      }
-    } else {
-      filter = { _uniqueRefs: paramId, 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id }
-    }
+    filter = { _uniqueRefs: paramId, 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id }
   } else if (mainPublicationSite) {
     filter = {
       $or: [

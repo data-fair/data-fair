@@ -801,12 +801,19 @@ async function createVirtualDataset () {
   }
 
   // Fill schema from children if requested
-  if (virtualFillSchema.value) {
-    let allChildrenHaveAttachmentsAsImage = virtualChildren.value.length > 0
+  if (virtualFillSchema.value && virtualChildren.value.length) {
+    const { results: childDatasets } = await $fetch<{ results: any[] }>(`${$apiPath}/datasets`, {
+      query: {
+        id: virtualChildren.value.map(c => c.id).join(','),
+        select: 'id,schema,attachmentsAsImage',
+        size: virtualChildren.value.length
+      }
+    })
+    let allChildrenHaveAttachmentsAsImage = true
     for (const child of virtualChildren.value) {
-      const childDataset = await $fetch<any>(`${$apiPath}/datasets/${child.id}`)
-      if (!childDataset.attachmentsAsImage) allChildrenHaveAttachmentsAsImage = false
-      const schema = childDataset.schema || []
+      const childDataset = childDatasets.find(d => d.id === child.id)
+      if (!childDataset?.attachmentsAsImage) allChildrenHaveAttachmentsAsImage = false
+      const schema = childDataset?.schema || []
       for (const property of schema) {
         if (!body.schema.find((p: any) => p.key === property.key)) {
           body.schema.push(property)
