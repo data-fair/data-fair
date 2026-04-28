@@ -3,12 +3,12 @@
     <template #activator="{ props }">
       <v-btn
         v-bind="props"
-        :prepend-icon="mdiDownload"
+        :icon="mdiDownload"
+        :title="t('downloadSchema')"
         color="primary"
         variant="flat"
-      >
-        {{ t('downloadSchema') }}
-      </v-btn>
+        size="small"
+      />
     </template>
     <v-list>
       <v-list-item
