@@ -51,6 +51,7 @@
       <v-col
         v-if="conceptTitle"
         cols="12"
+        sm="6"
       >
         <div class="text-caption text-medium-emphasis">
           {{ t('concept') }}
@@ -61,7 +62,13 @@
             v-if="field['x-refersTo']"
             class="text-medium-emphasis text-caption ml-1"
           >
-            {{ field['x-refersTo'] }}
+            <a
+              :href="field['x-refersTo']"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ field['x-refersTo'] }}
+            </a>
           </span>
         </div>
       </v-col>
@@ -119,7 +126,7 @@
             v-for="(entry, i) in valueEntries"
             :key="entry.value"
           >
-            <span v-if="i > 0">&nbsp;—&nbsp;</span>
+            <span v-if="i > 0">&nbsp;-&nbsp;</span>
             <span>
               <template v-if="entry.label">{{ entry.label }} (<code>{{ entry.value }}</code>)</template>
               <code v-else>{{ entry.value }}</code>

@@ -60,7 +60,6 @@ fr:
   key: Clé
   title: Libellé
   type: Type
-  x-refersTo: Concept
   description: Description
   moreInfo: Plus d'infos
   collapse: Réduire
@@ -69,7 +68,6 @@ en:
   key: Key
   title: Title
   type: Type
-  x-refersTo: Concept
   description: Description
   moreInfo: More info
   collapse: Collapse
@@ -90,10 +88,9 @@ const truncateStyle = 'max-width: 0; overflow: hidden; text-overflow: ellipsis; 
 const headers = computed(() => [
   { key: 'key', title: t('key'), width: '160px' },
   { key: 'title', title: t('title'), width: '25%', cellProps: { style: truncateStyle } },
-  { key: 'type', title: t('type'), width: '120px' },
-  { key: 'x-refersTo', title: t('x-refersTo'), width: '140px' },
+  { key: 'type', title: t('type'), width: '125px' },
   { key: 'description', title: t('description'), width: '40%', cellProps: { style: truncateStyle } },
-  { key: 'data-table-expand', title: '', sortable: false, width: '56px', align: 'end' as const }
+  { key: 'data-table-expand', title: '', sortable: false, align: 'end' as const }
 ])
 
 const visibleFields = computed(() => dataset.value?.schema?.filter(f => !f['x-calculated']) ?? [])
