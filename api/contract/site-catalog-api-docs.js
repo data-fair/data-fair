@@ -44,7 +44,7 @@ export default (publicUrl, publicationSite, info) => {
       '/api-docs.json': {
         get: {
           summary: 'Obtenir la documentation OpenAPI',
-          description: 'Accéder à cette documentation au format OpenAPI v3.',
+          description: 'Accéder à la documentation du catalogue au format OpenAPI v3.',
           operationId: 'getApiDoc',
           responses: {
             200: {

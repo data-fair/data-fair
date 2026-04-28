@@ -263,7 +263,7 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
       '/api-docs.json': {
         get: {
           summary: 'Obtenir la documentation OpenAPI',
-          description: 'Accéder à cette documentation au format OpenAPI v3.',
+          description: "Accéder à la documentation de l'application au format OpenAPI v3.",
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
           tags: ['Informations'],
@@ -442,7 +442,7 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
           }
         }
       },
-      '/permissions': permissionsDoc
+      '/permissions': structuredClone(permissionsDoc)
     },
     tags: [
       { name: 'Configuration' },

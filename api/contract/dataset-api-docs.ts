@@ -13,9 +13,56 @@ import { hasCapability } from '../src/datasets/es/commons.js'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
+type DatasetApiDocsOptions = { merged?: boolean }
+
 const config = _config as any
 
 const dataFiles = datasetSchema.properties.storage.properties.dataFiles
+
+/**
+ * Synthetic dataset used in `merged` mode (root API doc) so that every conditional route is included
+ * regardless of variant-specific flags. The pruning blocks at the bottom of this function are skipped
+ * when `merged` is true, so the conflicting flags (`isRest` + `file`, etc.) don't trigger pruning.
+ */
+export const mergedSampleSchema: any[] = [
+  { key: 'name', type: 'string', title: 'Nom', 'x-refersTo': 'http://schema.org/name' },
+  { key: 'description', type: 'string', title: 'Description' },
+  { key: 'category', type: 'string', title: 'Catégorie' },
+  { key: 'value', type: 'number', title: 'Valeur' },
+  { key: 'siret', type: 'string', title: 'SIRET', 'x-refersTo': 'http://dbpedia.org/ontology/siret' },
+  { key: 'image', type: 'string', title: 'Image', 'x-refersTo': 'http://schema.org/image' },
+  { key: 'document', type: 'string', title: 'Document', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+]
+
+export const mergedSampleDataset: any = {
+  id: '{datasetId}',
+  slug: 'sample-dataset',
+  title: 'Sample dataset',
+  file: { name: 'sample.csv', mimetype: 'text/csv', size: 1024 },
+  isRest: true,
+  rest: { history: true, lineOwnership: true },
+  schema: mergedSampleSchema,
+  bbox: [-180, -90, 180, 90],
+  readApiKey: { active: true },
+  masterData: {
+    singleSearchs: [{
+      id: '{singleSearchId}',
+      title: 'Recherche unitaire',
+      description: 'Récupérer une ligne par recherche unitaire',
+      output: { 'x-refersTo': 'http://schema.org/name' },
+      label: { key: 'name' }
+    }],
+    bulkSearchs: [{
+      id: '{bulkSearchId}',
+      title: 'Recherche en masse',
+      description: 'Récupérer en masse des lignes par lots',
+      input: [{
+        type: 'equals',
+        property: { key: 'siret', type: 'string', 'x-refersTo': 'http://dbpedia.org/ontology/siret' }
+      }]
+    }]
+  }
+}
 
 /** Wraps a description into a text/plain OpenAPI response object. */
 const textPlainResponse = (description: string) => ({
@@ -37,10 +84,23 @@ const anonymousApiRate = apiRate('anonymous', 'anonyme')
 /**
  * Builds the public per-dataset OpenAPI documentation served at /datasets/{id}/api-docs.json.
  * Routes that don't apply to the dataset variant (virtual, rest, meta-only, no bbox, ...) are pruned.
+ *
+ * When `options.merged` is true, the function uses an internal sample dataset (if none is provided)
+ * and skips the variant-specific pruning so the result contains every possible route. This is used
+ * to build the merged root doc at /api-docs.json.
  */
-export default (dataset: Dataset, publicUrl: string = config.publicUrl, settings?: DatasetApiDocsSettings, publicationSite?: unknown) => {
+export default (
+  dataset: Dataset | undefined,
+  publicUrl: string = config.publicUrl,
+  settings?: DatasetApiDocsSettings,
+  publicationSite?: unknown,
+  options?: DatasetApiDocsOptions
+) => {
+  const merged = options?.merged ?? false
+  const ds: Dataset = (dataset ?? (merged ? mergedSampleDataset : undefined)) as Dataset
+  if (!ds) throw new Error('dataset is required (or pass options.merged=true)')
   const ownerInfo = settings?.info || {}
-  const schema: any[] = (dataset as any).schema || []
+  const schema: any[] = (ds as any).schema || []
   const datasetLineSchema = datasetUtils.jsonSchema(schema, publicUrl)
 
   const bulkLineSchema = datasetUtils.jsonSchema(schema.filter((p: any) => !p['x-calculated'] && !p['x-extension']), publicUrl)
@@ -72,7 +132,7 @@ export default (dataset: Dataset, publicUrl: string = config.publicUrl, settings
   // Detect whether we're rendering the merged doc (sample dataset with placeholder id like "{datasetId}")
   // vs an actual per-dataset doc. In the merged case, the column-based filter dropdown would
   // expose sample column names (Nom, Description, ...) that aren't useful, so we hide it.
-  const isSampleDataset = typeof (dataset as any).id === 'string' && (dataset as any).id.startsWith('{')
+  const isSampleDataset = typeof (ds as any).id === 'string' && (ds as any).id.startsWith('{')
 
   const filterItems: any[] = []
   if (!isSampleDataset) {
@@ -212,7 +272,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     }
   }]
 
-  const hasBbox = !!((dataset as any).bbox && (dataset as any).bbox.length === 4)
+  const hasBbox = !!((ds as any).bbox && (ds as any).bbox.length === 4)
 
   if (hasBbox) {
     filterParams.push({
@@ -411,7 +471,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   }
 
   const description = `
-Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "**${dataset.title || (dataset as any).slug}**".
+Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "**${ds.title || (ds as any).slug}**".
 
 Pour protéger l'infrastructure de publication de données, les appels sont limités par quelques règles simples :
 
@@ -505,15 +565,15 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   })
 
   const servers = [{
-    url: `${publicUrl}/api/v1/datasets/${publicationSite ? (dataset as any).slug : (dataset as any).id}`,
-    description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${dataset.title}`
+    url: `${publicUrl}/api/v1/datasets/${publicationSite ? (ds as any).slug : (ds as any).id}`,
+    description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${ds.title}`
   }]
 
   const info: any = {
-    title: `API publique du jeu de données : ${dataset.title || (dataset as any).slug}`,
+    title: `API publique du jeu de données : ${ds.title || (ds as any).slug}`,
     description,
     version: pJson.version,
-    'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${(dataset as any).id}`,
+    'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${(ds as any).id}`,
     contact: { ...(ownerInfo.contact || {}) }
   }
   if (config.info.termsOfService) info.termsOfService = config.info.termsOfService
@@ -1084,7 +1144,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
       '/api-docs.json': {
         get: {
           summary: 'Obtenir la documentation OpenAPI',
-          description: 'Accéder à cette documentation publique au format OpenAPI v3.',
+          description: 'Accéder à la documentation publique du jeu de données au format OpenAPI v3.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
@@ -1142,7 +1202,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           }
         }
       },
-      ...masterData.endpoints(dataset)
+      ...masterData.endpoints(ds)
     },
     externalDocs: {
       description: 'Documentation sur GitHub',
@@ -1150,37 +1210,40 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
     }
   }
 
-  if ((dataset as any).isVirtual || (dataset as any).isRest || (dataset as any).isMetaOnly) {
-    delete api.paths['/raw']
-    delete api.paths['/convert']
-    delete api.paths['/full']
-    delete api.paths['/data-files']
-    delete api.paths['/data-files/{filePath}']
-  }
+  // Variant-specific pruning is skipped in merged mode so the root doc keeps every route.
+  if (!merged) {
+    if ((ds as any).isVirtual || (ds as any).isRest || (ds as any).isMetaOnly) {
+      delete api.paths['/raw']
+      delete api.paths['/convert']
+      delete api.paths['/full']
+      delete api.paths['/data-files']
+      delete api.paths['/data-files/{filePath}']
+    }
 
-  if ((dataset as any).isMetaOnly) {
-    delete api.paths['/lines']
-    delete api.paths['/schema']
-    delete api.paths['/safe-schema']
-    delete api.paths['/words_agg']
-    delete api.paths['/metric_agg']
-    delete api.paths['/values/{field}']
-    delete api.paths['/values-labels/{field}']
-    delete api.paths['/values_agg']
-  }
+    if ((ds as any).isMetaOnly) {
+      delete api.paths['/lines']
+      delete api.paths['/schema']
+      delete api.paths['/safe-schema']
+      delete api.paths['/words_agg']
+      delete api.paths['/metric_agg']
+      delete api.paths['/values/{field}']
+      delete api.paths['/values-labels/{field}']
+      delete api.paths['/values_agg']
+    }
 
-  if (textAggProperties.length === 0) {
-    delete api.paths['/words_agg']
-  }
-  if (valuesProperties.length === 0) {
-    delete api.paths['/values_agg']
-    delete api.paths['/values/{field}']
-    delete api.paths['/values-labels/{field}']
-    delete api.paths['/metric_agg']
-    delete api.paths['/simple_metrics_agg']
-  }
-  if (!documentProperty) {
-    delete api.paths['/attachments/{attachmentId}']
+    if (textAggProperties.length === 0) {
+      delete api.paths['/words_agg']
+    }
+    if (valuesProperties.length === 0) {
+      delete api.paths['/values_agg']
+      delete api.paths['/values/{field}']
+      delete api.paths['/values-labels/{field}']
+      delete api.paths['/metric_agg']
+      delete api.paths['/simple_metrics_agg']
+    }
+    if (!documentProperty) {
+      delete api.paths['/attachments/{attachmentId}']
+    }
   }
 
   if (hasBbox) {
@@ -1205,7 +1268,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
     }
   }
 
-  if ((dataset as any).rest && (dataset as any).rest.history) {
+  if ((ds as any).rest && (ds as any).rest.history) {
     const size = hitsParams().find((p: any) => p.name === 'size')
     const before = {
       in: 'query',
@@ -1343,16 +1406,13 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
     }
   }
 
-  // Drives the navigation drawer order in the openapi-viewer. Only tags that are
-  // actually used by at least one operation are listed.
-  const usedTags = new Set<string>()
-  for (const methods of Object.values(api.paths) as any[]) {
-    for (const [m, op] of Object.entries(methods)) {
-      if (m === 'parameters') continue
-      const tags = (op as any)?.tags
-      if (Array.isArray(tags)) for (const t of tags) usedTags.add(t)
-    }
-  }
+  // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
+  // Only tags that are actually used by at least one operation are listed.
+  const usedTags = new Set<string>(
+    Object.values(api.paths)
+      .flatMap((methods: any) => Object.values(methods))
+      .flatMap((op: any) => op?.tags || [])
+  )
   const tagOrder = [
     'Métadonnées',
     'Données',

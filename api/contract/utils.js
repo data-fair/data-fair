@@ -1,14 +1,3 @@
-export const idParam = {
-  in: 'path',
-  name: 'id',
-  description: 'Identifiant',
-  required: true,
-  schema: {
-    title: 'Identifiant',
-    type: 'string'
-  }
-}
-
 export const qParam = {
   in: 'query',
   name: 'q',

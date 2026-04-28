@@ -2,7 +2,7 @@ import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { Dataset, Settings } from '#types'
 
 import _config from 'config'
-import datasetAPIDocs from './dataset-api-docs.ts'
+import datasetAPIDocs, { mergedSampleDataset } from './dataset-api-docs.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
@@ -12,7 +12,26 @@ import * as datasetUtils from '../src/datasets/utils/index.js'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
+type DatasetApiDocsOptions = { merged?: boolean }
+
 const config = _config as any
+
+/**
+ * Tag remapping for the merged root doc:
+ * — Données and master-data merge under "JDD / Données"
+ * — Editable and own-line variants merge under "JDD / Éditable"
+ * — Permissions folds into "JDD / Métadonnées" since the merged drawer doesn't need its own section.
+ */
+const mergedTagMap: Record<string, string> = {
+  Métadonnées: 'JDD / Métadonnées',
+  Permissions: 'JDD / Métadonnées',
+  Données: 'JDD / Données',
+  'Données de référence': 'JDD / Données',
+  'Données éditables': 'JDD / Éditable',
+  'Données éditables par propriétaire de ligne': 'JDD / Éditable',
+  Administration: 'JDD / Administration',
+  Rétrocompatibilité: 'JDD / Rétrocompatibilité'
+}
 
 /** Wraps a description into a text/plain OpenAPI response object. */
 const textPlainResponse = (description: string) => ({
@@ -25,23 +44,37 @@ const textPlainResponse = (description: string) => ({
 /**
  * Builds the private per-dataset OpenAPI documentation served at /datasets/{id}/private-api-docs.json.
  * Extends the public doc with write/admin operations and routes gated by the user's session (admin mode, etc).
+ *
+ * When `options.merged` is true, the function uses an internal sample dataset (if none is provided),
+ * bypasses session-based gating to include all admin routes, and remaps tags for the merged root doc.
  */
-export default (dataset: Dataset, publicUrl: string = config.publicUrl, sessionState: SessionStateAuthenticated, settings?: DatasetApiDocsSettings) => {
-  const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, settings)
+export default (
+  dataset: Dataset | undefined,
+  publicUrl: string = config.publicUrl,
+  sessionState?: SessionStateAuthenticated,
+  settings?: DatasetApiDocsSettings,
+  options?: DatasetApiDocsOptions
+) => {
+  const merged = options?.merged ?? false
+  const ds: Dataset = (dataset ?? (merged ? mergedSampleDataset : undefined)) as Dataset
+  if (!ds) throw new Error('dataset is required (or pass options.merged=true)')
+  const isAdmin = merged || !!sessionState?.user?.adminMode
 
-  const title = `API privée du jeu de données : ${dataset.title || dataset.id}`
+  const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(ds, publicUrl, settings, undefined, options)
+
+  const title = `API privée du jeu de données : ${ds.title || ds.id}`
 
   let description = `
-Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "**${dataset.title || dataset.id}**".
+Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "**${ds.title || ds.id}**".
 `
 
-  if (dataset.isVirtual) {
+  if (ds.isVirtual) {
     description += `
 Ce jeu de données est virtuel. Cela signifie qu'il est constitué de redirections vers un ensemble de jeux de données et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
 `
   }
 
-  if (dataset.isRest) {
+  if (ds.isRest) {
     description += `
 Ce jeu de données est éditable. Cela signifie qu'il est constitué dynamiquement à partir de lectures / écritures de lignes et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
 `
@@ -53,7 +86,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 - ${userApiRate}
 `
 
-  if (visibility(dataset) !== 'public') {
+  if (visibility(ds) !== 'public') {
     description += `
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans les paramètres du compte.
 `
@@ -140,7 +173,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   })
 
-  if (dataset.file) {
+  if (ds.file) {
     api.paths['/'].post = {
       summary: 'Mettre à jour les données',
       description: 'Mettre à jour le fichier de données du jeu de données. La nouvelle version est créée en brouillon, à valider via la route `validateDraft`.',
@@ -171,10 +204,10 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   }
 
-  api.paths['/private-api-docs.json'] = {
+  const privateApiDocPath = {
     get: {
       summary: 'Obtenir la documentation privée OpenAPI',
-      description: 'Accéder à cette documentation privée au format OpenAPI v3.',
+      description: 'Accéder à la documentation privée du jeu de données au format OpenAPI v3.',
       operationId: 'readPrivateApiDoc',
       'x-permissionClass': 'readAdvanced',
       tags: ['Métadonnées'],
@@ -191,6 +224,15 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     }
   }
+  // Insert /private-api-docs.json right after the public /api-docs.json so the two doc routes
+  // appear consecutively in the openapi-viewer drawer instead of being separated by /thumbnail.
+  const reorderedPaths: Record<string, any> = {}
+  for (const [path, methods] of Object.entries(api.paths)) {
+    reorderedPaths[path] = methods
+    if (path === '/api-docs.json') reorderedPaths['/private-api-docs.json'] = privateApiDocPath
+  }
+  if (!reorderedPaths['/private-api-docs.json']) reorderedPaths['/private-api-docs.json'] = privateApiDocPath
+  api.paths = reorderedPaths
 
   api.paths['/metadata-attachments'] = {
     post: {
@@ -327,7 +369,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   }
 
-  if (dataset.file) {
+  if (ds.file) {
     api.paths['/draft'] = {
       post: {
         summary: 'Valider le brouillon',
@@ -368,8 +410,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   }
 
-  if (dataset.isRest) {
-    const schema = dataset.schema ?? []
+  if (ds.isRest) {
+    const schema = ds.schema ?? []
     const readLineSchema = datasetUtils.jsonSchema(schema, publicUrl)
     const writeLineSchema = datasetUtils.jsonSchema(schema.filter((p: any) => !p['x-calculated'] && !p['x-extension']), publicUrl)
     const lineIdParam = {
@@ -556,7 +598,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     }
 
-    if (dataset.rest?.lineOwnership) {
+    if (ds.rest?.lineOwnership) {
       const ownerParam = {
         in: 'path',
         name: 'owner',
@@ -595,9 +637,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   }
 
-  api.paths['/permissions'] = permissionsDoc
+  // Clone permissionsDoc: the imported object is a module-level singleton shared with the
+  // application doc and mutated by the merged-mode tag remapping below.
+  api.paths['/permissions'] = structuredClone(permissionsDoc)
 
-  if (!dataset.isMetaOnly && sessionState.user.adminMode) {
+  // Admin routes are gated by adminMode in normal use, and force-included in merged mode.
+  // Order: read-only diagnostics → force-actions → resync (rest-only) → destructive lock cleanup.
+  if (!ds.isMetaOnly && isAdmin) {
     Object.assign(api.paths, {
       '/_diagnose': {
         get: {
@@ -655,10 +701,10 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     })
   }
-  if (dataset.isRest && sessionState.user.adminMode) {
+  if (ds.isRest && isAdmin) {
     api.paths['/_sync_attachments_lines'] = {
       post: {
-        summary: 'Forcer la synchronisation',
+        summary: 'Forcer la resynchronisation',
         description: 'Re-synchroniser les lignes du jeu de données avec les pièces jointes présentes.',
         tags: ['Administration'],
         operationId: 'syncAttachmentsLines',
@@ -675,7 +721,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     }
   }
-  if (!dataset.isMetaOnly && sessionState.user.adminMode) {
+  if (!ds.isMetaOnly && isAdmin) {
     api.paths['/_lock'] = {
       delete: {
         summary: 'Supprimer les locks',
@@ -693,11 +739,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   }
 
-  if (dataset.isMetaOnly) {
-    delete api.paths['/'].post
-  }
-
-  if (dataset.readApiKey?.active) {
+  if (ds.readApiKey?.active) {
     api.paths['/read-api-key'] = {
       get: {
         summary: "Obtenir la clé d'API",
@@ -725,16 +767,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   }
 
-  // Drives the navigation drawer order in the openapi-viewer. Only tags that are
-  // actually used by at least one operation are listed.
-  const usedTags = new Set<string>()
-  for (const methods of Object.values(api.paths) as any[]) {
-    for (const [m, op] of Object.entries(methods)) {
-      if (m === 'parameters') continue
-      const tags = (op as any)?.tags
-      if (Array.isArray(tags)) for (const t of tags) usedTags.add(t)
-    }
-  }
+  // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
+  // Only tags that are actually used by at least one operation are listed.
+  const usedTags = new Set<string>(
+    Object.values(api.paths)
+      .flatMap((methods: any) => Object.values(methods))
+      .flatMap((op: any) => op?.tags || [])
+  )
   const tagOrder = [
     'Métadonnées',
     'Données',
@@ -746,6 +785,17 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     'Administration'
   ]
   api.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
+
+  // In merged mode, remap tags on every operation so the root doc gets the "JDD / ..." names
+  // directly. The root doc rebuilds api.tags afterwards, so we don't bother updating it here.
+  if (merged) {
+    for (const methods of Object.values(api.paths) as any[]) {
+      for (const [m, op] of Object.entries(methods) as [string, any][]) {
+        if (m === 'parameters' || !op?.tags) continue
+        op.tags = op.tags.map((t: string) => mergedTagMap[t] ?? t)
+      }
+    }
+  }
 
   return api
 }

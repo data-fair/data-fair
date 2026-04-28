@@ -1,191 +1,27 @@
-import type { SessionStateAuthenticated } from '@data-fair/lib-express'
-import type { Dataset } from '#types'
-
 import config from '#config'
 import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import { resolvedSchema as application } from '../types/application/.type/index.js'
 import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
-import datasetAPIDocs from './dataset-api-docs.ts'
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
 
-interface DatasetVariant {
-  key: string
-  dataset: any
-}
-
-const sampleSchema = [
-  { key: 'name', type: 'string', title: 'Nom', 'x-refersTo': 'http://schema.org/name' },
-  { key: 'description', type: 'string', title: 'Description' },
-  { key: 'category', type: 'string', title: 'Catégorie' },
-  { key: 'value', type: 'number', title: 'Valeur' }
-]
-
-const masterDataSchema = [
-  ...sampleSchema,
-  { key: 'siret', type: 'string', title: 'SIRET', 'x-refersTo': 'http://dbpedia.org/ontology/siret' }
-]
-
-const variants: DatasetVariant[] = [
-  {
-    key: 'file',
-    dataset: {
-      id: '{datasetId}',
-      slug: 'sample-file-dataset',
-      title: 'Sample file dataset',
-      file: { name: 'sample.csv', mimetype: 'text/csv', size: 1024 },
-      schema: sampleSchema,
-      bbox: [-180, -90, 180, 90]
-    }
-  },
-  {
-    key: 'rest',
-    dataset: {
-      id: '{datasetId}',
-      slug: 'sample-rest-dataset',
-      title: 'Sample editable dataset',
-      isRest: true,
-      rest: { history: true, lineOwnership: true },
-      schema: sampleSchema,
-      readApiKey: { active: true }
-    }
-  },
-  {
-    key: 'virtual',
-    dataset: {
-      id: '{datasetId}',
-      slug: 'sample-virtual-dataset',
-      title: 'Sample virtual dataset',
-      isVirtual: true,
-      schema: sampleSchema
-    }
-  },
-  {
-    key: 'metaOnly',
-    dataset: {
-      id: '{datasetId}',
-      slug: 'sample-meta-only-dataset',
-      title: 'Sample meta-only dataset',
-      isMetaOnly: true,
-      schema: []
-    }
-  },
-  {
-    key: 'masterData',
-    dataset: {
-      id: '{datasetId}',
-      slug: 'sample-master-data-dataset',
-      title: 'Sample master-data dataset',
-      isRest: true,
-      rest: {},
-      schema: masterDataSchema,
-      masterData: {
-        singleSearchs: [{
-          id: '{singleSearchId}',
-          title: 'Recherche unitaire',
-          description: 'Récupérer une ligne par recherche unitaire',
-          output: { 'x-refersTo': 'http://schema.org/name' },
-          label: { key: 'name' }
-        }],
-        bulkSearchs: [{
-          id: '{bulkSearchId}',
-          title: 'Recherche en masse',
-          description: 'Récupérer en masse des lignes par lots',
-          input: [{
-            type: 'equals',
-            property: { key: 'siret', type: 'string', 'x-refersTo': 'http://dbpedia.org/ontology/siret' }
-          }]
-        }]
-      }
-    }
-  }
-]
-
-/** Builds a synthetic admin session used to render the merged root doc with all admin/private routes visible. */
-const buildAdminSession = (): SessionStateAuthenticated => ({
-  user: {
-    id: '{adminUserId}',
-    email: 'admin@example.com',
-    name: 'Admin',
-    organizations: [],
-    adminMode: true
-  } as any,
-  account: { type: 'user', id: '{adminUserId}', name: 'Admin' } as any,
-  accountRole: 'admin',
-  lang: 'fr'
-} as any)
-
 const datasetIdParam = {
   in: 'path',
   name: 'id',
-  description: 'Identifiant du jeu de données',
+  description: "Identifiant du jeu de données. L'identifiant de publication (`slug`) fonctionne aussi lorsque l'API est appelée depuis un portail.",
   required: true,
   schema: { type: 'string', title: 'Identifiant du jeu de données' }
 }
 
-/** Copies schemas, securitySchemes and responses from a per-resource doc into the root doc, without overwriting existing entries. */
-const mergeComponents = (doc: any, sourceApi: any) => {
-  for (const section of ['schemas', 'securitySchemes', 'responses'] as const) {
-    const sourceEntries = sourceApi?.components?.[section]
-    if (!sourceEntries) continue
-    doc.components[section] = doc.components[section] || {}
-    for (const [name, value] of Object.entries(sourceEntries)) {
-      if (!doc.components[section][name]) {
-        doc.components[section][name] = value
-      }
-    }
-  }
-}
-
-/**
- * Merges a per-resource doc's paths into the root doc under a given prefix.
- * Injects the resource id parameter and merges tags when several variants document the same operation.
- * For a given (path, method) pair, the first variant wins; later variants only contribute their tags.
- */
-const mergePaths = (
-  doc: any,
-  sourcePaths: Record<string, any>,
-  prefix: string,
-  injectParam: any,
-  retagAll: (operation: any) => void
-) => {
-  for (const [path, methods] of Object.entries(sourcePaths)) {
-    const cleanedPath = path === '/' ? '' : path
-    const fullPath = `${prefix}${cleanedPath}`
-
-    const target = doc.paths[fullPath] || {}
-    const existingPathParams = methods.parameters || []
-    const incomingParams = [injectParam, ...existingPathParams]
-    if (!target.parameters) {
-      target.parameters = incomingParams
-    } else {
-      for (const param of incomingParams) {
-        const exists = target.parameters.some((p: any) => p.in === param.in && p.name === param.name)
-        if (!exists) target.parameters.push(param)
-      }
-    }
-
-    for (const [method, operation] of Object.entries(methods)) {
-      if (method === 'parameters') continue
-      const op: any = operation
-      const incoming = { ...op }
-      retagAll(incoming)
-
-      const existing = target[method]
-      if (!existing) {
-        target[method] = incoming
-      } else {
-        const existingTags: string[] = Array.isArray(existing.tags) ? existing.tags : []
-        const incomingTags: string[] = Array.isArray(incoming.tags) ? incoming.tags : []
-        existing.tags = Array.from(new Set([...existingTags, ...incomingTags]))
-      }
-    }
-
-    doc.paths[fullPath] = target
-  }
+const applicationIdParam = {
+  in: 'path',
+  name: 'id',
+  description: "Identifiant de l'application. L'identifiant de publication (`slug`) fonctionne aussi lorsque l'API est appelée depuis un portail.",
+  required: true,
+  schema: { type: 'string', title: "Identifiant de l'application" }
 }
 
 /** Wraps a description into a text/plain OpenAPI response object. */
@@ -209,11 +45,12 @@ const errorResponses = {
 
 /**
  * Builds the merged root OpenAPI documentation served at /api-docs.json.
- * Combines top-level CRUD (datasets, applications) with the per-dataset routes generated
- * from a representative set of dataset variants (file, rest, virtual, meta-only, master-data).
+ * Combines top-level CRUD (datasets, applications) with the per-dataset routes built by
+ * `privateDatasetAPIDocs` in `merged` mode, which produces every possible dataset route
+ * with tags already prefixed for the merged drawer.
  */
 export default (publicUrl: string = config.publicUrl) => {
-  const doc: any = {
+  const api: any = {
     openapi: '3.1.0',
     info: {
       title: 'API Data Fair',
@@ -405,7 +242,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         }
       },
       '/datasets/{id}': {
-        parameters: [utils.idParam],
+        parameters: [datasetIdParam],
         put: {
           summary: 'Créer ou mettre à jour un jeu de données',
           description: 'Créer ou mettre à jour un jeu de données en spécifiant son identifiant.',
@@ -511,7 +348,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         }
       },
       '/applications/{id}': {
-        parameters: [utils.idParam],
+        parameters: [applicationIdParam],
         get: {
           summary: "Lire les informations d'une application",
           description: "Récupérer les informations d'une application.",
@@ -609,75 +446,44 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     }
   }
 
-  const adminSession = buildAdminSession()
+  // Build all dataset routes in one shot. The merged-mode private doc:
+  // — uses an internal sample dataset with every feature enabled (file + isRest + history + masterData + bbox + ...)
+  // — skips variant pruning so /raw, /lines, /revisions, /master-data/*, /geo_agg, etc. all coexist
+  // — bypasses session-based admin gating
+  // — remaps tags to "JDD / ..." so they slot directly into this doc's drawer
+  const datasetApi = privateDatasetAPIDocs(undefined, publicUrl, undefined, undefined, { merged: true })
 
-  // Tag mapping for the merged root doc:
-  // — Permissions are grouped with Métadonnées
-  // — Données de référence (master-data) is grouped with Données
-  // — Own-line ops merge into the regular Éditable tag
-  // — Dataset tags get a "JDD / " prefix (abréviation de "Jeux de données")
-  const datasetTagMap: Record<string, string> = {
-    Métadonnées: 'JDD / Métadonnées',
-    Permissions: 'JDD / Métadonnées',
-    Données: 'JDD / Données',
-    'Données de référence': 'JDD / Données',
-    'Données éditables': 'JDD / Éditable',
-    'Données éditables par propriétaire de ligne': 'JDD / Éditable',
-    Administration: 'JDD / Administration',
-    Rétrocompatibilité: 'JDD / Rétrocompatibilité'
-  }
+  for (const [path, methods] of Object.entries(datasetApi.paths) as [string, any][]) {
+    const cleanedPath = path === '/' ? '' : path
+    const fullPath = `/datasets/{id}${cleanedPath}`
 
-  for (const variant of variants) {
-    const { api: publicApi } = datasetAPIDocs(variant.dataset, publicUrl, undefined)
-    const privateApi = privateDatasetAPIDocs(variant.dataset as Dataset, publicUrl, adminSession, undefined)
-
-    mergeComponents(doc, publicApi)
-    mergeComponents(doc, privateApi)
-
-    /** Maps the per-resource tags to their merged-doc equivalents (with the "JDD / " prefix when no explicit mapping exists). */
-    const retag = (operation: any) => {
-      const originalTags: string[] = operation.tags || []
-      operation.tags = originalTags.map(t => datasetTagMap[t] ?? `JDD / ${t}`)
-      if (originalTags.length === 0) operation.tags = ['Jeux de données (JDD)']
+    if (!api.paths[fullPath]) api.paths[fullPath] = { parameters: [datasetIdParam] }
+    api.paths[fullPath].parameters = api.paths[fullPath].parameters || [datasetIdParam]
+    for (const param of methods.parameters ?? []) {
+      const exists = api.paths[fullPath].parameters.some((p: any) => p.in === param.in && p.name === param.name)
+      if (!exists) api.paths[fullPath].parameters.push(param)
     }
 
-    mergePaths(
-      doc,
-      privateApi.paths,
-      '/datasets/{id}',
-      datasetIdParam,
-      retag
-    )
-  }
-
-  // Reorder admin paths to a deterministic order (read-first, force-actions, then destructive last).
-  // Without this, the merge order of variants leaves _lock before _sync_attachments_lines
-  // because the first variant (file) doesn't define _sync_attachments_lines.
-  const adminPathOrder = [
-    '/datasets/{id}/_diagnose',
-    '/datasets/{id}/_reindex',
-    '/datasets/{id}/_refinalize',
-    '/datasets/{id}/_sync_attachments_lines',
-    '/datasets/{id}/_lock'
-  ]
-  for (const p of adminPathOrder) {
-    if (doc.paths[p]) {
-      const entry = doc.paths[p]
-      delete doc.paths[p]
-      doc.paths[p] = entry
+    for (const [method, operation] of Object.entries(methods) as [string, any][]) {
+      if (method === 'parameters') continue
+      const existing = api.paths[fullPath][method]
+      if (existing) {
+        const existingTags: string[] = Array.isArray(existing.tags) ? existing.tags : []
+        const incomingTags: string[] = Array.isArray(operation.tags) ? operation.tags : []
+        existing.tags = Array.from(new Set([...existingTags, ...incomingTags]))
+      } else {
+        api.paths[fullPath][method] = operation
+      }
     }
   }
 
   // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
   // Only tags that are actually used by at least one operation are listed.
-  const usedTags = new Set<string>()
-  for (const methods of Object.values(doc.paths) as any[]) {
-    for (const [m, op] of Object.entries(methods)) {
-      if (m === 'parameters') continue
-      const tags = (op as any)?.tags
-      if (Array.isArray(tags)) for (const t of tags) usedTags.add(t)
-    }
-  }
+  const usedTags = new Set<string>(
+    Object.values(api.paths)
+      .flatMap((methods: any) => Object.values(methods))
+      .flatMap((op: any) => op?.tags || [])
+  )
   const tagOrder = [
     'Administration',
     'Jeux de données (JDD)',
@@ -688,7 +494,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     'JDD / Administration',
     'Applications'
   ]
-  doc.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
+  api.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
 
-  return doc
+  return api
 }
