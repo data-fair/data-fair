@@ -4,7 +4,7 @@ import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/a
 test.describe('applications list page', () => {
   let applicationId: string
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     const ax = await axiosAuth('test_user1@test.com')
     const baseApps = await ax.get('/api/v1/base-applications', { params: { size: 1 } })
@@ -17,25 +17,22 @@ test.describe('applications list page', () => {
     applicationId = res.data.id
   })
 
-  test('page loads and shows search and sort controls', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications', 'test_user1')
-    // Search field should be visible (use textbox role to avoid strict mode issues with clearable icon)
-    await expect(page.getByRole('textbox', { name: 'Rechercher' })).toBeVisible({ timeout: 10000 })
-    // Sort select should be visible
-    await expect(page.locator('.v-select').filter({ hasText: 'Trier par' })).toBeVisible({ timeout: 10000 })
-  })
-
-  test('page loads and displays application cards when applications exist', async ({ page, goToWithAuth }) => {
+  test('initial page state: cards, count, controls and contributor action all visible', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
     await goToWithAuth('/data-fair/applications', 'test_user1')
-    // At least one application card should appear
+
+    // Application cards rendered
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
-  })
 
-  test('results count is displayed when applications exist', async ({ page, goToWithAuth }) => {
-    test.skip(!applicationId, 'No base application available')
-    await goToWithAuth('/data-fair/applications', 'test_user1')
-    await expect(page.getByText(/applications/)).toBeVisible({ timeout: 10000 })
+    // Results count
+    await expect(page.getByText(/applications/)).toBeVisible()
+
+    // Controls
+    await expect(page.getByRole('textbox', { name: 'Rechercher' })).toBeVisible()
+    await expect(page.locator('.v-select').filter({ hasText: 'Trier par' })).toBeVisible()
+
+    // "Nouvelle application" link visible
+    await expect(page.getByRole('link', { name: /nouvelle application/i }).first()).toBeVisible()
   })
 
   test('search filters results (q param appears in URL)', async ({ page, goToWithAuth }) => {
@@ -78,12 +75,6 @@ test.describe('applications list page', () => {
     await expect(page).toHaveURL(/sort=title/)
   })
 
-  test('"Nouvelle application" button is visible for contributors', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications', 'test_user1')
-    // There may be two "Nouvelle application" links: one in the empty state and one in the right navigation
-    await expect(page.getByRole('link', { name: /nouvelle application/i }).first()).toBeVisible({ timeout: 10000 })
-  })
-
   test('"Nouvelle application" button navigates to new-application page', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/applications', 'test_user1')
     await page.getByRole('link', { name: /nouvelle application/i }).first().click()
@@ -114,11 +105,11 @@ test.describe('base-application facet display', () => {
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')
-    const baseAppFacet = navRight.getByRole('combobox', { name: "Type d'application" })
+    const baseAppFacet = navRight.getByRole('combobox', { name: "Modèle d'application" })
     await expect(baseAppFacet).toBeVisible({ timeout: 5000 })
     await baseAppFacet.click()
 
-    const listbox = page.getByRole('listbox', { name: "Type d'application" })
+    const listbox = page.getByRole('listbox', { name: "Modèle d'application" })
     const options = listbox.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
     const count = await options.count()

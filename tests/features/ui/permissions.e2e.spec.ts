@@ -6,33 +6,30 @@ import type { AxiosInstance } from 'axios'
 test.describe('permissions editor', () => {
   let datasetId: string
   let ax: AxiosInstance
+  let defaultPermissions: any
 
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
     ax = await axiosAuth('test_user1@test.com', 'test_org1')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id
+    // Snapshot the default permissions assigned at creation so we can restore
+    // them between tests instead of re-uploading the dataset.
+    defaultPermissions = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+  })
+
+  test.beforeEach(async () => {
+    await ax.put(`/api/v1/datasets/${datasetId}/permissions`, defaultPermissions)
   })
 
   /**
-   * Helper: login, switch to org context via personal menu, then navigate to dataset permissions tab.
+   * Helper: login (in test_org1 context), navigate to dataset, open Permissions tab.
    */
-  async function goToPermissions (page: any, goToWithAuth: any, user = 'test_user1', orgLabel = 'Test Org 1') {
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-    // Login and go to the dashboard first (personal context)
-    await goToWithAuth('/data-fair/', user)
-    // Switch to org context via the personal menu
-    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: orgLabel }).click()
-    // Wait for the page to reload after org switch
-    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-    // Navigate to the dataset page
-    await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+  async function goToPermissions (page: any, goToWithAuth: any, user = 'test_user1', org = 'test_org1') {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, user, { org })
     await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
     await page.locator('#share').scrollIntoViewIfNeeded()
-    // Click the Permissions tab to ensure it is active
     await page.getByRole('tab', { name: /Permissions/i }).click()
-    // Wait for the permissions component to load (visibility select appears)
     await expect(page.locator('#share .v-select').first()).toBeVisible({ timeout: 10000 })
   }
 
@@ -262,18 +259,58 @@ test.describe('permissions editor', () => {
   // ===== Test Group 5: Access Control =====
 
   test.describe('access control', () => {
+    // Uses the UI org-switch (personal-menu click) rather than the cookie shortcut
+    // in goToWithAuth: contributor-role tests have shown intermittent failures in
+    // the full e2e suite when relying on the cookie alone for first-time login.
     test('non-admin cannot see permissions tab', async ({ page, goToWithAuth }) => {
       const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-      // Login as contrib user and switch to org context
       await goToWithAuth('/data-fair/', 'test_user5')
       await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
       await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
       await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      // Navigate to the dataset page
       await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
-      // The Permissions tab should NOT be visible for a contrib user
       await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
+    })
+
+    // Org member with role "user": once the dataset is shared in-org they have
+    // basic read but no readJournal / setReadApiKey. The page must not show the
+    // read-api-key tab (managing the key needs setReadApiKey, admin-only) and
+    // must not request /task-progress or /journal (readAdvanced) on load.
+    test('basic-read user: no read-api-key tab, no readJournal request', async ({ page, goToWithAuth }) => {
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      // Share the dataset with the whole org so test_user8 (role "user") can read it.
+      await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [
+        { type: 'organization', id: 'test_org1', name: 'Test Org 1', operations: [], classes: ['list', 'read'] }
+      ])
+
+      const forbiddenRequests: string[] = []
+      page.on('response', (resp) => {
+        const url = resp.url()
+        if (/\/api\/v1\/datasets\/[^/]+\/(journal|task-progress)\b/.test(url)) {
+          forbiddenRequests.push(`${resp.status()} ${url}`)
+        }
+      })
+
+      await goToWithAuth('/data-fair/', 'test_user8')
+      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
+      await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
+      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
+      await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+
+      // Share section is visible (publication-sites + integration tabs remain).
+      await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
+      await page.locator('#share').scrollIntoViewIfNeeded()
+
+      // Read-api-key and Permissions tabs must NOT be present.
+      await expect(page.getByRole('tab', { name: /Clé d'API en lecture/i })).not.toBeVisible()
+      await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
+
+      // No journal/task-progress fetch should have been issued — they require
+      // readJournal which a basic "user" role doesn't have.
+      // Wait a short moment so any pending fetch has had a chance to fire.
+      await page.waitForTimeout(500)
+      expect(forbiddenRequests, `unexpected readAdvanced requests: ${forbiddenRequests.join(', ')}`).toEqual([])
     })
   })
 })
