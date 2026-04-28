@@ -88,7 +88,7 @@ const emit = defineEmits<{
   add: [column: any]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const isFormValid = ref(false)
 const newColumnKey = ref('')
@@ -96,7 +96,7 @@ const newColumnType = ref(propertyTypes[0])
 
 const typeItems = computed(() => propertyTypes.map(pt => ({
   ...pt,
-  title: pt.title
+  title: pt.title[locale.value]
 })))
 
 const validNewColumnKey = (name: string) => {

@@ -44,7 +44,7 @@
         <v-select
           v-model="overwritePropertyType"
           :items="rawPropertyTypes"
-          :item-title="(item: any) => item.title"
+          :item-title="(item: any) => item.title[locale]"
           :item-value="(item: any) => `${item.type}${item.format || item['x-display'] || ''}`"
           return-object
           :label="t('overrideType')"
@@ -52,7 +52,7 @@
           density="compact"
           persistent-placeholder
           clearable
-          :placeholder="t('detectedType') + ': ' + (detectedPropertyType?.title?.toLowerCase() || '')"
+          :placeholder="t('detectedType') + ': ' + (detectedPropertyType?.title?.[locale]?.toLowerCase() || '')"
           :disabled="!editable"
         />
 
@@ -112,7 +112,7 @@ en:
 import { mdiClose, mdiDatabaseCog } from '@mdi/js'
 import { propertyTypes } from '~/utils/dataset'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{
   property: any

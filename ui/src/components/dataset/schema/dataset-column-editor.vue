@@ -95,7 +95,7 @@
         </div>
         <div class="mb-1">
           <span class="text-medium-emphasis">{{ t('type') }}:</span>
-          {{ propTypeTitle(column) }}
+          {{ propTypeTitle(column, locale) }}
           <template v-if="currentFileColumn?.dateFormat">
             ({{ currentFileColumn.dateFormat }})
           </template>

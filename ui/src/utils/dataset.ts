@@ -1,24 +1,27 @@
 import { mdiTextShort, mdiTextLong, mdiFormatText, mdiCalendar, mdiClockOutline, mdiNumeric, mdiCheckboxMarkedCircleOutline, mdiCodeBraces, mdiCodeArray } from '@mdi/js'
 
-export const propertyTypes = [
-  { type: 'string', title: 'Texte', icon: mdiTextShort, 'x-capabilities': { textAgg: false }, maxLength: 200 },
-  { type: 'string', 'x-display': 'textarea', title: 'Texte long', icon: mdiTextLong, 'x-capabilities': { index: false, values: false, textAgg: false, insensitive: false }, maxLength: 1000 },
-  { type: 'string', 'x-display': 'markdown', title: 'Texte formatté', icon: mdiFormatText, 'x-capabilities': { index: false, values: false, textAgg: false, insensitive: false }, maxLength: 1000 },
-  { type: 'string', format: 'date', title: 'Date', icon: mdiCalendar },
-  { type: 'string', format: 'date-time', title: 'Date et heure', icon: mdiClockOutline },
-  { type: 'integer', title: 'Nombre entier', icon: mdiNumeric },
-  { type: 'number', title: 'Nombre', icon: mdiNumeric },
-  { type: 'boolean', title: 'Booléen', icon: mdiCheckboxMarkedCircleOutline }
+export const propertyTypes: Record<string, any>[] = [
+  { type: 'string', title: { fr: 'Texte', en: 'Text' }, icon: mdiTextShort, 'x-capabilities': { textAgg: false }, maxLength: 200 },
+  { type: 'string', 'x-display': 'textarea', title: { fr: 'Texte long', en: 'Long text' }, icon: mdiTextLong, 'x-capabilities': { index: false, values: false, textAgg: false, insensitive: false }, maxLength: 1000 },
+  { type: 'string', 'x-display': 'markdown', title: { fr: 'Texte formaté', en: 'Formatted text' }, icon: mdiFormatText, 'x-capabilities': { index: false, values: false, textAgg: false, insensitive: false }, maxLength: 1000 },
+  { type: 'string', format: 'date', title: { fr: 'Date', en: 'Date' }, icon: mdiCalendar },
+  { type: 'string', format: 'date-time', title: { fr: 'Date et heure', en: 'Date and time' }, icon: mdiClockOutline },
+  { type: 'integer', title: { fr: 'Nombre entier', en: 'Integer' }, icon: mdiNumeric },
+  { type: 'number', title: { fr: 'Nombre', en: 'Number' }, icon: mdiNumeric },
+  { type: 'boolean', title: { fr: 'Booléen', en: 'Boolean' }, icon: mdiCheckboxMarkedCircleOutline }
 ]
 
-export const propTypeTitle = (prop: { type?: string, format?: string | null }) => {
-  if (prop.type === 'object') return 'Objet JSON'
-  if (prop.type === 'array') return 'Tableau JSON'
+export const propTypeTitle = (
+  prop: { type?: string, format?: string | null },
+  locale: string = 'en'
+): string | undefined => {
+  if (prop.type === 'object') return { fr: 'Objet JSON', en: 'JSON object' }[locale]
+  if (prop.type === 'array') return { fr: 'Tableau JSON', en: 'JSON array' }[locale]
   if (prop.format) {
     const type = propertyTypes.find(p => p.type === prop.type && p.format === prop.format)
-    if (type) return type.title
+    if (type) return type.title[locale]
   }
-  return propertyTypes.find(p => p.type === prop.type)?.title
+  return propertyTypes.find(p => p.type === prop.type)?.title[locale]
 }
 
 export const propTypeIcon = (prop: { type: string, format?: string }) => {
