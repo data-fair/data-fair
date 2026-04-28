@@ -805,8 +805,7 @@ async function createVirtualDataset () {
     const { results: childDatasets } = await $fetch<{ results: any[] }>(`${$apiPath}/datasets`, {
       query: {
         id: virtualChildren.value.map(c => c.id).join(','),
-        select: 'id,schema,attachmentsAsImage',
-        size: virtualChildren.value.length
+        select: 'id,schema,attachmentsAsImage'
       }
     })
     let allChildrenHaveAttachmentsAsImage = true
