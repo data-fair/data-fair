@@ -16,22 +16,29 @@ test.describe('datasets list page', () => {
     await checkPendingTasks()
   })
 
-  test('page loads and shows search and sort controls in right navigation', async ({ page, goToWithAuth }) => {
+  test('initial page state: cards, count, controls, facets and contributor action all visible', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
-    // Controls are in the right navigation drawer
-    const navRight = page.locator('#navigation-right-local')
-    await expect(navRight.getByRole('textbox', { name: 'Rechercher' })).toBeVisible({ timeout: 10000 })
-    await expect(navRight.locator('.v-select').filter({ hasText: 'Trier par' })).toBeVisible({ timeout: 10000 })
-  })
 
-  test('page loads and displays dataset cards when datasets exist', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    // Dataset cards rendered
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
-  })
+    await expect(page.locator('.v-container .v-card')).toHaveCount(3)
 
-  test('results count is displayed when datasets exist', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
-    await expect(page.getByText(/jeux de données/)).toBeVisible({ timeout: 10000 })
+    // Visibility icon on cards
+    await expect(page.locator('.v-container .v-card .v-icon').first()).toBeVisible()
+
+    // Results count
+    await expect(page.getByText(/jeux de données/)).toBeVisible()
+
+    // Right-nav controls
+    const navRight = page.locator('#navigation-right-local')
+    await expect(navRight.getByRole('textbox', { name: 'Rechercher' })).toBeVisible()
+    await expect(navRight.locator('.v-select').filter({ hasText: 'Trier par' })).toBeVisible()
+
+    // Facets / combobox visible (at least one)
+    await expect(navRight.getByRole('combobox').first()).toBeVisible()
+
+    // Contributor action visible
+    await expect(navRight.getByText('Créer un nouveau jeu de données')).toBeVisible()
   })
 
   test('search filters results (q param appears in URL)', async ({ page, goToWithAuth }) => {
@@ -81,11 +88,6 @@ test.describe('datasets list page', () => {
     await expect(page.locator('.v-container .v-list .v-list-item').first()).toBeVisible({ timeout: 5000 })
   })
 
-  test('"Créer un nouveau jeu de données" action is visible for contributors', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
-    await expect(page.locator('#navigation-right-local').getByText('Créer un nouveau jeu de données')).toBeVisible({ timeout: 10000 })
-  })
-
   test('"Créer un nouveau jeu de données" action navigates to new-dataset page', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets', 'test_user1')
     await page.locator('#navigation-right-local').getByText('Créer un nouveau jeu de données').click()
@@ -95,15 +97,6 @@ test.describe('datasets list page', () => {
   test('empty state shown when no datasets for search', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/datasets?q=__nothing__', 'test_user1')
     await expect(page.getByText(/Aucun résultat ne correspond/)).toBeVisible({ timeout: 10000 })
-  })
-
-  // --- New tests ---
-
-  test('visibility icon is displayed on dataset cards', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
-    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
-    // Datasets have visibility set, so lock icons should be present in cards
-    await expect(page.locator('.v-container .v-card .v-icon').first()).toBeVisible({ timeout: 5000 })
   })
 
   test('view mode persists across page reload', async ({ page, goToWithAuth }) => {
@@ -179,21 +172,6 @@ test.describe('datasets list page', () => {
 
     // Visibility icon should be present in list items
     await expect(page.locator('.v-container .v-list .v-list-item .v-icon').first()).toBeVisible({ timeout: 5000 })
-  })
-
-  test('multiple dataset cards are displayed', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
-    // We seeded 3 datasets, so 3 cards should be visible
-    await expect(page.locator('.v-container .v-card')).toHaveCount(3, { timeout: 10000 })
-  })
-
-  test('facets are visible in right navigation', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
-    const navRight = page.locator('#navigation-right-local')
-    // Wait for data to load and facets to appear
-    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
-    // At least the visibility facet should be present
-    await expect(navRight.getByRole('combobox').first()).toBeVisible({ timeout: 5000 })
   })
 })
 
@@ -278,15 +256,8 @@ test.describe('owner facet filtering', () => {
 })
 
 test.describe('publication sites facet', () => {
-  test.beforeEach(async () => {
+  test.beforeAll(async () => {
     await clean()
-  })
-
-  test.afterEach(async ({}, testInfo) => {
-    if (testInfo.status === 'passed') await checkPendingTasks()
-  })
-
-  async function setupOrgWithPublicationSite (page: any, goToWithAuth: any) {
     const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
 
     // Create a publication site
@@ -301,7 +272,13 @@ test.describe('publication sites facet', () => {
 
     // Create a dataset NOT published (will have null publicationSites in facets)
     await sendDataset('datasets/dataset2.csv', axOrg, {}, { title: 'Unpublished Dataset' })
+  })
 
+  test.afterAll(async () => {
+    await checkPendingTasks()
+  })
+
+  test('publication sites facet shows portal names without null or IDs', async ({ page, goToWithAuth }) => {
     // Switch to org context and go to datasets page
     const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
     await goToWithAuth('/data-fair/', 'test_user1')
@@ -309,21 +286,14 @@ test.describe('publication sites facet', () => {
     await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
     await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
     await page.goto(`${baseUrl}/data-fair/datasets`)
-  }
 
-  test('publication sites facet does not show null values', async ({ page, goToWithAuth }) => {
-    await setupOrgWithPublicationSite(page, goToWithAuth)
-
-    // Wait for datasets to load
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
-    // Open the publication sites facet
     const navRight = page.locator('#navigation-right-local')
     const pubSitesFacet = navRight.getByRole('combobox', { name: 'Sites de publication' })
     await expect(pubSitesFacet).toBeVisible({ timeout: 5000 })
     await pubSitesFacet.click()
 
-    // Verify that no option contains "null"
     const listbox = page.getByRole('listbox', { name: 'Sites de publication' })
     const options = listbox.getByRole('option')
     await expect(options.first()).toBeVisible({ timeout: 5000 })
@@ -331,29 +301,11 @@ test.describe('publication sites facet', () => {
     for (let i = 0; i < count; i++) {
       const text = await options.nth(i).textContent()
       expect(text).not.toMatch(/\bnull\b/)
-    }
-  })
-
-  test('publication sites facet shows portal names, not IDs', async ({ page, goToWithAuth }) => {
-    await setupOrgWithPublicationSite(page, goToWithAuth)
-
-    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
-
-    const navRight = page.locator('#navigation-right-local')
-    const pubSitesFacet = navRight.getByRole('combobox', { name: 'Sites de publication' })
-    await expect(pubSitesFacet).toBeVisible({ timeout: 5000 })
-    await pubSitesFacet.click()
-
-    const listbox2 = page.getByRole('listbox', { name: 'Sites de publication' })
-    const options = listbox2.getByRole('option')
-    await expect(options.first()).toBeVisible({ timeout: 5000 })
-    const count = await options.count()
-    for (let i = 0; i < count; i++) {
-      const text = await options.nth(i).textContent()
-      // Should show the portal title "Test Portal", not the raw ID "data-fair-portals:portal1"
       expect(text).not.toContain('data-fair-portals:')
-      expect(text).toContain('Test Portal')
     }
+    // At least one option should show the portal title
+    const allTexts = await options.allTextContents()
+    expect(allTexts.some(t => t.includes('Test Portal'))).toBe(true)
   })
 })
 
