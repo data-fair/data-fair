@@ -272,5 +272,45 @@ test.describe('permissions editor', () => {
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
     })
+
+    // Org member with role "user": once the dataset is shared in-org they have
+    // basic read but no readJournal / setReadApiKey. The page must not show the
+    // read-api-key tab (managing the key needs setReadApiKey, admin-only) and
+    // must not request /task-progress or /journal (readAdvanced) on load.
+    test('basic-read user: no read-api-key tab, no readJournal request', async ({ page, goToWithAuth }) => {
+      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
+      // Share the dataset with the whole org so test_user8 (role "user") can read it.
+      await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [
+        { type: 'organization', id: 'test_org1', name: 'Test Org 1', operations: [], classes: ['list', 'read'] }
+      ])
+
+      const forbiddenRequests: string[] = []
+      page.on('response', (resp) => {
+        const url = resp.url()
+        if (/\/api\/v1\/datasets\/[^/]+\/(journal|task-progress)\b/.test(url)) {
+          forbiddenRequests.push(`${resp.status()} ${url}`)
+        }
+      })
+
+      await goToWithAuth('/data-fair/', 'test_user8')
+      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
+      await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
+      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
+      await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+
+      // Share section is visible (publication-sites + integration tabs remain).
+      await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
+      await page.locator('#share').scrollIntoViewIfNeeded()
+
+      // Read-api-key and Permissions tabs must NOT be present.
+      await expect(page.getByRole('tab', { name: /Clé d'API en lecture/i })).not.toBeVisible()
+      await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
+
+      // No journal/task-progress fetch should have been issued — they require
+      // readJournal which a basic "user" role doesn't have.
+      // Wait a short moment so any pending fetch has had a chance to fire.
+      await page.waitForTimeout(500)
+      expect(forbiddenRequests, `unexpected readAdvanced requests: ${forbiddenRequests.join(', ')}`).toEqual([])
+    })
   })
 })

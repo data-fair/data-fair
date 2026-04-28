@@ -121,6 +121,16 @@
   {
     "id": "koumoul",
     "name": "Koumoul",
+    "departments": [{
+      "id": "data",
+      "name": "Data"
+    }, {
+      "id": "support",
+      "name": "Support"
+    }, {
+      "id": "marketing",
+      "name": "Marketing"
+    }],
     "members": [{
       "id": "albanm",
       "role": "admin"
@@ -136,6 +146,48 @@
     }, {
       "id": "test_contrib",
       "role": "contrib"
+    }, {
+      "id": "kml_admin",
+      "role": "admin"
+    }, {
+      "id": "kml_user",
+      "role": "user"
+    }, {
+      "id": "kml_data_admin",
+      "role": "admin",
+      "department": "data"
+    }, {
+      "id": "kml_data_contrib",
+      "role": "contrib",
+      "department": "data"
+    }, {
+      "id": "kml_data_user",
+      "role": "user",
+      "department": "data"
+    }, {
+      "id": "kml_support_admin",
+      "role": "admin",
+      "department": "support"
+    }, {
+      "id": "kml_support_contrib",
+      "role": "contrib",
+      "department": "support"
+    }, {
+      "id": "kml_marketing_admin",
+      "role": "admin",
+      "department": "marketing"
+    }, {
+      "id": "kml_marketing_contrib",
+      "role": "contrib",
+      "department": "marketing"
+    }, {
+      "id": "kml_multi_admin",
+      "role": "admin",
+      "department": "data"
+    }, {
+      "id": "kml_multi_admin",
+      "role": "admin",
+      "department": "support"
     }],
     "partners": [{
       "id": "test_org1",
