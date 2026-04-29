@@ -28,6 +28,16 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
   }
   if (cleanProp['x-fromUrl']) {
     layout.getItems = { url: cleanProp['x-fromUrl'] }
+    if (cleanProp['x-itemKey']) layout.getItems.itemKey = `data["${cleanProp['x-itemKey']}"]`
+    if (cleanProp['x-itemTitle']) layout.getItems.itemTitle = `data["${cleanProp['x-itemTitle']}"]`
+    if (cleanProp['x-itemsProp']) {
+      // dedupe on the item key so that autocomplete suggestions are unique even when the underlying dataset has multiple rows per key
+      if (cleanProp['x-itemKey']) {
+        layout.getItems.itemsResults = `(data["${cleanProp['x-itemsProp']}"] || []).filter((r, i, a) => a.findIndex(x => x["${cleanProp['x-itemKey']}"] === r["${cleanProp['x-itemKey']}"]) === i)`
+      } else {
+        layout.getItems.itemsResults = `data["${cleanProp['x-itemsProp']}"]`
+      }
+    }
   }
 
   if (cleanProp.separator) layout.separator = cleanProp.separator

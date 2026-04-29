@@ -279,7 +279,8 @@ Exemple: ma_colonne,-ma_colonne2`
 
 export const endpoints = (dataset) => {
   const endpoints = {}
-  if (!dataset.masterData || !dataset.masterData.bulkSearchs) return endpoints
+  if (!dataset.masterData) return endpoints
+  if (!dataset.masterData.bulkSearchs?.length && !dataset.masterData.singleSearchs?.length) return endpoints
   const outputProperties = dataset.schema.filter(f => !f['x-calculated'])
   const datasetLineSchema = {
     type: 'object',
