@@ -161,8 +161,7 @@ server {
   }
 
   location /simple-directory {
-    rewrite  ^/simple-directory/(.*) /$1 break;
-    proxy_pass http://localhost:${SD_PORT}/;
+    proxy_pass http://localhost:${SD_PORT};
   }
 
   location /api-doc {
