@@ -34,7 +34,8 @@ const props = defineProps<{
   parentSchema: any[]
 }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 const { vocabulary } = useStore()
 
 const capabilitiesProperties = capabilitiesSchema.properties as Record<string, { type: string, default: boolean, layout: string, title: string, description: string }>
@@ -82,8 +83,8 @@ const messages = computed(() => {
     if (childType !== parentType) {
       messages.error.push(t('typeMismatch', {
         field: field.title || field['x-originalName'] || field.key,
-        childType: childType?.title?.[locale.value] ?? '?',
-        parentType: parentType?.title?.[locale.value] ?? '?'
+        childType: (childType && propTypeTitle(childType)) ?? '?',
+        parentType: (parentType && propTypeTitle(parentType)) ?? '?'
       }))
     }
 

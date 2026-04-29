@@ -31,7 +31,7 @@
               v-model="newColumnType"
               :label="t('columnType')"
               :items="propertyTypes"
-              :item-title="(item: any) => item.title[locale]"
+              :item-title="propTypeTitle"
               return-object
               hide-details
             />
@@ -89,7 +89,8 @@ const emit = defineEmits<{
   add: [column: any]
 }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 
 const isFormValid = ref(false)
 const newColumnKey = ref('')

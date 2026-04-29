@@ -24,7 +24,7 @@
       {{ item.title || item['x-originalName'] || item.key }}
     </template>
     <template #item.type="{ item }">
-      {{ propTypeTitle(item, locale) }}
+      {{ propTypeTitle(item) }}
     </template>
     <template #item.description="{ item }">
       {{ descriptionFor(item) }}
@@ -72,10 +72,10 @@ en:
 
 <script setup lang="ts">
 import { mdiClose, mdiInformationOutline } from '@mdi/js'
-import { propTypeTitle } from '~/utils/dataset'
 import type { SchemaProperty } from '#api/types'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 const { vocabulary } = useStore()
 const { dataset } = useDatasetStore()
 

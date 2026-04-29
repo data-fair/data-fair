@@ -30,7 +30,7 @@
           {{ t('type') }}
         </div>
         <div class="text-body-2">
-          {{ propTypeTitle(field, locale) }}<span
+          {{ propTypeTitle(field) }}<span
             v-if="field.format"
             class="text-medium-emphasis"
           > ({{ field.format }})</span>
@@ -168,10 +168,10 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { propTypeTitle } from '~/utils/dataset'
 import type { SchemaProperty } from '#api/types'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 const { vocabulary } = useStore()
 
 const props = defineProps<{

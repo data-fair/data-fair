@@ -96,7 +96,7 @@
 
         <div class="mb-1">
           <span class="text-medium-emphasis">{{ t('type') }}:</span>
-          {{ propTypeTitle(column, locale) }}
+          {{ propTypeTitle(column) }}
           <template v-if="currentFileColumn?.dateFormat">
             ({{ currentFileColumn.dateFormat }})
           </template>
@@ -264,11 +264,11 @@ en:
 /* eslint-disable vue/no-mutating-props */
 import type { SchemaProperty } from '#api/types'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
-import { propTypeTitle } from '~/utils/dataset'
 import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import useStore from '~/composables/use-store'
 
 const { t, locale } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 const { dataset } = useDatasetStore()
 const { vocabulary, vocabularyArray } = useStore()
 
