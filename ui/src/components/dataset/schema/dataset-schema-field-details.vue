@@ -119,20 +119,19 @@
         cols="12"
       >
         <div class="text-caption text-medium-emphasis mb-1">
-          {{ t('values') }}
+          {{ hasLabels ? t('valuesWithLabels') : t('values') }}
         </div>
-        <div class="text-body-2">
-          <template
-            v-for="(entry, i) in valueEntries"
-            :key="entry.value"
-          >
-            <span v-if="i > 0">&nbsp;-&nbsp;</span>
-            <span>
-              <template v-if="entry.label">{{ entry.label }} (<code>{{ entry.value }}</code>)</template>
-              <code v-else>{{ entry.value }}</code>
-            </span>
+        <v-data-table
+          :headers="valueHeaders"
+          :items="valueEntries"
+          density="compact"
+          class="border rounded"
+          hide-default-footer
+        >
+          <template #item.value="{ item }">
+            <code>{{ item.value }}</code>
           </template>
-        </div>
+        </v-data-table>
       </v-col>
     </v-row>
   </v-container>
@@ -149,6 +148,9 @@ fr:
   display: Affichage
   capabilities: Capacités
   values: Valeurs
+  valuesWithLabels: Valeurs et libellés associés
+  value: Valeur
+  label: Libellé
 en:
   title: Title
   originalName: Original name
@@ -159,6 +161,9 @@ en:
   display: Display
   capabilities: Capabilities
   values: Values
+  valuesWithLabels: Values and associated labels
+  value: Value
+  label: Label
 </i18n>
 
 <script setup lang="ts">
@@ -199,5 +204,15 @@ const valueEntries = computed(() => {
   const fromLabels = Object.keys(labels)
   const values = Array.from(new Set([...fromEnum, ...fromLabels]))
   return values.map(value => ({ value, label: labels[value] ?? '' }))
+})
+
+const hasLabels = computed(() => valueEntries.value.some(e => e.label))
+
+const valueHeaders = computed(() => {
+  const cols: { key: string, title: string, sortable: boolean }[] = [
+    { key: 'value', title: t('value'), sortable: false }
+  ]
+  if (hasLabels.value) cols.push({ key: 'label', title: t('label'), sortable: false })
+  return cols
 })
 </script>
