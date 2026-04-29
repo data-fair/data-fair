@@ -233,7 +233,8 @@ Exemple: ma_colonne,-ma_colonne2`
           },
           label: {
             type: 'object',
-            title: 'Propriété utilisée pour la recherche (libellé)',
+            title: 'Propriété affichée lors de la saisie (libellé)',
+            description: 'Propriété affichée à côté du code dans la liste des suggestions, sous la forme « code (libellé) », pour aider l\'utilisateur à identifier la bonne valeur. La recherche s\'effectue sur toutes les colonnes textuelles du jeu de données.',
             layout: {
               props: {
                 noDataText: 'Aucune colonne textuelle dans ce jeu de données.'
