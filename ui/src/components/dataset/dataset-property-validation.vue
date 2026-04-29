@@ -324,6 +324,7 @@ function setMasterData (masterData: MasterDataItem | null) {
     props.property['x-fromUrl'] = masterData['x-fromUrl']
     props.property['x-itemKey'] = masterData['x-itemKey']
     if (masterData['x-itemTitle']) props.property['x-itemTitle'] = masterData['x-itemTitle']
+    else delete props.property['x-itemTitle']
     props.property['x-itemsProp'] = 'results'
   }
 }

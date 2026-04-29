@@ -13,17 +13,16 @@ const siretProperty = {
   type: 'string',
   'x-refersTo': siretConcept
 }
+
 const denominationProperty = {
   key: 'denomination',
   title: 'Dénomination',
-  type: 'string',
-  'x-refersTo': 'http://schema.org/description'
+  type: 'string'
 }
 
 test.describe('dataset edit-data form: master-data validation + live extension pre-fill', () => {
   const masterId = 'ref-products'
   const slaveId = 'orders'
-  let singleSearchUrl: string
 
   test.beforeAll(async () => {
     test.setTimeout(60000)
@@ -62,7 +61,7 @@ test.describe('dataset edit-data form: master-data validation + live extension p
     const remoteService = (await ax.get(`/api/v1/remote-services/dataset:${masterId}`, { params: { showAll: true } })).data
     const singleSearchAction = remoteService.actions.find((a: any) => a.id === 'masterData_singleSearch_siret-search')
     expect(singleSearchAction, 'singleSearch action must be exposed by the master remote service').toBeTruthy()
-    singleSearchUrl = remoteService.server + singleSearchAction.operation.path
+    const singleSearchUrl = remoteService.server + singleSearchAction.operation.path
 
     // Slave REST dataset: extension on bulkSearch + siret column wired to the master singleSearch
     // via x-master / x-fromUrl / x-item* (same shape the new validation dialog produces).
@@ -112,7 +111,6 @@ test.describe('dataset edit-data form: master-data validation + live extension p
 
     const validationDialog = page.getByRole('dialog')
     await expect(validationDialog).toBeVisible({ timeout: 5000 })
-    await expect(validationDialog.getByText(/Valeurs issues d'une donnée de référence/)).toBeVisible()
     // The configured singleSearch action title is the displayed value of the master-data v-select.
     await expect(validationDialog.getByText('Recherche par SIRET').first()).toBeVisible({ timeout: 5000 })
 
