@@ -233,7 +233,8 @@ Exemple: ma_colonne,-ma_colonne2`
           },
           label: {
             type: 'object',
-            title: 'Propriété utilisée pour la recherche (libellé)',
+            title: 'Propriété affichée lors de la saisie (libellé)',
+            description: 'Propriété affichée à côté du code dans la liste des suggestions, sous la forme « code (libellé) », pour aider l\'utilisateur à identifier la bonne valeur. La recherche s\'effectue sur toutes les colonnes textuelles du jeu de données.',
             layout: {
               props: {
                 noDataText: 'Aucune colonne textuelle dans ce jeu de données.'
@@ -279,7 +280,8 @@ Exemple: ma_colonne,-ma_colonne2`
 
 export const endpoints = (dataset) => {
   const endpoints = {}
-  if (!dataset.masterData || !dataset.masterData.bulkSearchs) return endpoints
+  if (!dataset.masterData) return endpoints
+  if (!dataset.masterData.bulkSearchs?.length && !dataset.masterData.singleSearchs?.length) return endpoints
   const outputProperties = dataset.schema.filter(f => !f['x-calculated'])
   const datasetLineSchema = {
     type: 'object',

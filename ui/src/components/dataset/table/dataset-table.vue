@@ -435,6 +435,7 @@
     deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
     helpFilterPrompt: Aide-moi à filtrer ces données
     checkDataQualityPrompt: Vérifier la qualité de ces données
+    helpEditDataPrompt: Aide-moi à saisir des données
   en:
     cancel: Cancel
     delete: Delete
@@ -444,6 +445,7 @@
     checkDataQualityPrompt: Check data quality
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost permanently
+    helpEditDataPrompt: Help me enter data
 </i18n>
 
 <script setup lang="ts">

@@ -413,6 +413,11 @@ koumoul,19 rue de la voie lactée saint avé
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })).data
 
+    // pre-populate the dataset cache via a read without acceptedStatuses, so the
+    // cached value goes through the assertImmutable proxy in dev — the next POST /lines
+    // would hit a MutationError if extendedSchema starts mutating the dataset again
+    await ax.get(`/api/v1/datasets/${dataset.id}/schema`)
+
     // extend first inserted line
     await setupCoordsMock(10)
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' })

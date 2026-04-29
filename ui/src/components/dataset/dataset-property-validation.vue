@@ -15,19 +15,18 @@
     </template>
     <v-card v-if="dialog">
       <v-toolbar
+        :title="t('validationConfig')"
         density="compact"
         flat
       >
-        <v-toolbar-title>{{ t('validationConfig') }}</v-toolbar-title>
         <v-spacer />
         <v-btn
-          icon
+          :icon="mdiClose"
           @click="dialog = false"
-        >
-          <v-icon :icon="mdiClose" />
-        </v-btn>
+        />
       </v-toolbar>
-      <v-card-text class="px-3">
+
+      <v-card-text>
         <v-form>
           <df-tutorial-alert
             v-if="isRest"
@@ -46,6 +45,8 @@
             v-model="property['x-required']"
             :label="t('required')"
             :disabled="!editable"
+            density="comfortable"
+            hide-details
           />
 
           <v-checkbox
@@ -53,6 +54,8 @@
             v-model="property['x-labelsRestricted']"
             :label="t('restricted')"
             :disabled="!editable"
+            density="comfortable"
+            hide-details
           />
 
           <v-text-field
@@ -63,6 +66,8 @@
             type="number"
             variant="outlined"
             density="compact"
+            class="mt-2"
+            hide-details
             clearable
             @update:model-value="setNumberProp('minimum', $event)"
           />
@@ -75,6 +80,8 @@
             type="number"
             variant="outlined"
             density="compact"
+            class="mt-2"
+            hide-details
             clearable
             @update:model-value="setNumberProp('maximum', $event)"
           />
@@ -88,6 +95,8 @@
             min="0"
             variant="outlined"
             density="compact"
+            class="mt-2"
+            hide-details
             clearable
             @update:model-value="setNumberProp('minLength', $event)"
           />
@@ -101,6 +110,8 @@
             min="0"
             variant="outlined"
             density="compact"
+            class="mt-2"
+            hide-details
             clearable
             @update:model-value="setNumberProp('maxLength', $event)"
           />
@@ -109,6 +120,7 @@
             <df-tutorial-alert
               id="validation-regexp"
               :text="t('validationRegexpMessage')"
+              class="mb-2"
               persistent
             />
             <v-text-field
@@ -139,6 +151,7 @@
             <df-tutorial-alert
               id="validation-date-format"
               :text="t('dateFormatMessage')"
+              class="mb-2"
               persistent
             />
             <v-select
@@ -157,6 +170,7 @@
             <df-tutorial-alert
               id="validation-date-time-format"
               :text="t('dateTimeFormatMessage')"
+              class="mb-2"
               persistent
             />
             <v-select
@@ -170,6 +184,23 @@
               @click:clear="delete property.dateTimeFormat"
             />
           </template>
+
+          <v-select
+            v-if="property['x-refersTo'] && availableMasters[property['x-refersTo']]"
+            :model-value="property['x-master']"
+            :label="t('masterData')"
+            :disabled="!editable"
+            :items="availableMasters[property['x-refersTo']]"
+            item-title="title"
+            item-value="id"
+            return-object
+            variant="outlined"
+            density="compact"
+            class="mt-2"
+            clearable
+            hide-details
+            @update:model-value="setMasterData"
+          />
         </v-form>
       </v-card-text>
     </v-card>
@@ -178,7 +209,7 @@
 
 <i18n lang="yaml">
 fr:
-  validationConfig: Configuration de la validation des données
+  validationConfig: Validation des données
   required: Information obligatoire
   restricted: Cochez cette case pour restreindre les données aux valeurs avec libellés associés
   pattern: Format
@@ -192,11 +223,12 @@ fr:
   validationRegexpMessage: La définition du format est basée sur une expression régulière. Il s'agit d'un paramétrage avancé.
   validationRegexError: expression régulière invalide
   dateFormatMessage: Vous pouvez choisir un format de date accepté. Par défaut le seul format accepté est ISO 8601.
-  dateFormat: Formattage de date
+  dateFormat: Formatage de date
   dateTimeFormatMessage: Vous pouvez choisir un format de date et heure accepté. Par défaut le seul format accepté est IS0 8601.
-  dateTimeFormat: Formattage de date et heure
+  dateTimeFormat: Formatage de date et heure
+  masterData: Valeurs issues d'une donnée de référence
 en:
-  validationConfig: Data validation configuration
+  validationConfig: Data validation
   required: required information
   restricted: check this box to restrict data to values with associated labels
   pattern: Format
@@ -213,11 +245,14 @@ en:
   dateFormat: Date format
   dateTimeFormatMessage: You can choose an accepted datetime format. By default only ISO 8601 is accepted.
   dateTimeFormat: Datetime format
+  masterData: Values coming from a master-data dataset
 </i18n>
 
 <script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
 import { mdiCheckDecagram, mdiClose } from '@mdi/js'
+import { useDatasetStore } from '~/composables/dataset/dataset-store'
+import { useRemoteServices } from '~/composables/use-remote-services'
 
 const { t } = useI18n()
 
@@ -228,6 +263,71 @@ const props = defineProps<{
 }>()
 
 const dialog = ref(false)
+
+const { dataset } = useDatasetStore()
+const owner = computed(() => dataset.value?.owner)
+const { remoteServices } = useRemoteServices(owner)
+
+type MasterDataItem = {
+  id: string
+  title: string
+  remoteService: string
+  action: string
+  'x-fromUrl': string
+  'x-itemKey': string
+  'x-itemTitle'?: string
+}
+
+const labelConcept = 'http://www.w3.org/2000/01/rdf-schema#label'
+
+const availableMasters = computed(() => {
+  const masters: Record<string, MasterDataItem[]> = {}
+  for (const service of remoteServices.value as any[]) {
+    for (const action of service.actions ?? []) {
+      if (action.inputCollection) continue
+      if (action.type !== 'http://schema.org/SearchAction') continue
+      const nonLabelOutputs = (action.output ?? []).filter((o: any) => o.concept && o.concept !== labelConcept)
+      if (nonLabelOutputs.length !== 1) continue
+      const keyOutput = nonLabelOutputs[0]
+      const labelOutput = (action.output ?? []).find((o: any) => o.concept === labelConcept)
+      const master: MasterDataItem = {
+        id: `${service.id}--${action.id}`,
+        title: action.summary,
+        remoteService: service.id,
+        action: action.id,
+        'x-fromUrl': `${service.server}${action.operation.path}?q={q}`,
+        'x-itemKey': keyOutput.name,
+        'x-itemTitle': labelOutput?.name
+      }
+      const concept = keyOutput.concept
+      masters[concept] = masters[concept] ?? []
+      masters[concept].push(master)
+    }
+  }
+  return masters
+})
+
+function setMasterData (masterData: MasterDataItem | null) {
+  if (!masterData) {
+    delete props.property['x-master']
+    delete props.property['x-fromUrl']
+    delete props.property['x-itemKey']
+    delete props.property['x-itemTitle']
+    delete props.property['x-itemsProp']
+  } else {
+    props.property['x-master'] = {
+      id: masterData.id,
+      title: masterData.title,
+      remoteService: masterData.remoteService,
+      action: masterData.action
+    }
+    props.property['x-fromUrl'] = masterData['x-fromUrl']
+    props.property['x-itemKey'] = masterData['x-itemKey']
+    if (masterData['x-itemTitle']) props.property['x-itemTitle'] = masterData['x-itemTitle']
+    else delete props.property['x-itemTitle']
+    props.property['x-itemsProp'] = 'results'
+  }
+}
 
 const dateFormats = [
   'D/M/YYYY',

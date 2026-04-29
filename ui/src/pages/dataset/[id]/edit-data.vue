@@ -15,11 +15,9 @@
 fr:
   datasets: Jeux de données
   editData: Éditer les données
-  helpEditDataPrompt: Aide-moi à saisir des données
 en:
   datasets: Datasets
   editData: Edit data
-  helpEditDataPrompt: Help me enter data
 </i18n>
 
 <script setup lang="ts">

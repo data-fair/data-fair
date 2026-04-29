@@ -651,7 +651,9 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   let esResponse
   let select = singleSearch.output.key
   if (singleSearch.label) select += ',' + singleSearch.label.key
-  const params = { q: req.query.q, size: req.query.size, q_mode: 'complete', select }
+  // collapse on the output key so suggestions are deduplicated server-side
+  // (the underlying dataset may have multiple rows sharing the same output value)
+  const params = { q: req.query.q, size: req.query.size, q_mode: 'complete', select, collapse: singleSearch.output.key }
   const qs = []
 
   if (singleSearch.filters) {
