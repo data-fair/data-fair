@@ -516,6 +516,10 @@ const datasetProperties = {
           type: 'boolean',
           description: 'Toggle on and off the extension'
         },
+        mandatory: {
+          type: 'boolean',
+          description: 'Si vrai, un échec d\'enrichissement sur une ligne est traité comme une erreur de validation.'
+        },
         needsUpdate: {
           type: 'boolean'
         },
