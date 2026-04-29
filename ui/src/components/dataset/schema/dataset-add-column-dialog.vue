@@ -30,7 +30,8 @@
             <v-select
               v-model="newColumnType"
               :label="t('columnType')"
-              :items="typeItems"
+              :items="propertyTypes"
+              :item-title="(item: any) => item.title[locale]"
               return-object
               hide-details
             />
@@ -93,11 +94,6 @@ const { t, locale } = useI18n()
 const isFormValid = ref(false)
 const newColumnKey = ref('')
 const newColumnType = ref(propertyTypes[0])
-
-const typeItems = computed(() => propertyTypes.map(pt => ({
-  ...pt,
-  title: pt.title[locale.value]
-})))
 
 const validNewColumnKey = (name: string) => {
   if (!name) return false
