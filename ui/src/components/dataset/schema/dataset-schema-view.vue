@@ -26,9 +26,6 @@
     <template #item.type="{ item }">
       {{ propTypeTitle(item, locale) }}
     </template>
-    <template #item.x-refersTo="{ item }">
-      {{ vocabulary && item['x-refersTo'] && vocabulary[item['x-refersTo']]?.title }}
-    </template>
     <template #item.description="{ item }">
       {{ descriptionFor(item) }}
     </template>

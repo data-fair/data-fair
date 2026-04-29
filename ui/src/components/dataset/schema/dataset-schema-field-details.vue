@@ -124,6 +124,7 @@
         <v-data-table
           :headers="valueHeaders"
           :items="valueEntries"
+          :items-per-page="-1"
           density="compact"
           class="border rounded"
           hide-default-footer
