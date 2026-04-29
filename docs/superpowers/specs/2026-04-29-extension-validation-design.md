@@ -33,7 +33,7 @@ type DatasetExtension = {
 }
 ```
 
-When all `mandatory` flags on a dataset are absent or `false`, behavior is identical to today.
+When all `mandatory` flags on a dataset are absent or `false`, behavior is identical to today, with one deliberate exception: an `exprEval` extension that throws no longer aborts the worker — it is captured per-row in the diagnostic file (see §7). Non-mandatory `remoteService` extensions remain unchanged.
 
 ## 4. File datasets — validation flow
 
@@ -75,9 +75,14 @@ Changes:
 ### 4.3 Diagnostic file lifecycle
 
 - One file per dataset (per draft): `validationDiagnosticFilePath(dataset)`. Located under the existing `dir(dataset)` (or its draft sub-tree).
-- Overwritten each validation attempt. Because validation runs before extension and `throw`s on error, the file at any given moment contains the errors of exactly one phase (validation OR mandatory extension), never both.
-- Removed when the dataset moves to `finalized` (cleanup in `service.applyPatch` for the success path). Removed when a draft is cancelled (existing `cancelDraft` path).
+- Re-evaluated each validation+extension attempt. Lifecycle is owned by `DiagnosticWriter`:
+  - if the attempt produced errors → the writer flushes, overwriting any previous file;
+  - if the attempt produced zero errors → `discard()` removes the file if it existed.
+- Because validation `throw`s before extension when validation fails, in practice the file at any given moment contains either (a) the validation errors of the latest validation failure, or (b) the extension errors of the latest extension run — never both.
+- A diagnostic file MAY survive past `finalized`: this happens when extension produced non-blocking errors (non-mandatory `exprEval` failures, see §7) and the dataset proceeded successfully. The user can still download it.
+- Removed when a draft is cancelled (existing `cancelDraft` path) along with the rest of the draft directory.
 - Format: CSV, UTF-8, header row `line,error_type,field,message,raw_value`. `error_type` is `validation` or `extension`. `raw_value` is the offending field's source value, truncated to ~200 chars.
+- Hard cap: **10 000 rows of errors** per file. When the cap is reached, the writer stops appending and records that the cap was hit. The journal summary message reflects the cap (e.g. "10 000 rows have been recorded; further errors were not captured"). The downstream worker still completes its loop so `nbErrors` (the global count, not the file row count) is accurate.
 
 ### 4.4 Download endpoint
 
@@ -110,11 +115,9 @@ When the request body exceeds the threshold (`contentLength > maxBulkChars`) AND
 
 This check is done before the body is consumed (or as early as possible) in the bulk endpoint handler.
 
-### 5.4 Side-effect cleanup
+### 5.4 Cache writes
 
-`extendBatchSync` must not write to the `extensions-cache` collection in a way that survives a request that ends up failing for the request as a whole. Two options to reconcile cleanly with the existing cache:
-- (preferred) write cache entries lazily: cache entries reference the input hash, so writing them on success is fine; for failed lines the cache entry can still be written if the remote service did return a deterministic error (it's a real result), but we must verify this matches the current cache semantics. Detail at plan time.
-- (fallback) skip cache writes entirely on the hot path for the first iteration, accepting a perf hit, and re-enable later.
+The existing `extensions-cache` MongoDB collection is written normally by `extendBatchSync`, regardless of whether the request as a whole succeeds. The extension call to the remote service was a real, legitimate operation: caching its result by input hash remains correct even when the request is rejected because of a downstream failure (here, a different line that failed mandatory extension or, for file datasets, anything else). No special rollback path.
 
 ## 6. Modules & boundaries
 
@@ -137,7 +140,7 @@ The implementation introduces / refactors these units:
 
 6. **`api/src/datasets/router.js`**: add `GET /:id/validation-diagnostic.csv` route delegating to `filesStorage`.
 
-7. **`api/src/datasets/service.js`**: in `applyPatch`, on transition to `finalized`, remove the diagnostic file. In `cancelDraft`, remove the draft's diagnostic file.
+7. **`api/src/datasets/service.js`**: in `cancelDraft`, ensure the draft's diagnostic file is removed (typically a no-op if the existing draft directory cleanup already covers the new path). No explicit hook on transition to `finalized` — the diagnostic file's lifecycle is owned by `DiagnosticWriter` (see §4.3).
 
 8. **`ui/src/.../dataset-extensions/...`** (path TBD at plan time): add a "Mandatory" toggle on each extension entry. Render a "Download diagnostic" button on the `validation-error` journal event when `hasDiagnosticFile` is set.
 
@@ -149,11 +152,12 @@ The implementation introduces / refactors these units:
 
 - **Both validation and extension fail in the same attempt**: cannot happen because validation `throw`s before extension runs (§4.3).
 - **A dataset has `nonBlockingValidation: true` AND a mandatory extension**: the mandatory extension still enforces. `nonBlockingValidation` continues to apply to AJV schema rules only. Document this explicitly in the spec; it is NOT a contradiction because mandatory extensions are an opt-in escalation.
-- **`exprEval` extension marked mandatory throws on row N**: same path as a remote-service `errorKey` — recorded in `DiagnosticWriter`, no `throw` from `_transform` aborting the stream. Today an `exprEval` failure aborts the whole stream; this changes for mandatory-flagged ones (they fail the row, not the stream). Non-mandatory `exprEval` keeps current behavior.
+- **`exprEval` extension throws on row N**: routed to the `DiagnosticWriter` regardless of the `mandatory` flag — same path as a remote-service `errorKey`. The stream never aborts on an expression error. This is a deliberate, broader behavior change than just "for mandatory ones": today an `exprEval` throw kills the worker with `[noretry]`, which leaves the user no way to find which rows failed. From this spec onwards, any `exprEval` failure is captured per-row in the diagnostic file. The `mandatory` flag still controls whether the worker `throw`s at end-of-stream: mandatory exprEval errors block, non-mandatory exprEval errors leave the row's calculated field null and the dataset proceeds (a diagnostic file may still be present for the user to inspect).
+- **Diagnostic file may exist even when the dataset finalizes successfully**: only true for the case above (non-mandatory exprEval failed on some rows). It will be cleared the next time validation+extension runs cleanly (writer's `discard()`).
 - **REST single-line write, mandatory extension fails**: HTTP 400 with the same error envelope shape as a schema-validation failure on a single-line write. (Existing single-line endpoint already returns 4xx on AJV failure; we mirror it.)
 - **REST sync bulk, all rows fail mandatory extension**: same response shape as "all rows fail AJV", which today is 400 (per existing summary handling).
 - **Cache pollution risk on REST hot path**: addressed in §5.4.
-- **Diagnostic file size**: with a CSV row per error, a 1M-row file with 100% failure rate produces ~1M-row diagnostic. Acceptable for first iteration; we can introduce a soft cap (e.g., 100k errors with truncation marker) at plan time if needed.
+- **Diagnostic file size**: capped at 10 000 error rows (see §4.3). Above the cap, additional errors are counted in `nbErrors` but not written to the file. The journal summary mentions the cap explicitly.
 - **Concurrent validation attempts**: not possible — the worker has a single in-flight task per dataset.
 
 ## 8. Testing
@@ -175,7 +179,6 @@ See `docs/architecture/testing.md` for conventions.
 ## 9. Out of scope (follow-ups)
 
 - **Rate limiting on REST write endpoints when mandatory extensions are configured.** With mandatory extension on the hot path, write cost increases (CPU + remote-service call). A future spec should evaluate whether per-API-key or per-dataset rate limiting is feasible without regressing existing customers; until then the operational risk should be communicated to dataset owners enabling the flag.
-- **Soft cap on diagnostic file size** — defer to first feedback.
 - **Surfacing extension-only mandatory errors in the inline 3-error journal summary** — phase-2 polish.
 
 ## 10. Migration
