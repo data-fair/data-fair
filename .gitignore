@@ -24,3 +24,4 @@ dev/logs/
 test-results/
 /benchmark/results/*.json
 /docs/**/*.pdf
+.worktrees/
