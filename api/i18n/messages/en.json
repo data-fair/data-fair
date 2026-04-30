@@ -20,7 +20,7 @@
 		"dupSlug": "This slug is already used"
 	},
 	"appRequire": {
-		"noDataset": "does not use a dataset as source.",
+		"noDataset": "Does not use a dataset as source.",
 		"aDataset": "a dataset",
 		"geoData": "geolocalized data (latitude/longitude concepts)",
 		"aConcept": "the concept {{{concept}}}",
@@ -28,10 +28,10 @@
 		"aType": "the type {{{type}}}",
 		"oneOfTypes": "one of the types {{{types}}}",
 		"orJoin": " or ",
-		"requires": "requires ",
+		"requires": "Requires ",
 		"requiresJoin": " and "
 	},
-	"hasBreakingChanges": "the dataset \"{{{title}}}\" has breaking changes:",
+	"hasBreakingChanges": "The dataset \"{{{title}}}\" has breaking changes:",
 	"breakingChanges": {
 		"missing": "the column \"{{{key}}}\" doesn't exist anymore",
 		"type": "the column \"{{{key}}}\" changed type"
