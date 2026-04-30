@@ -7,7 +7,7 @@ proxy_cache_key $scheme$host$request_uri;
 
 server {
   listen ${NGINX_PORT1};
-  server_name _;
+  server_name ${DEV_HOST};
 
   # Transmit host, protocol and user ip, we use it for routing, rate limiting, etc.
   proxy_set_header Host $http_host;
@@ -47,35 +47,46 @@ server {
   add_header X-Cache-Status $upstream_cache_status;
   proxy_cache_bypass $http_x_cache_bypass;
   proxy_cache_bypass $cookie_cache_bypass;
-  
+
   # redirect root to /data-fair/
-  location = / {  
+  location = / {
     return 302 /data-fair/;
   }
-  location = /data-fair/embed {  
-    return 302 /data-fair/embed/dev;
-  }
-  location = /data-fair/embed/ {  
-    return 302 /data-fair/embed/dev;
-  }
 
-  location ~ /data-fair/embed/(.*)-ui-config.js {
+  # API routes served by API server (prefix match, more specific than /data-fair)
+  location /data-fair/api {
+    rewrite ^/data-fair/(.*) /$1 break;
     proxy_pass http://localhost:${DEV_API_PORT};
   }
-  # comment this to test built UI served by api
-  location /data-fair/embed {
-    proxy_pass http://localhost:${DEV_UI_PORT};
+  # use regex to match /data-fair/app/ and /data-fair/app? but not /data-fair/applications
+  location ~ ^/data-fair/app(/|$|\?) {
+    rewrite ^/data-fair/(.*) /$1 break;
+    proxy_pass http://localhost:${DEV_API_PORT};
+  }
+  location /data-fair/streamsaver {
+    rewrite ^/data-fair/(.*) /$1 break;
+    proxy_pass http://localhost:${DEV_API_PORT};
+  }
+  location /data-fair/assets {
+    rewrite ^/data-fair/(.*) /$1 break;
+    proxy_pass http://localhost:${DEV_API_PORT};
   }
 
+  # ui-config served by API
+  location ~ /data-fair/(.*)-ui-config.js {
+    rewrite ^/data-fair/(.*) /$1 break;
+    proxy_pass http://localhost:${DEV_API_PORT};
+  }
+
+  # comment this to test built UI served by api
   location /data-fair {
-    rewrite  ^/data-fair/(.*) /$1 break;
-    proxy_pass http://localhost:${DEV_API_PORT}/;
+    proxy_pass http://localhost:${DEV_UI_PORT};
   }
 
   location /simple-directory {
     proxy_pass http://localhost:${SD_PORT};
   }
-  
+
   location /openapi-viewer {
     proxy_pass http://localhost:${OAV_PORT};
   }
@@ -92,12 +103,16 @@ server {
   location /catalogs {
     proxy_pass http://localhost:${CATALOGS_PORT};
   }
+
+  location /agents {
+    proxy_pass http://localhost:${AGENTS_PORT};
+  }
 }
 
 # secondary exposition to simulate a publication site
 server {
   listen ${NGINX_PORT2};
-  server_name _;
+  server_name ${DEV_HOST};
 
   # Transmit host, protocol and user ip, we use it for routing, rate limiting, etc.
   proxy_set_header Host $http_host;
@@ -134,9 +149,9 @@ server {
   add_header X-Cache-Status $upstream_cache_status;
   proxy_cache_bypass $http_x_cache_bypass;
   proxy_cache_bypass $cookie_cache_bypass;
-  
+
   # redirect root to /data-fair/
-  location = / {  
+  location = / {
     return 302 /data-fair/;
   }
 
@@ -146,10 +161,9 @@ server {
   }
 
   location /simple-directory {
-    rewrite  ^/simple-directory/(.*) /$1 break;
-    proxy_pass http://localhost:${SD_PORT}/;
+    proxy_pass http://localhost:${SD_PORT};
   }
-  
+
   location /api-doc {
     rewrite  ^/api-doc/(.*) /$1 break;
     proxy_pass http://localhost:${OAV_PORT}/;

@@ -143,7 +143,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
           continue
         }
 
-        if (process.env.NODE_ENV === 'test') {
+        if (process.env.NODE_ENV === 'development') {
           const resourceMatchedTasks = freeTasks.map(t => t.task.name).filter(t => results[t]?.some((r: any) => r.id === resource.id))
           if (resourceMatchedTasks.length > 1) events.emit('error', new Error('task selecion was not exclusive ' + JSON.stringify(resourceMatchedTasks)))
         }

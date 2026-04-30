@@ -1,0 +1,83 @@
+<!-- eslint-disable vue/no-v-html -->
+<template>
+  <v-toolbar
+    density="compact"
+    color="surface"
+    flat
+  >
+    <dataset-nb-results
+      :total="total"
+      :limit="0"
+      style="min-width:80px;max-width:80px;"
+      class="ml-2"
+    />
+    <search-field v-model="q" />
+  </v-toolbar>
+  <v-virtual-scroll
+    ref="virtualScroll"
+    :height="height - 48"
+    :items="results"
+  >
+    <template #default="{ item, index }">
+      <v-row
+        v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)"
+        class="ma-0"
+      >
+        <v-col
+          cols="12"
+          class="pt-4"
+        >
+          <!-- attachment_url is empty if the value is an external link -->
+
+          <a :href="item.raw._attachment_url || item.raw[digitalDocumentField!.key]">{{ item.raw[digitalDocumentField!.key] }}</a>
+          <p
+            class="text-body-large"
+            style="word-break:break-word;"
+            v-html="item.raw._highlight['_file.content'].join('... ')"
+          />
+        </v-col>
+      </v-row>
+    </template>
+  </v-virtual-scroll>
+</template>
+
+<script setup lang="ts">
+import type { VVirtualScroll } from 'vuetify/components'
+
+const { height } = defineProps({ height: { type: Number, required: true } })
+const q = defineModel<string>('q', { default: '' })
+
+const { digitalDocumentField } = useDatasetStore()
+
+const cols = computed(() => [digitalDocumentField.value!.key, '_file.content_type', '_file.content_length', '_attachment_url'])
+const extraParams = computed(() => ({
+  select: cols.value.join(','),
+  highlight: '_file.content',
+  qs: `_exists_:${digitalDocumentField.value?.key}`
+}))
+const pageSize = 10
+const { baseFetchUrl, total, results, fetchResults } = useLines('list', pageSize, cols, q, '', extraParams, undefined)
+
+watch(baseFetchUrl, () => {
+  if (!baseFetchUrl.value) return
+  virtualScroll.value?.scrollToIndex(0)
+})
+const onScrollItem = async (index: number) => {
+  // ignore scroll on deprecated items that will soon be replaced
+  if (fetchResults.loading.value) return
+  if (index === results.value.length - 1) {
+    // scrolled until the current end of the table
+    if (!fetchResults.loading.value) fetchResults.execute()
+  }
+}
+
+const virtualScroll = ref<VVirtualScroll>()
+</script>
+
+<style lang="less">
+  .search-results {
+    .highlighted {
+      font-weight: bold;
+    }
+  }
+</style>

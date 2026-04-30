@@ -1,0 +1,229 @@
+import { provide, inject } from 'vue'
+import type { Event, Dataset, Application, Permission } from '#api/types'
+import { isRestDataset } from '#shared/types-utils'
+import type { PatchDatasetReq } from '#api-doc/datasets/patch-req/index.js'
+
+export type ExtendedDataset = Dataset & { userPermissions: string[] }
+export type TaskProgress = { task: string, progress: number, error?: string }
+
+export type DatasetStore = ReturnType<typeof createDatasetStore>
+export const datasetStoreKey = Symbol('dataset-store')
+
+export const createDatasetStore = (id: string, draft?: boolean, html?: boolean | string) => {
+  // manage case of application key prefixed to dataset id in embed page
+  const keys = id.split(':')
+  if (keys.length > 1) id = keys[1]
+
+  const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draft, html }, notifError: false })
+  const dataset = ref<ExtendedDataset | null>(null)
+  const statusOrder = ['loaded', 'stored', 'normalized', 'analyzed', 'validated', 'extended', 'indexed', 'finalized']
+  // Merge a freshly fetched dataset into the store without downgrading status already advanced by real-time WS events.
+  const mergeFetchedDataset = (fetched: any) => {
+    if (!fetched) return
+    if (dataset.value) {
+      const currentRank = statusOrder.indexOf(dataset.value.status ?? '')
+      const fetchedRank = statusOrder.indexOf(fetched.status ?? '')
+      if (currentRank > fetchedRank) {
+        dataset.value = { ...fetched, status: dataset.value.status as typeof dataset.value.status }
+        return
+      }
+    }
+    dataset.value = fetched
+  }
+  // Edit-fetches are not authoritative for backend-managed pipeline fields — they refresh right after
+  // datasetFetch and can briefly carry a stale draft processing state. Keep the current values of
+  // these fields so WS-advanced status and friends are not clobbered.
+  const pipelineManagedFields = ['status', 'finalizedAt', 'errorStatus', 'errorRetry', 'dataUpdatedAt', 'count', 'bbox', 'timePeriod', 'storage'] as const
+  const applyEditFetchSnapshot = (snapshot: any) => {
+    if (!snapshot || !dataset.value) return
+    const merged = { ...snapshot }
+    for (const f of pipelineManagedFields) {
+      if (f in dataset.value) (merged as any)[f] = (dataset.value as any)[f]
+      else delete (merged as any)[f]
+    }
+    dataset.value = merged
+  }
+  watch(datasetFetch.error, () => { if (datasetFetch.error.value) dataset.value = null })
+  watch(datasetFetch.data, () => { mergeFetchedDataset(datasetFetch.data.value) })
+  const restDataset = computed(() => {
+    if (dataset.value && isRestDataset(dataset.value)) return dataset.value
+  })
+
+  const journalFetch = useFetch<Event[]>($apiPath + `/datasets/${id}/journal`, { query: { draft }, immediate: false, watch: false })
+  const journal = ref<Event[] | null>(null)
+  watch(journalFetch.data, () => { journal.value = journalFetch.data.value })
+  const lastError = computed(() => journal.value?.find(e => e.type === 'error'))
+
+  const taskProgressFetch = useFetch<TaskProgress>($apiPath + `/datasets/${id}/task-progress`, { query: { draft }, immediate: false, watch: false })
+  const taskProgress = ref<TaskProgress>()
+  watch(taskProgressFetch.data, () => { taskProgress.value = taskProgressFetch.data.value?.task ? taskProgressFetch.data.value : undefined })
+
+  const jsonSchemaFetch = useFetch<Record<string, unknown>>($apiPath + `/datasets/${id}/schema`, {
+    query: () => ({
+      draft,
+      mimeType: 'application/schema+json',
+      extension: 'true',
+      arrays: true,
+      updatedAt: dataset.value?.updatedAt
+    }),
+    immediate: false,
+    waitFor: () => !!dataset.value
+  })
+
+  const imageField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/image'))
+  const labelField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))
+  const descriptionField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/description'))
+  const digitalDocumentField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument'))
+  const webPageField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'https://schema.org/WebPage'))
+
+  const canCache: Record<string, ComputedRef<boolean>> = {}
+  const can = (operation: string) => {
+    canCache[operation] = canCache[operation] ?? computed(() => dataset.value?.userPermissions.includes(operation))
+    return canCache[operation]
+  }
+
+  const patchDataset = useAsyncAction(async (patch: PatchDatasetReq['body']) => {
+    const patchedDataset = await $fetch<ExtendedDataset>(`datasets/${id}`, { method: 'PATCH', body: patch })
+    dataset.value = patchedDataset
+  })
+
+  const permissionsFetch = useFetch<Permission[]>($apiPath + `/datasets/${id}/permissions`, { immediate: false, watch: false })
+  const permissions = ref<Permission[] | null>(null)
+  watch(permissionsFetch.data, () => {
+    const perms = permissionsFetch.data.value
+    if (!perms) {
+      permissions.value = null
+      return
+    }
+    perms.forEach(p => { if (!p.type) delete p.type })
+    permissions.value = perms
+  })
+  const savePermissions = async (newPermissions: Permission[]) => {
+    const clean = JSON.parse(JSON.stringify(newPermissions))
+    clean.forEach((p: Record<string, unknown>) => {
+      if (!p.type) delete p.type
+      if (!p.id) delete p.id
+      if (!p.department) delete p.department
+    })
+    await $fetch(`datasets/${id}/permissions`, { method: 'PUT', body: clean })
+    permissions.value = newPermissions
+  }
+
+  const resourceUrl = computed(() => `${$apiPath}/datasets/${id}`)
+
+  const applicationsFetch = useFetch<{ results: Pick<Application, 'id' | 'title' | 'status' | 'description' | 'updatedAt' | 'owner' | 'topics'>[], count: number }>(() => {
+    if (!dataset.value?.finalizedAt) return null
+    return `${$apiPath}/applications`
+  }, {
+    query: computed(() => ({
+      dataset: id,
+      size: 100,
+      select: 'title,id,status,description,updatedAt,owner,topics'
+    })),
+    immediate: false,
+    watch: false
+  })
+
+  const nbVirtualDatasetsFetch = useFetch<{ count: number }>(() => {
+    if (!dataset.value?.finalizedAt) return null
+    return `${$apiPath}/datasets`
+  }, {
+    query: computed(() => ({ children: id, size: 0 }))
+  })
+  const nbVirtualDatasets = computed(() => nbVirtualDatasetsFetch.data.value?.count ?? 0)
+
+  const dataFiles = computed(() => {
+    if (!dataset.value) return []
+    const files: { key: string, name: string, size?: number, url: string }[] = []
+    const d = dataset.value
+    const qs = d.draftReason ? '?draft=true' : ''
+    if (d.originalFile) {
+      files.push({
+        key: 'original',
+        name: d.originalFile.name,
+        size: d.originalFile.size,
+        url: `${$apiPath}/datasets/${id}/raw${qs}`
+      })
+    }
+    if (d.file && d.file.name !== d.originalFile?.name) {
+      files.push({
+        key: 'converted',
+        name: d.file.name,
+        size: d.file.size,
+        url: `${$apiPath}/datasets/${id}/convert${qs}`
+      })
+    }
+    if (!d.isVirtual && !d.isMetaOnly && !d.isRest && d.finalizedAt) {
+      files.push({
+        key: 'full-csv',
+        name: `${d.slug || id}.csv`,
+        url: `${$apiPath}/datasets/${id}/full${qs}`
+      })
+    }
+    return files
+  })
+
+  const publishedDatasetFetch = useFetch<ExtendedDataset>(() => {
+    if (dataset.value?.draftReason?.key !== 'file-updated') return null
+    return $apiPath + `/datasets/${id}`
+  }, { immediate: false, watch: false })
+  const publishedDataset = ref<ExtendedDataset | null>(null)
+  watch(publishedDatasetFetch.data, () => { publishedDataset.value = publishedDatasetFetch.data.value })
+
+  const remove = async () => {
+    await $fetch('/datasets/' + id, { method: 'DELETE' })
+  }
+
+  const changeOwner = async (owner: { type: string, id: string, department?: string }) => {
+    await $fetch(`/datasets/${id}/owner`, { method: 'PUT', body: owner })
+  }
+
+  return {
+    id,
+    draft,
+    dataset,
+    datasetFetch,
+    mergeFetchedDataset,
+    applyEditFetchSnapshot,
+    restDataset,
+    journalFetch,
+    journal,
+    lastError,
+    taskProgressFetch,
+    taskProgress,
+    jsonSchemaFetch,
+    imageField,
+    labelField,
+    descriptionField,
+    digitalDocumentField,
+    webPageField,
+    can,
+    patchDataset,
+    permissions,
+    permissionsFetch,
+    savePermissions,
+    resourceUrl,
+    applicationsFetch,
+    nbVirtualDatasetsFetch,
+    nbVirtualDatasets,
+    publishedDatasetFetch,
+    publishedDataset,
+    dataFiles,
+    remove,
+    changeOwner,
+  }
+}
+
+export const provideDatasetStore = (id: string, draft?: boolean, html?: boolean | string) => {
+  const store = createDatasetStore(id, draft, html)
+  provide(datasetStoreKey, store)
+  return store
+}
+
+export const useDatasetStore = () => {
+  const store = inject(datasetStoreKey) as DatasetStore | undefined
+  if (!store) throw new Error('dataset store was not initialized')
+  return store
+}
+
+export default useDatasetStore

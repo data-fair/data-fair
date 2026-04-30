@@ -32,7 +32,7 @@ import * as tiles from './utils/tiles.ts'
 import * as cache from '../misc/utils/cache.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as outputs from './utils/outputs.js'
-import * as limits from '../misc/utils/limits.ts'
+import * as limits from '../limits/service.ts'
 import { extend } from './utils/extensions.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import userNotificationSchema from '../../contract/user-notification.js'
@@ -43,7 +43,7 @@ import * as observe from '../misc/utils/observe.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import * as apiKeyUtils from '../misc/utils/api-key.ts'
-import { syncDataset as syncRemoteService } from '../remote-services/utils.ts'
+import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.ts'
 import { dir, dataFilesDir, attachmentsDir } from './utils/files.ts'
@@ -177,13 +177,22 @@ router.patch('/:datasetId',
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
   (req, res, next) => req.body.masterData ? permissionsManageMasterData(req, res, next) : next(),
-  (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
+  (req, res, next) => {
+    if (descriptionHasBreakingChanges(req)) {
+      permissionsWriteDescriptionBreaking(req, res, next)
+    } else if (can('datasets', req.resource, 'writeDescription', reqSession(req))) {
+      permissionsWriteDescription(req, res, next)
+    } else {
+      // writeDescriptionBreaking implies writeDescription for non-breaking changes
+      permissionsWriteDescriptionBreaking(req, res, next)
+    }
+  },
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
   (req, res, next) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
   async (req, res) => {
-    // @ts-ignore
-    const dataset = req.dataset
+    // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
+    const dataset = clone(req.dataset)
 
     const locale = req.getLocale()
     const sessionState = reqSessionAuthenticated(req)
@@ -241,7 +250,7 @@ router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddleware
     }
   }
 
-  if (req.body.type !== req.dataset.owner.type && req.body.id !== req.dataset.owner.id) {
+  if (req.body.type !== req.dataset.owner.type || req.body.id !== req.dataset.owner.id) {
     const remaining = await limits.remaining(req.body)
     if (remaining.nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })
@@ -446,8 +455,8 @@ const createDatasetRoute = async (req, res) => {
 router.post('', apiKeyMiddlewareWrite, checkStorage(true, true), createDatasetRoute)
 
 const updateDatasetRoute = async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
+  // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
+  const dataset = clone(req.dataset)
 
   if (!dataset) {
     await createDatasetRoute(req, res, next)
@@ -542,8 +551,7 @@ router.put('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['final
 // validate the draft
 // TODO: apply different permission if draft has breaking changes or not
 router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), apiKeyMiddlewareWrite, permissions.middleware('validateDraft', 'write'), lockDataset(), async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
+  const dataset = clone(req.dataset)
   const sessionState = reqSession(req)
 
   if (!req.datasetFull.draft) {
@@ -561,11 +569,9 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 
 // cancel the draft
 router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'finalized', 'error'], alwaysDraft: true }), apiKeyMiddlewareWrite, permissions.middleware('cancelDraft', 'write'), lockDataset(), async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
+  const dataset = clone(req.dataset)
   const sessionState = reqSession(req)
-  // @ts-ignore
-  const datasetFull = req.datasetFull
+  const datasetFull = clone(req.datasetFull)
 
   if (datasetFull.status === 'draft') {
     return res.status(409).send('Impossible d\'annuler un brouillon si aucune version du jeu de données n\'a été validée.')
@@ -645,7 +651,9 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   let esResponse
   let select = singleSearch.output.key
   if (singleSearch.label) select += ',' + singleSearch.label.key
-  const params = { q: req.query.q, size: req.query.size, q_mode: 'complete', select }
+  // collapse on the output key so suggestions are deduplicated server-side
+  // (the underlying dataset may have multiple rows sharing the same output value)
+  const params = { q: req.query.q, size: req.query.size, q_mode: 'complete', select, collapse: singleSearch.output.key }
   const qs = []
 
   if (singleSearch.filters) {
@@ -663,7 +671,7 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   }
   const flatten = getFlatten(req.dataset)
   const result = {
-    total: esResponse.hits.total.value,
+    total: esResponse.hits.total?.value,
     results: esResponse.hits.hits.map(hit => {
       const item = esUtils.prepareResultItem(hit, req.dataset, req.query, flatten, req.publicBaseUrl)
       let label = item[singleSearch.output.key]
@@ -771,6 +779,8 @@ const readLines = async (req, res) => {
   if (vectorTileRequested) {
     // default is smaller (see es/commons) for other format, but we want filled tiles by default
     if (!('size' in query)) query.size = config.elasticsearch.maxPageSize + ''
+    // track_total_hits is expensive and not needed for tile rendering, disable by default
+    if (query.count !== 'true') query.count = 'false'
   }
 
   if (query.format === 'wkt') {
@@ -930,13 +940,13 @@ const readLines = async (req, res) => {
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (useVTCache) cache.set(cacheHash, { tile: new mongodb.Binary(tile), count: esResponse.hits.hits.length, total: esResponse.hits.total.value })
+    if (useVTCache) cache.set(cacheHash, { tile: new mongodb.Binary(tile), count: esResponse.hits.hits.length, total: esResponse.hits.total?.value })
     res.setHeader('x-tilesmode', tilesMode)
-    res.setHeader('x-tilesampling', esResponse.hits.hits.length + '/' + esResponse.hits.total.value)
+    if (esResponse.hits.total) res.setHeader('x-tilesampling', esResponse.hits.hits.length + '/' + esResponse.hits.total.value)
     return res.status(200).send(tile)
   }
 
-  const result = { total: esResponse.hits.total.value }
+  const result = { total: esResponse.hits.total?.value }
   if (nextLinkURL) result.next = nextLinkURL.href
   if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = []
@@ -1446,7 +1456,7 @@ router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('ge
 
 router.post('/:datasetId/_simulate-extension', readDataset({ noCache: true }), apiKeyMiddlewareWrite, permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
   const line = req.body
-  const dataset = clone(req.dataset)
+  const dataset = clone(req.dataset.__proxyTarget ?? req.dataset)
   if (!dataset.extensions?.length) throw httpError(400, 'no extension to simulate')
   await extend(dataset, dataset.extensions, undefined, undefined, undefined, line)
   const flatten = getFlatten(req.dataset, req.query.arrays === 'true')

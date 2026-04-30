@@ -412,7 +412,11 @@ class ExtensionsStream extends Transform {
 
 // Create a function that will transform items from a dataset into inputs for an action
 async function prepareInputMapping (action: any, dataset: Dataset, extensionKey: string, selectFields: string[]) {
-  const schema = await schemaUtils.extendedSchema(mongo.db, dataset)
+  // extendedSchema mutates the dataset (cleanSchema, fixConcepts) — work on a shallow
+  // copy of the schema so this is safe when called via commitLines with a cached/proxied
+  // dataset (assertImmutable in dev, or any future tightening of the cache contract)
+  const datasetCopy = { ...dataset, schema: (dataset.schema ?? []).map((f: any) => ({ ...f })) }
+  const schema = await schemaUtils.extendedSchema(mongo.db, datasetCopy)
   const fieldMappings = action.input.map((input: any) => {
     const field = schema.find((f: any) =>
       f['x-refersTo'] === input.concept &&
@@ -489,6 +493,14 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
         'x-calculated': true
       })
     } else if (extension.property) {
+      // TODO (to be confirmed): `extension.property` is not resynced when the column is edited in the schema
+      // (title, description, etc.) — it is a snapshot frozen at creation time, and this only affects calculated
+      // columns (exprEval). The live title/description is already preserved from `schema` below (see `if (prop.title)
+      // ...`), so it is not blocking on the API side, but storing a duplicated snapshot is a source of confusion.
+      // Possible direction: only store { type, key, expr, active } in `extension` and always read from
+      // `dataset.schema`. This would impact: validation here, service.js (patch dedup), rest.ts, DatasetExtension
+      // types, plus a migration for existing datasets. Likely best done alongside the upcoming refactor that moves
+      // calculated column editing directly into the Schema section.
       const existingProperty = schema.find((p: any) => p.key === extension.property.key)
       if (existingProperty && !existingProperty['x-extension']) throw httpError(400, `Une extension essaie de créer la colonne "${extension.property.key}" mais cette clé est déjà utilisée.`)
       const fullProperty = existingProperty ? { ...existingProperty } : { ...extension.property }

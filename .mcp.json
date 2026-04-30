@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "playwright-test": {
+      "command": "npx",
+      "args": [
+        "playwright",
+        "run-test-mcp-server"
+      ]
+    },
+    "vuetify": {
+      "command": "npx",
+      "args": [
+        "@vuetify/mcp"
+      ]
+    }
+  }
+}

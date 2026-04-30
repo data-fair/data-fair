@@ -19,8 +19,42 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Lint
+      run: npm run lint
+
+    - name: Build types
+      run: npm run build-types
+
+    - name: Build UI
+      run: npm -w ui run build
+
+    - name: Type check
+      run: npm -w ui run check-types
+
+    - name: Build parquet-writer
+      run: npm -w parquet-writer run build
+
     - name: Init .env
       run: ./dev/init-env.sh
 
-    - name: Run quality checks
-      run: OGR2OGR_SKIP=true npm run quality
+    - name: Use localhost as DEV_HOST in CI
+      run: sed -i 's/^DEV_HOST=.*/DEV_HOST=localhost/' .env
+
+    - name: Start test services
+      run: docker compose --profile test up -d --wait
+
+    - name: Start mock server
+      run: dotenv -- npm run dev-mock &
+
+    - name: Start dev API
+      run: dotenv -- npm run dev-api &
+
+    - name: Run tests
+      run: OGR2OGR_SKIP=true npm run test-unit && OGR2OGR_SKIP=true npm run test-api
+
+    - name: Audit
+      run: npm audit --omit=dev --audit-level=critical
+
+    - name: Stop test services
+      if: always()
+      run: docker compose --profile test down

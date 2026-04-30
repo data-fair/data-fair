@@ -1,8 +1,6 @@
 const filters = {
   type: 'array',
   title: 'Filtres statiques',
-  'x-class': 'mb-4',
-  'x-options': { editMode: 'inline' },
   items: {
     type: 'object',
     required: ['property', 'values'],
@@ -10,9 +8,15 @@ const filters = {
       property: {
         type: 'object',
         title: 'Propriété sur laquelle appliquer le filtre',
-        'x-fromData': 'context.filterProperties',
-        'x-itemTitle': 'title',
-        'x-itemKey': 'key'
+        layout: {
+          getItems: {
+            type: 'js-eval',
+            expr: 'context.filterProperties',
+            pure: true,
+            itemKey: 'data["key"]',
+            itemTitle: 'data["title"]'
+          }
+        }
       },
       values: {
         type: 'array',
@@ -28,28 +32,37 @@ const filters = {
 export const schema = {
   type: 'object',
   title: 'Données de référence',
+  layout: { title: null },
   properties: {
     shareOrgs: {
       type: 'array',
       title: 'Partagez cette donnée de référence avec vos partenaires',
-      'x-if': 'context.ownerOrg',
-      'x-fromUrl': '{context.directoryUrl}/api/{context.dataset.owner.type}s/{context.dataset.owner.id}',
-      'x-itemsProp': 'partners',
-      'x-itemTitle': 'name',
-      'x-itemKey': 'id',
+      description: 'Le partage à des partenaires affecte simplement la visibilité des actions liées à ces données de référence. Il est sans effet sur les permissions que vous devez définir séparément.',
       items: {
         type: 'object',
         properties: {
           id: { type: 'string' },
           name: { type: 'string' }
         }
+      },
+      layout: {
+        if: { type: 'js-eval', expr: 'context.ownerOrg', pure: true },
+        props: {
+          noDataText: 'Vous n\'avez pas encore de partenaires configurés pour votre organisation.'
+        },
+        getItems: {
+          // eslint-disable-next-line no-template-curly-in-string
+          url: { type: 'js-tpl', expr: '${context.directoryUrl}/api/${context.dataset.owner.type}s/${context.dataset.owner.id}', pure: true },
+          itemKey: 'data["id"]',
+          itemTitle: 'data["name"]',
+          itemsResults: 'data["partners"]'
+        }
       }
     },
     bulkSearchs: {
       type: 'array',
       title: 'Récupération de lignes en masse',
-      'x-class': 'my-4',
-      'x-options': { editMode: 'dialog' },
+      description: 'Permettez à vos utilisateurs de récupérer un grand nombre de lignes à partir d\'une règle de correspondance simple. Cette fonctionnalité permet de créer une nouvelle source d\'enrichissement.',
       items: {
         type: 'object',
         required: ['title'],
@@ -57,32 +70,32 @@ export const schema = {
           id: {
             type: 'string',
             title: 'Identifiant',
-            'x-if': 'parent.value.id',
-            readOnly: true
+            readOnly: true,
+            layout: {
+              if: { type: 'js-eval', expr: 'parent.data.id', pure: false }
+            }
           },
           title: {
             type: 'string',
             title: 'Titre',
-            'x-props': {
-              placeholder: 'exemple "récupérer les informations de plusieurs produits"'
-            },
-            minLength: 3
+            minLength: 3,
+            layout: {
+              props: { placeholder: 'Exemple "Récupérer les informations de plusieurs produits"' }
+            }
           },
           description: {
             type: 'string',
             title: 'Description',
-            'x-display': 'textarea',
-            'x-props': {
-              placeholder: 'exemple "cet enrichissement vous permet de récupérer les informations de plusieurs produits à partir d\'une liste de codes produits."'
+            layout: {
+              comp: 'textarea',
+              props: { placeholder: 'Exemple "Cet enrichissement vous permet de récupérer les informations de plusieurs produits à partir d\'une liste de codes produits."' }
             }
           },
           filters,
           input: {
             type: 'array',
             title: 'Méthodes de correspondance',
-            'x-class': 'mb-4',
             minItems: 1,
-            'x-options': { editMode: 'inline' },
             items: {
               type: 'object',
               required: ['type', 'property'],
@@ -94,14 +107,23 @@ export const schema = {
                   property: {
                     type: 'object',
                     title: 'Propriété comparée',
-                    'x-fromData': 'context.propertiesWithConcepts',
-                    'x-itemTitle': 'title',
-                    'x-itemKey': 'key'
+                    layout: {
+                      props: {
+                        noDataText: 'Aucune colonne de ce jeu de données n\'a de concept associé. Définissez des concepts dans l\'onglet Schéma.'
+                      },
+                      getItems: {
+                        type: 'js-eval',
+                        expr: 'context.propertiesWithConcepts',
+                        pure: true,
+                        itemKey: 'data["key"]',
+                        itemTitle: 'data["title"]'
+                      }
+                    }
                   }
                 }
               }, {
                 title: 'Date dans un interval',
-                'x-if': 'context.hasDateIntervalConcepts',
+                required: ['type', 'property'],
                 properties: {
                   type: { type: 'string', const: 'date-in-interval' },
                   property: {
@@ -114,10 +136,12 @@ export const schema = {
                       format: { type: 'string', const: 'date-time' }
                     }
                   }
+                },
+                layout: {
+                  if: { type: 'js-eval', expr: 'context.hasDateIntervalConcepts', pure: true }
                 }
               }, {
                 title: 'Coordonnée géographique à proximité',
-                'x-if': 'context.dataset.bbox',
                 required: ['type', 'distance'],
                 properties: {
                   type: { type: 'string', const: 'geo-distance' },
@@ -135,8 +159,12 @@ export const schema = {
                       type: { type: 'string', const: 'string' }
                     }
                   }
+                },
+                layout: {
+                  if: { type: 'js-eval', expr: 'context.dataset.bbox', pure: true }
                 }
-              }]
+              }],
+              oneOfLayout: { label: 'Type de méthode de correspondance' }
             }
           },
           sort: {
@@ -150,13 +178,15 @@ Le tri est exprimé sous forme d'une liste de clés de colonnes séparées par d
 Exemple: ma_colonne,-ma_colonne2`
           }
         }
+      },
+      layout: {
+        itemTitle: 'data.title'
       }
     },
     singleSearchs: {
       type: 'array',
       title: 'Recherche de paires code / libellé',
-      'x-class': 'mb-4',
-      'x-options': { editMode: 'dialog' },
+      description: 'Permettez à vos utilisateurs de récupérer une liste de résultats à partir d\'une recherche textuelle sur une colonne de libellés. Cette fonctionnalité permet de créer des champs de recherche dans les formulaires d\'édition de ligne des jeux éditables.',
       items: {
         type: 'object',
         required: ['title', 'output'],
@@ -164,65 +194,70 @@ Exemple: ma_colonne,-ma_colonne2`
           id: {
             type: 'string',
             title: 'Identifiant',
-            'x-if': 'parent.value.id',
-            readOnly: true
+            readOnly: true,
+            layout: {
+              if: { type: 'js-eval', expr: 'parent.data.id', pure: false }
+            }
           },
           title: {
             type: 'string',
             title: 'Titre',
-            'x-props': {
-              placeholder: 'exemple "recherche d\'un produit"'
-            },
-            minLength: 3
+            minLength: 3,
+            layout: {
+              props: { placeholder: 'Exemple "Recherche d\'un produit"' }
+            }
           },
           description: {
             type: 'string',
             title: 'Description',
-            'x-display': 'textarea',
-            'x-props': {
-              placeholder: 'exemple "récupérez un code produit en effectuant une recherche dans son code ou son libellé"'
+            layout: {
+              comp: 'textarea',
+              props: { placeholder: 'Exemple "Récupérez un code produit en effectuant une recherche dans son code ou son libellé"' }
             }
           },
           output: {
             type: 'object',
             title: 'Propriété à retourner (code)',
-            'x-fromData': 'context.propertiesWithConcepts',
-            'x-itemTitle': 'title',
-            'x-itemKey': 'key'
+            layout: {
+              props: {
+                noDataText: 'Aucune colonne de ce jeu de données n\'a de concept associé. Définissez des concepts dans l\'onglet Schéma.'
+              },
+              getItems: {
+                type: 'js-eval',
+                expr: 'context.propertiesWithConcepts',
+                pure: true,
+                itemKey: 'data["key"]',
+                itemTitle: 'data["title"]'
+              }
+            }
           },
           label: {
             type: 'object',
-            title: 'Propriété utilisée pour la recherche (libellé)',
-            'x-fromData': 'context.stringProperties',
-            'x-itemTitle': 'title',
-            'x-itemKey': 'key'
+            title: 'Propriété affichée lors de la saisie (libellé)',
+            description: 'Propriété affichée à côté du code dans la liste des suggestions, sous la forme « code (libellé) », pour aider l\'utilisateur à identifier la bonne valeur. La recherche s\'effectue sur toutes les colonnes textuelles du jeu de données.',
+            layout: {
+              props: {
+                noDataText: 'Aucune colonne textuelle dans ce jeu de données.'
+              },
+              getItems: {
+                type: 'js-eval',
+                expr: 'context.stringProperties',
+                pure: true,
+                itemKey: 'data["key"]',
+                itemTitle: 'data["title"]'
+              }
+            }
           },
           filters
-          /* input: {
-            type: 'array',
-            title: 'Propriétés utilisées pour la recherche',
-            minItems: 1,
-            'x-options': { editMode: 'inline' },
-            items: {
-              type: 'object',
-              required: ['property'],
-              properties: {
-                property: {
-                  type: 'object',
-                  title: 'Propriété',
-                  'x-fromData': 'context.searchProperties',
-                  'x-itemTitle': 'title',
-                  'x-itemKey': 'key',
-                },
-              },
-            },
-          }, */
         }
+      },
+      layout: {
+        itemTitle: 'data.title'
       }
     },
     virtualDatasets: {
       type: 'object',
-      'x-class': 'mt-4',
+      description: 'Proposez à vos utilisateurs de créer des jeux virtuels à partir de ce jeu de données. C\'est une option intéressante pour faciliter la création de vues filtrées de cette donnée.',
       properties: {
         active: {
           type: 'boolean',
@@ -232,7 +267,7 @@ Exemple: ma_colonne,-ma_colonne2`
     },
     standardSchema: {
       type: 'object',
-      'x-class': 'mt-4',
+      description: 'Proposez à vos utilisateurs d\'initialiser des jeux éditables à partir des métadonnées et des données de ce jeu de données.',
       properties: {
         active: {
           type: 'boolean',
@@ -245,7 +280,8 @@ Exemple: ma_colonne,-ma_colonne2`
 
 export const endpoints = (dataset) => {
   const endpoints = {}
-  if (!dataset.masterData || !dataset.masterData.bulkSearchs) return endpoints
+  if (!dataset.masterData) return endpoints
+  if (!dataset.masterData.bulkSearchs?.length && !dataset.masterData.singleSearchs?.length) return endpoints
   const outputProperties = dataset.schema.filter(f => !f['x-calculated'])
   const datasetLineSchema = {
     type: 'object',
@@ -420,7 +456,7 @@ export const endpoints = (dataset) => {
             }
           },
           400: {
-            description: 'Mauvais formattage de la requête',
+            description: 'Mauvais formatage de la requête',
             content: {
               'application/json': {
                 schema: {

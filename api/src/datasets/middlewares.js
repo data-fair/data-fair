@@ -77,12 +77,12 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   // @ts-ignore
   const mainPublicationSite = req.mainPublicationSite
   // TODO: excluding tests from using memoize cache is not great for test coverage
-  const tolerateStale = !acceptedStatuses && !noCache && process.env.NODE_ENV !== 'test'
+  const tolerateStale = !acceptedStatuses && !noCache && process.env.NODE_ENV !== 'development'
   const useDraft = req.query.draft === 'true' || alwaysDraft
 
   let { dataset, datasetFull } = tolerateStale
     ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
-    : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
+    : await service.getDatasetFresh(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
 
   // bypass the memory cache if it is contradicted by the finalizedAt parameter
   if (dataset && tolerateStale && req.query.finalizedAt && req.query.finalizedAt > dataset.finalizedAt) {

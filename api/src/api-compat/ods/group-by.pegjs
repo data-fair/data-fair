@@ -1,7 +1,7 @@
 // see syntax examples https://github.com/pegjs/pegjs/tree/master/examples
 {{
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { requiredCapability } from '../../datasets/es/commons.js'
+import { requiredCapability } from '../../datasets/es/operations.ts'
 import capabilities from '../../../contract/capabilities.js'
 import dayjs from 'dayjs'
 

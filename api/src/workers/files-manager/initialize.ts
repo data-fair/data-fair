@@ -107,6 +107,7 @@ export default async function (dataset: DatasetInternal) {
     }
     if (dataset.initFrom.parts.includes('description')) {
       patch.description = parentDataset.description
+      patch.summary = parentDataset.summary
     }
     if (dataset.initFrom.parts.includes('metadataAttachments')) {
       for (const metadataAttachment of metadataAttachments) {

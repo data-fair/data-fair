@@ -6,7 +6,10 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "ajv-i18n": "^4.2.0",
+    "dayjs": "^1.11.13",
     "expr-eval": "^2.0.2",
-    "sanitize-html": "^2.14.0"
+    "md5": "^2.3.0",
+    "sanitize-html": "^2.14.0",
+    "slugify": "^1.6.6"
   }
 }

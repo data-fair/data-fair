@@ -1,0 +1,901 @@
+<template>
+  <v-menu
+    v-model="showMenu"
+    :activator="activator"
+    :close-on-content-click="false"
+    :max-height="filterHeight"
+    location="bottom right"
+    @update:model-value="toggleMenu"
+  >
+    <v-sheet
+      class="pa-1"
+      rounded="0"
+      style="max-width: 450px"
+    >
+      <v-list
+        density="compact"
+        color="primary"
+        class="pa-0 dataset-table-header-actions"
+      >
+        <slot
+          name="prepend-items"
+          :hide="() => {showMenu = false}"
+        />
+
+        <!-- show help -->
+        <template v-if="!!header.tooltip">
+          <v-list-item
+            :active="showHelp"
+            :title="t('showHelp')"
+            class="pl-2"
+            @click="showHelp = !showHelp"
+          >
+            <template #prepend>
+              <v-icon
+                :icon="mdiInformation"
+                size="small"
+              />
+            </template>
+            <template #append>
+              <v-icon
+                :icon="showHelp ? mdiMenuUp : mdiMenuDown"
+                size="small"
+              />
+            </template>
+          </v-list-item>
+          <v-alert
+            v-if="showHelp"
+            class="mt-0 mb-2 pa-2 description-alert"
+            rounded="0"
+            variant="text"
+            v-html="/*eslint-disable-line vue/no-v-html vue/no-v-text-v-html-on-component*/header.tooltip"
+          />
+          <v-divider />
+        </template>
+
+        <!-- sorting -->
+        <template v-if="header.sortable">
+          <v-list-item
+            :active="sort === 1"
+            :title="t('sortAsc')"
+            class="pl-2"
+            @click="toggleSort(1)"
+          >
+            <template #prepend>
+              <v-icon
+                :icon="mdiSortAscending"
+                size="small"
+              />
+            </template>
+          </v-list-item>
+          <v-list-item
+            :active="sort === -1"
+            :title="t('sortDesc')"
+            class="pl-2"
+            @click="toggleSort(-1)"
+          >
+            <template #prepend>
+              <v-icon
+                :icon="mdiSortDescending"
+                size="small"
+              />
+            </template>
+          </v-list-item>
+          <v-divider />
+        </template>
+
+        <!-- filters -->
+        <template v-if="showFilters">
+          <v-list-item
+            :active="!!newFilter"
+            :title="t('addFilter')"
+            class="pl-2"
+            @click="newFilter = newFilter ? undefined : {}"
+          >
+            <template #prepend>
+              <v-icon
+                :icon="mdiFilterVariant"
+                size="small"
+              />
+            </template>
+            <template #append>
+              <v-icon
+                :icon="newFilter ? mdiMenuUp : mdiMenuDown"
+                size="x-small"
+              />
+            </template>
+          </v-list-item>
+          <template v-if="newFilter">
+            <template v-if="showSearch">
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'search'"
+                :active="newFilter.operator === 'search' || !!search"
+                :title="t('searchFilter')"
+                @click="newFilter.operator = newFilter.operator === 'search' ? undefined : 'search'"
+              />
+              <v-text-field
+                v-if="newFilter.operator === 'search'"
+                v-model="search"
+                :placeholder="t('searchFilter')"
+                class="my-1"
+                density="compact"
+                variant="outlined"
+                autofocus
+                hide-details
+                @keyup.enter="search && emitNewFilter(search)"
+              >
+                <template #append>
+                  <v-btn
+                    :disabled="!search"
+                    :icon="mdiCheck"
+                    :title="t('applyFilter')"
+                    class="mr-1"
+                    color="primary"
+                    density="comfortable"
+                    @click="search && emitNewFilter(search)"
+                  />
+                </template>
+              </v-text-field>
+            </template>
+            <template v-if="showEquals">
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'eq'"
+                :active="newFilter.operator === 'eq' || !!equals[0]"
+                :title="t('eqFilter')"
+                @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
+              />
+              <template v-if="newFilter.operator === 'eq'">
+                <v-text-field
+                  v-if="!header.property.enum?.length"
+                  :model-value="equals[0]"
+                  :placeholder="t('eqLabel')"
+                  :type="header.property.type === 'number' || header.property.type === 'integer' ? 'number' : ''"
+                  class="my-1"
+                  density="compact"
+                  variant="outlined"
+                  autofocus
+                  hide-details
+                  @update:model-value="v => equals = [v]"
+                  @keyup.enter="equals[0] && emitEqualsFilter()"
+                >
+                  <template #append>
+                    <v-btn
+                      :disabled="!equals[0]"
+                      :icon="mdiCheck"
+                      :title="t('applyFilter')"
+                      class="mr-1"
+                      color="primary"
+                      density="comfortable"
+                      @click="equals[0] && emitEqualsFilter()"
+                    />
+                  </template>
+                </v-text-field>
+                <template v-if="showEnum">
+                  <v-list-item
+                    v-for="{value, important} in fullEnum"
+                    :key="value"
+                    :active="equals.includes(value)"
+                    :style="{'minHeight': enumDense ? '24px' : '32px'}"
+                    class="px-2"
+                    @click="equals= [value]; emitEqualsFilter()"
+                  >
+                    <v-list-item-title :class="{'font-weight-bold': important}">
+                      {{ formatValue(value, header.property, null, localeDayjs) }}
+                    </v-list-item-title>
+                  </v-list-item>
+                </template>
+              </template>
+
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'neq'"
+                :active="newFilter.operator === 'neq' || !!nEquals[0]"
+                :title="t('neqFilter')"
+                @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
+              />
+              <template v-if="newFilter.operator === 'neq'">
+                <v-text-field
+                  v-if="!header.property.enum?.length"
+                  :model-value="nEquals[0]"
+                  :placeholder="t('neqLabel')"
+                  :type="header.property.type === 'number' || header.property.type === 'integer' ? 'number' : ''"
+                  class="my-1"
+                  density="compact"
+                  variant="outlined"
+                  autofocus
+                  hide-details
+                  @update:model-value="v => nEquals = [v]"
+                  @keyup.enter="nEquals[0] && emitNEqualsFilter()"
+                >
+                  <template #append>
+                    <v-btn
+                      :disabled="!nEquals[0]"
+                      :icon="mdiCheck"
+                      :title="t('applyFilter')"
+                      class="mr-1"
+                      color="primary"
+                      density="comfortable"
+                      @click="nEquals[0] && emitNEqualsFilter()"
+                    />
+                  </template>
+                </v-text-field>
+                <template v-if="showEnum">
+                  <v-list-item
+                    v-for="{value, important} in fullEnum"
+                    :key="value"
+                    :active="nEquals.includes(value)"
+                    :style="{'minHeight': enumDense ? '24px' : '32px'}"
+                    class="px-2"
+                    @click="nEquals= [value]; emitNEqualsFilter()"
+                  >
+                    <v-list-item-title :class="{'font-weight-bold': important}">
+                      {{ formatValue(value, header.property, null, localeDayjs) }}
+                    </v-list-item-title>
+                  </v-list-item>
+                </template>
+              </template>
+
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'in'"
+                :active="newFilter.operator === 'in' || equals.length > 2"
+                :title="t('inFilter')"
+                @click="newFilter.operator = newFilter.operator === 'in' ? undefined : 'in'"
+              />
+
+              <template v-if="newFilter.operator === 'in'">
+                <template v-if="!header.property.enum?.length">
+                  <v-text-field
+                    v-for="i in equals.length"
+                    :key="i"
+                    v-model="equals[i - 1]"
+                    :autofocus="i === 1"
+                    :label="i === 1 ? t('eqLabel') : t('orEqLabel')"
+                    class="my-1"
+                    density="compact"
+                    variant="outlined"
+                    clearable
+                    hide-details
+                  >
+                    <template #append>
+                      <v-btn
+                        v-if="i === equals.length - 1"
+                        :disabled="equals.length <= 1"
+                        :icon="mdiCheck"
+                        :title="t('applyFilter')"
+                        class="mr-1"
+                        color="primary"
+                        density="comfortable"
+                        @click="emitEqualsFilter"
+                      />
+                      <div
+                        v-else
+                        style="width:40px;height:36px;"
+                      />
+                    </template>
+                  </v-text-field>
+                </template>
+                <template v-else>
+                  <v-list-item
+                    v-for="{value, important} in fullEnum"
+                    :key="value"
+                    :active="equals.includes(value)"
+                    :style="{'minHeight': enumDense ? '24px' : '32px'}"
+                    class="px-2"
+                    @click="toggleEquals(value)"
+                  >
+                    <template #prepend>
+                      <v-icon
+                        v-if="equals.includes(value)"
+                        color="primary"
+                        :icon="mdiCheckboxMarked"
+                        :size="enumDense ? 'small' : undefined"
+                      />
+                      <v-icon
+                        v-else
+                        :icon="mdiCheckboxBlankOutline"
+                        :size="enumDense ? 'small' : undefined"
+                      />
+                    </template>
+
+                    <v-list-item-title :class="{'font-weight-bold': important}">
+                      {{ formatValue(value, header.property, null, localeDayjs) }}
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item>
+                    <template #append>
+                      <v-btn
+                        :disabled="!equals.length"
+                        color="primary"
+                        density="comfortable"
+                        variant="flat"
+                        @click="emitEqualsFilter"
+                      >
+                        {{ t('applyFilter') }}
+                      </v-btn>
+                    </template>
+                  </v-list-item>
+                </template>
+              </template>
+
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'nin'"
+                :active="newFilter.operator === 'nin' || nEquals.length > 2"
+                :title="t('ninFilter')"
+                @click="newFilter.operator = newFilter.operator === 'nin' ? undefined : 'nin'"
+              />
+
+              <template v-if="newFilter.operator === 'nin'">
+                <template v-if="!header.property.enum?.length">
+                  <v-text-field
+                    v-for="i in nEquals.length"
+                    :key="i"
+                    v-model="nEquals[i - 1]"
+                    :autofocus="i === 1"
+                    :label="i === 1 ? t('neqLabel') : t('andNeqLabel')"
+                    class="my-1"
+                    density="compact"
+                    variant="outlined"
+                    clearable
+                    hide-details
+                  >
+                    <template #append>
+                      <v-btn
+                        v-if="i === nEquals.length - 1"
+                        :disabled="nEquals.length <= 1"
+                        :icon="mdiCheck"
+                        :title="t('applyFilter')"
+                        class="mr-1"
+                        color="primary"
+                        density="comfortable"
+                        @click="emitNEqualsFilter"
+                      />
+                      <div
+                        v-else
+                        style="width:40px;height:36px;"
+                      />
+                    </template>
+                  </v-text-field>
+                </template>
+                <template v-else>
+                  <v-list-item
+                    v-for="{value, important} in fullEnum"
+                    :key="value"
+                    :active="nEquals.includes(value)"
+                    :style="{'minHeight': enumDense ? '24px' : '32px'}"
+                    class="px-2"
+                    @click="toggleNEquals(value)"
+                  >
+                    <template #prepend>
+                      <v-icon
+                        v-if="nEquals.includes(value)"
+                        color="primary"
+                        :icon="mdiCheckboxMarked"
+                        :size="enumDense ? 'small' : undefined"
+                      />
+                      <v-icon
+                        v-else
+                        :icon="mdiCheckboxBlankOutline"
+                        :size="enumDense ? 'small' : undefined"
+                      />
+                    </template>
+
+                    <v-list-item-title :class="{'font-weight-bold': important}">
+                      {{ formatValue(value, header.property, null, localeDayjs) }}
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item>
+                    <template #append>
+                      <v-btn
+                        :disabled="!nEquals.length"
+                        color="primary"
+                        density="comfortable"
+                        variant="flat"
+                        @click="emitNEqualsFilter"
+                      >
+                        {{ t('applyFilter') }}
+                      </v-btn>
+                    </template>
+                  </v-list-item>
+                </template>
+              </template>
+            </template>
+            <template v-if="showStartsWith">
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'starts'"
+                :active="newFilter.operator === 'starts' || !!startsWith"
+                :title="t('startsFilter')"
+                @click="newFilter.operator = newFilter.operator === 'starts' ? undefined : 'starts'"
+              />
+              <v-text-field
+                v-if="newFilter.operator === 'starts'"
+                v-model="startsWith"
+                :label="t('startsFilter')"
+                class="my-1"
+                density="compact"
+                variant="outlined"
+                autofocus
+                hide-details
+                @keyup.enter="startsWith && emitNewFilter(startsWith)"
+              >
+                <template #append>
+                  <v-btn
+                    class="mr-1"
+                    density="comfortable"
+                    :disabled="!startsWith"
+                    color="primary"
+                    :title="t('applyFilter')"
+                    :icon="mdiCheck"
+                    @click="startsWith && emitNewFilter(startsWith)"
+                  />
+                </template>
+              </v-text-field>
+            </template>
+            <template v-if="showContains">
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'contains'"
+                :active="newFilter.operator === 'contains' || !!contains"
+                :title="t('containsFilter')"
+                @click="newFilter.operator = newFilter.operator === 'contains' ? undefined : 'contains'"
+              />
+              <v-text-field
+                v-if="newFilter.operator === 'contains'"
+                v-model="contains"
+                :label="t('containsFilter')"
+                class="my-1"
+                density="compact"
+                variant="outlined"
+                hide-details
+                @keyup.enter="contains && emitNewFilter(contains)"
+              >
+                <template #append>
+                  <v-btn
+                    class="mr-1"
+                    density="comfortable"
+                    :disabled="!contains"
+                    color="primary"
+                    :title="t('applyFilter')"
+                    :icon="mdiCheck"
+                    @click="contains && emitNewFilter(contains)"
+                  />
+                </template>
+              </v-text-field>
+            </template>
+            <template v-if="showBoolEquals">
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'eq'"
+                :active="newFilter.operator === 'eq' || equalsBool !== undefined"
+                :title="t('eqFilter')"
+                @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
+              />
+              <template v-if="newFilter.operator === 'eq'">
+                <v-list-item
+                  :active="equalsBool === true"
+                  @click="emitNewFilter('true', formattedTrue)"
+                >
+                  {{ formattedTrue }}
+                </v-list-item>
+                <v-list-item
+                  :active="equalsBool === false"
+                  @click="emitNewFilter('false', formattedFalse)"
+                >
+                  {{ formattedFalse }}
+                </v-list-item>
+              </template>
+
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'neq'"
+                :active="newFilter.operator === 'neq' || nEqualsBool !== undefined"
+                :title="t('neqFilter')"
+                @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
+              />
+              <template v-if="newFilter.operator === 'neq'">
+                <v-list-item
+                  :active="nEqualsBool === true"
+                  @click="emitNewFilter('true', formattedTrue)"
+                >
+                  {{ formattedTrue }}
+                </v-list-item>
+                <v-list-item
+                  :active="nEqualsBool === false"
+                  @click="emitNewFilter('false', formattedFalse)"
+                >
+                  {{ formattedFalse }}
+                </v-list-item>
+              </template>
+            </template>
+            <template v-if="showNumCompare">
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'gte'"
+                :active="newFilter.operator === 'gte' || !!gte"
+                :title="t('gteFilter')"
+                @click="newFilter.operator = newFilter.operator === 'gte' ? undefined : 'gte'"
+              />
+              <v-text-field
+                v-if="newFilter.operator === 'gte'"
+                v-model="gte"
+                :label="t('gteFilter')"
+                class="my-1"
+                density="compact"
+                type="number"
+                variant="outlined"
+                hide-details
+                @keyup.enter="gte && emitNewFilter(gte, formatValue(gte, header.property, null, localeDayjs))"
+              >
+                <template #append>
+                  <v-btn
+                    :disabled="!gte"
+                    :icon="mdiCheck"
+                    :title="t('applyFilter')"
+                    class="mr-1"
+                    color="primary"
+                    density="comfortable"
+                    @click="gte && emitNewFilter(gte, formatValue(gte, header.property, null, localeDayjs))"
+                  />
+                </template>
+              </v-text-field>
+
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'lte'"
+                :active="newFilter.operator === 'lte' || !!lte"
+                :title="t('lteFilter')"
+                @click="newFilter.operator = newFilter.operator === 'lte' ? undefined : 'lte'"
+              />
+              <v-text-field
+                v-if="newFilter.operator === 'lte'"
+                v-model="lte"
+                :label="t('lteFilter')"
+                class="my-1"
+                density="compact"
+                type="number"
+                variant="outlined"
+                hide-details
+                @keyup.enter="lte && emitNewFilter(lte, formatValue(lte, header.property, null, localeDayjs))"
+              >
+                <template #append>
+                  <v-btn
+                    :disabled="!lte"
+                    :icon="mdiCheck"
+                    :title="t('applyFilter')"
+                    class="mr-1"
+                    color="primary"
+                    density="comfortable"
+                    @click="lte && emitNewFilter(lte, formatValue(lte, header.property, null, localeDayjs))"
+                  />
+                </template>
+              </v-text-field>
+            </template>
+            <template v-if="showDateCompare">
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'gte'"
+                :active="newFilter.operator === 'gte' || !!gte"
+                :title="t('gteFilter')"
+                @click="newFilter.operator = newFilter.operator === 'gte' ? undefined : 'gte'"
+              />
+              <v-date-picker
+                v-if="newFilter.operator === 'gte'"
+                :model-value="gte && new Date(gte)"
+                hide-header
+                @update:model-value="v => v && emitNewFilter(localeDayjs.dayjs(v).format('YYYY-MM-DD'), localeDayjs.dayjs(v).format('L'))"
+              />
+
+              <v-list-item
+                v-if="!newFilter.operator || newFilter.operator === 'lte'"
+                :active="newFilter.operator === 'lte' || !!lte"
+                :title="t('lteFilter')"
+                @click="newFilter.operator = newFilter.operator === 'lte' ? undefined : 'lte'"
+              />
+              <v-date-picker
+                v-if="newFilter.operator === 'lte'"
+                :model-value="lte && new Date(lte)"
+                hide-header
+                @update:model-value="v => v && emitNewFilter(localeDayjs.dayjs(v).format('YYYY-MM-DD'), localeDayjs.dayjs(v).format('L'))"
+              />
+            </template>
+            <template v-if="showExists">
+              <v-list-item
+                v-if="!newFilter.operator"
+                :active="exists"
+                :title="t('existsFilter')"
+                @click="newFilter.operator = 'exists'; emitNewFilter(' ')"
+              />
+              <v-list-item
+                v-if="!newFilter.operator"
+                :active="nExists"
+                :title="t('nexistsFilter')"
+                @click="newFilter.operator = 'nexists'; emitNewFilter(' ')"
+              />
+            </template>
+          </template>
+          <v-divider />
+        </template>
+
+        <!-- hide column -->
+        <v-list-item
+          v-if="!fixed"
+          :title="t('hide')"
+          class="pl-2"
+          @click="$emit('hide');showMenu=false"
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiEyeOffOutline"
+              size="small"
+            />
+          </template>
+        </v-list-item>
+
+        <!-- fix column to the left -->
+        <v-list-item
+          v-if="!noFix"
+          :class="{'v-item--active v-list-item--active': fixed}"
+          :title="t('fixLeft')"
+          class="pl-2"
+          @click="$emit('fix-col');showMenu=false"
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiFormatHorizontalAlignLeft"
+              size="small"
+            />
+          </template>
+        </v-list-item>
+      </v-list>
+    </v-sheet>
+  </v-menu>
+</template>
+
+<i18n lang="yaml">
+fr:
+  hide: Masquer cette colonne
+  sortAsc: Tri ascendant
+  sortDesc: Tri descendant
+  addFilter: Ajouter un filtre
+  applyFilter: Appliquer le filtre
+  fixLeft: "Fixer la colonne à gauche"
+  showHelp: "Description"
+  searchFilter: Recherche texte libre
+  eqFilter: Égal à une valeur
+  neqFilter: Différent d'une valeur
+  inFilter: Parmi des valeurs
+  ninFilter: À l'exclusion des valeurs
+  gteFilter: Supérieur ou égal à
+  lteFilter: Inférieur ou égal à
+  existsFilter: Est défini
+  nexistsFilter: N'est pas défini
+  startsFilter: Commence par les caractères
+  containsFilter: Contient les caractères
+  eqLabel: égal à
+  orEqLabel: ou égal à
+  neqLabel: différent de
+  andNeqLabel: et différent de
+en:
+  hide: Hide this column
+  sortAsc: Ascending sort
+  sortDesc: Descending sort
+  addFilter: Add a filter
+  applyFilter: Apply filter
+  fixLeft: "Fix the column to the left"
+  showHelp: "Description"
+  searchFilter: Free text search
+  eqFilter: Equal to a value
+  neqFilter: Different from a value
+  inFilter: Among values
+  ninFilter: Excluding values
+  gteFilter: Greater than or equal to
+  lteFilter: Less than or equal to
+  existsFilter: Is defined
+  nexistsFilter: Is not defined
+  startsFilter: Starts with characters
+  containsFilter: Contains characters
+  eqLabel: equal to
+  orEqLabel: or equal to
+  neqLabel: different from
+  andNeqLabel: and different from
+</i18n>
+
+<script setup lang="ts">
+import { mdiEyeOffOutline, mdiFormatHorizontalAlignLeft, mdiSortAscending, mdiSortDescending, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiCheck, mdiMenuDown, mdiMenuUp, mdiFilterVariant, mdiInformation } from '@mdi/js'
+import { type TableHeaderWithProperty } from './use-headers'
+import { type DatasetFilter } from '~/composables/dataset/filters'
+import { formatValue } from '~/composables/dataset/lines'
+import useHeaderFilters from './use-header-filters'
+
+const { header, localEnum, filters, closeOnFilter } = defineProps({
+  header: { type: Object as () => TableHeaderWithProperty, required: true },
+  filters: { type: Array as () => DatasetFilter[], required: true },
+  filterHeight: { type: Number, required: true },
+  fixed: { type: Boolean, default: false },
+  activator: { type: String, required: true },
+  noFix: { type: Boolean, default: false },
+  localEnum: { type: Array, required: false, default: null },
+  closeOnFilter: { type: Boolean, default: false }
+})
+
+const sort = defineModel<1 | -1>('sort')
+
+const emit = defineEmits<{
+  filter: [DatasetFilter],
+  hide: [],
+  'fix-col': []
+}>()
+
+const localeDayjs = useLocaleDayjs()
+const { t } = useI18n()
+
+const showMenu = ref(false)
+const equals = ref<string[]>([])
+const nEquals = ref<string[]>([])
+const startsWith = ref('')
+const search = ref('')
+const contains = ref('')
+const equalsBool = ref<boolean>()
+const nEqualsBool = ref<boolean>()
+const lte = ref<string>()
+const gte = ref<string>()
+const editDate = ref<string>()
+const showHelp = ref(false)
+const exists = ref(false)
+const nExists = ref(false)
+
+const formattedTrue = formatValue(true, header.property, null, localeDayjs)
+const formattedFalse = formatValue(false, header.property, null, localeDayjs)
+
+const { showSearch, showContains, showEnum, showEquals, showStartsWith, showBoolEquals, showNumCompare, showDateCompare, fullEnum, enumDense, showExists, showFilters } = useHeaderFilters(computed(() => header), computed(() => localEnum))
+
+const reversedLabels = computed(() => {
+  const reversedLabels: Record<string, string> = {}
+  for (const key of Object.keys(header.property['x-labels'] || {})) {
+    if (header.property['x-labels']?.[key]) {
+      reversedLabels[header.property['x-labels']?.[key]] = key
+    }
+  }
+  return reversedLabels
+})
+
+watch(equals, () => {
+  if (!showEquals.value) return
+  const newEquals = equals.value.filter(v => !!v).concat([''])
+  if (JSON.stringify(equals.value) !== JSON.stringify(newEquals)) equals.value = newEquals
+}, { deep: true, immediate: true })
+
+watch(nEquals, () => {
+  if (!showEquals.value) return
+  const newNequals = nEquals.value.filter(v => !!v).concat([''])
+  if (JSON.stringify(nEquals.value) !== JSON.stringify(newNequals)) nEquals.value = newNequals
+}, { deep: true, immediate: true })
+
+const toggleMenu = () => {
+  if (!showMenu.value) return
+  emptyFilters()
+  newFilter.value = undefined
+  for (const filter of filters.filter(f => f.property.key === header.property.key)) {
+    if (filter.operator === 'gte') gte.value = filter.value
+    if (filter.operator === 'lte') lte.value = filter.value
+    if (filter.operator === 'starts') startsWith.value = filter.value
+    if (filter.operator === 'search') search.value = filter.value
+    if (filter.operator === 'contains') contains.value = filter.value
+    if (filter.operator === 'exists') exists.value = true
+    if (filter.operator === 'nexists') nExists.value = true
+    if (filter.operator === 'in' || filter.operator === 'eq') {
+      const values = filter.operator === 'eq' ? [filter.value] : filter.value.startsWith('"') ? JSON.parse(`[${filter.value}]`) : filter.value.split(',')
+      if (header.property.type === 'string' || header.property.type === 'number' || header.property.type === 'integer') {
+        equals.value = [...values]
+        if (header.property['x-labels']) {
+          equals.value = equals.value.map(v => header.property['x-labels']?.[v] ?? v)
+        }
+      }
+      if (header.property.type === 'boolean') equalsBool.value = values[0]
+    }
+    if (filter.operator === 'nin' || filter.operator === 'neq') {
+      const values = filter.operator === 'neq' ? [filter.value] : filter.value.startsWith('"') ? JSON.parse(`[${filter.value}]`) : filter.value.split(',')
+      if (header.property.type === 'string' || header.property.type === 'number' || header.property.type === 'integer') {
+        nEquals.value = [...values]
+        if (header.property['x-labels']) {
+          nEquals.value = nEquals.value.map(v => header.property['x-labels']?.[v] ?? v)
+        }
+      }
+      if (header.property.type === 'boolean') nEqualsBool.value = values[0]
+    }
+  }
+}
+
+const toggleEquals = (value: string) => {
+  if (equals.value.includes(value)) equals.value = equals.value.filter(v => v !== value)
+  else equals.value.push(value)
+}
+
+const toggleNEquals = (value: string) => {
+  if (nEquals.value.includes(value)) nEquals.value = nEquals.value.filter(v => v !== value)
+  else nEquals.value.push(value)
+}
+
+const emitEqualsFilter = () => {
+  let values: (string | number)[] = equals.value.filter(v => !!v)
+  if (header.property['x-labels']) {
+    values = values.map(v => reversedLabels.value[v] ?? v)
+  } else if (header.property.type === 'number' || header.property.type === 'integer') {
+    values = values.map(Number)
+  }
+  const formattedValue = values.join(', ')
+  emitFilter({ operator: 'in', value: JSON.stringify(values).slice(1, -1), formattedValue, property: header.property }, false)
+  showMenu.value = false
+}
+
+const emitNEqualsFilter = () => {
+  let values: (string | number)[] = nEquals.value.filter(v => !!v)
+  if (header.property['x-labels']) {
+    values = values.map(v => reversedLabels.value[v] ?? v)
+  } else if (header.property.type === 'number' || header.property.type === 'integer') {
+    values = values.map(Number)
+  }
+  const formattedValue = values.join(', ')
+  emitFilter({ operator: 'nin', value: JSON.stringify(values).slice(1, -1), formattedValue, property: header.property }, false)
+  showMenu.value = false
+}
+
+/* const emitIntervalFilter = () => {
+  if (gte.value) {
+    emitFilter({
+      operator: 'gte',
+      value: gte.value,
+      formattedValue: formatValue(gte.value, header.property, null, localeDayjs),
+      property: header.property
+    })
+  }
+  if (lte.value) {
+    emitFilter({
+      operator: 'lte',
+      value: lte.value,
+      formattedValue: formatValue(lte.value, header.property, null, localeDayjs),
+      property: header.property
+    })
+  }
+} */
+const emitFilter = (filter: DatasetFilter, close = true) => {
+  emit('filter', filter)
+  if (close || closeOnFilter) {
+    showMenu.value = false
+  }
+}
+const emitNewFilter = (value: any, formattedValue?: any) => {
+  formattedValue = formattedValue ?? value
+  const operator = newFilter.value?.operator
+  if (!operator) throw new Error('operator not selected')
+  emit('filter', { operator, property: header.property, value, formattedValue })
+  showMenu.value = false
+}
+const emptyFilters = () => {
+  equals.value = []
+  nEquals.value = []
+  startsWith.value = ''
+  search.value = ''
+  contains.value = ''
+  equalsBool.value = undefined
+  nEqualsBool.value = undefined
+  lte.value = undefined
+  gte.value = undefined
+  editDate.value = undefined
+  exists.value = false
+  nExists.value = false
+}
+const toggleSort = (value: 1 | -1) => {
+  sort.value = sort.value !== value ? value : undefined
+  showMenu.value = false
+}
+
+const newFilter = ref<Partial<DatasetFilter>>()
+</script>
+
+<style>
+.dataset-table-header-actions .v-list-item__prepend {
+  width: 30px;
+}
+
+.dataset-table-header-actions .description-alert {
+  overflow-wrap: break-word;
+  display: block;
+}
+
+.dataset-table-header-actions .description-alert p {
+  margin-bottom: 8px;
+}
+</style>

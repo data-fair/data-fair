@@ -132,6 +132,12 @@
     "privateMetricsUrl": {
       "type": ["string", "null"]
     },
+    "privateAgentsUrl": {
+      "type": ["string", "null"]
+    },
+    "privateOpenapiViewerUrl": {
+      "type": ["string", "null"]
+    },
     "subscriptionUrl": {
       "type": ["string", "null"]
     },

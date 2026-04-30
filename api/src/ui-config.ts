@@ -1,5 +1,6 @@
 import config from '#config'
 
+// ui configuration exported to the frontend SPA
 export const uiConfig = {
   map: config.map as { style: string, beforeLayer: string },
   apiKeysMaxDuration: config.apiKeysMaxDuration as number,
@@ -11,8 +12,16 @@ export const uiConfig = {
   disablePublicationSites: config.disablePublicationSites,
   disableApplications: config.disableApplications,
   compatODS: config.compatODS,
-  adminRole: config.adminRole,
-  contribRole: config.contribRole
+  adminRole: config.adminRole as string,
+  contribRole: config.contribRole as string,
+  subscriptionUrl: config.subscriptionUrl,
+  agentsIntegration: !!config.privateAgentsUrl,
+  metricsIntegration: !!config.privateMetricsUrl,
+  openapiViewerIntegration: !!config.privateOpenapiViewerUrl,
+  extraNavigationItems: config.extraNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
+  extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
+  extraDocLinks: config.extraDocLinks as { icon?: string, href: string, title: string | Record<string, string> }[],
+  brand: config.brand as { logo: string | null, title: string, description: string, url: string | null }
 }
 
 export type UiConfig = typeof uiConfig

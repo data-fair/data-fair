@@ -1,0 +1,4 @@
+{
+  "ignoreRoot": [],
+  "ignore": ["node_modules/", "../dev/"]
+}

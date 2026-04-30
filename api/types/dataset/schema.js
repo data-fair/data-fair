@@ -224,12 +224,12 @@ const datasetProperties = {
         title: {
           type: 'string',
           title: 'Titre',
-          'x-props': { outlined: true, dense: true }
+          layout: { props: { outlined: true, dense: true } }
         },
         description: {
           type: 'string',
           title: 'Description',
-          'x-display': 'markdown'
+          layout: 'markdown'
         },
         includeInCatalogPublications: {
           type: 'boolean',
@@ -246,28 +246,28 @@ const datasetProperties = {
             const: 'file'
           },
           name: {
-            'x-display': 'hidden',
+            layout: 'none',
             type: 'string',
             description: 'Name of the file that was used to create or update this attachment'
           },
           size: {
-            'x-display': 'hidden',
+            layout: 'none',
             type: 'number',
             description: 'Size of the file on disk'
           },
           mimetype: {
-            'x-display': 'hidden',
+            layout: 'none',
             type: 'string',
             description: 'Mime type of the file'
           },
           updatedAt: {
-            'x-display': 'hidden',
+            layout: 'none',
             type: 'string',
             description: 'Date of the last update for this attachment',
             format: 'date-time'
           },
           url: {
-            'x-display': 'hidden',
+            layout: 'none',
             readOnly: true,
             type: 'string',
             title: 'URL'
@@ -298,9 +298,7 @@ const datasetProperties = {
             type: 'string',
             title: 'Nom du fichier',
             description: 'Ce nom doit contenir l\'extension qui doit correspondre au format du fichier téléchargé.',
-            'x-rules': [
-              'hasExtension'
-            ]
+            layout: { rules: ['hasExtension'] }
           },
           targetUrl: {
             type: 'string',
@@ -744,7 +742,7 @@ const datasetProperties = {
   topics: {
     type: 'array',
     title: 'Liste de thématiques',
-    'x-itemTitle': 'title',
+    layout: { itemTitle: 'item.title' },
     items: {
       $ref: 'https://github.com/data-fair/data-fair/topic'
     }
@@ -815,8 +813,8 @@ const datasetProperties = {
     properties: {
       active: { type: 'boolean', title: 'Activer l\'accès par clé d\'API' },
       interval: { type: 'string', title: 'Durée de validité des clés', oneOf: [{ const: 'P1W', title: '1 semaine' }, { const: 'P1M', title: '1 mois' }, { const: 'P1Y', title: '1 année' }] },
-      expiresAt: { type: 'string', format: 'date-time', readOnly: true, 'x-display': 'hidden' },
-      renewAt: { type: 'string', format: 'date-time', readOnly: true, 'x-display': 'hidden' }
+      expiresAt: { type: 'string', format: 'date-time', readOnly: true, layout: 'none' },
+      renewAt: { type: 'string', format: 'date-time', readOnly: true, layout: 'none' }
     }
   },
   esWarning: {
@@ -915,7 +913,7 @@ const dataset = {
       type: 'object',
       required: ['key'],
       properties: {
-        key: { type: 'string', readOnly: true, 'x-display': 'hidden' },
+        key: { type: 'string', readOnly: true, layout: 'none' },
         type: { type: 'string' },
         format: { type: ['string', 'null'] },
         'x-originalName': { type: ['string', 'null'] },

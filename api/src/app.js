@@ -1,5 +1,6 @@
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
+import { trackEmbed } from './nuxt.js'
 import express from 'express'
 import { parsePath as parseUrlPath } from 'ufo'
 import pathToRegexp from 'path-to-regexp'
@@ -39,7 +40,7 @@ export const run = async () => {
   }
 
   if (config.mode.includes('server')) {
-    const limits = await import('./misc/utils/limits.ts')
+    const limits = await import('./limits/router.ts')
     const rateLimiting = await import('./misc/utils/rate-limiting.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
     const { reqIsInternal, reqHost, createSiteMiddleware } = await import('@data-fair/lib-express/index.js')
@@ -140,18 +141,21 @@ export const run = async () => {
     app.use('/api/v1', (await import('./misc/routers/root.ts')).default)
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
-    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./misc/routers/catalog.js')).default)
+    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.js')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
     app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
-    app.use('/api/v1/stats', apiKey('stats'), (await import('./misc/routers/stats.ts')).default)
-    app.use('/api/v1/settings', (await import('./misc/routers/settings.ts')).default)
-    app.use('/api/v1/admin', (await import('./misc/routers/admin.js')).default)
-    app.use('/api/v1/identities', (await import('./misc/routers/identities.js')).default)
-    app.use('/api/v1/activity', (await import('./misc/routers/activity.js')).default)
+    app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
+    app.use('/api/v1/settings', (await import('./settings/router.ts')).default)
+    app.use('/api/v1/admin', (await import('./admin/router.js')).default)
+    app.use('/api/v1/identities', (await import('./identities/router.js')).default)
+    app.use('/api/v1/activity', (await import('./activity/router.js')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
       app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./api-compat/ods/index.ts')).default)
+    }
+    if (process.env.NODE_ENV === 'development') {
+      app.use('/api/v1/test-env', (await import('./misc/routers/test-env.ts')).default)
     }
 
     app.use('/api/', (req, res) => {
@@ -174,44 +178,52 @@ export const run = async () => {
 
     const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
 
-    const unsafePaths = [
-      '/dataset/:id/table-edit',
-      '/dataset/:id/form',
-      '/application/:id/config',
-      '/workflow/update-dataset',
-      '/settings',
-      '/settings/:type/:id/licenses',
-      '/settings/:type/:id/topics',
-      '/settings/:type/:id/webhooks',
-      '/settings/:type/:id/datasets-metadata',
+    const embedUnsafePaths = [
+      '/embed/dataset/:id/table-edit',
+      '/embed/dataset/:id/form',
+      '/embed/application/:id/config',
+      '/embed/workflow/update-dataset',
+      '/embed/settings/:type/:id/licenses',
+      '/embed/settings/:type/:id/topics',
+      '/embed/settings/:type/:id/webhooks',
+      '/embed/settings/:type/:id/datasets-metadata',
     ].map(p => pathToRegexp.match(p))
-    app.use('/embed', await createSpaMiddleware(resolve(import.meta.dirname, '../../embed-ui/dist'), uiConfig, {
-      ignoreSitePath: true,
-      csp: {
-        nonce: true,
-        header: (req) => {
-          const urlPath = parseUrlPath(req.url).pathname
-          const directives = { ...defaultNonceCSPDirectives }
-          for (const p of unsafePaths) {
-            if (p(urlPath)) {
-              // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
-              directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
-              directives['connect-src'] = "'self' https:"
-            }
-          }
-          // all embed pages allow cross domain iframe integration
-          directives['frame-ancestors'] = "'self' http: https:"
-          return directives
-        }
-      },
-      privateDirectoryUrl: config.privateDirectoryUrl
-    }))
+
+    app.use('/embed', trackEmbed)
 
     app.use('/next-ui', (req, res) => {
       // next-ui urls were a temporary alternate UI we redirect
       // them in case some are still in use somewhere
       res.redirect(reqSiteUrl(req) + '/data-fair' + req.url)
     })
+
+    app.use('/', await createSpaMiddleware(resolve(import.meta.dirname, '../../ui/dist'), uiConfig, {
+      ignoreSitePath: true,
+      csp: {
+        nonce: true,
+        header: (req) => {
+          const urlPath = parseUrlPath(req.url).pathname
+          const directives = { ...defaultNonceCSPDirectives }
+          if (urlPath.startsWith('/embed')) {
+            for (const p of embedUnsafePaths) {
+              if (p(urlPath)) {
+                directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+                directives['connect-src'] = "'self' https:"
+              }
+            }
+            // all embed pages allow cross domain iframe integration
+            directives['frame-ancestors'] = "'self' http: https:"
+          } else {
+            // many back-office pages use vjsf
+            directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+            directives['connect-src'] = "'self' https:"
+          }
+
+          return directives
+        }
+      },
+      privateDirectoryUrl: config.privateDirectoryUrl
+    }))
 
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')
@@ -262,10 +274,10 @@ export const run = async () => {
     const { readApiKey } = await import('./misc/utils/api-key.ts')
     await Promise.all([
       (await import('./misc/utils/cache.js')).init(),
-      (await import('./remote-services/utils.ts')).init(),
+      (await import('./remote-services/service.ts')).init(),
       (await import('./base-applications/router.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
-        if (process.env.NODE_ENV === 'test') {
+        if (process.env.NODE_ENV === 'development') {
           // TODO: remove this ugly exception, this code should be tested
           return true
         }
@@ -284,10 +296,6 @@ export const run = async () => {
       else next()
     })
 
-    const nuxt = await (await import('./nuxt.js')).default()
-    app.set('nuxt', nuxt.instance)
-    app.use(nuxt.trackEmbed)
-    app.use(nuxt.render)
     app.set('ui-ready', true)
 
     if (config.listenWhenReady) {

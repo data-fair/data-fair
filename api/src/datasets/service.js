@@ -68,7 +68,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
-export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
+export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState, options = {}) => {
   const explain = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
@@ -95,11 +95,25 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
-    extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
+    if (options.catalogMode) {
+      extraFilters.push({ publicationSites: `${publicationSite.type}:${publicationSite.id}` })
+    } else {
+      // master-data datasets are cross-domain reference data and must remain reachable
+      // from a per-domain back-office (e.g. as virtual-dataset children, or initFrom source)
+      // TODO: when remote-services are deprecated and master-data visibility is managed
+      // directly on the datasets make these filters more complete to better reflect account permissions.
+      extraFilters.push({
+        $or: [
+          { 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id },
+          { 'masterData.virtualDatasets.active': true },
+          { 'masterData.standardSchema.active': true }
+        ]
+      })
+    }
   }
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
-  const sort = findUtils.sort(reqQuery.sort, reqQuery.q)
+  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
   const project = findUtils.project(reqQuery.select, [], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
@@ -202,6 +216,46 @@ export const memoizedGetDataset = memoize(getDataset, {
   maxAge: 1000 * 30, // 30s
   length: 6 // in memoized mode ignore db, acceptedStatuses and reqBody
 })
+
+/**
+ * Like getDataset but validates the memoized cache with a lightweight updatedAt check.
+ * This avoids full MongoDB reads when the dataset hasn't changed, while still guaranteeing freshness.
+ * Returns cached results directly when fresh (protected by assertImmutable in dev/test).
+ */
+export const getDatasetFresh = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody) => {
+  // first try the memoized cache
+  const cached = await memoizedGetDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  if (!cached.dataset) {
+    // cache says not found — but is the cache stale? Do a lightweight check
+    const fresh = await db.collection('datasets').findOne({ _uniqueRefs: datasetId }, { projection: { updatedAt: 1, _id: 0 } })
+    if (!fresh) return cached // dataset really doesn't exist
+    // dataset exists but cache missed it — do a full read
+    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  }
+
+  // cache has a result — check if it's still fresh via a lightweight query
+  const projection = { updatedAt: 1, finalizedAt: 1, status: 1, errorStatus: 1, errorRetry: 1, _id: 0 }
+  if (useDraft) projection['draft.updatedAt'] = 1
+  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection })
+  if (!fresh) return {} // dataset was deleted
+
+  // check top-level updatedAt, finalizedAt and status
+  if (!cached.datasetFull || cached.datasetFull.updatedAt !== fresh.updatedAt || cached.datasetFull.finalizedAt !== fresh.finalizedAt || cached.datasetFull.status !== fresh.status || cached.datasetFull.errorStatus !== fresh.errorStatus || cached.datasetFull.errorRetry !== fresh.errorRetry) {
+    return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+  }
+
+  // when using draft mode, also check draft.updatedAt to detect draft-only changes
+  if (useDraft) {
+    const cachedDraftUpdatedAt = cached.datasetFull.draft?.updatedAt
+    const freshDraftUpdatedAt = fresh.draft?.updatedAt
+    if (cachedDraftUpdatedAt !== freshDraftUpdatedAt) {
+      return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
+    }
+  }
+
+  // cache is fresh — return cached result directly (assertImmutable proxy guards against mutations in dev/test)
+  return cached
+}
 
 /**
  *

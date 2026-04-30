@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "preserve",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "paths": {
+      "#api/types": ["../api/types/index.ts"],
+      "#api-doc/*": ["../api/doc/*"],
+      "#shared/*": ["../shared/*"],
+      "~/*": ["./src/*"],
+      "@data-fair/lib-vue/edit-fetch.js": ["./src/composables/df-local/edit-fetch-local.ts"]
+    },
+
+    "allowJs": true,
+  },
+  "include": [
+    "dts/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue"
+  ]
+}

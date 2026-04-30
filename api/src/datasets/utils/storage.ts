@@ -3,7 +3,7 @@ import * as esUtils from '../es/index.ts'
 import * as restDatasetsUtils from './rest.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
-import * as limits from '../../misc/utils/limits.ts'
+import * as limits from '../../limits/service.ts'
 import config from '#config'
 import mongo from '#mongo'
 import debug from 'debug'
@@ -202,10 +202,7 @@ export const updateTotalStorage = async (owner: AccountKeys, checkRemaining = fa
       debugLimits('exceedLimitIndexed/updateTotalStorage', { owner, remaining })
       throw httpError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
     }
-    if (remaining.nbDatasets === 0) {
-      debugLimits('exceedLimitNbDatasets/updateTotalStorage', { owner, remaining })
-      throw httpError(429, 'Vous avez atteint la limite de votre nombre de jeux de données.')
-    }
+    // No check for nb_datasets => Already checked at creation time
   }
   return totalStorage
 }

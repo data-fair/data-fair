@@ -7,30 +7,26 @@ layout {
       }
       pane name="deps" {
         command "bash"
-        args "-ic" "npm run dev-deps && watch -n 4 \"docker compose ps --all --format 'table {{.Name}}\t{{.Status}}'\""
+        args "-ic" "npm run dev-deps"
+      }
+      pane name="mock" {
+        command "bash"
+        args "-ic" "npm run dev-mock"
       }
     }
     pane {
       split_direction "vertical"
-      pane name="embed-ui" {
-        command "bash"
-        args "-ic" "nvm use && npm -w embed-ui run dev"
-      }
       pane name="ui" {
         command "bash"
-        args "-ic" "nvm use && npm run dev-ui"
+        args "-ic" "nvm use && npm -w ui run dev"
       }
       pane name="api" {
         command "bash"
         args "-ic" "nvm use && npm run dev-api"
       }
-      pane name="worker" {
-        command "bash"
-        args "-ic" "nvm use && npm run dev-worker"
-      }
     }
     pane size=1 borderless=true {
         command "bash"
-        args "-ic" "echo -n -e \"Dev server available at \\e[1;96mhttp://localhost:$NGINX_PORT1\\033[0m\""
+        args "-ic" "echo -n -e \"Dev server available at \\e[1;96mhttp://$DEV_HOST:$NGINX_PORT1\\033[0m\""
     }
 }

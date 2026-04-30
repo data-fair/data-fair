@@ -15,6 +15,10 @@ const resourceTypesLabels = {
 }
 
 export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string, acceptMissing?: boolean) {
+  // pre-compute the x-operation header since it is constant per route
+  const operation = { class: operationClass, id: operationId, track: trackingCategory }
+  const operationHeader = JSON.stringify(operation)
+
   return function (req: RequestWithResource, res: Response, next: NextFunction) {
     const sessionState = reqSession(req)
 
@@ -37,7 +41,14 @@ export const middleware = function (operationId: string, operationClass: string,
           if (org.department) name += ' / ' + (org.departmentName || org.department)
           const altSessionState: SessionState = { ...sessionState, account: { type: 'organization', ...org }, accountRole: org.role }
           if (can(req.resourceType, req.resource, operationId, altSessionState, req.bypassPermissions)) {
-            res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
+            // expose x-owner so the UI can offer a "switch active account" action without parsing the error body
+            if (req.resource?.owner) {
+              const ownerKey = req.resource.owner.department
+                ? { type: req.resource.owner.type, id: req.resource.owner.id, department: req.resource.owner.department } as AccountKeys
+                : { type: req.resource.owner.type, id: req.resource.owner.id } as AccountKeys
+              res.setHeader('x-owner', JSON.stringify(ownerKey))
+            }
+            res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} (${org.id}) dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
             return
           }
         }
@@ -52,15 +63,17 @@ export const middleware = function (operationId: string, operationClass: string,
     req.publicOperation = can(req.resourceType, req.resource, operationId, { lang: 'fr' })
 
     // these headers can be used to apply other permission/quota/metrics on the gateway
-    if (req.resource) res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title ?? '') }))
-    if (req.resource && req.resource.owner) {
-      const ownerHeader: AccountKeys = { type: req.resource.owner.type, id: req.resource.owner.id }
-      if (req.resource.owner.department) ownerHeader.department = req.resource.owner.department
-      res.setHeader('x-owner', JSON.stringify(ownerHeader))
+    if (req.resource) {
+      res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title ?? '') }))
+      if (req.resource.owner) {
+        const ownerKey = req.resource.owner.department
+          ? { type: req.resource.owner.type, id: req.resource.owner.id, department: req.resource.owner.department } as AccountKeys
+          : { type: req.resource.owner.type, id: req.resource.owner.id } as AccountKeys
+        res.setHeader('x-owner', JSON.stringify(ownerKey))
+      }
     }
-    const operation = { class: operationClass, id: operationId, track: trackingCategory };
-    (req as any).operation = operation
-    res.setHeader('x-operation', JSON.stringify(operation))
+    ;(req as any).operation = operation
+    res.setHeader('x-operation', operationHeader)
     next()
   }
 }
@@ -167,7 +180,11 @@ const permissionOperations = (resourceType: ResourceType, permission: Permission
     operations.add(op)
   }
   for (const opClass of permission.classes ?? []) {
-    for (const op of apiDocsUtil.operationsClasses[resourceType][opClass]) {
+    const classOps = apiDocsUtil.operationsClasses[resourceType][opClass]
+    if (!classOps) {
+      continue
+    }
+    for (const op of classOps) {
       operations.add(op)
     }
   }
@@ -332,7 +349,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
           }
         }
       }
-      await resources.updateOne({ id: resource.id }, { $set: { permissions: req.body } })
+      await resources.updateOne({ id: resource.id }, { $set: { permissions: req.body, updatedAt: new Date().toISOString() } })
 
       if (!wasPublic && willBePublic && onPublicCallback) {
         await onPublicCallback(req, { ...resource, permissions: req.body })

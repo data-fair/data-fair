@@ -1,16 +1,16 @@
 export default (admin = false) => ({
   type: 'array',
   title: 'Portails',
-  'x-options': admin ? {} : { arrayOperations: ['update'] },
   layout: {
     title: '',
+    listActions: admin ? ['add', 'edit', 'delete'] : ['edit'],
     messages: {
       addItem: 'Add a portal',
       'x-i18n-addItem': {
         fr: 'Ajouter un portail'
       }
     },
-    itemTitle: 'item.title + "(" + item.url + ")"'
+    itemTitle: 'item.title ? item.title + (item.url ? " (" + item.url + ")" : "") : (item.url || "")'
   },
   items: {
     type: 'object',
@@ -27,18 +27,18 @@ export default (admin = false) => ({
         title: 'Type de site',
         description: 'Utilisé pour séparer la gestion des sites par groupes.',
         default: 'data-fair-portals',
-        layout: admin ? 'none' : {}
+        layout: admin ? {} : 'none'
       },
       id: {
         type: 'string',
         title: 'Identifiant',
         description: 'Cet identifiant doit être unique pour la même valeur de "Type de site".',
-        layout: admin ? 'none' : {}
+        layout: admin ? {} : 'none'
       },
       department: {
         type: 'string',
         title: 'Département',
-        layout: admin ? 'none' : {}
+        layout: admin ? {} : 'none'
       },
       title: {
         type: 'string',
@@ -60,19 +60,19 @@ export default (admin = false) => ({
         title: 'Site privé (déprécié)',
         description: 'Dépend de la configuration de l\'authentification sur le portail. Si coché il sera permis de publier des ressources dont les permissions ne permettent pas l\'accès au public.',
         default: false,
-        layout: admin ? 'none' : {}
+        layout: 'none'
       },
       datasetUrlTemplate: {
         type: 'string',
         title: 'Adresse des pages de jeux de données',
         description: 'Exemple: https://mon-portail/datasets/{id}',
-        layout: admin ? 'none' : {}
+        layout: admin ? {} : 'none'
       },
       applicationUrlTemplate: {
         type: 'string',
         title: 'Adresse des pages de visualisations',
         description: 'Exemple: https://mon-portail/reuses/{id}',
-        layout: admin ? 'none' : {}
+        layout: admin ? {} : 'none'
       },
       settings: {
         type: 'object',
@@ -81,14 +81,29 @@ export default (admin = false) => ({
             title: 'Pré-production',
             description: 'Si coché les contributeurs pourront publier des ressources sans solliciter les administrateurs',
             type: 'boolean',
-            default: false
+            default: false,
+            readOnly: !admin
+          },
+          contributorDepartments: {
+            type: 'array',
+            title: 'Départements contributeurs',
+            description: 'Départements dont les administrateurs peuvent publier sur ce portail, comme s\'ils en étaient propriétaires.',
+            items: { type: 'string' },
+            default: [],
+            readOnly: !admin
           },
           datasetsRequiredMetadata: {
             title: 'Métadonnées requises pour les jeux de données',
             type: 'array',
-            'x-fromData': 'context.datasetsMetadata',
             items: {
               type: 'string'
+            },
+            layout: {
+              getItems: {
+                expr: 'context.DatasetsMetadata',
+                itemKey: 'item.key',
+                itemTitle: 'item.title'
+              }
             }
           }
         }

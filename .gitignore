@@ -20,3 +20,7 @@ node_modules
 /tmp
 .env
 .vscode
+dev/logs/
+test-results/
+/benchmark/results/*.json
+/docs/**/*.pdf

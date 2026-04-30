@@ -1,21 +1,31 @@
 import neostandard from 'neostandard'
 import pluginVue from 'eslint-plugin-vue'
+import pluginVuetify from 'eslint-plugin-vuetify'
+import dfLibRecommended from '@data-fair/lib-utils/eslint/recommended.js'
+
+// eslint-plugin-vuetify's flat/base already registers the `vue` plugin, and
+// ESLint 9.39+ rejects redefining a plugin — strip `plugins` from vue's flat config.
+const vueFlatRecommended = pluginVue.configs['flat/recommended'].map(({ plugins, ...rest }) => rest)
 
 export default [
-  ...pluginVue.configs['flat/vue2-recommended'],
-  ...neostandard(),
+  ...dfLibRecommended,
+  ...vueFlatRecommended,
+  ...pluginVuetify.configs['flat/recommended'],
+  ...neostandard({ ts: true }),
   {
     rules: {
-      'vue/no-v-html': 'off',
+      'vue/require-default-prop': 'off',
       'vue/multi-word-component-names': 'off',
-      'node/no-deprecated-api': 'off',
-      'vue/no-mutating-props': 'off',
-      'vue/require-prop-types': 'off',
-      'vue/no-useless-template-attributes': 'off',
-      'vue/singleline-html-element-content-newline': 'off',
-      'vue/valid-v-slot': 'off',
-      'vue/no-v-text-v-html-on-component': 'off'
+      'no-undef': 'off' // typescript takes care of this with autoImport support
     }
   },
-  { ignores: ['nuxt-dist/*', 'node_modules/*'] },
+  {
+    files: ['**/*.vue'],
+    languageOptions: {
+      parserOptions: {
+        parser: '@typescript-eslint/parser'
+      }
+    }
+  },
+  { ignores: ['dist/*', 'dts/*', 'src/components/vjsf/*'] },
 ]

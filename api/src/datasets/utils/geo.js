@@ -216,7 +216,7 @@ export const geometry2fields = async (dataset, doc) => {
 export const result2geojson = (esResponse, flatten) => {
   return {
     type: 'FeatureCollection',
-    total: esResponse.hits.total.value,
+    total: esResponse.hits.total?.value,
     features: esResponse.hits.hits.map(hit => {
       const properties = hit._source
       let geometry = properties._geoshape

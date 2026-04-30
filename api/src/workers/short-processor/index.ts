@@ -73,7 +73,7 @@ export const finalize = async function (dataset: Dataset) {
   await finalize.default(dataset)
 }
 
-if (process.env.NODE_ENV === 'test') {
+if (process.env.NODE_ENV === 'development') {
   const nock = (await import('nock')).default
   // fake catalog
   nock('http://test-catalog.com')

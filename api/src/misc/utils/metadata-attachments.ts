@@ -6,7 +6,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import { metadataAttachmentsDir as datasetAttachmentsDir } from '../../datasets/utils/files.ts'
 import { attachmentsDir as applicationAttachmentsDir } from '../../applications/utils.ts'
-import * as limits from './limits.ts'
+import * as limits from '../../limits/service.ts'
 import filesStorage from '#files-storage'
 
 const debug = debugLib('attachments')

@@ -30,6 +30,8 @@ module.exports = {
   privatePortalsManagerUrl: null,
   privateProcessingsUrl: null,
   privateMetricsUrl: null,
+  privateAgentsUrl: null,
+  privateOpenapiViewerUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
   mongo: {

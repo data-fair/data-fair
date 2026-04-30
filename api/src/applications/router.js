@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid'
 import applicationAPIDocs from '../../contract/application-api-docs.js'
 import * as ajv from '../misc/utils/ajv.ts'
 import applicationKeys from '../../contract/application-keys.js'
-import * as baseAppsUtils from '../base-applications/utils.js'
+import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as usersUtils from '../misc/utils/users.ts'
 import * as findUtils from '../misc/utils/find.js'
@@ -187,7 +187,7 @@ const readApplication = async (req, res, next) => {
 const readBaseApp = async (req, res, next) => {
   req.baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url })
   if (!req.baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
-  baseAppsUtils.clean(req.publicBaseUrl, req.baseApp)
+  cleanBaseApp(req.publicBaseUrl, req.baseApp)
   next()
 }
 
@@ -230,7 +230,7 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 
 // PUT used to create or update
 const attemptInsert = async (req, res, next) => {
-  const { returnValid } = await import('#types/application/index.js')
+  const { returnValid } = await import('#types/application/index.ts')
   const newApplication = returnValid(await initNew(req, req.params.applicationId))
   const sessionState = reqSession(req)
 
@@ -472,7 +472,9 @@ const writeConfig = async (req, res) => {
     { id: req.params.applicationId },
     {
       $unset: {
-        errorMessage: ''
+        errorMessage: '',
+        configurationDraft: '',
+        errorMessageDraft: ''
       },
       $set: {
         configuration: appConfig,
@@ -488,6 +490,7 @@ const writeConfig = async (req, res) => {
 
   await journals.log('applications', application, { type: 'config-updated' })
   await syncDatasets({ configuration: req.body })
+
   res.status(200).json(req.body)
 }
 router.put('/:applicationId/config', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
@@ -495,7 +498,11 @@ router.put('/:applicationId/configuration', readApplication, permissions.middlew
 
 // Configuration draft management
 router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
-  await refreshConfigDatasetsRefs(req, req.application, true, true)
+  // schemaOnly: the consumer is the config editor (vjsf), which strips fields not in the
+  // app schema. Full enrichment caused phantom drafts on mount (diff between server-enriched
+  // configDraft and vjsf-normalized editConfig). We keep the refresh for schema-declared keys
+  // (e.g. dataset title) but skip extras like slug and non-schema select fields.
+  await refreshConfigDatasetsRefs(req, req.application, true, true, true)
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
@@ -550,7 +557,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
 })
 
 router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), readBaseApp, cacheHeaders.noCache, async (req, res) => {
-  res.send(baseAppsUtils.clean(req.publicBaseUrl, req.baseApp, req.publicBaseUrl, req.query.html))
+  res.send(cleanBaseApp(req.publicBaseUrl, req.baseApp, req.publicBaseUrl, req.query.html))
 })
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
@@ -650,7 +657,7 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
 })
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {
-  await filesStorage.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
+  await filesStorage.removeFile(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
   await updateStorage(req.application)
   res.status(204).send()
 })

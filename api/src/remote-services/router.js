@@ -14,7 +14,7 @@ import mongo from '#mongo'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as rateLimiting from '../misc/utils/rate-limiting.ts'
 import { httpAgent, httpsAgent } from '../misc/utils/http-agents.js'
-import { clean, validateOpenApi, initNew, computeActions } from './utils.ts'
+import { clean, validateOpenApi, initNew, computeActions } from './operations.ts'
 import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -256,7 +256,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
   targetUrl.search = incomingUrl.searchParams
 
   const options = {
-    host: targetUrl.host,
+    hostname: targetUrl.hostname,
     port: targetUrl.port,
     protocol: targetUrl.protocol,
     path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
@@ -302,7 +302,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
       }
     })
     req.on('error', err => {
-      if (timedout) {
+      if (timedout || err.code === 'ERR_SOCKET_TIMEOUT' || err.code === 'ECONNRESET') {
         res.status(504).type('text/plain').send('remote-service timed out')
         resolve()
       } else {

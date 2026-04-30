@@ -7,7 +7,7 @@ export default {
       id: {
         type: 'string',
         readOnly: true,
-        'x-display': 'hidden'
+        layout: 'none'
       },
       title: { type: 'string' }
     }

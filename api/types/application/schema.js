@@ -128,7 +128,7 @@ export default {
     topics: {
       type: 'array',
       title: 'Liste de thématiques',
-      'x-itemTitle': 'title',
+      layout: { itemTitle: 'item.title' },
       items: {
         $ref: 'https://github.com/data-fair/data-fair/topic'
       }
@@ -150,31 +150,31 @@ export default {
           title: {
             type: 'string',
             title: 'Titre',
-            'x-props': { outlined: true, dense: true }
+            layout: { props: { outlined: true, dense: true } }
           },
           name: {
-            'x-display': 'hidden',
+            layout: 'none',
             type: 'string',
             description: 'Name of the file that was used to create or update this attachment'
           },
           size: {
-            'x-display': 'hidden',
+            layout: 'none',
             type: 'number',
             description: 'Size of the file on disk'
           },
           mimetype: {
-            'x-display': 'hidden',
+            layout: 'none',
             type: 'string',
             description: 'Mime type of the file'
           },
           updatedAt: {
-            'x-display': 'hidden',
+            layout: 'none',
             type: 'string',
             description: 'Date of the last update for this attachment',
             format: 'date-time'
           },
           url: {
-            'x-display': 'hidden',
+            layout: 'none',
             readOnly: true,
             type: 'string',
             title: 'URL'

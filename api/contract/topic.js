@@ -6,24 +6,28 @@ export default {
     id: {
       type: 'string',
       readOnly: true,
-      'x-display': 'hidden'
+      layout: 'none'
     },
     title: {
       type: 'string'
     },
     color: {
       type: 'string',
-      'x-display': 'color-picker'
+      layout: { comp: 'color-picker' }
     },
     icon: {
       title: 'Icône',
       description: 'Il est possible de consulter plus facilement la liste des icones disponibles sur <a href="https://materialdesignicons.com" target="_blank">ce site</a>.',
       type: 'object',
-      'x-fromUrl': 'https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}',
-      'x-itemKey': 'name',
-      'x-itemTitle': 'name',
-      'x-itemIcon': 'name',
-      'x-itemsProp': 'results',
+      layout: {
+        getItems: {
+          url: 'https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}',
+          itemKey: 'name',
+          itemTitle: 'name',
+          itemIcon: 'name',
+          itemsResults: 'results'
+        }
+      },
       properties: {
         name: {
           type: 'string'

@@ -1,0 +1,11 @@
+{
+  "name": "@data-fair/nuxt-server",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Isolated nuxt-start wrapper for legacy UI server (Vue 2). Will be deprecated with the legacy ui workspace.",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "nuxt-start": "^2.18.1"
+  }
+}

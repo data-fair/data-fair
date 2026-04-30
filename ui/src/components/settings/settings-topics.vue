@@ -1,0 +1,31 @@
+<template>
+  <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+    <v-form v-model="valid">
+      <vjsf
+        v-model="topics"
+        :schema="settingsSchema.properties.topics"
+        :options="vjsfOptions"
+      />
+    </v-form>
+  </v-defaults-provider>
+</template>
+
+<script setup lang="ts">
+import { type Settings, settingsSchema } from '#api/types'
+import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
+
+const topics = defineModel<Settings['topics']>()
+const valid = defineModel<boolean>('valid', { default: true })
+
+const { locale } = useI18n()
+
+const vjsfOptions = computed<VjsfOptions>(() => ({
+  readOnlyPropertiesMode: 'hide',
+  validateOn: 'input',
+  updateOn: 'blur',
+  density: 'comfortable',
+  xI18n: true,
+  locale: locale.value
+}))
+
+</script>

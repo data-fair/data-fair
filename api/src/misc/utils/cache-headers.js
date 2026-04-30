@@ -1,17 +1,11 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import useragent from 'useragent'
 import debugLib from 'debug'
 
 const debug = debugLib('cache-headers')
 
 export const setNoCache = (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no')
-  // compatibility with older IE
-  // cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
-  if (useragent.is(req.headers['user-agent']).ie) {
-    res.setHeader('Expires', '-1')
-  }
   res.setHeader('Cache-Control', 'must-revalidate, private, max-age=0')
 }
 

@@ -4,6 +4,7 @@ services:
     image: nginx:1.23.1-alpine
     network_mode: host
     environment:
+      - DEV_HOST=${DEV_HOST}
       - NGINX_PORT1=${NGINX_PORT1}
       - NGINX_PORT2=${NGINX_PORT2}
       - DEV_API_PORT=${DEV_API_PORT}
@@ -13,6 +14,7 @@ services:
       - OAV_PORT=${OAV_PORT}
       - EVENTS_PORT=${EVENTS_PORT}
       - CATALOGS_PORT=${CATALOGS_PORT}
+      - AGENTS_PORT=${AGENTS_PORT}
     volumes:
       - ./dev/resources/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
 
@@ -70,9 +72,9 @@ services:
     environment:
       - PORT=${SD_PORT}
       - DEBUG=webhooks,auth
-      - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
-      - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:${NGINX_PORT1}/api/v1/identities", "key": "dev_secret"}]'
-      - PUBLIC_URL=http://localhost:${NGINX_PORT1}/simple-directory
+      - ADMINS=["alban.mouton@koumoul.com", "test_superadmin@test.com"]
+      - 'IDENTITIES_WEBHOOKS=[{"base": "http://${DEV_HOST}:${NGINX_PORT1}/api/v1/identities", "key": "dev_secret"}]'
+      - PUBLIC_URL=http://${DEV_HOST}:${NGINX_PORT1}/simple-directory
       - PRIVATE_EVENTS_URL=http://events:${EVENTS_PORT}
       - MAILDEV_ACTIVE=true
       - STORAGE_TYPE=file
@@ -87,6 +89,7 @@ services:
       - MANAGE_DEPARTMENTS=true
       - MANAGE_PARTNERS=true
       - MANAGE_SITES=true
+      - ACCEPT_UNKNOWN_SITE=true
       - LIST_USERS_MODE=admin
       - LIST_ORGANIZATIONS_MODE=authenticated
       - OBSERVER_ACTIVE=false
@@ -108,8 +111,8 @@ services:
     environment:
       - PORT=${OAV_PORT}
       - USE_SIMPLE_DIRECTORY=true
-      - PRIVATE_DIRECTORY_URL=http://localhost:${NGINX_PORT1}/simple-directory
-      - ALLOWED_URLS={"general":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/api-docs.json","dataset":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/datasets/{id}/api-docs.json","privateDataset":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/datasets/{id}/private-api-docs.json","application":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/applications/{id}/api-docs.json","remoteService":"http://localhost:${NGINX_PORT1}/data-fair/api/v1/remote-services/{id}/api-docs.json"}
+      - PRIVATE_DIRECTORY_URL=http://${DEV_HOST}:${NGINX_PORT1}/simple-directory
+      - ALLOWED_URLS={"general":"http://${DEV_HOST}:${NGINX_PORT1}/data-fair/api/v1/api-docs.json","dataset":"http://${DEV_HOST}:${NGINX_PORT1}/data-fair/api/v1/datasets/{id}/api-docs.json","privateDataset":"http://${DEV_HOST}:${NGINX_PORT1}/data-fair/api/v1/datasets/{id}/private-api-docs.json","application":"http://${DEV_HOST}:${NGINX_PORT1}/data-fair/api/v1/applications/{id}/api-docs.json","remoteService":"http://${DEV_HOST}:${NGINX_PORT1}/data-fair/api/v1/remote-services/{id}/api-docs.json"}
 
   capture:
     profiles:
@@ -120,7 +123,7 @@ services:
     environment:
       - PORT=${CAPTURE_PORT}
       - DEBUG=capture
-      - PUBLIC_URL=http://localhost:${NGINX_PORT1}/capture
+      - PUBLIC_URL=http://${DEV_HOST}:${NGINX_PORT1}/capture
       - ONLY_SAME_HOST=false
       - PROMETHEUS_ACTIVE=false
       - PUPPETEER_ARGS=["--no-sandbox"]
@@ -163,6 +166,20 @@ services:
   #     - DATA_DIR=/data
   #   volumes:
   #     - ./data/catalogs:/data
+
+  agents:
+    profiles:
+      - dev
+    image: ghcr.io/data-fair/agents:main
+    network_mode: host
+    depends_on:
+      - mongodb
+    environment:
+      - PORT=${AGENTS_PORT}
+      - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
+      - MONGO_URL=mongodb://localhost:${MONGO_PORT}/agents
+      - CIPHER_PASSWORD=test
+      - OBSERVER_ACTIVE=false
 
   clamav:
     image: clamav/clamav:1.5.1
