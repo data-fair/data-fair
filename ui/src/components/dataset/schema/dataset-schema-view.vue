@@ -1,15 +1,24 @@
 <template>
   <v-data-table-virtual
     v-if="dataset?.schema"
+    :expanded="expanded"
     :group-by="dataset.schema.some(f => 'x-group' in f) ? [{ key: 'x-group' }] : []"
     :headers="headers"
-    :items="dataset.schema.filter(f => !f['x-calculated'])"
+    :items="visibleFields"
+    :height="height"
+    item-value="key"
     density="comfortable"
     hide-default-footer
     fixed-header
+    show-expand
+    class="bg-background"
+    @update:expanded="onExpandedUpdate"
   >
     <template #header.data-table-group>
       {{ t('group') }}
+    </template>
+    <template #header.data-table-expand>
+      <dataset-schema-download />
     </template>
     <template #item.title="{ item }">
       {{ item.title || item['x-originalName'] || item.key }}
@@ -17,11 +26,27 @@
     <template #item.type="{ item }">
       {{ propTypeTitle(item) }}
     </template>
-    <template #item.x-refersTo="{ item }">
-      {{ vocabulary && item['x-refersTo'] && vocabulary[item['x-refersTo']]?.title }}
-    </template>
     <template #item.description="{ item }">
-      <p v-safe-html="item.description || (vocabulary && item['x-refersTo'] && vocabulary[item['x-refersTo']]?.description)" />
+      {{ descriptionFor(item) }}
+    </template>
+    <template #item.data-table-expand="{ internalItem, isExpanded, toggleExpand }">
+      <v-btn
+        :icon="isExpanded(internalItem) ? mdiClose : mdiInformationOutline"
+        :title="isExpanded(internalItem) ? t('collapse') : t('moreInfo')"
+        variant="text"
+        size="small"
+        @click="toggleExpand(internalItem)"
+      />
+    </template>
+    <template #expanded-row="{ columns, item }">
+      <tr>
+        <td
+          :colspan="columns.length"
+          class="pa-0"
+        >
+          <dataset-schema-field-details :field="item" />
+        </td>
+      </tr>
     </template>
   </v-data-table-virtual>
 </template>
@@ -32,30 +57,50 @@ fr:
   key: Clé
   title: Libellé
   type: Type
-  x-refersTo: Concept
   description: Description
+  moreInfo: Plus d'infos
+  collapse: Réduire
 en:
   group: Group
   key: Key
   title: Title
   type: Type
-  x-refersTo: Concept
   description: Description
+  moreInfo: More info
+  collapse: Collapse
 </i18n>
 
 <script setup lang="ts">
-import { propTypeTitle } from '~/utils/dataset'
+import { mdiClose, mdiInformationOutline } from '@mdi/js'
+import type { SchemaProperty } from '#api/types'
 
 const { t } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 const { vocabulary } = useStore()
 const { dataset } = useDatasetStore()
 
-const headers = [
-  { key: 'key', title: t('key') },
-  { key: 'title', title: t('title') },
-  { key: 'type', title: t('type') },
-  { key: 'x-refersTo', title: t('x-refersTo') },
-  { key: 'description', title: t('description') }
-]
+defineProps<{ height?: number }>()
 
+const truncateStyle = 'max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap'
+const headers = computed(() => [
+  { key: 'key', title: t('key'), width: '160px' },
+  { key: 'title', title: t('title'), width: '25%', cellProps: { style: truncateStyle } },
+  { key: 'type', title: t('type'), width: '125px' },
+  { key: 'description', title: t('description'), width: '40%', cellProps: { style: truncateStyle } },
+  { key: 'data-table-expand', title: '', sortable: false, align: 'end' as const }
+])
+
+const visibleFields = computed(() => dataset.value?.schema?.filter(f => !f['x-calculated']) ?? [])
+
+const expanded = ref<string[]>([])
+function onExpandedUpdate (next: string[]) {
+  const added = next.find(k => !expanded.value.includes(k))
+  expanded.value = added ? [added] : []
+}
+
+function descriptionFor (field: SchemaProperty) {
+  const refersTo = field['x-refersTo']
+  const raw = field.description || (vocabulary.value && refersTo && vocabulary.value[refersTo]?.description) || ''
+  return raw.replace(/<[^>]*>/g, '')
+}
 </script>

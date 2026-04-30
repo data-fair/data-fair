@@ -44,15 +44,15 @@
         <v-select
           v-model="overwritePropertyType"
           :items="rawPropertyTypes"
-          :item-title="(item: any) => item.title"
-          :item-value="(item: any) => `${item.type}${item.format || item['x-display'] || ''}`"
+          :item-title="propTypeTitle"
+          :item-value="(item) => `${item.type}${item.format || ''}`"
           return-object
           :label="t('overrideType')"
           variant="outlined"
           density="compact"
           persistent-placeholder
           clearable
-          :placeholder="t('detectedType') + ': ' + (detectedPropertyType?.title?.toLowerCase() || '')"
+          :placeholder="t('detectedType') + ': ' + (detectedTypeTitle?.toLowerCase() || '')"
           :disabled="!editable"
         />
 
@@ -92,7 +92,7 @@
 fr:
   transform: Transformation
   overrideType: Surcharger le type
-  detectedType: "type détecté"
+  detectedType: Type détecté
   expr: Expression
   typeOverrideHelp1: Vous pouvez surcharger le type de cette colonne. De cette manière vous pouvez définir un type différent de celui détecté automatiquement depuis l'analyse du fichier.
   typeOverrideHelp2: Si le type choisi ne peut pas être obtenu à partir des données brutes vous pouvez saisir une expression de transformation ci-dessous.
@@ -100,7 +100,7 @@ fr:
 en:
   transform: Transformation
   overrideType: Override type
-  detectedType: "detected type"
+  detectedType: Detected type
   expr: Expression
   typeOverrideHelp1: You can override the type of this column. This way you can define a type different from the one automatically detected from the file analysis.
   typeOverrideHelp2: If the chosen type cannot be obtained from the raw data you can enter a transformation expression below.
@@ -113,6 +113,7 @@ import { mdiClose, mdiDatabaseCog } from '@mdi/js'
 import { propertyTypes } from '~/utils/dataset'
 
 const { t } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 
 const props = defineProps<{
   property: any
@@ -128,10 +129,11 @@ const hasTransform = computed(() => {
   return !!(transform?.expr?.trim() || transform?.type)
 })
 
-const detectedPropertyType = computed(() => {
-  return rawPropertyTypes.find(
+const detectedTypeTitle = computed(() => {
+  const detected = rawPropertyTypes.find(
     p => p.type === props.property.type && (p.format || null) === (props.property.format || null)
   )
+  return detected && propTypeTitle(detected)
 })
 
 const overwritePropertyType = computed({
