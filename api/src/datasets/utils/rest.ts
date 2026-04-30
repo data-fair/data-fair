@@ -42,6 +42,7 @@ import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'm
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
+import { computeModified } from './compute-modified.js'
 
 type Operation = {
   _id: string,
@@ -640,7 +641,13 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   if (bulkOpMatchingOperations.length && sessionState) {
     mongo.datasets.updateOne(
       { id: dataset.id },
-      { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: sessionState.user.id, name: sessionState.user.name } } })
+      {
+        $set: {
+          dataUpdatedAt: updatedAt.toISOString(),
+          dataUpdatedBy: { id: sessionState.user.id, name: sessionState.user.name },
+          _modified: computeModified({ ...dataset, dataUpdatedAt: updatedAt.toISOString() })
+        }
+      })
   }
 
   return { operations, bulkOpResult }
