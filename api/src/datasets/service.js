@@ -115,7 +115,13 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
   const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
-  const project = findUtils.project(reqQuery.select, [], reqQuery.raw === 'true')
+  // Sort on `modified` is transparently rewritten to the indexed `_modified` field
+  // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.js)
+  if ('modified' in sort) {
+    sort._modified = sort.modified
+    delete sort.modified
+  }
+  const project = findUtils.project(reqQuery.select, ['_modified'], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const t0 = Date.now()
