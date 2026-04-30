@@ -71,14 +71,13 @@ export const send = async (event: PushEvent, sessionState?: SessionState) => {
       // @ts-ignore
       parentPort?.postMessage(event)
     }
-  } else {
-    if (config.privateEventsUrl) {
-      if (sessionState?.user && (sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
-        event.originator = { apiKey: { id: sessionState.user.id.replace('apiKey:', ''), title: sessionState.user.name } }
-      }
-      debug('send event to events queue', event)
-      eventsQueue.pushEvent(event, sessionState)
+  }
+  if (config.privateEventsUrl) {
+    if (sessionState?.user && (sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
+      event.originator = { apiKey: { id: sessionState.user.id.replace('apiKey:', ''), title: sessionState.user.name } }
     }
+    debug('send event to events queue', event)
+    eventsQueue.pushEvent(event, sessionState)
   }
 }
 
