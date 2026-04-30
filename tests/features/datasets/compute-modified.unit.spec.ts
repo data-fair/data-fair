@@ -48,4 +48,11 @@ test.describe('computeModified', () => {
       '2026-02-20T10:00:00.000Z'
     )
   })
+
+  test('treats null modified as unset', () => {
+    assert.equal(
+      computeModified({ modified: null, updatedAt: '2026-02-20T10:00:00.000Z' }),
+      '2026-02-20T10:00:00.000Z'
+    )
+  })
 })
