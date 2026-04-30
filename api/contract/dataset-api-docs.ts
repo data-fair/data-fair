@@ -130,9 +130,10 @@ export default (
   const documentProperty = schema.find((f: any) => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
   // Detect whether we're rendering the merged doc (sample dataset with placeholder id like "{datasetId}")
-  // vs an actual per-dataset doc. In the merged case, the column-based filter dropdown would
-  // expose sample column names (Nom, Description, ...) that aren't useful, so we hide it.
+  // vs an actual per-dataset doc. In the merged case, exposing sample column keys (name, description, ...)
+  // through enum lists or filter helpers is misleading, so we strip them and let users type free text.
   const isSampleDataset = typeof (ds as any).id === 'string' && (ds as any).id.startsWith('{')
+  const propertiesEnum = (props: any[]) => isSampleDataset ? undefined : (props.length ? props.map((p: any) => p.key) : undefined)
 
   const filterItems: any[] = []
   if (!isSampleDataset) {
@@ -196,7 +197,7 @@ export default (
     in: 'query',
     name: 'q_fields',
     description: `
-  Ce paramètre permet de spécifier les colonnes sur lesquelles appliquer le paramètre "q".
+  Ce paramètre permet de spécifier les clés de colonnes sur lesquelles appliquer le paramètre "q".
 
   Par défaut toutes les colonnes supportant une recherche textuelle sont utilisées.
     `,
@@ -205,7 +206,7 @@ export default (
       type: 'array',
       items: {
         type: 'string',
-        enum: textSearchProperties.length ? textSearchProperties.map((p: any) => p.key) : undefined
+        enum: propertiesEnum(textSearchProperties)
       }
     },
     style: 'form',
@@ -321,9 +322,11 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     if (method === 'values_agg') {
       sortItems = ['metric', '-metric', 'count', '-count', 'key', '-key']
     }
-    for (const valuesProperty of valuesProperties) {
-      sortItems.push(valuesProperty.key)
-      sortItems.push('-' + valuesProperty.key)
+    if (!isSampleDataset) {
+      for (const valuesProperty of valuesProperties) {
+        sortItems.push(valuesProperty.key)
+        sortItems.push('-' + valuesProperty.key)
+      }
     }
 
     const params: any[] = [{
@@ -359,7 +362,7 @@ Exemple : \`ma_colonne,-ma_colonne2\``,
         type: 'array',
         items: {
           type: 'string',
-          enum: sortItems
+          enum: sortItems.length ? sortItems : undefined
         }
       },
       style: 'form',
@@ -367,13 +370,13 @@ Exemple : \`ma_colonne,-ma_colonne2\``,
     }, {
       in: 'query',
       name: 'select',
-      description: 'La liste des colonnes à retourner.',
+      description: 'La liste des clés de colonnes à retourner.',
       schema: {
         title: 'La liste des colonnes à retourner',
         type: 'array',
         items: {
           type: 'string',
-          enum: schema.length ? schema.map((p: any) => p.key) : undefined
+          enum: propertiesEnum(schema)
         },
         default: 'all'
       },
@@ -385,13 +388,13 @@ Exemple : \`ma_colonne,-ma_colonne2\``,
       description: `
 Demande à retourner des extraits du document qui contiennent les mots utilisés en filtre (paramètres q et qs).
 
-La valeur est une liste de colonnes séparées par des virgules.
+La valeur est une liste de clés de colonnes séparées par des virgules.
     `,
       schema: {
         type: 'array',
         items: {
           type: 'string',
-          enum: textSearchProperties.length ? textSearchProperties.map((p: any) => p.key) : undefined
+          enum: propertiesEnum(textSearchProperties)
         }
       },
       style: 'form',
@@ -648,10 +651,10 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           {
             in: 'query',
             name: 'collapse',
-            description: "Afficher une ligne de résultat par valeur distincte d'un champ.",
+            description: "Afficher une ligne de résultat par valeur distincte d'une colonne.",
             schema: {
               type: 'string',
-              enum: [null, ...valuesProperties.map((p: any) => p.key)]
+              enum: isSampleDataset ? undefined : [null, ...valuesProperties.map((p: any) => p.key)]
             }
           }],
           responses: {
@@ -688,12 +691,12 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         parameters: [{
           in: 'path',
           name: 'field',
-          description: 'La colonne pour laquelle récupérer les valeurs distinctes.',
+          description: 'La clé de la colonne pour laquelle récupérer les valeurs distinctes.',
           required: true,
           schema: {
             title: 'Colonne',
             type: 'string',
-            enum: valuesProperties.length ? valuesProperties.map((p: any) => p.key) : undefined
+            enum: propertiesEnum(valuesProperties)
           }
         }],
         get: {
@@ -747,12 +750,12 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         parameters: [{
           in: 'path',
           name: 'field',
-          description: 'La colonne pour laquelle récupérer les valeurs avec leurs libellés.',
+          description: 'La clé de la colonne pour laquelle récupérer les valeurs avec leurs libellés.',
           required: true,
           schema: {
             title: 'Colonne',
             type: 'string',
-            enum: valuesProperties.length ? valuesProperties.map((p: any) => p.key) : undefined
+            enum: propertiesEnum(valuesProperties)
           }
         }],
         get: {
@@ -805,7 +808,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'La ou les colonnes en fonction des valeurs desquelles grouper les lignes du jeu de données.',
+            description: 'La ou les clés de colonnes en fonction des valeurs desquelles grouper les lignes du jeu de données.',
             required: true,
             explode: false,
             schema: {
@@ -813,7 +816,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'array',
               items: {
                 type: 'string',
-                enum: valuesProperties.length ? valuesProperties.map((p: any) => p.key) : undefined
+                enum: propertiesEnum(valuesProperties)
               }
             }
           }, {
@@ -853,10 +856,10 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           }, {
             in: 'query',
             name: 'metric_field',
-            description: 'La colonne sur laquelle effectuer le calcul de métrique par niveau de groupement.',
+            description: 'La clé de la colonne sur laquelle effectuer le calcul de métrique par niveau de groupement.',
             schema: {
               type: 'string',
-              enum: schema.length ? schema.map((p: any) => p.key) : undefined
+              enum: propertiesEnum(schema)
             }
           }, {
             in: 'query',
@@ -917,11 +920,11 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             {
               in: 'query',
               name: 'field',
-              description: 'La colonne sur laquelle calculer la métrique.',
+              description: 'La clé de la colonne sur laquelle calculer la métrique.',
               schema: {
                 title: 'Colonne pour le calcul de métrique',
                 type: 'string',
-                enum: valuesProperties.length ? schema.map((p: any) => p.key) : undefined
+                enum: propertiesEnum(schema)
               },
               required: true
             },
@@ -970,13 +973,13 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             {
               in: 'query',
               name: 'fields',
-              description: 'Les colonnes sur lesquelles calculer les métriques.',
+              description: 'Les clés de colonnes sur lesquelles calculer les métriques.',
               schema: {
                 title: 'Colonnes sur lesquelles calculer les métriques',
                 type: 'array',
                 items: {
                   type: 'string',
-                  enum: valuesProperties.length ? schema.map((p: any) => p.key) : undefined
+                  enum: propertiesEnum(schema)
                 }
               },
               style: 'form',
@@ -1005,12 +1008,12 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           parameters: [{
             in: 'query',
             name: 'field',
-            description: "La colonne sur laquelle effectuer l'analyse.",
+            description: "La clé de la colonne sur laquelle effectuer l'analyse.",
             required: true,
             schema: {
               title: "Colonne pour l'analyse",
               type: 'string',
-              enum: textAggProperties.length ? textAggProperties.map((p: any) => p.key) : undefined
+              enum: propertiesEnum(textAggProperties)
             }
           }, {
             in: 'query',

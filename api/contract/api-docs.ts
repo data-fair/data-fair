@@ -1,3 +1,4 @@
+import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
@@ -76,7 +77,7 @@ type RootApiDoc = {
  * `privateDatasetAPIDocs` in `merged` mode, which produces every possible dataset route
  * with tags already prefixed for the merged drawer.
  */
-export default (publicUrl: string = config.publicUrl) => {
+export default (publicUrl: string = config.publicUrl, sessionState?: SessionStateAuthenticated) => {
   const api: RootApiDoc = {
     openapi: '3.1.0',
     info: {
@@ -476,9 +477,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
   // Build all dataset routes in one shot. The merged-mode private doc:
   // — uses an internal sample dataset with every feature enabled (file + isRest + history + masterData + bbox + ...)
   // — skips variant pruning so /raw, /lines, /revisions, /master-data/*, /geo_agg, etc. all coexist
-  // — bypasses session-based admin gating
+  // — honors session-based admin gating (admin routes only included when sessionState has adminMode)
   // — remaps tags to "JDD / ..." so they slot directly into this doc's drawer
-  const datasetApi = privateDatasetAPIDocs(undefined, publicUrl, undefined, undefined, { merged: true })
+  const datasetApi = privateDatasetAPIDocs(undefined, publicUrl, sessionState, undefined, { merged: true })
 
   for (const [path, methods] of Object.entries(datasetApi.paths) as [string, any][]) {
     const cleanedPath = path === '/' ? '' : path

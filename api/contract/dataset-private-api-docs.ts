@@ -45,8 +45,9 @@ const textPlainResponse = (description: string) => ({
  * Builds the private per-dataset OpenAPI documentation served at /datasets/{id}/private-api-docs.json.
  * Extends the public doc with write/admin operations and routes gated by the user's session (admin mode, etc).
  *
- * When `options.merged` is true, the function uses an internal sample dataset (if none is provided),
- * bypasses session-based gating to include all admin routes, and remaps tags for the merged root doc.
+ * When `options.merged` is true, the function uses an internal sample dataset (if none is provided)
+ * and remaps tags for the merged root doc. Admin routes still require the session to have adminMode,
+ * so anonymous or non-superadmin viewers of the root doc don't see "JDD / Administration".
  */
 export default (
   dataset: Dataset | undefined,
@@ -58,7 +59,7 @@ export default (
   const merged = options?.merged ?? false
   const ds: Dataset = (dataset ?? (merged ? mergedSampleDataset : undefined)) as Dataset
   if (!ds) throw new Error('dataset is required (or pass options.merged=true)')
-  const isAdmin = merged || !!sessionState?.user?.adminMode
+  const isAdmin = !!sessionState?.user?.adminMode
 
   const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(ds, publicUrl, settings, undefined, options)
 
@@ -641,7 +642,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   // application doc and mutated by the merged-mode tag remapping below.
   api.paths['/permissions'] = structuredClone(permissionsDoc)
 
-  // Admin routes are gated by adminMode in normal use, and force-included in merged mode.
+  // Admin routes are gated by adminMode (in both normal and merged mode).
   // Order: read-only diagnostics → force-actions → resync (rest-only) → destructive lock cleanup.
   if (!ds.isMetaOnly && isAdmin) {
     Object.assign(api.paths, {
