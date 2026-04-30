@@ -488,6 +488,11 @@ export const applyPatch = async (dataset, patch, removedRestProps, attemptMappin
     patch.errorRetry = null
   }
 
+  // Recompute _modified whenever any of the three source dates is in the patch
+  if ('modified' in patch || 'dataUpdatedAt' in patch || 'updatedAt' in patch) {
+    patch._modified = computeModified({ ...dataset, ...patch })
+  }
+
   Object.assign(dataset, patch)
 
   // if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
