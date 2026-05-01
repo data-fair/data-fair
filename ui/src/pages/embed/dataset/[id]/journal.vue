@@ -3,6 +3,7 @@
     v-if="journal"
     :journal="journal"
     :task-progress="taskProgress"
+    :diagnostic-download-href="`${resourceUrl}/validation-diagnostic.csv`"
     type="dataset"
     data-iframe-height
   />
@@ -14,7 +15,7 @@ import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 const route = useRoute<'/embed/dataset/[id]/journal'>()
 
 const datasetStore = provideDatasetStore(route.params.id)
-const { journal, journalFetch, taskProgress, taskProgressFetch } = datasetStore
+const { journal, journalFetch, taskProgress, taskProgressFetch, resourceUrl } = datasetStore
 useDatasetWatch(datasetStore, ['journal', 'taskProgress'])
 
 if (!journalFetch.initialized.value) journalFetch.refresh()

@@ -33,6 +33,17 @@
           {{ eventLabel(event) }}
           {{ event.type === 'draft-validated' ? `(${event.data})` : '' }}
         </span>
+        <v-btn
+          v-if="event.type === 'validation-error' && (event as any).hasDiagnosticFile && diagnosticDownloadHref"
+          variant="text"
+          size="small"
+          color="error"
+          :href="diagnosticDownloadHref"
+          target="_blank"
+          class="ml-2"
+        >
+          {{ t('downloadDiagnostic') }}
+        </v-btn>
       </v-list-item-title>
       <v-list-item-subtitle v-if="event.data && !['draft-validated', 'error', 'validation-error'].includes(event.type)">
         <p v-safe-html="event.data" />
@@ -49,8 +60,10 @@
 <i18n lang="yaml">
 fr:
   draft: Brouillon
+  downloadDiagnostic: Télécharger le diagnostic
 en:
   draft: Draft
+  downloadDiagnostic: Download diagnostic
 </i18n>
 
 <script setup lang="ts">
@@ -64,11 +77,16 @@ const session = useSession()
 const { dayjs } = useLocaleDayjs()
 const { t } = useI18n()
 
-const { journal, type, after } = defineProps<{
+const { journal, type, after, diagnosticDownloadHref } = defineProps<{
   journal: Event[]
   type: 'dataset' | 'application'
   after?: string
   taskProgress?: TaskProgress
+  /**
+   * If provided, validation-error events flagged hasDiagnosticFile will render
+   * a download button pointing at this URL.
+   */
+  diagnosticDownloadHref?: string
 }>()
 
 const eventTypes = eventsList[type]

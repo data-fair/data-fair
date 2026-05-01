@@ -263,6 +263,7 @@
                     :journal="datasetStore.journal.value"
                     :after="imported"
                     :task-progress="datasetStore.taskProgress.value"
+                    :diagnostic-download-href="`${datasetStore.resourceUrl.value}/validation-diagnostic.csv`"
                     type="dataset"
                   />
                 </div>
