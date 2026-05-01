@@ -1022,6 +1022,16 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const raw = mimeType === 'application/x-ndjson' || mimeType === 'application/json'
     const contentLength = Number(req.get('content-length'))
 
+    // mandatory extensions force in-memory processing — reject upfront when the
+    // request would have been queued for async indexing (see commitLines below).
+    const hasMandatoryExtension = !!(req.dataset.extensions ?? []).find((e: any) => e.active && e.mandatory)
+    const willGoAsync = req.query.async === 'true' || (!isNaN(contentLength) && contentLength > config.elasticsearch.maxBulkChars)
+    if (hasMandatoryExtension && willGoAsync) {
+      return res.status(400).type('text/plain').send(
+        `Une extension obligatoire est configurée sur ce jeu de données. La requête doit être traitée en mémoire et ne peut donc pas dépasser ${config.elasticsearch.maxBulkChars} caractères ni utiliser le mode "async". Découpez la requête en plus petits lots.`
+      )
+    }
+
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
 
     const summary = initSummary()
