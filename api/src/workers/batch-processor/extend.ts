@@ -1,8 +1,12 @@
+import config from '#config'
 import debugLib from 'debug'
 import * as extensionsUtils from '../../datasets/utils/extensions.ts'
+import { DiagnosticWriter } from '../../datasets/utils/diagnostic-file.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetService from '../../datasets/service.js'
 import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
+import * as journals from '../../misc/utils/journals.ts'
+import { sendResourceEvent } from '../../misc/utils/notifications.ts'
 import type { DatasetInternal } from '#types'
 import { isRestDataset } from '@data-fair/data-fair-shared/types-utils.ts'
 
@@ -31,9 +35,65 @@ export default async function (dataset: DatasetInternal) {
   debug('check extensions validity')
   await extensionsUtils.checkExtensions(dataset.schema!, extensions)
 
+  // Diagnostic writer is opened lazily; only file-mode runs that go through every
+  // line benefit from collecting per-row failures. For partial REST runs the
+  // mandatory check has already been enforced on the hot path.
+  const collectDiagnostic = !isRestDataset(dataset) && updateMode === 'all'
+  const writer = collectDiagnostic ? new DiagnosticWriter(dataset) : null
+  let totalErrors = 0
+  let blockingErrors = 0
+
   debug('apply extensions', dataset.extensions)
-  await extensionsUtils.extend(dataset, extensions, updateMode, dataset.validateDraft)
+  await extensionsUtils.extend(
+    dataset,
+    extensions,
+    updateMode,
+    dataset.validateDraft,
+    undefined,
+    undefined,
+    writer
+      ? async (absoluteIndex, err) => {
+        totalErrors++
+        if (err.mandatory) blockingErrors++
+        await writer.addError({
+          line: absoluteIndex + 1,
+          type: 'extension',
+          field: err.propertyKey,
+          message: err.message,
+          rawValue: ''
+        })
+      }
+      : undefined
+  )
   debug('extensions ok')
+
+  if (writer) {
+    if (totalErrors > 0) {
+      const fileResult = await writer.finalize()
+      const summary = blockingErrors > 0
+        ? `${totalErrors} ligne(s) avec un échec d'enrichissement (dont ${blockingErrors} obligatoire(s))`
+        : `${totalErrors} ligne(s) avec un échec d'enrichissement`
+      await journals.log('datasets', dataset, {
+        type: 'validation-error',
+        data: summary,
+        hasDiagnosticFile: true,
+        diagnosticErrorCount: fileResult.count,
+        diagnosticCapped: fileResult.capped
+      } as any)
+
+      if (blockingErrors > 0) {
+        await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
+          params: {
+            nbErrors: String(blockingErrors),
+            diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
+          }
+        })
+        throw new Error(`[noretry] ${blockingErrors} ligne(s) en échec d'enrichissement obligatoire`)
+      }
+    } else {
+      await writer.discard()
+    }
+  }
 
   // Some data was updated in the interval during which we performed indexation
   // keep dataset as "updated" so that this worker keeps going
