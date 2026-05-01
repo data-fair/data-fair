@@ -1,6 +1,6 @@
 # Extension validation — design
 
-Status: draft, awaiting user review.
+Status: implemented (api + workers + UI). Integration tests deferred — to be added once the dev environment is exercised against the new endpoints.
 Branch: `feat-extension-validation`.
 Driver: RGE use case — an enrichment must be treatable as part of a dataset's validation logic, and validation diagnostics on a dataset must be more complete than the current "first 3 errors inline in the journal".
 
