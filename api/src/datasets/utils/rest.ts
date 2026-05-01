@@ -525,6 +525,31 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
 
+  // mandatory-extension pass: run any extension flagged `mandatory && active` in-memory
+  // before MongoDB write so a failure aborts the line cleanly with no partial state.
+  // Non-mandatory extensions stay async (handled by the indexer worker via _needsExtending).
+  const mandatoryExtensions = (dataset.extensions ?? []).filter((e: any) => e.active && e.mandatory)
+  if (mandatoryExtensions.length) {
+    const candidates = operations.filter(op => op._action !== 'delete' && (!op._status || op._status < 300))
+    if (candidates.length) {
+      const lines = candidates.map(op => ({ ...op.fullBody }))
+      await extensionsUtils.extendBatchSync(dataset, mandatoryExtensions, lines, {
+        onLineError: (i, err) => {
+          if (!err.mandatory) return
+          const operation = candidates[i]
+          operation._status = 400
+          operation._error = `enrichissement obligatoire en échec (${err.propertyKey}) : ${err.message}`
+        }
+      })
+      // copy enriched fields back into fullBody for the lines that survived
+      for (let i = 0; i < candidates.length; i++) {
+        const operation = candidates[i]
+        if (operation._error) continue
+        Object.assign(operation.fullBody, lines[i])
+      }
+    }
+  }
+
   // check existence and hash for operations (create and update)
   // createOrUpdate operation use upsert with hash filter and so don't need this check
   if (createUpdatePreviousFilters.length) {
