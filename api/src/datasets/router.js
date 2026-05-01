@@ -46,7 +46,7 @@ import * as apiKeyUtils from '../misc/utils/api-key.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.ts'
-import { dir, dataFilesDir, attachmentsDir } from './utils/files.ts'
+import { dir, dataFilesDir, attachmentsDir, validationDiagnosticFilePath } from './utils/files.ts'
 import { preparePatch } from './utils/patch.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
@@ -1330,6 +1330,18 @@ router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareR
   } else {
     await downloadFileFromStorage(datasetUtils.filePath(req.dataset), req, res)
   }
+})
+
+// Download the validation diagnostic CSV. Same permission as the journal that
+// references it.
+router.get('/:datasetId/validation-diagnostic.csv', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res, next) => {
+  const filePath = validationDiagnosticFilePath(req.dataset)
+  if (!await filesStorage.pathExists(filePath)) {
+    return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
+  }
+  res.setHeader('content-disposition', contentDisposition(`${req.dataset.slug}-validation-diagnostic.csv`))
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  await downloadFileFromStorage(filePath, req, res)
 })
 
 router.get('/:datasetId/metadata-settings', readDataset(), apiKeyMiddlewareRead, permissions.middleware('readDescription', 'read'), async (req, res, next) => {
