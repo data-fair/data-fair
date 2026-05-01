@@ -1,4 +1,5 @@
 import { Writable } from 'stream'
+import config from '#config'
 import * as journals from '../../misc/utils/journals.ts'
 import { jsonSchema } from '../../datasets/utils/data-schema.ts'
 import * as ajv from '../../misc/utils/ajv.ts'
@@ -9,6 +10,7 @@ import * as datasetsService from '../../datasets/service.js'
 import * as schemaUtils from '../../datasets/utils/data-schema.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
 import { readStreams as getReadStreams } from '../../datasets/utils/data-streams.js'
+import { DiagnosticWriter } from '../../datasets/utils/diagnostic-file.ts'
 import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
 import mongo from '#mongo'
@@ -18,39 +20,65 @@ import type { CustomAjvValidate } from '../../misc/utils/ajv.ts'
 // Index tabular datasets with elasticsearch using available information on dataset schema
 export const eventsPrefix = 'validate'
 
-const maxErrors = 3
+const inlineErrorsLimit = 3
 
 class ValidateStream extends Writable {
   validate: CustomAjvValidate
-  errors: string[] = []
+  inlineErrors: string[] = []
   nbErrors = 0
   i = 0
+  writer: DiagnosticWriter
 
-  constructor (options: { dataset: DatasetInternal }) {
+  constructor (options: { dataset: DatasetInternal, writer: DiagnosticWriter }) {
     super({ objectMode: true })
-
     const schema = jsonSchema((options.dataset.schema ?? []).filter(p => !p['x-calculated'] && !p['x-extension']))
     this.validate = ajv.compile(schema, false)
+    this.writer = options.writer
   }
 
-  _write (chunk: any, encoding: string, callback: () => void) {
+  _write (chunk: any, encoding: string, callback: (err?: Error | null) => void) {
     this.i++
-    const valid = this.validate(chunk)
-    if (!valid) {
-      this.nbErrors++
-      if (this.nbErrors <= maxErrors) {
-        this.errors.push(`Ligne ${this.i}: ${this.validate.errors}`)
-      }
+    let rawErrors: any[] = []
+    const valid = this.validate(chunk, 'fr', errs => { rawErrors = errs ?? [] })
+    if (valid) {
+      callback()
+      return
     }
-    callback()
+    this.nbErrors++
+    if (this.nbErrors <= inlineErrorsLimit) {
+      this.inlineErrors.push(`Ligne ${this.i}: ${this.validate.errors}`)
+    }
+    const lineNumber = this.i
+    const writerErrors = rawErrors.length
+      ? rawErrors.map(err => {
+        const field = (err?.instancePath ?? '').replace(/^\//, '') || err?.params?.missingProperty || ''
+        const rawValue = field ? String((chunk as any)?.[field] ?? '') : ''
+        return {
+          field,
+          message: err?.message ?? JSON.stringify(err),
+          rawValue
+        }
+      })
+      : [{ field: '', message: this.validate.errors ?? 'invalid row', rawValue: '' }]
+    ;(async () => {
+      for (const e of writerErrors) {
+        await this.writer.addError({
+          line: lineNumber,
+          type: 'validation',
+          field: e.field,
+          message: e.message,
+          rawValue: e.rawValue
+        })
+      }
+    })().then(() => callback(), callback)
   }
 
   errorsSummary () {
     if (!this.nbErrors) return null
-    const leftOutErrors = this.nbErrors - maxErrors
+    const leftOut = this.nbErrors - inlineErrorsLimit
     let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n<br>`
-    msg += this.errors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n<br>')
-    if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
+    msg += this.inlineErrors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n<br>')
+    if (leftOut > 0) msg += `\n<br>${leftOut} autres erreurs...`
     return msg
   }
 }
@@ -104,13 +132,27 @@ export default async function (dataset: DatasetInternal) {
     const progress = taskProgress(dataset.id, eventsPrefix, 100)
     await progress.inc(0)
     const readStreams = await getReadStreams(dataset, false, false, true, progress)
-    const validateStream = new ValidateStream({ dataset })
+    const writer = new DiagnosticWriter(dataset)
+    const validateStream = new ValidateStream({ dataset, writer })
     await pump(...readStreams, validateStream)
     debug('Validator stream ok')
 
-    const errorsSummary = validateStream.errorsSummary()
-    if (errorsSummary) {
-      await journals.log('datasets', dataset, { type: 'validation-error', data: errorsSummary } as any)
+    if (validateStream.nbErrors > 0) {
+      const fileResult = await writer.finalize()
+      const errorsSummary = validateStream.errorsSummary() ?? ''
+      await journals.log('datasets', dataset, {
+        type: 'validation-error',
+        data: errorsSummary,
+        hasDiagnosticFile: true,
+        diagnosticErrorCount: fileResult.count,
+        diagnosticCapped: fileResult.capped
+      } as any)
+      await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
+        params: {
+          nbErrors: String(validateStream.nbErrors),
+          diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
+        }
+      })
       delete patch.validateDraft
       if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
         await cancelDraft()
@@ -118,6 +160,9 @@ export default async function (dataset: DatasetInternal) {
       } else {
         throw new Error(`[noretry] ${errorsSummary}`)
       }
+    } else {
+      // success: drop any stale diagnostic from a previous failed attempt
+      await writer.discard()
     }
   }
 
