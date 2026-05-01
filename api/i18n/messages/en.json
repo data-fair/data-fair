@@ -61,6 +61,14 @@
 				"title": "Error of draft dataset {{label}}",
 				"body": "There was an error during processing of the draft of the dataset {{label}}: {{detail}}."
 			},
+			"validation-error": {
+				"title": "Validation errors on dataset {{label}}",
+				"body": "Dataset {{label}} has {{nbErrors}} row(s) with errors. Download the diagnostic file: {{diagnosticUrl}}"
+			},
+			"draft-validation-error": {
+				"title": "Validation errors on draft {{label}}",
+				"body": "Draft of dataset {{label}} has {{nbErrors}} row(s) with errors. Download the diagnostic file: {{diagnosticUrl}}"
+			},
 			"dataset-created": {
 				"title": "New dataset {{label}}",
 				"body": "The new dataset {{label}} was just created."
