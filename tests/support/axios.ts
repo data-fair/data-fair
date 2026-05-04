@@ -64,11 +64,6 @@ export const config = {
 }
 
 export const checkPendingTasks = async () => {
-  // give in-flight tasks a short window to drain — tests sometimes return
-  // before a downstream finalize cycle (e.g. shortProcessor catching up after
-  // the last commitLines) has emitted its end event. This is a normal race,
-  // not a real leak.
-  await waitForWorkerIdle()
   const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`)
   for (const [worker, pending] of Object.entries(res.data)) {
     if (Object.keys(pending as any).length > 0) {

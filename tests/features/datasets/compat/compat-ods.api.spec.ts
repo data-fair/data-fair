@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import parquetjs from '@dsnp/parquetjs'
 import Excel from 'exceljs'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, clearDatasetCache } from '../../../support/workers.ts'
 
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -361,7 +361,9 @@ val 1;val 1, val 2
     }).then(r => r.data)
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-11T06:00:00Z' })
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-10T08:00:00Z' })
-    await waitForFinalize(ax, dataset.id)
+    // each POST queues a finalize cycle on the shortProcessor; drain the queue
+    // to guarantee no task is left in flight at afterEach.
+    await waitForWorkerIdle()
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
     assert.equal(res.data.results.length, 2)

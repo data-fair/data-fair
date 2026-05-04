@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
-import { axios, axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
+import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -383,7 +383,10 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [{ _action: 'patch', _id: line._id, attr1: 'patched1' }])
     assert.equal(res.data.nbOk, 1)
 
-    await waitForFinalize(ax, 'rest4')
+    // each commitLines above queues a finalize cycle on the shortProcessor; a single
+    // waitForFinalize only catches one finalize-end event, so we drain the worker
+    // queue instead to guarantee no task is left in flight at afterEach.
+    await waitForWorkerIdle()
   })
 
   test('Use nonBlockingValidation option', async () => {
