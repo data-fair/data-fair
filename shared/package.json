@@ -9,7 +9,7 @@
     "dayjs": "^1.11.13",
     "expr-eval": "^2.0.2",
     "md5": "^2.3.0",
-    "sanitize-html": "^2.14.0",
+    "sanitize-html": "^2.17.3",
     "slugify": "^1.6.6"
   }
 }
