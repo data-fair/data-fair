@@ -22,7 +22,6 @@
       <template #append-inner>
         <v-btn
           :icon="mdiMagnify"
-          :aria-label="t('searchSubmit')"
           :title="t('searchSubmit')"
           density="comfortable"
           size="small"
