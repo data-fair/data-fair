@@ -8,6 +8,10 @@ const remoteServicePatchSchema = { ..._remoteServicePatchSchema }
 delete remoteServiceSchema.definitions
 delete remoteServicePatchSchema.definitions
 
+/**
+ * Builds the per-remote-service OpenAPI documentation served at /remote-services/{id}/api-docs.json.
+ * Proxies the upstream API paths under /proxy/* with read-only permissions.
+ */
 export default (remoteService) => {
   const api = {
     openapi: '3.1.0',
@@ -114,7 +118,7 @@ export default (remoteService) => {
       '/api-docs.json': {
         get: {
           summary: 'Obtenir la documentation OpenAPI',
-          description: 'Accéder à cette documentation au format OpenAPI v3.',
+          description: 'Accéder à la documentation du service distant au format OpenAPI v3.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
           tags: ['Informations'],
@@ -135,13 +139,13 @@ export default (remoteService) => {
       '/permissions': permissionsDoc
     },
     externalDocs: {
-      description: 'Documentation sur Github',
+      description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     },
     definitions: {
       API: {
         type: 'object',
-        description: 'Open API v3 compliant documentation'
+        description: 'OpenAPI v3 compliant documentation'
       }
     }
   }

@@ -1,14 +1,3 @@
-export const idParam = {
-  in: 'path',
-  name: 'id',
-  description: 'Identifiant',
-  required: true,
-  schema: {
-    title: 'Identifiant',
-    type: 'string'
-  }
-}
-
 export const qParam = {
   in: 'query',
   name: 'q',
@@ -90,6 +79,7 @@ export const visibilityParams = [{
 }]
 
 /**
+ * Builds a `select` query parameter restricted to the given list of allowed column keys.
  * @param {string[]} values
  * @returns {Record<string, any>}
  */
@@ -111,6 +101,7 @@ export const selectParam = (values) => ({
 })
 
 /**
+ * Builds an array-typed query parameter used for list filtering, optionally restricted to an enum of values.
  * @param {string} name
  * @param {string} title
  * @param {string?} description
@@ -139,6 +130,7 @@ export const filterParam = (name, title, description = null, values = null) => {
 }
 
 /**
+ * Builds a simple boolean query parameter (typically used as a feature switch).
  * @param {string} name
  * @param {string} title
  * @param {string?} description

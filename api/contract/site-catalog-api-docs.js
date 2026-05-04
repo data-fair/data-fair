@@ -3,6 +3,7 @@ import pJson from './p-json.js'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as utils from './utils.js'
 
+/** Builds the OpenAPI documentation for a publication site's catalog (the developer-facing dataset listing). */
 export default (publicUrl, publicationSite, info) => {
   const hostname = new URL(publicUrl).hostname
   const servers = [{
@@ -14,7 +15,7 @@ export default (publicUrl, publicationSite, info) => {
     openapi: '3.1.0',
     info: {
       title: 'API de catalogue de données',
-      description: `Cette documentation est à destination de développeurs souhaitant explorer ou moissoner le catalogue de données de ${hostname}.`,
+      description: `Cette documentation est à destination de développeurs souhaitant explorer ou moissonner le catalogue de données de ${hostname}.`,
       version: pJson.version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-catalog`,
       termsOfService: config.info.termsOfService,
@@ -43,11 +44,11 @@ export default (publicUrl, publicationSite, info) => {
       '/api-docs.json': {
         get: {
           summary: 'Obtenir la documentation OpenAPI',
-          description: 'Accéder à cette documentation au format OpenAPI v3.',
+          description: 'Accéder à la documentation du catalogue au format OpenAPI v3.',
           operationId: 'getApiDoc',
           responses: {
             200: {
-              description: 'Etat de santé du service',
+              description: 'La documentation OpenAPI du catalogue.',
               content: {
                 'application/json': {
                   schema: { type: 'object' }
@@ -100,7 +101,7 @@ export default (publicUrl, publicationSite, info) => {
         get: {
           summary: 'Lister les jeux de données (DCAT)',
           description: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
-          operation: 'dcat',
+          operationId: 'getDcat',
           responses: {
             200: {
               description: 'Liste des jeux de données au format DCAT (JSON-LD)',
@@ -115,13 +116,13 @@ export default (publicUrl, publicationSite, info) => {
       }
     },
     externalDocs: {
-      description: 'Documentation sur Github',
+      description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     },
     definitions: {
       API: {
         type: 'object',
-        description: 'Open API v3 compliant documentation'
+        description: 'OpenAPI v3 compliant documentation'
       }
     }
   }
