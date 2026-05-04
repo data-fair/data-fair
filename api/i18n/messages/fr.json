@@ -3,8 +3,8 @@
 		"missingBaseApp": "Modèle d'application inconnu ou à accès restreint.",
 		"missingApp": "Application configuration not found",
 		"brokenHTML": "La structure HTML est corrompue, les éléments html, head et body sont requis",
-		"noAppAtUrl": "La page à l'adresse {{url}} ne semble pas héberger une application compatible avec ce service.",
-		"missingDataset": "Le jeu de données {{id}} est inconnu ou ne vous appartient pas.",
+		"noAppAtUrl": "La page à l'adresse {{{url}}} ne semble pas héberger une application compatible avec ce service.",
+		"missingDataset": "Le jeu de données {{{id}}} est inconnu ou ne vous appartient pas.",
 		"extensionShortIdConflict": "Le jeu de données contient 2 extensions qui sont en conflit sur le préfixe des colonnes étendus.",
 		"badContentType": "Cette API attend un header content-type compatible, le plus souvent application/json.",
 		"exceedLimitStorage": "Vous avez atteint la limite de votre espace de stockage.",
@@ -16,25 +16,25 @@
 		"looksLikeSpam": "Message refusé, l'activité ressemble à celle d'un robot spammeur.",
 		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",
 		"noCrossDomain": "Appel depuis un domaine extérieur non supporté.",
-		"urlFriendly": "\"{{value}}\" n'est pas assez lisible pour être utilisé dans une URL, peut-être pourriez vous utiliser \"{{slug}}\" ?",
+		"urlFriendly": "\"{{{value}}}\" n'est pas assez lisible pour être utilisé dans une URL, peut-être pourriez vous utiliser \"{{{slug}}}\" ?",
 		"dupSlug": "Ce slug est déjà utilisé"
 	},
 	"appRequire": {
 		"noDataset": "N'utilise pas de jeu de données comme source.",
 		"aDataset": "une source de données",
 		"geoData": "des données géolocalisées (concepts latitude/longitude)",
-		"aConcept": "le concept {{concept}}",
-		"oneOfConcepts": "un des concepts {{concepts}}",
-		"aType": "le type {{type}}",
-		"oneOfTypes": "un des types {{types}}",
+		"aConcept": "le concept {{{concept}}}",
+		"oneOfConcepts": "un des concepts {{{concepts}}}",
+		"aType": "le type {{{type}}}",
+		"oneOfTypes": "un des types {{{types}}}",
 		"orJoin": " ou ",
 		"requires": "Nécessite ",
 		"requiresJoin": " et "
 	},
-	"hasBreakingChanges": "le jeu de données \"{{title}}\" a des ruptures de compatibilité :",
+	"hasBreakingChanges": "Le jeu de données \"{{{title}}}\" a des ruptures de compatibilité :",
 	"breakingChanges": {
-		"missing": "la colonne \"{{key}}\" n'existe plus",
-		"type": "la colonne \"{{key}}\" a changé de type"
+		"missing": "la colonne \"{{{key}}}\" n'existe plus",
+		"type": "la colonne \"{{{key}}}\" a changé de type"
 	},
 	"sheets": {
 		"data": "données",
@@ -56,82 +56,82 @@
 	"notifications": {
 		"datasets": {
 			"error": {
-				"title": "Erreur du jeu de données {{label}}",
-				"body": "Il y a eu une erreur pendant le traitement du jeu de données {{label}} : {{detail}}."
+				"title": "Erreur du jeu de données {{{label}}}",
+				"body": "Il y a eu une erreur pendant le traitement du jeu de données {{{label}}} : {{{detail}}}."
 			},
 			"draft-error": {
-				"title": "Erreur du brouillon du jeu de données {{label}}",
-				"body": "Il y a eu une erreur pendant le traitement du brouillon du jeu de données {{label}} : {{detail}}."
+				"title": "Erreur du brouillon du jeu de données {{{label}}}",
+				"body": "Il y a eu une erreur pendant le traitement du brouillon du jeu de données {{{label}}} : {{{detail}}}."
 			},
 			"dataset-created": {
-				"title": "Nouveau jeu de données {{label}}",
-				"body": "Le jeu de données {{label}} vient d'être créé."
+				"title": "Nouveau jeu de données {{{label}}}",
+				"body": "Le jeu de données {{{label}}} vient d'être créé."
 			},
 			"draft-dataset-created": {
-				"title": "Nouveau jeu de données brouillon {{label}}",
-				"body": "Le jeu de données {{label}} vient d'être créé en mode brouillon."
+				"title": "Nouveau jeu de données brouillon {{{label}}}",
+				"body": "Le jeu de données {{{label}}} vient d'être créé en mode brouillon."
 			},
 			"publication-requested": {
 				"title": "Demande de publication de jeu de données",
-				"body": "Un contributeur demande de publier le jeu de données {{label}} sur {{publicationSite}}."
+				"body": "Un contributeur demande de publier le jeu de données {{{label}}} sur {{{publicationSite}}}."
 			},
 			"published": {
-				"title": "Publication de {{label}}",
-				"body": "Le jeu de données {{label}} a été publié sur {{publicationSite}}."
+				"title": "Publication de {{{label}}}",
+				"body": "Le jeu de données {{{label}}} a été publié sur {{{publicationSite}}}."
 			},
 			"published-topic": {
-				"title": "Publication de {{label}} dans {{topic}}",
-				"body": "Le jeu de données {{label}} a été publié sur {{publicationSite}} dans la thématique {{topic}}."
+				"title": "Publication de {{{label}}} dans {{{topic}}}",
+				"body": "Le jeu de données {{{label}}} a été publié sur {{{publicationSite}}} dans la thématique {{{topic}}}."
 			},
 			"draft-data-updated": {
-				"title": "Fichier brouillon mis à jour {{label}}",
-				"body": "Un nouveau fichier a été chargé sur le jeu de données {{label}} en mode brouillon."
+				"title": "Fichier brouillon mis à jour {{{label}}}",
+				"body": "Un nouveau fichier a été chargé sur le jeu de données {{{label}}} en mode brouillon."
 			},
 			"data-updated": {
-				"title": "Fichier mis à jour {{label}}",
-				"body": "Un nouveau fichier a été chargé sur le jeu de données {{label}}."
+				"title": "Fichier mis à jour {{{label}}}",
+				"body": "Un nouveau fichier a été chargé sur le jeu de données {{{label}}}."
 			},
 			"structure-updated": {
-				"title": "Changement de structure {{label}}",
-				"body": "La structure du jeu de données {{label}} a été modifiée."
+				"title": "Changement de structure {{{label}}}",
+				"body": "La structure du jeu de données {{{label}}} a été modifiée."
 			},
 			"draft-structure-updated": {
-				"title": "Changement de structure brouillon {{label}}",
-				"body": "La structure du brouillon du jeu de données {{label}} a été modifiée."
+				"title": "Changement de structure brouillon {{{label}}}",
+				"body": "La structure du brouillon du jeu de données {{{label}}} a été modifiée."
 			},
 			"draft-draft-validated": {
-				"title": "Brouillon validé {{label}}",
-				"body": "Le brouillon du jeu de données {{label}} a été validé ({{cause}})."
+				"title": "Brouillon validé {{{label}}}",
+				"body": "Le brouillon du jeu de données {{{label}}} a été validé ({{{cause}}})."
 			},
 			"breaking-change": {
-				"title": "Rupture de compatibilité de {{label}}",
-				"body": "Le jeu de données {{label}} a été modifié d'une manière qui inclue des risques de rupture de compatibilité : {{breakingChangesDesc}}."
+				"title": "Rupture de compatibilité de {{{label}}}",
+				"body": "Le jeu de données {{{label}}} a été modifié d'une manière qui inclue des risques de rupture de compatibilité : {{{breakingChangesDesc}}}."
 			},
 			"draft-draft-cancelled": {
-				"title": "Brouillon annulé {{label}}",
-				"body": "Le brouillon du jeu de données {{label}} a été annulé, il est de retour à son état validé précédent."
+				"title": "Brouillon annulé {{{label}}}",
+				"body": "Le brouillon du jeu de données {{{label}}} a été annulé, il est de retour à son état validé précédent."
 			}
 		},
 		"applications": {
 			"error": {
-				"title": "Erreur de l'application {{label}}",
-				"body": "Il y a eu une erreur pendant le traitement de l'application {{label}} : {{detail}}."
+				"title": "Erreur de l'application {{{label}}}",
+				"body": "Il y a eu une erreur pendant le traitement de l'application {{{label}}} : {{{detail}}}."
 			},
 			"application-created": {
-				"title": "Nouvelle application {{label}}",
-				"body": "L'application' {{label}} vient d'être créée."
+				"title": "Nouvelle application {{{label}}}",
+				"body": "L'application {{{label}}} vient d'être créée."
 			},
 			"publication-requested": {
-				"title": "Demande de publication d'application'",
-				"body": "Un contributeur demande de publier l'application {{label}} sur {{publicationSite}}."
+				"title": "Demande de publication d'application",
+				"body": "Un contributeur demande de publier l'application {{{label}}} sur {{{publicationSite}}}."
 			},
 			"published": {
-				"title": "Publication de {{label}}",
-				"body": "L'application {{label}} a été publiée sur {{publicationSite}}."
+				"title": "Publication de {{{label}}}",
+				"body": "L'application {{{label}}} a été publiée sur {{{publicationSite}}}."
 			},
 			"published-topic": {
-				"title": "Publication de {{label}} dans {{topic}}",
-				"body": "L'application {{label}} a été publiée sur {{publicationSite}} dans la thématique {{topic}}."
+				"title": "Publication de {{{label}}} dans {{{topic}}}",
+				"body": "L'application {{{label}}} a été publiée sur {{{publicationSite}}} dans la thématique {{{topic}}}."
 			}
 		}
 	}

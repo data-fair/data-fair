@@ -3,8 +3,8 @@
 		"missingBaseApp": "The base application is unknown or as a restricted access.",
 		"missingApp": "Application configuration not found",
 		"brokenHTML": "HTML structure is broken, expect html, head and body elements",
-		"noAppAtUrl": "The page at URL {{url}} doesn't seem to host an application compatible with this service.",
-		"missingDataset": "The dataset {{id}} is unknown or does not belong to you",
+		"noAppAtUrl": "The page at URL {{{url}}} doesn't seem to host an application compatible with this service.",
+		"missingDataset": "The dataset {{{id}}} is unknown or does not belong to you",
 		"extensionShortIdConflict": "The dataset contains 2 extensions that have a conflict on the prefix of the extended columns.",
 		"badContentType": "This API expects a compatible content-type header, most often application/json",
 		"exceedLimitStorage": "You exceeded your strorage limit.",
@@ -16,25 +16,25 @@
 		"looksLikeSpam": "Message rejected, activity looks like a spam robot.",
 		"requireAnonymousToken": "An anonymous token is required.",
 		"noCrossDomain": "Request from an other domain not supported.",
-		"urlFriendly": "\"{{value}}\" should be more URL friendly, maybe you could use \"{{slug}}\" ?",
+		"urlFriendly": "\"{{{value}}}\" should be more URL friendly, maybe you could use \"{{{slug}}}\" ?",
 		"dupSlug": "This slug is already used"
 	},
 	"appRequire": {
-		"noDataset": "does not use a dataset as source.",
+		"noDataset": "Does not use a dataset as source.",
 		"aDataset": "a dataset",
 		"geoData": "geolocalized data (latitude/longitude concepts)",
-		"aConcept": "the concept {{concept}}",
-		"oneOfConcepts": "one of the concepts {{concepts}}",
-		"aType": "the type {{type}}",
-		"oneOfTypes": "one of the types {{types}}",
+		"aConcept": "the concept {{{concept}}}",
+		"oneOfConcepts": "one of the concepts {{{concepts}}}",
+		"aType": "the type {{{type}}}",
+		"oneOfTypes": "one of the types {{{types}}}",
 		"orJoin": " or ",
-		"requires": "requires ",
+		"requires": "Requires ",
 		"requiresJoin": " and "
 	},
-	"hasBreakingChanges": "the dataset \"{{title}}\" has breaking changes:",
+	"hasBreakingChanges": "The dataset \"{{{title}}}\" has breaking changes:",
 	"breakingChanges": {
-		"missing": "the column \"{{key}}\" doesn't exist anymore",
-		"type": "the column \"{{key}}\" changed type"
+		"missing": "the column \"{{{key}}}\" doesn't exist anymore",
+		"type": "the column \"{{{key}}}\" changed type"
 	},
 	"sheets": {
 		"data": "data",
@@ -54,82 +54,82 @@
 	"notifications": {
 		"datasets": {
 			"error": {
-				"title": "Error of dataset {{label}}",
-				"body": "There was an error during processing of the dataset {{label}}: {{detail}}."
+				"title": "Error of dataset {{{label}}}",
+				"body": "There was an error during processing of the dataset {{{label}}}: {{{detail}}}."
 			},
 			"draft-error": {
-				"title": "Error of draft dataset {{label}}",
-				"body": "There was an error during processing of the draft of the dataset {{label}}: {{detail}}."
+				"title": "Error of draft dataset {{{label}}}",
+				"body": "There was an error during processing of the draft of the dataset {{{label}}}: {{{detail}}}."
 			},
 			"dataset-created": {
-				"title": "New dataset {{label}}",
-				"body": "The new dataset {{label}} was just created."
+				"title": "New dataset {{{label}}}",
+				"body": "The new dataset {{{label}}} was just created."
 			},
 			"draft-dataset-created": {
-				"title": "New draft dataset {{label}}",
-				"body": "The new dataset {{label}} was just created in draft mode."
+				"title": "New draft dataset {{{label}}}",
+				"body": "The new dataset {{{label}}} was just created in draft mode."
 			},
 			"publication-requested": {
 				"title": "Request for publication of a dataset",
-				"body": "A contributor is asking to publish the dataset {{label}} on {{publicationSite}}."
+				"body": "A contributor is asking to publish the dataset {{{label}}} on {{{publicationSite}}}."
 			},
 			"published": {
-				"title": "Publication of {{label}}",
-				"body": "The dataset {{label}} has been published on {{publicationSite}}."
+				"title": "Publication of {{{label}}}",
+				"body": "The dataset {{{label}}} has been published on {{{publicationSite}}}."
 			},
 			"published-topic": {
-				"title": "Publication of {{label}} in {{topic}}",
-				"body": "The dataset {{label}} has been published on {{publicationSite}} in the topic {{topic}}."
+				"title": "Publication of {{{label}}} in {{{topic}}}",
+				"body": "The dataset {{{label}}} has been published on {{{publicationSite}}} in the topic {{{topic}}}."
 			},
 			"draft-data-updated": {
-				"title": "Draft file updated {{label}}",
-				"body": "A new file was loaded on the dataset {{label}} in draft mode."
+				"title": "Draft file updated {{{label}}}",
+				"body": "A new file was loaded on the dataset {{{label}}} in draft mode."
 			},
 			"data-updated": {
-				"title": "File updated {{label}}",
-				"body": "A new file was loaded on the dataset {{label}}."
+				"title": "File updated {{{label}}}",
+				"body": "A new file was loaded on the dataset {{{label}}}."
 			},
 			"structure-updated": {
-				"title": "Structure change of {{label}}",
-				"body": "The structure of the dataset {{label}} was modified."
+				"title": "Structure change of {{{label}}}",
+				"body": "The structure of the dataset {{{label}}} was modified."
 			},
 			"draft-structure-updated": {
-				"title": "Structure change of draft {{label}}",
-				"body": "The structure of the draft of the dataset {{label}} was modified."
+				"title": "Structure change of draft {{{label}}}",
+				"body": "The structure of the draft of the dataset {{{label}}} was modified."
 			},
 			"draft-draft-validated": {
-				"title": "Draft validated {{label}}",
-				"body": "The draft of the dataset {{label}} has been validated ({{cause}})."
+				"title": "Draft validated {{{label}}}",
+				"body": "The draft of the dataset {{{label}}} has been validated ({{{cause}}})."
 			},
 			"breaking-change": {
-				"title": "Breaking change {{label}}",
-				"body": "The dataset {{label}} was modified in a way that might entail breakages : {{breakingChangesDesc}}."
+				"title": "Breaking change {{{label}}}",
+				"body": "The dataset {{{label}}} was modified in a way that might entail breakages : {{{breakingChangesDesc}}}."
 			},
 			"draft-draft-cancelled": {
-				"title": "Draft cancelled {{label}}",
-				"body": "The draft of the dataset {{label}} was cancelled, it is back to its previous validated state."
+				"title": "Draft cancelled {{{label}}}",
+				"body": "The draft of the dataset {{{label}}} was cancelled, it is back to its previous validated state."
 			}
 		},
 		"applications": {
 			"error": {
-				"title": "Error of application {{label}}",
-				"body": "There was an error during processing of the application {{label}}: {{detail}}."
+				"title": "Error of application {{{label}}}",
+				"body": "There was an error during processing of the application {{{label}}}: {{{detail}}}."
 			},
 			"application-created": {
-				"title": "New application {{label}}",
-				"body": "The new application {{label}} was just created."
+				"title": "New application {{{label}}}",
+				"body": "The new application {{{label}}} was just created."
 			},
 			"publication-requested": {
 				"title": "Request for publication of an application",
-				"body": "A contributor is asking to publish the application {{label}} on {{publicationSite}}."
+				"body": "A contributor is asking to publish the application {{{label}}} on {{{publicationSite}}}."
 			},
 			"published": {
-				"title": "Publication of {{label}}",
-				"body": "The application {{label}} has been published on {{publicationSite}}."
+				"title": "Publication of {{{label}}}",
+				"body": "The application {{{label}}} has been published on {{{publicationSite}}}."
 			},
 			"published-topic": {
-				"title": "Publication of {{label}} in {{topic}}",
-				"body": "The application {{label}} has been published on {{publicationSite}} in the topic {{topic}}."
+				"title": "Publication of {{{label}}} in {{{topic}}}",
+				"body": "The application {{{label}}} has been published on {{{publicationSite}}} in the topic {{{topic}}}."
 			}
 		}
 	}
