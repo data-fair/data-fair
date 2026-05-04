@@ -40,7 +40,6 @@ export default async function (dataset: DatasetInternal) {
   // mandatory check has already been enforced on the hot path.
   const collectDiagnostic = !isRestDataset(dataset) && updateMode === 'all'
   const writer = collectDiagnostic ? new DiagnosticWriter(dataset) : null
-  let totalErrors = 0
   let blockingErrors = 0
 
   debug('apply extensions', dataset.extensions)
@@ -53,8 +52,8 @@ export default async function (dataset: DatasetInternal) {
     undefined,
     writer
       ? async (absoluteIndex, err) => {
-        totalErrors++
-        if (err.mandatory) blockingErrors++
+        if (!err.mandatory) return // non-blocking failures (e.g. remoteService errorKey without mandatory) stay in row.error field, not in diagnostic
+        blockingErrors++
         await writer.addError({
           line: absoluteIndex + 1,
           type: 'extension',
@@ -68,11 +67,9 @@ export default async function (dataset: DatasetInternal) {
   debug('extensions ok')
 
   if (writer) {
-    if (totalErrors > 0) {
+    if (blockingErrors > 0) {
       const fileResult = await writer.finalize()
-      const summary = blockingErrors > 0
-        ? `${totalErrors} ligne(s) avec un échec d'enrichissement (dont ${blockingErrors} bloquant(s))`
-        : `${totalErrors} ligne(s) avec un échec d'enrichissement`
+      const summary = `${blockingErrors} ligne(s) en échec bloquant lors de l'enrichissement`
       await journals.log('datasets', dataset, {
         type: 'validation-error',
         data: summary,
@@ -80,16 +77,13 @@ export default async function (dataset: DatasetInternal) {
         diagnosticErrorCount: fileResult.count,
         diagnosticCapped: fileResult.capped
       } as any)
-
-      if (blockingErrors > 0) {
-        await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
-          params: {
-            nbErrors: String(blockingErrors),
-            diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
-          }
-        })
-        throw new Error(`[noretry] ${blockingErrors} ligne(s) en échec bloquant lors de l'enrichissement`)
-      }
+      await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
+        params: {
+          nbErrors: String(blockingErrors),
+          diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
+        }
+      })
+      throw new Error(`[noretry] ${summary}`)
     } else {
       await writer.discard()
     }
