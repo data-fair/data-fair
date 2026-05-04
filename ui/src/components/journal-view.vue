@@ -67,27 +67,30 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import { inject } from 'vue'
 import type { Event } from '#api/types'
 import eventsJson from '#shared/events.json'
 import { mdiAlert, mdiAlertDecagram, mdiCheck, mdiClipboardText, mdiContentSave, mdiDelete, mdiFileCancel, mdiFileCheck, mdiFileDownload, mdiFileSearch, mdiFileSwap, mdiMerge, mdiPencil, mdiPlusCircleOutline, mdiPublish, mdiReloadAlert, mdiTableOfContents, mdiWrench } from '@mdi/js'
-import { type TaskProgress } from '~/composables/dataset/dataset-store'
+import { datasetStoreKey, type DatasetStore, type TaskProgress } from '~/composables/dataset/dataset-store'
 const eventsList = eventsJson as Record<string, Record<string, { icon: string, text: Record<string, string>, color?: string }>>
 
 const session = useSession()
 const { dayjs } = useLocaleDayjs()
 const { t } = useI18n()
 
-const { journal, type, after, diagnosticDownloadHref } = defineProps<{
+const { journal, type, after } = defineProps<{
   journal: Event[]
   type: 'dataset' | 'application'
   after?: string
   taskProgress?: TaskProgress
-  /**
-   * If provided, validation-error events flagged hasDiagnosticFile will render
-   * a download button pointing at this URL.
-   */
-  diagnosticDownloadHref?: string
 }>()
+
+// dataset store may not be provided when type === 'application' — that's fine,
+// the diagnostic button only renders when we can build a URL.
+const datasetStore = inject<DatasetStore | undefined>(datasetStoreKey, undefined)
+const diagnosticDownloadHref = computed(() =>
+  type === 'dataset' && datasetStore ? `${datasetStore.resourceUrl.value}/validation-diagnostic.csv` : undefined
+)
 
 const eventTypes = eventsList[type]
 const draftEventTypes = eventsList[`${type}-draft`]

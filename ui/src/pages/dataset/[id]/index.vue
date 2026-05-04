@@ -293,7 +293,6 @@
               v-if="journal"
               :journal="journal"
               :task-progress="taskProgress"
-              :diagnostic-download-href="`${resourceUrl}/validation-diagnostic.csv`"
               type="dataset"
             />
           </v-tabs-window-item>
@@ -658,7 +657,7 @@ watch(shareTab, (tab) => {
 })
 
 const store = useDatasetStore()
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot, resourceUrl } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
 
 const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
   await savePermissions(newPermissions)
