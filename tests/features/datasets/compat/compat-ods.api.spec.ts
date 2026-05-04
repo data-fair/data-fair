@@ -361,6 +361,7 @@ val 1;val 1, val 2
     }).then(r => r.data)
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-11T06:00:00Z' })
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { date1: '2025-09-10T08:00:00Z' })
+    await waitForFinalize(ax, dataset.id)
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
     assert.equal(res.data.results.length, 2)
