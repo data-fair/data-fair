@@ -520,12 +520,15 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       {
         in: 'query',
         name: 'capability',
-        description: 'Restreindre aux colonnes ayant une capacité particulière.',
+        description: 'Restreindre aux colonnes ayant une capacité particulière.\n\n' +
+          Object.entries(capabilities.properties)
+            .map(([key, val]: [string, any]) => `- \`${key}\` — **${val.title}** : ${val.description}`)
+            .join('\n'),
         required: false,
         schema: {
           title: 'Restreindre par capacité de la colonne',
           type: 'string',
-          enum: [null, ...Object.keys(capabilities.properties)]
+          enum: Object.keys(capabilities.properties)
         }
       },
       {
