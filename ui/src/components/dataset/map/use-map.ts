@@ -1,6 +1,5 @@
 import maplibregl, { Map, ControlPosition, LegacyFilterSpecification, LngLatBoundsLike } from 'maplibre-gl'
 import { useMapStyle } from './use-map-style'
-import debounce from 'debounce'
 
 // @ts-ignore
 maplibregl.config.CSP_NONCE = $cspNonce
@@ -62,14 +61,30 @@ export const useMap = (
     // Create a popup, but don't add it to the map yet.
     const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
 
+    const emptyFilter: LegacyFilterSpecification = ['==', '_id', '']
+    const pointFilter: LegacyFilterSpecification = ['==', '$type', 'Point']
+
+    const clearHoverFilter = () => {
+      map.setFilter('results_hover', emptyFilter)
+      map.setFilter('results_point_hover', ['all', pointFilter, emptyFilter])
+    }
+
+    popup.on('close', () => {
+      map.setFilter('results_selected', emptyFilter)
+      map.setFilter('results_point_selected', ['all', pointFilter, emptyFilter])
+    })
+
+    let hoveredId: string | undefined
     const moveCallback = (e: any) => {
       const feature = map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
       if (!feature) return
 
-      if (feature.properties._id !== undefined) {
-        const itemFilter: LegacyFilterSpecification = ['==', '_id', feature.properties._id]
+      const id = feature.properties._id
+      if (id !== undefined && id !== hoveredId) {
+        hoveredId = id
+        const itemFilter: LegacyFilterSpecification = ['==', '_id', id]
         map.setFilter('results_hover', itemFilter)
-        map.setFilter('results_point_hover', ['all', ['==', '$type', 'Point'], itemFilter])
+        map.setFilter('results_point_hover', ['all', pointFilter, itemFilter])
       }
       // Change the cursor style as a UI indicator.
       map.getCanvas().style.cursor = 'pointer'
@@ -111,15 +126,22 @@ export const useMap = (
         popup.setLngLat(e.lngLat)
           .setHTML(html)
           .addTo(map)
+
+        const itemFilter: LegacyFilterSpecification = ['==', '_id', feature.properties._id]
+        map.setFilter('results_selected', itemFilter)
+        map.setFilter('results_point_selected', ['all', pointFilter, itemFilter])
       }
     }
 
     const leaveCallback = () => {
       map.getCanvas().style.cursor = ''
+      hoveredId = undefined
+      clearHoverFilter()
     }
 
-    dataLayers.forEach(layer => {
-      map.on('mousemove', layer.id, debounce(moveCallback, 30))
+    const interactiveLayerIds = ['results_polygon', 'results_line', 'results_point']
+    dataLayers.filter(layer => interactiveLayerIds.includes(layer.id)).forEach(layer => {
+      map.on('mousemove', layer.id, moveCallback)
       map.on('mouseleave', layer.id, leaveCallback)
       if (!noInteraction) {
         map.on('click', layer.id, clickCallback)
