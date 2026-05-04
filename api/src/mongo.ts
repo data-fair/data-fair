@@ -64,8 +64,6 @@ export class DfMongo {
         id_1: [{ id: 1 }, { unique: true }],
         'unique-refs': [{ _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }], // used to prevent conflicts accross ids and slugs
         'main-keys': { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, // used to fetch list sorted by creation
-        'main-keys-modified': { 'owner.type': 1, 'owner.id': 1, _modified: -1 }, // used to fetch list sorted by unified _modified date (see compute-modified.js)
-        '_modified_-1': { _modified: -1 },
         fulltext: [{ title: 'text', summary: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text', keywords: 'text', 'topics.title': 'text' }, { weights: { title: 3, summary: 2 } }],
         // special purpose indexes for workers, etc
         'virtual.children_1': { 'virtual.children': 1 },
