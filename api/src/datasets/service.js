@@ -114,12 +114,13 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   }
 
   const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
-  const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
+  const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
   // Sort on `modified` is transparently rewritten to the indexed `_modified` field
-  // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.js)
-  if ('modified' in sort) {
-    sort._modified = sort.modified
-    delete sort.modified
+  // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.js).
+  // Rebuild to preserve key ordering — Mongo applies sort keys in insertion order.
+  const sort = /** @type {any} */ ({})
+  for (const [k, v] of Object.entries(rawSort)) {
+    sort[k === 'modified' ? '_modified' : k] = v
   }
   const project = findUtils.project(reqQuery.select, ['_modified'], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
