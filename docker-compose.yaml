@@ -89,6 +89,7 @@ services:
       - MANAGE_DEPARTMENTS=true
       - MANAGE_PARTNERS=true
       - MANAGE_SITES=true
+      - ACCEPT_UNKNOWN_SITE=true
       - LIST_USERS_MODE=admin
       - LIST_ORGANIZATIONS_MODE=authenticated
       - OBSERVER_ACTIVE=false

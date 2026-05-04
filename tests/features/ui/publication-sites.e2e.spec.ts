@@ -138,6 +138,40 @@ test.describe('dataset publication sites', () => {
       return ds.publicationSites?.includes('data-fair-portals:staging1')
     }, { timeout: 5000 }).toBeTruthy()
   })
+
+  test('department admin sees and uses a portal shared with their department', async ({ page, goToWithAuth }) => {
+    const orgAx = await axiosAuth('test_user1@test.com', 'test_org1')
+    await orgAx.post('/api/v1/settings/organization/test_org1/publication-sites', {
+      type: 'data-fair-portals',
+      id: 'shared-portal',
+      url: 'http://portal.com',
+      title: 'Shared Portal',
+      datasetUrlTemplate: 'http://portal.com/datasets/{id}',
+      settings: { contributorDepartments: ['dep1'] }
+    })
+
+    const deptAx = await axiosAuth('test_user4@test.com', 'test_org1')
+    const dataset = (await deptAx.post('/api/v1/datasets', { isRest: true, title: 'dept dataset', schema: [] })).data
+    await deptAx.put(`/api/v1/datasets/${dataset.id}/permissions`, [])
+
+    await goToWithAuth('/data-fair/', 'test_user4')
+    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
+    await page.getByRole('listitem').filter({ hasText: 'dep1' }).click()
+    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
+    await page.goto(`${baseUrl}/data-fair/dataset/${dataset.id}`)
+    await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
+    await page.locator('#share').scrollIntoViewIfNeeded()
+    await page.getByRole('tab', { name: /Portails/i }).click()
+    await expect(page.getByRole('link', { name: 'Shared Portal' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Portail ouvert aux contributions de votre département')).toBeVisible()
+    await expect(page.getByLabel('publié')).toBeEnabled()
+    await page.getByLabel('publié').click()
+
+    await expect.poll(async () => {
+      const d = (await deptAx.get(`/api/v1/datasets/${dataset.id}`)).data
+      return d.publicationSites?.includes('data-fair-portals:shared-portal')
+    }, { timeout: 5000 }).toBeTruthy()
+  })
 })
 
 test.describe('application publication sites', () => {

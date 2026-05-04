@@ -126,5 +126,95 @@
     "password": {
       "clear": "passwd"
     }
+  },
+  {
+    "id": "kml_admin",
+    "firstName": "Koumoul",
+    "lastName": "Admin",
+    "email": "kml_admin@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_user",
+    "firstName": "Koumoul",
+    "lastName": "User",
+    "email": "kml_user@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_data_admin",
+    "firstName": "Koumoul Data",
+    "lastName": "Admin",
+    "email": "kml_data_admin@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_data_contrib",
+    "firstName": "Koumoul Data",
+    "lastName": "Contrib",
+    "email": "kml_data_contrib@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_data_user",
+    "firstName": "Koumoul Data",
+    "lastName": "User",
+    "email": "kml_data_user@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_support_admin",
+    "firstName": "Koumoul Support",
+    "lastName": "Admin",
+    "email": "kml_support_admin@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_support_contrib",
+    "firstName": "Koumoul Support",
+    "lastName": "Contrib",
+    "email": "kml_support_contrib@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_marketing_admin",
+    "firstName": "Koumoul Marketing",
+    "lastName": "Admin",
+    "email": "kml_marketing_admin@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_marketing_contrib",
+    "firstName": "Koumoul Marketing",
+    "lastName": "Contrib",
+    "email": "kml_marketing_contrib@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
+  },
+  {
+    "id": "kml_multi_admin",
+    "firstName": "Koumoul Multi",
+    "lastName": "Admin",
+    "email": "kml_multi_admin@koumoul-test.com",
+    "password": {
+      "clear": "passwd"
+    }
   }
 ]

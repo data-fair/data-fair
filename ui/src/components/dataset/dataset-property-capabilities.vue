@@ -14,29 +14,28 @@
         size="small"
       />
     </template>
+
     <v-card v-if="dialog">
       <v-toolbar
+        :title="t('technicalConfig')"
         density="compact"
         flat
       >
-        <v-toolbar-title>{{ t('technicalConfig') }}</v-toolbar-title>
         <v-spacer />
         <v-btn
-          icon
+          :icon="mdiClose"
           @click="dialog = false"
-        >
-          <v-icon :icon="mdiClose" />
-        </v-btn>
+        />
       </v-toolbar>
-      <v-card-text class="px-3 pb-0">
+
+      <v-card-text>
         <df-tutorial-alert
           id="capabilities"
+          class="mb-2"
           persistent
         >
           <p>{{ t('tutorialCapabilities') }}</p>
-          <p class="mb-0">
-            {{ t('tutorialEnergy') }}
-          </p>
+          <p>{{ t('tutorialEnergy') }}</p>
         </df-tutorial-alert>
 
         <v-form>

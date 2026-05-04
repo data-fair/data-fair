@@ -12,12 +12,12 @@ export default {
     },
     status: {
       type: 'string',
-      description: 'A simple flag to clearly identify the publications that were successful. If "published" then the targetUrl key should be defined, If "error" then the error key should be defined.',
+      description: 'Statut indiquant clairement si la publication a réussi. Si "published", la propriété targetUrl doit être renseignée. Si "error", la propriété error doit être renseignée.',
       enum: ['waiting', 'published', 'error', 'deleted']
     },
     publishedAt: {
       type: 'string',
-      description: 'Date of the last update for this publication',
+      description: 'Date de la dernière mise à jour de cette publication.',
       format: 'date-time'
     },
     error: {
@@ -28,7 +28,7 @@ export default {
     },
     result: {
       type: 'object',
-      description: 'The result of pushing the publication. The structure of this object is permissive and depends on the type of catalog'
+      description: 'Résultat de la publication. La structure de cet objet est libre et dépend du type de catalogue.'
     }
   }
 }

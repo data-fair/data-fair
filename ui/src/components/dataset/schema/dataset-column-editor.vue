@@ -88,11 +88,12 @@
       </div>
 
       <!-- Column info -->
-      <div class="text-body-medium mb-3">
+      <div class="text-body-medium mb-2">
         <div class="mb-1">
           <span class="text-medium-emphasis">{{ t('sourceKey') }}:</span>
           {{ column.key }}
         </div>
+
         <div class="mb-1">
           <span class="text-medium-emphasis">{{ t('type') }}:</span>
           {{ propTypeTitle(column) }}
@@ -103,16 +104,18 @@
             ({{ currentFileColumn.dateTimeFormat }})
           </template>
         </div>
+
         <div
           v-if="column['x-cardinality']"
           class="mb-1 d-flex align-center"
         >
-          <span class="text-medium-emphasis">{{ t('distinctValues') }}:</span>
+          <span class="text-medium-emphasis">{{ t('distinctValues') }}:&nbsp;</span>
           {{ column['x-cardinality'].toLocaleString() }}
           <help-tooltip small>
             {{ t('distinctValuesHelp') }}
           </help-tooltip>
         </div>
+
         <div
           v-if="column.enum"
           class="mb-1"
@@ -126,15 +129,15 @@
       <v-autocomplete
         v-if="column"
         :model-value="column['x-refersTo'] ?? undefined"
-        :items="filteredVocabularyItems"
-        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false)"
         :label="t('concept')"
+        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false)"
+        :items="filteredVocabularyItems"
+        :custom-filter="conceptFilter"
+        item-value="value"
+        class="mb-2"
+        density="comfortable"
         clearable
         hide-details
-        class="mb-3"
-        item-value="value"
-        :menu-props="{ maxWidth: 500 }"
-        :custom-filter="conceptFilter"
         @update:model-value="col => { if (col !== undefined && column) column['x-refersTo'] = col; else if (column) delete column['x-refersTo'] }"
       >
         <template #item="{ internalItem, props: itemProps }">
@@ -153,11 +156,12 @@
       <v-select
         v-if="column && column.type === 'string'"
         :model-value="(column as any).separator ?? undefined"
-        :items="[', ', '; ', ' - ', ' / ', ' | ']"
-        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false)"
         :label="t('sep')"
+        :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false)"
+        :items="[', ', '; ', ' - ', ' / ', ' | ']"
+        density="comfortable"
+        class="mb-2"
         hide-details
-        class="mb-3"
         clearable
         @update:model-value="val => { if (column) (column as any).separator = val; }"
       >
@@ -170,15 +174,35 @@
       <v-select
         v-if="column && showDisplayFormat"
         v-model="displayFormat"
-        :items="displayFormatItems"
         :label="t('xDisplay')"
         :disabled="!editable"
+        :items="displayFormatItems"
+        class="mb-2"
+        density="comfortable"
         hide-details
       >
         <template #append>
           <help-tooltip :text="t('xDisplayHelp')" />
         </template>
       </v-select>
+
+      <!-- Group combobox -->
+      <v-combobox
+        v-if="column"
+        :model-value="(column as any)['x-group'] ?? undefined"
+        :label="t('group')"
+        :disabled="!(editable ?? false)"
+        :items="groups"
+        class="mb-2"
+        density="comfortable"
+        hide-details
+        clearable
+        @update:model-value="val => { if (column) { if (val) (column as any)['x-group'] = val; else delete (column as any)['x-group'] } }"
+      >
+        <template #append>
+          <help-tooltip :text="t('groupHelp')" />
+        </template>
+      </v-combobox>
     </v-col>
   </v-row>
 </template>
@@ -201,9 +225,11 @@ fr:
   conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et son utilisation dans une application.
   xDisplay: Format
   xDisplayHelp: Si vous choisissez « texte formaté » la colonne pourra contenir du markdown ou du HTML simple et les applications en tiendront compte.
-  singleline: texte
-  textarea: texte long
-  markdown: texte formaté
+  singleline: Texte
+  textarea: Texte long
+  markdown: Texte formaté
+  group: Groupe
+  groupHelp: Les groupes aident à la sélection de colonnes. Particulièrement utile quand il y a de nombreuses colonnes.
   deleteColumnTitle: Supprimer la colonne
   deleteColumnText: Souhaitez-vous supprimer cette colonne ? Attention, la donnée sera effacée et définitivement perdue !
   privateVocabulary: Vocabulaire privé
@@ -224,9 +250,11 @@ en:
   conceptHelp: The concepts improve data processing and usage in an application.
   xDisplay: Format
   xDisplayHelp: If you chose "formatted text" the column will be able to contain markdown or HTML content that will be displayed as such by applications.
-  singleline: text
-  textarea: long text
-  markdown: formatted text
+  singleline: Text
+  textarea: Long text
+  markdown: Formatted text
+  group: Group
+  groupHelp: Groups help selecting columns. Particularly useful when there are many columns.
   deleteColumnTitle: Delete the column
   deleteColumnText: Do you want to delete this column? Warning, data will be permanently erased!
   privateVocabulary: Private vocabulary
@@ -236,11 +264,11 @@ en:
 /* eslint-disable vue/no-mutating-props */
 import type { SchemaProperty } from '#api/types'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
-import { propTypeTitle } from '~/utils/dataset'
 import { useDatasetStore } from '~/composables/dataset/dataset-store'
 import useStore from '~/composables/use-store'
 
 const { t, locale } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 const { dataset } = useDatasetStore()
 const { vocabulary, vocabularyArray } = useStore()
 
@@ -357,6 +385,13 @@ const displayFormat = computed({
       props.column['x-display'] = value
     }
   }
+})
+
+const groups = computed(() => {
+  const groupsArray = props.allColumns
+    .map((col: SchemaProperty) => (col as any)['x-group'])
+    .filter((g: string) => !!g)
+  return [...new Set(groupsArray)]
 })
 
 function conceptFilter (_itemText: string, queryText: string, item: any) {

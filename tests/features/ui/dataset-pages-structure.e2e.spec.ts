@@ -12,67 +12,38 @@ test.describe('dataset page restructuring', () => {
     datasetId = dataset.id
   })
 
-  test('main page shows structure, exploration, share and activity sections', async ({ page, goToWithAuth }) => {
+  test('main page sections, tabs and right-nav action items are correct', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    // Metadata section is visible when dataset data is loaded
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
-    // Other sections are visible
+
+    // All top-level sections rendered
+    await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#metadata')).toBeVisible()
+    await expect(page.locator('#structure')).toBeVisible()
     await expect(page.locator('#exploration')).toBeVisible()
     await expect(page.locator('#share')).toBeVisible()
     await expect(page.locator('#activity')).toBeVisible()
-  })
 
-  test('exploration section has table and applications tabs', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#exploration')).toBeVisible({ timeout: 10000 })
-    // Table tab should be present
+    // Exploration tabs
     await expect(page.locator('#exploration').getByRole('tab', { name: /Tableau|Table/ })).toBeVisible()
-    // Applications tab should be visible
     await expect(page.locator('#exploration').getByRole('tab', { name: /Applications/ })).toBeVisible()
-  })
 
-  test('table visualization route loads', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
-    // Page should load (dataset-table component renders)
-    await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
-  })
-
-  test('structure section has schema tab', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
-    // Schema is a tab within the structure section
+    // Structure tabs
     await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
-  })
 
-  test('share section has integration and API key tabs', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#share')).toBeVisible({ timeout: 10000 })
+    // Share tabs
     await expect(page.locator('#share').getByRole('tab', { name: /Intégrer|Embed/ })).toBeVisible()
     await expect(page.locator('#share').getByRole('tab', { name: /Clé d'API|Read API key/ })).toBeVisible()
-  })
 
-  test('activity section has journal tab', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#activity')).toBeVisible({ timeout: 10000 })
+    // Activity tab
     await expect(page.locator('#activity').getByRole('tab', { name: /Journal/ })).toBeVisible()
-  })
 
-  test('actions menu does not contain inline section items', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
-    // The right navigation panel contains the actions menu
+    // Right-nav actions list does NOT contain items moved inline
     const actionsList = page.locator('#navigation-right-local')
-    await expect(actionsList).toBeVisible({ timeout: 5000 })
-    // These should NOT be in the actions list (moved to inline tabs in the page)
+    await expect(actionsList).toBeVisible()
     await expect(actionsList.getByText(/Éditer les métadonnées|Edit metadata/)).not.toBeVisible()
     await expect(actionsList.getByText(/Intégrer dans un site|Embed in a website/)).not.toBeVisible()
     await expect(actionsList.getByText('Notifications')).not.toBeVisible()
     await expect(actionsList.getByText('Webhooks')).not.toBeVisible()
-  })
-
-  test('page has dataset details section', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
   })
 
   test('/table route loads table view', async ({ page, goToWithAuth }) => {

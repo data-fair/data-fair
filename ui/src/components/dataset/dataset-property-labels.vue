@@ -13,38 +13,39 @@
         size="small"
       />
     </template>
+
     <v-card v-if="dialog">
       <v-toolbar
+        :title="t('labels')"
         density="compact"
         flat
       >
-        <v-toolbar-title>{{ t('labels') }}</v-toolbar-title>
         <v-spacer />
         <v-btn
-          icon
+          :icon="mdiClose"
           @click="dialog = false"
-        >
-          <v-icon :icon="mdiClose" />
-        </v-btn>
+        />
       </v-toolbar>
-      <v-card-text class="px-3">
-        <v-alert
-          type="info"
-          variant="tonal"
-          class="mb-4"
-        >
-          {{ t('tutorialLabels') }}
-        </v-alert>
 
-        <v-form>
-          <vjsf
-            v-if="editLabels"
-            v-model="editLabels"
-            :schema="schema"
-            :options="vjsfOptions"
-            @update:model-value="apply"
-          />
-        </v-form>
+      <v-card-text>
+        <df-tutorial-alert
+          id="labels"
+          class="mb-2"
+          :text="t('tutorialLabels')"
+          persistent
+        />
+
+        <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+          <v-form>
+            <vjsf
+              v-if="editLabels"
+              v-model="editLabels"
+              :schema="schema"
+              :options="vjsfOptions"
+              @update:model-value="apply"
+            />
+          </v-form>
+        </v-defaults-provider>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -52,18 +53,22 @@
 
 <i18n lang="yaml">
 fr:
-  labels: Libellés
+  labels: Libellés des valeurs
   tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les applications.
+  value: Valeur
+  label: Libellé
 en:
-  labels: Labels
+  labels: Labels for values
   tutorialLabels: Enter some labels associated to values present in the data to improve the display in applications.
+  value: Value
+  label: Label
 </i18n>
 
 <script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
+import type { SchemaProperty } from '#api/types'
 import { mdiClose, mdiTagTextOutline } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
-import type { SchemaProperty } from '#api/types'
 
 const { t } = useI18n()
 
@@ -76,26 +81,27 @@ const dialog = ref(false)
 const editLabels = ref<Array<{ value: string, label: string }> | null>(null)
 
 const schema = computed(() => {
-  const value: Record<string, unknown> = { type: 'string', title: 'Valeur', layout: { cols: 6, class: 'pr-2' } }
+  const value: Record<string, unknown> = { type: 'string', title: t('value'), layout: { cols: { sm: 6 } } }
   if (props.property.type === 'boolean') value.enum = ['true', 'false']
   if (props.property.enum) value.examples = props.property.enum
   return {
     type: 'array',
-    title: ' ',
+    layout: { listEditMode: 'inline', messages: { addItem: 'Associer un libellé à une valeur' } },
+    title: t('labels'),
     items: {
       type: 'object',
       required: ['value'],
       properties: {
         value,
-        label: { type: 'string', title: 'Libellé', layout: { cols: 6 } }
+        label: { type: 'string', title: t('label'), layout: { cols: { sm: 6 } } }
       }
     }
   }
 })
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
-  disableAll: !props.editable,
-  editMode: 'inline'
+  density: 'comfortable',
+  disableAll: !props.editable
 }))
 
 watch(dialog, (show) => {

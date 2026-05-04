@@ -3,24 +3,24 @@
     <template #activator="{ props }">
       <v-btn
         v-bind="props"
-        :prepend-icon="mdiDownload"
+        :icon="mdiDownload"
+        :title="t('downloadSchema')"
         color="primary"
         variant="flat"
-      >
-        {{ t('downloadSchema') }}
-      </v-btn>
+        size="small"
+      />
     </template>
     <v-list>
       <v-list-item
         :href="downloadUrls.tableSchema"
         :prepend-icon="mdiTable"
-        :title="t('tableSchema')"
+        :title="t('downloadAsTableSchema')"
         download
       />
       <v-list-item
         :href="downloadUrls.jsonSchema"
         :prepend-icon="mdiCodeJson"
-        :title="t('jsonSchema')"
+        :title="t('downloadAsJsonSchema')"
         download
       />
     </v-list>
@@ -30,12 +30,12 @@
 <i18n lang="yaml">
 fr:
   downloadSchema: Télécharger le schéma
-  jsonSchema: Schéma JSON
-  tableSchema: Schéma Table
+  downloadAsJsonSchema: Télécharger au format JSON Schema
+  downloadAsTableSchema: Télécharger au format Table Schema
 en:
   downloadSchema: Download the schema
-  jsonSchema: JSON Schema
-  tableSchema: Table Schema
+  downloadAsJsonSchema: Download as JSON Schema
+  downloadAsTableSchema: Download as Table Schema
 </i18n>
 
 <script setup lang="ts">

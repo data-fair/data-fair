@@ -3,7 +3,7 @@
     <h2 class="text-title-large mb-4">
       {{ t('baseApps') }}
     </h2>
-    <v-row>
+    <v-row class="mb-2">
       <v-col
         cols="12"
         sm="6"
@@ -42,34 +42,47 @@
           v-for="baseApp in baseApps"
           :key="baseApp.id"
         >
-          <template #prepend>
-            <v-avatar rounded="0">
-              <img :src="baseApp.thumbnail as string">
-            </v-avatar>
+          <template
+            v-if="baseApp.thumbnail"
+            #prepend
+          >
+            <v-avatar
+              rounded="0"
+              :src="baseApp.thumbnail"
+            />
           </template>
 
           <v-list-item-title>
             {{ baseApp.title }}
-            <v-chip size="small">
-              {{ baseApp.category || t('other') }}
-            </v-chip>
+
+            <v-chip
+              :text="baseApp.category || t('other')"
+              size="small"
+              density="comfortable"
+              class="mr-2"
+            />
+
             <a
               :href="baseApp.url"
-              class="simple-link"
+              class="simple-link mr-2"
               target="_blank"
             >{{ baseApp.applicationName }} ({{ baseApp.version }})</a>
+
             <v-icon
               v-if="baseApp.public"
-              color="green"
               :icon="mdiLockOpen"
+              color="green"
+              class="mr-2"
             />
             <template v-else>
               <v-icon
-                color="red"
                 :icon="mdiLock"
+                color="red"
+                class="mr-2"
               />
               <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
             </template>
+
             <v-icon
               v-if="baseApp.deprecated"
               :icon="mdiEyeOff"
@@ -88,13 +101,12 @@
           </v-list-item-subtitle>
 
           <template #append>
-            <v-list-item-action>
-              <v-icon
-                color="primary"
-                :icon="mdiPencil"
-                @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;"
-              />
-            </v-list-item-action>
+            <v-btn
+              color="primary"
+              variant="text"
+              :icon="mdiPencil"
+              @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;"
+            />
           </template>
         </v-list-item>
       </v-list>

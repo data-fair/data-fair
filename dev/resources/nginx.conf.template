@@ -112,7 +112,7 @@ server {
 # secondary exposition to simulate a publication site
 server {
   listen ${NGINX_PORT2};
-  server_name pub-${DEV_HOST};
+  server_name ${DEV_HOST};
 
   # Transmit host, protocol and user ip, we use it for routing, rate limiting, etc.
   proxy_set_header Host $http_host;
@@ -161,8 +161,7 @@ server {
   }
 
   location /simple-directory {
-    rewrite  ^/simple-directory/(.*) /$1 break;
-    proxy_pass http://localhost:${SD_PORT}/;
+    proxy_pass http://localhost:${SD_PORT};
   }
 
   location /api-doc {

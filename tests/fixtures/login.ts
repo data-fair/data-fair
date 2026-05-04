@@ -16,14 +16,14 @@ async function performLogin (page: any, context: any, baseUrl: string, url: stri
 
 /**
  * Custom test fixture that provides:
- * - `goToWithAuth(url, user)`: navigates to the simple-directory login page,
- *   fills in credentials, and waits for redirect to the target URL.
+ * - `goToWithAuth(url, user, opts?)`: navigates to the simple-directory login page,
+ *   fills in credentials, optionally sets the active organization (via id_token_org
+ *   cookie — same effect as clicking the org in the personal menu, but no UI
+ *   round-trip), then navigates to the target URL.
  * - `page` override: sets i18n_lang=fr cookie on every page.
- *
- * Follows the same pattern as data-fair/agents.
  */
 export const test = base.extend<{
-  goToWithAuth: (url: string, user: string) => Promise<void>
+  goToWithAuth: (url: string, user: string, opts?: { org?: string, dep?: string }) => Promise<void>
 }>({
       page: async ({ page }, use) => {
         const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
@@ -41,18 +41,33 @@ export const test = base.extend<{
 
       goToWithAuth: async ({ page, context }, use) => {
         const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
-        const goToWithAuth = async (url: string, user: string) => {
-          const cached = cookieCache.get(user)
-          if (cached) {
-            await context.addCookies(cached)
+        const applyAccountCookies = async (cached: any[] | undefined, opts: { org?: string, dep?: string }) => {
+          // Strip any cached id_token_org/id_token_dep so opts wins deterministically;
+          // they may have been captured in performLogin from a previous test that
+          // ended in a different active-account state.
+          const base = (cached ?? []).filter(c => c.name !== 'id_token_org' && c.name !== 'id_token_dep')
+          if (opts.org) {
+            base.push({ name: 'id_token_org', value: opts.org, url: baseUrl })
+            if (opts.dep) base.push({ name: 'id_token_dep', value: opts.dep, url: baseUrl })
+          }
+          if (base.length) await context.addCookies(base)
+        }
+        const goToWithAuth = async (url: string, user: string, opts: { org?: string, dep?: string } = {}) => {
+          let cached = cookieCache.get(user)
+          if (!cached) {
+            // Login lands on /data-fair/ in personal context; the org cookie set
+            // by applyAccountCookies below switches active account on the next nav.
+            await performLogin(page, context, baseUrl, '/data-fair/', user)
+            cached = cookieCache.get(user)
+          }
+          await applyAccountCookies(cached, opts)
+          await page.goto(url)
+          // Safety: if redirected to login, cache was stale.
+          if (page.url().includes('/simple-directory/login')) {
+            cookieCache.delete(user)
+            await performLogin(page, context, baseUrl, '/data-fair/', user)
+            await applyAccountCookies(cookieCache.get(user), opts)
             await page.goto(url)
-            // Safety: if redirected to login, cache was stale
-            if (page.url().includes('/simple-directory/login')) {
-              cookieCache.delete(user)
-              await performLogin(page, context, baseUrl, url, user)
-            }
-          } else {
-            await performLogin(page, context, baseUrl, url, user)
           }
         }
         await use(goToWithAuth)

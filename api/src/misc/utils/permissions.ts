@@ -1,11 +1,14 @@
+import type { Response, NextFunction, RequestHandler } from 'express'
+import type { AccountKeys, SessionState } from '@data-fair/lib-express'
+import type { RequestWithResource, ResourceType, Permission, Resource, BypassPermissions } from '#types'
+
 import config from '#config'
 import mongo from '#mongo'
-import { Router, type Response, type NextFunction, type RequestHandler } from 'express'
+import { Router } from 'express'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as apiDocsUtil from './api-docs.ts'
 import * as visibilityUtils from './visibility.js'
-import { type AccountKeys, getAccountRole, reqSession, type SessionState } from '@data-fair/lib-express'
-import { type RequestWithResource, type ResourceType, type Permission, type Resource, type BypassPermissions } from '#types'
+import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 
 const resourceTypesLabels = {
@@ -14,6 +17,7 @@ const resourceTypesLabels = {
   catalogs: 'Le connecteur'
 }
 
+/** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
 export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string, acceptMissing?: boolean) {
   // pre-compute the x-operation header since it is constant per route
   const operation = { class: operationClass, id: operationId, track: trackingCategory }
@@ -78,6 +82,7 @@ export const middleware = function (operationId: string, operationClass: string,
   }
 }
 
+/** Express middleware that checks the user can perform a given operation class on the resource's owner (used for cross-owner actions). */
 export const canDoForOwnerMiddleware = function (operationClass: string, ignoreDepartment = false) {
   return function (req: RequestWithResource, res: Response, next: NextFunction) {
     const owner: AccountKeys = ignoreDepartment ? { ...req.resource.owner, department: undefined } : req.resource.owner
@@ -88,11 +93,13 @@ export const canDoForOwnerMiddleware = function (operationClass: string, ignoreD
   }
 }
 
+/** Returns the session's role within the resource owner (or null if the session is anonymous, an application key, or unrelated to the owner). */
 export const getOwnerRole = (owner: AccountKeys, sessionState: SessionState | undefined, ignoreDepartment = false) => {
   if (!sessionState?.user || !sessionState?.account || (sessionState as SessionState & { isApplicationKey?: boolean }).isApplicationKey) return null
   return getAccountRole(sessionState, owner, { acceptDepAsRoot: ignoreDepartment })
 }
 
+/** Returns the operation classes the session can perform by virtue of being a member of the resource owner (admin/contrib/null). */
 const getOwnerClasses = (owner: AccountKeys, sessionState: SessionState, resourceType: ResourceType) => {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const ownerRole = getOwnerRole(owner, sessionState)
@@ -109,6 +116,7 @@ const getOwnerClasses = (owner: AccountKeys, sessionState: SessionState, resourc
   return null
 }
 
+/** Checks whether a single permission entry matches the current session (public, user, organization with role/department). */
 const matchPermission = (owner: AccountKeys, permission: Permission, sessionState: SessionState) => {
   if (!permission.type && !permission.id) return true // public
   if (!sessionState.user || !sessionState.account || !sessionState.accountRole || (sessionState as SessionState & { isApplicationKey?: boolean }).isApplicationKey) return false
@@ -134,14 +142,14 @@ const matchPermission = (owner: AccountKeys, permission: Permission, sessionStat
   return false
 }
 
-// resource can be an application, a dataset or a remote service
+/** Returns true if the session is allowed to perform an operation on a resource (datasets, applications, remote services). */
 export const can = function (resourceType: ResourceType, resource: Resource, operationId: string, sessionState: SessionState, bypassPermissions?: BypassPermissions) {
   if (sessionState.user?.adminMode) return true
   const userPermissions = list(resourceType, resource, sessionState, bypassPermissions)
   return !!userPermissions.includes(operationId)
 }
 
-// list operations a user can do with a resource
+/** Lists every operationId the session can perform on the given resource (combining owner role, explicit permissions and bypasses). */
 export const list = function (resourceType: ResourceType, resource: Resource, sessionState: SessionState, bypassPermissions?: BypassPermissions) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const operations = new Set<string>([])
@@ -174,6 +182,7 @@ export const list = function (resourceType: ResourceType, resource: Resource, se
   return [...operations]
 }
 
+/** Expands a permission entry into the concrete set of operationIds it grants (resolving permission classes). */
 const permissionOperations = (resourceType: ResourceType, permission: Permission) => {
   const operations = new Set<string>()
   for (const op of permission.operations ?? []) {
@@ -191,8 +200,10 @@ const permissionOperations = (resourceType: ResourceType, permission: Permission
   return operations
 }
 
-// resource is public if there are public permissions for all operations of the classes 'read' and 'use'
-// list is not here as someone can set a resource publicly usable but not appearing in lists
+/**
+ * Returns true if the resource is fully public for the read/use operation classes.
+ * `list` is excluded on purpose: one can mark a resource publicly usable without making it appear in listings.
+ */
 export const isPublic = function (resourceType: ResourceType, resource: Resource) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const publicOperations = new Set<string>()
@@ -214,12 +225,12 @@ export const isPublic = function (resourceType: ResourceType, resource: Resource
   return true
 }
 
-// Manage filters for datasets, applications and remote services
-// this filter ensures that nobody can list something they are not permitted to list
+/** Returns the Mongo `$or` clauses ensuring the session can only list resources it is allowed to see. */
 export const filter = function (sessionState: SessionState, resourceType: ResourceType) {
   return [visibilityUtils.publicFilter].concat(filterCan(sessionState, resourceType, 'list'))
 }
 
+/** Builds the Mongo `$or` clauses matching resources on which the session can perform the given operation(s). */
 export const filterCan = function (sessionState: SessionState, resourceType: ResourceType, operation = 'list'): any[] {
   const ignoreDepartment = resourceType === 'catalogs'
 
@@ -281,14 +292,17 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
   return or
 }
 
-// Only operationId level : it is used only for creation of resources and
-// setting screen only set creation permissions at operationId level
+/**
+ * Returns true if the session is a member of the given owner with the rights to perform an operation class.
+ * Used at resource creation, where permissions are still expressed at the operation class level.
+ */
 export const canDoForOwner = function (owner: AccountKeys, resourceType: ResourceType, operationClass: string, sessionState: SessionState) {
   if (sessionState.user?.adminMode) return true
   const ownerClasses = getOwnerClasses(owner, sessionState, resourceType)
   return ownerClasses && ownerClasses.includes(operationClass)
 }
 
+/** Initializes the default permissions on a freshly-created resource (give org contributors write/list/read access). */
 export const initResourcePermissions = async (resource: Resource, extraPermissions: Permission[] = []) => {
   // initially give owner contribs permissions to write
   if (resource.owner.type === 'user') {
@@ -311,6 +325,7 @@ export const initResourcePermissions = async (resource: Resource, extraPermissio
   resource.permissions = [contribWritePermission, { ...contribWritePermission, classes: ['list', 'read', 'readAdvanced'], operations: [] }, ...extraPermissions]
 }
 
+/** Builds the Express sub-router exposing GET /permissions, PUT /permissions and lookup helpers, mounted under each resource. */
 export const router = (resourceType: ResourceType, resourceName: string, onPublicCallback: ((req: RequestWithResource, resource: Resource) => void)) => {
   const router = Router()
 

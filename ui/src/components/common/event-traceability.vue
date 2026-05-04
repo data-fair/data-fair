@@ -2,7 +2,7 @@
   <d-frame
     :src="src"
     sync-params
-    @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+    @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.title })"
   />
 </template>
 

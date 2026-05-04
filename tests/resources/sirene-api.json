@@ -3202,7 +3202,7 @@
             }
           },
           "400": {
-            "description": "Mauvais formattage de la requête",
+            "description": "Mauvais formatage de la requête",
             "content": {
               "application/json": {
                 "schema": {
@@ -8281,7 +8281,7 @@
             }
           },
           "400": {
-            "description": "Mauvais formattage de la requête",
+            "description": "Mauvais formatage de la requête",
             "content": {
               "application/json": {
                 "schema": {
@@ -13332,7 +13332,7 @@
             }
           },
           "400": {
-            "description": "Mauvais formattage de la requête",
+            "description": "Mauvais formatage de la requête",
             "content": {
               "application/json": {
                 "schema": {

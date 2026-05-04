@@ -102,7 +102,7 @@ export default [
       en: 'Address'
     },
     description: {
-      fr: 'Une adresse écrite en une seule chaine de caractère',
+      fr: 'Une adresse écrite en une seule chaîne de caractères',
       en: 'An address written in a single string'
     },
     identifiers: [
@@ -178,7 +178,7 @@ export default [
       en: 'Postal code'
     },
     description: {
-      fr: 'Code postal, sur 5 chiffre',
+      fr: 'Code postal, sur 5 chiffres',
       en: 'Postal code / zip code'
     },
     identifiers: [

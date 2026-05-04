@@ -74,46 +74,35 @@ test.describe('dataset draft mode - file-new', () => {
     datasetId = dataset.id
   })
 
-  test('shows draft banner with file-new message', async ({ page, goToWithAuth }) => {
+  test('file-new draft page shows expected sections, tabs and controls', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.getByText(/créé en mode brouillon|created in draft mode/)).toBeVisible({ timeout: 15000 })
-  })
 
-  test('shows data and schema tabs but not applications tab', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#exploration')).toBeVisible({ timeout: 15000 })
+    // Draft banner with file-new message
+    await expect(page.getByText(/créé en mode brouillon|created in draft mode/)).toBeVisible({ timeout: 15000 })
+
+    // Exploration: data and schema tabs, but no applications tab
+    await expect(page.locator('#exploration')).toBeVisible()
     await expect(page.locator('#exploration').getByRole('tab', { name: /Tableau|Table/ })).toBeVisible()
     await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
     await expect(page.locator('#exploration').getByRole('tab', { name: /Applications/ })).not.toBeVisible()
-  })
 
-  test('hides share section', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#exploration')).toBeVisible({ timeout: 15000 })
+    // Share section hidden in file-new draft
     await expect(page.locator('#share')).not.toBeVisible()
-  })
 
-  test('shows activity section', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#activity')).toBeVisible({ timeout: 15000 })
+    // Activity section with Journal tab
+    await expect(page.locator('#activity')).toBeVisible()
     await expect(page.locator('#activity').getByRole('tab', { name: /Journal/ })).toBeVisible()
-  })
 
-  test('shows metadata section with editable form', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
+    // Metadata section with editable form
+    await expect(page.locator('#metadata')).toBeVisible()
     await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
-  })
 
-  test('shows validate draft button but not cancel draft button', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })).toBeVisible({ timeout: 15000 })
+    // Validate button present, cancel button absent
+    await expect(page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Annuler le brouillon|Cancel the draft/ })).not.toBeVisible()
-  })
 
-  test('dataset details section is accessible in draft mode', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#informations')).toBeVisible({ timeout: 15000 })
+    // Dataset details (informations) accessible
+    await expect(page.locator('#informations')).toBeVisible()
   })
 
   // Mutating test last — validates the draft (dataset leaves draft mode)
@@ -138,46 +127,36 @@ test.describe('dataset draft mode - file-updated', () => {
     datasetId = dataset.id
   })
 
-  test('shows draft banner with file-updated message', async ({ page, goToWithAuth }) => {
+  test('file-updated draft page shows expected sections, tabs and controls', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.getByText(/passé en mode brouillon|switched to draft mode/)).toBeVisible({ timeout: 15000 })
-  })
 
-  test('shows data, schema and applications tabs', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#exploration')).toBeVisible({ timeout: 15000 })
+    // Draft banner with file-updated message
+    await expect(page.getByText(/passé en mode brouillon|switched to draft mode/)).toBeVisible({ timeout: 15000 })
+
+    // Exploration: data, schema and applications tabs
+    await expect(page.locator('#exploration')).toBeVisible()
     await expect(page.locator('#exploration').getByRole('tab', { name: /Tableau|Table/ })).toBeVisible()
     await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
     await expect(page.locator('#exploration').getByRole('tab', { name: /Applications/ })).toBeVisible()
-  })
 
-  test('shows share section', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
+    // Share section with Permissions tab
+    await expect(page.locator('#share')).toBeVisible()
     await expect(page.locator('#share').getByRole('tab', { name: /Permissions/ })).toBeVisible()
-  })
 
-  test('shows activity section', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#activity')).toBeVisible({ timeout: 15000 })
+    // Activity section with Journal tab
+    await expect(page.locator('#activity')).toBeVisible()
     await expect(page.locator('#activity').getByRole('tab', { name: /Journal/ })).toBeVisible()
-  })
 
-  test('shows metadata section with editable form', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
+    // Metadata section with editable form
+    await expect(page.locator('#metadata')).toBeVisible()
     await expect(page.locator('#metadata').getByRole('tab', { name: /Informations|Information/ })).toBeVisible()
-  })
 
-  test('shows both validate and cancel draft buttons', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })).toBeVisible({ timeout: 15000 })
+    // Both validate and cancel buttons present
+    await expect(page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Annuler le brouillon|Cancel the draft/ })).toBeVisible()
-  })
 
-  test('dataset details section is accessible in draft mode', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#informations')).toBeVisible({ timeout: 15000 })
+    // Dataset details (informations) accessible
+    await expect(page.locator('#informations')).toBeVisible()
   })
 
   // Mutating test last — cancels the draft (dataset reverts to pre-update state)
@@ -201,24 +180,21 @@ test.describe('dataset draft mode - normal dataset (no draft) regression check',
     datasetId = dataset.id
   })
 
-  test('shows all sections: exploration, share, activity', async ({ page, goToWithAuth }) => {
+  test('published dataset page shows all sections and tabs without draft banner', async ({ page, goToWithAuth }) => {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+
+    // All sections visible
     await expect(page.locator('#exploration')).toBeVisible({ timeout: 15000 })
     await expect(page.locator('#share')).toBeVisible()
     await expect(page.locator('#activity')).toBeVisible()
-  })
+    await expect(page.locator('#metadata')).toBeVisible()
 
-  test('shows all data tabs including applications', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#exploration')).toBeVisible({ timeout: 15000 })
+    // All data tabs including applications
     await expect(page.locator('#exploration').getByRole('tab', { name: /Tableau|Table/ })).toBeVisible()
     await expect(page.locator('#structure').getByRole('tab', { name: /Schéma|Schema/ })).toBeVisible()
     await expect(page.locator('#exploration').getByRole('tab', { name: /Applications/ })).toBeVisible()
-  })
 
-  test('no draft banner is shown', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
-    await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
+    // No draft banner in either variant
     await expect(page.getByText(/créé en mode brouillon|created in draft mode/)).not.toBeVisible()
     await expect(page.getByText(/passé en mode brouillon|switched to draft mode/)).not.toBeVisible()
   })

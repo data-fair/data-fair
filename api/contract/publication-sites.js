@@ -5,9 +5,9 @@ export default (admin = false) => ({
     title: '',
     listActions: admin ? ['add', 'edit', 'delete'] : ['edit'],
     messages: {
-      addItem: 'Add a portal',
+      addItem: 'Ajouter un portail',
       'x-i18n-addItem': {
-        fr: 'Ajouter un portail'
+        en: 'Add a portal'
       }
     },
     itemTitle: 'item.title ? item.title + (item.url ? " (" + item.url + ")" : "") : (item.url || "")'
@@ -81,7 +81,16 @@ export default (admin = false) => ({
             title: 'Pré-production',
             description: 'Si coché les contributeurs pourront publier des ressources sans solliciter les administrateurs',
             type: 'boolean',
-            default: false
+            default: false,
+            readOnly: !admin
+          },
+          contributorDepartments: {
+            type: 'array',
+            title: 'Départements contributeurs',
+            description: 'Départements dont les administrateurs peuvent publier sur ce portail, comme s\'ils en étaient propriétaires.',
+            items: { type: 'string' },
+            default: [],
+            readOnly: !admin
           },
           datasetsRequiredMetadata: {
             title: 'Métadonnées requises pour les jeux de données',

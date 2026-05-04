@@ -259,7 +259,7 @@
               :key="catalogPublicationsKey"
               :src="catalogPublicationsUrl"
               sync-params
-              @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.body })"
+              @notif="(msg: any) => sendUiNotif({ type: msg.type || 'success', msg: msg.title })"
             />
           </v-tabs-window-item>
 
@@ -825,7 +825,7 @@ watch(dataset, (d) => {
   })
   if (can('readJournal').value && !d.isMetaOnly && !journalFetch.initialized.value) journalFetch.refresh()
   if (can('getPermissions').value && (!d.draftReason || d.draftReason.key === 'file-updated') && !permissionsFetch.initialized.value) permissionsFetch.refresh()
-  if (!taskProgressFetch.initialized.value) taskProgressFetch.refresh()
+  if (can('readJournal').value && !taskProgressFetch.initialized.value) taskProgressFetch.refresh()
   if (d.finalizedAt && !applicationsFetch.initialized.value) applicationsFetch.refresh()
   if (d.draftReason?.key === 'file-updated' && !publishedDatasetFetch.initialized.value) publishedDatasetFetch.refresh()
 }, { immediate: true })
@@ -995,7 +995,7 @@ const sections = computedDeepDiff(() => {
     if (can('getPermissions').value) {
       shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
     }
-    if (can('getReadApiKey').value) {
+    if (can('setReadApiKey').value) {
       shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
     }
     shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
@@ -1016,7 +1016,9 @@ const sections = computedDeepDiff(() => {
     activityTabs.push({ key: 'journal', title: t('journal'), icon: mdiCalendarText })
   }
   if ($uiConfig.eventsIntegration) {
-    activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
+    if (can('readJournal').value) {
+      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
+    }
     activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
     if (can('setPermissions').value) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })

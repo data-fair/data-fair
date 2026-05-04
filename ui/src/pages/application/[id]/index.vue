@@ -665,9 +665,10 @@ const sections = computedDeepDiff(() => {
   }
 
   if ($uiConfig.eventsIntegration) {
-    const activityTabs = [
-      { key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock }
-    ]
+    const activityTabs = []
+    if (can('readJournal')) {
+      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
+    }
     activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
     if (can('setPermissions')) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })

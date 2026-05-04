@@ -1,5 +1,5 @@
 export default {
-  title: 'Application keys for unauthenticated readonly access',
+  title: 'Clés d\'application pour un accès anonyme en lecture seule',
   type: 'array',
   items: {
     type: 'object',

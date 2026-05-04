@@ -30,7 +30,8 @@
             <v-select
               v-model="newColumnType"
               :label="t('columnType')"
-              :items="typeItems"
+              :items="propertyTypes"
+              :item-title="propTypeTitle"
               return-object
               hide-details
             />
@@ -89,15 +90,11 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const propTypeTitle = usePropTypeTitle()
 
 const isFormValid = ref(false)
 const newColumnKey = ref('')
 const newColumnType = ref(propertyTypes[0])
-
-const typeItems = computed(() => propertyTypes.map(pt => ({
-  ...pt,
-  title: pt.title
-})))
 
 const validNewColumnKey = (name: string) => {
   if (!name) return false
