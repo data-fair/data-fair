@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, waitForJournalEvent, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -232,11 +232,10 @@ test.describe('Extensions (expressions)', () => {
       ]
     })
     assert.equal(res.status, 200)
-    // non-mandatory exprEval evaluation failures no longer abort the worker;
-    // they are captured per-row in the diagnostic file and the dataset still finalizes
-    let validationErrEvent: any = await waitForJournalEvent(dataset.id, 'validation-error')
-    assert.equal(validationErrEvent.hasDiagnosticFile, true)
-    await waitForFinalize(ax, dataset.id)
+    // exprEval evaluation failures are always blocking — they go to the diagnostic
+    // file AND the dataset enters error state.
+    let errorDataset = await waitForDatasetError(ax, dataset.id)
+    assert.equal(errorDataset.status, 'error')
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -278,9 +277,8 @@ test.describe('Extensions (expressions)', () => {
       ]
     })
     assert.equal(res.status, 200)
-    validationErrEvent = await waitForJournalEvent(dataset.id, 'validation-error')
-    assert.equal(validationErrEvent.hasDiagnosticFile, true)
-    await waitForFinalize(ax, dataset.id)
+    errorDataset = await waitForDatasetError(ax, dataset.id)
+    assert.equal(errorDataset.status, 'error')
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -289,24 +287,7 @@ test.describe('Extensions (expressions)', () => {
       ]
     })
     assert.equal(res.status, 200)
-    validationErrEvent = await waitForJournalEvent(dataset.id, 'validation-error')
-    assert.equal(validationErrEvent.hasDiagnosticFile, true)
-    await waitForFinalize(ax, dataset.id)
-  })
-
-  test('Manage cases where extension returns wrong type — mandatory blocks', async () => {
-    const ax = testUser1
-    const dataset = await sendDataset('datasets/dataset1.csv', ax)
-
-    // Same wrong-type expression, but flagged mandatory: must block the worker
-    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
-      schema: dataset.schema,
-      extensions: [
-        { active: true, mandatory: true, type: 'exprEval', expr: '"value"', property: { key: 'calc1', type: 'number' } }
-      ]
-    })
-    assert.equal(res.status, 200)
-    const errorDataset = await waitForDatasetError(ax, dataset.id)
+    errorDataset = await waitForDatasetError(ax, dataset.id)
     assert.equal(errorDataset.status, 'error')
   })
 })

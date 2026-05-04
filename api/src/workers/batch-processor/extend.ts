@@ -71,7 +71,7 @@ export default async function (dataset: DatasetInternal) {
     if (totalErrors > 0) {
       const fileResult = await writer.finalize()
       const summary = blockingErrors > 0
-        ? `${totalErrors} ligne(s) avec un échec d'enrichissement (dont ${blockingErrors} obligatoire(s))`
+        ? `${totalErrors} ligne(s) avec un échec d'enrichissement (dont ${blockingErrors} bloquant(s))`
         : `${totalErrors} ligne(s) avec un échec d'enrichissement`
       await journals.log('datasets', dataset, {
         type: 'validation-error',
@@ -88,7 +88,7 @@ export default async function (dataset: DatasetInternal) {
             diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
           }
         })
-        throw new Error(`[noretry] ${blockingErrors} ligne(s) en échec d'enrichissement obligatoire`)
+        throw new Error(`[noretry] ${blockingErrors} ligne(s) en échec bloquant lors de l'enrichissement`)
       }
     } else {
       await writer.discard()

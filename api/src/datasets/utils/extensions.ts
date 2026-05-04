@@ -441,9 +441,12 @@ class ExtensionsStream extends Transform {
           } catch (err: any) {
             const message = `échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`
             if (this.onLineError) {
+              // exprEval failures are always blocking — like a validation error.
+              // The hook collects them per-row so the diagnostic file is exhaustive,
+              // and the worker is expected to throw [noretry] at end-of-stream.
               await this.onLineError(this.offset + Number(i), {
                 extensionType: 'exprEval',
-                mandatory: !!extension.mandatory,
+                mandatory: true,
                 propertyKey: extension.property.key,
                 message
               })

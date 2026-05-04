@@ -21,19 +21,28 @@ Driver: RGE use case — an enrichment must be treatable as part of a dataset's 
 
 ## 3. Data model
 
-A new optional boolean `mandatory` on each entry of `dataset.extensions[]`. Default `false`. The flag is dataset-level only — the `remoteService` action contract is unchanged. This keeps the existing rule that an extension is fully configured at the dataset level (alongside `active`, `select`, `overwrite`, `propertyPrefix`).
+A new optional boolean `mandatory` on `dataset.extensions[]` entries of type `remoteService` only. Default `false`. The flag is dataset-level — the `remoteService` action contract is unchanged. This keeps the existing rule that an extension is fully configured at the dataset level (alongside `active`, `select`, `overwrite`, `propertyPrefix`).
 
 ```ts
 // shape after change
-type DatasetExtension = {
+type RemoteServiceExtension = {
+  type: 'remoteService'
   active: boolean
-  type: 'remoteService' | 'exprEval'
-  mandatory?: boolean  // NEW — default false
+  mandatory?: boolean  // NEW — default false; only on remoteService
   // ...existing fields
 }
 ```
 
-When all `mandatory` flags on a dataset are absent or `false`, behavior is identical to today, with one deliberate exception: an `exprEval` extension that throws no longer aborts the worker — it is captured per-row in the diagnostic file (see §7). Non-mandatory `remoteService` extensions remain unchanged.
+`exprEval` extensions intentionally do not have a `mandatory` flag. An expression evaluation failure (a throw at evaluation time on a row) is **always** treated as a blocking validation error — there is no "soft" mode for exprEval. The rationale: an expression that throws is a contract violation between the configured expression and the data, conceptually equivalent to a row failing schema validation. The diagnostic file still collects every failing row so the user can investigate exhaustively.
+
+Behavior summary:
+
+| Situation | Effect on the row | Effect on the dataset |
+|---|---|---|
+| `exprEval` throws on a row | row's calculated property is unset, error written to diagnostic | dataset enters error state at end of stream |
+| `remoteService` returns `errorKey` populated, `mandatory: false` | row's error field is set as today (no change) | dataset finalizes (no change) |
+| `remoteService` returns `errorKey` populated, `mandatory: true` | row's error field is set + recorded in diagnostic | dataset enters error state at end of stream |
+| `remoteService` returns success | no error | no effect |
 
 ## 4. File datasets — validation flow
 
@@ -63,14 +72,13 @@ Today `ExtensionsStream`:
 - For `exprEval` extensions, the expression error is wrapped with `[noretry]` and currently fails the whole stream.
 
 Changes:
-- When at least one `extensions[i]` has `mandatory && active`, the stream tracks per-row failures of those extensions (errorKey set on the result, or `exprEval` evaluation throw on a mandatory expression).
-- These failures are written to a `DiagnosticWriter` as they happen (`error_type = extension`).
-- At end of stream, if any mandatory-extension failures were collected:
+- The stream tracks per-row failures from active extensions, with two sources: `exprEval` evaluation throws (always blocking — see §3) and `remoteService` results whose `errorKey` is populated when `mandatory: true`.
+- These failures are written to a `DiagnosticWriter` as they happen (`error_type = extension`). Per-row remoteService errors with `mandatory: false` keep their current behavior (stored in the row's error field, not in the diagnostic file, not blocking).
+- At end of stream, if any blocking failures were collected:
   - the CSV is finalized (it overwrites any prior file, which should not exist since validation succeeded — see §4.3),
-  - a `validation-error` journal event is logged with `hasDiagnosticFile: true` and a summary like "X rows failed mandatory enrichment",
-  - the same `notifications.datasets.validation-error` notification is sent,
+  - a `validation-error` journal event is logged with `hasDiagnosticFile: true` and a summary like "X rows failed enrichment (Y blocking)",
+  - the `notifications.datasets.validation-error` notification is sent,
   - the worker `throw`s `[noretry]` so the dataset enters the same error state as a validation failure.
-- For non-mandatory extensions: no behavior change. Errors are stored in the row's error field as today and do not produce a diagnostic file.
 
 ### 4.3 Diagnostic file lifecycle
 
@@ -79,7 +87,7 @@ Changes:
   - if the attempt produced errors → the writer flushes, overwriting any previous file;
   - if the attempt produced zero errors → `discard()` removes the file if it existed.
 - Because validation `throw`s before extension when validation fails, in practice the file at any given moment contains either (a) the validation errors of the latest validation failure, or (b) the extension errors of the latest extension run — never both.
-- A diagnostic file MAY survive past `finalized`: this happens when extension produced non-blocking errors (non-mandatory `exprEval` failures, see §7) and the dataset proceeded successfully. The user can still download it.
+- The diagnostic file does not survive past a successful run: the writer's `discard()` removes it. (There is no path that writes the diagnostic and lets the dataset finalize successfully — both blocking sources, exprEval throw and remoteService mandatory error, throw `[noretry]`.)
 - Removed when a draft is cancelled (existing `cancelDraft` path) along with the rest of the draft directory.
 - Format: CSV, UTF-8, header row `line,error_type,field,message,raw_value`. `error_type` is `validation` or `extension`. `raw_value` is the offending field's source value, truncated to ~200 chars.
 - Hard cap: **10 000 rows of errors** per file. When the cap is reached, the writer stops appending and records that the cap was hit. The journal summary message reflects the cap (e.g. "10 000 rows have been recorded; further errors were not captured"). The downstream worker still completes its loop so `nbErrors` (the global count, not the file row count) is accurate.
@@ -144,16 +152,15 @@ The implementation introduces / refactors these units:
 
 8. **`ui/src/.../dataset-extensions/...`** (path TBD at plan time): add a "Mandatory" toggle on each extension entry. Render a "Download diagnostic" button on the `validation-error` journal event when `hasDiagnosticFile` is set.
 
-9. **Types** (in `api/types` and the shared types package): add `mandatory?: boolean` to the dataset-extension type.
+9. **Types** (in `api/types` and the shared types package): add `mandatory?: boolean` to the `remoteService` branch of the dataset-extension oneOf type.
 
-10. **i18n**: new key `notifications.datasets.validation-error` (FR + EN), and UI strings for the mandatory toggle / download button.
+10. **i18n**: new key `notifications.datasets.validation-error` (FR + EN), and UI strings for the mandatory toggle (remoteService card only) and the diagnostic-download button.
 
 ## 7. Error handling & edge cases
 
 - **Both validation and extension fail in the same attempt**: cannot happen because validation `throw`s before extension runs (§4.3).
 - **A dataset has `nonBlockingValidation: true` AND a mandatory extension**: the mandatory extension still enforces. `nonBlockingValidation` continues to apply to AJV schema rules only. Document this explicitly in the spec; it is NOT a contradiction because mandatory extensions are an opt-in escalation.
-- **`exprEval` extension throws on row N**: routed to the `DiagnosticWriter` regardless of the `mandatory` flag — same path as a remote-service `errorKey`. The stream never aborts on an expression error. This is a deliberate, broader behavior change than just "for mandatory ones": today an `exprEval` throw kills the worker with `[noretry]`, which leaves the user no way to find which rows failed. From this spec onwards, any `exprEval` failure is captured per-row in the diagnostic file. The `mandatory` flag still controls whether the worker `throw`s at end-of-stream: mandatory exprEval errors block, non-mandatory exprEval errors leave the row's calculated field null and the dataset proceeds (a diagnostic file may still be present for the user to inspect).
-- **Diagnostic file may exist even when the dataset finalizes successfully**: only true for the case above (non-mandatory exprEval failed on some rows). It will be cleared the next time validation+extension runs cleanly (writer's `discard()`).
+- **`exprEval` extension throws on row N**: routed to the `DiagnosticWriter` (so the user gets per-row visibility instead of just the worker abort) AND counted as a blocking failure. At end-of-stream the worker `throw`s `[noretry]`. There is no "soft" mode — the `mandatory` flag does not exist on `exprEval`. The behavior change vs. today is purely the diagnostic file: previously the worker would abort on the first row with `[noretry]` and the user would only see the first error. Now the stream completes the buffer pass collecting every failing row, then aborts.
 - **REST single-line write, mandatory extension fails**: HTTP 400 with the same error envelope shape as a schema-validation failure on a single-line write. (Existing single-line endpoint already returns 4xx on AJV failure; we mirror it.)
 - **REST sync bulk, all rows fail mandatory extension**: same response shape as "all rows fail AJV", which today is 400 (per existing summary handling).
 - **Cache pollution risk on REST hot path**: addressed in §5.4.
@@ -166,12 +173,13 @@ The implementation introduces / refactors these units:
 - **Unit**: `extendBatchSync` — error per row from remote service, exprEval throw, all-pass case.
 - **Integration (api)**:
   - File dataset, schema-validation failure → diagnostic CSV exists, contains every row, journal event has flag, notification sent.
-  - File dataset, validation passes, mandatory extension fails → diagnostic CSV contains extension errors, journal flagged, notification sent.
-  - File dataset, no mandatory extension, extension errors occur → no diagnostic file (current behavior).
-  - REST dataset, single-line write, mandatory extension fails → 400, no MongoDB row written.
-  - REST dataset, sync bulk, mandatory extension fails on some rows → other rows persist, failed rows don't, response has nbErrors > 0.
-  - REST dataset, async bulk (oversize) with mandatory extension configured → 400 up-front.
-  - Diagnostic file removed on transition to `finalized` and on `cancelDraft`.
+  - File dataset, validation passes, exprEval throws on some rows → diagnostic CSV contains every failing row, dataset enters error state, journal flagged, notification sent.
+  - File dataset, validation passes, mandatory remoteService extension fails on some rows → same as above.
+  - File dataset, validation passes, non-mandatory remoteService extension errors → no diagnostic file (current behavior).
+  - REST dataset, single-line write, mandatory remoteService extension fails → 400, no MongoDB row written.
+  - REST dataset, sync bulk, mandatory remoteService extension fails on some rows → other rows persist, failed rows don't, response has nbErrors > 0.
+  - REST dataset, async bulk (oversize) with mandatory remoteService extension configured → 400 up-front.
+  - Diagnostic file removed on `cancelDraft` (covered by existing draft directory cleanup).
 - **e2e**: dataset draft validation flow with downloadable diagnostic + UI link.
 
 See `docs/architecture/testing.md` for conventions.

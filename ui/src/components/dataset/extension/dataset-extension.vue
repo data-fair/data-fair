@@ -51,7 +51,6 @@
         :can-write="can('writeDescriptionBreaking')"
         @remove="removeExtension(idx as number)"
         @update:expr="val => extension.expr = val"
-        @update:mandatory="val => extension.mandatory = val ?? false"
       />
     </v-col>
   </v-row>

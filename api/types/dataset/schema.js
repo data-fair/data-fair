@@ -516,10 +516,6 @@ const datasetProperties = {
           type: 'boolean',
           description: 'Toggle on and off the extension'
         },
-        mandatory: {
-          type: 'boolean',
-          description: 'Si vrai, un échec d\'enrichissement sur une ligne est traité comme une erreur de validation.'
-        },
         needsUpdate: {
           type: 'boolean'
         },
@@ -599,6 +595,10 @@ const datasetProperties = {
           propertyPrefix: {
             type: 'string',
             description: 'Chaine à utiliser comme préfixe des clés de champs issus de cette extension'
+          },
+          mandatory: {
+            type: 'boolean',
+            description: 'Si vrai, un échec d\'enrichissement sur une ligne est traité comme une erreur de validation bloquante.'
           }
         }
       }]
