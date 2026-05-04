@@ -1,7 +1,7 @@
 <template>
   <d-frame
     id="dataset-api-doc"
-    :src="`${$sitePath}/openapi-viewer?drawerLocation=right&urlType=${urlType}&id=${route.params.id}`"
+    :src="`${$sitePath}/openapi-viewer/?drawerLocation=right&urlType=${urlType}&id=${route.params.id}`"
     class="fill-height"
     resize="no"
     sync-params

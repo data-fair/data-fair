@@ -33,6 +33,16 @@
         @click="nextPage"
       />
     </template>
+
+    <!-- Agent helpers -->
+    <df-agent-chat-action
+      v-if="edit"
+      action-id="help-edit-data"
+      :visible-prompt="t('helpEditDataPrompt')"
+      :hidden-context="dataEntryContext"
+      :btn-props="{ class: 'mx-1' }"
+      :title="t('helpEditDataPrompt')"
+    />
     <df-agent-chat-action
       action-id="help-filter-table"
       :visible-prompt="t('helpFilterPrompt')"
@@ -209,7 +219,7 @@
           renderless
         >
           <template #default="{ item, index }">
-            <tr v-intersect.quiet="(isIntersecting: boolean) => isIntersecting && onScrollItem(index)">
+            <tr v-intersect="(isIntersecting: boolean) => isIntersecting && onScrollItem(index)">
               <dataset-table-cell
                 v-for="header of headers"
                 :key="header.key"
@@ -321,7 +331,7 @@
       <!-- list mode show more (infinite scroll only) -->
       <v-row
         v-if="results.length && !pagination"
-        v-intersect.quiet="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
+        v-intersect="(isIntersecting: boolean) => isIntersecting && fetchResults.execute()"
         align="center"
         class="my-0"
       >
@@ -450,6 +460,7 @@
     deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
     helpFilterPrompt: Aide-moi à filtrer ces données
     checkDataQualityPrompt: Vérifier la qualité de ces données
+    helpEditDataPrompt: Aide-moi à saisir des données
     tableCaption: "Tableau de données : {title}"
     tableCaptionFallback: Tableau de données
     announceResults: "Aucun résultat | 1 résultat | {count} résultats"
@@ -468,6 +479,7 @@
     checkDataQualityPrompt: Check data quality
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost permanently
+    helpEditDataPrompt: Help me enter data
     tableCaption: "Data table: {title}"
     tableCaptionFallback: Data table
     announceResults: "No result | 1 result | {count} results"
@@ -564,8 +576,25 @@ const hideHeader = (header: TableHeader) => {
   cols.value = newCols.filter(col => col !== header.key)
 }
 
-const { filters, addFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
+// Agent contexts
+const dataEntryContext = computed(() => {
+  const d = dataset.value
+  if (!d) return ''
+  const lines = [
+    `The user is on the data editing page for REST dataset "${d.title}" (id: ${d.id}).`,
+    'You can help them add or edit data lines.',
+    'To add a new line: use the open_add_line_dialog tool, then delegate to the editLine_form subagent to fill form fields (it becomes available once the dialog opens).',
+    'To edit an existing line: first delegate to the dataset_data subagent to search for the line _id, then use open_edit_line_dialog with that _id, then delegate to the editLine_form subagent to modify fields.',
+    'IMPORTANT: Do NOT submit the form. The user will click Save manually.',
+    'Start by asking the user what they want to do.'
+  ]
+  if (d.schema?.length) {
+    lines.push(`Dataset columns: ${d.schema.filter((f: any) => !f['x-calculated']).map((f: any) => `${f.key} (${f.title || f.key}, ${f.type})`).join(', ')}`)
+  }
+  return lines.join(' ')
+})
 
+const { filters, addFilter, queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: selectable ? ['_id_eq'] : [] })
 const filterHelpContext = computed(() => {
   const d = dataset.value
   if (!d) return ''

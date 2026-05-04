@@ -111,7 +111,7 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
     if (reset) results.value = extendedResults
     else results.value.push(...extendedResults)
     next.value = data.next
-    total.value = data.total
+    if (data.total !== undefined) total.value = data.total
   })
 
   const reset = () => {

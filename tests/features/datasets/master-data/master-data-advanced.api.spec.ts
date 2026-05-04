@@ -575,4 +575,40 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
     assert.equal(results[0]['_geo.country'], 'JPN')
     assert.equal(results[0]['_country.name'], 'Japan')
   })
+
+  test('singleSearch should deduplicate results on the output key (ES collapse)', async () => {
+    const ax = testSuperadmin
+
+    await initMaster(
+      ax,
+      [siretProperty, { key: 'denomination', title: 'Denomination', type: 'string' }],
+      {
+        singleSearchs: [{
+          id: 'siret-search',
+          title: 'Search siret by denomination',
+          output: { key: 'siret' },
+          label: { key: 'denomination' }
+        }]
+      }
+    )
+
+    // three lines share the same siret, one has a different siret
+    await ax.post('/api/v1/datasets/master/_bulk_lines', [
+      { siret: '82898347800011', denomination: 'Acme A' },
+      { siret: '82898347800011', denomination: 'Acme B' },
+      { siret: '82898347800011', denomination: 'Acme C' },
+      { siret: '99999999900099', denomination: 'Other corp' }
+    ])
+    await waitForFinalize(ax, 'master')
+
+    const res = await ax.get('/api/v1/datasets/master/master-data/single-searchs/siret-search', { params: { q: 'Acme' } })
+    // collapse on `siret` should yield a single hit for the duplicated value, not three
+    const acmeHits = res.data.results.filter((r: any) => r.output === '82898347800011')
+    assert.equal(acmeHits.length, 1, 'duplicated siret values must be collapsed to a single suggestion')
+
+    // a broader search must still surface the other distinct siret
+    const resAll = await ax.get('/api/v1/datasets/master/master-data/single-searchs/siret-search', { params: { q: '' } })
+    const outputs = resAll.data.results.map((r: any) => r.output).sort()
+    assert.deepEqual(outputs, ['82898347800011', '99999999900099'])
+  })
 })

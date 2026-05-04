@@ -73,9 +73,13 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     if (!$uiConfig.disableApplications) {
       content.push({ to: '/applications', icon: mdiImageMultiple, title: t('applications') })
     }
-    if (canAdminDep.value && $uiConfig.portalsIntegration) {
-      content.push({ to: '/pages', icon: mdiViewDashboardEdit, title: t('portalPages') })
-      content.push({ to: '/reuses', icon: mdiPageNext, title: t('reuses') })
+    if ($uiConfig.portalsIntegration) {
+      if (canContribDep.value) {
+        content.push({ to: '/pages', icon: mdiViewDashboardEdit, title: t('portalPages') })
+      }
+      if (canAdminDep.value) {
+        content.push({ to: '/reuses', icon: mdiPageNext, title: t('reuses') })
+      }
     }
     groups.push({ key: 'content', title: t('group.content'), items: content })
 
@@ -98,7 +102,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     if (canAdminDep.value && $uiConfig.portalsIntegration) {
       management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })
     }
-    groups.push({ key: 'management', title: t('group.management'), items: management })
+    if (management.length) groups.push({ key: 'management', title: t('group.management'), items: management })
 
     // Connectors group
     const connect: NavItem[] = []

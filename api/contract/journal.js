@@ -1,16 +1,16 @@
 export default {
   type: 'object',
   title: 'Journal',
-  description: 'History journal of a resource',
+  description: 'Journal d\'événements d\'une ressource.',
   required: ['id', 'type', 'events'],
   properties: {
     id: {
       type: 'string',
-      description: 'The id of the resource'
+      description: 'Identifiant de la ressource.'
     },
     type: {
       type: 'string',
-      description: 'The type of resource concerned by the event',
+      description: 'Type de ressource concernée par l\'événement.',
       enum: ['dataset', 'application', 'remote-service', 'catalog']
     },
     events: {

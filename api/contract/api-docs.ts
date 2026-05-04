@@ -1,45 +1,111 @@
+import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
-import { resolvedSchema as remoteServicePatch } from '../doc/remote-services/patch-req/.type/index.js'
-import { resolvedSchema as remoteService } from '#types/remote-service/index.js'
 import { resolvedSchema as application } from '../types/application/.type/index.js'
 import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
+import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
 
-export default (publicUrl = config.publicUrl) => {
-  const doc = {
-    openapi: '3.1.0',
-    info: Object.assign({
-      title: 'API principale',
-      description: `
-Cette documentation interactive à destination des développeurs permet de gérer les ressources de ce service de publication de données.
+const datasetIdParam = {
+  in: 'path',
+  name: 'id',
+  description: "Identifiant du jeu de données. L'identifiant de publication (`slug`) fonctionne aussi lorsque l'API est appelée depuis un portail.",
+  required: true,
+  schema: { type: 'string', title: 'Identifiant du jeu de données' }
+}
 
-Notez que l'API réelle est plus riche, chaque jeu de données et chaque service distant disposant de sa propre API documentée séparément.
+const applicationIdParam = {
+  in: 'path',
+  name: 'id',
+  description: "Identifiant de l'application. L'identifiant de publication (`slug`) fonctionne aussi lorsque l'API est appelée depuis un portail.",
+  required: true,
+  schema: { type: 'string', title: "Identifiant de l'application" }
+}
+
+/** Wraps a description into a text/plain OpenAPI response object. */
+const textPlainResponse = (description: string) => ({
+  description,
+  content: {
+    'text/plain': { schema: { type: 'string' } }
+  }
+})
+
+// Reusable error response refs for top-level routes.
+const readErrorResponses = {
+  401: { $ref: '#/components/responses/Unauthorized' },
+  403: { $ref: '#/components/responses/Forbidden' },
+  404: { $ref: '#/components/responses/NotFound' }
+}
+// Writes on a collection (POST) or create-or-update where the resource always exists by the end:
+// no 404 since the operation itself produces the resource.
+const writeErrorResponses = {
+  400: { $ref: '#/components/responses/BadRequest' },
+  401: { $ref: '#/components/responses/Unauthorized' },
+  403: { $ref: '#/components/responses/Forbidden' }
+}
+const errorResponses = {
+  400: { $ref: '#/components/responses/BadRequest' },
+  ...readErrorResponses
+}
+
+/**
+ * Minimal structural type for the OpenAPI v3.1 document we build here.
+ * `paths` and `components.schemas` stay loose (`Record<string, any>`) because they are
+ * mutated dynamically and hold resolved JSON Schema objects whose shape varies.
+ */
+type RootApiDoc = {
+  openapi: string
+  info: Record<string, any>
+  servers: { url: string, description?: string }[]
+  components: {
+    schemas: Record<string, any>
+    securitySchemes: Record<string, any>
+    responses: Record<string, any>
+  }
+  security: Record<string, string[]>[]
+  paths: Record<string, any>
+  externalDocs?: { description?: string, url: string }
+  tags?: { name: string }[]
+}
+
+/**
+ * Builds the merged root OpenAPI documentation served at /api-docs.json.
+ * Combines top-level CRUD (datasets, applications) with the per-dataset routes built by
+ * `privateDatasetAPIDocs` in `merged` mode, which produces every possible dataset route
+ * with tags already prefixed for the merged drawer.
+ */
+export default (publicUrl: string = config.publicUrl, sessionState?: SessionStateAuthenticated) => {
+  const api: RootApiDoc = {
+    openapi: '3.1.0',
+    info: {
+      title: 'API Data Fair',
+      description: `
+Cette documentation interactive à destination des développeurs permet de gérer les ressources de ce service de publication de données et de consommer les opérations applicables aux jeux de données (toutes variantes confondues : fichier, éditable, virtuel, métadonnées seules, master data), incluant les opérations privées et d'administration.
+
+Les opérations réellement exposées pour un jeu de données particulier dépendent de son type et de sa configuration. Pour un jeu de données précis, sa propre documentation reste accessible via \`/datasets/{id}/api-docs.json\` (publique) ou \`/datasets/{id}/private-api-docs.json\` (privée).
+
+Les opérations spécifiques à une application particulière (configuration, journal, pièces jointes, etc.) ainsi que les services distants disposent chacune de leur propre documentation séparée.
 
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur.
 
-Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="blank">documentation sur ce sujet</a>.
+Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="_blank">documentation sur ce sujet</a>.
 `,
       version: pJson.version,
-      'x-api-id': 'data-fair'
-      // @ts-ignore
-    }, config.info),
+      'x-api-id': 'data-fair',
+      ...config.info
+    },
     servers: [{
-      // @ts-ignore
       url: `${publicUrl}/api/v1`,
-      // @ts-ignore
-      description: `Instance DataFair - ${new URL(publicUrl).hostname}`
+      description: `Instance Data Fair - ${new URL(publicUrl).hostname}`
     }],
     components: {
       schemas: {
         dataset,
         datasetPatch: datasetPatch.properties.body,
         datasetPost: datasetPost.properties.body,
-        remoteService,
-        remoteServicePatch: remoteServicePatch.properties.body,
         application,
         applicationPatch: applicationPatchReq.properties.body,
       },
@@ -54,23 +120,26 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           in: 'cookie',
           name: 'id_token'
         }
+      },
+      responses: {
+        BadRequest: textPlainResponse('Requête invalide : corps de requête mal formé, paramètres manquants ou contraintes métier non respectées.'),
+        Unauthorized: textPlainResponse("Non authentifié : aucune session ni clé d'API valide n'a été fournie."),
+        Forbidden: textPlainResponse('Permissions insuffisantes pour effectuer cette opération.'),
+        NotFound: textPlainResponse("La ressource demandée n'existe pas.")
       }
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     paths: {
       '/ping': {
         get: {
-          summary: 'Obtenir l\'état de santé du service',
+          summary: "Obtenir l'état de santé du service",
+          description: 'Vérifier que le service est opérationnel.',
           operationId: 'ping',
           tags: ['Administration'],
           'x-operationType': 'http://schema.org/CheckAction',
           responses: {
-            200: {
-              description: 'Service ok'
-            },
-            500: {
-              description: 'Service ko'
-            }
+            200: textPlainResponse('Service ok.'),
+            500: textPlainResponse('Service ko.')
           }
         }
       },
@@ -82,13 +151,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Administration'],
           responses: {
             200: {
-              description: 'La documentation de l\'API',
+              description: "La documentation de l'API.",
               content: {
-                'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
-                }
+                'application/json': { schema: { type: 'object' } }
               }
             }
           }
@@ -102,6 +167,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Administration'],
           responses: {
             200: {
+              description: 'La liste des concepts.',
               content: {
                 'application/json': {
                   schema: {
@@ -132,16 +198,16 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           summary: 'Lister les jeux de données',
           description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
-          tags: ['Jeux de données'],
+          tags: ['Jeux de données (JDD)'],
           parameters: [
             utils.qParam,
             ...utils.ownerParams,
             utils.booleanParam('raw', 'Ne pas inclure les champs calculés'),
             utils.selectParam(Object.keys(dataset.properties)),
-            utils.filterParam('ids', 'Identifiants de jeux de données', 'Restreins la liste sur un ou plusieurs identifiants de jeux de données.'),
+            utils.filterParam('ids', 'Identifiants de jeux de données', 'Restreindre sur un ou plusieurs identifiants de jeux de données.'),
             utils.filterParam('filename', 'Restreindre sur les noms de fichier'),
-            utils.filterParam('concepts', 'Identifiants de concepts', 'Restreins les jeux de données sur un ou plusieurs identifiants de concepts.'),
-            utils.filterParam('topics', 'Identifiants de thématiques', 'Restreins les jeux de données sur un ou plusieurs identifiants de thématiques.'),
+            utils.filterParam('concepts', 'Identifiants de concepts', 'Restreindre les jeux de données sur un ou plusieurs identifiants de concepts.'),
+            utils.filterParam('topics', 'Identifiants de thématiques', 'Restreindre les jeux de données sur un ou plusieurs identifiants de thématiques.'),
             utils.filterParam('field-type', 'Restreindre sur les types de colonnes'),
             utils.filterParam('field-format', 'Restreindre sur les formats des colonnes textes'),
             utils.booleanParam('file', 'Restreindre aux jeux avec fichiers attachés'),
@@ -153,7 +219,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           ],
           responses: {
             200: {
-              description: 'Liste des jeux de données que l\'utilisateur est autorisé à voir.',
+              description: "Liste des jeux de données que l'utilisateur est autorisé à voir.",
               content: {
                 'application/json': {
                   schema: {
@@ -161,83 +227,61 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                     properties: {
                       count: {
                         type: 'number',
-                        description: 'Nombre total de jeux de données'
+                        description: 'Nombre total de jeux de données.'
                       },
                       results: {
                         type: 'array',
-                        items: {
-                          $ref: '#/components/schemas/dataset'
-                        }
+                        items: { $ref: '#/components/schemas/dataset' }
                       }
                     }
                   }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         },
         post: {
           summary: 'Créer un jeu de données',
+          description: 'Créer un nouveau jeu de données.',
           operationId: 'postDataset',
-          tags: ['Jeux de données'],
+          tags: ['Jeux de données (JDD)'],
           requestBody: {
             description: 'Fichier à charger et autres informations.',
             required: true,
             content: {
               'multipart/form-data': {
-                schema: {
-                  $ref: '#/components/schemas/datasetPost'
-                }
+                schema: { $ref: '#/components/schemas/datasetPost' }
               }
             }
           },
           responses: {
-            200: {
-              description: 'Métadonnées sur le dataset créé.',
+            201: {
+              description: 'Le jeu de données créé.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
+                  schema: { $ref: '#/components/schemas/dataset' }
                 }
               }
-            }
+            },
+            ...writeErrorResponses,
+            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
           }
         }
       },
       '/datasets/{id}': {
-        parameters: [utils.idParam],
-        get: {
-          summary: 'Lire les informations d\'un jeu de données',
-          description: 'Récupérer les informations d\'un jeu de données.',
-          operationId: 'getDataset',
-          tags: ['Jeux de données'],
-          responses: {
-            200: {
-              description: 'Informations d\'un jeu de données.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
-                }
-              }
-            }
-          }
-        },
+        parameters: [datasetIdParam],
         put: {
           summary: 'Créer ou mettre à jour un jeu de données',
-          description: 'Créer ou mettre à jour un jeu de données.',
+          description: 'Créer ou mettre à jour un jeu de données en spécifiant son identifiant.',
           operationId: 'putDataset',
-          tags: ['Jeux de données'],
+          tags: ['JDD / Métadonnées'],
           requestBody: {
             description: 'Fichier à charger et autres informations.',
             required: true,
             content: {
               'multipart/form-data': {
-                schema: {
-                  $ref: '#/components/schemas/datasetPost'
-                }
+                schema: { $ref: '#/components/schemas/datasetPost' }
               }
             }
           },
@@ -246,9 +290,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               description: 'Jeu de données créé.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
+                  schema: { $ref: '#/components/schemas/dataset' }
                 }
               }
             },
@@ -256,51 +298,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               description: 'Jeu de données modifié.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
+                  schema: { $ref: '#/components/schemas/dataset' }
                 }
               }
-            }
-          }
-        },
-        patch: {
-          summary: 'Modifier un jeu de données',
-          description: 'Modifier seulement certaines informations d\'un jeu de données.',
-          operationId: 'patchDataset',
-          tags: ['Jeux de données'],
-          requestBody: {
-            description: 'Informations à modifier.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/datasetPatch'
-                }
-              }
-            }
-          },
-          responses: {
-            200: {
-              description: 'Informations du jeu de données modifié.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/dataset'
-                  }
-                }
-              }
-            }
-          }
-        },
-        delete: {
-          summary: 'Supprimer un jeu de données',
-          operationId: 'deleteDataset',
-          tags: ['Jeux de données'],
-          responses: {
-            204: {
-              description: 'Jeu de données supprimé.'
-            }
+            },
+            ...writeErrorResponses,
+            413: textPlainResponse('Quota de stockage dépassé ou fichier trop volumineux.')
           }
         }
       },
@@ -323,7 +326,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           ],
           responses: {
             200: {
-              description: 'Liste des applications que l\'utilisateur est autorisé à voir.',
+              description: "Liste des applications que l'utilisateur est autorisé à voir.",
               content: {
                 'application/json': {
                   schema: {
@@ -331,83 +334,77 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                     properties: {
                       count: {
                         type: 'number',
-                        description: 'Nombre total d\'applications'
+                        description: "Nombre total d'applications."
                       },
                       results: {
                         type: 'array',
-                        items: {
-                          $ref: '#/components/schemas/application'
-                        }
+                        items: { $ref: '#/components/schemas/application' }
                       }
                     }
                   }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         },
         post: {
           summary: 'Configurer une application',
+          description: 'Créer une nouvelle application.',
           operationId: 'postApplication',
           tags: ['Applications'],
           requestBody: {
-            description: 'Les informations de configuration de l\'application.',
+            description: "Les informations de configuration de l'application.",
             required: true,
             content: {
               'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/application'
-                }
+                schema: { $ref: '#/components/schemas/application' }
               }
             }
           },
           responses: {
             201: {
-              description: 'Les informations de configuration de l\'application.',
+              description: "Les informations de configuration de l'application.",
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
-            }
+            },
+            ...writeErrorResponses
           }
         }
       },
       '/applications/{id}': {
-        parameters: [utils.idParam],
+        parameters: [applicationIdParam],
         get: {
-          summary: 'Lire les informations d\'une application',
-          description: 'Récupérer les informations d\'une application.',
+          summary: "Lire les informations d'une application",
+          description: "Récupérer les informations d'une application.",
           operationId: 'getApplication',
           tags: ['Applications'],
           responses: {
             200: {
-              description: 'Informations d\'une application.',
+              description: "Informations d'une application.",
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
-            }
+            },
+            ...readErrorResponses
           }
         },
         put: {
           summary: 'Créer ou mettre à jour une application',
-          description: 'Créer ou mettre à jour une application.',
+          description: 'Créer ou mettre à jour une application en spécifiant son identifiant.',
           operationId: 'putApplication',
           tags: ['Applications'],
           requestBody: {
-            description: 'Informations de l\'application.',
+            description: "Informations de l'application.",
             required: true,
             content: {
               'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/application'
-                }
+                schema: { $ref: '#/components/schemas/application' }
               }
             }
           },
@@ -416,9 +413,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               description: 'Application créée.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
             },
@@ -426,17 +421,16 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               description: 'Application modifiée.',
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         },
         patch: {
-          summary: 'Modifier une informations',
-          description: 'Modifier seulement certaines informations d\'une application.',
+          summary: 'Modifier une application',
+          description: "Modifier seulement certaines informations d'une application.",
           operationId: 'patchApplication',
           tags: ['Applications'],
           requestBody: {
@@ -444,217 +438,91 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             required: true,
             content: {
               'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/applicationPatch'
-                }
+                schema: { $ref: '#/components/schemas/applicationPatch' }
               }
             }
           },
           responses: {
             200: {
-              description: 'Informations de l\'application modifiée.',
+              description: "Informations de l'application modifiée.",
               content: {
                 'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/application'
-                  }
+                  schema: { $ref: '#/components/schemas/application' }
                 }
               }
-            }
+            },
+            ...errorResponses
           }
         },
         delete: {
           summary: 'Supprimer une application',
+          description: 'Supprimer cette application.',
           operationId: 'deleteApplication',
           tags: ['Applications'],
           responses: {
             204: {
               description: 'Application supprimée.'
-            }
-          }
-        }
-      },
-      '/remote-services': {
-        get: {
-          summary: 'Lister les services',
-          description: 'Récupérer la liste des services distants.',
-          operationId: 'listRemoteServices',
-          tags: ['Services distants'],
-          parameters: [
-            utils.qParam,
-            utils.selectParam(Object.keys(remoteService.properties)),
-            utils.filterParam('api-id', 'Restreindre sur l\'identifiant de l\'API d\'origine'),
-            utils.filterParam('input-concepts', 'Restreindre sur les concepts en entrée des routes de l\'API'),
-            utils.filterParam('output-concepts', 'Restreindre sur les concepts en sortie des routes de l\'API'),
-            ...utils.paginationParams
-          ],
-          responses: {
-            200: {
-              description: 'Liste des services distants que l\'utilisateur est autorisé à voir.',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      count: {
-                        type: 'number',
-                        description: 'Nombre total de services distants'
-                      },
-                      results: {
-                        type: 'array',
-                        items: {
-                          $ref: '#/components/schemas/remoteService'
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        post: {
-          summary: 'Configurer un service',
-          description: 'Configurer un service distant.',
-          operationId: 'postRemoteService',
-          tags: ['Services distants'],
-          requestBody: {
-            description: 'Les informations du service distant.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
-          },
-          responses: {
-            201: {
-              description: 'Les informations de configuration du service distant.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      '/remote-services/{id}': {
-        parameters: [utils.idParam],
-        get: {
-          summary: 'Lire les informations d\'un service',
-          description: 'Récupérer les informations d\'un service distant.',
-          operationId: 'getRemoteService',
-          tags: ['Services distants'],
-          responses: {
-            200: {
-              description: 'Informations d\'un service distant.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
-            }
-          }
-        },
-        put: {
-          summary: 'Créer ou mettre à jour un service',
-          description: 'Créer ou mettre à jour un service distant.',
-          operationId: 'putRemoteService',
-          tags: ['Services distants'],
-          requestBody: {
-            description: 'Informations du service distant.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
-          },
-          responses: {
-            201: {
-              description: 'Service distant créé.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
             },
-            200: {
-              description: 'Service distant modifié.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
-            }
-          }
-        },
-        patch: {
-          summary: 'Modifier une informations',
-          description: 'Modifier seulement certaines informations d\'un service distant.',
-          operationId: 'patchRemoteService',
-          tags: ['Services distants'],
-          requestBody: {
-            description: 'Informations à modifier.',
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/remoteServicePatch'
-                }
-              }
-            }
-          },
-          responses: {
-            200: {
-              description: 'Informations du service distant modifié.',
-              content: {
-                'application/json': {
-                  schema: {
-                    $ref: '#/components/schemas/remoteService'
-                  }
-                }
-              }
-            }
-          }
-        },
-        delete: {
-          summary: 'Supprimer un service',
-          description: 'Supprimer un service distant.',
-          operationId: 'deleteRemoteService',
-          tags: ['Services distants'],
-          responses: {
-            204: {
-              description: 'Service distant supprimé.'
-            }
+            ...readErrorResponses
           }
         }
-      }
+      },
     },
     externalDocs: {
-      description: 'Documentation sur Github',
+      description: 'Documentation sur GitHub',
       url: 'https://data-fair.github.io/master/'
     }
   }
 
-  // TODO: shoud we keep some of this ?
-  // @ts-ignore
-  delete doc.paths['/remote-services']
-  // @ts-ignore
-  delete doc.paths['/remote-services/{id}']
+  // Build all dataset routes in one shot. The merged-mode private doc:
+  // — uses an internal sample dataset with every feature enabled (file + isRest + history + masterData + bbox + ...)
+  // — skips variant pruning so /raw, /lines, /revisions, /master-data/*, /geo_agg, etc. all coexist
+  // — honors session-based admin gating (admin routes only included when sessionState has adminMode)
+  // — remaps tags to "JDD / ..." so they slot directly into this doc's drawer
+  const datasetApi = privateDatasetAPIDocs(undefined, publicUrl, sessionState, undefined, { merged: true })
 
-  return doc
+  for (const [path, methods] of Object.entries(datasetApi.paths) as [string, any][]) {
+    const cleanedPath = path === '/' ? '' : path
+    const fullPath = `/datasets/{id}${cleanedPath}`
+
+    if (!api.paths[fullPath]) api.paths[fullPath] = { parameters: [datasetIdParam] }
+    api.paths[fullPath].parameters = api.paths[fullPath].parameters || [datasetIdParam]
+    for (const param of methods.parameters ?? []) {
+      const exists = api.paths[fullPath].parameters.some((p: any) => p.in === param.in && p.name === param.name)
+      if (!exists) api.paths[fullPath].parameters.push(param)
+    }
+
+    for (const [method, operation] of Object.entries(methods) as [string, any][]) {
+      if (method === 'parameters') continue
+      const existing = api.paths[fullPath][method]
+      if (existing) {
+        const existingTags: string[] = Array.isArray(existing.tags) ? existing.tags : []
+        const incomingTags: string[] = Array.isArray(operation.tags) ? operation.tags : []
+        existing.tags = Array.from(new Set([...existingTags, ...incomingTags]))
+      } else {
+        api.paths[fullPath][method] = operation
+      }
+    }
+  }
+
+  // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
+  // Only tags that are actually used by at least one operation are listed.
+  const usedTags = new Set<string>(
+    Object.values(api.paths)
+      .flatMap((methods: any) => Object.values(methods))
+      .flatMap((op: any) => op?.tags || [])
+  )
+  const tagOrder = [
+    'Administration',
+    'Jeux de données (JDD)',
+    'JDD / Métadonnées',
+    'JDD / Données',
+    'JDD / Éditable',
+    'JDD / Rétrocompatibilité',
+    'JDD / Administration',
+    'Applications'
+  ]
+  api.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
+
+  return api
 }

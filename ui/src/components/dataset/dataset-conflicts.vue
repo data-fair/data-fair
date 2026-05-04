@@ -14,7 +14,7 @@
         >
           <v-list-item-title>
             <a
-              :href="`/dataset/${conflict.dataset.id}`"
+              :href="`/data-fair/dataset/${conflict.dataset.id}`"
               target="_blank"
             >
               {{ conflict.dataset.title }}

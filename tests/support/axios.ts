@@ -5,9 +5,10 @@ const slug = _slug as unknown as (str: string, opts?: Record<string, any>) => st
 
 /**
  * Test users and orgs are defined in:
- *   - dev/resources/users.json — user accounts (test_user1..test_user10, test_alone, test_user, test_contrib, test_superadmin, albanm)
+ *   - dev/resources/users.json — user accounts (test_user1..test_user10, test_alone, test_user, test_contrib, test_superadmin, albanm,
+ *     plus kml_admin / kml_user / kml_{data,support,marketing}_{admin,contrib}[/user] / kml_multi_admin for koumoul-org dept testing).
  *     All use password 'passwd'.
- *   - dev/resources/organizations.json — org memberships and roles (test_org1..test_org6, koumoul)
+ *   - dev/resources/organizations.json — org memberships and roles (test_org1..test_org6, koumoul with depts data/support/marketing)
  *
  * These are loaded by simple-directory (see docker-compose.yaml, STORAGE_TYPE=file).
  */

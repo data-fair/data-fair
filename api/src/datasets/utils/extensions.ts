@@ -412,7 +412,11 @@ class ExtensionsStream extends Transform {
 
 // Create a function that will transform items from a dataset into inputs for an action
 async function prepareInputMapping (action: any, dataset: Dataset, extensionKey: string, selectFields: string[]) {
-  const schema = await schemaUtils.extendedSchema(mongo.db, dataset)
+  // extendedSchema mutates the dataset (cleanSchema, fixConcepts) — work on a shallow
+  // copy of the schema so this is safe when called via commitLines with a cached/proxied
+  // dataset (assertImmutable in dev, or any future tightening of the cache contract)
+  const datasetCopy = { ...dataset, schema: (dataset.schema ?? []).map((f: any) => ({ ...f })) }
+  const schema = await schemaUtils.extendedSchema(mongo.db, datasetCopy)
   const fieldMappings = action.input.map((input: any) => {
     const field = schema.find((f: any) =>
       f['x-refersTo'] === input.concept &&
