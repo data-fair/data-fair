@@ -18,7 +18,7 @@ import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
-import { computeModified } from './utils/compute-modified.js'
+import { computeModified } from './utils/compute-modified.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
@@ -116,7 +116,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
   const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
   // Sort on `modified` is transparently rewritten to the indexed `_modified` field
-  // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.js).
+  // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.ts).
   // Rebuild to preserve key ordering — Mongo applies sort keys in insertion order.
   const sort = /** @type {any} */ ({})
   for (const [k, v] of Object.entries(rawSort)) {

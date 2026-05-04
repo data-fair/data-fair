@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { computeModified } from '../../../api/src/datasets/utils/compute-modified.js'
+import { computeModified } from '../../../api/src/datasets/utils/compute-modified.ts'
 
 test.describe('computeModified', () => {
   test('returns updatedAt when only updatedAt is set', () => {

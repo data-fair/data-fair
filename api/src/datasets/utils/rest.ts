@@ -42,7 +42,7 @@ import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'm
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
-import { computeModified } from './compute-modified.js'
+import { computeModified } from './compute-modified.ts'
 
 type Operation = {
   _id: string,
