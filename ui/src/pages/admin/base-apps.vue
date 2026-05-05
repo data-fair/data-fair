@@ -3,22 +3,10 @@
     <h2 class="text-title-large mb-4">
       {{ t('baseApps') }}
     </h2>
-    <v-row class="mb-2">
-      <v-col
-        cols="12"
-        sm="6"
-      >
-        <v-text-field
-          v-model="urlToAdd"
-          :label="t('add')"
-          :placeholder="t('addPlaceholder')"
-          variant="outlined"
-          density="compact"
-          hide-details
-          @keypress.enter="add.execute()"
-        />
-      </v-col>
 
+    <!-- Search and Add -->
+    <v-row class="mb-2">
+      <!-- Search -->
       <v-col
         cols="12"
         sm="6"
@@ -32,6 +20,22 @@
           hide-details
           clearable
           @keypress.enter="baseAppsFetch.refresh()"
+        />
+      </v-col>
+
+      <!-- Add base app -->
+      <v-col
+        cols="12"
+        sm="6"
+      >
+        <v-text-field
+          v-model="urlToAdd"
+          :label="t('add')"
+          :placeholder="t('addPlaceholder')"
+          variant="outlined"
+          density="compact"
+          hide-details
+          @keypress.enter="add.execute()"
         />
       </v-col>
     </v-row>
