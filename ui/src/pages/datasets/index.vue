@@ -114,14 +114,28 @@
       />
 
       <!-- Sort select -->
-      <v-select
-        v-model="sort"
-        :label="t('sort')"
-        :items="sortItems"
-        :clearable="false"
-        class="mt-4 mx-4"
-        rounded="md"
-      />
+      <v-tooltip
+        :disabled="!searchInput"
+        :text="t('sortDisabledRelevance')"
+        location="bottom"
+      >
+        <template #activator="{ props: tooltipProps }">
+          <div
+            v-bind="tooltipProps"
+            :class="{ 'cursor-not-allowed': !!searchInput }"
+          >
+            <v-select
+              v-model="sort"
+              :label="t('sort')"
+              :items="sortItems"
+              :clearable="false"
+              :disabled="!!searchInput"
+              class="mt-4 mx-4"
+              rounded="md"
+            />
+          </div>
+        </template>
+      </v-tooltip>
 
       <!-- Super admin toggle -->
       <v-switch
@@ -140,6 +154,7 @@
         v-model:draft-status="facetDraftStatus"
         v-model:visibility="facetVisibility"
         v-model:topics="facetTopics"
+        v-model:keywords="facetKeywords"
         v-model:publication-sites="facetPublicationSites"
         v-model:requested-publication-sites="facetRequestedPublicationSites"
         v-model:services="facetServices"
@@ -211,6 +226,7 @@ const facetStatus = useStringsArraySearchParam('status')
 const facetDraftStatus = useStringsArraySearchParam('draftStatus')
 const facetVisibility = useStringsArraySearchParam('visibility')
 const facetTopics = useStringsArraySearchParam('topics')
+const facetKeywords = useStringsArraySearchParam('keywords')
 const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
 const facetServices = useStringsArraySearchParam('services')
@@ -252,6 +268,7 @@ const datasetsQuery = computed(() => {
   if (facetDraftStatus.value?.length) params.draftStatus = facetDraftStatus.value.join(',')
   if (facetVisibility.value?.length) params.visibility = facetVisibility.value.join(',')
   if (facetTopics.value?.length) params.topics = facetTopics.value.join(',')
+  if (facetKeywords.value?.length) params.keywords = facetKeywords.value.join(',')
   if (facetPublicationSites.value?.length) params.publicationSites = facetPublicationSites.value.join(',')
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
   if (facetServices.value?.length) params.services = facetServices.value.join(',')
@@ -266,7 +283,7 @@ const datasetsQuery = computed(() => {
 const catalog = useCatalogList<Dataset>({
   fetchUrl: computed(() => $apiPath + '/datasets'),
   query: datasetsQuery,
-  facetsFields: 'status,visibility,topics,publicationSites,requestedPublicationSites,services,concepts,owner,draftStatus',
+  facetsFields: 'status,visibility,topics,keywords,publicationSites,requestedPublicationSites,services,concepts,owner,draftStatus',
 })
 
 // Breadcrumb updates
@@ -300,6 +317,7 @@ fr:
   sortDataUpdatedAtAsc: Données mises à jour (plus anciennes)
   sortTitleAsc: Titre (A → Z)
   sortTitleDesc: Titre (Z → A)
+  sortDisabledRelevance: "Tri désactivé pendant une recherche : les résultats sont triés par pertinence"
   datasets: "{count} jeux de données"
 en:
   showAll: Show all datasets
@@ -314,5 +332,6 @@ en:
   sortDataUpdatedAtAsc: Data update (oldest)
   sortTitleAsc: Title (A → Z)
   sortTitleDesc: Title (Z → A)
+  sortDisabledRelevance: "Sorting is disabled during a search: results are sorted by relevance"
   datasets: "{count} datasets"
 </i18n>
