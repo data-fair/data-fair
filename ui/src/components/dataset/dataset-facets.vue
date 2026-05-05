@@ -56,6 +56,17 @@
       multiple
     />
     <v-autocomplete
+      v-if="keywordsItems.length"
+      v-model="keywords"
+      :items="keywordsItems"
+      :label="t('keywords')"
+      density="compact"
+      variant="outlined"
+      hide-details
+      clearable
+      multiple
+    />
+    <v-autocomplete
       v-if="publicationSitesItems.length"
       v-model="publicationSites"
       :items="publicationSitesItems"
@@ -126,6 +137,7 @@ const status = defineModel<string[]>('status', { default: () => [] })
 const draftStatus = defineModel<string[]>('draftStatus', { default: () => [] })
 const visibility = defineModel<string[]>('visibility', { default: () => [] })
 const topics = defineModel<string[]>('topics', { default: () => [] })
+const keywords = defineModel<string[]>('keywords', { default: () => [] })
 const publicationSites = defineModel<string[]>('publicationSites', { default: () => [] })
 const requestedPublicationSites = defineModel<string[]>('requestedPublicationSites', { default: () => [] })
 const services = defineModel<string[]>('services', { default: () => [] })
@@ -209,6 +221,7 @@ const statusItems = facetToItems('status', (f) => t('statusValues.' + f.value))
 const draftStatusItems = facetToItems('draftStatus', (f) => t('draftStatusValues.' + f.value))
 const visibilityItems = facetToItems('visibility', (f) => t('visibilityValues.' + f.value))
 const topicsItems = facetToItems('topics', (f) => f.value?.title || f.value, (f) => f.value?.id || f.value)
+const keywordsItems = facetToItems('keywords')
 // Fetch publication sites for current account to resolve names
 const session = useSession()
 const publicationSitesById = ref<Record<string, any>>({})
@@ -249,6 +262,7 @@ fr:
   draftStatus: Statut du brouillon
   visibility: Visibilité
   topics: Thématiques
+  keywords: Mots-clés
   publicationSites: Sites de publication
   requestedPublicationSites: Publications demandées
   services: Enrichissement
@@ -290,6 +304,7 @@ en:
   draftStatus: Draft status
   visibility: Visibility
   topics: Topics
+  keywords: Keywords
   publicationSites: Publication sites
   requestedPublicationSites: Requested publications
   services: Extensions
