@@ -152,4 +152,50 @@ test.describe('validation diagnostic file', () => {
     const diag = await fetchDiagnostic(dataset.id)
     assert.equal(diag.status, 404)
   })
+
+  test('combined validation + exprEval errors land in the same diagnostic CSV', async () => {
+    // Schema rejects rows with non-alpha id.
+    // exprEval `10 / n` throws on n === 0.
+    // Some rows fail validation only, some fail extension only, some fail both, some pass.
+    const schema = [
+      { key: 'id', type: 'string', pattern: '^[a-z]+$' },
+      { key: 'n', type: 'number' }
+    ]
+    const csv = 'id,n\n' + [
+      'abc,2',   // line 2: passes both
+      '123,4',   // line 3: validation fail (id), extension passes
+      'def,0',   // line 4: validation passes, extension fail (10/0)
+      '456,0',   // line 5: validation fail AND extension fail
+      'jkl,5'    // line 6: passes both
+    ].join('\n') + '\n'
+    const form = new FormData()
+    form.append('file', Buffer.from(csv), 'combined.csv')
+    form.append('schema', JSON.stringify(schema))
+    form.append('extensions', JSON.stringify([{
+      active: true,
+      type: 'exprEval',
+      expr: '10 / n',
+      property: { key: 'half', type: 'number' }
+    }]))
+    const ds = (await testUser1.post('/api/v1/datasets', form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+    })).data
+    await waitForDatasetError(testUser1, ds.id)
+
+    const errEvent = await findEvent(ds.id, 'validation-error')
+    assert.ok(errEvent, 'expected a single validation-error event')
+    assert.equal(errEvent.hasDiagnosticFile, true)
+    assert.ok((errEvent.validationErrorCount ?? 0) > 0, 'expected validationErrorCount > 0')
+    assert.ok((errEvent.extensionErrorCount ?? 0) > 0, 'expected extensionErrorCount > 0')
+
+    const diag = await fetchDiagnostic(ds.id)
+    assert.equal(diag.status, 200)
+    const rows = diag.data.replace(/^\uFEFF/, '').trim().split('\n')
+    assert.equal(rows[0], 'line,error_type,field,message,raw_value')
+    const dataRows = rows.slice(1)
+    const validationRows = dataRows.filter((r: string) => r.includes(',validation,'))
+    const extensionRows = dataRows.filter((r: string) => r.includes(',extension,'))
+    assert.ok(validationRows.length >= 1, `expected validation rows in diagnostic, got: ${diag.data}`)
+    assert.ok(extensionRows.length >= 1, `expected extension rows in diagnostic, got: ${diag.data}`)
+  })
 })
