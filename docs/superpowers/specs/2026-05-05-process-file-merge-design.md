@@ -49,15 +49,9 @@ export default async function (dataset: DatasetInternal) {
     await pump(...readStreams, validateStream)
     nbValidationErrors = validateStream.nbErrors
     await journals.log('datasets', dataset, { type: 'validate-end' })
-
-    // compatibleOrCancel + row-level errors → cancel the draft, no diagnostic
-    if (nbValidationErrors > 0 && dataset.draftReason?.validationMode === 'compatibleOrCancel') {
-      await writer.discard()
-      delete patch.validateDraft
-      await cancelDraft()
-      return
-    }
   }
+  // (no early cancel here — phase B still runs so the cancel decision can include
+  // mandatory extension errors)
 
   // 3. PHASE B — extensions (only if at least one is active)
   let nbExtensionErrors = 0
@@ -90,11 +84,28 @@ export default async function (dataset: DatasetInternal) {
 
   // 4. Aggregate decision
   if (writer.count > 0) {
-    const fileResult = await writer.finalize()
     const summaryParts = []
     if (nbValidationErrors > 0) summaryParts.push(`${nbValidationErrors} ligne(s) en erreur de validation`)
     if (blockingExtensionErrors > 0) summaryParts.push(`${blockingExtensionErrors} ligne(s) en échec d'enrichissement obligatoire`)
     const summary = summaryParts.join(' ; ')
+
+    // compatibleOrCancel: silent auto-cancel — the draft directory is wiped, so we
+    // do not finalize the diagnostic (it would point at a nonexistent file).
+    if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
+      await writer.discard()
+      delete patch.validateDraft
+      await journals.log('datasets', dataset, {
+        type: 'draft-cancelled',
+        data: `annulation automatique : ${summary}`,
+        validationErrorCount: nbValidationErrors,
+        extensionErrorCount: blockingExtensionErrors
+      } as any)
+      await datasetsService.cancelDraft(dataset)
+      await datasetsService.applyPatch({ ...dataset, draftReason: null }, { draft: null })
+      return
+    }
+
+    const fileResult = await writer.finalize()
     await journals.log('datasets', dataset, {
       type: 'validation-error',
       data: summary,
@@ -106,7 +117,7 @@ export default async function (dataset: DatasetInternal) {
     } as any)
     await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
       params: {
-        nbErrors: String(writer.count),
+        nbErrors: String(fileResult.count),
         diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
       }
     })
@@ -213,7 +224,7 @@ The `validation-error` event gains two new optional integer fields (`validationE
 - **Validation produces N errors, extension produces M blocking errors**: writer.count = N + M → finalize, journal `validation-error` with both counts, throw. This is the new behavior the user asked for.
 - **Validation produces N errors, extension produces only non-mandatory errors**: writer.count = N (non-mandatory don't add). Finalize, throw. Non-mandatory errors stay in row error fields as today.
 - **Validation cap reached at 10 000**: phase B still runs but its addError calls are silent no-ops. `diagnosticCapped: true`. The dataset still enters error state.
-- **`compatibleOrCancel` validationMode + row-level validation errors**: writer is discarded (the draft is being cancelled and the directory cleanup wipes any partial diagnostic). Extension phase is **not** entered. The `cancelDraft` path is unchanged.
+- **`compatibleOrCancel` validationMode + any row-level errors (validation and/or mandatory extension)**: both phases still run so the count of cancelled-because-of-errors is accurate; at the aggregate decision point the writer is discarded (the draft is being cancelled and the directory cleanup wipes any partial diagnostic), a `draft-cancelled` journal event is emitted with the breakdown counts, and `cancelDraft()` runs. The `validation-error` event is **not** emitted in this case (it would otherwise reference a diagnostic file that no longer exists). This unifies the prior "row-level validation errors → cancel" path so mandatory extension failures also trigger auto-cancel under this mode.
 - **`compatibleOrCancel` validationMode + breaking schema changes**: existing path (lines 100-128) untouched — no diagnostic file produced, same as today.
 - **Empty file dataset**: same as today — validation finds no rows, extension processes no rows, writer.count = 0, dataset finalizes.
 - **Cascading errors** (a row that fails validation also produces a "garbage in" extension error, e.g. exprEval `n / 2` on a row whose `n` is the string `"abc"`): both errors are recorded. No suppression — explicit user direction.

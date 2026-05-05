@@ -419,15 +419,9 @@ export default async function (dataset: DatasetInternal) {
     await pump(...readStreams, validationStream)
     await journals.log('datasets', dataset, { type: 'validate-end' } as any)
     debug('phase A: done', { nbErrors: validationStream.nbErrors })
-
-    // compatibleOrCancel + row-level errors → cancel the draft, no diagnostic
-    if (validationStream.nbErrors > 0 && dataset.draftReason?.validationMode === 'compatibleOrCancel') {
-      await writer.discard()
-      delete patch.validateDraft
-      await cancelDraft()
-      return
-    }
   }
+  // No early cancel for compatibleOrCancel — phase B still runs so the cancel
+  // decision below can account for mandatory extension errors too.
 
   const nbValidationErrors = validationStream?.nbErrors ?? 0
 
@@ -465,7 +459,6 @@ export default async function (dataset: DatasetInternal) {
 
   // ----- Aggregate decision -----
   if (writer.errorCount > 0) {
-    const fileResult = await writer.finalize()
     const summaryParts: string[] = []
     if (nbValidationErrors > 0) {
       const validationSummary = validationStream?.errorsSummary() ?? `${nbValidationErrors} ligne(s) en erreur de validation`
@@ -475,6 +468,26 @@ export default async function (dataset: DatasetInternal) {
       summaryParts.push(`${blockingExtensionErrors} ligne(s) en échec d'enrichissement obligatoire`)
     }
     const summary = summaryParts.join('\n')
+
+    // compatibleOrCancel: auto-cancel the draft. We discard the writer (the draft
+    // directory is about to be wiped, so the diagnostic file would be orphaned)
+    // and emit a draft-cancelled event with breakdown counts instead of a
+    // validation-error event that would reference a nonexistent file.
+    if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
+      await writer.discard()
+      delete patch.validateDraft
+      await journals.log('datasets', dataset, {
+        type: 'draft-cancelled',
+        data: `annulation automatique : ${summary}`,
+        validationErrorCount: nbValidationErrors,
+        extensionErrorCount: blockingExtensionErrors
+      } as any)
+      await datasetsService.cancelDraft(dataset)
+      await datasetsService.applyPatch({ ...dataset, draftReason: null }, { draft: null })
+      return
+    }
+
+    const fileResult = await writer.finalize()
     await journals.log('datasets', dataset, {
       type: 'validation-error',
       data: summary,
@@ -878,16 +891,109 @@ The full 10 000-error test is slow; instead add a smoke test that confirms the b
 Run: `npx playwright test tests/features/datasets/extensions/validation-diagnostic.api.spec.ts -g "breakdown counts"`
 Expected: PASS.
 
-- [ ] **Step 5: Run the full diagnostic suite once more**
+- [ ] **Step 5: Add the compatibleOrCancel + mandatory extension test**
+
+Append inside the `test.describe('validation diagnostic file', () => { ... })` block:
+
+```ts
+  test('compatibleOrCancel auto-cancels the draft when a mandatory extension fails', async () => {
+    // First publish a clean dataset so a follow-up upload becomes a draft.
+    const fs = await import('node:fs')
+    const dataset1Fd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', dataset1Fd, 'dataset1.csv')
+    let dataset = (await testUser1.post('/api/v1/datasets', form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+    })).data
+    dataset = await waitForFinalize(testUser1, dataset.id)
+
+    // Add a mandatory exprEval extension that throws when one of the dataset's
+    // numeric fields is 0 (or any value that would make the expression error).
+    // Pick whichever numeric field exists in dataset1.csv.
+    const numField = dataset.schema.find((f: any) => f.type === 'integer' || f.type === 'number')
+    assert.ok(numField, 'dataset1.csv should have a numeric field for this test')
+    const patchRes = await testUser1.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        type: 'exprEval',
+        expr: `10 / IF(${numField.key} == ${numField.key}, ${numField.key}, ${numField.key})`,
+        property: { key: 'inverse', type: 'number' }
+      }]
+    })
+    assert.equal(patchRes.status, 200)
+    await waitForFinalize(testUser1, dataset.id)
+
+    // Upload a follow-up file containing a row that triggers the mandatory
+    // extension to throw (e.g. zero in the numeric column).
+    // We craft the CSV inline using only the columns of dataset1.csv — read the
+    // first line of the fixture to learn the headers.
+    const headersLine = dataset1Fd.toString().split('\n')[0]
+    const headers = headersLine.split(',')
+    const numIdx = headers.indexOf(numField.key)
+    assert.ok(numIdx >= 0, 'numeric field must be in the fixture header')
+    // build a 2-row body where the second row has 0 in the numeric column
+    const rowOk = headers.map((h, i) => i === numIdx ? '5' : (h === 'id' ? 'aaa' : 'x')).join(',')
+    const rowBad = headers.map((h, i) => i === numIdx ? '0' : (h === 'id' ? 'bbb' : 'y')).join(',')
+    const csv = headersLine + '\n' + rowOk + '\n' + rowBad + '\n'
+    const form2 = new FormData()
+    form2.append('file', Buffer.from(csv), 'dataset1.csv')
+    const draftRes = (await testUser1.post(`/api/v1/datasets/${dataset.id}`, form2, {
+      headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
+      params: { draft: 'compatibleOrCancel' }
+    })).data
+    assert.equal(draftRes.draftReason.validationMode, 'compatibleOrCancel')
+
+    // Wait for the worker to process and either cancel or error. We poll the
+    // journal looking for the draft-cancelled event.
+    let cancelled = false
+    for (let i = 0; i < 60; i++) {
+      const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+      if (journal.find((e: any) => e.type === 'draft-cancelled')) {
+        cancelled = true
+        break
+      }
+      await new Promise(r => setTimeout(r, 500))
+    }
+    assert.ok(cancelled, 'expected draft-cancelled event after a mandatory extension failed under compatibleOrCancel')
+
+    // Assert no validation-error event with a diagnostic file (it would point at
+    // a nonexistent file since the draft directory was wiped).
+    const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    const cancelEvent = journal.find((e: any) => e.type === 'draft-cancelled')
+    // The new event should carry breakdown counts (validationErrorCount + extensionErrorCount)
+    assert.ok((cancelEvent.extensionErrorCount ?? 0) > 0,
+      `expected extensionErrorCount > 0 on draft-cancelled, got ${JSON.stringify(cancelEvent)}`)
+
+    // diagnostic endpoint should 404
+    const diag = await fetchDiagnostic(dataset.id)
+    assert.equal(diag.status, 404)
+  })
+```
+
+If `dataset1.csv` doesn't have a usable numeric field, swap the fixture for one that does (e.g. `dataset-extensions.csv` has `label,adr` — adapt the CSV constants accordingly). Inspect with:
+
+```bash
+head -3 tests/resources/datasets/dataset1.csv
+```
+
+…and adjust the column names if needed.
+
+- [ ] **Step 6: Run the new test**
+
+Run: `npx playwright test tests/features/datasets/extensions/validation-diagnostic.api.spec.ts -g "compatibleOrCancel auto-cancels"`
+Expected: PASS.
+
+- [ ] **Step 7: Run the full diagnostic suite once more**
 
 Run: `npx playwright test tests/features/datasets/extensions/validation-diagnostic.api.spec.ts`
-Expected: PASS — 7 tests (4 original + combined exprEval + combined mandatory remoteService + breakdown).
+Expected: PASS — 8 tests (4 original + combined exprEval + combined mandatory remoteService + breakdown + compatibleOrCancel auto-cancel).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add tests/features/datasets/extensions/validation-diagnostic.api.spec.ts
-git commit -m "test: add combined validation+extension and breakdown-count tests"
+git commit -m "test: add combined-error and compatibleOrCancel auto-cancel tests"
 ```
 
 ---
