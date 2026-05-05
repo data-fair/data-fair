@@ -37,6 +37,10 @@ export class DiagnosticWriter {
   private stringifier: Stringifier | null = null
   private pipelineDone: Promise<void> | null = null
   private count = 0
+  get errorCount (): number {
+    return this.count
+  }
+
   private capped = false
 
   constructor (dataset: Dataset) {
