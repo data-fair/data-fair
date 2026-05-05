@@ -181,7 +181,6 @@ const datasetTasks: DatasetTask[] = [{
   })
 }, {
   name: 'validateFile',
-  eventsPrefix: 'validate',
   worker: 'batchProcessor',
   mongoFilter: () => ({
     $or: [
@@ -195,8 +194,6 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'batchProcessor',
   mongoFilter: () => ({
     $or: [
-      { $and: [isValidatedMongoFilter(), noActiveDraftFilter, activeExtensionMongoFilter()] },
-      { $and: [isValidatedMongoFilter('draft.'), activeExtensionMongoFilter(true)] },
       { isRest: true, status: 'finalized', 'extensions.active': true, _partialRestStatus: 'updated' },
       { isRest: true, status: 'finalized', extensions: { $elemMatch: { active: true, needsUpdate: true } }, _partialRestStatus: null }
     ]
