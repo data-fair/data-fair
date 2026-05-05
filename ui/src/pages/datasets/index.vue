@@ -154,6 +154,7 @@
         v-model:draft-status="facetDraftStatus"
         v-model:visibility="facetVisibility"
         v-model:topics="facetTopics"
+        v-model:keywords="facetKeywords"
         v-model:publication-sites="facetPublicationSites"
         v-model:requested-publication-sites="facetRequestedPublicationSites"
         v-model:services="facetServices"
@@ -225,6 +226,7 @@ const facetStatus = useStringsArraySearchParam('status')
 const facetDraftStatus = useStringsArraySearchParam('draftStatus')
 const facetVisibility = useStringsArraySearchParam('visibility')
 const facetTopics = useStringsArraySearchParam('topics')
+const facetKeywords = useStringsArraySearchParam('keywords')
 const facetPublicationSites = useStringsArraySearchParam('publicationSites')
 const facetRequestedPublicationSites = useStringsArraySearchParam('requestedPublicationSites')
 const facetServices = useStringsArraySearchParam('services')
@@ -266,6 +268,7 @@ const datasetsQuery = computed(() => {
   if (facetDraftStatus.value?.length) params.draftStatus = facetDraftStatus.value.join(',')
   if (facetVisibility.value?.length) params.visibility = facetVisibility.value.join(',')
   if (facetTopics.value?.length) params.topics = facetTopics.value.join(',')
+  if (facetKeywords.value?.length) params.keywords = facetKeywords.value.join(',')
   if (facetPublicationSites.value?.length) params.publicationSites = facetPublicationSites.value.join(',')
   if (facetRequestedPublicationSites.value?.length) params.requestedPublicationSites = facetRequestedPublicationSites.value.join(',')
   if (facetServices.value?.length) params.services = facetServices.value.join(',')
@@ -280,7 +283,7 @@ const datasetsQuery = computed(() => {
 const catalog = useCatalogList<Dataset>({
   fetchUrl: computed(() => $apiPath + '/datasets'),
   query: datasetsQuery,
-  facetsFields: 'status,visibility,topics,publicationSites,requestedPublicationSites,services,concepts,owner,draftStatus',
+  facetsFields: 'status,visibility,topics,keywords,publicationSites,requestedPublicationSites,services,concepts,owner,draftStatus',
 })
 
 // Breadcrumb updates
