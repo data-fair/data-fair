@@ -83,7 +83,7 @@ export default async function (dataset: DatasetInternal) {
           diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
         }
       })
-      throw new Error(`[noretry] ${summary}`)
+      throw new Error(`[validation-error] ${summary}`)
     } else {
       await writer.discard()
     }

@@ -95,7 +95,15 @@ export const waitForDatasetError = async (
   const timeout = opts?.timeout ?? 15000
   const params = opts?.draft ? { draft: true } : undefined
   const ws = getSharedWs()
-  await ws.waitFor(`datasets/${datasetId}/journal`, (e: any) => e.type === 'error', timeout)
+  // Match either an 'error' event (infrastructure / unexpected failure) or a
+  // terminal 'validation-error' (carries hasDiagnosticFile). Non-terminal
+  // validation-errors (e.g. breaking-changes detection on a draft) do NOT
+  // make the dataset enter the error state, so we ignore them here.
+  await ws.waitFor(
+    `datasets/${datasetId}/journal`,
+    (e: any) => e.type === 'error' || (e.type === 'validation-error' && e.hasDiagnosticFile),
+    timeout
+  )
   return (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
 }
 

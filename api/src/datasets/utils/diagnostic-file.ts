@@ -1,6 +1,7 @@
 import fs from 'fs-extra'
 import path from 'node:path'
 import filesStorage from '#files-storage'
+import mongo from '#mongo'
 import { tmpDir, validationDiagnosticFilePath } from './files.ts'
 import type { Dataset } from '#types'
 
@@ -35,6 +36,7 @@ const csvEscape = (v: string | number | undefined | null): string => {
  *   successful re-run clears stale diagnostics from a prior failed attempt.
  */
 export class DiagnosticWriter {
+  private dataset: Dataset
   private targetPath: string
   private tmpPath: string
   private writeStream: fs.WriteStream | null = null
@@ -42,8 +44,31 @@ export class DiagnosticWriter {
   private capped = false
 
   constructor (dataset: Dataset) {
+    this.dataset = dataset
     this.targetPath = validationDiagnosticFilePath(dataset)
     this.tmpPath = path.join(tmpDir, `validation-diagnostic-${dataset.id}-${Date.now()}-${process.pid}.csv`)
+  }
+
+  // The hasDiagnosticFile flag on a journal event reflects the live filesystem
+  // state, which has just changed. Clear it from any prior events in the same
+  // draft bucket so the UI can trust event.hasDiagnosticFile directly.
+  private async clearStaleJournalFlags (): Promise<void> {
+    const isDraft = !!this.dataset.draftReason
+    await mongo.db.collection('journals').updateOne(
+      {
+        type: 'dataset',
+        id: this.dataset.id,
+        'owner.type': this.dataset.owner.type,
+        'owner.id': this.dataset.owner.id
+      },
+      { $unset: { 'events.$[stale].hasDiagnosticFile': '' } },
+      {
+        arrayFilters: [{
+          'stale.hasDiagnosticFile': true,
+          ...(isDraft ? { 'stale.draft': true } : { 'stale.draft': { $ne: true } })
+        }]
+      }
+    )
   }
 
   private ensureStream () {
@@ -85,6 +110,7 @@ export class DiagnosticWriter {
     })
     this.writeStream = null
     await filesStorage.moveFromFs(this.tmpPath, this.targetPath)
+    await this.clearStaleJournalFlags()
     return { count: this.count, capped: this.capped }
   }
 
@@ -97,5 +123,6 @@ export class DiagnosticWriter {
     if (await filesStorage.pathExists(this.targetPath)) {
       await filesStorage.removeFile(this.targetPath)
     }
+    await this.clearStaleJournalFlags()
   }
 }

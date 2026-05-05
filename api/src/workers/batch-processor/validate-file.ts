@@ -76,9 +76,9 @@ class ValidateStream extends Writable {
   errorsSummary () {
     if (!this.nbErrors) return null
     const leftOut = this.nbErrors - inlineErrorsLimit
-    let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n<br>`
-    msg += this.inlineErrors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n<br>')
-    if (leftOut > 0) msg += `\n<br>${leftOut} autres erreurs...`
+    let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n`
+    msg += this.inlineErrors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n')
+    if (leftOut > 0) msg += `\n${leftOut} autres erreurs...`
     return msg
   }
 }
@@ -158,7 +158,7 @@ export default async function (dataset: DatasetInternal) {
         await cancelDraft()
         return
       } else {
-        throw new Error(`[noretry] ${errorsSummary}`)
+        throw new Error(`[validation-error] ${errorsSummary}`)
       }
     } else {
       // success: drop any stale diagnostic from a previous failed attempt

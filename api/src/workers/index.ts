@@ -218,6 +218,14 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
       debug('error message started by [noretry]')
       errorMessage = errorMessage.replace('[noretry] ', '')
     }
+    // [validation-error] is a [noretry] variant signalling that a validation-error
+    // journal entry was already written; skip the duplicate error/error-retry log.
+    const isValidationError = errorMessage.startsWith('[validation-error] ')
+    if (isValidationError) {
+      debug('error message started by [validation-error]')
+      errorMessage = errorMessage.replace('[validation-error] ', '')
+      retry = false
+    }
     if (retry) {
       // if this is the second time we get this error, do not retry anymore
       const hasErrorRetry = await journals.hasErrorRetry(resource, type)
@@ -249,7 +257,9 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
       await journals.log(type, resource, { type: 'error-retry', data: errorMessage } as any)
       patch.$set[propertyPrefix + 'errorRetry'] = new Date((new Date()).getTime() + config.worker.errorRetryDelay).toISOString()
     } else {
-      await journals.log(type, resource, { type: 'error', data: errorMessage } as any)
+      if (!isValidationError) {
+        await journals.log(type, resource, { type: 'error', data: errorMessage } as any)
+      }
       patch.$unset = { [propertyPrefix + 'errorRetry']: 1 }
     }
 

@@ -4,6 +4,7 @@
   "dependencies": {
     "@data-fair/lib-utils": "^1.8.0",
     "ajv": "^8.17.1",
+    "ajv-errors": "^3.0.0",
     "ajv-formats": "^3.0.1",
     "ajv-i18n": "^4.2.0",
     "dayjs": "^1.11.13",
