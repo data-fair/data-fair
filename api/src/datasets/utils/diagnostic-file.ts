@@ -1,5 +1,7 @@
 import fs from 'fs-extra'
 import path from 'node:path'
+import { pipeline } from 'node:stream/promises'
+import { stringify as csvStrStream, type Stringifier } from 'csv-stringify'
 import filesStorage from '#files-storage'
 import mongo from '#mongo'
 import { tmpDir, validationDiagnosticFilePath } from './files.ts'
@@ -19,13 +21,6 @@ export const DIAGNOSTIC_FILE_CAP = 10000
 
 const RAW_VALUE_TRUNCATE = 200
 
-const csvEscape = (v: string | number | undefined | null): string => {
-  if (v === undefined || v === null) return ''
-  const s = String(v).replace(/"/g, '""')
-  if (s.includes(',') || s.includes('\n') || s.includes('"')) return `"${s}"`
-  return s
-}
-
 /**
  * Owns the lifecycle of one validation-diagnostic CSV per dataset.
  *
@@ -39,7 +34,8 @@ export class DiagnosticWriter {
   private dataset: Dataset
   private targetPath: string
   private tmpPath: string
-  private writeStream: fs.WriteStream | null = null
+  private stringifier: Stringifier | null = null
+  private pipelineDone: Promise<void> | null = null
   private count = 0
   private capped = false
 
@@ -72,12 +68,14 @@ export class DiagnosticWriter {
   }
 
   private ensureStream () {
-    if (this.writeStream) return
+    if (this.stringifier) return
     fs.ensureDirSync(path.dirname(this.tmpPath))
-    this.writeStream = fs.createWriteStream(this.tmpPath, { encoding: 'utf8' })
-    // BOM for Excel
-    this.writeStream.write('﻿')
-    this.writeStream.write('line,error_type,field,message,raw_value\n')
+    this.stringifier = csvStrStream({
+      bom: true,
+      header: true,
+      columns: ['line', 'error_type', 'field', 'message', 'raw_value']
+    })
+    this.pipelineDone = pipeline(this.stringifier, fs.createWriteStream(this.tmpPath))
   }
 
   async addError (entry: DiagnosticErrorEntry): Promise<void> {
@@ -89,40 +87,38 @@ export class DiagnosticWriter {
     const truncated = entry.rawValue && entry.rawValue.length > RAW_VALUE_TRUNCATE
       ? entry.rawValue.slice(0, RAW_VALUE_TRUNCATE) + '…'
       : entry.rawValue
-    const row = [
-      entry.line,
-      entry.type,
-      csvEscape(entry.field),
-      csvEscape(entry.message),
-      csvEscape(truncated)
-    ].join(',') + '\n'
-    this.writeStream!.write(row)
+    this.stringifier!.write([entry.line, entry.type, entry.field, entry.message, truncated ?? ''])
     this.count += 1
   }
 
   async finalize (): Promise<{ count: number, capped: boolean }> {
-    if (!this.writeStream || this.count === 0) {
+    if (!this.stringifier || this.count === 0) {
       await this.discard()
       return { count: 0, capped: false }
     }
-    await new Promise<void>((resolve, reject) => {
-      this.writeStream!.end((err: any) => err ? reject(err) : resolve())
-    })
-    this.writeStream = null
+    await this.closeStream()
     await filesStorage.moveFromFs(this.tmpPath, this.targetPath)
     await this.clearStaleJournalFlags()
     return { count: this.count, capped: this.capped }
   }
 
   async discard (): Promise<void> {
-    if (this.writeStream) {
-      await new Promise<void>(resolve => this.writeStream!.end(() => resolve()))
-      this.writeStream = null
+    if (this.stringifier) {
+      await this.closeStream().catch(() => {})
     }
     await fs.remove(this.tmpPath).catch(() => {})
     if (await filesStorage.pathExists(this.targetPath)) {
       await filesStorage.removeFile(this.targetPath)
     }
     await this.clearStaleJournalFlags()
+  }
+
+  private async closeStream (): Promise<void> {
+    const stringifier = this.stringifier!
+    const done = this.pipelineDone!
+    this.stringifier = null
+    this.pipelineDone = null
+    stringifier.end()
+    await done
   }
 }
