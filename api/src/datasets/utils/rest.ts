@@ -840,10 +840,27 @@ async function manageAttachment (req: RequestWithRestDataset & { body: any }, ke
       throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
     req.body[pathField.key] = relativePath
+    // remember the new attachment path so the caller can roll it back if the
+    // transaction is rejected (mandatory-extension fail, AJV fail, conflict…)
+    req._uploadedAttachmentPath = attachmentPath(req.dataset, relativePath)
   } else if (!keepExisting && pathField) {
     if (!checkMatchingAttachment(req, lineId, dir, pathField)) {
       await filesStorage.removeDir(dir)
     }
+  }
+}
+
+// Remove an attachment that was just uploaded by manageAttachment when the
+// surrounding transaction is rejected — otherwise the file lingers on disk
+// without any database row referencing it.
+const rollbackUploadedAttachment = async (req: RequestWithRestDataset) => {
+  const p = req._uploadedAttachmentPath
+  if (!p) return
+  delete req._uploadedAttachmentPath
+  try {
+    if (await filesStorage.pathExists(p)) await filesStorage.removeFile(p)
+  } catch (err) {
+    console.warn('failed to rollback uploaded attachment', p, err)
   }
 }
 
@@ -909,7 +926,10 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   formatLine(fullLine, req.dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
-  if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
+  if (operation._error) {
+    await rollbackUploadedAttachment(req)
+    return res.status(operation._status ?? 200).send(operation._error)
+  }
   await commitLines(req.dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
@@ -926,7 +946,10 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   formatLine(fullLine, req.dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
-  if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
+  if (operation._error) {
+    await rollbackUploadedAttachment(req)
+    return res.status(operation._status ?? 200).send(operation._error)
+  }
   await commitLines(req.dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')

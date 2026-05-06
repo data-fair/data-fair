@@ -1,7 +1,9 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import fs from 'fs-extra'
+import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { restCollectionCount, setupMockRoute, clearMockRoutes, setConfig } from '../../../support/workers.ts'
+import { restCollectionCount, setupMockRoute, clearMockRoutes, setConfig, lsAttachments } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -108,6 +110,47 @@ test.describe('mandatory remoteService — REST dataset', () => {
     } finally {
       await setConfig('elasticsearch.maxBulkChars', 200000)
     }
+  })
+
+  test('uploaded attachment is rolled back when mandatory remoteService rejects the line', async () => {
+    await setupMockRoute({
+      path: '/geocoder/coords',
+      ndjsonEcho: { fields: { error: 'mock failure' } }
+    })
+
+    const ds = (await testUser1.post('/api/v1/datasets/rest-mandatory-attach', {
+      isRest: true,
+      title: 'rest-mandatory-attach',
+      schema: [
+        { key: 'adr', type: 'string', 'x-refersTo': 'http://schema.org/address' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ],
+      extensions: [{
+        active: true,
+        mandatory: true,
+        type: 'remoteService',
+        remoteService: 'geocoder-koumoul',
+        action: 'postCoords'
+      }]
+    })).data
+    assert.equal(ds.status, 'finalized')
+
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf')
+    form.append('attachment', attachmentContent, 'dir1/test.pdf')
+    form.append('adr', 'somewhere')
+    const res = await testUser1.post(`/api/v1/datasets/${ds.id}/lines`, form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+      validateStatus: () => true
+    })
+    assert.equal(res.status, 400)
+    assert.match(JSON.stringify(res.data), /enrichissement obligatoire/)
+
+    // line not persisted
+    assert.equal(await restCollectionCount(ds.id), 0)
+    // and the uploaded attachment was cleaned up — no orphan on disk
+    const attachments = await lsAttachments(ds.id)
+    assert.equal(attachments.length, 0, `expected no orphaned attachment, got ${JSON.stringify(attachments)}`)
   })
 
   test('non-mandatory remoteService failure is non-blocking — line persists', async () => {
