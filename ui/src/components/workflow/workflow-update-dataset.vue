@@ -71,9 +71,21 @@
           :title="t('editTable')"
         />
       </template>
+
+      <v-btn
+        v-if="currentDataset && $uiConfig.openapiViewerIntegration && currentDatasetStore?.can('readApiDoc').value"
+        :icon="mdiCog"
+        :href="apiDocHref"
+        target="_blank"
+        variant="text"
+        size="small"
+        color="primary"
+        class="mr-4"
+        :title="t('apiDocBtn')"
+      />
     </v-stepper-header>
 
-    <v-stepper-window>
+    <v-stepper-window :class="{ 'ma-0': currentDataset?.isRest }">
       <v-stepper-window-item :value="1">
         <dataset-select-cards
           v-if="!initialFetch"
@@ -112,8 +124,9 @@
             </li>
           </ul>
         </v-alert>
-        <!-- FILE steps -->
+
         <template v-else>
+          <!-- FILE steps -->
           <template v-if="currentDataset?.file">
             <v-stepper-window-item
               :value="2"
@@ -297,10 +310,13 @@
 
           <!-- REST steps -->
           <template v-if="datasetStore.dataset.value?.isRest">
-            <v-stepper-window-item :value="2">
+            <v-stepper-window-item
+              :value="2"
+              class="pt-4 bg-surface"
+            >
               <dataset-table
                 :edit="true"
-                :height="height - 84"
+                :height="height - 140"
               />
             </v-stepper-window-item>
           </template>
@@ -346,6 +362,7 @@ fr:
     readLines: Requêter les lignes du jeu de données.
   draftCancelled: Votre fichier a été rejeté automatiquement. Vous pouvez corriger un problème de structure dans le fichier avant de le charger de nouveau, ou contacter un administrateur.
   changeFile: Changer de fichier
+  apiDocBtn: Accéder à la documentation d'API du jeu de données - Nouvelle fenêtre
 en:
   updateDataset: Update a dataset
   choseType: What update action do you wish to perform ?
@@ -381,6 +398,7 @@ en:
     readLines: Query the dataset's lines
   draftCancelled: Your file was rejected. You can fix a structure problem in the file before loading it again, or contact an administrator.
   changeFile: Change file
+  apiDocBtn: Access the dataset API documentation - New window
 </i18n>
 
 <script setup lang="ts">
@@ -392,7 +410,7 @@ import { type ListedDataset } from '../dataset/select/utils'
 import { type DatasetStore } from '~/composables/dataset/dataset-store'
 import DatasetStoreProvider from '~/components/provide/dataset-store-provider.vue'
 import Debug from 'debug'
-import { mdiCancel, mdiCheckAll, mdiDatabase, mdiPaperclip, mdiTable, mdiZipBox } from '@mdi/js'
+import { mdiCancel, mdiCheckAll, mdiCog, mdiDatabase, mdiPaperclip, mdiTable, mdiZipBox } from '@mdi/js'
 import { useWindowSize } from '@vueuse/core'
 
 const debug = Debug('workflow-update-dataset')
@@ -459,6 +477,12 @@ watch(currentDataset, (newValue, oldValue) => {
   }
 })
 const digitalDocumentField = computed(() => currentDatasetStore.value?.digitalDocumentField.value)
+
+const apiDocHref = computed(() => {
+  if (!currentDataset.value) return undefined
+  const urlType = currentDatasetStore.value?.can('readPrivateApiDoc').value ? 'privateDataset' : 'dataset'
+  return `${$sitePath}/openapi-viewer/?drawerLocation=right&urlType=${urlType}&id=${currentDataset.value.id}`
+})
 
 let cancelUpdate: CancelTokenSource
 const uploadProgress = ref<{ loaded: number, total?: number, percent?: number }>()
