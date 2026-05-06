@@ -27,7 +27,10 @@
       md="6"
       lg="4"
     >
-      <v-card variant="outlined">
+      <v-card
+        variant="outlined"
+        class="bg-surface"
+      >
         <v-card-title class="text-body-large font-weight-bold">
           <a
             :href="attachmentUrl(attachment)"
@@ -37,21 +40,23 @@
           </a>
         </v-card-title>
 
-        <v-card-text v-if="attachment.type === 'file' || !attachment.type">
-          <div v-if="attachment.name">
-            {{ attachment.name }} ({{ formatSize(attachment.size) }})
-          </div>
-          <div v-if="attachment.updatedAt">
-            {{ formatDate(attachment.updatedAt) }}
-          </div>
-        </v-card-text>
+        <v-card-text class="pb-0">
+          <template v-if="attachment.type === 'file' || !attachment.type">
+            <div v-if="attachment.name">
+              {{ attachment.name }} ({{ formatSize(attachment.size) }})
+            </div>
+            <div v-if="attachment.updatedAt">
+              {{ formatDate(attachment.updatedAt) }}
+            </div>
+          </template>
 
-        <v-card-text v-if="attachment.type === 'url' && attachment.url">
-          <div>{{ attachment.url }}</div>
-        </v-card-text>
+          <div v-if="attachment.type === 'url' && attachment.url">
+            {{ attachment.url }}
+          </div>
 
-        <v-card-text v-if="type === 'dataset' && attachment.description">
-          <div>{{ attachment.description }}</div>
+          <div v-if="type === 'dataset' && attachment.description">
+            {{ attachment.description }}
+          </div>
         </v-card-text>
 
         <v-card-actions>
