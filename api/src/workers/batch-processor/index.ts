@@ -8,8 +8,8 @@ import type { FileDataset, Dataset } from '#types'
 export const extend = async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
   await wsEmitter.init(mongo.db)
-  const extend = await import('./extend.ts')
-  await extend.default(dataset)
+  const extendRest = await import('./extend-rest.ts')
+  await extendRest.default(dataset)
 }
 
 export const indexLines = async function (dataset: Dataset) {
