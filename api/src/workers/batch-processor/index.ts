@@ -23,8 +23,8 @@ export const validateFile = async function (dataset: FileDataset) {
   await mongo.connect(true)
   await wsEmitter.init(mongo.db)
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
-  const validateFile = await import('./validate-file.ts')
-  await validateFile.default(dataset)
+  const processFile = await import('./process-file.ts')
+  await processFile.default(dataset)
 }
 
 export type NockInfo = {
