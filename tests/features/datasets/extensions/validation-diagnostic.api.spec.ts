@@ -199,4 +199,147 @@ test.describe('validation diagnostic file', () => {
     assert.ok(validationRows.length >= 1, `expected validation rows in diagnostic, got: ${diag.data}`)
     assert.ok(extensionRows.length >= 1, `expected extension rows in diagnostic, got: ${diag.data}`)
   })
+
+  test('combined validation + mandatory remoteService errors land in the same diagnostic CSV', async () => {
+    // Fixture (tests/resources/datasets/dataset-extensions.csv) has 2 rows:
+    //   koumoul,19 rue de la voie lactée saint avé
+    //   other,unknown address
+    const dataset = await sendDataset('datasets/dataset-extensions.csv', testUser1)
+
+    await setupMockRoute({
+      path: '/geocoder/coords',
+      ndjsonEcho: { fields: { error: 'mock failure' } }
+    })
+
+    // Tighten the label schema so 'other' fails validation (only 'koumoul' matches);
+    // the mandatory remoteService returns an error on every row → both rows fail extension.
+    const labelField = dataset.schema.find((f: any) => f.key === 'label')
+    labelField.pattern = '^k.*$'
+    const adrField = dataset.schema.find((f: any) => f.key === 'adr')
+    adrField['x-refersTo'] = 'http://schema.org/address'
+
+    const res = await testUser1.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        mandatory: true,
+        type: 'remoteService',
+        remoteService: 'geocoder-koumoul',
+        action: 'postCoords'
+      }]
+    })
+    assert.equal(res.status, 200)
+    const errored = await waitForDatasetError(testUser1, dataset.id)
+    assert.equal(errored.status, 'error')
+
+    const errEvent = await findEvent(dataset.id, 'validation-error')
+    assert.ok(errEvent)
+    assert.equal(errEvent.hasDiagnosticFile, true)
+    assert.ok((errEvent.validationErrorCount ?? 0) > 0)
+    assert.ok((errEvent.extensionErrorCount ?? 0) > 0)
+
+    const diag = await fetchDiagnostic(dataset.id)
+    assert.equal(diag.status, 200)
+    const dataRows = diag.data.replace(/^\uFEFF/, '').trim().split('\n').slice(1)
+    const hasValidation = dataRows.some((r: string) => r.includes(',validation,'))
+    const hasExtension = dataRows.some((r: string) => r.includes(',extension,'))
+    assert.ok(hasValidation, `expected validation rows: ${diag.data}`)
+    assert.ok(hasExtension, `expected extension rows: ${diag.data}`)
+  })
+
+  test('breakdown counts in the journal event match the diagnostic file content', async () => {
+    const schema = [
+      { key: 'id', type: 'string', pattern: '^[a-z]+$' },
+      { key: 'n', type: 'number' }
+    ]
+    const csv = 'id,n\n' + [
+      '1,2',     // validation fail
+      '2,0',     // validation fail + extension fail
+      'a,0',     // extension fail only
+      'b,5'      // ok
+    ].join('\n') + '\n'
+    const form = new FormData()
+    form.append('file', Buffer.from(csv), 'breakdown.csv')
+    form.append('schema', JSON.stringify(schema))
+    form.append('extensions', JSON.stringify([{
+      active: true,
+      type: 'exprEval',
+      expr: 'n == 0 ? "zero" : n',
+      property: { key: 'half', type: 'number' }
+    }]))
+    const ds = (await testUser1.post('/api/v1/datasets', form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+    })).data
+    await waitForDatasetError(testUser1, ds.id)
+
+    const errEvent = await findEvent(ds.id, 'validation-error')
+    const diag = await fetchDiagnostic(ds.id)
+    const dataRows = diag.data.replace(/^\uFEFF/, '').trim().split('\n').slice(1)
+    const validationCount = dataRows.filter((r: string) => r.includes(',validation,')).length
+    const extensionCount = dataRows.filter((r: string) => r.includes(',extension,')).length
+    assert.equal(errEvent.validationErrorCount, validationCount,
+      `breakdown.validationErrorCount=${errEvent.validationErrorCount} mismatched file=${validationCount}`)
+    assert.equal(errEvent.extensionErrorCount, extensionCount,
+      `breakdown.extensionErrorCount=${errEvent.extensionErrorCount} mismatched file=${extensionCount}`)
+    assert.equal(errEvent.diagnosticErrorCount, validationCount + extensionCount)
+  })
+
+  test('compatibleOrCancel auto-cancels the draft when a mandatory extension fails', async () => {
+    // Use a simple 2-column CSV (id, n) so the draft upload stays schema-compatible.
+    // dataset1.csv has complex typed columns (date, geo, bool) that would trigger
+    // schema-breaking-changes when filled with dummy strings, cancelling for the wrong reason.
+    const initialCsv = 'id,n\na,5\nb,10\n'
+    const form = new FormData()
+    form.append('file', Buffer.from(initialCsv), 'simple.csv')
+    let dataset = (await testUser1.post('/api/v1/datasets', form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+    })).data
+    dataset = await waitForFinalize(testUser1, dataset.id)
+
+    // Add a mandatory exprEval that fails when n=0 (returns string → AJV type check fails).
+    const patchRes = await testUser1.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        mandatory: true,
+        type: 'exprEval',
+        expr: 'n == 0 ? "zero" : n',
+        property: { key: 'inverse', type: 'number' }
+      }]
+    })
+    assert.equal(patchRes.status, 200)
+    await waitForFinalize(testUser1, dataset.id)
+
+    // Draft CSV: same schema (no breaking changes), but one row has n=0 → extension fails.
+    const draftCsv = 'id,n\nc,7\nd,0\n'
+    const form2 = new FormData()
+    form2.append('file', Buffer.from(draftCsv), 'simple.csv')
+    const draftRes = (await testUser1.post(`/api/v1/datasets/${dataset.id}`, form2, {
+      headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
+      params: { draft: 'compatibleOrCancel' }
+    })).data
+    assert.equal(draftRes.draftReason.validationMode, 'compatibleOrCancel')
+
+    // Poll for the draft-cancelled event (the worker may take a moment to process).
+    let cancelled = false
+    for (let i = 0; i < 60; i++) {
+      const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+      if (journal.find((e: any) => e.type === 'draft-cancelled')) {
+        cancelled = true
+        break
+      }
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    assert.ok(cancelled, 'expected draft-cancelled event after a mandatory extension failed under compatibleOrCancel')
+
+    // The draft-cancelled event must carry breakdown counts proving extension failed.
+    const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    const cancelEvent = journal.find((e: any) => e.type === 'draft-cancelled')
+    assert.ok((cancelEvent.extensionErrorCount ?? 0) > 0,
+      `expected extensionErrorCount > 0 on draft-cancelled, got ${JSON.stringify(cancelEvent)}`)
+
+    // diagnostic endpoint should 404 (the draft directory was wiped)
+    const diag = await fetchDiagnostic(dataset.id)
+    assert.equal(diag.status, 404)
+  })
 })
