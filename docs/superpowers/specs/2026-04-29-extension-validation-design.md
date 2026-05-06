@@ -1,6 +1,6 @@
 # Extension validation — design
 
-Status: implemented (api + workers + UI). Integration tests deferred — to be added once the dev environment is exercised against the new endpoints.
+Status: superseded in part by `docs/superpowers/specs/2026-05-05-process-file-merge-design.md`. The §2 / §4.3 / §7 statements that "validation and extension errors cannot coexist in the same diagnostic file" no longer hold after the process-file merge.
 Branch: `feat-extension-validation`.
 Driver: RGE use case — an enrichment must be treatable as part of a dataset's validation logic, and validation diagnostics on a dataset must be more complete than the current "first 3 errors inline in the journal".
 
