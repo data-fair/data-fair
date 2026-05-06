@@ -155,7 +155,8 @@ test.describe('validation diagnostic file', () => {
 
   test('combined validation + exprEval errors land in the same diagnostic CSV', async () => {
     // Schema rejects rows with non-alpha id.
-    // exprEval `10 / n` throws on n === 0.
+    // exprEval `n == 0 ? "zero" : n` returns a string when n=0, which fails
+    // AJV type check for a number property → triggers onLineError.
     // Some rows fail validation only, some fail extension only, some fail both, some pass.
     const schema = [
       { key: 'id', type: 'string', pattern: '^[a-z]+$' },
@@ -164,7 +165,7 @@ test.describe('validation diagnostic file', () => {
     const csv = 'id,n\n' + [
       'abc,2',   // line 2: passes both
       '123,4',   // line 3: validation fail (id), extension passes
-      'def,0',   // line 4: validation passes, extension fail (10/0)
+      'def,0',   // line 4: validation passes, extension fail (n=0 → "zero")
       '456,0',   // line 5: validation fail AND extension fail
       'jkl,5'    // line 6: passes both
     ].join('\n') + '\n'
@@ -174,7 +175,7 @@ test.describe('validation diagnostic file', () => {
     form.append('extensions', JSON.stringify([{
       active: true,
       type: 'exprEval',
-      expr: '10 / n',
+      expr: 'n == 0 ? "zero" : n',
       property: { key: 'half', type: 'number' }
     }]))
     const ds = (await testUser1.post('/api/v1/datasets', form, {

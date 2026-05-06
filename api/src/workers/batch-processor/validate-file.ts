@@ -11,14 +11,17 @@ import * as schemaUtils from '../../datasets/utils/data-schema.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
 import { readStreams as getReadStreams } from '../../datasets/utils/data-streams.js'
 import { DiagnosticWriter } from '../../datasets/utils/diagnostic-file.ts'
+import * as extensionsUtils from '../../datasets/utils/extensions.ts'
+import { updateStorage } from '../../datasets/utils/storage.ts'
 import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import type { CustomAjvValidate } from '../../misc/utils/ajv.ts'
 
-// Index tabular datasets with elasticsearch using available information on dataset schema
-export const eventsPrefix = 'validate'
+// File-dataset processor: runs schema validation then (if extensions exist) runs
+// extensions, accumulating every row error into a single DiagnosticWriter. Throws
+// [validation-error] at the end if any error was collected.
 
 const inlineErrorsLimit = 3
 
@@ -84,12 +87,14 @@ class ValidateStream extends Writable {
 }
 
 export default async function (dataset: DatasetInternal) {
-  const debug = debugLib(`worker:validator:${dataset.id}`)
+  const debug = debugLib(`worker:process-file:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
   if (dataset.isRest) throw new Error('Un jeu de données éditable ne devrait pas passer par l\'étape validation.')
 
-  const patch: Partial<DatasetInternal> = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
+  const patch: Partial<DatasetInternal> = {}
+  // status default — overwritten when extensions run successfully
+  patch.status = dataset.status === 'validation-updated' ? 'finalized' : 'validated'
 
   const cancelDraft = async () => {
     await journals.log('datasets', dataset, { type: 'draft-cancelled', data: 'annulation automatique' } as any)
@@ -97,8 +102,8 @@ export default async function (dataset: DatasetInternal) {
     await datasetsService.applyPatch({ ...dataset, draftReason: null }, { draft: null })
   }
 
+  // ----- existing draft compatibility checks (breaking schema changes) -----
   if (dataset.draftReason) {
-    // manage auto-validation of a dataset draft
     if (dataset.draftReason.validationMode !== 'never') {
       patch.validateDraft = true
     }
@@ -127,49 +132,130 @@ export default async function (dataset: DatasetInternal) {
     }
   }
 
+  // ----- single DiagnosticWriter for the whole run -----
+  const writer = new DiagnosticWriter(dataset)
+
+  // ----- Phase A: schema validation (if any rules) -----
+  let validationStream: ValidateStream | null = null
   if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
-    debug('Run validator stream')
-    const progress = taskProgress(dataset.id, eventsPrefix, 100)
+    debug('phase A: validate')
+    const progress = taskProgress(dataset.id, 'validate', 100)
     await progress.inc(0)
     const readStreams = await getReadStreams(dataset, false, false, true, progress)
-    const writer = new DiagnosticWriter(dataset)
-    const validateStream = new ValidateStream({ dataset, writer })
-    await pump(...readStreams, validateStream)
-    debug('Validator stream ok')
+    validationStream = new ValidateStream({ dataset, writer })
+    await pump(...readStreams, validationStream)
+    debug('phase A: done', { nbErrors: validationStream.nbErrors })
+  }
+  // No early cancel for compatibleOrCancel — phase B still runs so the cancel
+  // decision below can account for mandatory extension errors too.
 
-    if (validateStream.nbErrors > 0) {
-      const fileResult = await writer.finalize()
-      const errorsSummary = validateStream.errorsSummary() ?? ''
-      await journals.log('datasets', dataset, {
-        type: 'validation-error',
-        data: errorsSummary,
-        hasDiagnosticFile: true,
-        diagnosticErrorCount: fileResult.count,
-        diagnosticCapped: fileResult.capped
-      } as any)
-      await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
-        params: {
-          nbErrors: String(validateStream.nbErrors),
-          diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
-        }
-      })
-      delete patch.validateDraft
-      if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
-        await cancelDraft()
-        return
-      } else {
-        throw new Error(`[validation-error] ${errorsSummary}`)
+  const nbValidationErrors = validationStream?.nbErrors ?? 0
+
+  // ----- Phase B: extensions (if any active) -----
+  const activeExtensions = (dataset.extensions ?? []).filter((e: any) => e.active)
+  let blockingExtensionErrors = 0
+  let totalExtensionErrors = 0
+  if (activeExtensions.length) {
+    debug('phase B: extend')
+    await extensionsUtils.checkExtensions(dataset.schema!, activeExtensions)
+    await journals.log('datasets', dataset, { type: 'extend-start' } as any)
+    await extensionsUtils.extend(
+      dataset,
+      activeExtensions,
+      'all',
+      dataset.validateDraft,
+      undefined,
+      undefined,
+      async (absoluteIndex: number, err: any) => {
+        totalExtensionErrors++
+        if (!err.mandatory) return // non-mandatory remoteService stays in row.error, not in diagnostic
+        blockingExtensionErrors++
+        await writer.addError({
+          line: absoluteIndex + 1,
+          type: 'extension',
+          field: err.propertyKey,
+          message: err.message,
+          rawValue: ''
+        })
       }
-    } else {
-      // success: drop any stale diagnostic from a previous failed attempt
+    )
+    await journals.log('datasets', dataset, { type: 'extend-end' } as any)
+    debug('phase B: done', { totalExtensionErrors, blockingExtensionErrors })
+  }
+
+  // ----- Aggregate decision -----
+  if (writer.errorCount > 0) {
+    const summaryParts: string[] = []
+    if (nbValidationErrors > 0) {
+      const validationSummary = validationStream?.errorsSummary() ?? `${nbValidationErrors} ligne(s) en erreur de validation`
+      summaryParts.push(validationSummary)
+    }
+    if (blockingExtensionErrors > 0) {
+      summaryParts.push(`${blockingExtensionErrors} ligne(s) en échec d'enrichissement obligatoire`)
+    }
+    const summary = summaryParts.join('\n')
+
+    // compatibleOrCancel: auto-cancel the draft. We discard the writer (the draft
+    // directory is about to be wiped, so the diagnostic file would be orphaned)
+    // and emit a draft-cancelled event with breakdown counts instead of a
+    // validation-error event that would reference a nonexistent file.
+    if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
       await writer.discard()
+      delete patch.validateDraft
+      await journals.log('datasets', dataset, {
+        type: 'draft-cancelled',
+        data: `annulation automatique : ${summary}`,
+        validationErrorCount: nbValidationErrors,
+        extensionErrorCount: blockingExtensionErrors
+      } as any)
+      await datasetsService.cancelDraft(dataset)
+      await datasetsService.applyPatch({ ...dataset, draftReason: null }, { draft: null })
+      return
+    }
+
+    const fileResult = await writer.finalize()
+    await journals.log('datasets', dataset, {
+      type: 'validation-error',
+      data: summary,
+      hasDiagnosticFile: true,
+      diagnosticErrorCount: fileResult.count,
+      diagnosticCapped: fileResult.capped,
+      validationErrorCount: nbValidationErrors,
+      extensionErrorCount: blockingExtensionErrors
+    } as any)
+    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
+      params: {
+        nbErrors: String(fileResult.count),
+        diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
+      }
+    })
+    delete patch.validateDraft
+    throw new Error(`[validation-error] ${summary}`)
+  } else {
+    await writer.discard()
+  }
+
+  // ----- Success path: bookkeeping -----
+  if (activeExtensions.length) {
+    // status advances directly to 'extended' (skipping the old intermediate 'validated')
+    if (dataset.status !== 'validation-updated') patch.status = 'extended'
+    // clear needsUpdate flags on extensions, mirroring today's extend.ts post-loop
+    if (dataset.extensions) {
+      patch.extensions = dataset.extensions.map((e: any) => {
+        const doneE = { ...e }
+        delete doneE.needsUpdate
+        return doneE
+      })
     }
   }
 
   if (patch.validateDraft) {
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' } as any)
-    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'draft-validated', { localizedParams: { fr: { cause: 'validation automatique' }, en: { cause: 'automatic validation' } } })
+    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'draft-validated', {
+      localizedParams: { fr: { cause: 'validation automatique' }, en: { cause: 'automatic validation' } }
+    })
   }
 
   await datasetsService.applyPatch(dataset, patch)
+  if (activeExtensions.length && !dataset.draftReason) await updateStorage(dataset, false, true)
 }
