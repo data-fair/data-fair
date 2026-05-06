@@ -154,7 +154,6 @@ export default async function (dataset: DatasetInternal) {
   // ----- Phase B: extensions (if any active) -----
   const activeExtensions = (dataset.extensions ?? []).filter((e: any) => e.active)
   let blockingExtensionErrors = 0
-  let totalExtensionErrors = 0
   if (activeExtensions.length) {
     debug('phase B: extend')
     await extensionsUtils.checkExtensions(dataset.schema!, activeExtensions)
@@ -167,7 +166,6 @@ export default async function (dataset: DatasetInternal) {
       undefined,
       undefined,
       async (absoluteIndex: number, err: any) => {
-        totalExtensionErrors++
         if (!err.mandatory) return // non-mandatory remoteService stays in row.error, not in diagnostic
         blockingExtensionErrors++
         await writer.addError({
@@ -180,7 +178,7 @@ export default async function (dataset: DatasetInternal) {
       }
     )
     await journals.log('datasets', dataset, { type: 'extend-end' } as any)
-    debug('phase B: done', { totalExtensionErrors, blockingExtensionErrors })
+    debug('phase B: done', { blockingExtensionErrors })
   }
 
   // ----- Aggregate decision -----

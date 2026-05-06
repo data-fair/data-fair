@@ -20,7 +20,7 @@ export default async function (dataset: DatasetInternal) {
   if (!isRestDataset(dataset)) {
     throw new Error(`extend-rest invoked on non-REST dataset ${dataset.id} — should not happen after the process-file merge`)
   }
-  // re-assert as DatasetInternal so branch-specific fields (_partialRestStatus, validateDraft) remain available
+  // keep the DatasetInternal view after isRestDataset() narrows the type to RestDataset
   const internalDataset = dataset as DatasetInternal
 
   let updateMode: 'all' | 'updatedLines' | 'updatedExtensions' = 'all'

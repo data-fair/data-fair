@@ -188,9 +188,9 @@ const datasetTasks: DatasetTask[] = [{
       { file: { $exists: true }, status: { $in: ['analyzed', 'validation-updated'] }, ...noActiveDraftFilter },
       // also pick up file datasets in 'validated' status with active extensions
       // (set by preparePatch when the user patches extensions on a finalized dataset)
-      { file: { $exists: true }, status: 'validated', 'extensions.active': true, ...noActiveDraftFilter },
+      { $and: [{ file: { $exists: true }, status: 'validated', ...noActiveDraftFilter }, activeExtensionMongoFilter()] },
       { 'draft.file': { $exists: true }, 'draft.status': { $in: ['analyzed', 'validation-updated'] } },
-      { 'draft.file': { $exists: true }, 'draft.status': 'validated', ...activeExtensionMongoFilter(true) }
+      { $and: [{ 'draft.file': { $exists: true }, 'draft.status': 'validated' }, activeExtensionMongoFilter(true)] }
     ]
   })
 }, {
