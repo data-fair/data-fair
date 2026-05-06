@@ -20,10 +20,12 @@ export default async function (dataset: DatasetInternal) {
   if (!isRestDataset(dataset)) {
     throw new Error(`extend-rest invoked on non-REST dataset ${dataset.id} — should not happen after the process-file merge`)
   }
+  // re-assert as DatasetInternal so branch-specific fields (_partialRestStatus, validateDraft) remain available
+  const internalDataset = dataset as DatasetInternal
 
   let updateMode: 'all' | 'updatedLines' | 'updatedExtensions' = 'all'
-  if (dataset.status === 'finalized' && dataset.extensions?.find(e => e.needsUpdate)) updateMode = 'updatedExtensions'
-  else if (dataset._partialRestStatus === 'updated') updateMode = 'updatedLines'
+  if (internalDataset.status === 'finalized' && internalDataset.extensions?.find(e => e.needsUpdate)) updateMode = 'updatedExtensions'
+  else if (internalDataset._partialRestStatus === 'updated') updateMode = 'updatedLines'
   debug('update mode', updateMode)
 
   const patch: Partial<DatasetInternal> = {}
@@ -33,14 +35,14 @@ export default async function (dataset: DatasetInternal) {
     patch._partialRestStatus = 'extended'
   }
 
-  let extensions = dataset.extensions || []
+  let extensions = internalDataset.extensions || []
   if (updateMode === 'updatedExtensions') extensions = extensions.filter(e => e.needsUpdate)
 
   debug('check extensions validity')
-  await extensionsUtils.checkExtensions(dataset.schema!, extensions)
+  await extensionsUtils.checkExtensions(internalDataset.schema!, extensions)
 
-  debug('apply extensions', dataset.extensions)
-  await extensionsUtils.extend(dataset, extensions, updateMode, dataset.validateDraft)
+  debug('apply extensions', internalDataset.extensions)
+  await extensionsUtils.extend(internalDataset, extensions, updateMode, internalDataset.validateDraft)
   debug('extensions ok')
 
   // Some data was updated in the interval during which we performed indexation
@@ -50,15 +52,15 @@ export default async function (dataset: DatasetInternal) {
     patch._partialRestStatus = 'updated'
   }
 
-  debugMasterData(`apply patch after extensions ${dataset.id} (${dataset.slug})`, patch)
-  if (updateMode !== 'updatedLines' && dataset.extensions) {
-    patch.extensions = dataset.extensions.map(e => {
+  debugMasterData(`apply patch after extensions ${internalDataset.id} (${internalDataset.slug})`, patch)
+  if (updateMode !== 'updatedLines' && internalDataset.extensions) {
+    patch.extensions = internalDataset.extensions.map(e => {
       const doneE = { ...e }
       delete doneE.needsUpdate
       return doneE
     })
   }
-  await datasetService.applyPatch(dataset, patch)
-  if (!dataset.draftReason) await updateStorage(dataset, false, true)
+  await datasetService.applyPatch(internalDataset, patch)
+  if (!internalDataset.draftReason) await updateStorage(internalDataset, false, true)
   debug('done')
 }

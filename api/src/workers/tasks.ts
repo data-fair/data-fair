@@ -181,6 +181,7 @@ const datasetTasks: DatasetTask[] = [{
   })
 }, {
   name: 'validateFile',
+  eventsPrefix: 'validate',
   worker: 'batchProcessor',
   mongoFilter: () => ({
     $or: [
@@ -198,7 +199,11 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'batchProcessor',
   mongoFilter: () => ({
     $or: [
+      // initial extension run for a newly created REST dataset with active extensions
+      { isRest: true, status: 'analyzed', 'extensions.active': true, ...noActiveDraftFilter },
+      // incremental extension run after _bulk_lines sets _partialRestStatus: 'updated'
       { isRest: true, status: 'finalized', 'extensions.active': true, _partialRestStatus: 'updated' },
+      // extension re-run when an extension is marked needsUpdate
       { isRest: true, status: 'finalized', extensions: { $elemMatch: { active: true, needsUpdate: true } }, _partialRestStatus: null }
     ]
   })
