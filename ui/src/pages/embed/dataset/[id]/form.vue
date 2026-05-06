@@ -17,6 +17,7 @@
         v-if="line"
         ref="form"
         v-model="valid"
+        @keydown.enter="onEnterSubmit"
       >
         <dataset-edit-line-form
           v-model="line"
@@ -152,5 +153,12 @@ const saveLine = useAsyncAction(async () => {
     sent.value = true
   }
 }, {})
+
+const onEnterSubmit = (e: KeyboardEvent) => {
+  const target = e.target as HTMLElement | null
+  if (target?.tagName !== 'INPUT' || e.isComposing) return
+  e.preventDefault()
+  saveLine.execute()
+}
 
 </script>

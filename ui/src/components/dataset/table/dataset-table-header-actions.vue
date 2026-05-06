@@ -82,6 +82,7 @@
       <v-form
         ref="editSelectedLinesForm"
         v-model="editSelectedLinesValid"
+        @keydown.enter="onEnterSubmit($event, saveLinesPatch.execute)"
       >
         <v-card-text>
           <dataset-edit-multiple-lines
@@ -152,6 +153,7 @@
       <v-form
         ref="addLineForm"
         v-model="addLineValid"
+        @keydown.enter="onEnterSubmit($event, addLine.execute)"
       >
         <v-card-text>
           <dataset-edit-line-form
@@ -267,6 +269,7 @@ const editSelectedLinesValid = ref(false)
 const editingLinesPatch = ref({})
 const saveLinesPatch = useAsyncAction(async () => {
   await editSelectedLinesForm.value?.validate()
+  if (!editSelectedLinesValid.value) return
   if (!editingLines.value?.length) return
   await bulkLines(editingLines.value.map(result => ({ ...editingLinesPatch.value, _id: result._id, _action: 'patch' })))
   editSelectedResultsDialog.value = false
@@ -288,4 +291,11 @@ const addLine = useAsyncAction(async () => {
   await saveLine(newLine.value, file.value)
   addLineDialog.value = false
 })
+
+const onEnterSubmit = (e: KeyboardEvent, action: () => void) => {
+  const target = e.target as HTMLElement | null
+  if (target?.tagName !== 'INPUT' || e.isComposing) return
+  e.preventDefault()
+  action()
+}
 </script>
