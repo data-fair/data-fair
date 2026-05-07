@@ -19,7 +19,7 @@ export default async (dataset, query = {}, allowPartialResults = false, timeout 
     timeout,
     allow_partial_search_results: allowPartialResults
   })
-  const response = { total: esResponse.hits.total.value }
+  const response = { total: esResponse.hits.total?.value }
   // ES bounds to standard bounding box: left,bottom,right,top
   const bounds = esResponse.aggregations.bbox.bounds
   if (!bounds) response.bbox = []
