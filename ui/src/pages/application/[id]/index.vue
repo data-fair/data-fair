@@ -385,20 +385,6 @@
     <df-navigation-right>
       <application-actions />
       <df-toc :sections="tocSections" />
-      <v-list-item
-        v-if="baseAppFetch.data.value?.documentation"
-        :href="baseAppFetch.data.value.documentation"
-        target="_blank"
-        link
-      >
-        <template #prepend>
-          <v-icon
-            color="primary"
-            :icon="mdiBookOpenVariant"
-          />
-        </template>
-        {{ t('documentation') }}
-      </v-list-item>
     </df-navigation-right>
   </v-container>
 </template>
@@ -444,7 +430,6 @@ fr:
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
   deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
   yes: Oui
-  documentation: Documentation
   no: Non
 en:
   applications: Applications
@@ -486,7 +471,6 @@ en:
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
   deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
   yes: Yes
-  documentation: Documentation
   no: No
 </i18n>
 
@@ -495,7 +479,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiBookOpenVariant, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
