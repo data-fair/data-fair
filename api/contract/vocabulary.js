@@ -958,6 +958,26 @@ export default [
     }
   },
   {
+    id: 'codeCPV',
+    title: {
+      fr: 'Code CPV',
+      en: 'CPV code'
+    },
+    description: {
+      fr: "Code CPV (Common Procurement Vocabulary) désignant un secteur d'achat dans la nomenclature européenne des marchés publics. Code à 9 chiffres (8 chiffres significatifs + clé de contrôle).",
+      en: 'CPV (Common Procurement Vocabulary) code designating a purchase sector in the European public procurement classification. 9-digit code (8 significant digits + check digit).'
+    },
+    identifiers: [
+      'http://data.europa.eu/cpv/cpv',
+      'http://purl.org/cpv/2008'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Marchés publics',
+      en: 'Public procurement'
+    }
+  },
+  {
     id: 'qpv',
     title: {
       fr: 'Quartier prioritaire (QPV)',
