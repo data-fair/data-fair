@@ -137,8 +137,7 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
     [labels.url, url.href],
     [labels.select, query.select || '*'],
     [labels.sort, query.sort],
-    [labels.q, query.q],
-    [labels.qs, query.qs]
+    [labels.q, query.q]
   ]
   const querySheet = XLSX.utils.aoa_to_sheet(queryArray, { cellDates: true })
   querySheet['!cols'] = fitToColumn(queryArray)

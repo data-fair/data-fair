@@ -79,8 +79,7 @@
 		"url": "URL",
 		"select": "Selected columns",
 		"sort": "Sort",
-		"q": "Text search",
-		"qs": "Structured filter"
+		"q": "Text search"
 	},
 	"notifications": {
 		"datasets": {

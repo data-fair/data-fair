@@ -79,8 +79,7 @@
 		"url": "URL",
 		"select": "Colonnes sélectionnées",
 		"sort": "Tri",
-		"q": "Recherche textuelle",
-		"qs": "Filtre structuré"
+		"q": "Recherche textuelle"
 	},
 	"data": "data",
 	"dataset": "dataset",
