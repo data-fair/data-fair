@@ -3,7 +3,8 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.js'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'
 
-export default async (client, dataset, query, publicBaseUrl, flatten) => {
+/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+export default async (client, dataset, query, publicBaseUrl, flatten, abortContext) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
   const bbox = getQueryBBOX(query) || dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
@@ -39,7 +40,7 @@ export default async (client, dataset, query, publicBaseUrl, flatten) => {
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  })
+  }, abortContext)
   return prepareGeoAggResponse(esResponse, dataset, query, publicBaseUrl, flatten)
 }
 

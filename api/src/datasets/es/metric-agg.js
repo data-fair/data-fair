@@ -56,7 +56,8 @@ export const assertMetricAccepted = (field, metric) => {
   }
 }
 
-export const agg = async (client, dataset, query) => {
+/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+export const agg = async (client, dataset, query, abortContext) => {
   if (!query.metric) throw httpError(400, '"metric" parameter is required')
   const metricField = query.field || query.metric_field
   if (!metricField) throw httpError(400, '"field" parameter is required')
@@ -90,13 +91,14 @@ export const agg = async (client, dataset, query) => {
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  })
+  }, abortContext)
   const response = { total: esResponse.hits.total.value }
   response.metric = getValueFromAggRes(field, query.metric, esResponse.aggregations.metric)
   return response
 }
 
-export const simpleMetricsAgg = async (client, dataset, query) => {
+/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+export const simpleMetricsAgg = async (client, dataset, query, abortContext) => {
   let fields
   if (query.fields) {
     fields = query.fields.split(',')
@@ -136,7 +138,7 @@ export const simpleMetricsAgg = async (client, dataset, query) => {
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  })
+  }, abortContext)
   const response = { total: esResponse.hits.total.value, metrics: {} }
   for (const metricField of fields) {
     response.metrics[metricField] = {}

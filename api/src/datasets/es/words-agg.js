@@ -3,7 +3,8 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 
-export default async (client, dataset, query) => {
+/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+export default async (client, dataset, query, abortContext) => {
   if (!query.field) throw httpError(400, '"field" parameter is required')
   const prop = dataset.schema.find(f => f.key === query.field)
   if (!prop) {
@@ -48,11 +49,11 @@ export default async (client, dataset, query) => {
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  })
+  }, abortContext)
 
   const buckets = esResponse.aggregations.sample.words.buckets
 
-  const words = await Promise.all(buckets.map(bucket => unstem(client, dataset, field, bucket.key)))
+  const words = await Promise.all(buckets.map(bucket => unstem(client, dataset, field, bucket.key, abortContext)))
 
   return {
     total: esResponse.hits.total.value,
@@ -68,7 +69,8 @@ export default async (client, dataset, query) => {
 // significant_text does not "unstem"
 // it is suggested that the highlight logic is the closest there is to satisfying this need
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
-async function unstem (client, dataset, field, key) {
+/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+async function unstem (client, dataset, field, key, abortContext) {
   const res = await client.search({
     index: aliasName(dataset),
     body: {
@@ -84,7 +86,7 @@ async function unstem (client, dataset, field, key) {
     },
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  })
+  }, abortContext)
 
   const words = {}
   for (const hit of res.hits.hits) {

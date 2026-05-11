@@ -25,7 +25,8 @@ const parseOrder = (sortStr, fields, dataset, valuesField, hasMetric) => {
   })
 }
 
-export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
+/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout, abortContext) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw httpError(400, 'Le paramètre "field" est obligatoire')
@@ -214,7 +215,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
     body: esQuery,
     timeout,
     allow_partial_search_results: allowPartialResults
-  })
+  }, abortContext)
   if (explain) explain.esResponse = esResponse
 
   const response = { total: esResponse.hits.total.value }

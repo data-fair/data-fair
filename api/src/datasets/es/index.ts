@@ -1,4 +1,5 @@
 export * from './commons.js'
+export { createEsRequestOptions, type EsAbortContext } from './abort.js'
 export { default as search } from './search.ts'
 export { default as multiSearch } from './multi-search.js'
 export { default as count } from './count.js'

@@ -3,7 +3,8 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
 import es from '#es'
 
-export default async (dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
+/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+export default async (dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout, abortContext) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
 
   const esQuery = prepareQuery(dataset, query)
@@ -18,7 +19,7 @@ export default async (dataset, query = {}, allowPartialResults = false, timeout 
     body: esQuery,
     timeout,
     allow_partial_search_results: allowPartialResults
-  })
+  }, abortContext)
   const response = { total: esResponse.hits.total?.value }
   // ES bounds to standard bounding box: left,bottom,right,top
   const bounds = esResponse.aggregations.bbox.bounds

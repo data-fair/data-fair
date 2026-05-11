@@ -2,8 +2,9 @@ import config from '#config'
 import es from '#es'
 import type { Dataset } from '#types'
 import { prepareQuery, aliasName } from './commons.js'
+import { type EsAbortContext } from './abort.js'
 
-async function * iterHits (dataset: Dataset, query: { size: number } & Record<string, string | number> = { size: 1000 }) {
+async function * iterHits (dataset: Dataset, query: { size: number } & Record<string, string | number> = { size: 1000 }, abortContext?: EsAbortContext) {
   const esQuery = prepareQuery(dataset, query, undefined, undefined, true, true)
   const index = aliasName(dataset)
 
@@ -13,7 +14,7 @@ async function * iterHits (dataset: Dataset, query: { size: number } & Record<st
       body: esQuery,
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
-    })).hits.hits
+    }, abortContext)).hits.hits
     yield hits
     if (hits.length < query.size) break
     esQuery.search_after = hits[hits.length - 1].sort

@@ -664,8 +664,9 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
     }
   }
   if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   try {
-    esResponse = await esUtils.search(req.app.get('es'), req.dataset, params)
+    esResponse = await esUtils.search(req.app.get('es'), req.dataset, params, undefined, undefined, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -703,6 +704,11 @@ async function manageESError (req, err) {
   if (status === 400) {
     // console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
     esQueryErrorCounter.inc()
+  } else if (status === 499 || status === 504) {
+    // 499 = client gave up (browser cancel, proxy timeout) -> the query was aborted, nothing to report
+    // 504 = the read timeout elapsed (ES "Time exceeded" guard or the per-request client timeout) -> a
+    // slow query, not an internal failure
+    // in both cases avoid internalError noise (a flood of these is exactly the overload symptom we want to handle)
   } else {
     internalError('es-query-' + status, err)
   }
@@ -719,14 +725,14 @@ async function manageESError (req, err) {
 
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req, db, query) {
-  if (config.cache.disabled) return esUtils.count(req.dataset, query)
+  if (config.cache.disabled) return esUtils.count(req.dataset, query, req.esAbortContext)
   return cache.getSet({
     type: 'tile-count',
     datasetId: req.dataset.id,
     finalizedAt: req.dataset.finalizedAt,
     query
   }, async () => {
-    return esUtils.count(req.dataset, query)
+    return esUtils.count(req.dataset, query, req.esAbortContext)
   })
 }
 
@@ -736,6 +742,10 @@ const readLines = async (req, res) => {
   observe.reqStep(req, 'middlewares')
   const db = mongo.db
   res.throttleEnd()
+
+  // abort the underlying ES search(es) if the http client goes away + bound them with a read-side
+  // requestTimeout (also stored on req.esAbortContext, picked up by countWithCache)
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
 
   // if the output format is geo make sure geoshape is present
   // also manage a default content for geo tiles
@@ -867,7 +877,7 @@ const readLines = async (req, res) => {
         }
       }
       try {
-        previousEsResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, vtPrepared && xyz.join('-'))
+        previousEsResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, vtPrepared && xyz.join('-'), esAbortContext)
       } catch (err) {
         await manageESError(req, err)
         break
@@ -879,7 +889,7 @@ const readLines = async (req, res) => {
     }
   } else {
     try {
-      esResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, vtPrepared && xyz.join('-'))
+      esResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, vtPrepared && xyz.join('-'), esAbortContext)
     } catch (err) {
       await manageESError(req, err)
     }
@@ -906,7 +916,7 @@ const readLines = async (req, res) => {
     const geojson = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
     // geojson format benefits from bbox info
-    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...query })).bbox
+    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...query }, undefined, undefined, esAbortContext)).bbox
     observe.reqStep(req, 'bboxAgg')
     if (query.format === 'geojson') {
       res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.geojson'))
@@ -1007,15 +1017,16 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
   }
   let result
   const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   try {
-    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl, flatten)
+    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl, flatten, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }
 
   if (req.query.format === 'geojson') {
     const geojson = geo.aggs2geojson(result)
-    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...req.query })).bbox
+    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...req.query }, undefined, undefined, esAbortContext)).bbox
     return res.status(200).send(geojson)
   }
 
@@ -1058,8 +1069,9 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
 
   let result
   const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   try {
-    result = await esUtils.valuesAgg(req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain, flatten)
+    result = await esUtils.valuesAgg(req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain, flatten, undefined, undefined, esAbortContext)
     if (result.next) {
       const nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/values_agg`)
       for (const key of Object.keys(req.query)) {
@@ -1079,7 +1091,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
 
   if (req.query.format === 'geojson') {
     const geojson = geo.aggs2geojson(result)
-    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...req.query })).bbox
+    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...req.query }, undefined, undefined, esAbortContext)).bbox
     return res.status(200).send(geojson)
   }
 
@@ -1104,9 +1116,10 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
 // mostly useful for selects/autocompletes on values
 router.get('/:datasetId/values/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('getValues', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   let result
   try {
-    result = await esUtils.values(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
+    result = await esUtils.values(req.app.get('es'), req.dataset, req.params.fieldKey, req.query, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -1123,8 +1136,9 @@ router.get('/:datasetId/values-labels/:fieldKey', readDataset({ fillDescendants:
     result = Object.entries(field['x-labels']).map(([value, label]) => ({ value, label }))
   } else {
     req.query.size = req.query.size ?? '1000'
+    const esAbortContext = esUtils.createEsRequestOptions(req, res)
     try {
-      const values = await esUtils.values(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
+      const values = await esUtils.values(req.app.get('es'), req.dataset, req.params.fieldKey, req.query, esAbortContext)
       result = values.map(value => ({ value, label: field['x-labels']?.[value] ?? value }))
     } catch (err) {
       await manageESError(req, err)
@@ -1136,9 +1150,10 @@ router.get('/:datasetId/values-labels/:fieldKey', readDataset({ fillDescendants:
 // Simple metric aggregation to calculate 1 value (sum, avg, etc.) about 1 column
 router.get('/:datasetId/metric_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('getMetricAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   let result
   try {
-    result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
+    result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -1148,9 +1163,10 @@ router.get('/:datasetId/metric_agg', readDataset({ fillDescendants: true }), app
 // Simple metric aggregation to calculate some basic values about a list of columns
 router.get('/:datasetId/simple_metrics_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('getSimpleMetricsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   let result
   try {
-    result = await esUtils.simpleMetricsAgg(req.app.get('es'), req.dataset, req.query)
+    result = await esUtils.simpleMetricsAgg(req.app.get('es'), req.dataset, req.query, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -1160,9 +1176,10 @@ router.get('/:datasetId/simple_metrics_agg', readDataset({ fillDescendants: true
 // Simple words aggregation for significant terms extraction
 router.get('/:datasetId/words_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('getWordsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   let result
   try {
-    result = await esUtils.wordsAgg(req.app.get('es'), req.dataset, req.query)
+    result = await esUtils.wordsAgg(req.app.get('es'), req.dataset, req.query, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -1172,9 +1189,10 @@ router.get('/:datasetId/words_agg', readDataset({ fillDescendants: true }), appl
 // DEPRECATED, replaced by metric_agg
 // Get max value of a field
 router.get('/:datasetId/max/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('getMaxAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   let result
   try {
-    result = await esUtils.maxAgg(req.dataset, req.params.fieldKey, req.query)
+    result = await esUtils.maxAgg(req.dataset, req.params.fieldKey, req.query, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -1184,9 +1202,10 @@ router.get('/:datasetId/max/:fieldKey', readDataset({ fillDescendants: true }), 
 // DEPRECATED, replaced by metric_agg
 // Get min value of a field
 router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('getMinAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   let result
   try {
-    result = await esUtils.minAgg(req.dataset, req.params.fieldKey, req.query)
+    result = await esUtils.minAgg(req.dataset, req.params.fieldKey, req.query, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }

@@ -342,6 +342,8 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     if (size + from > 10000) throw httpError(400, 'offset+limit should be less than 10000')
   }
 
+  // abort the ES search if the http client goes away; also bounds the request with a read-side timeout
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
   let esResponse: any
   try {
     esResponse = await esClient.search({
@@ -349,10 +351,11 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       body: esQuery,
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
-    })
+    }, esAbortContext)
   } catch (err) {
     const { message, status } = esUtils.extractError(err)
-    logCompatODSError(message, req.url, 'records', 'es-error', dataset.id)
+    // 499 = the http client gave up, the query was aborted: nothing to log or report
+    if (status !== 499) logCompatODSError(message, req.url, 'records', 'es-error', dataset.id)
     throw httpError(status, message)
   }
 
