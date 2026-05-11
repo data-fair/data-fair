@@ -7,6 +7,7 @@ import promClient from 'prom-client'
 import { type Request, type Response } from 'express'
 import { reqUser } from '@data-fair/lib-express'
 import { ComputeBucket } from './compute-budget.ts'
+import { queryAdvice } from './query-advice.ts'
 
 const debugLimits = debug('limits')
 
@@ -162,7 +163,11 @@ export const middleware = (_limitType) => async (req, res, next) => {
   if (!ignoreRateLimiting && !hasComputeBudget(req, limitType)) {
     debugLimits('exceedComputeBudget', limitType, user, requestIp.getClientIp(req))
     computeBudgetExceededCounter.labels(limitType).inc()
-    return res.status(429).type('text/plain').send(req.__('errors.exceedComputeBudget'))
+    // GET only: the compute bucket can also block a write request from a client that previously did
+    // heavy reads, where query-shape advice would be off-context. req.dataset isn't loaded at this
+    // mount point, so the select rule never fires here — rules 1–4 work off req.query/req.path.
+    const advice = req.method === 'GET' ? queryAdvice(req) : ''
+    return res.status(429).type('text/plain').send(req.__('errors.exceedComputeBudget') + advice)
   }
   if (!ignoreRateLimiting) {
     // 'close' fires exactly once, after a normal finish or a client disconnect; an aborted request is

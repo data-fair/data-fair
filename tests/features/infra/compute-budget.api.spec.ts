@@ -36,10 +36,27 @@ test.describe('compute budget rate limiting', () => {
     assert.equal(res.status, 200)
     await sleep(300) // let the server-side 'close' handler run the debit before the next call
 
-    // second /lines call: compute budget spent -> 429 with the dedicated message
+    // second call hits a /lines endpoint asking for an exact count -> 429 + the count advice
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { validateStatus: () => true })
     assert.equal(res.status, 429)
+    assert.match(String(res.data), /traitement|processing/) // the base exceedComputeBudget message
+    assert.match(String(res.data), /count=false|count=estimate/) // the appended query advice
+  })
+
+  test('the appended advice reflects the request: no count advice when count=false is already set', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    await clearRateLimiting()
+
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?count=false`)
+    assert.equal(res.status, 200)
+    await sleep(300)
+
+    // budget spent -> still 429, still the base message, but no "count=false" advice this time
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?count=false`, { validateStatus: () => true })
+    assert.equal(res.status, 429)
     assert.match(String(res.data), /traitement|processing/)
+    assert.doesNotMatch(String(res.data), /count=false|count=estimate/)
   })
 
   test('a non-Elasticsearch request does not consume the compute budget', async () => {
