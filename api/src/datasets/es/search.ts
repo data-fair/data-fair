@@ -1,9 +1,11 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.js'
+import { tooLongError } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
+import { type EsAbortContext, timedEsCall } from './abort.js'
 
-export default async (client: Client, dataset, query, publicBaseUrl, vtXYZ) => {
+export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, abortContext?: EsAbortContext) => {
   const esQuery = prepareQuery(dataset, query)
 
   if (query.collapse) {
@@ -32,16 +34,21 @@ export default async (client: Client, dataset, query, publicBaseUrl, vtXYZ) => {
     }
   }
 
-  const res = await client.transport.request({
+  const res = await timedEsCall(abortContext, () => client.transport.request({
     method: 'POST',
     path: `/${aliasName(dataset)}/_search`,
     body: esQuery,
     querystring: {
-      allow_partial_search_results: 'true',
+      // never return truncated results: when the `timeout` parameter (config.elasticsearch.searchTimeout)
+      // elapses ES fails the request ("Time exceeded" -> 504) rather than returning partial hits
+      allow_partial_search_results: 'false',
       timeout: config.elasticsearch.searchTimeout
     }
-  }, { meta: true })
-  const esResponse = res.body
+  }, { ...abortContext, meta: true }))
+  const esResponse: any = res.body
+  // belt-and-suspenders: with allow_partial_search_results=false ES errors on timeout, but if a
+  // timed_out response ever slips through, surface it as the same 504 rather than a silent partial
+  if (esResponse.timed_out) throw httpError(tooLongError.status, tooLongError.message)
   esResponse.contentLength = Number(res.headers['content-length'])
 
   for (const hit of esResponse.hits.hits) {
