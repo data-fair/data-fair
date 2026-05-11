@@ -33,9 +33,11 @@ test.describe('queryAdvice', () => {
     assert.doesNotMatch(queryAdvice(fakeReq('/abc/values_agg', { field: 'a' })), /errors\.queryAdviceCount/)
   })
 
-  test('deepPagination rule: from >= 1000 fires, 999 does not', () => {
-    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', from: '1000' })), /errors\.queryAdviceDeepPagination/)
-    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', from: '999' })), /errors\.queryAdviceDeepPagination/)
+  test('deepPagination rule: deep native page or ODS offset fires, shallow does not', () => {
+    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', page: '100' })), /errors\.queryAdviceDeepPagination/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', page: '99' })), /errors\.queryAdviceDeepPagination/)
+    assert.match(queryAdvice(fakeReq('/v2.1/catalog/datasets/abc/records', { offset: '1000' })), /errors\.queryAdviceDeepPagination/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/v2.1/catalog/datasets/abc/records', { offset: '999' })), /errors\.queryAdviceDeepPagination/)
   })
 
   test('aggSize rule: agg_size >= 100 fires', () => {
@@ -63,7 +65,7 @@ test.describe('queryAdvice', () => {
 
   test('multiple rules combine, count first', () => {
     const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
-    const out = queryAdvice(fakeReq('/abc/lines', { from: '5000', size: '2000' }, wide))
+    const out = queryAdvice(fakeReq('/abc/lines', { page: '500', size: '2000' }, wide))
     assert.match(out, /errors\.queryAdviceCount/)
     assert.match(out, /errors\.queryAdviceDeepPagination/)
     assert.match(out, /errors\.queryAdviceSize/)

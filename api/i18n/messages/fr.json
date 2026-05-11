@@ -15,7 +15,7 @@
 		"exceedComputeBudget": "Le temps de traitement cumulé de vos requêtes dépasse le budget alloué sur cette API. Veuillez patienter avant d'essayer de nouveau, ou réduire le coût de vos requêtes.",
 		"queryAdviceIntro": "Conseil pour optimiser vos requêtes",
 		"queryAdviceCount": "passez count=false (ou count=estimate) pour éviter le comptage exact du nombre total de lignes",
-		"queryAdviceDeepPagination": "utilisez la pagination par clé via le paramètre after plutôt que de grandes valeurs de from",
+		"queryAdviceDeepPagination": "utilisez la pagination par clé via le paramètre after plutôt qu'une navigation profonde par page ou offset",
 		"queryAdviceAggSize": "réduisez agg_size et/ou le nombre de champs de regroupement",
 		"queryAdviceSize": "demandez moins de résultats par page (réduisez size)",
 		"queryAdviceSelect": "utilisez le paramètre select pour ne récupérer que les colonnes nécessaires",

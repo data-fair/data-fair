@@ -28,14 +28,14 @@ export const queryAdvice = (req: Request & { dataset?: { schema?: any[] } }): st
   if (isLinesOrRecords(req.path) && q.count !== 'false' && q.count !== 'estimate' && !q.after) {
     keys.push('errors.queryAdviceCount')
   }
-  // 2. deep offset pagination
-  if (num(q.from) >= 1000) keys.push('errors.queryAdviceDeepPagination')
+  // 2. deep offset pagination (native API: page, 1-based; ODS-compat: offset)
+  if (num(q.page) >= 100 || num(q.offset) >= 1000) keys.push('errors.queryAdviceDeepPagination')
   // 3. large aggregation fan-out
   if (num(q.agg_size) >= 100 || nbLevels(q.field) > 1) keys.push('errors.queryAdviceAggSize')
   // 4. large page size
   if (num(q.size) >= 1000) keys.push('errors.queryAdviceSize')
-  // 5. wide dataset fetched without a select (only when the dataset is loaded on the request)
-  if ((req.dataset?.schema?.length ?? 0) > 20 && !q.select) keys.push('errors.queryAdviceSelect')
+  // 5. wide dataset fetched without a select (only when the dataset is loaded on the request); select=* == all fields
+  if ((req.dataset?.schema?.length ?? 0) > 20 && !q.select && q.select !== '*') keys.push('errors.queryAdviceSelect')
 
   if (keys.length === 0) return ''
   return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + keys.map(k => req.__(k)).join(' ; ') + '.'
