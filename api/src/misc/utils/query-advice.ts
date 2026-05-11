@@ -35,7 +35,7 @@ export const queryAdvice = (req: Request & { dataset?: { schema?: any[] } }): st
   // 4. large page size
   if (num(q.size) >= 1000) keys.push('errors.queryAdviceSize')
   // 5. wide dataset fetched without a select (only when the dataset is loaded on the request); select=* == all fields
-  if ((req.dataset?.schema?.length ?? 0) > 20 && !q.select && q.select !== '*') keys.push('errors.queryAdviceSelect')
+  if ((req.dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) keys.push('errors.queryAdviceSelect')
 
   if (keys.length === 0) return ''
   return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + keys.map(k => req.__(k)).join(' ; ') + '.'

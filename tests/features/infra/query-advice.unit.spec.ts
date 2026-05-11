@@ -59,6 +59,7 @@ test.describe('queryAdvice', () => {
     const narrow = { schema: Array.from({ length: 5 }, (_, i) => ({ key: 'f' + i })) }
     assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false' }, wide)), /errors\.queryAdviceSelect/)
     assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false', select: 'f1,f2' }, wide)), /errors\.queryAdviceSelect/)
+    assert.match(queryAdvice(fakeReq('/abc/lines', { count: 'false', select: '*' }, wide)), /errors\.queryAdviceSelect/) // select=* == all fields
     assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false' }, narrow)), /errors\.queryAdviceSelect/)
     assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { count: 'false' })), /errors\.queryAdviceSelect/)
   })
