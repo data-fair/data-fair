@@ -58,6 +58,7 @@ import { reqAdminMode, reqSession, reqSessionAuthenticated, session } from '@dat
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
+import { queryAdvice } from '../misc/utils/query-advice.ts'
 import { can } from '../misc/utils/permissions.ts'
 import { emit as workerPing } from '../workers/ping.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
@@ -720,7 +721,9 @@ async function manageESError (req, err) {
   // await mongo.db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'error' } })
   // await journals.log(req.dataset, { type: 'error', data: message })
   // }
-  throw httpError(status, message)
+  // on overload-symptom statuses, hint at how to make the query cheaper (no-op when no rule applies)
+  const finalMessage = (status === 504 || status === 429) ? message + queryAdvice(req) : message
+  throw httpError(status, finalMessage)
 }
 
 // used later to count items in a tile or tile's neighbor

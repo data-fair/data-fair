@@ -25,6 +25,7 @@ import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
 import JSONStream from 'JSONStream'
 import type { DatasetInternal } from '#types'
+import { queryAdvice } from '../../misc/utils/query-advice.ts'
 
 dayjs.extend(timezone)
 dayjs.extend(utc)
@@ -356,7 +357,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     const { message, status } = esUtils.extractError(err)
     // 499 = the http client gave up, the query was aborted: nothing to log or report
     if (status !== 499) logCompatODSError(message, req.url, 'records', 'es-error', dataset.id)
-    throw httpError(status, message)
+    throw httpError(status, (status === 504 || status === 429) ? message + queryAdvice(req) : message)
   }
 
   if (grouped) {
@@ -516,7 +517,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     } catch (err) {
       const { message, status } = esUtils.extractError(err)
       logCompatODSError(err, req.url, 'exports', 'xlsx-error', dataset.id)
-      throw httpError(status, message)
+      throw httpError(status, (status === 504 || status === 429) ? message + queryAdvice(req) : message)
     }
     // return early, xlsx export is written directly ro response,
     // it does not create a transform stream
@@ -614,7 +615,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   } catch (err) {
     const { message, status } = esUtils.extractError(err)
     logCompatODSError(err, req.url, 'exports', 'stream-error', dataset.id)
-    throw httpError(status, message)
+    throw httpError(status, (status === 504 || status === 429) ? message + queryAdvice(req) : message)
   }
   // compatReqCounter.inc({ route: 'exports', status: 'ok' })
 }
