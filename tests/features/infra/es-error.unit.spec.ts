@@ -15,4 +15,15 @@ test.describe('ES error extraction', () => {
     assert.equal(message, 'Validation Failed: 1: this action would add [2] total shards, but this cluster currently has [3456]/[3000] maximum shards open; - [master5][10.0.11.177:9300][indices:admin/create]')
     assert.equal(status, 400)
   })
+
+  test('Map an aborted request (http client gave up) to a 499', () => {
+    const { status } = extractError({ name: 'RequestAbortedError', message: 'Request aborted' })
+    assert.equal(status, 499)
+  })
+
+  test('Map an elasticsearch client TimeoutError to a 504 with the "too long" message', () => {
+    const { message, status } = extractError({ name: 'TimeoutError', message: 'Request timed out' })
+    assert.equal(status, 504)
+    assert.ok(message.includes('trop longue'))
+  })
 })

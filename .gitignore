@@ -25,3 +25,4 @@ test-results/
 /benchmark/results/*.json
 /docs/**/*.pdf
 .playwright-mcp
+/superpowers/**/*.md

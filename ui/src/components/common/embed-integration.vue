@@ -84,7 +84,7 @@ import { mdiCheck, mdiContentCopy } from '@mdi/js'
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
-  resource: { id: string, slug?: string, href?: string, previews?: { id?: string, href?: string, title?: string }[] }
+  resource: { id: string, slug?: string, href?: string, exposedUrl?: string, previews?: { id?: string, href?: string, title?: string }[] }
 }>()
 
 const { t } = useI18n()
@@ -97,7 +97,7 @@ const embedUrl = computed(() => {
   if (props.resourceType === 'datasets') {
     return props.resource.previews?.[0]?.href || ''
   }
-  return props.resource.href || ''
+  return props.resource.exposedUrl || ''
 })
 
 const syncParamsAttr = computed(() => {

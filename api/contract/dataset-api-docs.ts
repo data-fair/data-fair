@@ -75,8 +75,13 @@ const textPlainResponse = (description: string) => ({
 /** Renders the rate-limit blurb describing how many requests/sec a given user role can make. */
 const apiRate = (key: 'user' | 'anonymous', label: string): string => {
   const rate = config.defaultLimits.apiRate[key]
-  return `Un utilisateur ${label} ne peut pas effectuer plus de ${rate.nb} requêtes par intervalle de ${rate.duration} seconde${rate.duration > 1 ? 's' : ''}.
+  let blurb = `Un utilisateur ${label} ne peut pas effectuer plus de ${rate.nb} requêtes par intervalle de ${rate.duration} seconde${rate.duration > 1 ? 's' : ''}.
   Sa vitesse de téléchargement totale sera limitée à ${prettyBytes(rate.bandwidth.static)}/s pour les contenus statiques (fichiers de données, pièces jointes, etc.) et à ${prettyBytes(rate.bandwidth.dynamic)}/s pour les autres appels.`
+  if (rate.computeMs) {
+    blurb += `
+  De plus, le temps de traitement cumulé de ses requêtes ne peut pas dépasser ${Math.round(rate.computeMs / 1000)} seconde${rate.computeMs >= 2000 ? 's' : ''} par intervalle de ${rate.duration} seconde${rate.duration > 1 ? 's' : ''} ; au-delà, les requêtes sont rejetées (code 429) jusqu'à régularisation.`
+  }
+  return blurb
 }
 const userApiRate = apiRate('user', "authentifié (session ou clé d'API)")
 const anonymousApiRate = apiRate('anonymous', 'anonyme')
