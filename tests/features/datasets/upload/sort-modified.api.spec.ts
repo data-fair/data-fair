@@ -1,8 +1,13 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { nanoid } from 'nanoid'
+import { customAlphabet } from 'nanoid'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
+
+// MongoDB $text treats a leading "-" as a term-exclusion operator, so a tag
+// starting with "-" would make the `q` filter exclude this test's datasets.
+// Use a hyphen-free alphabet for the unique tag.
+const nanoid = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 12)
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
