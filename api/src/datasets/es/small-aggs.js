@@ -1,6 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
+import { timedEsCall } from './abort.js'
 import es from '#es'
 
 /** @param {import('./abort.js').EsAbortContext} [abortContext] */
@@ -14,12 +15,12 @@ export const max = async (dataset, fieldKey, query, abortContext) => {
       max: { field: fieldKey }
     }
   }
-  const esResponse = await es.client.search({
+  const esResponse = await timedEsCall(abortContext, () => es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  }, abortContext)
+  }, abortContext))
   return esResponse.aggregations.max.value
 }
 
@@ -34,11 +35,11 @@ export const min = async (dataset, fieldKey, query, abortContext) => {
       min: { field: fieldKey }
     }
   }
-  const esResponse = await es.client.search({
+  const esResponse = await timedEsCall(abortContext, () => es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  }, abortContext)
+  }, abortContext))
   return esResponse.aggregations.min.value
 }

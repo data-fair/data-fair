@@ -3,6 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { parseSort, prepareQuery, aliasName, prepareResultItem } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 import { assertMetricAccepted } from './metric-agg.js'
+import { timedEsCall } from './abort.js'
 import es from '#es'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 
@@ -210,12 +211,12 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   }
   // Bound complexity with a timeout
   if (explain) explain.esQuery = esQuery
-  const esResponse = await es.client.search({
+  const esResponse = await timedEsCall(abortContext, () => es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout,
     allow_partial_search_results: allowPartialResults
-  }, abortContext)
+  }, abortContext))
   if (explain) explain.esResponse = esResponse
 
   const response = { total: esResponse.hits.total.value }

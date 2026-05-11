@@ -3,7 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.js'
 import { tooLongError } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
-import { type EsAbortContext } from './abort.js'
+import { type EsAbortContext, timedEsCall } from './abort.js'
 
 export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, abortContext?: EsAbortContext) => {
   const esQuery = prepareQuery(dataset, query)
@@ -34,7 +34,7 @@ export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, ab
     }
   }
 
-  const res = await client.transport.request({
+  const res = await timedEsCall(abortContext, () => client.transport.request({
     method: 'POST',
     path: `/${aliasName(dataset)}/_search`,
     body: esQuery,
@@ -44,7 +44,7 @@ export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, ab
       allow_partial_search_results: 'false',
       timeout: config.elasticsearch.searchTimeout
     }
-  }, { ...abortContext, meta: true })
+  }, { ...abortContext, meta: true }))
   const esResponse: any = res.body
   // belt-and-suspenders: with allow_partial_search_results=false ES errors on timeout, but if a
   // timed_out response ever slips through, surface it as the same 504 rather than a silent partial

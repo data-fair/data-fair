@@ -5,6 +5,9 @@ import config from '#config'
  * @property {AbortSignal} signal - pass it (with requestTimeout) as the options arg of an ES client call
  * @property {string | number} requestTimeout - per-request client timeout; equals the ES search
  *   `timeout` parameter so the http request can't outlive the ES-side collection timeout
+ * @property {number} esElapsedMs - cumulated wall-clock duration (ms) of the ES calls made for this
+ *   request; fed to the time-weighted ("compute budget") rate limiter (see api/src/misc/utils/rate-limiting.ts).
+ *   Each ES helper bumps it via `recordEsElapsed` around its client call.
  */
 
 /**
@@ -39,7 +42,8 @@ export const createEsRequestOptions = (req, res) => {
   /** @type {EsAbortContext} */
   const abortContext = {
     signal: controller.signal,
-    requestTimeout: config.elasticsearch.searchTimeout
+    requestTimeout: config.elasticsearch.searchTimeout,
+    esElapsedMs: 0
   }
 
   const onClose = () => {
@@ -52,4 +56,28 @@ export const createEsRequestOptions = (req, res) => {
   // @ts-ignore
   req.esAbortContext = abortContext
   return abortContext
+}
+
+/**
+ * Run one Elasticsearch client call, adding its wall-clock duration to the per-request abort context
+ * for the time-weighted ("compute budget") rate limiter. No-op accounting when there is no abort
+ * context (worker / bulk-indexing callers, or helpers reached without one).
+ *
+ * Usage in an ES helper:
+ *   const esResponse = await timedEsCall(abortContext, () => client.search({ ... }, abortContext))
+ *
+ * @template T
+ * @param {EsAbortContext | undefined} abortContext
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
+export const timedEsCall = async (abortContext, fn) => {
+  // performance.now() (sub-millisecond float) rather than Date.now(): a fast localhost ES call can be
+  // well under 1 ms and Date.now()'s integer-ms resolution would round it to 0
+  const start = performance.now()
+  try {
+    return await fn()
+  } finally {
+    if (abortContext) abortContext.esElapsedMs += performance.now() - start
+  }
 }

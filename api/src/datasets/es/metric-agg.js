@@ -2,6 +2,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import moment from 'moment-timezone'
 import config from '#config'
 import { prepareQuery, aliasName } from './commons.js'
+import { timedEsCall } from './abort.js'
 import capabilities from '../../../contract/capabilities.js'
 
 const acceptedMetricAggsByType = {
@@ -86,12 +87,12 @@ export const agg = async (client, dataset, query, abortContext) => {
     const precisionThreshold = Number(query.precision_threshold ?? '40000')
     esQuery.aggs.metric.cardinality.precision_threshold = precisionThreshold
   }
-  const esResponse = await client.search({
+  const esResponse = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  }, abortContext)
+  }, abortContext))
   const response = { total: esResponse.hits.total.value }
   response.metric = getValueFromAggRes(field, query.metric, esResponse.aggregations.metric)
   return response
@@ -133,12 +134,12 @@ export const simpleMetricsAgg = async (client, dataset, query, abortContext) => 
       }
     }
   }
-  const esResponse = await client.search({
+  const esResponse = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  }, abortContext)
+  }, abortContext))
   const response = { total: esResponse.hits.total.value, metrics: {} }
   for (const metricField of fields) {
     response.metrics[metricField] = {}

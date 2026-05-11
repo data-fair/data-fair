@@ -114,6 +114,9 @@ module.exports = {
       anonymous: {
         duration: 60, // seconds intervals
         nb: 600, // req max in this interval, 429 afterwards
+        // time-weighted ("compute budget") limit: max cumulated Elasticsearch query time (in ms) over
+        // the same interval; 429 afterwards. 0 = disabled. See docs/architecture/load-management.md
+        computeMs: 20000, // 20 s of ES query time per 60 s
         // in bytes per second, no 429, instead the stream is throttled
         bandwidth: {
           // used by routes with dynamic contents (search mostly)
@@ -125,6 +128,9 @@ module.exports = {
       user: {
         duration: 60, // second intervals
         nb: 1200, // req max in this interval, 429 afterwards
+        // see anonymous.computeMs above; >= the ES searchTimeout (45 s) so a single legitimate slow
+        // query never locks an authenticated client out for a window
+        computeMs: 60000, // 60 s of ES query time per 60 s
         // in bytes per second, no 429, instead the stream is throttled
         bandwidth: {
           // used by routes with dynamic contents (search mostly)

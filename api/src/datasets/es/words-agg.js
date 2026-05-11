@@ -1,6 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
+import { timedEsCall } from './abort.js'
 import capabilities from '../../../contract/capabilities.js'
 
 /** @param {import('./abort.js').EsAbortContext} [abortContext] */
@@ -44,12 +45,12 @@ export default async (client, dataset, query, abortContext) => {
   }
 
   // console.log(esQuery)
-  const esResponse = await client.search({
+  const esResponse = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  }, abortContext)
+  }, abortContext))
 
   const buckets = esResponse.aggregations.sample.words.buckets
 
@@ -71,7 +72,7 @@ export default async (client, dataset, query, abortContext) => {
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
 /** @param {import('./abort.js').EsAbortContext} [abortContext] */
 async function unstem (client, dataset, field, key, abortContext) {
-  const res = await client.search({
+  const res = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: {
       size: 20,
@@ -86,7 +87,7 @@ async function unstem (client, dataset, field, key, abortContext) {
     },
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  }, abortContext)
+  }, abortContext))
 
   const words = {}
   for (const hit of res.hits.hits) {

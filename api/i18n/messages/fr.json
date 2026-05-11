@@ -12,6 +12,7 @@
 		"exceedLimitNbDatasets": "Vous avez atteint votre nombre maximal de jeux de données autorisés.",
 		"missingPermission": "Vous n'avez pas la permission d'effectuer cette opération.",
 		"exceedRateLimiting": "Trop de traffic dans un interval restreint sur cette API.",
+		"exceedComputeBudget": "Le temps de traitement cumulé de vos requêtes dépasse le budget alloué sur cette API. Veuillez patienter avant d'essayer de nouveau, ou réduire le coût de vos requêtes.",
 		"exceedAnonymousRateLimiting": "Trop de messages dans un bref interval. Veuillez patienter avant d'essayer de nouveau.",
 		"looksLikeSpam": "Message refusé, l'activité ressemble à celle d'un robot spammeur.",
 		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",

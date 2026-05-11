@@ -2,6 +2,7 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.js'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'
+import { timedEsCall } from './abort.js'
 
 /** @param {import('./abort.js').EsAbortContext} [abortContext] */
 export default async (client, dataset, query, publicBaseUrl, flatten, abortContext) => {
@@ -35,12 +36,12 @@ export default async (client, dataset, query, publicBaseUrl, flatten, abortConte
       [query.metric]: { field: query.metric_field }
     }
   }
-  const esResponse = await client.search({
+  const esResponse = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  }, abortContext)
+  }, abortContext))
   return prepareGeoAggResponse(esResponse, dataset, query, publicBaseUrl, flatten)
 }
 

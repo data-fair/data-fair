@@ -492,6 +492,7 @@
       "properties": {
         "duration": { "type": "number" },
         "nb": { "type": "number" },
+        "computeMs": { "type": "number" },
         "bandwidth": {
           "type": "object",
           "properties": {

@@ -1,6 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
+import { timedEsCall } from './abort.js'
 
 /** @param {import('./abort.js').EsAbortContext} [abortContext] */
 export default async (client, dataset, fieldKey, query, abortContext) => {
@@ -37,12 +38,12 @@ export default async (client, dataset, fieldKey, query, abortContext) => {
     }
   }
   // Bound complexity with a timeout
-  const esResponse = await client.search({
+  const esResponse = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  }, abortContext)
+  }, abortContext))
   return esResponse.aggregations.values.buckets.map(b => {
     let value = b.key_as_string || b.key
     if (field?.type === 'string' && field.format === 'date') {
