@@ -79,6 +79,78 @@ test.describe('mandatory remoteService — REST dataset', () => {
     assert.equal(count, 1)
   })
 
+  // the UI editing forms send an explicit `_action` ('create' when adding, 'update' when editing)
+  // — unlike the default 'createOrUpdate' path these go through the existence/hash check, which used
+  // to overwrite the rejection status set by the mandatory-extension pass and silently persist the line.
+  test('single-line POST with explicit _action=create is rejected and not persisted when mandatory remoteService fails', async () => {
+    await setupMockRoute({
+      path: '/geocoder/coords',
+      ndjsonEcho: { fields: { error: 'mock failure' } }
+    })
+
+    const ds = (await testUser1.post('/api/v1/datasets', {
+      ...baseRestDataset,
+      extensions: [{ active: true, mandatory: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+    })).data
+    assert.equal(ds.status, 'finalized')
+
+    const res = await testUser1.post(`/api/v1/datasets/${ds.id}/lines`, { _action: 'create', adr: 'somewhere' }, { validateStatus: () => true })
+    assert.equal(res.status, 400)
+    assert.match(JSON.stringify(res.data), /enrichissement obligatoire/)
+    assert.equal(await restCollectionCount(ds.id), 0)
+  })
+
+  test('single-line POST with _action=update is rejected and leaves the existing line unchanged when mandatory remoteService fails', async () => {
+    // first create a valid line with the geocoder succeeding
+    await setupMockRoute({
+      path: '/geocoder/coords',
+      ndjsonEcho: { fields: { lat: 10, lon: 20, matchLevel: 'match' } }
+    })
+    const ds = (await testUser1.post('/api/v1/datasets', {
+      ...baseRestDataset,
+      extensions: [{ active: true, mandatory: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+    })).data
+    assert.equal(ds.status, 'finalized')
+    const created = (await testUser1.post(`/api/v1/datasets/${ds.id}/lines`, { adr: 'good address' })).data
+    assert.equal(created.adr, 'good address')
+
+    // now make the geocoder fail and try to update the line
+    await setupMockRoute({
+      path: '/geocoder/coords',
+      ndjsonEcho: { fields: { error: 'mock failure' } }
+    })
+    const res = await testUser1.post(`/api/v1/datasets/${ds.id}/lines`, { _action: 'update', _id: created._id, adr: 'changed address' }, { validateStatus: () => true })
+    assert.equal(res.status, 400)
+    assert.match(JSON.stringify(res.data), /enrichissement obligatoire/)
+
+    // the line is still there with its original value
+    assert.equal(await restCollectionCount(ds.id), 1)
+    const line = (await testUser1.get(`/api/v1/datasets/${ds.id}/lines/${created._id}`)).data
+    assert.equal(line.adr, 'good address')
+  })
+
+  test('_bulk_lines with explicit _action=create/update persists nothing for the lines that fail a mandatory remoteService', async () => {
+    await setupMockRoute({
+      path: '/geocoder/coords',
+      ndjsonEcho: { fields: { error: 'mock failure' } }
+    })
+    const ds = (await testUser1.post('/api/v1/datasets', {
+      ...baseRestDataset,
+      extensions: [{ active: true, mandatory: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+    })).data
+    assert.equal(ds.status, 'finalized')
+
+    const res = await testUser1.post(`/api/v1/datasets/${ds.id}/_bulk_lines`, [
+      { _action: 'create', _id: 'a', adr: 'addr a' },
+      { _action: 'update', _id: 'b', adr: 'addr b' }
+    ], { validateStatus: () => true })
+    // all lines failed → 400, and the errors are reported in the summary
+    assert.equal(res.status, 400)
+    assert.equal(res.data.nbErrors, 2)
+    assert.match(JSON.stringify(res.data.errors), /enrichissement obligatoire/)
+    assert.equal(await restCollectionCount(ds.id), 0)
+  })
+
   test('bulk write is rejected up-front when oversize and a mandatory remoteService is configured', async () => {
     // lower the threshold so we can trigger the oversize path without sending megabytes
     await setConfig('elasticsearch.maxBulkChars', 200)

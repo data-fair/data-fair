@@ -553,6 +553,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 
   // check existence and hash for operations (create and update)
   // createOrUpdate operation use upsert with hash filter and so don't need this check
+  // operations that already failed (e.g. a mandatory extension rejection above) are left
+  // untouched here — overwriting their _status would let the failing line be persisted.
   if (createUpdatePreviousFilters.length) {
     const missingCheckPrevious = new Set(createUpdatePreviousFilters.map(f => f._id))
     for await (const checkPrevious of c.find({ $or: createUpdatePreviousFilters }).project({ _id: 1, _hash: 1, _deleted: 1 })) {
@@ -560,7 +562,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       if (!_deleted) {
         missingCheckPrevious.delete(_id)
         const operation = operations.find(op => op._id === _id)
-        if (operation) {
+        if (operation && !operation._error) {
           if (operation._action === 'create') {
             operation._status = 409
             operation._error = 'cet identifiant de ligne est déjà utilisé'
@@ -576,7 +578,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
     for (const _id of missingCheckPrevious) {
       const operation = operations.find(op => op._id === _id)
-      if (operation) {
+      if (operation && !operation._error) {
         if (operation._action === 'create') {
           operation._status = 201
         } else {
