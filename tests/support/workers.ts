@@ -104,7 +104,17 @@ export const waitForDatasetError = async (
     (e: any) => e.type === 'error' || (e.type === 'validation-error' && e.hasDiagnosticFile),
     timeout
   )
-  return (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
+  // The journal event is emitted before the generic worker error handler flips
+  // the dataset status to 'error' (especially for 'validation-error', where the
+  // worker also sends a notification before throwing). Poll until the status is
+  // actually visible so callers can reliably assert on it.
+  const deadline = Date.now() + timeout
+  let dataset = (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
+  while (dataset.status !== 'error' && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 50))
+    dataset = (await ax.get(`/api/v1/datasets/${datasetId}`, { params })).data
+  }
+  return dataset
 }
 
 /**
