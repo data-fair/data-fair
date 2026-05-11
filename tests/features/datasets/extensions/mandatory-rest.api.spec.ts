@@ -153,6 +153,40 @@ test.describe('mandatory remoteService — REST dataset', () => {
     assert.equal(attachments.length, 0, `expected no orphaned attachment, got ${JSON.stringify(attachments)}`)
   })
 
+  test('a repeated failing line stays rejected even once the remoteService result is cached', async () => {
+    await setupMockRoute({
+      path: '/geocoder/coords',
+      ndjsonEcho: { fields: { error: 'mock failure' } }
+    })
+
+    const ds = (await testUser1.post('/api/v1/datasets', {
+      ...baseRestDataset,
+      title: 'rest-mandatory-cache',
+      extensions: [{
+        active: true,
+        mandatory: true,
+        type: 'remoteService',
+        remoteService: 'geocoder-koumoul',
+        action: 'postCoords'
+      }]
+    })).data
+    assert.equal(ds.status, 'finalized')
+
+    // first write: primes the extensions-cache with the error result
+    const res1 = await testUser1.post(`/api/v1/datasets/${ds.id}/lines`, { adr: 'somewhere' }, { validateStatus: () => true })
+    assert.equal(res1.status, 400)
+    assert.match(JSON.stringify(res1.data), /enrichissement obligatoire/)
+
+    // second write of the same address: the result is now replayed from the cache;
+    // the mandatory-extension failure must still be detected and the line rejected
+    const res2 = await testUser1.post(`/api/v1/datasets/${ds.id}/lines`, { adr: 'somewhere' }, { validateStatus: () => true })
+    assert.equal(res2.status, 400)
+    assert.match(JSON.stringify(res2.data), /enrichissement obligatoire/)
+
+    // nothing persisted from either attempt
+    assert.equal(await restCollectionCount(ds.id), 0)
+  })
+
   test('non-mandatory remoteService failure is non-blocking — line persists', async () => {
     await setupMockRoute({
       path: '/geocoder/coords',

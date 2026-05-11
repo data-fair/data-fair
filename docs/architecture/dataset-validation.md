@@ -93,6 +93,8 @@ This is enforced in `bulkLines` (rest.ts) before parsing the body.
 
 The `extensions-cache` MongoDB collection is written normally by `extendBatchSync`, even when the request as a whole is rejected because of a different line failing. The remote-service call was a real, paid operation; caching its result by input hash remains correct.
 
+A cached result that carries an `errorKey` is replayed exactly like a fresh one: `ExtensionsStream.sendBuffer` invokes `onLineError` for cache hits as well as cache misses, so a line that failed a mandatory extension once stays rejected on every later write of the same input — it is never silently persisted because the failure came from the cache.
+
 ### `extend-rest` worker
 
 The `extend` worker (`api/src/workers/batch-processor/extend-rest.ts`) handles only REST datasets now: initial extension run for newly-created REST datasets with active extensions, incremental `_partialRestStatus: 'updated'` runs after `_bulk_lines`, and re-runs when an extension is flagged `needsUpdate`. It never writes to the diagnostic file.

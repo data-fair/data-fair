@@ -316,6 +316,19 @@ class ExtensionsStream extends Transform {
 
         const separatorOutput = extension.action.output.filter((o: any) => o['x-separator'])
 
+        // surface a per-row error whether the remote-service result was freshly
+        // fetched or replayed from extensions-cache — a cached failure is still a failure
+        const reportLineError = async (bufferIndex: number | string, result: any) => {
+          if (this.onLineError && result && result[extension.errorKey]) {
+            await this.onLineError(this.offset + Number(bufferIndex), {
+              extensionType: 'remoteService',
+              mandatory: !!extension.mandatory,
+              propertyKey: extension.extensionKey,
+              message: String(result[extension.errorKey])
+            })
+          }
+        }
+
         const opts: any = {
           method: extension.action.operation.method,
           url: extension.remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]) + extension.action.operation.path,
@@ -363,6 +376,7 @@ class ExtensionsStream extends Transform {
           if (cachedValue) {
             const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], cachedValue.output, this.onlyEmitChanges, separatorOutput)
             if (hasChanges) changesIndexes.add(i)
+            await reportLineError(i, cachedValue.output)
           } else opts.data += JSON.stringify(inputs[i]) + '\n'
         }
         if (!opts.data) continue
@@ -408,14 +422,7 @@ class ExtensionsStream extends Transform {
           const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], selectedResult, this.onlyEmitChanges, separatorOutput)
           if (hasChanges) changesIndexes.add(i)
 
-          if (this.onLineError && selectedResult[extension.errorKey]) {
-            await this.onLineError(this.offset + Number(i), {
-              extensionType: 'remoteService',
-              mandatory: !!extension.mandatory,
-              propertyKey: extension.extensionKey,
-              message: String(selectedResult[extension.errorKey])
-            })
-          }
+          await reportLineError(i, selectedResult)
         }
       } else if (extension.evaluate && extension.property) {
         for (const i in this.buffer) {
