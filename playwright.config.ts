@@ -1,5 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
+import { fileURLToPath } from 'node:url'
 import 'dotenv/config'
+
+// Unit tests import api modules that load node-config (the `config` package) at module-evaluation
+// time; it resolves its files relative to cwd, which when running the test suite is the repo root.
+// Point it at api/config so those imports don't blow up on an empty config. (Only affects the test
+// runner / its worker processes — the dev API runs with cwd=api/ and finds ./config on its own.)
+process.env.NODE_CONFIG_DIR ??= fileURLToPath(new URL('./api/config', import.meta.url))
 
 export default defineConfig({
   testDir: './tests',
