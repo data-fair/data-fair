@@ -526,8 +526,35 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
 
+  // mandatory-extension pass: run any extension flagged `mandatory && active` in-memory
+  // before MongoDB write so a failure aborts the line cleanly with no partial state.
+  // Non-mandatory extensions stay async (handled by the indexer worker via _needsExtending).
+  const mandatoryExtensions = (dataset.extensions ?? []).filter((e: any) => e.active && e.mandatory)
+  if (mandatoryExtensions.length) {
+    const candidates = operations.filter(op => op._action !== 'delete' && (!op._status || op._status < 300))
+    if (candidates.length) {
+      const lines = candidates.map(op => ({ ...op.fullBody }))
+      await extensionsUtils.extendBatchSync(dataset, mandatoryExtensions, lines, {
+        onLineError: (i, err) => {
+          if (!err.mandatory) return
+          const operation = candidates[i]
+          operation._status = 400
+          operation._error = `enrichissement obligatoire en échec (${err.propertyKey}) : ${err.message}`
+        }
+      })
+      // copy enriched fields back into fullBody for the lines that survived
+      for (let i = 0; i < candidates.length; i++) {
+        const operation = candidates[i]
+        if (operation._error) continue
+        Object.assign(operation.fullBody, lines[i])
+      }
+    }
+  }
+
   // check existence and hash for operations (create and update)
   // createOrUpdate operation use upsert with hash filter and so don't need this check
+  // operations that already failed (e.g. a mandatory extension rejection above) are left
+  // untouched here — overwriting their _status would let the failing line be persisted.
   if (createUpdatePreviousFilters.length) {
     const missingCheckPrevious = new Set(createUpdatePreviousFilters.map(f => f._id))
     for await (const checkPrevious of c.find({ $or: createUpdatePreviousFilters }).project({ _id: 1, _hash: 1, _deleted: 1 })) {
@@ -535,7 +562,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       if (!_deleted) {
         missingCheckPrevious.delete(_id)
         const operation = operations.find(op => op._id === _id)
-        if (operation) {
+        if (operation && !operation._error) {
           if (operation._action === 'create') {
             operation._status = 409
             operation._error = 'cet identifiant de ligne est déjà utilisé'
@@ -551,7 +578,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
     for (const _id of missingCheckPrevious) {
       const operation = operations.find(op => op._id === _id)
-      if (operation) {
+      if (operation && !operation._error) {
         if (operation._action === 'create') {
           operation._status = 201
         } else {
@@ -815,10 +842,27 @@ async function manageAttachment (req: RequestWithRestDataset & { body: any }, ke
       throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
     req.body[pathField.key] = relativePath
+    // remember the new attachment path so the caller can roll it back if the
+    // transaction is rejected (mandatory-extension fail, AJV fail, conflict…)
+    req._uploadedAttachmentPath = attachmentPath(req.dataset, relativePath)
   } else if (!keepExisting && pathField) {
     if (!checkMatchingAttachment(req, lineId, dir, pathField)) {
       await filesStorage.removeDir(dir)
     }
+  }
+}
+
+// Remove an attachment that was just uploaded by manageAttachment when the
+// surrounding transaction is rejected — otherwise the file lingers on disk
+// without any database row referencing it.
+const rollbackUploadedAttachment = async (req: RequestWithRestDataset) => {
+  const p = req._uploadedAttachmentPath
+  if (!p) return
+  delete req._uploadedAttachmentPath
+  try {
+    if (await filesStorage.pathExists(p)) await filesStorage.removeFile(p)
+  } catch (err) {
+    console.warn('failed to rollback uploaded attachment', p, err)
   }
 }
 
@@ -884,7 +928,10 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   formatLine(fullLine, req.dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
-  if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
+  if (operation._error) {
+    await rollbackUploadedAttachment(req)
+    return res.status(operation._status ?? 200).send(operation._error)
+  }
   await commitLines(req.dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
@@ -901,7 +948,10 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   formatLine(fullLine, req.dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
-  if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
+  if (operation._error) {
+    await rollbackUploadedAttachment(req)
+    return res.status(operation._status ?? 200).send(operation._error)
+  }
   await commitLines(req.dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
@@ -1003,6 +1053,16 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // these formats are read strictly as is
     const raw = mimeType === 'application/x-ndjson' || mimeType === 'application/json'
     const contentLength = Number(req.get('content-length'))
+
+    // mandatory extensions force in-memory processing — reject upfront when the
+    // request would have been queued for async indexing (see commitLines below).
+    const hasMandatoryExtension = !!(req.dataset.extensions ?? []).find((e: any) => e.active && e.mandatory)
+    const willGoAsync = req.query.async === 'true' || (!isNaN(contentLength) && contentLength > config.elasticsearch.maxBulkChars)
+    if (hasMandatoryExtension && willGoAsync) {
+      return res.status(400).type('text/plain').send(
+        `Une extension obligatoire est configurée sur ce jeu de données. La requête doit être traitée en mémoire et ne peut donc pas dépasser ${config.elasticsearch.maxBulkChars} caractères ni utiliser le mode "async". Découpez la requête en plus petits lots.`
+      )
+    }
 
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
 

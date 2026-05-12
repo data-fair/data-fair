@@ -89,18 +89,11 @@ export const prepareExtensions = (locale: string, extensions: any[], oldExtensio
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
 export const compileExpression = exprEval(config.defaultTimezone).compile
-export const extend = async (
-  dataset: Dataset,
-  extensions: any[],
-  updateMode?: 'all' | 'updatedLines' | 'lineIds' | 'updatedExtensions',
-  ignoreDraftLimit?: boolean,
-  lineIds?: string[],
-  simulationLine?: DatasetLine
-) => {
-  debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
-  const detailedExtensions = []
-
-  // TODO: move this in a small cache for performance in singleLine mode
+// Resolve each active extension into a "detailed" descriptor that can be consumed
+// by ExtensionsStream (loads remoteService + action, prepares input mapping, compiles
+// expression, etc.). Throws on configuration errors at the dataset level.
+const buildDetailedExtensions = async (dataset: Dataset, extensions: any[]) => {
+  const detailedExtensions: any[] = []
   for (const extension of extensions) {
     if (!extension.active) continue
     if (extension.type === 'remoteService') {
@@ -134,6 +127,45 @@ export const extend = async (
       }
     }
   }
+  return detailedExtensions
+}
+
+/**
+ * Apply extensions to an in-memory batch of lines. Mutates the lines (enriched
+ * fields are added) and surfaces per-row failures via options.onLineError.
+ *
+ * Used on the REST hot path when at least one extension is `mandatory && active`.
+ */
+export const extendBatchSync = async (
+  dataset: Dataset,
+  extensions: any[],
+  lines: any[],
+  options: { onLineError?: ExtensionLineErrorHandler, onlyEmitChanges?: boolean } = {}
+): Promise<any[]> => {
+  const detailedExtensions = await buildDetailedExtensions(dataset, extensions)
+  if (!detailedExtensions.length) return lines
+  const stream = new ExtensionsStream({
+    extensions: detailedExtensions,
+    dataset,
+    onlyEmitChanges: !!options.onlyEmitChanges,
+    onLineError: options.onLineError
+  })
+  stream.buffer = lines.slice()
+  await stream.sendBuffer()
+  return lines
+}
+
+export const extend = async (
+  dataset: Dataset,
+  extensions: any[],
+  updateMode?: 'all' | 'updatedLines' | 'lineIds' | 'updatedExtensions',
+  ignoreDraftLimit?: boolean,
+  lineIds?: string[],
+  simulationLine?: DatasetLine,
+  onLineError?: ExtensionLineErrorHandler
+) => {
+  debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
+  const detailedExtensions = await buildDetailedExtensions(dataset, extensions)
   if (!detailedExtensions.length) {
     debugMasterData('no extension to apply')
     return
@@ -171,7 +203,7 @@ export const extend = async (
   try {
     await pump(
       ...inputStreams,
-      new ExtensionsStream({ extensions: detailedExtensions, dataset, onlyEmitChanges: updateMode === 'updatedExtensions' }),
+      new ExtensionsStream({ extensions: detailedExtensions, dataset, onlyEmitChanges: updateMode === 'updatedExtensions', onLineError }),
       ...writeStreams
     )
     if (filePath) {
@@ -210,10 +242,20 @@ const applyExtensionResult = (extensionKey: string, overwrittenKeys: string[][],
   return hasChanges
 }
 
+export type ExtensionLineErrorInfo = {
+  extensionType: 'remoteService' | 'exprEval'
+  mandatory: boolean
+  propertyKey: string
+  message: string
+}
+
+export type ExtensionLineErrorHandler = (absoluteIndex: number, err: ExtensionLineErrorInfo) => void | Promise<void>
+
 type ExtensionStreamOptions = {
   extensions: any[],
   dataset: Dataset,
-  onlyEmitChanges: boolean
+  onlyEmitChanges: boolean,
+  onLineError?: ExtensionLineErrorHandler
 }
 
 // Perform HTTP requests to a remote service to extend data
@@ -223,13 +265,16 @@ class ExtensionsStream extends Transform {
   extensions: any[]
   onlyEmitChanges: boolean
   buffer: any[]
-  constructor ({ extensions, dataset, onlyEmitChanges }: ExtensionStreamOptions) {
+  offset = 0
+  onLineError?: ExtensionLineErrorHandler
+  constructor ({ extensions, dataset, onlyEmitChanges, onLineError }: ExtensionStreamOptions) {
     super({ objectMode: true })
     this.i = 0
     this.dataset = dataset
     this.extensions = extensions
     this.onlyEmitChanges = onlyEmitChanges
     this.buffer = []
+    this.onLineError = onLineError
   }
 
   async transformPromise (item: any) {
@@ -270,6 +315,19 @@ class ExtensionsStream extends Transform {
         }
 
         const separatorOutput = extension.action.output.filter((o: any) => o['x-separator'])
+
+        // surface a per-row error whether the remote-service result was freshly
+        // fetched or replayed from extensions-cache — a cached failure is still a failure
+        const reportLineError = async (bufferIndex: number | string, result: any) => {
+          if (this.onLineError && result && result[extension.errorKey]) {
+            await this.onLineError(this.offset + Number(bufferIndex), {
+              extensionType: 'remoteService',
+              mandatory: !!extension.mandatory,
+              propertyKey: extension.extensionKey,
+              message: String(result[extension.errorKey])
+            })
+          }
+        }
 
         const opts: any = {
           method: extension.action.operation.method,
@@ -318,6 +376,7 @@ class ExtensionsStream extends Transform {
           if (cachedValue) {
             const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], cachedValue.output, this.onlyEmitChanges, separatorOutput)
             if (hasChanges) changesIndexes.add(i)
+            await reportLineError(i, cachedValue.output)
           } else opts.data += JSON.stringify(inputs[i]) + '\n'
         }
         if (!opts.data) continue
@@ -362,6 +421,8 @@ class ExtensionsStream extends Transform {
 
           const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], selectedResult, this.onlyEmitChanges, separatorOutput)
           if (hasChanges) changesIndexes.add(i)
+
+          await reportLineError(i, selectedResult)
         }
       } else if (extension.evaluate && extension.property) {
         for (const i in this.buffer) {
@@ -385,9 +446,22 @@ class ExtensionsStream extends Transform {
             }
             value = extension.evaluate(data)
           } catch (err: any) {
-            const message = `[noretry] échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`
-
-            throw new Error(message)
+            const message = `échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`
+            if (this.onLineError) {
+              // exprEval failures are always blocking — like a validation error.
+              // The hook collects them per-row so the diagnostic file is exhaustive,
+              // and the worker is expected to throw [noretry] at end-of-stream.
+              await this.onLineError(this.offset + Number(i), {
+                extensionType: 'exprEval',
+                mandatory: true,
+                propertyKey: extension.property.key,
+                message
+              })
+              // leave the property unset for this row and continue
+              continue
+            }
+            // legacy behavior for callers that did not opt into onLineError: abort the run
+            throw new Error(`[noretry] ${message}`)
           }
           if (this.onlyEmitChanges && !equal(this.buffer[i][extension.property.key], value)) {
             changesIndexes.add(i)
@@ -406,6 +480,7 @@ class ExtensionsStream extends Transform {
       this.push(this.buffer[i])
     }
 
+    this.offset += this.buffer.length
     this.buffer = []
   }
 }

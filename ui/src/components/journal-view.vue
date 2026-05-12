@@ -24,7 +24,7 @@
     >
       <v-list-item-title>
         <span
-          v-if="event.type === 'error' || event.type === 'validation-error'"
+          v-if="event.type === 'error'"
           class="text-error"
         >
           {{ event.data || eventLabel(event) }}
@@ -34,13 +34,33 @@
           {{ event.type === 'draft-validated' ? `(${event.data})` : '' }}
         </span>
       </v-list-item-title>
-      <v-list-item-subtitle v-if="event.data && !['draft-validated', 'error', 'validation-error'].includes(event.type)">
+      <v-list-item-subtitle v-if="event.type === 'validation-error' && event.data">
+        <p
+          class="text-error"
+          style="white-space: pre-line"
+        >
+          {{ event.data }}
+        </p>
+      </v-list-item-subtitle>
+      <v-list-item-subtitle v-else-if="event.data && !['draft-validated', 'error'].includes(event.type)">
         <p v-safe-html="event.data" />
       </v-list-item-subtitle>
       <template #append>
-        <span class="text-body-small default">
-          {{ event.date ? dayjs(event.date).format('lll') : dayjs().format('lll') }}
-        </span>
+        <div class="d-flex flex-column align-end">
+          <span class="text-body-small default">
+            {{ event.date ? dayjs(event.date).format('lll') : dayjs().format('lll') }}
+          </span>
+          <v-btn
+            v-if="event.type === 'validation-error' && (event as any).hasDiagnosticFile && diagnosticDownloadHref(event)"
+            variant="text"
+            size="small"
+            color="error"
+            :href="diagnosticDownloadHref(event)"
+            target="_blank"
+          >
+            {{ t('downloadDiagnostic') }}
+          </v-btn>
+        </div>
       </template>
     </v-list-item>
   </v-list>
@@ -49,15 +69,18 @@
 <i18n lang="yaml">
 fr:
   draft: Brouillon
+  downloadDiagnostic: Télécharger le diagnostic
 en:
   draft: Draft
+  downloadDiagnostic: Download diagnostic
 </i18n>
 
 <script setup lang="ts">
+import { inject } from 'vue'
 import type { Event } from '#api/types'
 import eventsJson from '#shared/events.json'
 import { mdiAlert, mdiAlertDecagram, mdiCheck, mdiClipboardText, mdiContentSave, mdiDelete, mdiFileCancel, mdiFileCheck, mdiFileDownload, mdiFileSearch, mdiFileSwap, mdiMerge, mdiPencil, mdiPlusCircleOutline, mdiPublish, mdiReloadAlert, mdiTableOfContents, mdiWrench } from '@mdi/js'
-import { type TaskProgress } from '~/composables/dataset/dataset-store'
+import { datasetStoreKey, type DatasetStore, type TaskProgress } from '~/composables/dataset/dataset-store'
 const eventsList = eventsJson as Record<string, Record<string, { icon: string, text: Record<string, string>, color?: string }>>
 
 const session = useSession()
@@ -70,6 +93,15 @@ const { journal, type, after } = defineProps<{
   after?: string
   taskProgress?: TaskProgress
 }>()
+
+// dataset store may not be provided when type === 'application' — that's fine,
+// the diagnostic button only renders when we can build a URL.
+const datasetStore = inject<DatasetStore | undefined>(datasetStoreKey, undefined)
+const diagnosticDownloadHref = (event: Event) => {
+  if (type !== 'dataset' || !datasetStore) return undefined
+  const qs = event.draft ? '?draft=true' : ''
+  return `${datasetStore.resourceUrl.value}/validation-diagnostic.csv${qs}`
+}
 
 const eventTypes = eventsList[type]
 const draftEventTypes = eventsList[`${type}-draft`]

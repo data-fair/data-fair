@@ -17,96 +17,10 @@
       :title="t('loadLines')"
     >
       <v-card-text>
-        <template v-if="result">
-          <v-alert
-            v-if="result.cancelled"
-            type="error"
-            :value="true"
-            variant="outlined"
-          >
-            {{ t('cancelled') }}
-          </v-alert>
-          <template v-else>
-            <p
-              v-if="result.nbOk"
-              class="mb-2"
-            >
-              {{ t('resultOk', {nb: result.nbOk.toLocaleString()}) }}
-            </p>
-            <p
-              v-if="result.nbCreated"
-              class="mb-2"
-            >
-              {{ t('resultCreated', {nb: result.nbCreated.toLocaleString()}) }}
-            </p>
-            <p
-              v-if="result.nbModified"
-              class="mb-2"
-            >
-              {{ t('resultModified', {nb: result.nbModified.toLocaleString()}) }}
-            </p>
-            <p
-              v-if="result.nbNotModified"
-              class="mb-2"
-            >
-              {{ t('resultNotModified', {nb: result.nbNotModified.toLocaleString()}) }}
-            </p>
-            <p
-              v-if="result.nbDeleted"
-              class="mb-2"
-            >
-              {{ t('resultDeleted', {nb: result.nbDeleted.toLocaleString()}) }}
-            </p>
-            <v-alert
-              v-if="result.dropped"
-              type="warning"
-              :value="true"
-              variant="outlined"
-            >
-              {{ t('dropped') }}
-            </v-alert>
-            <v-alert
-              v-if="!result.indexedAt"
-              type="warning"
-              :value="true"
-              variant="outlined"
-            >
-              {{ t('waitForIndex') }}
-            </v-alert>
-          </template>
-          <v-alert
-            v-if="result.nbErrors"
-            type="error"
-            :value="true"
-            variant="outlined"
-          >
-            {{ t('resultErrors', {nb: result.nbErrors.toLocaleString()}) }}
-            <ul>
-              <li
-                v-for="(error, i) in result.errors"
-                :key="i"
-              >
-                <span v-if="error.line !== -1">{{ t('line') }} {{ error.line }} : </span>{{ error.error }}
-              </li>
-            </ul>
-          </v-alert>
-          <v-alert
-            v-if="result.nbWarnings"
-            type="error"
-            :value="true"
-            variant="outlined"
-          >
-            {{ t('resultWarnings', {nb: result.nbWarnings.toLocaleString()}) }}
-            <ul>
-              <li
-                v-for="(warning, i) in result.warnings"
-                :key="i"
-              >
-                <span v-if="warning.line !== -1">{{ t('line') }} {{ warning.line }} : </span>{{ warning.warning }}
-              </li>
-            </ul>
-          </v-alert>
-        </template>
+        <dataset-rest-actions-summary
+          v-if="result"
+          :summary="result"
+        />
         <v-form
           v-else
           v-model="form"
@@ -217,42 +131,20 @@ fr:
   cancel: Annuler
   load: Charger
   ok: Ok
-  resultOk: "{nb} ligne(s) OK"
-  resultModified: "{nb} ligne(s) modifiée(s)"
-  resultNotModified: "{nb} ligne(s) sans modification"
-  resultErrors: "{nb} erreur(s)"
-  resultWarnings: "{nb} avertissement(s)"
-  resultCreated: "{nb} ligne(s) créée(s)"
-  resultDeleted: "{nb} ligne(s) supprimées(s)"
   separator: Séparateur
-  line: ligne
   drop: Cochez pour supprimer toutes les lignes existantes avant d'importer les nouvelles
-  dropped: "Toutes les lignes existantes ont été supprimées"
-  cancelled: "Suppression des lignes existantes et autres opérations annulées à cause des erreurs"
   selectAttachmentsFile: Sélectionnez un fichier zip de pièces jointes
   attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
-  waitForIndex: Les opérations demandées étant volumineuses, elles seront traitées de manière légèrement différée. Veuillez patienter, la table sera rafraîchie quand les données seront traitées.
 en:
   loadLines: Load multiple lines from a file
   selectFile: Select or drag and drop a file
   cancel: Cancel
   load: Load
   ok: Ok
-  resultOk: "{nb} OK line(s)"
-  resultModified: "{nb} modified line(s)"
-  resultNotModified: "{nb} line(s) without modifications"
-  resultErrors: "{nb} error(s)"
-  resultWarnings: "{nb} warning(s)"
-  resultCreated: "{nb} created line(s)"
-  resultDeleted: "{nb} deleted line(s)"
   separator: Separator
-  line: line
   drop: Check to delete all existing lines before importing new ones
-  dropped: "All existing lines have been deleted"
-  cancelled: "Deletion of existing lines and other operations cancelled because of errors"
   selectAttachmentsFile: Select an attachments zip file
   attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.
-  waitForIndex: The requested operations are large, they will be processed with a slight delay. Please wait, the table will be refreshed when the data is processed.
 </i18n>
 
 <script setup lang="ts">

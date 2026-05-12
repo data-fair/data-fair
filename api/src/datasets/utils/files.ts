@@ -56,6 +56,10 @@ export const fullFilePath = (dataset: any) => {
   return resolvePath(dataFilesDir(dataset), fullFileName(dataset))
 }
 
+export const validationDiagnosticFilePath = (dataset: any) => {
+  return resolvePath(dataFilesDir(dataset), 'validation-diagnostic.csv')
+}
+
 export const loadedAttachmentsFilePath = (dataset: any) => {
   return resolvePath(loadingDir(dataset), 'attachments.zip')
 }

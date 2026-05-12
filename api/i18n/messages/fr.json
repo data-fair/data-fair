@@ -70,6 +70,14 @@
 				"title": "Erreur du brouillon du jeu de données {{label}}",
 				"body": "Il y a eu une erreur pendant le traitement du brouillon du jeu de données {{label}} : {{detail}}."
 			},
+			"validation-error": {
+				"title": "Erreurs de validation sur le jeu de données {{label}}",
+				"body": "Le jeu de données {{label}} a {{nbErrors}} ligne(s) en erreur. Téléchargez le fichier de diagnostic : {{diagnosticUrl}}"
+			},
+			"draft-validation-error": {
+				"title": "Erreurs de validation sur le brouillon {{label}}",
+				"body": "Le brouillon du jeu de données {{label}} a {{nbErrors}} ligne(s) en erreur. Téléchargez le fichier de diagnostic : {{diagnosticUrl}}"
+			},
 			"dataset-created": {
 				"title": "Nouveau jeu de données {{label}}",
 				"body": "Le jeu de données {{label}} vient d'être créé."

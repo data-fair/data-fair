@@ -1,4 +1,5 @@
 {
   "ignoreRoot": [],
-  "ignore": ["node_modules/", "../dev/"]
+  "ignore": ["node_modules/", "../dev/"],
+  "watch": [".", "../ui/dist"]
 }
