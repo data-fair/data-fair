@@ -20,13 +20,14 @@ eagerly; degrade gracefully until a wide dataset is next reindexed. Keep relevan
 
 ## Width metric & threshold
 
-`nbTextSearchFields(schema)` = number of schema fields whose `esProperty(field)` produces a
-`.text` or `.text_standard` inner field. In practice this is all indexed non-object / non-geo
-columns; string columns (`uri-reference` or no format) contribute both `.text` and
-`.text_standard`, numbers/dates contribute `.text_standard`.
+`hasManyQSearchFields(schema)` counts, across the schema, the analyzed inner sub-fields that end
+up in the `q` `fields` array — i.e. `.text` and `.text_standard` are counted **separately** (a
+string column with both contributes 2, a number/date column contributes 1 for its `.text_standard`,
+an object/geo/boolean column contributes 0). This mirrors what actually inflates the array.
 
-**A dataset is "wide" ⇔ `nbTextSearchFields(schema) > 30`.** This is a hardcoded constant in
-`api/src/datasets/es/commons.js` — not configurable.
+**A dataset is "wide" ⇔ that count `> Q_SEARCH_FIELDS_THRESHOLD` (`30`).** The threshold is a
+hardcoded constant in `api/src/datasets/es/commons.js` — not configurable. (With the separate
+counting, 30 corresponds to roughly 15 typical string columns.)
 
 ## Mapping changes
 
@@ -91,7 +92,7 @@ Four regimes, evaluated in this order:
    - `qSearchFields = ['_search']`, `qStandardFields = ['_search.text_standard']`.
    - extra `should` boosting clause:
      `simple_query_string { query: q, fields: ['_search_boosted', '_search_boosted.text_standard'], ...sqsOptions }`
-     with a uniform boost (`^4`) — this replaces the previous per-field `^3` / `^2` boosts.
+     with a uniform boost (`^3`) — this replaces the previous per-field `^3` / `^2` boosts.
    - `q_mode=complete` keeps its structure: `${q}*` prefix sub-query → `['_search.text_standard']`;
      `"${q}"` phrase sub-query → `['_search']`; plain sub-queries → `['_search']` +
      `['_search.text_standard']` + the boosted clause.
@@ -116,14 +117,14 @@ which is part of the memoized dataset argument. The function additionally reads
 ## Overload advice (`queryAdvice`, `api/src/misc/utils/query-advice.ts`)
 
 Add one rule, independent of `_esCopyToSearch` (restricting `q_fields` reduces cost in every
-regime and is good practice): if `nbTextSearchFields(req.dataset.schema) > 30` **and** `q` or
+regime and is good practice): if `hasManyQSearchFields(req.dataset.schema)` **and** `q` or
 `_c_q` is set **and** `q_fields` is absent → push a new i18n key `errors.queryAdviceQFields`
 ("…restrict the searched columns with `q_fields=col1,col2`"). Add the key to
 `api/i18n/messages/en.json` and `api/i18n/messages/fr.json`.
 
 ## Tests
 
-- Wide dataset (> 30 text columns): after finalize → mapping contains `_search` /
+- Wide dataset (enough text columns to exceed the threshold — e.g. 33 string columns): after finalize → mapping contains `_search` /
   `_search_boosted` with `copy_to` on the columns; `dataset._esCopyToSearch === true`; a `q=`
   matching a value in any column returns that row; a value longer than 200 chars in a free-text
   cell is matchable via `q` (this is the `ignore_above` × `copy_to` verification, expressed as a

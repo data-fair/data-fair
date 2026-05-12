@@ -29,25 +29,27 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields } from '../../../../api/src/datasets/es/commons.js'
 
-const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'f' + i, type: 'string' }))
+// a string column produces both a .text and a .text_standard inner field -> counts as 2
+const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 's' + i, type: 'string' }))
+// an integer (or date) column produces only a .text_standard inner field -> counts as 1
+const intFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'i' + i, type: 'integer' }))
+const boolFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))
 
 test.describe('hasManyQSearchFields', () => {
   test('threshold is 30', () => {
     assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 30)
   })
-  test('false at or below the threshold, true above it', () => {
-    assert.equal(hasManyQSearchFields(stringFields(30)), false)
-    assert.equal(hasManyQSearchFields(stringFields(31)), true)
+  test('counts .text and .text_standard separately', () => {
+    // string columns have both -> 15 columns == 30 inner fields (not over), 16 == 32 (over)
+    assert.equal(hasManyQSearchFields(stringFields(15)), false)
+    assert.equal(hasManyQSearchFields(stringFields(16)), true)
+    // integer/date columns have only .text_standard -> 30 columns == 30 (not over), 31 == 31 (over)
+    assert.equal(hasManyQSearchFields(intFields(30)), false)
+    assert.equal(hasManyQSearchFields(intFields(31)), true)
   })
-  test('only counts fields that produce a .text / .text_standard inner field', () => {
-    // booleans and geo_point produce no text inner fields; _id is ignored
-    const schema = [
-      ...stringFields(31),
-      ...Array.from({ length: 50 }, (_, i) => ({ key: 'b' + i, type: 'boolean' })),
-      { key: '_id', type: 'string' }
-    ]
-    assert.equal(hasManyQSearchFields(schema), true)
-    assert.equal(hasManyQSearchFields([...stringFields(20), ...Array.from({ length: 50 }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))]), false)
+  test('ignores fields with no text inner field, and _id', () => {
+    assert.equal(hasManyQSearchFields([...stringFields(16), ...boolFields(50), { key: '_id', type: 'string' }]), true)
+    assert.equal(hasManyQSearchFields([...stringFields(10), ...boolFields(50)]), false) // 20 inner fields
   })
   test('tolerates a missing schema', () => {
     assert.equal(hasManyQSearchFields(undefined), false)
@@ -66,10 +68,10 @@ Expected: FAIL — `hasManyQSearchFields`/`Q_SEARCH_FIELDS_THRESHOLD` are not ex
 In `api/src/datasets/es/commons.js`, immediately after the `esProperty` function (after line 92, before `export const aliasName`), add:
 
 ```javascript
-// A dataset whose `q` query would otherwise expand into a huge `fields` array (one entry per
-// text-bearing column, times the analyzed sub-fields) is considered "wide": its index gets the
-// `_search` / `_search_boosted` catch-all fields and its `q` query targets those instead.
-// See docs/architecture/load-management.md.
+// A dataset whose `q` query would otherwise expand into a huge `fields` array is given the
+// `_search` / `_search_boosted` catch-all fields, and its `q` query targets those instead.
+// We count the analyzed inner sub-fields (`.text` and `.text_standard` separately, since that is
+// what actually inflates the `fields` array) rather than the columns. See docs/architecture/load-management.md.
 export const Q_SEARCH_FIELDS_THRESHOLD = 30
 
 export const hasManyQSearchFields = (schema) => {
@@ -78,7 +80,9 @@ export const hasManyQSearchFields = (schema) => {
   for (const f of schema) {
     if (f.key === '_id') continue
     const esProp = esProperty(f)
-    if (esProp && esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) n++
+    if (!esProp || !esProp.fields) continue
+    if (esProp.fields.text) n++
+    if (esProp.fields.text_standard) n++
   }
   return n > Q_SEARCH_FIELDS_THRESHOLD
 }
@@ -790,7 +794,7 @@ git commit -m "test: end-to-end coverage for the _search catch-all on a wide dat
 
 In `docs/architecture/load-management.md`, find the section that lists the `queryAdvice` rules and add a bullet for the new one:
 
-> - **`q_fields` on wide datasets** — when a dataset has more than `Q_SEARCH_FIELDS_THRESHOLD` (30) text-bearing columns and a request uses `q` (or `_c_q`) without `q_fields`, the advice suggests restricting the searched columns.
+> - **`q_fields` on wide datasets** — when a dataset is "wide" (`hasManyQSearchFields`: more than `Q_SEARCH_FIELDS_THRESHOLD` = 30 analyzed text sub-fields, counting `.text` and `.text_standard` separately, ≈ 15 typical string columns) and a request uses `q` (or `_c_q`) without `q_fields`, the advice suggests restricting the searched columns.
 
 Then add a new subsection (near the Elasticsearch query-controls part):
 
@@ -798,7 +802,7 @@ Then add a new subsection (near the Elasticsearch query-controls part):
 >
 > A `q` search is compiled into one or more Elasticsearch `simple_query_string` clauses whose `fields` array normally has roughly one entry per text column (times the analyzed sub-fields). On datasets with many columns this array reaches hundreds of entries, which is expensive for Elasticsearch to parse and execute.
 >
-> When a dataset has more than `Q_SEARCH_FIELDS_THRESHOLD` (30) text-bearing columns (`hasManyQSearchFields` in `api/src/datasets/es/commons.js`), its index gets two extra internal fields, `_search` and `_search_boosted` (`indexDefinition` in `api/src/datasets/es/manage-indices.js`), and every text column gets a `copy_to` into `_search` (columns annotated with `rdfs:label` / `schema.org/description` / `DefinedTermSet` also copy into `_search_boosted`). A `q` query against such a dataset (when `q_fields` is not given) then targets just `_search` / `_search.text_standard`, plus a boosting clause on `_search_boosted`.
+> When a dataset is "wide" — `hasManyQSearchFields` in `api/src/datasets/es/commons.js`: more than `Q_SEARCH_FIELDS_THRESHOLD` (30) analyzed text sub-fields, counting `.text` and `.text_standard` separately (≈ 15 typical string columns) — its index gets two extra internal fields, `_search` and `_search_boosted` (`indexDefinition` in `api/src/datasets/es/manage-indices.js`), and every text column gets a `copy_to` into `_search` (columns annotated with `rdfs:label` / `schema.org/description` / `DefinedTermSet` also copy into `_search_boosted`). A `q` query against such a dataset (when `q_fields` is not given) then targets just `_search` / `_search.text_standard`, plus a boosting clause on `_search_boosted`.
 >
 > Existing datasets are **not** reindexed eagerly. The boolean `dataset._esCopyToSearch` (set by the `finalize` worker; for virtual datasets it is `true` iff every descendant has it) records whether the dataset's current index actually carries `_search`. The query layer keys off this flag: `true` → use `_search`; otherwise, if the dataset is wide but not yet reindexed, a "reduced" path is used that drops the `.text_standard` sub-fields from the main query (still O(columns), but roughly half the array) while keeping them available for `q_mode=complete`'s prefix matching. A wide dataset picks up `_search` automatically the next time a schema change triggers a full reindex (`updateDatasetMapping` forces one when the dataset crosses the threshold).
 
