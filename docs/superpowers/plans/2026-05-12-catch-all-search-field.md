@@ -4,7 +4,7 @@
 
 **Goal:** For datasets with many text columns, replace the O(columns) `fields` array in the `q` Elasticsearch query with a constant-size set of internal catch-all fields (`_search`, `_search_boosted`) populated via `copy_to`; degrade gracefully for datasets not yet reindexed; and add a `q_fields` hint to the overload-advice messages.
 
-**Architecture:** A new constant `Q_SEARCH_FIELDS_THRESHOLD = 30` and a helper `isWideDataset(schema)` live in `api/src/datasets/es/commons.js`. `indexDefinition()` adds `_search`/`_search_boosted` to the ES mapping and `copy_to` references on text columns when the dataset is wide; `updateDatasetMapping()` forces a reindex when a dataset crosses the threshold. The `finalize` worker records the result on `dataset._esCopyToSearch` (a virtual dataset bubbles up `descendants.every(d => d._esCopyToSearch)`); `clean()` strips it from API output. `getFilterableFields()`/`prepareQuery()` pick one of three query regimes from that stored flag (catch-all / reduced-legacy / full-legacy). `queryAdvice()` gains one rule.
+**Architecture:** A new constant `Q_SEARCH_FIELDS_THRESHOLD = 30` and a helper `hasManyQSearchFields(schema)` live in `api/src/datasets/es/commons.js`. `indexDefinition()` adds `_search`/`_search_boosted` to the ES mapping and `copy_to` references on text columns when the dataset is wide; `updateDatasetMapping()` forces a reindex when a dataset crosses the threshold. The `finalize` worker records the result on `dataset._esCopyToSearch` (a virtual dataset bubbles up `descendants.every(d => d._esCopyToSearch)`); `clean()` strips it from API output. `getFilterableFields()`/`prepareQuery()` pick one of three query regimes from that stored flag (catch-all / reduced-legacy / full-legacy). `queryAdvice()` gains one rule.
 
 **Tech Stack:** Node.js (ESM), Elasticsearch, MongoDB, Playwright test runner (`*.unit.spec.ts` / `*.api.spec.ts`), `memoizee`.
 
@@ -14,7 +14,7 @@
 
 ---
 
-### Task 1: `Q_SEARCH_FIELDS_THRESHOLD` constant + `isWideDataset` helper
+### Task 1: `Q_SEARCH_FIELDS_THRESHOLD` constant + `hasManyQSearchFields` helper
 
 **Files:**
 - Modify: `api/src/datasets/es/commons.js` (add exports near the top, after the `esProperty` function which ends at line 92)
@@ -27,17 +27,17 @@ Create `tests/features/datasets/query/q-fields.unit.spec.ts`:
 ```ts
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { Q_SEARCH_FIELDS_THRESHOLD, isWideDataset } from '../../../../api/src/datasets/es/commons.js'
+import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields } from '../../../../api/src/datasets/es/commons.js'
 
 const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 'f' + i, type: 'string' }))
 
-test.describe('isWideDataset', () => {
+test.describe('hasManyQSearchFields', () => {
   test('threshold is 30', () => {
     assert.equal(Q_SEARCH_FIELDS_THRESHOLD, 30)
   })
   test('false at or below the threshold, true above it', () => {
-    assert.equal(isWideDataset(stringFields(30)), false)
-    assert.equal(isWideDataset(stringFields(31)), true)
+    assert.equal(hasManyQSearchFields(stringFields(30)), false)
+    assert.equal(hasManyQSearchFields(stringFields(31)), true)
   })
   test('only counts fields that produce a .text / .text_standard inner field', () => {
     // booleans and geo_point produce no text inner fields; _id is ignored
@@ -46,12 +46,12 @@ test.describe('isWideDataset', () => {
       ...Array.from({ length: 50 }, (_, i) => ({ key: 'b' + i, type: 'boolean' })),
       { key: '_id', type: 'string' }
     ]
-    assert.equal(isWideDataset(schema), true)
-    assert.equal(isWideDataset([...stringFields(20), ...Array.from({ length: 50 }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))]), false)
+    assert.equal(hasManyQSearchFields(schema), true)
+    assert.equal(hasManyQSearchFields([...stringFields(20), ...Array.from({ length: 50 }, (_, i) => ({ key: 'b' + i, type: 'boolean' }))]), false)
   })
   test('tolerates a missing schema', () => {
-    assert.equal(isWideDataset(undefined), false)
-    assert.equal(isWideDataset(null), false)
+    assert.equal(hasManyQSearchFields(undefined), false)
+    assert.equal(hasManyQSearchFields(null), false)
   })
 })
 ```
@@ -59,7 +59,7 @@ test.describe('isWideDataset', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx playwright test tests/features/datasets/query/q-fields.unit.spec.ts --project unit`
-Expected: FAIL — `isWideDataset`/`Q_SEARCH_FIELDS_THRESHOLD` are not exported.
+Expected: FAIL — `hasManyQSearchFields`/`Q_SEARCH_FIELDS_THRESHOLD` are not exported.
 
 - [ ] **Step 3: Implement**
 
@@ -72,7 +72,7 @@ In `api/src/datasets/es/commons.js`, immediately after the `esProperty` function
 // See docs/architecture/load-management.md.
 export const Q_SEARCH_FIELDS_THRESHOLD = 30
 
-export const isWideDataset = (schema) => {
+export const hasManyQSearchFields = (schema) => {
   if (!schema) return false
   let n = 0
   for (const f of schema) {
@@ -93,7 +93,7 @@ Expected: PASS (4 tests).
 
 ```bash
 git add api/src/datasets/es/commons.js tests/features/datasets/query/q-fields.unit.spec.ts
-git commit -m "feat(es): isWideDataset helper + Q_SEARCH_FIELDS_THRESHOLD constant"
+git commit -m "feat(es): hasManyQSearchFields helper + Q_SEARCH_FIELDS_THRESHOLD constant"
 ```
 
 ---
@@ -204,7 +204,7 @@ In `api/src/datasets/es/manage-indices.js`:
 Change the import on line 5 to:
 
 ```javascript
-import { aliasName, esProperty, isWideDataset } from './commons.js'
+import { aliasName, esProperty, hasManyQSearchFields } from './commons.js'
 ```
 
 Replace the body of `indexDefinition` (lines 11-35) with:
@@ -222,7 +222,7 @@ export const indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const properties = body.mappings.properties = {}
   const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
-  const wide = isWideDataset(jsProps)
+  const wide = hasManyQSearchFields(jsProps)
   if (wide) {
     properties._search = catchAllSearchProperty(dataset)
     properties._search_boosted = catchAllSearchProperty(dataset)
@@ -299,7 +299,7 @@ git commit -m "feat(es): add _search/_search_boosted catch-all fields to wide-da
 In `api/src/workers/short-processor/finalize.ts`, near `import { datasetWarning } from '../../datasets/es/manage-indices.js'` (line 4), add:
 
 ```ts
-import { isWideDataset } from '../../datasets/es/commons.js'
+import { hasManyQSearchFields } from '../../datasets/es/commons.js'
 ```
 
 - [ ] **Step 2: Set the flag for non-virtual datasets**
@@ -309,7 +309,7 @@ In `finalize.ts`, just after the line `queryableDataset.schema = result.schema =
 ```ts
   // record whether this dataset's freshly-built index carries the _search catch-all fields
   // (virtual datasets have no index of their own — handled below by bubbling up from descendants)
-  result._esCopyToSearch = !isVirtualDataset(dataset) && isWideDataset(result.schema)
+  result._esCopyToSearch = !isVirtualDataset(dataset) && hasManyQSearchFields(result.schema)
 ```
 
 - [ ] **Step 3: Bubble up for virtual datasets**
@@ -457,7 +457,7 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
 
   // pick the `q` regime (only when no explicit q_fields was requested)
   const copyToSearch = !!hasQ && !qFields && dataset._esCopyToSearch === true
-  const reduced = !!hasQ && !qFields && !copyToSearch && isWideDataset(dataset.schema)
+  const reduced = !!hasQ && !qFields && !copyToSearch && hasManyQSearchFields(dataset.schema)
 
   for (const f of dataset.schema) {
     const capabilities = f['x-capabilities'] || []
@@ -640,14 +640,14 @@ Expected: FAIL — `errors.queryAdviceQFields` never appears.
 In `api/src/misc/utils/query-advice.ts`, add the import at the top (after the existing `import { type Request } from 'express'`):
 
 ```ts
-import { isWideDataset } from '../../datasets/es/commons.js'
+import { hasManyQSearchFields } from '../../datasets/es/commons.js'
 ```
 
 Then, in `queryAdvice`, after rule 5 (`errors.queryAdviceSelect`) and before `if (keys.length === 0) return ''`, add:
 
 ```ts
   // 6. wide dataset full-text-searched without restricting the searched columns
-  if ((q.q || q._c_q) && !q.q_fields && isWideDataset(req.dataset?.schema)) keys.push('errors.queryAdviceQFields')
+  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(req.dataset?.schema)) keys.push('errors.queryAdviceQFields')
 ```
 
 In `api/i18n/messages/en.json`, after the `"queryAdviceSelect": ...,` line, add:
@@ -798,7 +798,7 @@ Then add a new subsection (near the Elasticsearch query-controls part):
 >
 > A `q` search is compiled into one or more Elasticsearch `simple_query_string` clauses whose `fields` array normally has roughly one entry per text column (times the analyzed sub-fields). On datasets with many columns this array reaches hundreds of entries, which is expensive for Elasticsearch to parse and execute.
 >
-> When a dataset has more than `Q_SEARCH_FIELDS_THRESHOLD` (30) text-bearing columns (`isWideDataset` in `api/src/datasets/es/commons.js`), its index gets two extra internal fields, `_search` and `_search_boosted` (`indexDefinition` in `api/src/datasets/es/manage-indices.js`), and every text column gets a `copy_to` into `_search` (columns annotated with `rdfs:label` / `schema.org/description` / `DefinedTermSet` also copy into `_search_boosted`). A `q` query against such a dataset (when `q_fields` is not given) then targets just `_search` / `_search.text_standard`, plus a boosting clause on `_search_boosted`.
+> When a dataset has more than `Q_SEARCH_FIELDS_THRESHOLD` (30) text-bearing columns (`hasManyQSearchFields` in `api/src/datasets/es/commons.js`), its index gets two extra internal fields, `_search` and `_search_boosted` (`indexDefinition` in `api/src/datasets/es/manage-indices.js`), and every text column gets a `copy_to` into `_search` (columns annotated with `rdfs:label` / `schema.org/description` / `DefinedTermSet` also copy into `_search_boosted`). A `q` query against such a dataset (when `q_fields` is not given) then targets just `_search` / `_search.text_standard`, plus a boosting clause on `_search_boosted`.
 >
 > Existing datasets are **not** reindexed eagerly. The boolean `dataset._esCopyToSearch` (set by the `finalize` worker; for virtual datasets it is `true` iff every descendant has it) records whether the dataset's current index actually carries `_search`. The query layer keys off this flag: `true` → use `_search`; otherwise, if the dataset is wide but not yet reindexed, a "reduced" path is used that drops the `.text_standard` sub-fields from the main query (still O(columns), but roughly half the array) while keeping them available for `q_mode=complete`'s prefix matching. A wide dataset picks up `_search` automatically the next time a schema change triggers a full reindex (`updateDatasetMapping` forces one when the dataset crosses the threshold).
 
@@ -838,7 +838,7 @@ Report: tests run + results, the `ignore_above` × `copy_to` verification outcom
 
 ## Notes carried over from the spec / decisions made while planning
 
-- **Flag is written in `finalize`, not `index-lines`** — one place, runs after every finalize, and `result.schema` there is already the extended schema that the index was built from, so the flag and the mapping agree. `indexDefinition` makes the same `isWideDataset(extendedSchema)` decision independently; both use the helper from Task 1.
+- **Flag is written in `finalize`, not `index-lines`** — one place, runs after every finalize, and `result.schema` there is already the extended schema that the index was built from, so the flag and the mapping agree. `indexDefinition` makes the same `hasManyQSearchFields(extendedSchema)` decision independently; both use the helper from Task 1.
 - **`searchFields` (the `?qs=` structured-query field list) is never routed through `_search`** — only `qSearchFields` / `qStandardFields` (the `?q=` lists) change. Users reference real columns in `qs`, and `_search` is never in the schema.
 - **`qWildcardFields` (`q_mode=complete` "contains" search) is left per-field in all regimes** — the `wildcard` ES type can't fold into a `text` field; it only exists for columns that opt into the `wildcard` capability, so the array is small anyway.
 - **`_esCopyToSearch` is `DatasetInternal`-only (not in `api/types/dataset/schema.js`)** — same pattern as `_readApiKey` / `_partialRestStatus`: stored on the mongo doc, never in the public schema, stripped by `clean()`.
