@@ -3,6 +3,7 @@ import { stringify as csvStrSync } from 'csv-stringify/sync'
 import { Transform } from 'stream'
 import path from 'path'
 import { Piscina } from 'piscina'
+import mongo from '#mongo'
 
 export const results2sheetPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/results2sheet.js'),
@@ -76,13 +77,17 @@ export const csvStreams = (dataset, query = {}, useTitle = false) => {
 }
 
 export const results2sheet = async (req, results, bookType) => {
+  const dataset = req.dataset.__isProxy ? req.dataset.__proxyTarget : req.dataset
+  const settings = await mongo.db.collection('settings')
+    .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { datasetsMetadata: 1 } })
   const buf = Buffer.from(await results2sheetPiscina.run({
     results,
     bookType,
     query: req.query,
-    dataset: req.dataset.__isProxy ? req.dataset.__proxyTarget : req.dataset,
+    dataset,
     downloadUrl: req.publicBaseUrl + req.originalUrl,
-    labels: req.__('sheets')
+    labels: req.__('sheets'),
+    datasetsMetadata: settings?.datasetsMetadata ?? {}
   }))
   return buf
 }

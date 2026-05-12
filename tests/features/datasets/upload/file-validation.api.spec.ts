@@ -68,7 +68,7 @@ test.describe('file datasets with validation rules', () => {
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
     await waitForDatasetError(ax, dataset.id)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-    const errorEvent = journal.find((e: any) => e.type === 'error')
+    const errorEvent = journal.find((e: any) => e.type === 'validation-error')
     assert.ok(errorEvent)
     assert.ok(errorEvent.data.includes('ont une erreur de validation'))
 
@@ -109,7 +109,7 @@ test.describe('file datasets with validation rules', () => {
     assert.equal(patched.status, 'validation-updated')
     await waitForDatasetError(ax, dataset.id)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-    const errorEvent = journal.find((e: any) => e.type === 'error')
+    const errorEvent = journal.find((e: any) => e.type === 'validation-error')
     assert.ok(errorEvent)
     assert.ok(errorEvent.data.includes('ont une erreur de validation'))
 
@@ -162,7 +162,7 @@ bidule,123,test3`, 'dataset1.csv')
     const dataset2 = await ax.post('/api/v1/datasets', form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } }).then(r => r.data)
     await waitForDatasetError(ax, dataset2.id)
     const journal = (await ax.get(`/api/v1/datasets/${dataset2.id}/journal`)).data
-    const errorEvent = journal.find((e: any) => e.type === 'error')
+    const errorEvent = journal.find((e: any) => e.type === 'validation-error')
     assert.ok(errorEvent)
     assert.ok(errorEvent.data.includes('/multipattern/1 doit correspondre au format'))
   })

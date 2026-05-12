@@ -1,4 +1,3 @@
-<!-- eslint-disable vue/no-v-html -->
 <template>
   <template v-if="dataset">
     <template v-if="journal && !dataset.draftReason">
@@ -9,8 +8,8 @@
       >
         <p
           v-if="lastProdEvent"
-          v-html="lastProdEvent.data"
-        />
+          style="white-space: pre-line"
+        >{{ lastProdEvent.data }}</p>
         <template #append>
           <v-btn
             color="primary"
@@ -67,13 +66,13 @@
         <p
           v-if="draftError"
           class="mt-4 font-weight-bold"
-          v-html="draftError.data"
-        />
+          style="white-space: pre-line"
+        >{{ draftError.data }}</p>
         <p
           v-if="draftValidationError"
           class="mt-4 font-weight-bold"
-          v-html="draftValidationError.data"
-        />
+          style="white-space: pre-line"
+        >{{ draftValidationError.data }}</p>
         <p class="mt-4">
           <span v-if="dataset.draftReason.key === 'file-new'">
             {{ t('draftNew2') }}&nbsp;

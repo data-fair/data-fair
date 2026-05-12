@@ -232,6 +232,8 @@ test.describe('Extensions (expressions)', () => {
       ]
     })
     assert.equal(res.status, 200)
+    // exprEval evaluation failures are always blocking — they go to the diagnostic
+    // file AND the dataset enters error state.
     let errorDataset = await waitForDatasetError(ax, dataset.id)
     assert.equal(errorDataset.status, 'error')
 

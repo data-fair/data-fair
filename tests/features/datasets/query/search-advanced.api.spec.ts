@@ -68,10 +68,15 @@ test.describe('search - advanced', () => {
 
   test('get deeper into data', async () => {
     const ax = testUser1
-    const schema = [{ key: 'attr1', type: 'integer' }, { key: 'attr2', type: 'integer' }]
+    const schema = [
+      { key: 'attr1', type: 'integer' },
+      { key: 'attr2', type: 'integer' },
+      { key: 'lat', type: 'number', 'x-refersTo': 'http://schema.org/latitude' },
+      { key: 'lon', type: 'number', 'x-refersTo': 'http://schema.org/longitude' }
+    ]
     const actions = []
     for (let i = 0; i < 100; i++) {
-      actions.push({ _action: 'create', attr1: i, attr2: 99 - i })
+      actions.push({ _action: 'create', attr1: i, attr2: 99 - i, lat: 47 + (i % 10) * 0.01, lon: -2 + (i % 10) * 0.01 })
     }
     for (let i = 0; i < 3; i++) {
       await ax.put('/api/v1/datasets/rest-page' + i, { isRest: true, title: 'rest pagination ' + i, schema })
@@ -134,6 +139,16 @@ test.describe('search - advanced', () => {
     assert.equal(res.data.results[0].attr1, 3)
     assert.equal(res.data.results[1].attr1, 3)
     assert.equal(res.data.results[2].attr1, 4)
+    // deep pagination should also work with geojson format (next link from the Link header)
+    res = await ax.get('/api/v1/datasets/rest-page0/lines?format=geojson')
+    assert.equal(res.data.type, 'FeatureCollection')
+    assert.equal(res.data.features.length, 12)
+    assert.ok(res.headers.link)
+    const geojsonNextUrl = /<([^>]+)>/.exec(res.headers.link)?.[1]
+    assert.ok(geojsonNextUrl)
+    res = await ax.get(geojsonNextUrl)
+    assert.equal(res.data.type, 'FeatureCollection')
+    assert.equal(res.data.features.length, 12)
   })
 
   test('Date match special filter on date field with date-time format', async () => {

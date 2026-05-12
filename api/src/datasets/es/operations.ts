@@ -26,10 +26,26 @@ export const requiredCapability = (prop: any, filterName: string, capability: st
   }
 }
 
+export const tooLongError: ExtractedError = {
+  message: 'Cette requête est trop longue, son traitement a été interrompu.',
+  status: 504
+}
+
 /**
  * Try to produce a somewhat readable error message from a structured error from elasticsearch
  */
 export const extractError = (err: any): ExtractedError => {
+  // on a read path (see es/abort.js) the elasticsearch client throws RequestAbortedError when our
+  // AbortSignal fires - the only thing that aborts it is the http client going away - and TimeoutError
+  // when the per-request client timeout elapses
+  if (err) {
+    if (err.name === 'RequestAbortedError' || err.name === 'AbortError') {
+      // 499 = "client closed request" (nginx convention) - the http response, if any, won't reach
+      // anyone; callers must treat this as a quiet no-op (no internalError, no error metric)
+      return { message: 'Requête interrompue (client déconnecté).', status: 499 }
+    }
+    if (err.name === 'TimeoutError') return tooLongError
+  }
   const status = err.status ?? err.statusCode ?? 500
   if (typeof err === 'string') return { message: err, status }
   let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
@@ -61,10 +77,7 @@ export const extractError = (err: any): ExtractedError => {
     }
   }
   if (parts.includes('Time exceeded')) {
-    return {
-      message: 'Cette requête est trop longue, son traitement a été interrompu.',
-      status: 504
-    }
+    return tooLongError
   }
   return { message: parts.join(' - '), status }
 }

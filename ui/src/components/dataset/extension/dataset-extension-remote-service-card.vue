@@ -64,6 +64,15 @@
           v-model="extension.autoUpdate"
           :label="t('autoUpdate')"
         />
+        <v-checkbox
+          v-model="extension.mandatory"
+          :label="t('mandatory')"
+          :hint="t('mandatoryHint')"
+          persistent-hint
+          :disabled="!canWrite"
+          density="comfortable"
+          hide-details="auto"
+        />
       </v-card-text>
 
       <!-- Refresh, preview and delete -->
@@ -135,6 +144,8 @@ fr:
   unavailableServiceDetail: Soit la donnée de référence n'existe plus, soit le concept servant de liaison n'est plus présent dans votre jeu de données.
   overwriteKeys: Surcharger les clés des colonnes
   autoUpdate: Mise à jour automatique si la source change
+  mandatory: Enrichissement obligatoire
+  mandatoryHint: Une ligne dont l'enrichissement échoue est traitée comme une erreur de validation.
 en:
   additionalCols: Additional columns
   allColsOut: All the columns
@@ -149,6 +160,8 @@ en:
   unavailableServiceDetail: Either the master data no longer exists, or the linking concept is no longer present in your dataset.
   overwriteKeys: Override column keys
   autoUpdate: Auto update when the source changes
+  mandatory: Mandatory enrichment
+  mandatoryHint: A row whose enrichment fails is treated as a validation error.
 </i18n>
 
 <script setup lang="ts">
