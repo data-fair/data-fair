@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields } from '../../../../api/src/datasets/es/commons.js'
+import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields, getFilterableFields, prepareQuery } from '../../../../api/src/datasets/es/commons.js'
 
 // a string column produces both a .text and a .text_standard inner field -> counts as 2
 const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 's' + i, type: 'string' }))
@@ -29,8 +29,6 @@ test.describe('hasManyQSearchFields', () => {
     assert.equal(hasManyQSearchFields(null), false)
   })
 })
-
-import { getFilterableFields, prepareQuery } from '../../../../api/src/datasets/es/commons.js'
 
 // getFilterableFields is memoized on `${id}:${finalizedAt}:${!!hasQ}:${qFields}` — give each
 // assertion a unique id so cases never collide.
