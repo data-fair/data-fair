@@ -57,29 +57,37 @@ their next reindex-triggering schema change; there is no migration job.
 
 ## Persistence
 
-A new internal boolean `dataset.esCopyToSearch` is added to the dataset contract
-(`api/contract/dataset*.js`) as read-only (not user-settable, stripped from user input like other
-computed fields). After a successful (re)index — right after `switchAlias` succeeds in the
+A new internal boolean `dataset._esCopyToSearch` is added to the dataset contract
+(`api/contract/dataset*.js`). It follows the convention of the other calculated/internal dataset
+properties: underscore-prefixed, and stripped by the dataset `clean()` helper (so it is never
+echoed to API consumers) — locate `clean()` and the existing list of removed `_`-prefixed props
+and add it there. After a successful (re)index — right after `switchAlias` succeeds in the
 finalize/index task — the dataset is patched with the `wide` value that `indexDefinition` used. It
 is recomputed on every reindex.
 
 Query-time behavior keys off this stored flag, **never** off recomputing width from the live
 schema (the live schema may differ from the schema the current index was built with).
 
-**Virtual datasets:** the flag is not stored on the virtual dataset. At query time a virtual
-dataset uses `_search` iff **every descendant** has `esCopyToSearch === true`. Implementation must
-source the descendant flags where the virtual alias is built (`aliasName` uses
-`dataset.descendants`); if it turns out the descendant flags are not reachable there without new
-plumbing, the fallback is to treat virtual datasets as never-copyTo (legacy/reduced path). This
-fallback is acceptable and must be decided during implementation, not left ambiguous.
+**Virtual datasets:** `_esCopyToSearch` bubbles up. When a virtual dataset is finalized — and
+through whatever hook already propagates descendant changes (schema, bbox, …) onto a virtual
+dataset — it is set to `descendants.every(d => d._esCopyToSearch === true)` (a virtual dataset has
+no index of its own; its alias spans the descendant indices, so it can only use `_search` if all
+of them carry it). Query time then reads `dataset._esCopyToSearch` uniformly — no per-query
+descendant lookup. Implementation note: the virtual dataset's `_esCopyToSearch` must be
+recomputed whenever a descendant's flag could have changed — this should already follow from the
+existing descendant→virtual propagation that re-finalizes a virtual dataset when a child changes,
+but the plan must verify it. (A stale `true` is the dangerous direction: a `simple_query_string`
+on `_search` against a descendant index that no longer has the field returns no hits from that
+descendant — so correctness here depends on the re-finalization actually happening. A stale
+`false` only means the reduced legacy path is used a bit longer, which is harmless.)
 
 ## Query changes (`getFilterableFields` / `prepareQuery`)
 
 Four regimes, evaluated in this order:
 
 1. **`q_fields` given** — unchanged. Per-field path over the selected columns (already small).
-2. **`esCopyToSearch === true` (or virtual dataset with all descendants true), no `q_fields`** —
-   *catch-all path*:
+2. **`_esCopyToSearch === true`, no `q_fields`** (this already covers virtual datasets, since the
+   flag bubbles up) — *catch-all path*:
    - `qSearchFields = ['_search']`, `qStandardFields = ['_search.text_standard']`.
    - extra `should` boosting clause:
      `simple_query_string { query: q, fields: ['_search_boosted', '_search_boosted.text_standard'], ...sqsOptions }`
@@ -90,7 +98,7 @@ Four regimes, evaluated in this order:
    - `qWildcardFields` (the `wildcard`-typed contains-search fields used only in `q_mode=complete`,
      and only present when columns opt into the `wildcard` capability) are **unchanged** — they
      cannot fold into `_search`.
-3. **wide but `esCopyToSearch` not true, no `q_fields`** — *reduced legacy path*:
+3. **wide but `_esCopyToSearch` not true, no `q_fields`** — *reduced legacy path*:
    - `qSearchFields` is built with keyword (`f.key`) + `.text` variants only — **no
      `.text_standard`**.
    - `q_mode=simple`: drop the separate `.text_standard` (`qStandardFields`) clause entirely → the
@@ -100,14 +108,14 @@ Four regimes, evaluated in this order:
      phrase clauses use `.text` only.
 4. **not wide, not copyTo, no `q_fields`** — today's behavior, untouched.
 
-`getFilterableFields`'s memo key (`id:finalizedAt:hasQ:qFields`) stays valid: `esCopyToSearch`
+`getFilterableFields`'s memo key (`id:finalizedAt:hasQ:qFields`) stays valid: `_esCopyToSearch`
 only changes alongside `finalizedAt` (patched at finalize), and width derives from the schema,
 which is part of the memoized dataset argument. The function additionally reads
-`dataset.esCopyToSearch` (and, for virtual datasets, descendant flags) when deciding the regime.
+`dataset._esCopyToSearch` when deciding the regime.
 
 ## Overload advice (`queryAdvice`, `api/src/misc/utils/query-advice.ts`)
 
-Add one rule, independent of `esCopyToSearch` (restricting `q_fields` reduces cost in every
+Add one rule, independent of `_esCopyToSearch` (restricting `q_fields` reduces cost in every
 regime and is good practice): if `nbTextSearchFields(req.dataset.schema) > 30` **and** `q` or
 `_c_q` is set **and** `q_fields` is absent → push a new i18n key `errors.queryAdviceQFields`
 ("…restrict the searched columns with `q_fields=col1,col2`"). Add the key to
@@ -116,18 +124,19 @@ regime and is good practice): if `nbTextSearchFields(req.dataset.schema) > 30` *
 ## Tests
 
 - Wide dataset (> 30 text columns): after finalize → mapping contains `_search` /
-  `_search_boosted` with `copy_to` on the columns; `dataset.esCopyToSearch === true`; a `q=`
+  `_search_boosted` with `copy_to` on the columns; `dataset._esCopyToSearch === true`; a `q=`
   matching a value in any column returns that row; a value longer than 200 chars in a free-text
   cell is matchable via `q` (this is the `ignore_above` × `copy_to` verification, expressed as a
   test); a match in an `x-refersTo` label column outranks a match in a plain column.
-- Narrow dataset (≤ 30 columns): no `_search` in the mapping, `esCopyToSearch` falsy, legacy query
+- Narrow dataset (≤ 30 columns): no `_search` in the mapping, `_esCopyToSearch` falsy, legacy query
   behavior unchanged.
 - Wide-but-not-reindexed (flag unset, or schema widened after the index was built): query uses the
   reduced `.text`-only path; `q_mode=complete` prefix still works; the simple-mode `fields` array
   shrank.
 - `q_fields` set on a wide + copyTo dataset → query uses the explicit fields, not `_search`.
-- Virtual dataset over children with / without the flag → uses `_search` only when all descendants
-  have it.
+- Virtual dataset: `_esCopyToSearch` bubbles up to `true` only when all descendants have it
+  (finalize a virtual dataset over children with the flag, then over a mix), and the query path
+  follows the bubbled-up flag.
 - `queryAdvice`: a 429 on a wide dataset with `q` and no `q_fields` → the advice string mentions
   `q_fields`.
 - Existing `tests/features/datasets/query/search-*.api.spec.ts` still pass.
@@ -135,7 +144,7 @@ regime and is good practice): if `nbTextSearchFields(req.dataset.schema) > 30` *
 ## Documentation
 
 Extend `docs/architecture/load-management.md`: the new advice rule, and a short section on the
-`_search` catch-all field (what it is, the threshold, the `esCopyToSearch` flag, the
+`_search` catch-all field (what it is, the threshold, the `_esCopyToSearch` flag, the
 no-eager-reindex policy). No new doc file is created, so the `AGENTS.md` doc list is unchanged.
 
 ## Out of scope
@@ -156,5 +165,7 @@ no-eager-reindex policy). No new doc file is created, so the `AGENTS.md` doc lis
    be missing from `_search`; the fallback (e.g. a different mapping shape for wide datasets' text
    columns — note that simply dropping `ignore_above` reintroduces exposure to Lucene's term-length
    limit) must then be decided.
-2. **Virtual-dataset descendant flags** must be reachable where the virtual alias is built; if not,
-   fall back to treating virtual datasets as never-copyTo (legacy/reduced path).
+2. **Virtual-dataset re-finalization.** Confirm that a virtual dataset is re-finalized (so
+   `_esCopyToSearch` is recomputed) whenever a descendant changes — the existing descendant→virtual
+   propagation should cover it. If a path is missing, a stale `true` on a virtual dataset would
+   make `q` queries return no hits from a descendant index that no longer carries `_search`.
