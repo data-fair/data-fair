@@ -213,14 +213,16 @@ function checkQuery (query, schema, esFields, currentField) {
 export { hasCapability, requiredCapability }
 
 export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
-  // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
-  // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []
   const wildcardFields = []
   const qSearchFields = []
   const qStandardFields = []
   const qWildcardFields = []
   const esFields = []
+
+  // pick the `q` regime (only when no explicit q_fields was requested)
+  const copyToSearch = !!hasQ && !qFields && dataset._esCopyToSearch === true
+  const reduced = !!hasQ && !qFields && !copyToSearch && hasManyQSearchFields(dataset.schema)
 
   for (const f of dataset.schema) {
     const capabilities = f['x-capabilities'] || []
@@ -236,10 +238,11 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
     }
 
     const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
+    const perField = isQField && !copyToSearch // in catch-all mode, qSearchFields/qStandardFields don't list per-field entries
     const esProp = esProperty(f)
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       searchFields.push(f.key)
-      if (isQField) qSearchFields.push(f.key)
+      if (perField) qSearchFields.push(f.key)
     }
     if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
@@ -250,12 +253,14 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
 
       if (esProp.fields.text) {
         searchFields.push(f.key + '.text' + suffix)
-        if (isQField) qSearchFields.push(f.key + '.text' + suffix)
+        if (perField) qSearchFields.push(f.key + '.text' + suffix)
       }
       if (esProp.fields.text_standard) {
         searchFields.push(f.key + '.text_standard' + suffix)
-        if (isQField) {
-          qSearchFields.push(f.key + '.text_standard' + suffix)
+        if (perField) {
+          // reduced mode: omit .text_standard from the main qSearchFields array (halves it),
+          // but keep it in qStandardFields so q_mode=complete's "startsWith" prefix query still works
+          if (!reduced) qSearchFields.push(f.key + '.text_standard' + suffix)
           qStandardFields.push(f.key + '.text_standard' + suffix)
         }
       }
@@ -265,7 +270,13 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
       }
     }
   }
-  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qWildcardFields, esFields }
+
+  if (copyToSearch) {
+    qSearchFields.push('_search')
+    qStandardFields.push('_search.text_standard')
+  }
+
+  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qWildcardFields, esFields, copyToSearch, reduced }
 }, {
   profileName: 'getFilterableFields',
   primitive: true,
@@ -398,7 +409,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (q) q = q.trim()
 
   if (q || query.qs) {
-    const { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields } = getFilterableFields(dataset, q, qFields)
+    const { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields, copyToSearch, reduced } = getFilterableFields(dataset, q, qFields)
     if (query.qs) {
       if (!ignoreInvalidQS) checkQuery(query.qs, dataset.schema, esFields)
       const qs = { query_string: { query: query.qs, fields: searchFields } }
@@ -408,6 +419,11 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     if (q) {
       const qBool = { bool: { should: [], minimum_should_match: 1 } }
       const qShould = qBool.bool.should
+      // extra clause that boosts matches in semantically-important columns (label/description/...)
+      // when the dataset uses the catch-all _search fields (replaces the old per-field ^3/^2 boosts)
+      const pushBoosted = () => {
+        if (copyToSearch) qShould.push({ simple_query_string: { query: q, fields: ['_search_boosted^3', '_search_boosted.text_standard^3'], ...sqsOptions } })
+      }
       if (query.q_mode === 'complete') {
       // "complete" mode, we try to accomodate for most cases and give the most intuitive results
       // to a search query where the user might be using a autocomplete type control
@@ -431,15 +447,19 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         if (qSearchFields.length) {
           qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
         }
+        pushBoosted()
       } else {
         // default "simple" mode uses ES simple query string directly
         // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
         if (qSearchFields.length) {
           qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
         }
-        if (qStandardFields.length) {
+        // in "reduced" mode we already dropped .text_standard from qSearchFields and skip this clause
+        // (qStandardFields is still populated but only meant for the complete-mode prefix query)
+        if (qStandardFields.length && !reduced) {
           qShould.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
         }
+        pushBoosted()
       }
       must.push(qBool)
     }
