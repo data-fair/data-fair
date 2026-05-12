@@ -107,7 +107,8 @@ by `x-ignore-rate-limiting`; cleared by the test reset endpoint and the 20-min s
 The `429 errors.exceedComputeBudget` body (for `GET` requests) carries an appended, localized
 *query-shape advice* sentence derived from the request's own parameters (`queryAdvice`,
 `api/src/misc/utils/query-advice.ts`) — e.g. "set `count=false`/`count=estimate`", "use keyset
-pagination via `after`", "reduce `agg_size`", "lower `size`", "use `select` to return fewer columns" —
+pagination via `after`", "reduce `agg_size`", "lower `size`", "use `select` to return fewer columns",
+"restrict `q_fields` to the relevant columns on a wide dataset" —
 so a throttled client is told what to change, not just that it was throttled.
 
 ## 5. Other quotas & concurrency limits
@@ -156,6 +157,35 @@ returning truncated hits; also `if (res.timed_out)` → `504` belt-and-suspender
 `batched_reduce_size`, no `pre_filter_shard_size` — all ES defaults. The 45 s `timeout` mostly
 bounds the per-shard *collection* phase (not the coordinating-node reduce phase or query rewrite —
 the per-request `requestTimeout` from `es/abort.js` is the wall-clock backstop for those).
+
+### Wide-dataset `q` catch-all (the `_search` field)
+
+On a dataset with many text-searchable columns, a `q` query expands into a `simple_query_string`
+`fields` array with one entry per analyzed sub-field per column (`.text` and `.text_standard`
+counted separately — ≈ 2 entries per string column). Beyond ~15 string columns (~30 analyzed
+sub-fields) that array becomes expensive for Elasticsearch to parse and execute, and it grows
+linearly with schema width.
+
+`hasManyQSearchFields(schema)` in `commons.js` detects this condition (threshold hardcoded at **30
+analyzed text inner sub-fields**). When true, `indexDefinition` in `manage-indices.js` injects two
+extra internal fields into the mapping: `_search` (standard text analyzers, catches all columns) and
+`_search_boosted` (same, but only columns annotated `rdfs:label`, `schema.org/description`, or
+`DefinedTermSet` copy into it). Every text column's `copy_to` is wired to `_search`; label/
+description-annotated columns also copy to `_search_boosted`. The `q` query then targets the
+constant-size pair `['_search', '_search.text_standard']` plus a boost clause on `_search_boosted`,
+regardless of how many columns the schema has. `updateDatasetMapping` forces a full reindex whenever
+a dataset crosses the threshold — so the mapping change is never applied in-place.
+
+Rollout is lazy: **no eager reindex job**. `dataset._esCopyToSearch` (set by the `finalize` worker
+in `finalize.ts`) records whether the dataset's *current* ES index was built with `_search`. The
+query layer in `getFilterableFields` / `prepareQuery` (`commons.js`) keys off that stored flag, not
+the live schema. Wide datasets whose index predates the feature use a **"reduced" path** that drops
+`.text_standard` from the main `qSearchFields` array (roughly half the fields), while keeping it for
+`q_mode=complete`'s prefix query — a smaller but still approximate catch-all until the next
+reindex-triggering schema change picks up the `copy_to` fields. For virtual datasets,
+`_esCopyToSearch` bubbles up as `true` only when every descendant has it. When `q_fields` is
+supplied explicitly the catch-all is bypassed entirely and the query targets only the requested
+columns, as before.
 
 ### Aggregations (`values-agg.js`, `metric-agg.js`, `geo-agg.js`, `words-agg.js`, `values.js`, `bbox-agg.js`, `small-aggs.js`)
 
