@@ -86,9 +86,15 @@ export const updateDatasetMapping = async (dataset, oldDataset) => {
           }
         }
       }
+      // copy_to is not updatable on an existing field, and existing rows are not re-copied;
+      // a changed copy_to (e.g. a column newly annotated as a label, or the dataset dropping below
+      // the "wide" threshold) only takes effect on a full reindex -> force one
+      if (newProperty && JSON.stringify([].concat(oldProperty.copy_to ?? []).sort()) !== JSON.stringify([].concat(newProperty.copy_to ?? []).sort())) {
+        throw new Error(`the copy_to of field ${key} changed, simple mapping update will not work`)
+      }
     }
-    // crossing the "wide" threshold adds the _search catch-all fields and copy_to references,
-    // which only take effect on a full reindex -> force one (same mechanism as the inner-field guard)
+    // a freshly-added column carrying a copy_to (e.g. crossing the "wide" threshold by adding columns)
+    // is not in the loop above, so also force a reindex whenever the _search catch-all field appears
     if (newMapping.properties._search && !oldMapping.properties._search) {
       throw new Error('the _search catch-all field is added, simple mapping update will not work')
     }
