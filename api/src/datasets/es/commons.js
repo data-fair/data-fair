@@ -91,6 +91,25 @@ export const esProperty = prop => {
   return esProp
 }
 
+// A dataset whose `q` query would otherwise expand into a huge `fields` array is given the
+// `_search` / `_search_boosted` catch-all fields, and its `q` query targets those instead.
+// We count the analyzed inner sub-fields (`.text` and `.text_standard` separately, since that is
+// what actually inflates the `fields` array) rather than the columns. See docs/architecture/load-management.md.
+export const Q_SEARCH_FIELDS_THRESHOLD = 30
+
+export const hasManyQSearchFields = (schema) => {
+  if (!schema) return false
+  let n = 0
+  for (const f of schema) {
+    if (f.key === '_id') continue
+    const esProp = esProperty(f)
+    if (!esProp || !esProp.fields) continue
+    if (esProp.fields.text) n++
+    if (esProp.fields.text_standard) n++
+  }
+  return n > Q_SEARCH_FIELDS_THRESHOLD
+}
+
 export const aliasName = dataset => {
   if (dataset.isVirtual) return dataset.descendants.map(id => `${config.indicesPrefix}-${id}`).join(',')
   if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
