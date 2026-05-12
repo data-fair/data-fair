@@ -2,18 +2,35 @@ import crypto from 'crypto'
 import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.js'
-import { aliasName, esProperty } from './commons.js'
+import { aliasName, esProperty, hasManyQSearchFields } from './commons.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
 const debug = debugModule('manage-indices')
 
+const SEARCH_BOOST_REFERS_TO = ['http://www.w3.org/2000/01/rdf-schema#label', 'http://schema.org/description', 'https://schema.org/DefinedTermSet']
+
+const catchAllSearchProperty = () => ({
+  type: 'text',
+  analyzer: config.elasticsearch.defaultAnalyzer,
+  fields: { text_standard: { type: 'text', analyzer: 'standard' } }
+})
+
 export const indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const properties = body.mappings.properties = {}
-  for (const jsProp of await datasetUtils.extendedSchema(null, dataset, false)) {
+  const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
+  const wide = hasManyQSearchFields(jsProps)
+  if (wide) {
+    properties._search = catchAllSearchProperty()
+    properties._search_boosted = catchAllSearchProperty()
+  }
+  for (const jsProp of jsProps) {
     const esProp = esProperty(jsProp)
     if (esProp) {
+      if (wide && esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
+        esProp.copy_to = SEARCH_BOOST_REFERS_TO.includes(jsProp['x-refersTo']) ? ['_search', '_search_boosted'] : '_search'
+      }
       if (jsProp['x-extension'] && dataset.extensions && dataset.extensions.find(e => e.type === 'remoteService' && jsProp['x-extension'] === e.remoteService + '/' + e.action && jsProp.key.startsWith(e.propertyPrefix + '.'))) {
         const extKey = jsProp.key.split('.')[0]
         properties[extKey] = properties[extKey] || { dynamic: 'strict', properties: {} }
@@ -69,6 +86,11 @@ export const updateDatasetMapping = async (dataset, oldDataset) => {
           }
         }
       }
+    }
+    // crossing the "wide" threshold adds the _search catch-all fields and copy_to references,
+    // which only take effect on a full reindex -> force one (same mechanism as the inner-field guard)
+    if (newMapping.properties._search && !oldMapping.properties._search) {
+      throw new Error('the _search catch-all field is added, simple mapping update will not work')
     }
   }
   const res = await es.client.indices.putMapping({
