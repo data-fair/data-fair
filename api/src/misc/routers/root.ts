@@ -15,7 +15,9 @@ const remoteServices = config.remoteServices.map((s: any) => ({ ...s }))
 router.get('/ping', status.ping)
 
 router.get('/api-docs.json', (req, res) => {
-  res.json(apiDocs(req.publicBaseUrl))
+  const session = reqSession(req)
+  const authenticatedSession = session.user ? (session as Parameters<typeof apiDocs>[1]) : undefined
+  res.json(apiDocs(req.publicBaseUrl, authenticatedSession))
 })
 
 router.get('/vocabulary', async (req, res) => {

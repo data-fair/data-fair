@@ -50,6 +50,8 @@ module.exports = {
       anonymous: {
         duration: 1,
         nb: 100,
+        // compute-budget limiting off in dev/test by default (tests that exercise it set it explicitly)
+        computeMs: 0,
         bandwidth: {
           dynamic: 100000,
           static: 200000
@@ -58,6 +60,7 @@ module.exports = {
       user: {
         duration: 1,
         nb: 100,
+        computeMs: 0,
         bandwidth: {
           dynamic: 200000,
           static: 400000

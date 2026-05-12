@@ -114,14 +114,28 @@
       />
 
       <!-- Sort select -->
-      <v-select
-        v-model="sort"
-        :label="t('sort')"
-        :items="sortItems"
-        :clearable="false"
-        class="mt-4 mx-4"
-        rounded="md"
-      />
+      <v-tooltip
+        :disabled="!searchInput"
+        :text="t('sortDisabledRelevance')"
+        location="bottom"
+      >
+        <template #activator="{ props: tooltipProps }">
+          <div
+            v-bind="tooltipProps"
+            :class="{ 'cursor-not-allowed': !!searchInput }"
+          >
+            <v-select
+              v-model="sort"
+              :label="t('sort')"
+              :items="sortItems"
+              :clearable="false"
+              :disabled="!!searchInput"
+              class="mt-4 mx-4"
+              rounded="md"
+            />
+          </div>
+        </template>
+      </v-tooltip>
 
       <!-- Super admin toggle -->
       <v-switch
@@ -281,6 +295,7 @@ fr:
   sortUpdatedAtAsc: Mise à jour (plus ancienne)
   sortTitleAsc: Titre (A → Z)
   sortTitleDesc: Titre (Z → A)
+  sortDisabledRelevance: "Tri désactivé pendant une recherche : les résultats sont triés par pertinence"
 en:
   showAll: Show all applications
   sort: Sort by
@@ -293,4 +308,5 @@ en:
   sortUpdatedAtAsc: Update (oldest)
   sortTitleAsc: Title (A → Z)
   sortTitleDesc: Title (Z → A)
+  sortDisabledRelevance: "Sorting is disabled during a search: results are sorted by relevance"
 </i18n>

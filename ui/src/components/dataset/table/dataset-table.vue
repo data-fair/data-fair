@@ -578,7 +578,7 @@ const nextPage = async () => {
   paginationPage.value++
 }
 const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
-const { selectedResults, saveLine, bulkLines, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
+const { selectedResults, saveLine, removeLine, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 if (edit) {
   useAgentTool({
@@ -690,7 +690,7 @@ const editLine = useAsyncAction(async () => {
 const showDeleteDialog = ref<ExtendedResult>()
 const deleteLine = useAsyncAction(async () => {
   if (!showDeleteDialog.value) return
-  await bulkLines([{ _action: 'delete', _id: showDeleteDialog.value._id }])
+  await removeLine(showDeleteDialog.value._id)
   showDeleteDialog.value = undefined
 })
 </script>

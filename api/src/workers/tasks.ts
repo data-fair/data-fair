@@ -186,7 +186,11 @@ const datasetTasks: DatasetTask[] = [{
   mongoFilter: () => ({
     $or: [
       { file: { $exists: true }, status: { $in: ['analyzed', 'validation-updated'] }, ...noActiveDraftFilter },
-      { 'draft.file': { $exists: true }, 'draft.status': { $in: ['analyzed', 'validation-updated'] } }
+      // also pick up file datasets in 'validated' status with active extensions
+      // (set by preparePatch when the user patches extensions on a finalized dataset)
+      { $and: [{ file: { $exists: true }, status: 'validated', ...noActiveDraftFilter }, activeExtensionMongoFilter()] },
+      { 'draft.file': { $exists: true }, 'draft.status': { $in: ['analyzed', 'validation-updated'] } },
+      { $and: [{ 'draft.file': { $exists: true }, 'draft.status': 'validated' }, activeExtensionMongoFilter(true)] }
     ]
   })
 }, {
@@ -195,9 +199,11 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'batchProcessor',
   mongoFilter: () => ({
     $or: [
-      { $and: [isValidatedMongoFilter(), noActiveDraftFilter, activeExtensionMongoFilter()] },
-      { $and: [isValidatedMongoFilter('draft.'), activeExtensionMongoFilter(true)] },
+      // initial extension run for a newly created REST dataset with active extensions
+      { isRest: true, status: 'analyzed', 'extensions.active': true, ...noActiveDraftFilter },
+      // incremental extension run after _bulk_lines sets _partialRestStatus: 'updated'
       { isRest: true, status: 'finalized', 'extensions.active': true, _partialRestStatus: 'updated' },
+      // extension re-run when an extension is marked needsUpdate
       { isRest: true, status: 'finalized', extensions: { $elemMatch: { active: true, needsUpdate: true } }, _partialRestStatus: null }
     ]
   })

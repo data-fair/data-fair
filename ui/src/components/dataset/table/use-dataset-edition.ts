@@ -1,3 +1,4 @@
+import { type RestActionsSummary } from '#api/types'
 import { ExtendedResult } from '~/composables/dataset/lines'
 
 export type DatasetEdition = ReturnType<typeof createDatasetEdition>
@@ -13,11 +14,23 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
 
   const addLineTrigger = ref(false)
   const saving = ref(false)
-  const bulkLines = async (body: any) => {
+  // performs a _bulk_lines request and returns the operations summary.
+  // per-line failures are reported in the summary (summary.nbErrors / summary.errors), not thrown — it
+  // is up to the caller to display them (see dataset-rest-actions-summary). Genuine request errors
+  // (permissions, malformed request, oversize+mandatory-extension…) are still thrown.
+  const bulkLines = async (body: any): Promise<RestActionsSummary> => {
     saving.value = true
     try {
-      const res = await $fetch(`datasets/${id}/_bulk_lines`, { method: 'POST', body })
-      if (res.indexedAt) indexedAt.value = res.indexedAt
+      let summary: RestActionsSummary
+      try {
+        summary = await $fetch(`datasets/${id}/_bulk_lines`, { method: 'POST', body })
+      } catch (err: any) {
+        // when every operation fails the endpoint answers 400 with the summary object as the body
+        if (err?.data && typeof err.data === 'object' && Array.isArray(err.data.errors)) summary = err.data
+        else throw err
+      }
+      if (summary?.indexedAt) indexedAt.value = summary.indexedAt
+      return summary
     } finally {
       saving.value = false
     }
@@ -48,12 +61,26 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
     }
   }
 
+  // single-line deletion uses the dedicated endpoint (matching the deleteLine permission the
+  // delete buttons are gated on) — it returns 204 on success and a plain-text error otherwise,
+  // so a failure naturally bubbles up through $fetch
+  const removeLine = async (lineId: string) => {
+    saving.value = true
+    try {
+      await $fetch(`datasets/${id}/lines/${lineId}`, { method: 'DELETE' })
+      indexedAt.value = new Date().toISOString()
+    } finally {
+      saving.value = false
+    }
+  }
+
   return {
     selectedResults,
     addLineTrigger,
     saving,
     bulkLines,
-    saveLine
+    saveLine,
+    removeLine
   }
 }
 

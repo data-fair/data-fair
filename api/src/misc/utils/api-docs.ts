@@ -1,6 +1,7 @@
-import { type ResourceType } from '#types'
+import type { ResourceType } from '#types'
 
 // TODO: this could be processed from actual api doc ?
+/** Maps each resource type to the OpenAPI operationIds grouped by permission class. */
 export const operationsClasses: Record<ResourceType, Record<string, string[]>> = {
   datasets: {
     list: ['list'],
@@ -39,6 +40,7 @@ export const contribOperationsClasses: Record<ResourceType, string[]> = {
 }
 
 // WARNING: this util is used both in UI and server
+/** Flattens an OpenAPI doc into a list of `{ id, title }` operations (used to render permission pickers). */
 export const operations = (apiDoc: any): { id: string, title: string }[] => {
   if (!apiDoc) return []
   // @ts-ignore

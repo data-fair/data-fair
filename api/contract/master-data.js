@@ -122,7 +122,7 @@ export const schema = {
                   }
                 }
               }, {
-                title: 'Date dans un interval',
+                title: 'Date dans un intervalle',
                 required: ['type', 'property'],
                 properties: {
                   type: { type: 'string', const: 'date-in-interval' },

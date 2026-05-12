@@ -84,8 +84,11 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
     ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
     : await service.getDatasetFresh(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
 
-  // bypass the memory cache if it is contradicted by the finalizedAt parameter
-  if (dataset && tolerateStale && req.query.finalizedAt && req.query.finalizedAt > dataset.finalizedAt) {
+  // bypass the memory cache if it is contradicted by the finalizedAt or updatedAt parameter
+  if (dataset && tolerateStale && (
+    (req.query.finalizedAt && req.query.finalizedAt > dataset.finalizedAt) ||
+    (req.query.updatedAt && req.query.updatedAt > dataset.updatedAt)
+  )) {
     const result = await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
     dataset = result.dataset
     datasetFull = result.datasetFull

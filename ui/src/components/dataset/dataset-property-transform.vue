@@ -10,8 +10,8 @@
         :color="hasTransform ? 'success' : undefined"
         :title="t('transform')"
         :icon="mdiDatabaseCog"
-        size="text"
-        variant="flat"
+        variant="text"
+        size="small"
       />
     </template>
     <v-card v-if="dialog">

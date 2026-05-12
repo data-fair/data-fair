@@ -79,7 +79,23 @@
     max-width="500"
   >
     <v-card :title="t('editAllLines', {nbLines: editingLines?.length})">
+      <template v-if="bulkActionResult">
+        <v-card-text>
+          <dataset-rest-actions-summary :summary="bulkActionResult" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            color="primary"
+            variant="flat"
+            @click="editSelectedResultsDialog = false"
+          >
+            {{ t('ok') }}
+          </v-btn>
+        </v-card-actions>
+      </template>
       <v-form
+        v-else
         ref="editSelectedLinesForm"
         v-model="editSelectedLinesValid"
       >
@@ -117,30 +133,47 @@
     max-width="500"
   >
     <v-card :title="t('deleteAllLines', {nbLines: deletingResults?.length})">
-      <v-card-text>
-        <v-alert
-          :value="true"
-          type="warning"
-        >
-          {{ t('deleteAllLinesWarning') }}
-        </v-alert>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          @click="deleteSelectedResultsDialog = false"
-        >
-          {{ t('cancel') }}
-        </v-btn>
-        <v-btn
-          color="warning"
-          variant="flat"
-          :loading="deleteLines.loading.value"
-          @click="deleteLines.execute()"
-        >
-          {{ t('delete') }}
-        </v-btn>
-      </v-card-actions>
+      <template v-if="bulkActionResult">
+        <v-card-text>
+          <dataset-rest-actions-summary :summary="bulkActionResult" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            color="primary"
+            variant="flat"
+            @click="deleteSelectedResultsDialog = false"
+          >
+            {{ t('ok') }}
+          </v-btn>
+        </v-card-actions>
+      </template>
+      <template v-else>
+        <v-card-text>
+          <v-alert
+            :value="true"
+            type="warning"
+          >
+            {{ t('deleteAllLinesWarning') }}
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            @click="deleteSelectedResultsDialog = false"
+          >
+            {{ t('cancel') }}
+          </v-btn>
+          <v-btn
+            color="warning"
+            variant="flat"
+            :loading="deleteLines.loading.value"
+            @click="deleteLines.execute()"
+          >
+            {{ t('delete') }}
+          </v-btn>
+        </v-card-actions>
+      </template>
     </v-card>
   </v-dialog>
 
@@ -191,6 +224,7 @@
     cancel: Annuler
     delete: Supprimer
     save: Enregistrer
+    ok: Ok
     addLine: Ajouter une ligne
     selectAllLines: Sélectionner les {nbLines} lignes
     unselectAllLines: Désélectionner toutes les lignes
@@ -201,6 +235,7 @@
     cancel: Cancel
     delete: Delete
     save: Save
+    ok: Ok
     addLine: Add a line
     selectAllLines: Select the {nbLines} lines
     unselectAllLines: Deselect all lines
@@ -211,6 +246,7 @@
 
 <script setup lang="ts">
 import type { VForm } from 'vuetify/components'
+import type { RestActionsSummary } from '#api/types'
 import type { ExtendedResult } from '~/composables/dataset/lines'
 import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline, mdiPlusCircle, mdiUpload } from '@mdi/js'
 import useDatasetEdition from './use-dataset-edition'
@@ -242,11 +278,16 @@ const canUpdateLine = can('updateLine')
 const canCreateLine = can('createLine')
 const canBulkLines = can('bulkLines')
 
+// when a bulk operation reports per-line errors we keep its summary to display in place of
+// the dialog form, instead of closing the dialog as if everything went fine
+const bulkActionResult = ref<RestActionsSummary>()
+
 const deletingResults = ref<ExtendedResult[]>()
 const deleteLines = useAsyncAction(async () => {
   if (!deletingResults.value?.length) return
-  await bulkLines(deletingResults.value.map(line => ({ _id: line._id, _action: 'delete' })))
-  deleteSelectedResultsDialog.value = false
+  const summary = await bulkLines(deletingResults.value.map(line => ({ _id: line._id, _action: 'delete' })))
+  if (summary.nbErrors) bulkActionResult.value = summary
+  else deleteSelectedResultsDialog.value = false
 })
 
 const showEditSelectedResultsDialog = useAsyncAction(async () => {
@@ -262,14 +303,17 @@ const showEditSelectedResultsDialog = useAsyncAction(async () => {
 
 const editingLines = ref<Record<string, any>[]>()
 const editSelectedResultsDialog = ref(false)
+// reset the kept bulk-operation summary whenever either bulk dialog is opened or closed
+watch([editSelectedResultsDialog, deleteSelectedResultsDialog], () => { bulkActionResult.value = undefined })
 const editSelectedLinesForm = ref<VForm>()
 const editSelectedLinesValid = ref(false)
 const editingLinesPatch = ref({})
 const saveLinesPatch = useAsyncAction(async () => {
   await editSelectedLinesForm.value?.validate()
   if (!editingLines.value?.length) return
-  await bulkLines(editingLines.value.map(result => ({ ...editingLinesPatch.value, _id: result._id, _action: 'patch' })))
-  editSelectedResultsDialog.value = false
+  const summary = await bulkLines(editingLines.value.map(result => ({ ...editingLinesPatch.value, _id: result._id, _action: 'patch' })))
+  if (summary.nbErrors) bulkActionResult.value = summary
+  else editSelectedResultsDialog.value = false
 })
 
 const addLineDialog = ref(false)

@@ -8,8 +8,8 @@ import type { FileDataset, Dataset } from '#types'
 export const extend = async function (dataset: Dataset) {
   await Promise.all([mongo.connect(true), es.connect()])
   await wsEmitter.init(mongo.db)
-  const extend = await import('./extend.ts')
-  await extend.default(dataset)
+  const extendRest = await import('./extend-rest.ts')
+  await extendRest.default(dataset)
 }
 
 export const indexLines = async function (dataset: Dataset) {
@@ -23,8 +23,8 @@ export const validateFile = async function (dataset: FileDataset) {
   await mongo.connect(true)
   await wsEmitter.init(mongo.db)
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
-  const validateFile = await import('./validate-file.ts')
-  await validateFile.default(dataset)
+  const processFile = await import('./process-file.ts')
+  await processFile.default(dataset)
 }
 
 export type NockInfo = {

@@ -12,6 +12,13 @@
 		"exceedLimitNbDatasets": "Vous avez atteint votre nombre maximal de jeux de données autorisés.",
 		"missingPermission": "Vous n'avez pas la permission d'effectuer cette opération.",
 		"exceedRateLimiting": "Trop de traffic dans un interval restreint sur cette API.",
+		"exceedComputeBudget": "Le temps de traitement cumulé de vos requêtes dépasse le budget alloué sur cette API. Veuillez patienter avant d'essayer de nouveau, ou réduire le coût de vos requêtes.",
+		"queryAdviceIntro": "Conseil pour optimiser vos requêtes",
+		"queryAdviceCount": "passez count=false (ou count=estimate) pour éviter le comptage exact du nombre total de lignes",
+		"queryAdviceDeepPagination": "utilisez la pagination par clé via le paramètre after plutôt qu'une navigation profonde par page ou offset",
+		"queryAdviceAggSize": "réduisez agg_size et/ou le nombre de champs de regroupement",
+		"queryAdviceSize": "demandez moins de résultats par page (réduisez size)",
+		"queryAdviceSelect": "utilisez le paramètre select pour ne récupérer que les colonnes nécessaires",
 		"exceedAnonymousRateLimiting": "Trop de messages dans un bref interval. Veuillez patienter avant d'essayer de nouveau.",
 		"looksLikeSpam": "Message refusé, l'activité ressemble à celle d'un robot spammeur.",
 		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",
@@ -92,6 +99,14 @@
 			"draft-error": {
 				"title": "Erreur du brouillon du jeu de données {{label}}",
 				"body": "Il y a eu une erreur pendant le traitement du brouillon du jeu de données {{label}} : {{detail}}."
+			},
+			"validation-error": {
+				"title": "Erreurs de validation sur le jeu de données {{label}}",
+				"body": "Le jeu de données {{label}} a {{nbErrors}} ligne(s) en erreur. Téléchargez le fichier de diagnostic : {{diagnosticUrl}}"
+			},
+			"draft-validation-error": {
+				"title": "Erreurs de validation sur le brouillon {{label}}",
+				"body": "Le brouillon du jeu de données {{label}} a {{nbErrors}} ligne(s) en erreur. Téléchargez le fichier de diagnostic : {{diagnosticUrl}}"
 			},
 			"dataset-created": {
 				"title": "Nouveau jeu de données {{label}}",

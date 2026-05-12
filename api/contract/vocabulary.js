@@ -102,7 +102,7 @@ export default [
       en: 'Address'
     },
     description: {
-      fr: 'Une adresse écrite en une seule chaine de caractère',
+      fr: 'Une adresse écrite en une seule chaîne de caractères',
       en: 'An address written in a single string'
     },
     identifiers: [
@@ -178,7 +178,7 @@ export default [
       en: 'Postal code'
     },
     description: {
-      fr: 'Code postal, sur 5 chiffre',
+      fr: 'Code postal, sur 5 chiffres',
       en: 'Postal code / zip code'
     },
     identifiers: [
@@ -955,6 +955,26 @@ export default [
     tag: {
       fr: 'Commerce',
       en: 'Commerce'
+    }
+  },
+  {
+    id: 'codeCPV',
+    title: {
+      fr: 'Code CPV',
+      en: 'CPV code'
+    },
+    description: {
+      fr: "Code CPV (Common Procurement Vocabulary) désignant un secteur d'achat dans la nomenclature européenne des marchés publics. Code à 9 chiffres (8 chiffres significatifs + clé de contrôle).",
+      en: 'CPV (Common Procurement Vocabulary) code designating a purchase sector in the European public procurement classification. 9-digit code (8 significant digits + check digit).'
+    },
+    identifiers: [
+      'http://data.europa.eu/cpv/cpv',
+      'http://purl.org/cpv/2008'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Marchés publics',
+      en: 'Public procurement'
     }
   },
   {

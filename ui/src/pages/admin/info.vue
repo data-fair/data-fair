@@ -11,6 +11,7 @@
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
+
     <div
       v-for="service of services"
       :key="service.name"
@@ -55,29 +56,29 @@
 
 <i18n lang="yaml">
   fr:
-    info: Informations
+    info: Informations sur les services
     installed: installé
     available: disponible
     services:
       data-fair/data-fair: Data Fair - Back Office
       data-fair/simple-directory: Gestion des comptes
-      data-fair/openapi-viewer: Documentation des API
-      data-fair/events: Gestion des événements/notifications
+      data-fair/events: Gestion des événements & notifications
       data-fair/catalogs: Gestion des catalogues
-      data-fair/portals: Portails
       data-fair/processings: Gestion des traitements
+      data-fair/portals: Gestion des portails
+      data-fair/openapi-viewer: Visualisateur de documentation d'API
   en:
-    info: Information
+    info: Services information
     installed: installed
     available: available
     services:
       data-fair/data-fair: Data Fair - Back Office
       data-fair/simple-directory: Accounts management
-      data-fair/openapi-viewer: API documentation
-      data-fair/events: Events/notifications management
+      data-fair/events: Events & notifications management
       data-fair/catalogs: Catalogs management
-      data-fair/portals: Portals
       data-fair/processings: Processings management
+      data-fair/portals: Portals management
+      data-fair/openapi-viewer: API documentation viewer
   </i18n>
 
 <script setup lang="ts">
@@ -92,8 +93,7 @@ breadcrumbs.receive({ breadcrumbs: [{ text: t('info') }] })
 type Service = { name: string, infoUrl: string, loaded?: boolean, error?: string, commit?: string, date?: string, version?: string }
 const services = ref<Service[]>([
   { name: 'data-fair/data-fair', infoUrl: '/data-fair/api/v1/admin/info' },
-  { name: 'data-fair/simple-directory', infoUrl: '/simple-directory/api/admin/info' },
-  { name: 'data-fair/openapi-viewer', infoUrl: '/openapi-viewer/api/admin/info' }
+  { name: 'data-fair/simple-directory', infoUrl: '/simple-directory/api/admin/info' }
 ])
 
 if ($uiConfig.eventsIntegration) {
@@ -102,11 +102,14 @@ if ($uiConfig.eventsIntegration) {
 if ($uiConfig.catalogsIntegration) {
   services.value.push({ name: 'data-fair/catalogs', infoUrl: '/catalogs/api/admin/info' })
 }
+if ($uiConfig.processingsIntegration) {
+  services.value.push({ name: 'data-fair/processings', infoUrl: '/processings/api/admin/info' })
+}
 if ($uiConfig.portalsIntegration) {
   services.value.push({ name: 'data-fair/portals', infoUrl: '/portals-manager/api/admin/info' })
 }
-if ($uiConfig.processingsIntegration) {
-  services.value.push({ name: 'data-fair/processings', infoUrl: '/processings/api/admin/info' })
+if ($uiConfig.openapiViewerIntegration) {
+  services.value.push({ name: 'data-fair/openapi-viewer', infoUrl: '/openapi-viewer/api/admin/info' })
 }
 
 onMounted(async () => {

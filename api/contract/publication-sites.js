@@ -5,9 +5,9 @@ export default (admin = false) => ({
     title: '',
     listActions: admin ? ['add', 'edit', 'delete'] : ['edit'],
     messages: {
-      addItem: 'Add a portal',
+      addItem: 'Ajouter un portail',
       'x-i18n-addItem': {
-        fr: 'Ajouter un portail'
+        en: 'Add a portal'
       }
     },
     itemTitle: 'item.title ? item.title + (item.url ? " (" + item.url + ")" : "") : (item.url || "")'

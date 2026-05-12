@@ -177,6 +177,10 @@ module.exports = {
       anonymous: {
         duration: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_DURATION',
         nb: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_NB',
+        computeMs: {
+          __name: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_COMPUTE_MS',
+          __format: 'json'
+        },
         bandwidth: {
           dynamic: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_BANDWIDTH_DYNAMIC',
           static: 'DEFAULT_LIMITS_API_RATE_ANONYMOUS_BANDWIDTH_STATIC'
@@ -185,6 +189,10 @@ module.exports = {
       user: {
         duration: 'DEFAULT_LIMITS_API_RATE_USER_DURATION',
         nb: 'DEFAULT_LIMITS_API_RATE_USER_NB',
+        computeMs: {
+          __name: 'DEFAULT_LIMITS_API_RATE_USER_COMPUTE_MS',
+          __format: 'json'
+        },
         bandwidth: {
           dynamic: 'DEFAULT_LIMITS_API_RATE_USER_BANDWIDTH_DYNAMIC',
           static: 'DEFAULT_LIMITS_API_RATE_USER_BANDWIDTH_STATIC'
