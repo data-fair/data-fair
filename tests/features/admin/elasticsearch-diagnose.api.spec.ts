@@ -34,6 +34,10 @@ test.describe('admin/elasticsearch/diagnose', () => {
     assert.ok(['green', 'yellow', 'red'].includes(body.cluster.status))
     assert.ok(Array.isArray(body.nodes))
     assert.ok(body.nodes.length >= 1, 'at least one node')
+    for (const n of body.nodes) {
+      // null only if the cluster settings call failed entirely
+      assert.ok(n.maxShardsPerNode == null || typeof n.maxShardsPerNode === 'number')
+    }
     assert.ok(body.longTasks)
     assert.ok(body.longTasks.search)
     assert.ok(Array.isArray(body.longTasks.search.items))

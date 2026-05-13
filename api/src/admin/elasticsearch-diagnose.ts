@@ -40,6 +40,7 @@ export type NodeSummary = {
     watermark: Watermark
   }
   shardCount: number | null
+  maxShardsPerNode: number | null
   breakers: Record<string, { tripped: number }>
   threadPoolsOfInterest: Array<{ name: string, active: number, queue: number, rejected: number }>
   indexingPressure: { currentCombinedBytes: number, currentPrimaryBytes: number, currentCoordinatingBytes: number } | null
@@ -140,7 +141,7 @@ const isDataRole = (role: string) => dataRoleRe.test(role)
 
 export const mapNodes = (
   nodesStats: any,
-  watermarks: { lowPct: number, highPct: number, floodPct: number },
+  allocSettings: { lowPct: number, highPct: number, floodPct: number, maxShardsPerNode: number | null },
   shardsByNode: Map<string, number>
 ): NodeSummary[] => {
   const result: NodeSummary[] = []
@@ -199,9 +200,10 @@ export const mapNodes = (
         usedBytes,
         totalBytes,
         usedPct,
-        watermark: resolveWatermark(usedPct, watermarks.lowPct, watermarks.highPct, watermarks.floodPct)
+        watermark: resolveWatermark(usedPct, allocSettings.lowPct, allocSettings.highPct, allocSettings.floodPct)
       },
       shardCount: shardsByNode.get(raw.name) ?? null,
+      maxShardsPerNode: allocSettings.maxShardsPerNode,
       breakers,
       threadPoolsOfInterest,
       indexingPressure

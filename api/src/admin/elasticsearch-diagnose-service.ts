@@ -20,6 +20,7 @@ import { listDatasetsWithEsWarnings } from './service.ts'
 const DEFAULT_LOW = 85
 const DEFAULT_HIGH = 90
 const DEFAULT_FLOOD = 95
+const DEFAULT_MAX_SHARDS_PER_NODE = 1000
 
 const parsePct = (raw: string | undefined, fallback: number): number => {
   if (!raw) return fallback
@@ -30,17 +31,22 @@ const parsePct = (raw: string | undefined, fallback: number): number => {
   return fallback
 }
 
-const _getWatermarks = async (): Promise<{ lowPct: number, highPct: number, floodPct: number }> => {
+const _getClusterAllocSettings = async (): Promise<{
+  lowPct: number, highPct: number, floodPct: number, maxShardsPerNode: number | null
+}> => {
   const s = await es.client.cluster.getSettings({ include_defaults: true, flat_settings: true })
   const get = (key: string): string | undefined =>
     (s.persistent as any)?.[key] ?? (s.transient as any)?.[key] ?? (s.defaults as any)?.[key]
+  const rawMax = get('cluster.max_shards_per_node')
+  const parsedMax = rawMax != null ? Number(rawMax) : DEFAULT_MAX_SHARDS_PER_NODE
   return {
     lowPct: parsePct(get('cluster.routing.allocation.disk.watermark.low'), DEFAULT_LOW),
     highPct: parsePct(get('cluster.routing.allocation.disk.watermark.high'), DEFAULT_HIGH),
-    floodPct: parsePct(get('cluster.routing.allocation.disk.watermark.flood_stage'), DEFAULT_FLOOD)
+    floodPct: parsePct(get('cluster.routing.allocation.disk.watermark.flood_stage'), DEFAULT_FLOOD),
+    maxShardsPerNode: Number.isFinite(parsedMax) ? parsedMax : DEFAULT_MAX_SHARDS_PER_NODE
   }
 }
-const getWatermarks = memoize(_getWatermarks, { promise: true, maxAge: 60_000 })
+const getClusterAllocSettings = memoize(_getClusterAllocSettings, { promise: true, maxAge: 60_000 })
 
 const countShardsByNode = (catShardsRows: any[]): Map<string, number> => {
   const m = new Map<string, number>()
@@ -98,13 +104,13 @@ export const getElasticsearchDiagnose = async () => {
   const explainCap: number = config.elasticsearch.diagnose.unassignedExplainCap
 
   const [
-    health, pendingTasks, watermarks,
+    health, pendingTasks, allocSettings,
     nodesStats, catShards, catIndices, tasksResponse,
     datasetsWithEsWarnings, nbDatasetsInMongo
   ] = await Promise.all([
     safeSection('cluster.health', () => es.client.cluster.health(), errors, null as any),
     safeSection('cluster.pendingTasks', async () => (await es.client.cluster.pendingTasks()).tasks ?? [], errors, [] as any[]),
-    safeSection('cluster.watermarks', () => getWatermarks(), errors, { lowPct: DEFAULT_LOW, highPct: DEFAULT_HIGH, floodPct: DEFAULT_FLOOD }),
+    safeSection('cluster.allocSettings', () => getClusterAllocSettings(), errors, { lowPct: DEFAULT_LOW, highPct: DEFAULT_HIGH, floodPct: DEFAULT_FLOOD, maxShardsPerNode: DEFAULT_MAX_SHARDS_PER_NODE }),
     safeSection('nodes.stats', () => es.client.nodes.stats({
       metric: ['os', 'jvm', 'fs', 'thread_pool', 'breaker', 'indexing_pressure']
     }), errors, { nodes: {} } as any),
@@ -162,7 +168,7 @@ export const getElasticsearchDiagnose = async () => {
 
   return {
     cluster: health ? mapClusterHealth(health, pendingTasks as any[]) : null,
-    nodes: mapNodes(nodesStats as any, watermarks as any, countShardsByNode(catShards as any)),
+    nodes: mapNodes(nodesStats as any, allocSettings as any, countShardsByNode(catShards as any)),
     longTasks: mapLongTasks(tasksResponse as any, longTaskMs, indicesPrefix, datasetsById, maxLongTasksPerCategory),
     unassignedShards: mapUnassignedShards(catShards as any[], explainByKey, indicesPrefix, datasetsById),
     indicesSummary: mapIndicesSummary(catIndices as any[], indicesPrefix, nbDatasetsInMongo as number, mongoIdsPresent),

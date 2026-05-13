@@ -92,9 +92,9 @@ test.describe('mapNodes', () => {
         }
       }
     }
-    const watermarks = { lowPct: 85, highPct: 90, floodPct: 95 }
+    const allocSettings = { lowPct: 85, highPct: 90, floodPct: 95, maxShardsPerNode: 1000 }
     const shardsByNode = new Map([['node-a', 7]])
-    const out = mapNodes(nodesStats as any, watermarks, shardsByNode)
+    const out = mapNodes(nodesStats as any, allocSettings, shardsByNode)
     assert.equal(out.length, 1)
     const n = out[0]
     assert.equal(n.id, 'nodeA')
@@ -109,6 +109,7 @@ test.describe('mapNodes', () => {
     assert.equal(n.disk.usedPct, 80)
     assert.equal(n.disk.watermark, 'ok')
     assert.equal(n.shardCount, 7)
+    assert.equal(n.maxShardsPerNode, 1000)
     assert.equal(n.breakers.fielddata.tripped, 3)
     assert.equal(n.threadPoolsOfInterest.length, 2)
     assert.equal(n.threadPoolsOfInterest[0].name, 'bulk') // rejected first
@@ -121,7 +122,7 @@ test.describe('mapNodes', () => {
         n1: { name: 'h', roles: ['data_hot'], fs: { data: [] }, breakers: {}, thread_pool: {} }
       }
     }
-    const out = mapNodes(nodesStats as any, { lowPct: 85, highPct: 90, floodPct: 95 }, new Map())
+    const out = mapNodes(nodesStats as any, { lowPct: 85, highPct: 90, floodPct: 95, maxShardsPerNode: 1000 }, new Map())
     assert.equal(out[0].isDataNode, true)
   })
 
@@ -129,13 +130,21 @@ test.describe('mapNodes', () => {
     const nodesStats = {
       nodes: { n1: { name: 'x', roles: [], breakers: {}, thread_pool: {}, fs: { data: [] } } }
     }
-    const out = mapNodes(nodesStats as any, { lowPct: 85, highPct: 90, floodPct: 95 }, new Map())
+    const out = mapNodes(nodesStats as any, { lowPct: 85, highPct: 90, floodPct: 95, maxShardsPerNode: 1000 }, new Map())
     assert.equal(out[0].heapUsedPct, null)
     assert.equal(out[0].cpuPct, null)
     assert.equal(out[0].load1m, null)
     assert.equal(out[0].disk.totalBytes, null)
     assert.equal(out[0].disk.usedPct, null)
     assert.equal(out[0].indexingPressure, null)
+  })
+
+  test('propagates null maxShardsPerNode through to summary', () => {
+    const nodesStats = {
+      nodes: { n1: { name: 'h', roles: ['data_hot'], fs: { data: [] }, breakers: {}, thread_pool: {} } }
+    }
+    const out = mapNodes(nodesStats as any, { lowPct: 85, highPct: 90, floodPct: 95, maxShardsPerNode: null }, new Map())
+    assert.equal(out[0].maxShardsPerNode, null)
   })
 })
 
