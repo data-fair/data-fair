@@ -54,6 +54,8 @@ export type LongTask = {
   category: LongTaskCategory
   runningTimeMs: number
   description: string
+  sourceQuery: object | null
+  sourceQueryOversized: boolean
   targets: Array<{
     indexName: string
     datasetId: string | null
@@ -205,6 +207,58 @@ export const categorizeTaskAction = (action: string): LongTaskCategory => {
   return 'other'
 }
 
+export type ExtractedSourceQuery = {
+  sourceQuery: object | null
+  sourceQueryOversized: boolean
+}
+
+const NONE: ExtractedSourceQuery = { sourceQuery: null, sourceQueryOversized: false }
+
+export const extractSourceQuery = (description: string, maxChars: number): ExtractedSourceQuery => {
+  if (!description) return NONE
+  const head = 'source['
+  const start = description.indexOf(head)
+  if (start === -1) return NONE
+  const innerStart = start + head.length
+  let depth = 0
+  let inString = false
+  let escape = false
+  let i = innerStart
+  let foundOpen = false
+  for (; i < description.length; i++) {
+    const ch = description[i]
+    if (inString) {
+      if (escape) { escape = false; continue }
+      if (ch === '\\') { escape = true; continue }
+      if (ch === '"') inString = false
+      continue
+    }
+    if (ch === '"') { inString = true; continue }
+    if (ch === '{') { depth++; foundOpen = true; continue }
+    if (ch === '}') {
+      depth--
+      if (depth < 0) return NONE
+      continue
+    }
+    if (ch === ']' && depth === 0) {
+      if (!foundOpen) return NONE
+      break
+    }
+  }
+  if (i >= description.length || depth !== 0) return NONE
+  const inner = description.slice(innerStart, i)
+  if (inner.length > maxChars) return { sourceQuery: null, sourceQueryOversized: true }
+  try {
+    const parsed = JSON.parse(inner)
+    if (parsed && typeof parsed === 'object') return { sourceQuery: parsed, sourceQueryOversized: false }
+    return NONE
+  } catch {
+    return NONE
+  }
+}
+
+const MAX_SOURCE_QUERY_CHARS = 50_000
+
 // Tokens used to find data-fair index names embedded inside an ES task description.
 // Hyphens are part of the index name; ":" is intentionally NOT in the class — ES remote-cluster
 // syntax `cluster:index` would split here, yielding `index` only. That's a known limitation;
@@ -236,6 +290,10 @@ export const mapLongTasks = (
       if (runningMs <= longTaskMs) continue
       const rawDesc: string = task.description ?? ''
       const description = rawDesc.length > 500 ? rawDesc.slice(0, 500) : rawDesc
+      const category = categorizeTaskAction(task.action)
+      const { sourceQuery, sourceQueryOversized } = category === 'search'
+        ? extractSourceQuery(rawDesc, MAX_SOURCE_QUERY_CHARS)
+        : { sourceQuery: null, sourceQueryOversized: false }
       const indexNames = extractIndexNames(rawDesc, indicesPrefix)
       const targets = indexNames.map(indexName => {
         const datasetId = parseIndexName(indexName, indicesPrefix)
@@ -251,9 +309,11 @@ export const mapLongTasks = (
         id: taskId,
         node: nodeName,
         action: task.action,
-        category: categorizeTaskAction(task.action),
+        category,
         runningTimeMs: runningMs,
         description,
+        sourceQuery,
+        sourceQueryOversized,
         targets
       })
     }

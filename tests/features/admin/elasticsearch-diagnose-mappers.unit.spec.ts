@@ -8,7 +8,8 @@ import {
   mapUnassignedShards,
   mapIndicesSummary,
   resolveWatermark,
-  safeSection
+  safeSection,
+  extractSourceQuery
 } from '../../../api/src/admin/elasticsearch-diagnose.ts'
 
 test.describe('resolveWatermark', () => {
@@ -283,6 +284,50 @@ test.describe('mapIndicesSummary', () => {
     const out = mapIndicesSummary([], indicesPrefix, 0, new Set())
     assert.equal(out.deletedRatio, 0)
     assert.equal(out.totalDocs, 0)
+  })
+})
+
+test.describe('extractSourceQuery', () => {
+  const MAX = 50_000
+
+  test('parses source[...] with a simple object', () => {
+    const desc = 'indices[my-index], search_type[QUERY_THEN_FETCH], source[{"size":10,"query":{"match_all":{}}}]'
+    const r = extractSourceQuery(desc, MAX)
+    assert.deepEqual(r.sourceQuery, { size: 10, query: { match_all: {} } })
+    assert.equal(r.sourceQueryOversized, false)
+  })
+
+  test('handles nested braces correctly', () => {
+    const inner = '{"a":{"b":{"c":1}},"d":[{"e":2}]}'
+    const desc = `prefix source[${inner}]`
+    const r = extractSourceQuery(desc, MAX)
+    assert.deepEqual(r.sourceQuery, { a: { b: { c: 1 } }, d: [{ e: 2 }] })
+  })
+
+  test('returns null when no source[ token is present', () => {
+    const r = extractSourceQuery('clear scroll, scrollIds[ABC]', MAX)
+    assert.equal(r.sourceQuery, null)
+    assert.equal(r.sourceQueryOversized, false)
+  })
+
+  test('returns null on malformed JSON inside source[...]', () => {
+    const r = extractSourceQuery('source[{"size":10,"query":}]', MAX)
+    assert.equal(r.sourceQuery, null)
+    assert.equal(r.sourceQueryOversized, false)
+  })
+
+  test('flags oversized inner content and does not parse', () => {
+    const filler = 'x'.repeat(MAX + 100)
+    const desc = `source[{"f":"${filler}"}]`
+    const r = extractSourceQuery(desc, MAX)
+    assert.equal(r.sourceQuery, null)
+    assert.equal(r.sourceQueryOversized, true)
+  })
+
+  test('returns null when source[ is not closed by a matching ]', () => {
+    const r = extractSourceQuery('source[{"a":1', MAX)
+    assert.equal(r.sourceQuery, null)
+    assert.equal(r.sourceQueryOversized, false)
   })
 })
 
