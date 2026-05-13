@@ -390,6 +390,7 @@
       <v-form
         ref="editLineForm"
         v-model="editLineValid"
+        @keydown.enter="onEnterSubmit"
       >
         <v-card-text>
           <async-dataset-edit-line-form
@@ -686,6 +687,13 @@ const editLine = useAsyncAction(async () => {
   await saveLine({ _id: showEditDialog.value?._id, ...editedLine.value }, file.value)
   showEditDialog.value = undefined
 })
+
+const onEnterSubmit = (e: KeyboardEvent) => {
+  const target = e.target as HTMLElement | null
+  if (target?.tagName !== 'INPUT' || e.isComposing) return
+  e.preventDefault()
+  editLine.execute()
+}
 
 const showDeleteDialog = ref<ExtendedResult>()
 const deleteLine = useAsyncAction(async () => {

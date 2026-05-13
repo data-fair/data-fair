@@ -53,6 +53,21 @@
     </v-list-item>
 
     <v-list-item
+      v-if="baseAppFetch.data.value?.documentation"
+      :href="baseAppFetch.data.value.documentation"
+      target="_blank"
+      link
+    >
+      <template #prepend>
+        <v-icon
+          color="primary"
+          :icon="mdiBookOpenVariant"
+        />
+      </template>
+      {{ t('documentation') }}
+    </v-list-item>
+
+    <v-list-item
       v-if="$uiConfig.openapiViewerIntegration && can('readApiDoc')"
       :to="`/application/${application.id}/api-doc`"
       link
@@ -94,6 +109,7 @@ fr:
   fullPage: Ouvrir en pleine page
   viewOnPortal: "Voir sur {title}"
   useAPI: Utiliser l'API
+  documentation: Documentation
 en:
   navigation: Navigation
   actions: Actions
@@ -102,14 +118,15 @@ en:
   fullPage: Open fullscreen
   viewOnPortal: "View on {title}"
   useAPI: Use the API
+  documentation: Documentation
 </i18n>
 
 <script setup lang="ts">
-import { mdiCamera, mdiCloud, mdiExitToApp, mdiSquareEditOutline, mdiWeb } from '@mdi/js'
+import { mdiBookOpenVariant, mdiCamera, mdiCloud, mdiExitToApp, mdiSquareEditOutline, mdiWeb } from '@mdi/js'
 import useApplicationStore from '~/composables/application/application-store'
 
 const { t } = useI18n()
-const { application, applicationLink, can } = useApplicationStore()
+const { application, applicationLink, baseAppFetch, can } = useApplicationStore()
 
 const owner = computed(() => application.value?.owner)
 const publicationSitesFetch = useFetch<any[]>(() => {

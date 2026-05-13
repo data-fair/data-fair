@@ -1,4 +1,4 @@
-import { mdiTextShort, mdiTextLong, mdiFormatText, mdiCalendar, mdiClockOutline, mdiNumeric, mdiCheckboxMarkedCircleOutline, mdiCodeBraces, mdiCodeArray } from '@mdi/js'
+import { mdiTextShort, mdiTextLong, mdiFormatText, mdiCalendar, mdiClockOutline, mdiNumeric, mdiDecimal, mdiCheckboxMarkedCircleOutline, mdiCodeBraces, mdiCodeArray } from '@mdi/js'
 
 type LocalizedTitle = { fr: string, en: string }
 
@@ -19,7 +19,7 @@ export const propertyTypes: PropertyType[] = [
   { type: 'string', format: 'date', title: { fr: 'Date', en: 'Date' }, icon: mdiCalendar },
   { type: 'string', format: 'date-time', title: { fr: 'Date et heure', en: 'Date and time' }, icon: mdiClockOutline },
   { type: 'integer', title: { fr: 'Nombre entier', en: 'Integer' }, icon: mdiNumeric },
-  { type: 'number', title: { fr: 'Nombre', en: 'Number' }, icon: mdiNumeric },
+  { type: 'number', title: { fr: 'Nombre', en: 'Number' }, icon: mdiDecimal },
   { type: 'boolean', title: { fr: 'Booléen', en: 'Boolean' }, icon: mdiCheckboxMarkedCircleOutline }
 ]
 

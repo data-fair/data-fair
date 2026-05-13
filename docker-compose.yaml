@@ -47,6 +47,10 @@ services:
       - ${MONGO_PORT}:27017
     volumes:
       - mongodb-data:/data/db
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
 
   s3mock:
     profiles:
