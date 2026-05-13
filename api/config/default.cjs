@@ -65,7 +65,9 @@ module.exports = {
       segmentsPerShardWarn: 30,
       deletedRatioWarn: 0.2,
       mappingFieldsLimitWarn: 0.8,
-      minShardSize: 1000000000 // 1go
+      minShardSize: 1000000000, // 1go
+      longTaskMs: 1000, // tasks running longer than this are surfaced on the admin ES page
+      unassignedExplainCap: 20 // cap calls to cluster.allocationExplain per request
     }
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
