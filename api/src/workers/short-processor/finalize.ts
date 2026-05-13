@@ -2,6 +2,7 @@
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
 import { datasetWarning } from '../../datasets/es/manage-indices.js'
+import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
 import * as geoUtils from '../../datasets/utils/geo.js'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -39,6 +40,13 @@ export default async function (_dataset: DatasetInternal) {
   // Add the calculated fields to the schema
   debug('prepare extended schema')
   queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
+  // record whether the freshly-built index carries the _search catch-all fields.
+  // only when an index was actually (re)built: finalize also runs after a partial REST data
+  // update (`_partialRestStatus` set, existing index reused) — don't recompute the flag then.
+  // virtual datasets have no index of their own — handled below by bubbling up from descendants.
+  if (!isVirtualDataset(dataset) && !dataset._partialRestStatus) {
+    result._esCopyToSearch = hasManyQSearchFields(result.schema)
+  }
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
@@ -138,13 +146,14 @@ export default async function (_dataset: DatasetInternal) {
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (isVirtualDataset(dataset)) {
-    const descendants: DatasetInternal[] = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy'])
+    const descendants: DatasetInternal[] = await virtualDatasetsUtils.descendants(dataset, ['dataUpdatedAt', 'dataUpdatedBy', '_esCopyToSearch'])
     dataset.descendants = descendants.map(d => d.id)
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt! > d2.dataUpdatedAt! ? 1 : -1).pop()
     if (lastDataUpdate) {
       result.dataUpdatedAt = lastDataUpdate.dataUpdatedAt
       result.dataUpdatedBy = lastDataUpdate.dataUpdatedBy
     }
+    result._esCopyToSearch = descendants.length > 0 && descendants.every(d => d._esCopyToSearch === true)
     result.count = dataset.count = await esUtils.count(queryableDataset, {})
   }
 

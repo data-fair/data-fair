@@ -19,6 +19,7 @@
 		"queryAdviceAggSize": "réduisez agg_size et/ou le nombre de champs de regroupement",
 		"queryAdviceSize": "demandez moins de résultats par page (réduisez size)",
 		"queryAdviceSelect": "utilisez le paramètre select pour ne récupérer que les colonnes nécessaires",
+		"queryAdviceQFields": "restreignez la recherche plein texte aux colonnes pertinentes avec q_fields=col1,col2 plutôt que de rechercher dans toutes les colonnes",
 		"exceedAnonymousRateLimiting": "Trop de messages dans un bref interval. Veuillez patienter avant d'essayer de nouveau.",
 		"looksLikeSpam": "Message refusé, l'activité ressemble à celle d'un robot spammeur.",
 		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",

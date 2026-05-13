@@ -1,4 +1,5 @@
 import { type Request } from 'express'
+import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
 
 // Builds a short, localized, advisory sentence appended to overload errors (429 compute-budget,
 // 504 "request too long", 429 ES circuit_breaking_exception). It only ever *advises* — it never
@@ -36,6 +37,8 @@ export const queryAdvice = (req: Request & { dataset?: { schema?: any[] } }): st
   if (num(q.size) >= 1000) keys.push('errors.queryAdviceSize')
   // 5. wide dataset fetched without a select (only when the dataset is loaded on the request); select=* == all fields
   if ((req.dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) keys.push('errors.queryAdviceSelect')
+  // 6. wide dataset full-text-searched without restricting the searched columns
+  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(req.dataset?.schema)) keys.push('errors.queryAdviceQFields')
 
   if (keys.length === 0) return ''
   return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + keys.map(k => req.__(k)).join(' ; ') + '.'

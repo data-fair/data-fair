@@ -9,12 +9,25 @@ const ax = axiosBuilder()
 const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
 
 setup('Stateful tests setup', async () => {
-  // Check that the dev API server is up
-  await assert.doesNotReject(
-    ax.get(`${apiUrl}/api/v1/test-env/pending-tasks`),
-    `Dev API server seems to be unavailable at ${apiUrl}.
-If you are an agent do not try to start it. Instead check for a startup failure at the end of dev/logs/dev-api.log and report this problem to your user.`
-  )
+  // Wait for the dev API server to be up. It can be mid-restart (e.g. nodemon reacting
+  // to UI build output during `npm run quality`), so we poll instead of probing once.
+  const apiReadyUrl = `${apiUrl}/api/v1/test-env/pending-tasks`
+  const apiReadyTimeoutMs = 30_000
+  const apiReadyStart = Date.now()
+  let lastErr: unknown
+  while (Date.now() - apiReadyStart < apiReadyTimeoutMs) {
+    try {
+      await ax.get(apiReadyUrl)
+      lastErr = undefined
+      break
+    } catch (err) {
+      lastErr = err
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+  }
+  assert.equal(lastErr, undefined, `Dev API server did not become available at ${apiUrl} within ${apiReadyTimeoutMs}ms.
+If you are an agent do not try to start it. Instead check for a startup failure at the end of dev/logs/dev-api.log and report this problem to your user.
+Last error: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
 
   // Check that the mock server is up
   await assert.doesNotReject(

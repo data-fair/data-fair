@@ -107,7 +107,8 @@ by `x-ignore-rate-limiting`; cleared by the test reset endpoint and the 20-min s
 The `429 errors.exceedComputeBudget` body (for `GET` requests) carries an appended, localized
 *query-shape advice* sentence derived from the request's own parameters (`queryAdvice`,
 `api/src/misc/utils/query-advice.ts`) — e.g. "set `count=false`/`count=estimate`", "use keyset
-pagination via `after`", "reduce `agg_size`", "lower `size`", "use `select` to return fewer columns" —
+pagination via `after`", "reduce `agg_size`", "lower `size`", "use `select` to return fewer columns",
+"restrict `q_fields` to the relevant columns on a wide dataset" —
 so a throttled client is told what to change, not just that it was throttled.
 
 ## 5. Other quotas & concurrency limits
@@ -156,6 +157,49 @@ returning truncated hits; also `if (res.timed_out)` → `504` belt-and-suspender
 `batched_reduce_size`, no `pre_filter_shard_size` — all ES defaults. The 45 s `timeout` mostly
 bounds the per-shard *collection* phase (not the coordinating-node reduce phase or query rewrite —
 the per-request `requestTimeout` from `es/abort.js` is the wall-clock backstop for those).
+
+### Wide-dataset `q` catch-all (the `_search` field)
+
+On a dataset with many text-searchable columns, a `q` query expands into a `simple_query_string`
+`fields` array with one entry per analyzed sub-field per column (`.text` and `.text_standard`
+counted separately — ≈ 2 entries per string column). Beyond ~15 string columns (~30 analyzed
+sub-fields) that array becomes expensive for Elasticsearch to parse and execute, and it grows
+linearly with schema width.
+
+`hasManyQSearchFields(schema)` in `commons.js` detects this condition (threshold hardcoded at **30
+analyzed text inner sub-fields**, boost-eligible columns excluded from the count since they're
+queried per-field in every regime). When true, `indexDefinition` in `manage-indices.js` injects
+one extra internal field into the mapping: `_search` (standard text analyzers). Every text column
+except the boost-eligible ones (annotated `rdfs:label`, `schema.org/description`, or
+`DefinedTermSet`) is wired into it via `copy_to`. The `q` query then targets the constant-size
+pair `['_search', '_search.text_standard']` regardless of how many columns the schema has, plus
+the small handful of boost-eligible columns listed per-field with their `^3` / `^2` weight — i.e.
+the same per-field boost mechanism narrow datasets use, applied to ~1-3 columns at most. Boost-
+eligible columns are therefore *not* duplicated into `_search` — they're only referenced per-
+field. The **keyword main type of a column contributes to `qSearchFields` only when the column
+has no analyzed inner field** (no `.text`, no `.text_standard` — i.e. a "pure keyword" column with
+`text` and `textStandard` both disabled via `x-capabilities`). When the analyzed views exist they
+already cover `q` matching, so the keyword main is redundant — and skipping it keeps `qSearchFields`
+constant-size in catch-all mode (`[_search]` plus the few boost-eligible per-field entries).
+The keyword main type is always kept in `searchFields`, the field list used by the raw `qs=`
+query_string path. `updateDatasetMapping` forces a full reindex whenever a dataset crosses the
+threshold or when a column's boost eligibility changes (its `copy_to` would change) — so the
+mapping change is never applied in-place.
+
+Rollout is lazy: **no eager reindex job**. `dataset._esCopyToSearch` (set by the `finalize` worker
+in `finalize.ts`) records whether the dataset's *current* ES index was built with `_search`. The
+query layer in `getFilterableFields` / `prepareQuery` (`commons.js`) keys off that stored flag, not
+the live schema. Wide datasets whose index predates the feature use a **"reduced" path** that
+performs analyzer deduplication: it drops `.text_standard` from `qSearchFields` *only when `.text`
+is also present on the same column* (string-fulltext columns, where the two analyzers are a quasi-
+duplicate of each other on the same source). Columns whose only analyzed inner field is
+`.text_standard` (numeric, date) keep it — the goal is to remove the analyzer duplicate, not to
+eject columns from the search. The duplicate second `simple_query_string` clause over
+`qStandardFields` is also skipped in this mode (clause A now covers it), while `qStandardFields`
+itself is still populated so `q_mode=complete`'s `startsWith` prefix query keeps working on every
+column. For virtual datasets, `_esCopyToSearch` bubbles up as `true` only when every descendant
+has it. When `q_fields` is supplied explicitly the catch-all is bypassed entirely and the query
+targets only the requested columns, as before.
 
 ### Aggregations (`values-agg.js`, `metric-agg.js`, `geo-agg.js`, `words-agg.js`, `values.js`, `bbox-agg.js`, `small-aggs.js`)
 
