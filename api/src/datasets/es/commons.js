@@ -91,17 +91,30 @@ export const esProperty = prop => {
   return esProp
 }
 
-// A dataset whose `q` query would otherwise expand into a huge `fields` array is given the
-// `_search` / `_search_boosted` catch-all fields, and its `q` query targets those instead.
-// We count the analyzed inner sub-fields (`.text` and `.text_standard` separately, since that is
-// what actually inflates the `fields` array) rather than the columns. See docs/architecture/load-management.md.
+// A dataset whose `q` query would otherwise expand into a huge `fields` array is given a
+// `_search` catch-all field, and its `q` query targets `_search` plus the small handful of
+// boost-eligible columns (label / description / DefinedTermSet) as per-field entries with
+// their original `^3` / `^2` weight. We count the analyzed inner sub-fields (`.text` and
+// `.text_standard` separately, since that is what actually inflates the `fields` array)
+// rather than the columns. See docs/architecture/load-management.md.
 export const Q_SEARCH_FIELDS_THRESHOLD = 30
+
+// boost-eligible columns keep a per-field entry (with `^3` / `^2`) in qSearchFields in every
+// regime — so they don't contribute to the catch-all's savings and don't `copy_to` it either.
+const BOOST_REFERS_TO = new Set([
+  'http://www.w3.org/2000/01/rdf-schema#label',
+  'http://schema.org/description',
+  'https://schema.org/DefinedTermSet'
+])
+export const isBoostEligible = (prop) => BOOST_REFERS_TO.has(prop['x-refersTo'])
 
 export const hasManyQSearchFields = (schema) => {
   if (!schema) return false
   let n = 0
   for (const f of schema) {
     if (f.key === '_id') continue
+    // boost-eligible columns are always referenced per-field, so they don't benefit from `_search`
+    if (isBoostEligible(f)) continue
     const esProp = esProperty(f)
     if (!esProp || !esProp.fields) continue
     if (esProp.fields.text) n++
@@ -238,11 +251,10 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
     }
 
     const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
-    const perField = isQField && !copyToSearch // in catch-all mode, qSearchFields/qStandardFields don't list per-field entries
     const esProp = esProperty(f)
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       searchFields.push(f.key)
-      if (perField) qSearchFields.push(f.key)
+      if (isQField && !copyToSearch) qSearchFields.push(f.key)
     }
     if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
@@ -250,6 +262,10 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
       if (f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') suffix = '^3'
       if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
       if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
+
+      // in catch-all mode the catch-all `_search` field covers everything; we still list the
+      // few boost-eligible columns per-field so their `^3`/`^2` weight applies at query time.
+      const perField = isQField && (!copyToSearch || !!suffix)
 
       if (esProp.fields.text) {
         searchFields.push(f.key + '.text' + suffix)
@@ -409,7 +425,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (q) q = q.trim()
 
   if (q || query.qs) {
-    const { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields, copyToSearch, reduced } = getFilterableFields(dataset, q, qFields)
+    const { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields, reduced } = getFilterableFields(dataset, q, qFields)
     if (query.qs) {
       if (!ignoreInvalidQS) checkQuery(query.qs, dataset.schema, esFields)
       const qs = { query_string: { query: query.qs, fields: searchFields } }
@@ -419,11 +435,6 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     if (q) {
       const qBool = { bool: { should: [], minimum_should_match: 1 } }
       const qShould = qBool.bool.should
-      // extra clause that boosts matches in semantically-important columns (label/description/...)
-      // when the dataset uses the catch-all _search fields (replaces the old per-field ^3/^2 boosts)
-      const pushBoosted = () => {
-        if (copyToSearch) qShould.push({ simple_query_string: { query: q, fields: ['_search_boosted^3', '_search_boosted.text_standard^3'], ...sqsOptions } })
-      }
       if (query.q_mode === 'complete') {
       // "complete" mode, we try to accomodate for most cases and give the most intuitive results
       // to a search query where the user might be using a autocomplete type control
@@ -447,7 +458,6 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         if (qSearchFields.length) {
           qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
         }
-        pushBoosted()
       } else {
         // default "simple" mode uses ES simple query string directly
         // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
@@ -459,7 +469,6 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         if (qStandardFields.length && !reduced) {
           qShould.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
         }
-        pushBoosted()
       }
       must.push(qBool)
     }

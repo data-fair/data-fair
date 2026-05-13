@@ -24,6 +24,13 @@ test.describe('hasManyQSearchFields', () => {
     assert.equal(hasManyQSearchFields([...stringFields(16), ...boolFields(50), { key: '_id', type: 'string' }]), true)
     assert.equal(hasManyQSearchFields([...stringFields(10), ...boolFields(50)]), false) // 20 inner fields
   })
+  test('ignores boost-eligible columns (they are queried per-field, not via _search)', () => {
+    // 30 plain strings = 60 inner fields => wide
+    assert.equal(hasManyQSearchFields(stringFields(30)), true)
+    // 30 columns all annotated as labels contribute 0 to the count (always per-field) => not wide
+    const allLabels = Array.from({ length: 30 }, (_, i) => ({ key: 'l' + i, type: 'string', 'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label' }))
+    assert.equal(hasManyQSearchFields(allLabels), false)
+  })
   test('tolerates a missing schema', () => {
     assert.equal(hasManyQSearchFields(undefined), false)
     assert.equal(hasManyQSearchFields(null), false)
@@ -55,6 +62,31 @@ test.describe('getFilterableFields - regimes', () => {
     assert.deepEqual(qStandardFields, ['_search.text_standard'])
   })
 
+  test('catch-all: boost-eligible columns (label/description) are still listed per-field with their boost', () => {
+    const ds = fakeDataset({
+      schema: [
+        ...wideSchema(),
+        { key: 'label_col', type: 'string', 'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label' },
+        { key: 'desc_col', type: 'string', 'x-refersTo': 'http://schema.org/description' }
+      ],
+      _esCopyToSearch: true
+    })
+    const { qSearchFields, qStandardFields, copyToSearch } = getFilterableFields(ds, 'x', undefined)
+    assert.equal(copyToSearch, true)
+    // boost-eligible columns are listed per-field with their ^N suffix; _search covers everything else
+    // (the catch-all entry is appended after the per-field loop)
+    assert.deepEqual(qSearchFields, [
+      'label_col.text^3', 'label_col.text_standard^3',
+      'desc_col.text^2', 'desc_col.text_standard^2',
+      '_search'
+    ])
+    assert.deepEqual(qStandardFields, [
+      'label_col.text_standard^3',
+      'desc_col.text_standard^2',
+      '_search.text_standard'
+    ])
+  })
+
   test('reduced: wide dataset not yet reindexed drops .text_standard from qSearchFields but keeps qStandardFields', () => {
     const ds = fakeDataset({ schema: wideSchema(33), _esCopyToSearch: false })
     const { qSearchFields, qStandardFields, copyToSearch, reduced } = getFilterableFields(ds, 'x', undefined)
@@ -83,17 +115,25 @@ test.describe('getFilterableFields - regimes', () => {
 
 test.describe('prepareQuery - catch-all clauses', () => {
   const baseQuery = { size: '10' }
-  test('catch-all dataset: q targets _search and adds a _search_boosted clause', () => {
-    const ds: any = fakeDataset({ schema: wideSchema(), _esCopyToSearch: true })
+  test('catch-all dataset: q targets _search; no separate _search_boosted clause', () => {
+    const ds: any = fakeDataset({
+      schema: [
+        ...wideSchema(),
+        { key: 'label_col', type: 'string', 'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label' }
+      ],
+      _esCopyToSearch: true
+    })
     const esQuery: any = prepareQuery(ds, { ...baseQuery, q: 'hello' })
     const shoulds = esQuery.query.bool.must.flatMap((m: any) => m.bool?.should ?? [])
     const sqs = shoulds.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
-    assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['_search'])))
-    assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['_search.text_standard'])))
-    assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['_search_boosted^3', '_search_boosted.text_standard^3'])))
+    // boost-eligible columns listed per-field with ^N suffix; catch-all `_search` appended after
+    assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['label_col.text^3', 'label_col.text_standard^3', '_search'])))
+    assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['label_col.text_standard^3', '_search.text_standard'])))
+    // no `_search_boosted` field is emitted by the query layer any more
+    assert.ok(!JSON.stringify(sqs).includes('_search_boosted'))
   })
 
-  test('legacy narrow dataset: q targets per-field list, no _search_boosted', () => {
+  test('legacy narrow dataset: q targets per-field list, no _search', () => {
     const ds: any = fakeDataset({ schema: [{ key: 'a', type: 'string' }] })
     const esQuery: any = prepareQuery(ds, { ...baseQuery, q: 'hello' })
     const shoulds = esQuery.query.bool.must.flatMap((m: any) => m.bool?.should ?? [])

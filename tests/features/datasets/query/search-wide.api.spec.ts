@@ -17,12 +17,13 @@ test.describe('search - wide dataset (_search catch-all)', () => {
     const ax = testUser1
     let dataset = await sendDataset('datasets/wide-dataset.csv', ax)
 
-    // index mapping carries the catch-all fields
+    // index mapping carries the catch-all field on every text column
     const diagnose = (await adminUser.get(`/api/v1/datasets/${dataset.id}/_diagnose`)).data
     const aliasedIndex = diagnose.esInfos.index
     const props = aliasedIndex.definition.mappings.properties
     assert.ok(props._search, 'index should have a _search field')
-    assert.ok(props._search_boosted, 'index should have a _search_boosted field')
+    // no separate _search_boosted field — boost-eligible columns get a ^3/^2 weight at query time instead
+    assert.equal(props._search_boosted, undefined, 'index should NOT have a _search_boosted field')
     // ES normalizes copy_to to an array even when a single string was specified
     assert.deepEqual(props.col1.copy_to, ['_search'])
 
@@ -36,14 +37,15 @@ test.describe('search - wide dataset (_search catch-all)', () => {
     assert.equal(res.data.total, 1, 'a word inside a >200-char cell must be searchable via _search (ignore_above must not block copy_to)')
     assert.equal(res.data.results[0].col0, 'Initech LLC')
 
-    // mark col0 as a label column and re-finalize — the index is rebuilt with col0 copying into
-    // _search_boosted as well; the catch-all path still returns correct results afterwards
+    // annotating a column as a label triggers a reindex (copy_to drops since boost-eligible
+    // columns are queried per-field instead of via the catch-all); q still returns correct results
     dataset.schema.find((f: any) => f.key === 'col0')['x-refersTo'] = 'http://www.w3.org/2000/01/rdf-schema#label'
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
     dataset = await waitForFinalize(ax, dataset.id)
     const diagnose2 = (await adminUser.get(`/api/v1/datasets/${dataset.id}/_diagnose`)).data
     const props2 = diagnose2.esInfos.index.definition.mappings.properties
-    assert.deepEqual(props2.col0.copy_to, ['_search', '_search_boosted'])
+    // boost-eligible columns no longer copy_to _search; they're listed per-field at query time
+    assert.equal(props2.col0.copy_to, undefined)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'Globex' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].col0, 'Globex Industries')

@@ -2,13 +2,11 @@ import crypto from 'crypto'
 import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.js'
-import { aliasName, esProperty, hasManyQSearchFields } from './commons.js'
+import { aliasName, esProperty, hasManyQSearchFields, isBoostEligible } from './commons.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
 const debug = debugModule('manage-indices')
-
-const SEARCH_BOOST_REFERS_TO = ['http://www.w3.org/2000/01/rdf-schema#label', 'http://schema.org/description', 'https://schema.org/DefinedTermSet']
 
 const catchAllSearchProperty = () => ({
   type: 'text',
@@ -23,13 +21,13 @@ export const indexDefinition = async (dataset) => {
   const wide = hasManyQSearchFields(jsProps)
   if (wide) {
     properties._search = catchAllSearchProperty()
-    properties._search_boosted = catchAllSearchProperty()
   }
   for (const jsProp of jsProps) {
     const esProp = esProperty(jsProp)
     if (esProp) {
-      if (wide && esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
-        esProp.copy_to = SEARCH_BOOST_REFERS_TO.includes(jsProp['x-refersTo']) ? ['_search', '_search_boosted'] : '_search'
+      if (wide && esProp.fields && (esProp.fields.text || esProp.fields.text_standard) && !isBoostEligible(jsProp)) {
+        // boost-eligible columns are queried per-field with their ^3/^2 boost — no need to copy them into _search
+        esProp.copy_to = '_search'
       }
       if (jsProp['x-extension'] && dataset.extensions && dataset.extensions.find(e => e.type === 'remoteService' && jsProp['x-extension'] === e.remoteService + '/' + e.action && jsProp.key.startsWith(e.propertyPrefix + '.'))) {
         const extKey = jsProp.key.split('.')[0]
@@ -87,8 +85,8 @@ export const updateDatasetMapping = async (dataset, oldDataset) => {
         }
       }
       // copy_to is not updatable on an existing field, and existing rows are not re-copied;
-      // a changed copy_to (e.g. a column newly annotated as a label, or the dataset dropping below
-      // the "wide" threshold) only takes effect on a full reindex -> force one
+      // a changed copy_to (e.g. the dataset dropping below the "wide" threshold) only takes
+      // effect on a full reindex -> force one
       if (newProperty && JSON.stringify([].concat(oldProperty.copy_to ?? []).sort()) !== JSON.stringify([].concat(newProperty.copy_to ?? []).sort())) {
         throw new Error(`the copy_to of field ${key} changed, simple mapping update will not work`)
       }

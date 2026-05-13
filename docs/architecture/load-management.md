@@ -167,14 +167,18 @@ sub-fields) that array becomes expensive for Elasticsearch to parse and execute,
 linearly with schema width.
 
 `hasManyQSearchFields(schema)` in `commons.js` detects this condition (threshold hardcoded at **30
-analyzed text inner sub-fields**). When true, `indexDefinition` in `manage-indices.js` injects two
-extra internal fields into the mapping: `_search` (standard text analyzers, catches all columns) and
-`_search_boosted` (same, but only columns annotated `rdfs:label`, `schema.org/description`, or
-`DefinedTermSet` copy into it). Every text column's `copy_to` is wired to `_search`; label/
-description-annotated columns also copy to `_search_boosted`. The `q` query then targets the
-constant-size pair `['_search', '_search.text_standard']` plus a boost clause on `_search_boosted`,
-regardless of how many columns the schema has. `updateDatasetMapping` forces a full reindex whenever
-a dataset crosses the threshold — so the mapping change is never applied in-place.
+analyzed text inner sub-fields**, boost-eligible columns excluded from the count since they're
+queried per-field in every regime). When true, `indexDefinition` in `manage-indices.js` injects
+one extra internal field into the mapping: `_search` (standard text analyzers). Every text column
+except the boost-eligible ones (annotated `rdfs:label`, `schema.org/description`, or
+`DefinedTermSet`) is wired into it via `copy_to`. The `q` query then targets the constant-size
+pair `['_search', '_search.text_standard']` regardless of how many columns the schema has, plus
+the small handful of boost-eligible columns listed per-field with their `^3` / `^2` weight — i.e.
+the same per-field boost mechanism narrow datasets use, applied to ~1-3 columns at most. Boost-
+eligible columns are therefore *not* duplicated into `_search` — they're only referenced per-
+field. `updateDatasetMapping` forces a full reindex whenever a dataset crosses the threshold or
+when a column's boost eligibility changes (its `copy_to` would change) — so the mapping change is
+never applied in-place.
 
 Rollout is lazy: **no eager reindex job**. `dataset._esCopyToSearch` (set by the `finalize` worker
 in `finalize.ts`) records whether the dataset's *current* ES index was built with `_search`. The
