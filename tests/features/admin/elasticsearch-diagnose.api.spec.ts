@@ -41,6 +41,8 @@ test.describe('admin/elasticsearch/diagnose', () => {
     assert.equal(typeof body.longTasks.search.truncated, 'boolean')
     assert.ok(body.longTasks.other)
     assert.ok(Array.isArray(body.longTasks.other.items))
+    assert.equal(typeof body.longTasks.other.totalCount, 'number')
+    assert.equal(typeof body.longTasks.other.truncated, 'boolean')
     assert.ok(Array.isArray(body.unassignedShards))
 
     assert.ok(body.indicesSummary)

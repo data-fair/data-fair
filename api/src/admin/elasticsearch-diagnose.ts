@@ -70,6 +70,9 @@ export type LongTaskBucket = {
   truncated: boolean
 }
 
+// `other` is a single non-search bucket — it aggregates the write / admin / other
+// task categories. The category field on each item still discriminates them for
+// the UI's chip column.
 export type LongTasksByCategory = {
   search: LongTaskBucket
   other: LongTaskBucket
