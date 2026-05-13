@@ -121,7 +121,9 @@ export const getElasticsearchDiagnose = async () => {
       bytes: 'b',
       h: 'index,docs.count,docs.deleted,pri.store.size'
     }), errors, [] as any[]),
-    safeSection('tasks.list', () => es.client.tasks.list({ detailed: true, group_by: 'none' as any }), errors, { nodes: {} } as any),
+    // Default group_by is 'nodes' which produces { nodes: { <nodeId>: { name, tasks: { <taskId>: ... } } } }
+    // — that's the shape both collectReferencedDatasetIds and mapLongTasks consume.
+    safeSection('tasks.list', () => es.client.tasks.list({ detailed: true }), errors, { nodes: {} } as any),
     safeSection('datasetsWithEsWarnings', () => listDatasetsWithEsWarnings(1000), errors, { count: 0, results: [] }),
     safeSection('mongo.countDatasets', () => mongo.db.collection('datasets').countDocuments({
       isVirtual: { $ne: true },
