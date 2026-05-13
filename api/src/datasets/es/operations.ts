@@ -209,11 +209,14 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
     const esProp = esProperty(f, '')
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
-      // keyword main type: always per-field, including in catch-all mode. `_search` is a text
-      // field built by concatenating many columns, so it can't carry whole-value exact-match
-      // semantics — the per-column keyword does. Cheap per entry (single posting-list lookup).
+      // keyword main type: only contributes to `qSearchFields` when the column has no analyzed
+      // text inner field (no `.text`, no `.text_standard`) — i.e. a pure-keyword string column
+      // (text/textStandard both disabled via x-capabilities). When the analyzed inner fields
+      // exist they already cover `q` matching, so the keyword main entry would be redundant.
+      // It is always kept in `searchFields` for the raw `qs=` query path.
       searchFields.push(f.key)
-      if (isQField) qSearchFields.push(f.key)
+      const hasFullText = !!(esProp.fields && (esProp.fields.text || esProp.fields.text_standard))
+      if (isQField && !hasFullText) qSearchFields.push(f.key)
     }
     if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
@@ -224,7 +227,7 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
 
       // in catch-all mode the catch-all `_search` field covers the analyzed text views; we still
       // list the few boost-eligible columns per-field so their `^3`/`^2` weight applies at query
-      // time. (Keyword main types are also still listed — see the keyword branch above.)
+      // time.
       const perField = isQField && (!copyToSearch || !!suffix)
 
       if (esProp.fields.text) {

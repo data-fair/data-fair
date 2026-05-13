@@ -176,12 +176,15 @@ pair `['_search', '_search.text_standard']` regardless of how many columns the s
 the small handful of boost-eligible columns listed per-field with their `^3` / `^2` weight — i.e.
 the same per-field boost mechanism narrow datasets use, applied to ~1-3 columns at most. Boost-
 eligible columns are therefore *not* duplicated into `_search` — they're only referenced per-
-field. The **keyword main type of every column is also kept per-field** in `qSearchFields`,
-even in catch-all mode: `_search` is a concatenation of all non-boost columns and so cannot carry
-whole-value exact-match semantics, while a per-column keyword can — and keyword entries are cheap
-(single posting-list lookup, no analysis). `updateDatasetMapping` forces a full reindex whenever a
-dataset crosses the threshold or when a column's boost eligibility changes (its `copy_to` would
-change) — so the mapping change is never applied in-place.
+field. The **keyword main type of a column contributes to `qSearchFields` only when the column
+has no analyzed inner field** (no `.text`, no `.text_standard` — i.e. a "pure keyword" column with
+`text` and `textStandard` both disabled via `x-capabilities`). When the analyzed views exist they
+already cover `q` matching, so the keyword main is redundant — and skipping it keeps `qSearchFields`
+constant-size in catch-all mode (`[_search]` plus the few boost-eligible per-field entries).
+The keyword main type is always kept in `searchFields`, the field list used by the raw `qs=`
+query_string path. `updateDatasetMapping` forces a full reindex whenever a dataset crosses the
+threshold or when a column's boost eligibility changes (its `copy_to` would change) — so the
+mapping change is never applied in-place.
 
 Rollout is lazy: **no eager reindex job**. `dataset._esCopyToSearch` (set by the `finalize` worker
 in `finalize.ts`) records whether the dataset's *current* ES index was built with `_search`. The

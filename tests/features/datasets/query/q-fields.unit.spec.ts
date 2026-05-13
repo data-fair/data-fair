@@ -49,19 +49,33 @@ test.describe('getFilterableFields - regimes', () => {
     const { qSearchFields, qStandardFields, copyToSearch, reduced } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, false)
     assert.equal(reduced, false)
-    assert.deepEqual(qSearchFields, ['a', 'a.text', 'a.text_standard', 'b', 'b.text', 'b.text_standard'])
+    // keyword main types ('a', 'b') are omitted: each column has analyzed inner fields
+    // (.text + .text_standard) which already cover `q` matching, so the keyword main is redundant.
+    assert.deepEqual(qSearchFields, ['a.text', 'a.text_standard', 'b.text', 'b.text_standard'])
     assert.deepEqual(qStandardFields, ['a.text_standard', 'b.text_standard'])
   })
 
-  test('catch-all: _esCopyToSearch dataset collapses analyzed fields to _search, keeps keyword main types per-column', () => {
+  test('pure-keyword column (text + textStandard disabled) keeps the keyword main type in qSearchFields', () => {
+    const ds = fakeDataset({
+      schema: [
+        { key: 'a', type: 'string' },
+        { key: 'tag', type: 'string', 'x-capabilities': { text: false, textStandard: false } }
+      ]
+    })
+    const { qSearchFields, qStandardFields } = getFilterableFields(ds, 'x', undefined)
+    // `tag` has no analyzed inner field, so its keyword main type is the only way to search it
+    assert.deepEqual(qSearchFields, ['a.text', 'a.text_standard', 'tag'])
+    assert.deepEqual(qStandardFields, ['a.text_standard'])
+  })
+
+  test('catch-all: _esCopyToSearch dataset collapses qSearchFields to just _search (analyzed views and keyword mains both gone)', () => {
     const ds = fakeDataset({ schema: wideSchema(), _esCopyToSearch: true })
     const { qSearchFields, qStandardFields, copyToSearch, reduced } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, true)
     assert.equal(reduced, false)
-    // every column's keyword main type stays (cheap whole-value exact match — `_search`
-    // is a concatenation so it can't carry that semantics). Analyzed text views collapse to `_search`.
-    const expected = [...Array.from({ length: 32 }, (_, i) => 'f' + i), '_search']
-    assert.deepEqual(qSearchFields, expected)
+    // Every column has analyzed inner fields, so no keyword main is added; analyzed views all
+    // collapse into `_search` via copy_to. qSearchFields is constant-size regardless of width.
+    assert.deepEqual(qSearchFields, ['_search'])
     assert.deepEqual(qStandardFields, ['_search.text_standard'])
   })
 
@@ -76,12 +90,12 @@ test.describe('getFilterableFields - regimes', () => {
     })
     const { qSearchFields, qStandardFields, copyToSearch } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, true)
-    // every column contributes its keyword main type; boost-eligible columns also contribute
-    // their analyzed inner fields with the ^N suffix; the catch-all `_search` entry is appended last.
+    // boost-eligible columns contribute their analyzed inner fields with the ^N suffix; the
+    // catch-all `_search` entry is appended last. No keyword main types: every column has
+    // analyzed inner fields.
     assert.deepEqual(qSearchFields, [
-      ...Array.from({ length: 32 }, (_, i) => 'f' + i),
-      'label_col', 'label_col.text^3', 'label_col.text_standard^3',
-      'desc_col', 'desc_col.text^2', 'desc_col.text_standard^2',
+      'label_col.text^3', 'label_col.text_standard^3',
+      'desc_col.text^2', 'desc_col.text_standard^2',
       '_search'
     ])
     assert.deepEqual(qStandardFields, [
@@ -103,9 +117,9 @@ test.describe('getFilterableFields - regimes', () => {
     const { qSearchFields, qStandardFields, copyToSearch, reduced } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, false)
     assert.equal(reduced, true)
-    // string-fulltext columns: keyword main type + .text in qSearchFields, .text_standard dropped
-    // (it's a quasi-duplicate of .text on the same source — language vs standard analyzer)
-    assert.ok(qSearchFields.includes('s0'))
+    // string-fulltext columns: only .text remains in qSearchFields. The keyword main type is
+    // omitted (analyzed views cover it), and .text_standard is dropped as a quasi-duplicate of .text.
+    assert.ok(!qSearchFields.includes('s0'))
     assert.ok(qSearchFields.includes('s0.text'))
     assert.ok(!qSearchFields.includes('s0.text_standard'))
     // integer columns: .text_standard is the only inner field, so it stays in qSearchFields —
@@ -122,19 +136,22 @@ test.describe('getFilterableFields - regimes', () => {
     const ds = fakeDataset({ schema: wideSchema(), _esCopyToSearch: true })
     const { qSearchFields, copyToSearch } = getFilterableFields(ds, 'x', ['f3'])
     assert.equal(copyToSearch, false)
-    assert.deepEqual(qSearchFields, ['f3', 'f3.text', 'f3.text_standard'])
+    // f3 has analyzed inner fields, so its keyword main is omitted from qSearchFields
+    assert.deepEqual(qSearchFields, ['f3.text', 'f3.text_standard'])
   })
 
   test('searchFields (used for the ?qs= query_string) is unchanged in catch-all mode', () => {
     const ds = fakeDataset({ schema: wideSchema(), _esCopyToSearch: true })
     const { searchFields } = getFilterableFields(ds, 'x', undefined)
+    // searchFields still carries the keyword main type for the raw `qs=` path
+    assert.ok(searchFields.includes('f0'))
     assert.ok(searchFields.includes('f0.text'))
     assert.ok(!searchFields.includes('_search'))
   })
 })
 
 test.describe('buildQClauses - catch-all clauses', () => {
-  test('catch-all dataset: q targets _search and the per-column keyword main types; no separate _search_boosted clause', () => {
+  test('catch-all dataset: q targets the boost-eligible per-field entries plus _search; no separate _search_boosted clause', () => {
     const ds: any = fakeDataset({
       schema: [
         ...wideSchema(),
@@ -144,9 +161,9 @@ test.describe('buildQClauses - catch-all clauses', () => {
     })
     const qBool: any = buildQClauses(ds, 'hello', undefined, undefined)
     const sqs = qBool.bool.should.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
+    // no keyword main types contribute — every column has analyzed inner fields covered by `_search`
     const expectedQSearchFields = [
-      ...Array.from({ length: 32 }, (_, i) => 'f' + i),
-      'label_col', 'label_col.text^3', 'label_col.text_standard^3',
+      'label_col.text^3', 'label_col.text_standard^3',
       '_search'
     ]
     assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(expectedQSearchFields)))
