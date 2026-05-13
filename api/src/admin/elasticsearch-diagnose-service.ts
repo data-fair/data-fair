@@ -10,6 +10,7 @@ import {
   mapUnassignedShards,
   mapIndicesSummary,
   safeSection,
+  extractIndexNames,
   type SectionError,
   type DatasetRef
 } from './elasticsearch-diagnose.ts'
@@ -51,8 +52,6 @@ const countShardsByNode = (catShardsRows: any[]): Map<string, number> => {
   return m
 }
 
-const INDEX_TOKEN_RE = /[a-zA-Z0-9_.-]+/g
-
 const collectReferencedDatasetIds = (
   catShardsRows: any[],
   catIndicesRows: any[],
@@ -69,15 +68,12 @@ const collectReferencedDatasetIds = (
     if (id) ids.add(id)
   }
   // tasks-list descriptions: parse out any prefix-prefixed tokens
-  const head = `${indicesPrefix}-`
   for (const [, nodeBlock] of Object.entries<any>(tasksResponse?.nodes ?? {})) {
     for (const [, task] of Object.entries<any>(nodeBlock.tasks ?? {})) {
       const desc: string = task.description ?? ''
-      for (const tok of desc.match(INDEX_TOKEN_RE) ?? []) {
-        if (tok.startsWith(head)) {
-          const id = parseIndexName(tok, indicesPrefix)
-          if (id) ids.add(id)
-        }
+      for (const indexName of extractIndexNames(desc, indicesPrefix)) {
+        const id = parseIndexName(indexName, indicesPrefix)
+        if (id) ids.add(id)
       }
     }
   }

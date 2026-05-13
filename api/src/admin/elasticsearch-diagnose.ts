@@ -197,7 +197,7 @@ export const mapNodes = (
 // data-fair does not use remote clusters in any current deployment.
 const INDEX_TOKEN_RE = /[a-zA-Z0-9_.-]+/g
 
-const extractIndexNames = (description: string, indicesPrefix: string): string[] => {
+export const extractIndexNames = (description: string, indicesPrefix: string): string[] => {
   if (!description) return []
   const head = `${indicesPrefix}-`
   const found = new Set<string>()
