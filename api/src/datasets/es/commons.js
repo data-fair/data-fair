@@ -732,3 +732,5 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
 }
 
 export { extractError, escapeFilter } from './operations.ts'
+
+export { parseIndexName } from './index-utils.ts'
