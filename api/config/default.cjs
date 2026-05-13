@@ -60,7 +60,13 @@ module.exports = {
     maxPageSize: 10000,
     singleLineOpRefresh: 'wait_for',
     searchTimeout: '45s', // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value
-    acceptYellowStatus: false // change to "true" to tolerate a single node instance
+    acceptYellowStatus: false, // change to "true" to tolerate a single node instance
+    diagnose: {
+      segmentsPerShardWarn: 30,
+      deletedRatioWarn: 0.2,
+      mappingFieldsLimitWarn: 0.8,
+      minShardSize: 1000000000 // 1go
+    }
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {
