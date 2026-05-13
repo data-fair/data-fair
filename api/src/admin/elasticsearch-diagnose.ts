@@ -1,0 +1,250 @@
+// Pure shape mappers + small async wrapper. No ES / Mongo / node-config imports here.
+
+import { parseIndexName } from '../datasets/es/index-name.js'
+
+export type Watermark = 'ok' | 'low' | 'high' | 'flood' | null
+
+export type DatasetRef = {
+  id: string
+  title: string
+  owner: { type: string, id: string, name: string }
+}
+
+export type SectionError = { section: string, message: string }
+
+export const resolveWatermark = (
+  usedPct: number | null,
+  lowPct: number,
+  highPct: number,
+  floodPct: number
+): Watermark => {
+  if (usedPct == null) return null
+  if (usedPct >= floodPct) return 'flood'
+  if (usedPct >= highPct) return 'high'
+  if (usedPct >= lowPct) return 'low'
+  return 'ok'
+}
+
+export const mapClusterHealth = (
+  health: any,
+  pendingTasks: Array<{ time_in_queue_millis?: number }>
+) => {
+  const ageList = (pendingTasks ?? []).map(t => Number(t.time_in_queue_millis ?? 0))
+  return {
+    name: health.cluster_name,
+    status: health.status,
+    numberOfNodes: health.number_of_nodes ?? 0,
+    numberOfDataNodes: health.number_of_data_nodes ?? 0,
+    activePrimaryShards: health.active_primary_shards ?? 0,
+    activeShards: health.active_shards ?? 0,
+    relocatingShards: health.relocating_shards ?? 0,
+    initializingShards: health.initializing_shards ?? 0,
+    unassignedShards: health.unassigned_shards ?? 0,
+    pendingTasks: {
+      count: (pendingTasks ?? []).length,
+      maxAgeMs: ageList.length ? Math.max(...ageList) : null
+    }
+  }
+}
+
+const dataRoleRe = /^data(_|$)/
+const isDataRole = (role: string) => dataRoleRe.test(role)
+
+export const mapNodes = (
+  nodesStats: any,
+  watermarks: { lowPct: number, highPct: number, floodPct: number },
+  shardsByNode: Map<string, number>
+) => {
+  const result: any[] = []
+  for (const [id, raw] of Object.entries<any>(nodesStats?.nodes ?? {})) {
+    const roles: string[] = raw.roles ?? []
+    const fsData: any[] = raw.fs?.data ?? []
+    let totalBytes: number | null = null
+    let availBytes: number | null = null
+    if (fsData.length) {
+      totalBytes = 0
+      availBytes = 0
+      for (const d of fsData) {
+        totalBytes += Number(d.total_in_bytes ?? 0)
+        availBytes += Number(d.available_in_bytes ?? 0)
+      }
+    }
+    const usedBytes = (totalBytes != null && availBytes != null) ? totalBytes - availBytes : null
+    const usedPct = (totalBytes && usedBytes != null) ? (usedBytes / totalBytes) * 100 : null
+
+    const breakers: Record<string, { tripped: number }> = {}
+    for (const [bName, b] of Object.entries<any>(raw.breakers ?? {})) {
+      breakers[bName] = { tripped: Number(b.tripped ?? 0) }
+    }
+
+    const tpList: Array<{ name: string, active: number, queue: number, rejected: number }> = []
+    for (const [tpName, tp] of Object.entries<any>(raw.thread_pool ?? {})) {
+      const queue = Number(tp.queue ?? 0)
+      const rejected = Number(tp.rejected ?? 0)
+      if (queue > 0 || rejected > 0) {
+        tpList.push({ name: tpName, active: Number(tp.active ?? 0), queue, rejected })
+      }
+    }
+    tpList.sort((a, b) => (b.rejected - a.rejected) || (b.queue - a.queue))
+    const threadPoolsOfInterest = tpList.slice(0, 10)
+
+    const pressure = raw.indexing_pressure?.memory?.current
+    const indexingPressure = pressure
+      ? {
+          currentCombinedBytes: Number(pressure.combined_coordinating_and_primary_in_bytes ?? 0),
+          currentPrimaryBytes: Number(pressure.primary_in_bytes ?? 0),
+          currentCoordinatingBytes: Number(pressure.coordinating_in_bytes ?? 0)
+        }
+      : null
+
+    result.push({
+      id,
+      name: raw.name,
+      roles,
+      isDataNode: roles.some(isDataRole),
+      heapUsedPct: raw.jvm?.mem?.heap_used_percent ?? null,
+      cpuPct: raw.os?.cpu?.percent ?? null,
+      load1m: raw.os?.cpu?.load_average?.['1m'] ?? null,
+      disk: {
+        usedBytes,
+        totalBytes,
+        usedPct,
+        watermark: resolveWatermark(usedPct, watermarks.lowPct, watermarks.highPct, watermarks.floodPct)
+      },
+      shardCount: shardsByNode.get(raw.name) ?? null,
+      breakers,
+      threadPoolsOfInterest,
+      indexingPressure
+    })
+  }
+  return result
+}
+
+const INDEX_TOKEN_RE = /[a-zA-Z0-9_.-]+/g
+
+const extractIndexNames = (description: string, indicesPrefix: string): string[] => {
+  if (!description) return []
+  const head = `${indicesPrefix}-`
+  const found = new Set<string>()
+  const tokens = description.match(INDEX_TOKEN_RE) ?? []
+  for (const tok of tokens) {
+    if (tok.startsWith(head)) found.add(tok)
+  }
+  return [...found]
+}
+
+export const mapLongTasks = (
+  tasksResponse: any,
+  longTaskMs: number,
+  indicesPrefix: string,
+  datasetsById: Map<string, DatasetRef>
+) => {
+  const out: any[] = []
+  for (const [, nodeBlock] of Object.entries<any>(tasksResponse?.nodes ?? {})) {
+    const nodeName: string = nodeBlock.name
+    for (const [taskId, task] of Object.entries<any>(nodeBlock.tasks ?? {})) {
+      const runningMs = Number(task.running_time_in_nanos ?? 0) / 1e6
+      if (runningMs <= longTaskMs) continue
+      const rawDesc: string = task.description ?? ''
+      const description = rawDesc.length > 500 ? rawDesc.slice(0, 500) : rawDesc
+      const indexNames = extractIndexNames(rawDesc, indicesPrefix)
+      const targets = indexNames.map(indexName => {
+        const datasetId = parseIndexName(indexName, indicesPrefix)
+        const ref = datasetId ? datasetsById.get(datasetId) ?? null : null
+        return {
+          indexName,
+          datasetId,
+          datasetTitle: ref?.title ?? null,
+          datasetOwner: ref?.owner ?? null
+        }
+      })
+      out.push({
+        id: taskId,
+        node: nodeName,
+        action: task.action,
+        runningTimeMs: runningMs,
+        description,
+        targets
+      })
+    }
+  }
+  out.sort((a, b) => b.runningTimeMs - a.runningTimeMs)
+  return out
+}
+
+export const mapUnassignedShards = (
+  catRows: any[],
+  explainByKey: Record<string, string>,
+  indicesPrefix: string,
+  datasetsById: Map<string, DatasetRef>
+) => {
+  const out: any[] = []
+  for (const row of catRows ?? []) {
+    if (row.state !== 'UNASSIGNED') continue
+    const indexName = row.index
+    const shard = Number(row.shard)
+    const primary = row.prirep === 'p'
+    const datasetId = parseIndexName(indexName, indicesPrefix)
+    const ref = datasetId ? datasetsById.get(datasetId) ?? null : null
+    const key = `${indexName}#${shard}#${row.prirep}`
+    out.push({
+      index: indexName,
+      shard,
+      primary,
+      reason: row['unassigned.reason'] ?? 'UNKNOWN',
+      details: explainByKey[key] ?? null,
+      datasetId,
+      datasetTitle: ref?.title ?? null,
+      datasetOwner: ref?.owner ?? null
+    })
+  }
+  return out
+}
+
+export const mapIndicesSummary = (
+  catRows: any[],
+  indicesPrefix: string,
+  nbDatasetsInMongo: number,
+  mongoDatasetIds: Set<string>
+) => {
+  let totalDocs = 0
+  let totalDeletedDocs = 0
+  let totalPrimaryBytes = 0
+  const datasetIds = new Set<string>()
+  let orphanIndicesCount = 0
+  for (const row of catRows ?? []) {
+    totalDocs += Number(row['docs.count'] ?? 0)
+    totalDeletedDocs += Number(row['docs.deleted'] ?? 0)
+    totalPrimaryBytes += Number(row['pri.store.size'] ?? 0)
+    const datasetId = parseIndexName(row.index, indicesPrefix)
+    if (datasetId) {
+      datasetIds.add(datasetId)
+      if (!mongoDatasetIds.has(datasetId)) orphanIndicesCount += 1
+    }
+  }
+  const denom = totalDocs + totalDeletedDocs
+  return {
+    nbDataFairIndices: (catRows ?? []).length,
+    nbDatasetsWithIndex: datasetIds.size,
+    nbDatasetsInMongo,
+    totalDocs,
+    totalPrimaryBytes,
+    totalDeletedDocs,
+    deletedRatio: denom > 0 ? totalDeletedDocs / denom : 0,
+    orphanIndicesCount
+  }
+}
+
+export const safeSection = async <T>(
+  section: string,
+  fn: () => Promise<T>,
+  errors: SectionError[],
+  fallback?: T
+): Promise<T | undefined> => {
+  try {
+    return await fn()
+  } catch (err) {
+    errors.push({ section, message: (err as Error)?.message ?? String(err) })
+    return fallback
+  }
+}
