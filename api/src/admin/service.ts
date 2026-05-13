@@ -56,6 +56,19 @@ async function singleStatus (req: any, fn: (req: any) => Promise<void>, name: st
   }
 }
 
+export async function listDatasetsWithEsWarnings (size = 1000, skip = 0) {
+  const datasets = mongo.db.collection('datasets')
+  const query: any = { esWarning: { $exists: true, $ne: null } }
+  const resultsPromise = datasets
+    .find(query)
+    .skip(skip)
+    .limit(size)
+    .project({ _id: 0, id: 1, title: 1, owner: 1, esWarning: 1, status: 1 })
+    .toArray()
+  const [count, results] = await Promise.all([datasets.countDocuments(query), resultsPromise])
+  return { count, results }
+}
+
 export async function getStatus (req: any) {
   const promises = [
     singleStatus(req, mongoStatus, 'mongodb'),
