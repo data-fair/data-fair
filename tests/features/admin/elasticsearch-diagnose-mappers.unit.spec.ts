@@ -191,6 +191,38 @@ test.describe('mapLongTasks', () => {
     const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map())
     assert.deepEqual(out[0].targets, [])
   })
+
+  test('classifies tasks by action prefix', () => {
+    const tasksResponse = {
+      nodes: {
+        n: {
+          name: 'n',
+          tasks: {
+            s: { action: 'indices:data/read/search', running_time_in_nanos: 5_000_000_000, description: '' },
+            sp: { action: 'indices:data/read/search[phase/query]', running_time_in_nanos: 5_000_000_000, description: '' },
+            ms: { action: 'indices:data/read/msearch', running_time_in_nanos: 5_000_000_000, description: '' },
+            sc: { action: 'indices:data/read/scroll', running_time_in_nanos: 5_000_000_000, description: '' },
+            w: { action: 'indices:data/write/bulk', running_time_in_nanos: 5_000_000_000, description: '' },
+            a: { action: 'indices:admin/refresh', running_time_in_nanos: 5_000_000_000, description: '' },
+            c: { action: 'cluster:monitor/state', running_time_in_nanos: 5_000_000_000, description: '' },
+            i: { action: 'internal:cluster/coordination', running_time_in_nanos: 5_000_000_000, description: '' },
+            o: { action: 'something/else', running_time_in_nanos: 5_000_000_000, description: '' }
+          }
+        }
+      }
+    }
+    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map())
+    const byId = Object.fromEntries(out.map(t => [t.id, t.category]))
+    assert.equal(byId.s, 'search')
+    assert.equal(byId.sp, 'search')
+    assert.equal(byId.ms, 'search')
+    assert.equal(byId.sc, 'search')
+    assert.equal(byId.w, 'write')
+    assert.equal(byId.a, 'admin')
+    assert.equal(byId.c, 'admin')
+    assert.equal(byId.i, 'admin')
+    assert.equal(byId.o, 'other')
+  })
 })
 
 test.describe('mapUnassignedShards', () => {

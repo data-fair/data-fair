@@ -45,10 +45,13 @@ export type NodeSummary = {
   indexingPressure: { currentCombinedBytes: number, currentPrimaryBytes: number, currentCoordinatingBytes: number } | null
 }
 
+export type LongTaskCategory = 'search' | 'write' | 'admin' | 'other'
+
 export type LongTask = {
   id: string
   node: string
   action: string
+  category: LongTaskCategory
   runningTimeMs: number
   description: string
   targets: Array<{
@@ -191,6 +194,17 @@ export const mapNodes = (
   return result
 }
 
+export const categorizeTaskAction = (action: string): LongTaskCategory => {
+  if (action.startsWith('indices:data/read/')) return 'search'
+  if (action.startsWith('indices:data/write/')) return 'write'
+  if (
+    action.startsWith('indices:admin/') ||
+    action.startsWith('cluster:') ||
+    action.startsWith('internal:')
+  ) return 'admin'
+  return 'other'
+}
+
 // Tokens used to find data-fair index names embedded inside an ES task description.
 // Hyphens are part of the index name; ":" is intentionally NOT in the class — ES remote-cluster
 // syntax `cluster:index` would split here, yielding `index` only. That's a known limitation;
@@ -237,6 +251,7 @@ export const mapLongTasks = (
         id: taskId,
         node: nodeName,
         action: task.action,
+        category: categorizeTaskAction(task.action),
         runningTimeMs: runningMs,
         description,
         targets
