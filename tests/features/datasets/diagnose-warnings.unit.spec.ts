@@ -247,7 +247,7 @@ test.describe('LargeDeletedDocsRatio', () => {
     const item = w.find(x => x.code === 'LargeDeletedDocsRatio')
     assert.ok(item)
     assert.equal(item!.severity, 'warning')
-    assert.equal(item!.details!.ratio.toFixed(2), '0.40')
+    assert.equal((item!.details!.ratio as number).toFixed(2), '0.40')
   })
 
   test('does not fire when total docs <= 1000', () => {
