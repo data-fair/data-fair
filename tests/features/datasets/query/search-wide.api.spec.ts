@@ -27,6 +27,11 @@ test.describe('search - wide dataset (_search catch-all)', () => {
     // ES normalizes copy_to to an array even when a single string was specified
     assert.deepEqual(props.col1.copy_to, ['_search'])
 
+    // diagnose now returns a structured warnings array; the wide dataset must NOT have MissingSearchOnWide
+    assert.ok(Array.isArray(diagnose.warnings), 'diagnose response must include a warnings array')
+    assert.equal(diagnose.warnings.find((w: any) => w.code === 'MissingSearchOnWide'), undefined,
+      'wide dataset with _search field should not flag MissingSearchOnWide')
+
     // q matches a value in an arbitrary column
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'xyzzy-unique-token' } })
     assert.equal(res.data.total, 1)
