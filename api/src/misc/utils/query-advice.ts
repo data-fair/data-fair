@@ -1,5 +1,7 @@
 import { type Request } from 'express'
+import i18n from 'i18n'
 import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
+import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
 
 // Builds a short, localized, advisory sentence appended to overload errors (429 compute-budget,
 // 504 "request too long", 429 ES circuit_breaking_exception). It only ever *advises* — it never
@@ -42,4 +44,48 @@ export const queryAdvice = (req: Request & { dataset?: { schema?: any[] } }): st
 
   if (keys.length === 0) return ''
   return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + keys.map(k => req.__(k)).join(' ; ') + '.'
+}
+
+export type HintMode = 'auto' | 'true' | 'false'
+
+/**
+ * Pure decision: should a hint be attached given the requested mode and the elapsed ES step?
+ * Extracted so it can be unit-tested without the rest of the request machinery.
+ */
+export const shouldEmitHint = (mode: HintMode, esStepDurationMs: number): boolean => {
+  if (mode === 'false') return false
+  if (mode === 'true') return true
+  return esStepDurationMs > SLOW_REQUEST_THRESHOLD_MS
+}
+
+const parseHintMode = (raw: any): HintMode => (raw === 'true' || raw === 'false' ? raw : 'auto')
+
+/**
+ * Returns the result with a `hint` string field prepended (so it appears first in the JSON) when
+ * the request opted in (or the ES step was slow enough in auto mode) and at least one rule matches.
+ * Returns `result` unchanged for `hint=false` or when no rule applies. The hint reuses the exact
+ * same `queryAdvice` rules that drive the 429/504 error advice.
+ *
+ * Public/cacheable responses are served without varying by the i18n_lang cookie, so for those we
+ * force the hint to English to avoid the reverse-proxy serving a French hint to an English client
+ * (or vice versa) from cache.
+ */
+export const attachQueryHint = <T extends Record<string, any>> (
+  req: Request & { dataset?: { schema?: any[] }, publicOperation?: boolean },
+  esStepDurationMs: number,
+  result: T
+): T => {
+  const mode = parseHintMode(req.query?.hint)
+  if (!shouldEmitHint(mode, esStepDurationMs)) return result
+  const adviceReq = req.publicOperation
+    ? {
+        path: req.path,
+        query: req.query,
+        dataset: req.dataset,
+        __: (key: string) => i18n.__({ phrase: key, locale: 'en' })
+      } as any
+    : req
+  const advice = queryAdvice(adviceReq).trim()
+  if (!advice) return result
+  return { hint: advice, ...result }
 }
