@@ -67,7 +67,8 @@ module.exports = {
       mappingFieldsLimitWarn: 0.8,
       minShardSize: 1000000000, // 1go
       longTaskMs: 1000, // tasks running longer than this are surfaced on the admin ES page
-      unassignedExplainCap: 20 // cap calls to cluster.allocationExplain per request
+      unassignedExplainCap: 20, // cap calls to cluster.allocationExplain per request
+      maxLongTasksPerCategory: 100 // cap per-bucket long tasks returned by the diagnose endpoint (search / other)
     }
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
