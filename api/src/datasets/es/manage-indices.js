@@ -2,50 +2,17 @@ import crypto from 'crypto'
 import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.js'
-import { aliasName, esProperty, hasManyQSearchFields, isBoostEligible } from './commons.js'
+import { aliasName } from './commons.js'
+import { buildIndexMappings } from './operations.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
 const debug = debugModule('manage-indices')
 
-const catchAllSearchProperty = () => ({
-  type: 'text',
-  analyzer: config.elasticsearch.defaultAnalyzer,
-  fields: { text_standard: { type: 'text', analyzer: 'standard' } }
-})
-
 export const indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
-  const properties = body.mappings.properties = {}
   const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
-  const wide = hasManyQSearchFields(jsProps)
-  if (wide) {
-    properties._search = catchAllSearchProperty()
-  }
-  for (const jsProp of jsProps) {
-    const esProp = esProperty(jsProp)
-    if (esProp) {
-      if (wide && esProp.fields && (esProp.fields.text || esProp.fields.text_standard) && !isBoostEligible(jsProp)) {
-        // boost-eligible columns are queried per-field with their ^3/^2 boost — no need to copy them into _search
-        esProp.copy_to = '_search'
-      }
-      if (jsProp['x-extension'] && dataset.extensions && dataset.extensions.find(e => e.type === 'remoteService' && jsProp['x-extension'] === e.remoteService + '/' + e.action && jsProp.key.startsWith(e.propertyPrefix + '.'))) {
-        const extKey = jsProp.key.split('.')[0]
-        properties[extKey] = properties[extKey] || { dynamic: 'strict', properties: {} }
-        properties[extKey].properties[jsProp.key.replace(extKey + '.', '')] = esProp
-      } else {
-        properties[jsProp.key] = esProp
-      }
-    }
-    if (jsProp.key === '_geoshape' && jsProp['x-capabilities']?.vtPrepare) {
-      properties['_vt_prepared'] = {
-        properties: {
-          xyz: { type: 'keyword', index: true, doc_values: false },
-          pbf: { type: 'binary', store: false, doc_values: false }
-        }
-      }
-    }
-  }
+  body.mappings.properties = buildIndexMappings(dataset, jsProps, config.elasticsearch.defaultAnalyzer).properties
   return body
 }
 

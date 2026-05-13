@@ -2,7 +2,7 @@
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
 import { datasetWarning } from '../../datasets/es/manage-indices.js'
-import { hasManyQSearchFields } from '../../datasets/es/commons.js'
+import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
 import * as geoUtils from '../../datasets/utils/geo.js'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'

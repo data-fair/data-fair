@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields, getFilterableFields, prepareQuery } from '../../../../api/src/datasets/es/commons.js'
+import { Q_SEARCH_FIELDS_THRESHOLD, hasManyQSearchFields, getFilterableFields, buildQClauses } from '../../../../api/src/datasets/es/operations.ts'
 
 // a string column produces both a .text and a .text_standard inner field -> counts as 2
 const stringFields = (n: number) => Array.from({ length: n }, (_, i) => ({ key: 's' + i, type: 'string' }))
@@ -113,8 +113,7 @@ test.describe('getFilterableFields - regimes', () => {
   })
 })
 
-test.describe('prepareQuery - catch-all clauses', () => {
-  const baseQuery = { size: '10' }
+test.describe('buildQClauses - catch-all clauses', () => {
   test('catch-all dataset: q targets _search; no separate _search_boosted clause', () => {
     const ds: any = fakeDataset({
       schema: [
@@ -123,9 +122,8 @@ test.describe('prepareQuery - catch-all clauses', () => {
       ],
       _esCopyToSearch: true
     })
-    const esQuery: any = prepareQuery(ds, { ...baseQuery, q: 'hello' })
-    const shoulds = esQuery.query.bool.must.flatMap((m: any) => m.bool?.should ?? [])
-    const sqs = shoulds.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
+    const qBool: any = buildQClauses(ds, 'hello', undefined, undefined)
+    const sqs = qBool.bool.should.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
     // boost-eligible columns listed per-field with ^N suffix; catch-all `_search` appended after
     assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['label_col.text^3', 'label_col.text_standard^3', '_search'])))
     assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['label_col.text_standard^3', '_search.text_standard'])))
@@ -135,9 +133,8 @@ test.describe('prepareQuery - catch-all clauses', () => {
 
   test('legacy narrow dataset: q targets per-field list, no _search', () => {
     const ds: any = fakeDataset({ schema: [{ key: 'a', type: 'string' }] })
-    const esQuery: any = prepareQuery(ds, { ...baseQuery, q: 'hello' })
-    const shoulds = esQuery.query.bool.must.flatMap((m: any) => m.bool?.should ?? [])
-    const fieldsLists = shoulds.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
+    const qBool: any = buildQClauses(ds, 'hello', undefined, undefined)
+    const fieldsLists = qBool.bool.should.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
     assert.ok(fieldsLists.some((f: string[]) => f.includes('a.text')))
     assert.ok(!JSON.stringify(fieldsLists).includes('_search'))
   })
