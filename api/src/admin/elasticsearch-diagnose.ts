@@ -64,6 +64,17 @@ export type LongTask = {
   }>
 }
 
+export type LongTaskBucket = {
+  items: LongTask[]
+  totalCount: number
+  truncated: boolean
+}
+
+export type LongTasksByCategory = {
+  search: LongTaskBucket
+  other: LongTaskBucket
+}
+
 export type UnassignedShard = {
   index: string
   shard: number
@@ -280,9 +291,11 @@ export const mapLongTasks = (
   tasksResponse: any,
   longTaskMs: number,
   indicesPrefix: string,
-  datasetsById: Map<string, DatasetRef>
-): LongTask[] => {
-  const out: LongTask[] = []
+  datasetsById: Map<string, DatasetRef>,
+  maxPerCategory: number
+): LongTasksByCategory => {
+  const search: LongTask[] = []
+  const other: LongTask[] = []
   for (const [, nodeBlock] of Object.entries<any>(tasksResponse?.nodes ?? {})) {
     const nodeName: string = nodeBlock.name
     for (const [taskId, task] of Object.entries<any>(nodeBlock.tasks ?? {})) {
@@ -290,10 +303,6 @@ export const mapLongTasks = (
       if (runningMs <= longTaskMs) continue
       const rawDesc: string = task.description ?? ''
       const description = rawDesc.length > 500 ? rawDesc.slice(0, 500) : rawDesc
-      const category = categorizeTaskAction(task.action)
-      const { sourceQuery, sourceQueryOversized } = category === 'search'
-        ? extractSourceQuery(rawDesc, MAX_SOURCE_QUERY_CHARS)
-        : { sourceQuery: null, sourceQueryOversized: false }
       const indexNames = extractIndexNames(rawDesc, indicesPrefix)
       const targets = indexNames.map(indexName => {
         const datasetId = parseIndexName(indexName, indicesPrefix)
@@ -305,7 +314,11 @@ export const mapLongTasks = (
           datasetOwner: ref?.owner ?? null
         }
       })
-      out.push({
+      const category = categorizeTaskAction(task.action)
+      const { sourceQuery, sourceQueryOversized } = category === 'search'
+        ? extractSourceQuery(rawDesc, MAX_SOURCE_QUERY_CHARS)
+        : { sourceQuery: null, sourceQueryOversized: false }
+      const item: LongTask = {
         id: taskId,
         node: nodeName,
         action: task.action,
@@ -315,11 +328,17 @@ export const mapLongTasks = (
         sourceQuery,
         sourceQueryOversized,
         targets
-      })
+      }
+      ;(category === 'search' ? search : other).push(item)
     }
   }
-  out.sort((a, b) => b.runningTimeMs - a.runningTimeMs)
-  return out
+  const sortDesc = (a: LongTask, b: LongTask) => b.runningTimeMs - a.runningTimeMs
+  search.sort(sortDesc)
+  other.sort(sortDesc)
+  return {
+    search: { items: search.slice(0, maxPerCategory), totalCount: search.length, truncated: search.length > maxPerCategory },
+    other: { items: other.slice(0, maxPerCategory), totalCount: other.length, truncated: other.length > maxPerCategory }
+  }
 }
 
 export const mapUnassignedShards = (

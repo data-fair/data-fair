@@ -165,15 +165,16 @@ test.describe('mapLongTasks', () => {
       }
     }
     const datasetsById = new Map([['ds-a', { id: 'ds-a', title: 'Dataset A', owner: { type: 'user', id: 'u', name: 'User' } }]])
-    const out = mapLongTasks(tasksResponse as any, 1000, indicesPrefix, datasetsById)
-    assert.equal(out.length, 1)
-    assert.equal(out[0].action, 'indices:data/read/search')
-    assert.equal(out[0].node, 'coordinator')
-    assert.equal(out[0].runningTimeMs, 5000)
-    assert.equal(out[0].targets.length, 1)
-    assert.equal(out[0].targets[0].indexName, idxA)
-    assert.equal(out[0].targets[0].datasetId, 'ds-a')
-    assert.equal(out[0].targets[0].datasetTitle, 'Dataset A')
+    const out = mapLongTasks(tasksResponse as any, 1000, indicesPrefix, datasetsById, 100)
+    assert.equal(out.search.items.length, 1)
+    assert.equal(out.search.totalCount, 1)
+    assert.equal(out.search.truncated, false)
+    assert.equal(out.other.items.length, 0)
+    const item = out.search.items[0]
+    assert.equal(item.action, 'indices:data/read/search')
+    assert.equal(item.node, 'coordinator')
+    assert.equal(item.runningTimeMs, 5000)
+    assert.equal(item.targets[0].datasetId, 'ds-a')
   })
 
   test('truncates very long descriptions to 500 chars', () => {
@@ -181,16 +182,17 @@ test.describe('mapLongTasks', () => {
     const tasksResponse = {
       nodes: { n: { name: 'n', tasks: { t: { action: 'a', running_time_in_nanos: 2_000_000_000, description: longDesc } } } }
     }
-    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map())
-    assert.equal(out[0].description.length, 500)
+    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map(), 100)
+    // action 'a' falls into the 'other' bucket
+    assert.equal(out.other.items[0].description.length, 500)
   })
 
   test('returns empty targets when no index parses out of description', () => {
     const tasksResponse = {
       nodes: { n: { name: 'n', tasks: { t: { action: 'a', running_time_in_nanos: 2_000_000_000, description: 'no index here' } } } }
     }
-    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map())
-    assert.deepEqual(out[0].targets, [])
+    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map(), 100)
+    assert.deepEqual(out.other.items[0].targets, [])
   })
 
   test('classifies tasks by action prefix', () => {
@@ -212,17 +214,46 @@ test.describe('mapLongTasks', () => {
         }
       }
     }
-    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map())
-    const byId = Object.fromEntries(out.map(t => [t.id, t.category]))
-    assert.equal(byId.s, 'search')
-    assert.equal(byId.sp, 'search')
-    assert.equal(byId.ms, 'search')
-    assert.equal(byId.sc, 'search')
-    assert.equal(byId.w, 'write')
-    assert.equal(byId.a, 'admin')
-    assert.equal(byId.c, 'admin')
-    assert.equal(byId.i, 'admin')
-    assert.equal(byId.o, 'other')
+    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map(), 100)
+    const collect = (bucket: typeof out.search): Record<string, string> =>
+      Object.fromEntries(bucket.items.map(t => [t.id, t.category]))
+    const searchCat = collect(out.search)
+    const otherCat = collect(out.other)
+    assert.equal(searchCat.s, 'search')
+    assert.equal(searchCat.sp, 'search')
+    assert.equal(searchCat.ms, 'search')
+    assert.equal(searchCat.sc, 'search')
+    assert.equal(otherCat.w, 'write')
+    assert.equal(otherCat.a, 'admin')
+    assert.equal(otherCat.c, 'admin')
+    assert.equal(otherCat.i, 'admin')
+    assert.equal(otherCat.o, 'other')
+  })
+
+  test('caps each bucket independently and reports truncation', () => {
+    const mk = (i: number, action: string) => ([
+      `t${i}`,
+      { action, running_time_in_nanos: (10_000_000_000 - i) * 1_000_000, description: '' }
+    ])
+    const searchTasks = Array.from({ length: 5 }, (_, i) => mk(i, 'indices:data/read/search'))
+    const otherTasks = Array.from({ length: 3 }, (_, i) => mk(100 + i, 'indices:admin/refresh'))
+    const tasksResponse = {
+      nodes: {
+        n: {
+          name: 'n',
+          tasks: Object.fromEntries([...searchTasks, ...otherTasks])
+        }
+      }
+    }
+    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map(), 2)
+    assert.equal(out.search.items.length, 2)
+    assert.equal(out.search.totalCount, 5)
+    assert.equal(out.search.truncated, true)
+    assert.equal(out.other.items.length, 2)
+    assert.equal(out.other.totalCount, 3)
+    assert.equal(out.other.truncated, true)
+    // sorted by runningTimeMs desc within each bucket
+    assert.ok(out.search.items[0].runningTimeMs >= out.search.items[1].runningTimeMs)
   })
 })
 

@@ -94,6 +94,7 @@ export const getElasticsearchDiagnose = async () => {
   const errors: SectionError[] = []
   const indicesPrefix: string = config.indicesPrefix
   const longTaskMs: number = config.elasticsearch.diagnose.longTaskMs
+  const maxLongTasksPerCategory: number = config.elasticsearch.diagnose.maxLongTasksPerCategory
   const explainCap: number = config.elasticsearch.diagnose.unassignedExplainCap
 
   const [
@@ -162,7 +163,7 @@ export const getElasticsearchDiagnose = async () => {
   return {
     cluster: health ? mapClusterHealth(health, pendingTasks as any[]) : null,
     nodes: mapNodes(nodesStats as any, watermarks as any, countShardsByNode(catShards as any)),
-    longTasks: mapLongTasks(tasksResponse as any, longTaskMs, indicesPrefix, datasetsById),
+    longTasks: mapLongTasks(tasksResponse as any, longTaskMs, indicesPrefix, datasetsById, maxLongTasksPerCategory),
     unassignedShards: mapUnassignedShards(catShards as any[], explainByKey, indicesPrefix, datasetsById),
     indicesSummary: mapIndicesSummary(catIndices as any[], indicesPrefix, nbDatasetsInMongo as number, mongoIdsPresent),
     datasetsWithEsWarnings,
