@@ -180,12 +180,14 @@
         "acceptYellowStatus": { "type": "boolean" },
         "diagnose": {
           "type": "object",
-          "required": ["segmentsPerShardWarn", "deletedRatioWarn", "mappingFieldsLimitWarn", "minShardSize"],
+          "required": ["segmentsPerShardWarn", "deletedRatioWarn", "mappingFieldsLimitWarn", "minShardSize", "longTaskMs", "unassignedExplainCap"],
           "properties": {
             "segmentsPerShardWarn": { "type": "number" },
             "deletedRatioWarn": { "type": "number" },
             "mappingFieldsLimitWarn": { "type": "number" },
-            "minShardSize": { "type": "number" }
+            "minShardSize": { "type": "number" },
+            "longTaskMs": { "type": "number" },
+            "unassignedExplainCap": { "type": "number" }
           }
         }
       }
