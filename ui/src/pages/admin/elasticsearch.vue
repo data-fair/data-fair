@@ -384,7 +384,7 @@
         :headers="unassignedHeaders"
         :items="unassignedShardRows"
         item-value="rowKey"
-        :items-per-page="-1"
+        :items-per-page="25"
         density="compact"
         show-expand
       >
