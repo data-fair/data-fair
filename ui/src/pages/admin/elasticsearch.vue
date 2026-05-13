@@ -172,29 +172,141 @@
       </v-data-table>
     </v-card>
 
-    <!-- Long-running tasks -->
+    <!-- Long-running tasks: empty state when both buckets are empty -->
     <v-card
+      v-if="data && !data.longTasks.search.items.length && !data.longTasks.other.items.length"
       variant="flat"
       class="mb-4"
     >
       <v-card-title class="text-subtitle-1">
         {{ t('longTasks.title') }}
       </v-card-title>
-      <v-card-text
-        v-if="!data?.longTasks?.length"
-        class="text-medium-emphasis"
-      >
+      <v-card-text class="text-medium-emphasis">
         {{ t('longTasks.none') }}
       </v-card-text>
+    </v-card>
+
+    <!-- Long-running search queries -->
+    <v-card
+      v-if="data?.longTasks?.search?.items?.length"
+      variant="flat"
+      class="mb-4"
+    >
+      <v-card-title class="text-subtitle-1">
+        {{ t('longTasks.searchTitle') }}
+      </v-card-title>
+      <v-alert
+        v-if="data.longTasks.search.truncated"
+        type="warning"
+        variant="tonal"
+        class="mx-4 mb-2"
+      >
+        {{ t('longTasks.truncated', { shown: data.longTasks.search.items.length, total: data.longTasks.search.totalCount }) }}
+      </v-alert>
       <v-data-table
-        v-else
-        :headers="longTaskHeaders"
-        :items="data.longTasks"
+        :headers="searchTaskHeaders"
+        :items="data.longTasks.search.items"
         item-value="id"
-        :items-per-page="-1"
+        :items-per-page="25"
         density="compact"
         show-expand
       >
+        <template #item.runningTimeMs="{ item }">
+          {{ Math.round(item.runningTimeMs) }} ms
+        </template>
+        <template #item.primary="{ item }">
+          <template v-if="item.targets[0]?.datasetId">
+            <a
+              :href="`/data-fair/dataset/${item.targets[0].datasetId}`"
+              target="_top"
+              class="simple-link"
+            >{{ item.targets[0].datasetTitle || item.targets[0].datasetId }}</a>
+          </template>
+          <template v-else-if="item.targets[0]">
+            <code>{{ item.targets[0].indexName }}</code>
+          </template>
+          <span
+            v-else
+            class="text-medium-emphasis"
+          >—</span>
+        </template>
+        <template #expanded-row="{ columns, item }">
+          <tr>
+            <td :colspan="columns.length">
+              <div
+                v-if="item.sourceQuery"
+                class="my-2"
+              >
+                <strong>{{ t('longTasks.sourceQuery') }}:</strong>
+                <pre class="text-caption">{{ JSON.stringify(item.sourceQuery, null, 2) }}</pre>
+              </div>
+              <div
+                v-else-if="item.sourceQueryOversized"
+                class="my-2 text-medium-emphasis"
+              >
+                {{ t('longTasks.sourceQueryOversized') }}
+                <pre class="text-caption mt-1">{{ item.description }}</pre>
+              </div>
+              <pre
+                v-else
+                class="text-caption"
+              >{{ item.description }}</pre>
+              <div v-if="item.targets.length > 1">
+                <strong>{{ t('longTasks.otherTargets') }}:</strong>
+                <ul>
+                  <li
+                    v-for="(tgt, i) in item.targets.slice(1)"
+                    :key="i"
+                  >
+                    <a
+                      v-if="tgt.datasetId"
+                      :href="`/data-fair/dataset/${tgt.datasetId}`"
+                      target="_top"
+                      class="simple-link"
+                    >{{ tgt.datasetTitle || tgt.datasetId }}</a>
+                    <code v-else>{{ tgt.indexName }}</code>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </v-data-table>
+    </v-card>
+
+    <!-- Other long-running tasks -->
+    <v-card
+      v-if="data?.longTasks?.other?.items?.length"
+      variant="flat"
+      class="mb-4"
+    >
+      <v-card-title class="text-subtitle-1">
+        {{ t('longTasks.otherTitle') }}
+      </v-card-title>
+      <v-alert
+        v-if="data.longTasks.other.truncated"
+        type="warning"
+        variant="tonal"
+        class="mx-4 mb-2"
+      >
+        {{ t('longTasks.truncated', { shown: data.longTasks.other.items.length, total: data.longTasks.other.totalCount }) }}
+      </v-alert>
+      <v-data-table
+        :headers="otherTaskHeaders"
+        :items="data.longTasks.other.items"
+        item-value="id"
+        :items-per-page="25"
+        density="compact"
+        show-expand
+      >
+        <template #item.category="{ item }">
+          <v-chip
+            :color="categoryColor(item.category)"
+            size="x-small"
+          >
+            {{ item.category }}
+          </v-chip>
+        </template>
         <template #item.runningTimeMs="{ item }">
           {{ Math.round(item.runningTimeMs) }} ms
         </template>
@@ -449,8 +561,19 @@ fr:
     indexingPressure: Pression d'indexation
   longTasks:
     title: Tâches longues
+    searchTitle: Requêtes de recherche longues
+    otherTitle: Autres tâches longues
     none: Aucune tâche au-delà du seuil
     otherTargets: Autres cibles
+    sourceQuery: Requête source
+    sourceQueryOversized: Requête trop volumineuse pour être affichée — description brute ci-dessous
+    truncated: 'Affichage des {shown} premières sur {total} — le cluster est peut-être saturé (tâches en attente, rejets de pool de threads, requêtes bloquées).'
+    headers:
+      running: durée
+      target: cible
+      node: nœud
+      category: catégorie
+      action: action
   unassignedShards:
     title: Shards non assignés
     none: Aucun shard non assigné
@@ -487,8 +610,19 @@ en:
     indexingPressure: Indexing pressure
   longTasks:
     title: Long-running tasks
-    none: No task above threshold
+    searchTitle: Long-running search queries
+    otherTitle: Other long-running tasks
+    none: No long-running tasks above the configured threshold
     otherTargets: Other targets
+    sourceQuery: Source query
+    sourceQueryOversized: Query too large to display inline — raw description below
+    truncated: 'Showing top {shown} of {total} — cluster may be saturated (pending tasks, thread-pool rejections, stuck queries).'
+    headers:
+      running: running
+      target: target
+      node: node
+      category: category
+      action: action
   unassignedShards:
     title: Unassigned shards
     none: No unassigned shards
@@ -515,10 +649,15 @@ const { t, locale } = useI18n()
 const breadcrumbs = useBreadcrumbs()
 breadcrumbs.receive({ breadcrumbs: [{ text: t('title') }] })
 
+type LongTaskBucket = {
+  items: any[]
+  totalCount: number
+  truncated: boolean
+}
 type DiagnoseResponse = {
   cluster: any | null
   nodes: any[]
-  longTasks: any[]
+  longTasks: { search: LongTaskBucket, other: LongTaskBucket }
   unassignedShards: any[]
   indicesSummary: any | null
   datasetsWithEsWarnings: { count: number, results: any[] }
@@ -575,13 +714,24 @@ const nodeHeaders = [
   { title: '', key: 'data-table-expand' }
 ]
 
-const longTaskHeaders = [
-  { title: 'action', key: 'action' },
-  { title: 'running', key: 'runningTimeMs' },
-  { title: 'node', key: 'node' },
-  { title: 'target', key: 'primary' },
+const searchTaskHeaders = [
+  { title: t('longTasks.headers.running'), key: 'runningTimeMs' },
+  { title: t('longTasks.headers.target'), key: 'primary' },
+  { title: t('longTasks.headers.node'), key: 'node' },
   { title: '', key: 'data-table-expand' }
 ]
+
+const otherTaskHeaders = [
+  { title: t('longTasks.headers.category'), key: 'category' },
+  { title: t('longTasks.headers.action'), key: 'action' },
+  { title: t('longTasks.headers.running'), key: 'runningTimeMs' },
+  { title: t('longTasks.headers.target'), key: 'primary' },
+  { title: t('longTasks.headers.node'), key: 'node' },
+  { title: '', key: 'data-table-expand' }
+]
+
+const categoryColor = (c: string): string | undefined =>
+  c === 'write' ? 'warning' : c === 'admin' ? 'info' : undefined
 
 const unassignedShardRows = computed(() =>
   (data.value?.unassignedShards ?? []).map(s => ({
