@@ -16,6 +16,7 @@ import * as journals from '../misc/utils/journals.ts'
 import axios from '../misc/utils/axios.js'
 import * as esUtils from './es/index.ts'
 import { initDatasetIndex, switchAlias, datasetInfos } from '../datasets/es/manage-indices.js'
+import { computeRealtimeWarnings } from './es/diagnose-warnings.ts'
 import * as uploadUtils from './utils/upload.ts'
 import datasetAPIDocs from '../../contract/dataset-api-docs.ts'
 import privateDatasetAPIDocs from '../../contract/dataset-private-api-docs.ts'
@@ -1517,7 +1518,8 @@ router.get('/:datasetId/_diagnose', readDataset({ fillDescendants: true, acceptI
     await mongo.db.collection('locks').findOne({ _id: `datasets:${req.dataset.id}` }),
     await mongo.db.collection('locks').findOne({ _id: `datasets:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })
   ]
-  res.json({ filesInfos, esInfos, locks })
+  const warnings = computeRealtimeWarnings(req.dataset, esInfos, config.elasticsearch)
+  res.json({ filesInfos, esInfos, locks, warnings })
 })
 
 // Special admin route to force reindexing a dataset

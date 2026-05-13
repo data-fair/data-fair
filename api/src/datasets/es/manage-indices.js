@@ -4,6 +4,7 @@ import es from '#es'
 import * as datasetUtils from '../utils/index.js'
 import { aliasName } from './commons.js'
 import { buildIndexMappings } from './operations.ts'
+import { computeFinalizeWarnings, pickPrimaryCode } from './diagnose-warnings.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
@@ -268,11 +269,21 @@ const indexBase = (dataset) => {
 export const datasetInfos = async (dataset) => {
   if (dataset.isVirtual) return {}
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
-  const indices = await es.client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
+  const indices = await es.client.cat.indices({
+    index: `${indexPrefix(dataset)}-*`,
+    format: 'json',
+    bytes: 'b',
+    h: 'health,status,index,uuid,pri,rep,docs.count,docs.deleted,store.size,pri.store.size,segments.count'
+  })
   for (const index of indices) {
     index.definition = (await es.client.indices.get({ index: index.index }))[index.index]
   }
-  const alias = await es.client.indices.getAlias({ index: aliasName(dataset) })
+  let alias
+  try {
+    alias = await es.client.indices.getAlias({ index: aliasName(dataset) })
+  } catch (err) {
+    if (err.statusCode !== 404) throw err
+  }
   const aliasedIndexName = Object.keys(alias ?? {})[0]
   const index = indices.find(index => index.index === aliasedIndexName)
   return {
@@ -284,16 +295,9 @@ export const datasetInfos = async (dataset) => {
   }
 }
 
+/** @returns {Promise<'MissingIndex'|'IndexHealthRed'|'MissingIndexSettings'|'ShardingRecommended'|'MissingSearchOnWide'|'MappingNearLimit'|'ReplicaDrift'|null>} */
 export const datasetWarning = async (dataset) => {
   if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') return null
   const esInfos = await datasetInfos(dataset)
-  if (!esInfos.index) return 'MissingIndex'
-  else if (esInfos.index.health === 'red') return 'IndexHealthRed'
-  else if (!esInfos.index.definition?.settings?.index?.number_of_shards) return 'MissingIndexSettings'
-  else {
-    const nbShards = Number(esInfos.index.definition.settings.index.number_of_shards)
-    const recommendedNbShards = getNbShards(dataset)
-    if (recommendedNbShards !== nbShards) return 'ShardingRecommended'
-  }
-  return null
+  return /** @type {any} */ (pickPrimaryCode(computeFinalizeWarnings(dataset, esInfos, config.elasticsearch)))
 }

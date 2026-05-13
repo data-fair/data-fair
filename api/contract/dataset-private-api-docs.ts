@@ -657,7 +657,29 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             200: {
               description: 'Informations techniques de diagnostic.',
               content: {
-                'application/json': { schema: { type: 'object' } }
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      filesInfos: { type: 'array' },
+                      esInfos: { type: 'object' },
+                      locks: { type: 'array' },
+                      warnings: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          required: ['code', 'severity', 'message'],
+                          properties: {
+                            code: { type: 'string' },
+                            severity: { type: 'string', enum: ['info', 'warning', 'error'] },
+                            message: { type: 'string' },
+                            details: { type: 'object' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             },
             ...readErrorResponses

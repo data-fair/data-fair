@@ -325,6 +325,37 @@
       </template>
     </df-section-tabs>
 
+    <!-- Diagnose section (superadmin only) -->
+    <df-section-tabs
+      v-if="sections.diagnose"
+      id="diagnose"
+      v-model="diagnoseTab"
+      :svg="dataMaintenanceSvg"
+      svg-no-margin
+      color="admin"
+      :title="sections.diagnose.title"
+      :subtitle="sections.diagnose.subtitle"
+      :tabs="sections.diagnose.tabs"
+    >
+      <template #actions>
+        <v-btn
+          :prepend-icon="mdiRefresh"
+          :loading="diagnoseRef?.loading"
+          size="small"
+          variant="text"
+          @click="diagnoseRef?.refresh()"
+        >
+          {{ t('refresh') }}
+        </v-btn>
+      </template>
+      <template #content="{ tab }">
+        <dataset-diagnose
+          ref="diagnoseRef"
+          :tab="tab"
+        />
+      </template>
+    </df-section-tabs>
+
     <!-- Danger zone section -->
     <df-section-tabs
       v-if="sections.dangerZone"
@@ -543,6 +574,12 @@ fr:
   traceability: Traçabilité
   notifications: Notifications
   webhooks: Webhooks
+  diagnose: Diagnostic
+  diagnoseSubtitle: Informations techniques pour les administrateurs.
+  diagnoseTabEs: Elasticsearch
+  diagnoseTabLocks: Verrous
+  diagnoseTabRaw: JSON brut
+  refresh: Rafraîchir
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer ce jeu de données à un autre propriétaire.
@@ -596,6 +633,12 @@ en:
   traceability: Traceability
   notifications: Notifications
   webhooks: Webhooks
+  diagnose: Diagnose
+  diagnoseSubtitle: Technical information for superadmins.
+  diagnoseTabEs: Elasticsearch
+  diagnoseTabLocks: Locks
+  diagnoseTabRaw: Raw JSON
+  refresh: Refresh
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this dataset to another owner.
@@ -620,10 +663,11 @@ import metadataSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
+import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeTags, mdiContentCopy, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -645,6 +689,8 @@ const route = useRoute<'/dataset/[id]/'>()
 const router = useRouter()
 const { sendUiNotif } = useUiNotif()
 const { accountRole } = useSessionAuthenticated()
+const session = useSession()
+const adminMode = computed(() => !!session.state.user?.adminMode)
 const { canContribDep } = usePermissions()
 const { height: windowHeight } = useWindowSize()
 
@@ -654,6 +700,7 @@ const explorationTab = ref('table')
 const activityTab = ref('journal')
 const structureTab = ref('schema')
 const shareTab = ref('')
+const diagnoseTab = ref('elasticsearch')
 const catalogPublicationsKey = ref(0)
 watch(shareTab, (tab) => {
   if (tab === 'catalog-publications') catalogPublicationsKey.value++
@@ -795,6 +842,7 @@ const onRefreshExtension = async (extension: any) => {
 const showOwnerDialog = ref(false)
 const showDeleteDialog = ref(false)
 const showDeleteAllLinesDialog = ref(false)
+const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('diagnoseRef')
 
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
@@ -1027,6 +1075,19 @@ const sections = computedDeepDiff(() => {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
     result.activity = { title: t('tracking'), tabs: activityTabs }
+  }
+
+  // Diagnose section (superadmin only)
+  if (adminMode.value) {
+    result.diagnose = {
+      title: t('diagnose'),
+      subtitle: t('diagnoseSubtitle'),
+      tabs: [
+        { key: 'elasticsearch', title: t('diagnoseTabEs'), icon: mdiDatabaseSearch },
+        { key: 'locks', title: t('diagnoseTabLocks'), icon: mdiLock },
+        { key: 'rawJson', title: t('diagnoseTabRaw'), icon: mdiCodeJson }
+      ]
+    }
   }
 
   // Danger zone section

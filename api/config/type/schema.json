@@ -162,7 +162,7 @@
     },
     "elasticsearch": {
       "type": "object",
-      "required": ["host", "auth", "nodes", "options", "ca", "defaultAnalyzer", "maxBulkLines", "maxBulkChars", "maxShardSize", "nbReplicas", "maxPageSize", "singleLineOpRefresh", "searchTimeout", "acceptYellowStatus"],
+      "required": ["host", "auth", "nodes", "options", "ca", "defaultAnalyzer", "maxBulkLines", "maxBulkChars", "maxShardSize", "nbReplicas", "maxPageSize", "singleLineOpRefresh", "searchTimeout", "acceptYellowStatus", "diagnose"],
       "properties": {
         "host": { "type": "string" },
         "auth": { "type": ["object", "null"] },
@@ -177,7 +177,20 @@
         "maxPageSize": { "type": "number" },
         "singleLineOpRefresh": { "type": "string" },
         "searchTimeout": { "type": "string" },
-        "acceptYellowStatus": { "type": "boolean" }
+        "acceptYellowStatus": { "type": "boolean" },
+        "diagnose": {
+          "type": "object",
+          "required": ["segmentsPerShardWarn", "deletedRatioWarn", "mappingFieldsLimitWarn", "minShardSize", "longTaskMs", "unassignedExplainCap", "maxLongTasksPerCategory"],
+          "properties": {
+            "segmentsPerShardWarn": { "type": "number" },
+            "deletedRatioWarn": { "type": "number" },
+            "mappingFieldsLimitWarn": { "type": "number" },
+            "minShardSize": { "type": "number" },
+            "longTaskMs": { "type": "number" },
+            "unassignedExplainCap": { "type": "number" },
+            "maxLongTasksPerCategory": { "type": "number" }
+          }
+        }
       }
     },
     "indicesPrefix": {

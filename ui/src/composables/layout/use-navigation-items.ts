@@ -4,6 +4,7 @@ import { usePermissions } from '~/composables/use-permissions'
 import { $uiConfig, $sdUrl } from '~/context'
 import {
   mdiDatabase,
+  mdiDatabaseSearchOutline,
   mdiImageMultiple,
   mdiCog,
   mdiTransitConnection,
@@ -167,6 +168,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
         { to: '/remote-services', icon: mdiCloud, title: t('services') },
         { to: '/admin/owners', icon: mdiBriefcase, title: t('owners') },
         { to: '/admin/errors', icon: mdiAlert, title: t('errors') },
+        { to: '/admin/elasticsearch', icon: mdiDatabaseSearchOutline, title: t('elasticsearch') },
       ]
       if ($uiConfig.agentsIntegration) {
         admin.push({ to: '/admin/agents', icon: mdiRobotOutline, title: t('agents') })

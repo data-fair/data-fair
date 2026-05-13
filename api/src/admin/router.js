@@ -1,7 +1,8 @@
 import express from 'express'
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
-import { getStatus } from './service.ts'
+import { getStatus, listDatasetsWithEsWarnings } from './service.ts'
+import { getElasticsearchDiagnose } from './elasticsearch-diagnose-service.ts'
 import * as findUtils from '../misc/utils/find.js'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
@@ -56,20 +57,16 @@ router.get('/datasets-errors', async (req, res, next) => {
 })
 
 router.get('/datasets-es-warnings', async (req, res, next) => {
-  const datasets = mongo.db.collection('datasets')
-  const query = { esWarning: { $exists: true, $ne: null } }
   const [skip, size] = findUtils.pagination(req.query)
+  res.send(await listDatasetsWithEsWarnings(size, skip))
+})
 
-  const resultsPromise = datasets
-    .find(query)
-    .skip(skip)
-    .limit(size)
-    .project({ _id: 0, id: 1, title: 1, owner: 1, esWarning: 1, status: 1 })
-    .toArray()
-
-  const [count, results] = await Promise.all([datasets.countDocuments(query), resultsPromise])
-
-  res.send({ count, results })
+router.get('/elasticsearch/diagnose', async (req, res, next) => {
+  try {
+    res.send(await getElasticsearchDiagnose())
+  } catch (err) {
+    next(err)
+  }
 })
 
 router.get('/applications-errors', async (req, res, next) => {

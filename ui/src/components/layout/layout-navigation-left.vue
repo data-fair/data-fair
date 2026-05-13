@@ -141,6 +141,7 @@ fr:
   serviceInfo: Informations du service
   owners: Propriétaires
   errors: Erreurs
+  elasticsearch: Elasticsearch
   baseApplications: Modèles d'application
   accountsManagement: Gestion des comptes
   apiDoc: Utiliser l'API
@@ -175,6 +176,7 @@ en:
   serviceInfo: Service information
   owners: Owners
   errors: Errors
+  elasticsearch: Elasticsearch
   baseApplications: Application models
   accountsManagement: Accounts management
   apiDoc: Use the API

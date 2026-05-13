@@ -823,7 +823,10 @@ const datasetProperties = {
   },
   esWarning: {
     type: ['string', 'null'],
-    enum: ['MissingIndex', 'IndexHealthRed', 'MissingIndexSettings', 'ShardingRecommended']
+    enum: [
+      'MissingIndex', 'IndexHealthRed', 'MissingIndexSettings', 'ShardingRecommended',
+      'MissingSearchOnWide', 'MappingNearLimit', 'ReplicaDrift'
+    ]
   },
   draftReason: {
     type: 'object',

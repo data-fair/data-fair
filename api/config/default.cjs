@@ -60,7 +60,16 @@ module.exports = {
     maxPageSize: 10000,
     singleLineOpRefresh: 'wait_for',
     searchTimeout: '45s', // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value
-    acceptYellowStatus: false // change to "true" to tolerate a single node instance
+    acceptYellowStatus: false, // change to "true" to tolerate a single node instance
+    diagnose: {
+      segmentsPerShardWarn: 30,
+      deletedRatioWarn: 0.2,
+      mappingFieldsLimitWarn: 0.8,
+      minShardSize: 1000000000, // 1go
+      longTaskMs: 1000, // tasks running longer than this are surfaced on the admin ES page
+      unassignedExplainCap: 20, // cap calls to cluster.allocationExplain per request
+      maxLongTasksPerCategory: 100 // cap per-bucket long tasks returned by the diagnose endpoint (search / other)
+    }
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {
