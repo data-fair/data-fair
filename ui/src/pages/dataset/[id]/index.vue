@@ -493,7 +493,10 @@
         class="py-0"
         bg-color="background"
       >
-        <dataset-task-progress :task-progress="taskProgress" />
+        <dataset-task-progress
+          :task-progress="taskProgress"
+          compact
+        />
       </v-list>
       <df-toc :sections="tocSections" />
     </df-navigation-right>

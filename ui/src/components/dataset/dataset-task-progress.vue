@@ -3,14 +3,23 @@
     <v-list-item-title class="text-body-medium">
       {{ t('activity') }} - {{ t('tasks.' + taskProgress.task) }}
     </v-list-item-title>
-    <v-progress-linear
-      :model-value="taskProgress.progress === -1 ? undefined : taskProgress.progress"
-      :indeterminate="taskProgress.progress === -1 && !taskProgress.error"
-      :color="taskProgress.error ? 'error' : 'primary'"
-      class="mt-1"
-      rounded
-      height="6"
-    />
+    <div class="d-flex align-center mt-1">
+      <v-progress-linear
+        :model-value="taskProgress.progress === -1 ? undefined : taskProgress.progress"
+        :indeterminate="taskProgress.progress === -1 && !taskProgress.error"
+        :color="taskProgress.error ? 'error' : 'primary'"
+        :title="compact && taskProgress.progress !== -1 ? `${taskProgress.progress}%` : undefined"
+        class="flex-grow-1"
+        rounded
+        height="6"
+      />
+      <span
+        v-if="!compact && taskProgress.progress !== -1"
+        class="text-caption text-medium-emphasis ml-2"
+      >
+        {{ taskProgress.progress }}%
+      </span>
+    </div>
   </v-list-item>
 </template>
 
@@ -46,6 +55,7 @@ import { type TaskProgress } from '~/composables/dataset/dataset-store'
 
 defineProps<{
   taskProgress?: TaskProgress
+  compact?: boolean
 }>()
 
 const { t } = useI18n()

@@ -23,8 +23,8 @@ export default (datasetId: string, task: string, nbSteps?: number, progressCallb
       if (progressCallback && progress > lastProgress) {
         progressCallback(progress)
       }
-      // send message on websocket at most once per second
-      if ((time - lastTime) < 1000) return
+      // send message on websocket at least every 250ms or on every percent change
+      if ((time - lastTime) < 250) return
       // send message on websocket at least every 30s or on every percent change
       if (progress > lastProgress || (time - lastTime) > 30000) {
         lastProgress = progress
