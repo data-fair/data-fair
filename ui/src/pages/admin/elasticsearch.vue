@@ -258,8 +258,8 @@
       <v-data-table
         v-else
         :headers="unassignedHeaders"
-        :items="data.unassignedShards"
-        item-value="index"
+        :items="unassignedShardRows"
+        item-value="rowKey"
         :items-per-page="-1"
         density="compact"
         show-expand
@@ -435,6 +435,13 @@ fr:
   partialErrors: Certaines sections n'ont pas pu être chargées
   cluster:
     title: Cluster
+    dataNodes: Nœuds data
+    activeShards: Shards actifs
+    unassigned: Non assignés
+    relocating: En déplacement
+    initializing: En initialisation
+    pendingTasks: Tâches en attente
+    pendingTasksAge: 'max age {age} ms'
   nodes:
     title: Nœuds
     breakers: Disjoncteurs déclenchés
@@ -466,6 +473,13 @@ en:
   partialErrors: Some sections failed to load
   cluster:
     title: Cluster
+    dataNodes: Data nodes
+    activeShards: Active shards
+    unassigned: Unassigned
+    relocating: Relocating
+    initializing: Initializing
+    pendingTasks: Pending tasks
+    pendingTasksAge: 'max age {age} ms'
   nodes:
     title: Nodes
     breakers: Tripped breakers
@@ -535,17 +549,18 @@ const numOrDash = (v: number | null) => v == null ? '—' : (Math.round(v * 100)
 
 const trippedBreakers = (n: any) => Object.entries(n.breakers ?? {})
   .map(([name, b]: any) => ({ name, tripped: (b as any).tripped }))
+  .filter(b => b.tripped > 0)
 
 const clusterKpis = computed(() => {
   const c = data.value?.cluster
   if (!c) return []
   return [
-    { label: 'data nodes', value: `${c.numberOfDataNodes} / ${c.numberOfNodes}` },
-    { label: 'active shards', value: c.activeShards },
-    { label: 'unassigned', value: c.unassignedShards },
-    { label: 'relocating', value: c.relocatingShards },
-    { label: 'initializing', value: c.initializingShards },
-    { label: 'pending tasks', value: `${c.pendingTasks.count} (max age ${c.pendingTasks.maxAgeMs ?? 0} ms)` }
+    { label: t('cluster.dataNodes'), value: `${c.numberOfDataNodes} / ${c.numberOfNodes}` },
+    { label: t('cluster.activeShards'), value: c.activeShards },
+    { label: t('cluster.unassigned'), value: c.unassignedShards },
+    { label: t('cluster.relocating'), value: c.relocatingShards },
+    { label: t('cluster.initializing'), value: c.initializingShards },
+    { label: t('cluster.pendingTasks'), value: `${c.pendingTasks.count} (${t('cluster.pendingTasksAge', { age: c.pendingTasks.maxAgeMs ?? 0 })})` }
   ]
 })
 
@@ -567,6 +582,13 @@ const longTaskHeaders = [
   { title: 'target', key: 'primary' },
   { title: '', key: 'data-table-expand' }
 ]
+
+const unassignedShardRows = computed(() =>
+  (data.value?.unassignedShards ?? []).map(s => ({
+    ...s,
+    rowKey: `${s.index}#${s.shard}#${s.primary ? 'p' : 'r'}`
+  }))
+)
 
 const unassignedHeaders = [
   { title: 'index / dataset', key: 'index' },
