@@ -2,7 +2,7 @@ import config from '#config'
 import es from '#es'
 import mongo from '#mongo'
 import memoize from 'memoizee'
-import { parseIndexName } from '../datasets/es/index-name.js'
+import { parseIndexName } from '../datasets/es/index-name.ts'
 import {
   mapClusterHealth,
   mapNodes,

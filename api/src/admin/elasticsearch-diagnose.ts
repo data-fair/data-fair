@@ -1,6 +1,6 @@
 // Pure shape mappers + small async wrapper. No ES / Mongo / node-config imports here.
 
-import { parseIndexName } from '../datasets/es/index-name.js'
+import { parseIndexName } from '../datasets/es/index-name.ts'
 
 export type Watermark = 'ok' | 'low' | 'high' | 'flood' | null
 

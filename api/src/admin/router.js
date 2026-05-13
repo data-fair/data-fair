@@ -2,6 +2,7 @@ import express from 'express'
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import { getStatus, listDatasetsWithEsWarnings } from './service.ts'
+import { getElasticsearchDiagnose } from './elasticsearch-diagnose-service.ts'
 import * as findUtils from '../misc/utils/find.js'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
@@ -58,6 +59,14 @@ router.get('/datasets-errors', async (req, res, next) => {
 router.get('/datasets-es-warnings', async (req, res, next) => {
   const [skip, size] = findUtils.pagination(req.query)
   res.send(await listDatasetsWithEsWarnings(size, skip))
+})
+
+router.get('/elasticsearch/diagnose', async (req, res, next) => {
+  try {
+    res.send(await getElasticsearchDiagnose())
+  } catch (err) {
+    next(err)
+  }
 })
 
 router.get('/applications-errors', async (req, res, next) => {
