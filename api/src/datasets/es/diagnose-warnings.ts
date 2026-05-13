@@ -2,6 +2,8 @@
 // Inputs: a dataset object, the esInfos snapshot returned by manage-indices.datasetInfos(),
 // and the relevant elasticsearch config subtree. Outputs: a Warning[].
 
+import { hasManyQSearchFields } from './operations.ts'
+
 export type WarningSeverity = 'info' | 'warning' | 'error'
 
 export type WarningCode =
@@ -107,6 +109,15 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
       severity: 'warning',
       message: `current shard count ${currentNbShards} differs from recommended ${recommendedNbShards}`,
       details: { currentNbShards, recommendedNbShards }
+    })
+  }
+
+  const properties = esInfos.index.definition?.mappings?.properties ?? {}
+  if (hasManyQSearchFields(dataset.schema) && !properties._search) {
+    warnings.push({
+      code: 'MissingSearchOnWide',
+      severity: 'warning',
+      message: 'wide dataset is missing the _search catch-all field; reindex to apply the optimization'
     })
   }
 

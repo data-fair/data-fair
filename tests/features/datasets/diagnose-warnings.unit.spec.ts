@@ -101,3 +101,41 @@ test.describe('existing finalize-time codes', () => {
     assert.equal(sr!.details!.recommendedNbShards, 5)
   })
 })
+
+test.describe('MissingSearchOnWide', () => {
+  // hasManyQSearchFields counts analyzed inner sub-fields (.text + .text_standard);
+  // each plain string column contributes 2 inner fields. Threshold is 30 -> need ≥ 16 columns.
+  const wideSchema = Array.from({ length: 20 }, (_, i) => ({ key: `c${i}`, type: 'string' }))
+  const baseDataset = { schema: wideSchema, storage: { indexed: { size: 1_000_000 } } }
+  const goodSettings = { settings: { index: { number_of_shards: '1', number_of_replicas: '1' } } }
+
+  test('fires when wide dataset mapping lacks _search', () => {
+    const esInfos = {
+      indices: [],
+      index: { health: 'green', definition: { ...goodSettings, mappings: { properties: { c0: {} } } } }
+    }
+    const w = computeFinalizeWarnings(baseDataset, esInfos, baseEsConfig)
+    const item = w.find(x => x.code === 'MissingSearchOnWide')
+    assert.ok(item)
+    assert.equal(item!.severity, 'warning')
+  })
+
+  test('does not fire when _search is present', () => {
+    const esInfos = {
+      indices: [],
+      index: { health: 'green', definition: { ...goodSettings, mappings: { properties: { c0: {}, _search: { type: 'text' } } } } }
+    }
+    const w = computeFinalizeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'MissingSearchOnWide'), undefined)
+  })
+
+  test('does not fire when schema is narrow', () => {
+    const narrow = { schema: [{ key: 'a', type: 'string' }], storage: { indexed: { size: 1_000_000 } } }
+    const esInfos = {
+      indices: [],
+      index: { health: 'green', definition: { ...goodSettings, mappings: { properties: { a: {} } } } }
+    }
+    const w = computeFinalizeWarnings(narrow, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'MissingSearchOnWide'), undefined)
+  })
+})
