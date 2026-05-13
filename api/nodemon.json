@@ -1,5 +1,6 @@
 {
   "ignoreRoot": [],
   "ignore": ["node_modules/", "../dev/"],
-  "watch": [".", "../ui/dist"]
+  "watch": [".", "../ui/dist"],
+  "delay": 1000
 }
