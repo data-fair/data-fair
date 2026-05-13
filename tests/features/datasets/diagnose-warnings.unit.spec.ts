@@ -306,3 +306,40 @@ test.describe('ShardSizeOutOfBand', () => {
     assert.equal(w.find(x => x.code === 'ShardSizeOutOfBand'), undefined)
   })
 })
+
+test.describe('OrphanIndices', () => {
+  const baseDataset = { schema: [{ key: 'a', type: 'string' }], storage: { indexed: { size: 1_000_000 } } }
+
+  test('fires when more than one index for this dataset', () => {
+    const esInfos = {
+      indices: [
+        { index: 'dataset-test-abc-123' },
+        { index: 'dataset-test-abc-456' },
+        { index: 'dataset-test-abc-789' }
+      ],
+      index: {
+        index: 'dataset-test-abc-789',
+        health: 'green',
+        definition: { settings: { index: { number_of_shards: '1', number_of_replicas: '1' } }, mappings: { properties: {} } }
+      }
+    }
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    const item = w.find(x => x.code === 'OrphanIndices')
+    assert.ok(item)
+    assert.equal(item!.severity, 'info')
+    assert.deepEqual(item!.details!.orphans, ['dataset-test-abc-123', 'dataset-test-abc-456'])
+  })
+
+  test('does not fire when only the aliased index exists', () => {
+    const esInfos = {
+      indices: [{ index: 'dataset-test-abc-789' }],
+      index: {
+        index: 'dataset-test-abc-789',
+        health: 'green',
+        definition: { settings: { index: { number_of_shards: '1', number_of_replicas: '1' } }, mappings: { properties: {} } }
+      }
+    }
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'OrphanIndices'), undefined)
+  })
+})

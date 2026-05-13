@@ -202,6 +202,18 @@ const realtimeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
     }
   }
 
+  const allIndices: any[] = esInfos.indices ?? []
+  if (allIndices.length > 1) {
+    const aliasedName = esInfos.index?.index
+    const orphans = allIndices.map(i => i.index).filter(name => name !== aliasedName)
+    warnings.push({
+      code: 'OrphanIndices',
+      severity: 'info',
+      message: `${orphans.length} orphan index(es) for this dataset; leftover from failed reindex`,
+      details: { orphans }
+    })
+  }
+
   return warnings
 }
 
