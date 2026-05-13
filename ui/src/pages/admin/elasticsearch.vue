@@ -110,6 +110,18 @@
         <template #item.load1m="{ item }">
           {{ numOrDash(item.load1m) }}
         </template>
+        <template #item.shardCount="{ item }">
+          {{ shardCellLabel(item) }}
+          <v-chip
+            v-if="isShardCapNear(item)"
+            color="warning"
+            size="x-small"
+            class="ml-1"
+            :title="t('nodes.shardCap')"
+          >
+            !
+          </v-chip>
+        </template>
         <template #item.disk="{ item }">
           {{ pctOrDash(item.disk.usedPct) }}
           <v-chip
@@ -559,6 +571,7 @@ fr:
     breakers: Disjoncteurs déclenchés
     threadPools: Pools de threads (queue / rejected)
     indexingPressure: Pression d'indexation
+    shardCap: Proche de la limite de shards par nœud
   longTasks:
     title: Tâches longues
     searchTitle: Requêtes de recherche longues
@@ -608,6 +621,7 @@ en:
     breakers: Tripped breakers
     threadPools: Thread pools (queue / rejected)
     indexingPressure: Indexing pressure
+    shardCap: Near per-node shard cap
   longTasks:
     title: Long-running tasks
     searchTitle: Long-running search queries
@@ -685,6 +699,16 @@ const watermarkColor = (w: string) => w === 'flood' ? 'error' : 'warning'
 
 const pctOrDash = (v: number | null) => v == null ? '—' : `${Math.round(v)}%`
 const numOrDash = (v: number | null) => v == null ? '—' : (Math.round(v * 100) / 100).toString()
+
+const shardCellLabel = (n: any) => {
+  if (n.shardCount == null) return '—'
+  if (n.maxShardsPerNode == null) return `${n.shardCount}`
+  return `${n.shardCount} / ${n.maxShardsPerNode}`
+}
+
+const isShardCapNear = (n: any) =>
+  n.shardCount != null && n.maxShardsPerNode != null &&
+  n.shardCount >= 0.9 * n.maxShardsPerNode
 
 const trippedBreakers = (n: any) => Object.entries(n.breakers ?? {})
   .map(([name, b]: any) => ({ name, tripped: (b as any).tripped }))
