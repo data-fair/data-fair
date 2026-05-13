@@ -12,6 +12,75 @@ export type DatasetRef = {
 
 export type SectionError = { section: string, message: string }
 
+export type ClusterSummary = {
+  name: string
+  status: 'green' | 'yellow' | 'red' | string
+  numberOfNodes: number
+  numberOfDataNodes: number
+  activePrimaryShards: number
+  activeShards: number
+  relocatingShards: number
+  initializingShards: number
+  unassignedShards: number
+  pendingTasks: { count: number, maxAgeMs: number | null }
+}
+
+export type NodeSummary = {
+  id: string
+  name: string
+  roles: string[]
+  isDataNode: boolean
+  heapUsedPct: number | null
+  cpuPct: number | null
+  load1m: number | null
+  disk: {
+    usedBytes: number | null
+    totalBytes: number | null
+    usedPct: number | null
+    watermark: Watermark
+  }
+  shardCount: number | null
+  breakers: Record<string, { tripped: number }>
+  threadPoolsOfInterest: Array<{ name: string, active: number, queue: number, rejected: number }>
+  indexingPressure: { currentCombinedBytes: number, currentPrimaryBytes: number, currentCoordinatingBytes: number } | null
+}
+
+export type LongTask = {
+  id: string
+  node: string
+  action: string
+  runningTimeMs: number
+  description: string
+  targets: Array<{
+    indexName: string
+    datasetId: string | null
+    datasetTitle: string | null
+    datasetOwner: { type: string, id: string, name: string } | null
+  }>
+}
+
+export type UnassignedShard = {
+  index: string
+  shard: number
+  primary: boolean
+  reason: string
+  details: string | null
+  datasetId: string | null
+  datasetTitle: string | null
+  datasetOwner: { type: string, id: string, name: string } | null
+}
+
+export type IndicesSummary = {
+  nbDataFairIndices: number
+  nbDatasetsWithIndex: number
+  nbDatasetsInMongo: number
+  totalDocs: number
+  totalPrimaryBytes: number
+  totalDeletedDocs: number
+  deletedRatio: number
+  orphanIndicesCount: number
+}
+
 export const resolveWatermark = (
   usedPct: number | null,
   lowPct: number,
@@ -28,7 +97,7 @@ export const resolveWatermark = (
 export const mapClusterHealth = (
   health: any,
   pendingTasks: Array<{ time_in_queue_millis?: number }>
-) => {
+): ClusterSummary => {
   const ageList = (pendingTasks ?? []).map(t => Number(t.time_in_queue_millis ?? 0))
   return {
     name: health.cluster_name,
@@ -54,8 +123,8 @@ export const mapNodes = (
   nodesStats: any,
   watermarks: { lowPct: number, highPct: number, floodPct: number },
   shardsByNode: Map<string, number>
-) => {
-  const result: any[] = []
+): NodeSummary[] => {
+  const result: NodeSummary[] = []
   for (const [id, raw] of Object.entries<any>(nodesStats?.nodes ?? {})) {
     const roles: string[] = raw.roles ?? []
     const fsData: any[] = raw.fs?.data ?? []
@@ -72,9 +141,11 @@ export const mapNodes = (
     const usedBytes = (totalBytes != null && availBytes != null) ? totalBytes - availBytes : null
     const usedPct = (totalBytes && usedBytes != null) ? (usedBytes / totalBytes) * 100 : null
 
+    // only surface breakers that have tripped — untripped breakers are noise on the UI
     const breakers: Record<string, { tripped: number }> = {}
     for (const [bName, b] of Object.entries<any>(raw.breakers ?? {})) {
-      breakers[bName] = { tripped: Number(b.tripped ?? 0) }
+      const tripped = Number(b.tripped ?? 0)
+      if (tripped > 0) breakers[bName] = { tripped }
     }
 
     const tpList: Array<{ name: string, active: number, queue: number, rejected: number }> = []
@@ -120,6 +191,10 @@ export const mapNodes = (
   return result
 }
 
+// Tokens used to find data-fair index names embedded inside an ES task description.
+// Hyphens are part of the index name; ":" is intentionally NOT in the class — ES remote-cluster
+// syntax `cluster:index` would split here, yielding `index` only. That's a known limitation;
+// data-fair does not use remote clusters in any current deployment.
 const INDEX_TOKEN_RE = /[a-zA-Z0-9_.-]+/g
 
 const extractIndexNames = (description: string, indicesPrefix: string): string[] => {
@@ -138,8 +213,8 @@ export const mapLongTasks = (
   longTaskMs: number,
   indicesPrefix: string,
   datasetsById: Map<string, DatasetRef>
-) => {
-  const out: any[] = []
+): LongTask[] => {
+  const out: LongTask[] = []
   for (const [, nodeBlock] of Object.entries<any>(tasksResponse?.nodes ?? {})) {
     const nodeName: string = nodeBlock.name
     for (const [taskId, task] of Object.entries<any>(nodeBlock.tasks ?? {})) {
@@ -177,8 +252,8 @@ export const mapUnassignedShards = (
   explainByKey: Record<string, string>,
   indicesPrefix: string,
   datasetsById: Map<string, DatasetRef>
-) => {
-  const out: any[] = []
+): UnassignedShard[] => {
+  const out: UnassignedShard[] = []
   for (const row of catRows ?? []) {
     if (row.state !== 'UNASSIGNED') continue
     const indexName = row.index
@@ -206,7 +281,7 @@ export const mapIndicesSummary = (
   indicesPrefix: string,
   nbDatasetsInMongo: number,
   mongoDatasetIds: Set<string>
-) => {
+): IndicesSummary => {
   let totalDocs = 0
   let totalDeletedDocs = 0
   let totalPrimaryBytes = 0
@@ -244,7 +319,7 @@ export const safeSection = async <T>(
   try {
     return await fn()
   } catch (err) {
-    errors.push({ section, message: (err as Error)?.message ?? String(err) })
+    errors.push({ section, message: (err as Error).message ?? String(err) })
     return fallback
   }
 }
