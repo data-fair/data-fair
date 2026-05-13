@@ -65,6 +65,54 @@ const sortByPriority = (warnings: Warning[]): Warning[] => {
   )
 }
 
+const getRecommendedNbShards = (dataset: any, maxShardSize: number): number => {
+  return Math.max(1, Math.ceil((dataset.storage?.indexed?.size || 0) / maxShardSize))
+}
+
+const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): Warning[] => {
+  const warnings: Warning[] = []
+
+  if (!esInfos.index) {
+    warnings.push({
+      code: 'MissingIndex',
+      severity: 'error',
+      message: 'no Elasticsearch index found for this dataset'
+    })
+    return warnings
+  }
+
+  if (esInfos.index.health === 'red') {
+    warnings.push({
+      code: 'IndexHealthRed',
+      severity: 'error',
+      message: 'index health is red'
+    })
+  }
+
+  const indexSettings = esInfos.index.definition?.settings?.index
+  if (!indexSettings?.number_of_shards) {
+    warnings.push({
+      code: 'MissingIndexSettings',
+      severity: 'error',
+      message: 'index settings (number_of_shards) are missing'
+    })
+    return warnings
+  }
+
+  const currentNbShards = Number(indexSettings.number_of_shards)
+  const recommendedNbShards = getRecommendedNbShards(dataset, config.maxShardSize)
+  if (currentNbShards !== recommendedNbShards) {
+    warnings.push({
+      code: 'ShardingRecommended',
+      severity: 'warning',
+      message: `current shard count ${currentNbShards} differs from recommended ${recommendedNbShards}`,
+      details: { currentNbShards, recommendedNbShards }
+    })
+  }
+
+  return warnings
+}
+
 export const computeFinalizeWarnings = (
   dataset: any,
   esInfos: any,
@@ -72,9 +120,7 @@ export const computeFinalizeWarnings = (
 ): Warning[] => {
   if (skipDataset(dataset)) return []
   if (!esInfos || Object.keys(esInfos).length === 0) return []
-  // individual checks plug in here in later tasks
-  const warnings: Warning[] = []
-  return sortByPriority(warnings)
+  return sortByPriority(finalizeChecks(dataset, esInfos, config))
 }
 
 export const computeRealtimeWarnings = (
@@ -84,7 +130,8 @@ export const computeRealtimeWarnings = (
 ): Warning[] => {
   if (skipDataset(dataset)) return []
   if (!esInfos || Object.keys(esInfos).length === 0) return []
-  const warnings: Warning[] = []
+  const warnings = finalizeChecks(dataset, esInfos, config)
+  // realtime-only checks plug in here in later tasks
   return sortByPriority(warnings)
 }
 
