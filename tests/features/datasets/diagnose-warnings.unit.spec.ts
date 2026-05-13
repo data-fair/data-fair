@@ -196,3 +196,36 @@ test.describe('ReplicaDrift', () => {
     assert.equal(w.find(x => x.code === 'ReplicaDrift'), undefined)
   })
 })
+
+test.describe('HighSegmentCount', () => {
+  const baseDataset = { schema: [{ key: 'a', type: 'string' }], storage: { indexed: { size: 1_000_000 } } }
+  const goodIndex = (extra: any) => ({
+    indices: [],
+    index: {
+      health: 'green',
+      definition: { settings: { index: { number_of_shards: '2', number_of_replicas: '1' } }, mappings: { properties: {} } },
+      ...extra
+    }
+  })
+
+  test('fires when segments per shard exceeds threshold', () => {
+    const esInfos = goodIndex({ 'segments.count': '100' }) // 100 / 2 = 50 > 30
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    const item = w.find(x => x.code === 'HighSegmentCount')
+    assert.ok(item)
+    assert.equal(item!.severity, 'warning')
+    assert.equal(item!.details!.segmentsPerShard, 50)
+  })
+
+  test('does not fire in finalize-time evaluator', () => {
+    const esInfos = goodIndex({ 'segments.count': '100' })
+    const w = computeFinalizeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'HighSegmentCount'), undefined)
+  })
+
+  test('does not fire when segments per shard is below threshold', () => {
+    const esInfos = goodIndex({ 'segments.count': '10' }) // 10 / 2 = 5 < 30
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'HighSegmentCount'), undefined)
+  })
+})

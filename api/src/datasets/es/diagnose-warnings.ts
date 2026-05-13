@@ -145,6 +145,29 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   return warnings
 }
 
+const realtimeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): Warning[] => {
+  const warnings: Warning[] = []
+  if (!esInfos.index) return warnings
+  const indexSettings = esInfos.index.definition?.settings?.index
+  if (!indexSettings?.number_of_shards) return warnings
+  const nbShards = Number(indexSettings.number_of_shards)
+
+  const segments = Number(esInfos.index['segments.count'])
+  if (!Number.isNaN(segments) && nbShards > 0) {
+    const segmentsPerShard = segments / nbShards
+    if (segmentsPerShard > config.diagnose.segmentsPerShardWarn) {
+      warnings.push({
+        code: 'HighSegmentCount',
+        severity: 'warning',
+        message: `${segmentsPerShard.toFixed(1)} segments per shard exceeds threshold ${config.diagnose.segmentsPerShardWarn}; a force_merge may help`,
+        details: { segmentsPerShard, segments, nbShards }
+      })
+    }
+  }
+
+  return warnings
+}
+
 export const computeFinalizeWarnings = (
   dataset: any,
   esInfos: any,
@@ -162,9 +185,10 @@ export const computeRealtimeWarnings = (
 ): Warning[] => {
   if (skipDataset(dataset)) return []
   if (!esInfos || Object.keys(esInfos).length === 0) return []
-  const warnings = finalizeChecks(dataset, esInfos, config)
-  // realtime-only checks plug in here in later tasks
-  return sortByPriority(warnings)
+  return sortByPriority([
+    ...finalizeChecks(dataset, esInfos, config),
+    ...realtimeChecks(dataset, esInfos, config)
+  ])
 }
 
 export const pickPrimaryCode = (warnings: Warning[]): WarningCode | null => {
