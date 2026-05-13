@@ -262,3 +262,47 @@ test.describe('LargeDeletedDocsRatio', () => {
     assert.equal(w.find(x => x.code === 'LargeDeletedDocsRatio'), undefined)
   })
 })
+
+test.describe('ShardSizeOutOfBand', () => {
+  const baseDataset = { schema: [{ key: 'a', type: 'string' }], storage: { indexed: { size: 1_000_000 } } }
+  const idx = (extra: any) => ({
+    indices: [],
+    index: {
+      health: 'green',
+      definition: { settings: { index: { number_of_shards: '2', number_of_replicas: '1' } }, mappings: { properties: {} } },
+      ...extra
+    }
+  })
+
+  test('fires when avg shard size above maxShardSize', () => {
+    // 30gb / 2 shards = 15gb > 10gb maxShardSize
+    const esInfos = idx({ 'pri.store.size': String(30 * 1_000_000_000) })
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    const item = w.find(x => x.code === 'ShardSizeOutOfBand')
+    assert.ok(item)
+    assert.equal(item!.details!.avgShardSize, 15 * 1_000_000_000)
+  })
+
+  test('fires when avg shard size below minShardSize', () => {
+    // 100mb / 2 = 50mb < 1gb minShardSize
+    const esInfos = idx({ 'pri.store.size': String(100_000_000), 'docs.count': '500' })
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    const item = w.find(x => x.code === 'ShardSizeOutOfBand')
+    assert.ok(item)
+  })
+
+  test('does not fire when in band', () => {
+    const esInfos = idx({ 'pri.store.size': String(3 * 1_000_000_000) }) // 3gb / 2 = 1.5gb, within [1gb, 10gb]
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'ShardSizeOutOfBand'), undefined)
+  })
+
+  test('skips check when only 1 shard and below min (single-shard small datasets are fine)', () => {
+    const oneShard = idx({
+      'pri.store.size': String(100_000_000)
+    })
+    oneShard.index.definition.settings.index.number_of_shards = '1'
+    const w = computeRealtimeWarnings(baseDataset, oneShard, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'ShardSizeOutOfBand'), undefined)
+  })
+})

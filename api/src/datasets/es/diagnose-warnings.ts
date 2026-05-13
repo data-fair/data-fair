@@ -182,6 +182,26 @@ const realtimeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
     }
   }
 
+  const priBytes = Number(esInfos.index['pri.store.size'])
+  if (!Number.isNaN(priBytes) && nbShards > 1) {
+    const avgShardSize = priBytes / nbShards
+    if (avgShardSize > config.maxShardSize) {
+      warnings.push({
+        code: 'ShardSizeOutOfBand',
+        severity: 'warning',
+        message: `average shard size ${avgShardSize.toFixed(0)} bytes exceeds maxShardSize ${config.maxShardSize}`,
+        details: { avgShardSize, maxShardSize: config.maxShardSize, nbShards }
+      })
+    } else if (avgShardSize < config.diagnose.minShardSize) {
+      warnings.push({
+        code: 'ShardSizeOutOfBand',
+        severity: 'warning',
+        message: `average shard size ${avgShardSize.toFixed(0)} bytes is below minShardSize ${config.diagnose.minShardSize}`,
+        details: { avgShardSize, minShardSize: config.diagnose.minShardSize, nbShards }
+      })
+    }
+  }
+
   return warnings
 }
 
