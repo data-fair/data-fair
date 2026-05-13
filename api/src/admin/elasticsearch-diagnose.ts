@@ -212,7 +212,7 @@ export type ExtractedSourceQuery = {
   sourceQueryOversized: boolean
 }
 
-const NONE: ExtractedSourceQuery = { sourceQuery: null, sourceQueryOversized: false }
+const NONE: ExtractedSourceQuery = Object.freeze({ sourceQuery: null, sourceQueryOversized: false }) as ExtractedSourceQuery
 
 export const extractSourceQuery = (description: string, maxChars: number): ExtractedSourceQuery => {
   if (!description) return NONE
