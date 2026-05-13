@@ -1,97 +1,72 @@
 <template>
   <div class="px-4 pt-4">
-    <div class="d-flex align-center mb-4">
-      <div class="text-body-medium text-medium-emphasis">
-        {{ t('subtitle') }}
-      </div>
-      <v-spacer />
-      <v-btn
-        :prepend-icon="mdiRefresh"
-        :loading="diagnoseFetch.loading.value"
-        size="small"
-        variant="text"
-        @click="diagnoseFetch.refresh()"
-      >
-        {{ t('refresh') }}
-      </v-btn>
-    </div>
-
-    <!-- Warnings list -->
     <div v-if="data">
-      <v-alert
-        v-if="!data.warnings || data.warnings.length === 0"
-        type="success"
-        variant="tonal"
-        class="mb-4"
-        :text="t('noIssues')"
-      />
-      <v-alert
-        v-for="w in data.warnings"
-        :key="w.code"
-        :type="alertType(w.severity)"
-        variant="tonal"
-        class="mb-3"
-      >
-        <div class="text-body-1 font-weight-bold">
-          {{ t('warning.' + w.code) }}
-        </div>
-        <div class="text-body-medium">
-          {{ w.message }}
-        </div>
-        <dl
-          v-if="w.details"
-          class="mt-2 text-caption"
-        >
-          <template
-            v-for="(v, k) in w.details"
-            :key="k"
+      <v-tabs-window :model-value="tab">
+        <!-- Elasticsearch tab -->
+        <v-tabs-window-item value="elasticsearch">
+          <v-alert
+            v-if="!data.warnings || data.warnings.length === 0"
+            type="success"
+            variant="tonal"
+            class="mb-4"
+            :text="t('noIssues')"
+          />
+          <v-alert
+            v-for="w in data.warnings"
+            :key="w.code"
+            :type="alertType(w.severity)"
+            variant="tonal"
+            class="mb-3"
           >
-            <dt class="d-inline font-weight-medium">
-              {{ k }}:
-            </dt>
-            <dd class="d-inline ml-1 mr-3">
-              {{ formatDetail(k, v) }}
-            </dd>
-          </template>
-        </dl>
-      </v-alert>
-
-      <!-- Summary -->
-      <v-card
-        v-if="data.esInfos?.index"
-        variant="flat"
-        class="mb-4"
-      >
-        <v-card-title class="text-subtitle-1">
-          {{ t('summary') }}
-        </v-card-title>
-        <v-card-text>
-          <v-row
-            dense
-            class="text-body-medium"
-          >
-            <v-col
-              v-for="row in summaryRows"
-              :key="row.key"
-              cols="6"
-              md="4"
+            <div class="text-body-1 font-weight-bold">
+              {{ t('warning.' + w.code) }}
+            </div>
+            <div class="text-body-medium">
+              {{ w.message }}
+            </div>
+            <dl
+              v-if="w.details"
+              class="mt-2 text-caption"
             >
-              <span class="text-medium-emphasis">{{ row.label }}:</span>
-              <span class="ml-1">{{ row.value }}</span>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
+              <template
+                v-for="(v, k) in w.details"
+                :key="k"
+              >
+                <dt class="d-inline font-weight-medium">
+                  {{ k }}:
+                </dt>
+                <dd class="d-inline ml-1 mr-3">
+                  {{ formatDetail(k, v) }}
+                </dd>
+              </template>
+            </dl>
+          </v-alert>
 
-      <!-- Locks -->
-      <v-card
-        variant="flat"
-        class="mb-4"
-      >
-        <v-card-title class="text-subtitle-1">
-          {{ t('locks') }}
-        </v-card-title>
-        <v-card-text>
+          <v-card
+            v-if="data.esInfos?.index"
+            variant="flat"
+            class="mb-4"
+          >
+            <v-card-title class="text-subtitle-1">
+              {{ t('summary') }}
+            </v-card-title>
+            <v-card-text class="py-1">
+              <dl class="text-body-medium ma-0">
+                <div
+                  v-for="row in summaryRows"
+                  :key="row.key"
+                  class="py-0"
+                >
+                  <dt class="d-inline text-medium-emphasis">{{ row.label }}:</dt>
+                  <dd class="d-inline ml-1">{{ row.value }}</dd>
+                </div>
+              </dl>
+            </v-card-text>
+          </v-card>
+        </v-tabs-window-item>
+
+        <!-- Locks tab -->
+        <v-tabs-window-item value="locks">
           <div
             v-if="!data.locks || data.locks.every((l: any) => !l)"
             class="text-medium-emphasis"
@@ -110,27 +85,29 @@
               >free</code>
             </li>
           </ul>
-        </v-card-text>
-      </v-card>
+        </v-tabs-window-item>
 
-      <!-- Raw JSON -->
-      <v-expansion-panels variant="accordion">
-        <v-expansion-panel :title="t('rawJson') + ' — esInfos'">
-          <template #text>
-            <pre class="text-caption">{{ JSON.stringify(data.esInfos, null, 2) }}</pre>
-          </template>
-        </v-expansion-panel>
-        <v-expansion-panel :title="t('rawJson') + ' — filesInfos'">
-          <template #text>
-            <pre class="text-caption">{{ JSON.stringify(data.filesInfos, null, 2) }}</pre>
-          </template>
-        </v-expansion-panel>
-        <v-expansion-panel :title="t('rawJson') + ' — locks'">
-          <template #text>
-            <pre class="text-caption">{{ JSON.stringify(data.locks, null, 2) }}</pre>
-          </template>
-        </v-expansion-panel>
-      </v-expansion-panels>
+        <!-- Raw JSON tab -->
+        <v-tabs-window-item value="rawJson">
+          <v-expansion-panels variant="accordion">
+            <v-expansion-panel :title="t('rawJson') + ' — esInfos'">
+              <template #text>
+                <pre class="text-caption">{{ JSON.stringify(data.esInfos, null, 2) }}</pre>
+              </template>
+            </v-expansion-panel>
+            <v-expansion-panel :title="t('rawJson') + ' — filesInfos'">
+              <template #text>
+                <pre class="text-caption">{{ JSON.stringify(data.filesInfos, null, 2) }}</pre>
+              </template>
+            </v-expansion-panel>
+            <v-expansion-panel :title="t('rawJson') + ' — locks'">
+              <template #text>
+                <pre class="text-caption">{{ JSON.stringify(data.locks, null, 2) }}</pre>
+              </template>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </v-tabs-window-item>
+      </v-tabs-window>
     </div>
 
     <v-progress-circular
@@ -143,11 +120,8 @@
 
 <i18n lang="yaml">
 fr:
-  subtitle: Informations techniques pour les administrateurs. Cliquez sur Rafraîchir pour recharger.
-  refresh: Rafraîchir
   noIssues: Aucun problème détecté
   summary: Résumé
-  locks: Verrous
   locksFree: Aucun verrou actif
   rawJson: JSON brut
   warning:
@@ -163,11 +137,8 @@ fr:
     ShardSizeOutOfBand: Taille de shard hors plage
     OrphanIndices: Index orphelins pour ce dataset
 en:
-  subtitle: Technical information for superadmins. Use Refresh to reload.
-  refresh: Refresh
   noIssues: No issues detected
   summary: Summary
-  locks: Locks
   locksFree: No active locks
   rawJson: Raw JSON
   warning:
@@ -185,8 +156,9 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiRefresh } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset/dataset-store'
+
+defineProps<{ tab?: string }>()
 
 const { t } = useI18n()
 const { id } = useDatasetStore()
@@ -200,6 +172,11 @@ type DiagnoseResponse = {
 
 const diagnoseFetch = useFetch<DiagnoseResponse>(`${$apiPath}/datasets/${id}/_diagnose`)
 const data = computed(() => diagnoseFetch.data.value)
+
+defineExpose({
+  refresh: () => diagnoseFetch.refresh(),
+  loading: diagnoseFetch.loading
+})
 
 const alertType = (severity: string) => {
   if (severity === 'error') return 'error'
