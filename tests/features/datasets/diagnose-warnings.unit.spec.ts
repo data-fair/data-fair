@@ -229,3 +229,36 @@ test.describe('HighSegmentCount', () => {
     assert.equal(w.find(x => x.code === 'HighSegmentCount'), undefined)
   })
 })
+
+test.describe('LargeDeletedDocsRatio', () => {
+  const baseDataset = { schema: [{ key: 'a', type: 'string' }], storage: { indexed: { size: 1_000_000 } } }
+  const idx = (extra: any) => ({
+    indices: [],
+    index: {
+      health: 'green',
+      definition: { settings: { index: { number_of_shards: '1', number_of_replicas: '1' } }, mappings: { properties: {} } },
+      ...extra
+    }
+  })
+
+  test('fires when deleted ratio exceeds threshold and total > 1000', () => {
+    const esInfos = idx({ 'docs.count': '6000', 'docs.deleted': '4000' }) // ratio 0.4 > 0.2
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    const item = w.find(x => x.code === 'LargeDeletedDocsRatio')
+    assert.ok(item)
+    assert.equal(item!.severity, 'warning')
+    assert.equal(item!.details!.ratio.toFixed(2), '0.40')
+  })
+
+  test('does not fire when total docs <= 1000', () => {
+    const esInfos = idx({ 'docs.count': '500', 'docs.deleted': '400' })
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'LargeDeletedDocsRatio'), undefined)
+  })
+
+  test('does not fire when ratio below threshold', () => {
+    const esInfos = idx({ 'docs.count': '9000', 'docs.deleted': '500' })
+    const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'LargeDeletedDocsRatio'), undefined)
+  })
+})

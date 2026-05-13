@@ -165,6 +165,23 @@ const realtimeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
     }
   }
 
+  const docsCount = Number(esInfos.index['docs.count'])
+  const docsDeleted = Number(esInfos.index['docs.deleted'])
+  if (!Number.isNaN(docsCount) && !Number.isNaN(docsDeleted)) {
+    const total = docsCount + docsDeleted
+    if (total > 1000) {
+      const ratio = docsDeleted / total
+      if (ratio > config.diagnose.deletedRatioWarn) {
+        warnings.push({
+          code: 'LargeDeletedDocsRatio',
+          severity: 'warning',
+          message: `${(ratio * 100).toFixed(1)}% of documents are deleted; consider reindexing to reclaim space`,
+          details: { ratio, docsCount, docsDeleted }
+        })
+      }
+    }
+  }
+
   return warnings
 }
 
