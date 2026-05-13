@@ -364,6 +364,22 @@ test.describe('extractSourceQuery', () => {
     assert.equal(r.sourceQueryOversized, true)
   })
 
+  test('does not call JSON.parse when content exceeds maxChars', () => {
+    const filler = 'x'.repeat(MAX + 100)
+    const desc = `source[{"f":"${filler}"}]`
+    const originalParse = JSON.parse
+    let parseCalls = 0
+    JSON.parse = ((...args: any[]) => { parseCalls++; return originalParse.apply(JSON, args as [string, any?]) }) as any
+    try {
+      const r = extractSourceQuery(desc, MAX)
+      assert.equal(r.sourceQueryOversized, true)
+      assert.equal(r.sourceQuery, null)
+      assert.equal(parseCalls, 0, 'JSON.parse must NOT be called when input is oversized')
+    } finally {
+      JSON.parse = originalParse
+    }
+  })
+
   test('returns null when source[ is not closed by a matching ]', () => {
     const r = extractSourceQuery('source[{"a":1', MAX)
     assert.equal(r.sourceQuery, null)

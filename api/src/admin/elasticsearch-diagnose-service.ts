@@ -110,7 +110,7 @@ export const getElasticsearchDiagnose = async () => {
   ] = await Promise.all([
     safeSection('cluster.health', () => es.client.cluster.health(), errors, null as any),
     safeSection('cluster.pendingTasks', async () => (await es.client.cluster.pendingTasks()).tasks ?? [], errors, [] as any[]),
-    safeSection('cluster.allocSettings', () => getClusterAllocSettings(), errors, { lowPct: DEFAULT_LOW, highPct: DEFAULT_HIGH, floodPct: DEFAULT_FLOOD, maxShardsPerNode: DEFAULT_MAX_SHARDS_PER_NODE }),
+    safeSection('cluster.allocSettings', () => getClusterAllocSettings(), errors, { lowPct: DEFAULT_LOW, highPct: DEFAULT_HIGH, floodPct: DEFAULT_FLOOD, maxShardsPerNode: null as number | null }),
     safeSection('nodes.stats', () => es.client.nodes.stats({
       metric: ['os', 'jvm', 'fs', 'thread_pool', 'breaker', 'indexing_pressure']
     }), errors, { nodes: {} } as any),
@@ -168,7 +168,7 @@ export const getElasticsearchDiagnose = async () => {
 
   return {
     cluster: health ? mapClusterHealth(health, pendingTasks as any[]) : null,
-    nodes: mapNodes(nodesStats as any, allocSettings as any, countShardsByNode(catShards as any)),
+    nodes: mapNodes(nodesStats as any, allocSettings!, countShardsByNode(catShards as any)),
     longTasks: mapLongTasks(tasksResponse as any, longTaskMs, indicesPrefix, datasetsById, maxLongTasksPerCategory),
     unassignedShards: mapUnassignedShards(catShards as any[], explainByKey, indicesPrefix, datasetsById),
     indicesSummary: mapIndicesSummary(catIndices as any[], indicesPrefix, nbDatasetsInMongo as number, mongoIdsPresent),
