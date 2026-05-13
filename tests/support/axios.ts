@@ -65,6 +65,10 @@ export const config = {
 }
 
 export const checkPendingTasks = async () => {
+  // some test paths legitimately leave a finalize task in-flight (e.g. a successful REST line POST
+  // sets _partialRestStatus: 'indexed' which the shortProcessor picks up asynchronously). Give workers
+  // the same idle grace period clean() uses before asserting — anything still pending after 5s is a leak.
+  await waitForWorkerIdle()
   const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`)
   for (const [worker, pending] of Object.entries(res.data)) {
     if (Object.keys(pending as any).length > 0) {

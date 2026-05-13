@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { queryAdvice } from '../../../api/src/misc/utils/query-advice.ts'
+import { queryAdvice, shouldEmitHint, attachQueryHint } from '../../../api/src/misc/utils/query-advice.ts'
 
 // minimal fake of the bits of an express Request the helper reads.
 // `__` echoes the key so assertions can match on key names instead of translated text.
@@ -72,5 +72,74 @@ test.describe('queryAdvice', () => {
     assert.match(out, /errors\.queryAdviceSize/)
     assert.match(out, /errors\.queryAdviceSelect/)
     assert.ok(out.indexOf('errors.queryAdviceCount') < out.indexOf('errors.queryAdviceDeepPagination'))
+  })
+
+  test('qFields rule: fires on a wide dataset searched with q and no q_fields', () => {
+    const wide = { schema: Array.from({ length: 31 }, (_, i) => ({ key: 'f' + i, type: 'string' })) }
+    const narrow = { schema: Array.from({ length: 5 }, (_, i) => ({ key: 'f' + i, type: 'string' })) }
+    assert.match(queryAdvice(fakeReq('/abc/lines', { q: 'x' }, wide)), /errors\.queryAdviceQFields/)
+    assert.match(queryAdvice(fakeReq('/abc/lines', { _c_q: 'x' }, wide)), /errors\.queryAdviceQFields/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x', q_fields: 'f1,f2' }, wide)), /errors\.queryAdviceQFields/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', {}, wide)), /errors\.queryAdviceQFields/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x' }, narrow)), /errors\.queryAdviceQFields/)
+    assert.doesNotMatch(queryAdvice(fakeReq('/abc/lines', { q: 'x' })), /errors\.queryAdviceQFields/)
+  })
+})
+
+test.describe('shouldEmitHint', () => {
+  test('false silences the hint regardless of duration', () => {
+    assert.equal(shouldEmitHint('false', 0), false)
+    assert.equal(shouldEmitHint('false', 99999), false)
+  })
+  test('true emits regardless of duration', () => {
+    assert.equal(shouldEmitHint('true', 0), true)
+    assert.equal(shouldEmitHint('true', 99999), true)
+  })
+  test('auto emits only when ES step duration exceeds the slow-request threshold', () => {
+    assert.equal(shouldEmitHint('auto', 0), false)
+    assert.equal(shouldEmitHint('auto', 1000), false) // strictly greater than 1000ms
+    assert.equal(shouldEmitHint('auto', 1001), true)
+  })
+})
+
+test.describe('attachQueryHint', () => {
+  test('prepends a trimmed advice string when a rule fires and hint=true', () => {
+    const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
+    const req = fakeReq('/abc/lines', { hint: 'true' }, wide)
+    const out = attachQueryHint(req, 0, { total: 5, results: [] })
+    assert.ok(typeof out.hint === 'string')
+    assert.ok((out.hint as string).length > 0)
+    assert.equal((out.hint as string)[0] !== ' ', true) // leading space stripped
+    // hint must appear before existing fields so it lands first in the JSON output
+    assert.equal(Object.keys(out)[0], 'hint')
+  })
+  test('does not attach when hint=false even with a slow query and matching rule', () => {
+    const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
+    const req = fakeReq('/abc/lines', { hint: 'false' }, wide)
+    const out = attachQueryHint(req, 99999, { total: 5 })
+    assert.equal('hint' in out, false)
+  })
+  test('does not attach when hint=auto and the query was fast', () => {
+    const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
+    const req = fakeReq('/abc/lines', {}, wide)
+    const out = attachQueryHint(req, 500, { total: 5 })
+    assert.equal('hint' in out, false)
+  })
+  test('attaches when hint=auto and the query crossed the slow threshold', () => {
+    const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
+    const req = fakeReq('/abc/lines', {}, wide)
+    const out = attachQueryHint(req, 1500, { total: 5 })
+    assert.ok(typeof out.hint === 'string')
+  })
+  test('does not attach when no rule fires (even with hint=true)', () => {
+    const req = fakeReq('/abc/lines', { hint: 'true', count: 'false', after: '["x"]' })
+    const out = attachQueryHint(req, 99999, { total: 5 })
+    assert.equal('hint' in out, false)
+  })
+  test('treats unknown hint values as auto', () => {
+    const wide = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })) }
+    const req = fakeReq('/abc/lines', { hint: 'banana' }, wide)
+    assert.equal('hint' in attachQueryHint(req, 500, { total: 5 }), false)
+    assert.ok(typeof attachQueryHint(req, 1500, { total: 5 }).hint === 'string')
   })
 })

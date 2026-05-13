@@ -35,6 +35,9 @@ export type DatasetInternal = Dataset & {
   validateDraft?: boolean
   _newRestAttachments?: string[]
   _readApiKey?: { current: string, previous: string }
+  // true when this dataset's current index carries the `_search` / `_search_boosted` catch-all
+  // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
+  _esCopyToSearch?: boolean
 }
 
 export type DatasetLine = {

@@ -2,7 +2,8 @@ import crypto from 'crypto'
 import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.js'
-import { aliasName, esProperty } from './commons.js'
+import { aliasName } from './commons.js'
+import { buildIndexMappings } from './operations.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
@@ -10,27 +11,8 @@ const debug = debugModule('manage-indices')
 
 export const indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
-  const properties = body.mappings.properties = {}
-  for (const jsProp of await datasetUtils.extendedSchema(null, dataset, false)) {
-    const esProp = esProperty(jsProp)
-    if (esProp) {
-      if (jsProp['x-extension'] && dataset.extensions && dataset.extensions.find(e => e.type === 'remoteService' && jsProp['x-extension'] === e.remoteService + '/' + e.action && jsProp.key.startsWith(e.propertyPrefix + '.'))) {
-        const extKey = jsProp.key.split('.')[0]
-        properties[extKey] = properties[extKey] || { dynamic: 'strict', properties: {} }
-        properties[extKey].properties[jsProp.key.replace(extKey + '.', '')] = esProp
-      } else {
-        properties[jsProp.key] = esProp
-      }
-    }
-    if (jsProp.key === '_geoshape' && jsProp['x-capabilities']?.vtPrepare) {
-      properties['_vt_prepared'] = {
-        properties: {
-          xyz: { type: 'keyword', index: true, doc_values: false },
-          pbf: { type: 'binary', store: false, doc_values: false }
-        }
-      }
-    }
-  }
+  const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
+  body.mappings.properties = buildIndexMappings(dataset, jsProps, config.elasticsearch.defaultAnalyzer).properties
   return body
 }
 
@@ -69,6 +51,17 @@ export const updateDatasetMapping = async (dataset, oldDataset) => {
           }
         }
       }
+      // copy_to is not updatable on an existing field, and existing rows are not re-copied;
+      // a changed copy_to (e.g. the dataset dropping below the "wide" threshold) only takes
+      // effect on a full reindex -> force one
+      if (newProperty && JSON.stringify([].concat(oldProperty.copy_to ?? []).sort()) !== JSON.stringify([].concat(newProperty.copy_to ?? []).sort())) {
+        throw new Error(`the copy_to of field ${key} changed, simple mapping update will not work`)
+      }
+    }
+    // a freshly-added column carrying a copy_to (e.g. crossing the "wide" threshold by adding columns)
+    // is not in the loop above, so also force a reindex whenever the _search catch-all field appears
+    if (newMapping.properties._search && !oldMapping.properties._search) {
+      throw new Error('the _search catch-all field is added, simple mapping update will not work')
     }
   }
   const res = await es.client.indices.putMapping({

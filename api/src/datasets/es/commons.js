@@ -15,81 +15,28 @@ import * as geo from '../utils/geo.js'
 import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
-import memoize from 'memoizee'
 import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.js'
-import { hasCapability, requiredCapability } from './operations.ts'
+import {
+  hasCapability,
+  requiredCapability,
+  esProperty as esPropertyPure,
+  Q_SEARCH_FIELDS_THRESHOLD,
+  isBoostEligible,
+  hasManyQSearchFields,
+  getFilterableFields,
+  buildQClauses
+} from './operations.ts'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
 const filterSuffixes = ['_in', '_nin', '_eq', '_neq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts', '_exists', '_nexists']
 
-// From a property in data-fair schema to the property in an elasticsearch mapping
-export const esProperty = prop => {
-  const capabilities = prop['x-capabilities'] || {}
-  // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
-  const innerFields = {}
-  if (capabilities.textStandard !== false) {
-    // more "raw" analysis good to boost more exact matches and for wildcard queries
-    innerFields.text_standard = { type: 'text', analyzer: 'standard' }
-  }
-  let esProp = {}
-  const index = capabilities.index !== false
-  const values = capabilities.values !== false
-  if (prop.type === 'object') esProp = { type: 'object', enabled: index }
-  if (prop.type === 'integer') esProp = { type: 'long', fields: innerFields, index, doc_values: values }
-  if (prop.type === 'number') esProp = { type: 'double', fields: innerFields, index, doc_values: values }
-  if (prop.type === 'boolean') esProp = { type: 'boolean', index, doc_values: values }
-  if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
-  if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
-  // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
-  if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
-    const textFieldData = capabilities.textAgg
-    if (capabilities.textStandard !== false) {
-      innerFields.text_standard.fielddata = textFieldData
-    }
-    if (capabilities.text !== false) {
-      // language based analysis for better recall with stemming, etc
-      innerFields.text = { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: textFieldData }
-    }
-    if (capabilities.insensitive !== false) {
-      // handle case and diacritics for better sorting
-      innerFields.keyword_insensitive = { type: 'keyword', ignore_above: 200, normalizer: 'insensitive_normalizer' }
-    }
-    if (capabilities.wildcard) {
-      // support wildcard filters
-      // TODO: depending on the cardinality of the field the wildcard inner field might not be relevant
-      // https://www.elastic.co/fr/blog/find-strings-within-strings-faster-with-the-new-elasticsearch-wildcard-field
-      innerFields.wildcard = { type: 'wildcard' }
-    }
-    esProp = { type: 'keyword', ignore_above: 200, fields: innerFields, index, doc_values: values }
-  }
-  // Do not index geometry, it will be copied and simplified in _geoshape
-  if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
-    // Geometry can be passed serialized in a string, or as an object
-    if (prop.type === 'string') {
-      esProp = { type: 'keyword', index: false, doc_values: false }
-    } else {
-      esProp = { enabled: false }
-    }
-  }
-  // Hardcoded calculated properties
-  if (prop.key === '_geopoint') esProp = { type: 'geo_point' }
-  if (prop.key === '_geoshape') {
-    // if geometry is present, _geoshape will always be here too, but maybe not fully indexed depending on capabilities
-    if (!prop['x-capabilities'] || prop['x-capabilities'].geoShape !== false) {
-      esProp = { type: 'geo_shape' }
-    } else {
-      esProp = { enabled: false }
-    }
-  }
-  if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
-  if (prop.key === '_i') esProp = { type: 'long' }
-  if (prop.key === '_rand') esProp = { type: 'integer' }
-  if (prop.key === '_id') return null
+// thin wrapper around the pure helper to keep the existing single-arg call sites working —
+// supplies the runtime analyzer from config so mapping creation behaves unchanged
+export const esProperty = prop => esPropertyPure(prop, config.elasticsearch.defaultAnalyzer)
 
-  return esProp
-}
+export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
 export const aliasName = dataset => {
   if (dataset.isVirtual) return dataset.descendants.map(id => `${config.indicesPrefix}-${id}`).join(',')
@@ -192,70 +139,6 @@ function checkQuery (query, schema, esFields, currentField) {
 }
 
 export { hasCapability, requiredCapability }
-
-export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
-  // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
-  // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
-  const searchFields = []
-  const wildcardFields = []
-  const qSearchFields = []
-  const qStandardFields = []
-  const qWildcardFields = []
-  const esFields = []
-
-  for (const f of dataset.schema) {
-    const capabilities = f['x-capabilities'] || []
-    if (capabilities.index !== false) esFields.push(f.key)
-    if (capabilities.text !== false) esFields.push(f.key + '.text')
-    if (capabilities.textStandard !== false) esFields.push(f.key + '.text_standard')
-    if (capabilities.insensitive !== false) esFields.push(f.key + '.keyword_insensitive')
-    if (capabilities.wildcard) esFields.push(f.key + '.wildcard')
-
-    if (f.key === '_id') {
-      searchFields.push('_id')
-      continue
-    }
-
-    const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
-    const esProp = esProperty(f)
-    if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
-      searchFields.push(f.key)
-      if (isQField) qSearchFields.push(f.key)
-    }
-    if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
-      // automatic boost of some special properties well suited for full-text search
-      let suffix = ''
-      if (f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') suffix = '^3'
-      if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
-      if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
-
-      if (esProp.fields.text) {
-        searchFields.push(f.key + '.text' + suffix)
-        if (isQField) qSearchFields.push(f.key + '.text' + suffix)
-      }
-      if (esProp.fields.text_standard) {
-        searchFields.push(f.key + '.text_standard' + suffix)
-        if (isQField) {
-          qSearchFields.push(f.key + '.text_standard' + suffix)
-          qStandardFields.push(f.key + '.text_standard' + suffix)
-        }
-      }
-      if (esProp.fields.wildcard) {
-        wildcardFields.push(f.key + '.wildcard')
-        if (isQField) qWildcardFields.push(f.key + '.wildcard')
-      }
-    }
-  }
-  return { searchFields, wildcardFields, qSearchFields, qStandardFields, qWildcardFields, esFields }
-}, {
-  profileName: 'getFilterableFields',
-  primitive: true,
-  normalizer: ([dataset, hasQ, qFields]) => {
-    return `${dataset.id}:${dataset.finalizedAt}:${!!hasQ}:${qFields ? qFields.join(',') : ''}`
-  },
-  max: 10000,
-  maxAge: 1000 * 60 * 60, // 1 hour
-})
 
 export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter, ignoreInvalidQS) => {
   /** @type {any} */
@@ -379,50 +262,15 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (q) q = q.trim()
 
   if (q || query.qs) {
-    const { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields } = getFilterableFields(dataset, q, qFields)
     if (query.qs) {
+      const { searchFields, esFields } = getFilterableFields(dataset, q, qFields)
       if (!ignoreInvalidQS) checkQuery(query.qs, dataset.schema, esFields)
       const qs = { query_string: { query: query.qs, fields: searchFields } }
       if (qsAsFilter) filter.push(qs)
       else must.push(qs)
     }
     if (q) {
-      const qBool = { bool: { should: [], minimum_should_match: 1 } }
-      const qShould = qBool.bool.should
-      if (query.q_mode === 'complete') {
-      // "complete" mode, we try to accomodate for most cases and give the most intuitive results
-      // to a search query where the user might be using a autocomplete type control
-
-        // if the user didn't define wildcards himself, we use wildcard to create a "startsWith" functionality
-        // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
-        // we also perform a contains filter if some wildcard functionnality is activate
-        if (!q.includes('*') && !q.includes('?')) {
-          if (qStandardFields.length) {
-            qShould.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields, ...sqsOptions } })
-          }
-          if (qWildcardFields.length) {
-            qShould.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
-          }
-        }
-        // if the user submitted a multi word query and didn't use quotes
-        // we add some quotes to boost results with sequence of words
-        if (qSearchFields.length && q.includes(' ') && !q.includes('"')) {
-          qShould.push({ simple_query_string: { query: `"${q}"`, fields: qSearchFields, ...sqsOptions } })
-        }
-        if (qSearchFields.length) {
-          qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
-        }
-      } else {
-        // default "simple" mode uses ES simple query string directly
-        // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
-        if (qSearchFields.length) {
-          qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
-        }
-        if (qStandardFields.length) {
-          qShould.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
-        }
-      }
-      must.push(qBool)
+      must.push(buildQClauses(dataset, q, qFields, query.q_mode, sqsOptions))
     }
   }
   // pre-build schema lookup maps for O(1) field resolution

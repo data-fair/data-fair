@@ -478,6 +478,22 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     }
   }
 
+  const hintParam = {
+    in: 'query',
+    name: 'hint',
+    description: `Ajouter un champ \`hint\` au corps de la réponse avec un conseil de performance le cas échéant.
+
+  - **auto** (défaut) : seulement si la requête est lente.
+  - **true** : dès qu'un conseil s'applique.
+  - **false** : jamais.`,
+    schema: {
+      title: 'Conseil de performance',
+      type: 'string',
+      default: 'auto',
+      enum: ['auto', 'true', 'false']
+    }
+  }
+
   const description = `
 Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "**${ds.title || (ds as any).slug}**".
 
@@ -655,6 +671,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           ...hitsParams(),
           formatParam,
           htmlParam,
+          hintParam,
           ...filterParams,
           {
             in: 'query',
@@ -894,6 +911,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
             }
           },
           ...hitsParams(0, 100, 'values_agg'),
+          hintParam,
           ...filterParams],
           responses: {
             200: {
@@ -1265,7 +1283,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
-        parameters: [aggSizeParam, ...hitsParams(0, 100), formatParam, htmlParam, ...filterParams],
+        parameters: [aggSizeParam, ...hitsParams(0, 100), formatParam, htmlParam, hintParam, ...filterParams],
         responses: {
           200: {
             description: 'Les informations du jeu de données agrégées spatialement.',
