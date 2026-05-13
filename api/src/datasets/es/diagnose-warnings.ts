@@ -121,6 +121,17 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
     })
   }
 
+  const limit = Number(indexSettings['mapping.total_fields.limit'] ?? 1000)
+  const fields = Object.keys(properties).length
+  if (fields / limit > config.diagnose.mappingFieldsLimitWarn) {
+    warnings.push({
+      code: 'MappingNearLimit',
+      severity: 'warning',
+      message: `${fields} mapped fields exceeds ${Math.round(config.diagnose.mappingFieldsLimitWarn * 100)}% of the limit (${limit})`,
+      details: { fields, limit }
+    })
+  }
+
   return warnings
 }
 

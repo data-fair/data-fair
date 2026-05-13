@@ -139,3 +139,28 @@ test.describe('MissingSearchOnWide', () => {
     assert.equal(w.find(x => x.code === 'MissingSearchOnWide'), undefined)
   })
 })
+
+test.describe('MappingNearLimit', () => {
+  const settings = { index: { number_of_shards: '1', number_of_replicas: '1', 'mapping.total_fields.limit': 100 } }
+  const baseDataset = { schema: [{ key: 'a', type: 'string' }], storage: { indexed: { size: 1_000_000 } } }
+
+  test('fires above threshold', () => {
+    const properties: Record<string, any> = {}
+    for (let i = 0; i < 85; i++) properties[`f${i}`] = {}
+    const esInfos = { indices: [], index: { health: 'green', definition: { settings, mappings: { properties } } } }
+    const w = computeFinalizeWarnings(baseDataset, esInfos, baseEsConfig)
+    const item = w.find(x => x.code === 'MappingNearLimit')
+    assert.ok(item)
+    assert.equal(item!.severity, 'warning')
+    assert.equal(item!.details!.fields, 85)
+    assert.equal(item!.details!.limit, 100)
+  })
+
+  test('does not fire below threshold', () => {
+    const properties: Record<string, any> = {}
+    for (let i = 0; i < 50; i++) properties[`f${i}`] = {}
+    const esInfos = { indices: [], index: { health: 'green', definition: { settings, mappings: { properties } } } }
+    const w = computeFinalizeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'MappingNearLimit'), undefined)
+  })
+})
