@@ -143,7 +143,7 @@
 
 <i18n lang="yaml">
 fr:
-  subtitle: Informations techniques pour les administrateurs (calculées à la demande).
+  subtitle: Informations techniques pour les administrateurs. Cliquez sur Rafraîchir pour recharger.
   refresh: Rafraîchir
   noIssues: Aucun problème détecté
   summary: Résumé
@@ -163,7 +163,7 @@ fr:
     ShardSizeOutOfBand: Taille de shard hors plage
     OrphanIndices: Index orphelins pour ce dataset
 en:
-  subtitle: Technical information for superadmins (computed on demand).
+  subtitle: Technical information for superadmins. Use Refresh to reload.
   refresh: Refresh
   noIssues: No issues detected
   summary: Summary

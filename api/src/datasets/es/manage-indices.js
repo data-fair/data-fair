@@ -273,7 +273,12 @@ export const datasetInfos = async (dataset) => {
   for (const index of indices) {
     index.definition = (await es.client.indices.get({ index: index.index }))[index.index]
   }
-  const alias = await es.client.indices.getAlias({ index: aliasName(dataset) })
+  let alias
+  try {
+    alias = await es.client.indices.getAlias({ index: aliasName(dataset) })
+  } catch (err) {
+    if (err.statusCode !== 404) throw err
+  }
   const aliasedIndexName = Object.keys(alias ?? {})[0]
   const index = indices.find(index => index.index === aliasedIndexName)
   return {
