@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
-import { parseIndexName } from '../../../api/src/datasets/es/index-utils.ts'
+import { parseIndexName } from '../../../api/src/datasets/es/index-name.ts'
 
 const sha = (id: string) => crypto.createHash('sha1').update(id).digest('hex').slice(0, 12)
 const prefix = 'dataset-test'
