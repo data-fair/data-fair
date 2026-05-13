@@ -132,6 +132,16 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
     })
   }
 
+  const currentReplicas = Number(indexSettings.number_of_replicas)
+  if (!Number.isNaN(currentReplicas) && currentReplicas !== config.nbReplicas) {
+    warnings.push({
+      code: 'ReplicaDrift',
+      severity: 'info',
+      message: `index has ${currentReplicas} replicas but config expects ${config.nbReplicas}`,
+      details: { current: currentReplicas, expected: config.nbReplicas }
+    })
+  }
+
   return warnings
 }
 

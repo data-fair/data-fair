@@ -164,3 +164,35 @@ test.describe('MappingNearLimit', () => {
     assert.equal(w.find(x => x.code === 'MappingNearLimit'), undefined)
   })
 })
+
+test.describe('ReplicaDrift', () => {
+  const baseDataset = { schema: [{ key: 'a', type: 'string' }], storage: { indexed: { size: 1_000_000 } } }
+
+  test('fires when replicas differ from config', () => {
+    const esInfos = {
+      indices: [],
+      index: {
+        health: 'green',
+        definition: { settings: { index: { number_of_shards: '1', number_of_replicas: '0' } }, mappings: { properties: {} } }
+      }
+    }
+    const w = computeFinalizeWarnings(baseDataset, esInfos, baseEsConfig) // config nbReplicas=1
+    const item = w.find(x => x.code === 'ReplicaDrift')
+    assert.ok(item)
+    assert.equal(item!.severity, 'info')
+    assert.equal(item!.details!.current, 0)
+    assert.equal(item!.details!.expected, 1)
+  })
+
+  test('does not fire when replicas match', () => {
+    const esInfos = {
+      indices: [],
+      index: {
+        health: 'green',
+        definition: { settings: { index: { number_of_shards: '1', number_of_replicas: '1' } }, mappings: { properties: {} } }
+      }
+    }
+    const w = computeFinalizeWarnings(baseDataset, esInfos, baseEsConfig)
+    assert.equal(w.find(x => x.code === 'ReplicaDrift'), undefined)
+  })
+})
