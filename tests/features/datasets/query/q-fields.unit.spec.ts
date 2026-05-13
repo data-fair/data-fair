@@ -53,12 +53,15 @@ test.describe('getFilterableFields - regimes', () => {
     assert.deepEqual(qStandardFields, ['a.text_standard', 'b.text_standard'])
   })
 
-  test('catch-all: _esCopyToSearch dataset collapses to the _search fields', () => {
+  test('catch-all: _esCopyToSearch dataset collapses analyzed fields to _search, keeps keyword main types per-column', () => {
     const ds = fakeDataset({ schema: wideSchema(), _esCopyToSearch: true })
     const { qSearchFields, qStandardFields, copyToSearch, reduced } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, true)
     assert.equal(reduced, false)
-    assert.deepEqual(qSearchFields, ['_search'])
+    // every column's keyword main type stays (cheap whole-value exact match — `_search`
+    // is a concatenation so it can't carry that semantics). Analyzed text views collapse to `_search`.
+    const expected = [...Array.from({ length: 32 }, (_, i) => 'f' + i), '_search']
+    assert.deepEqual(qSearchFields, expected)
     assert.deepEqual(qStandardFields, ['_search.text_standard'])
   })
 
@@ -73,11 +76,12 @@ test.describe('getFilterableFields - regimes', () => {
     })
     const { qSearchFields, qStandardFields, copyToSearch } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, true)
-    // boost-eligible columns are listed per-field with their ^N suffix; _search covers everything else
-    // (the catch-all entry is appended after the per-field loop)
+    // every column contributes its keyword main type; boost-eligible columns also contribute
+    // their analyzed inner fields with the ^N suffix; the catch-all `_search` entry is appended last.
     assert.deepEqual(qSearchFields, [
-      'label_col.text^3', 'label_col.text_standard^3',
-      'desc_col.text^2', 'desc_col.text_standard^2',
+      ...Array.from({ length: 32 }, (_, i) => 'f' + i),
+      'label_col', 'label_col.text^3', 'label_col.text_standard^3',
+      'desc_col', 'desc_col.text^2', 'desc_col.text_standard^2',
       '_search'
     ])
     assert.deepEqual(qStandardFields, [
@@ -87,14 +91,30 @@ test.describe('getFilterableFields - regimes', () => {
     ])
   })
 
-  test('reduced: wide dataset not yet reindexed drops .text_standard from qSearchFields but keeps qStandardFields', () => {
-    const ds = fakeDataset({ schema: wideSchema(33), _esCopyToSearch: false })
+  test('reduced (dedup-only): drops .text_standard for columns that have .text, keeps it for columns where it is the only inner field', () => {
+    // mix string-fulltext columns (have .text + .text_standard) and integer columns (only .text_standard)
+    const ds = fakeDataset({
+      schema: [
+        ...Array.from({ length: 20 }, (_, i) => ({ key: 's' + i, type: 'string' })),
+        ...Array.from({ length: 5 }, (_, i) => ({ key: 'i' + i, type: 'integer' }))
+      ],
+      _esCopyToSearch: false
+    })
     const { qSearchFields, qStandardFields, copyToSearch, reduced } = getFilterableFields(ds, 'x', undefined)
     assert.equal(copyToSearch, false)
     assert.equal(reduced, true)
-    assert.ok(qSearchFields.includes('f0.text'))
-    assert.ok(!qSearchFields.some((f: string) => f.endsWith('.text_standard')))
-    assert.ok(qStandardFields.includes('f0.text_standard')) // still populated for complete-mode prefix
+    // string-fulltext columns: keyword main type + .text in qSearchFields, .text_standard dropped
+    // (it's a quasi-duplicate of .text on the same source — language vs standard analyzer)
+    assert.ok(qSearchFields.includes('s0'))
+    assert.ok(qSearchFields.includes('s0.text'))
+    assert.ok(!qSearchFields.includes('s0.text_standard'))
+    // integer columns: .text_standard is the only inner field, so it stays in qSearchFields —
+    // removing it would eject the column from `q` entirely, not deduplicate.
+    assert.ok(qSearchFields.includes('i0.text_standard'))
+    // qStandardFields still carries every .text_standard for q_mode=complete's prefix query
+    assert.ok(qStandardFields.includes('s0.text_standard'))
+    assert.ok(qStandardFields.includes('i0.text_standard'))
+    // catch-all is not in play yet (no reindex)
     assert.ok(!qSearchFields.includes('_search'))
   })
 
@@ -114,7 +134,7 @@ test.describe('getFilterableFields - regimes', () => {
 })
 
 test.describe('buildQClauses - catch-all clauses', () => {
-  test('catch-all dataset: q targets _search; no separate _search_boosted clause', () => {
+  test('catch-all dataset: q targets _search and the per-column keyword main types; no separate _search_boosted clause', () => {
     const ds: any = fakeDataset({
       schema: [
         ...wideSchema(),
@@ -124,8 +144,13 @@ test.describe('buildQClauses - catch-all clauses', () => {
     })
     const qBool: any = buildQClauses(ds, 'hello', undefined, undefined)
     const sqs = qBool.bool.should.filter((s: any) => s.simple_query_string).map((s: any) => s.simple_query_string.fields)
-    // boost-eligible columns listed per-field with ^N suffix; catch-all `_search` appended after
-    assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['label_col.text^3', 'label_col.text_standard^3', '_search'])))
+    const expectedQSearchFields = [
+      ...Array.from({ length: 32 }, (_, i) => 'f' + i),
+      'label_col', 'label_col.text^3', 'label_col.text_standard^3',
+      '_search'
+    ]
+    assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(expectedQSearchFields)))
+    // qStandardFields (clause B in default mode) only carries analyzed-text views
     assert.ok(sqs.some((f: string[]) => JSON.stringify(f) === JSON.stringify(['label_col.text_standard^3', '_search.text_standard'])))
     // no `_search_boosted` field is emitted by the query layer any more
     assert.ok(!JSON.stringify(sqs).includes('_search_boosted'))

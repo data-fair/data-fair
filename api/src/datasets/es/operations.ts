@@ -209,8 +209,11 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
     const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
     const esProp = esProperty(f, '')
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
+      // keyword main type: always per-field, including in catch-all mode. `_search` is a text
+      // field built by concatenating many columns, so it can't carry whole-value exact-match
+      // semantics — the per-column keyword does. Cheap per entry (single posting-list lookup).
       searchFields.push(f.key)
-      if (isQField && !copyToSearch) qSearchFields.push(f.key)
+      if (isQField) qSearchFields.push(f.key)
     }
     if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
@@ -219,8 +222,9 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
       if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
       if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
 
-      // in catch-all mode the catch-all `_search` field covers everything; we still list the
-      // few boost-eligible columns per-field so their `^3`/`^2` weight applies at query time.
+      // in catch-all mode the catch-all `_search` field covers the analyzed text views; we still
+      // list the few boost-eligible columns per-field so their `^3`/`^2` weight applies at query
+      // time. (Keyword main types are also still listed — see the keyword branch above.)
       const perField = isQField && (!copyToSearch || !!suffix)
 
       if (esProp.fields.text) {
@@ -230,9 +234,13 @@ export const getFilterableFields = memoize((dataset: any, hasQ: any, qFields: an
       if (esProp.fields.text_standard) {
         searchFields.push(f.key + '.text_standard' + suffix)
         if (perField) {
-          // reduced mode: omit .text_standard from the main qSearchFields array (halves it),
-          // but keep it in qStandardFields so q_mode=complete's "startsWith" prefix query still works
-          if (!reduced) qSearchFields.push(f.key + '.text_standard' + suffix)
+          // reduced mode: deduplicate by dropping .text_standard from qSearchFields ONLY when
+          // .text already covers the column (string-fulltext columns — the two analyzers are
+          // a quasi-duplicate on the same source). For numeric/date columns where .text_standard
+          // is the only inner field we keep it: the point is to remove the analyzer duplicate,
+          // not to remove columns from the search. qStandardFields still carries it for
+          // q_mode=complete's "startsWith" prefix query.
+          if (!reduced || !esProp.fields.text) qSearchFields.push(f.key + '.text_standard' + suffix)
           qStandardFields.push(f.key + '.text_standard' + suffix)
         }
       }

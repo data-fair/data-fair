@@ -176,20 +176,27 @@ pair `['_search', '_search.text_standard']` regardless of how many columns the s
 the small handful of boost-eligible columns listed per-field with their `^3` / `^2` weight — i.e.
 the same per-field boost mechanism narrow datasets use, applied to ~1-3 columns at most. Boost-
 eligible columns are therefore *not* duplicated into `_search` — they're only referenced per-
-field. `updateDatasetMapping` forces a full reindex whenever a dataset crosses the threshold or
-when a column's boost eligibility changes (its `copy_to` would change) — so the mapping change is
-never applied in-place.
+field. The **keyword main type of every column is also kept per-field** in `qSearchFields`,
+even in catch-all mode: `_search` is a concatenation of all non-boost columns and so cannot carry
+whole-value exact-match semantics, while a per-column keyword can — and keyword entries are cheap
+(single posting-list lookup, no analysis). `updateDatasetMapping` forces a full reindex whenever a
+dataset crosses the threshold or when a column's boost eligibility changes (its `copy_to` would
+change) — so the mapping change is never applied in-place.
 
 Rollout is lazy: **no eager reindex job**. `dataset._esCopyToSearch` (set by the `finalize` worker
 in `finalize.ts`) records whether the dataset's *current* ES index was built with `_search`. The
 query layer in `getFilterableFields` / `prepareQuery` (`commons.js`) keys off that stored flag, not
-the live schema. Wide datasets whose index predates the feature use a **"reduced" path** that drops
-`.text_standard` from the main `qSearchFields` array (roughly half the fields), while keeping it for
-`q_mode=complete`'s prefix query — a smaller but still approximate catch-all until the next
-reindex-triggering schema change picks up the `copy_to` fields. For virtual datasets,
-`_esCopyToSearch` bubbles up as `true` only when every descendant has it. When `q_fields` is
-supplied explicitly the catch-all is bypassed entirely and the query targets only the requested
-columns, as before.
+the live schema. Wide datasets whose index predates the feature use a **"reduced" path** that
+performs analyzer deduplication: it drops `.text_standard` from `qSearchFields` *only when `.text`
+is also present on the same column* (string-fulltext columns, where the two analyzers are a quasi-
+duplicate of each other on the same source). Columns whose only analyzed inner field is
+`.text_standard` (numeric, date) keep it — the goal is to remove the analyzer duplicate, not to
+eject columns from the search. The duplicate second `simple_query_string` clause over
+`qStandardFields` is also skipped in this mode (clause A now covers it), while `qStandardFields`
+itself is still populated so `q_mode=complete`'s `startsWith` prefix query keeps working on every
+column. For virtual datasets, `_esCopyToSearch` bubbles up as `true` only when every descendant
+has it. When `q_fields` is supplied explicitly the catch-all is bypassed entirely and the query
+targets only the requested columns, as before.
 
 ### Aggregations (`values-agg.js`, `metric-agg.js`, `geo-agg.js`, `words-agg.js`, `values.js`, `bbox-agg.js`, `small-aggs.js`)
 
