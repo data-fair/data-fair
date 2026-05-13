@@ -184,23 +184,9 @@
       </v-data-table>
     </v-card>
 
-    <!-- Long-running tasks: empty state when both buckets are empty -->
-    <v-card
-      v-if="data && !data.longTasks.search.items.length && !data.longTasks.other.items.length"
-      variant="flat"
-      class="mb-4"
-    >
-      <v-card-title class="text-subtitle-1">
-        {{ t('longTasks.title') }}
-      </v-card-title>
-      <v-card-text class="text-medium-emphasis">
-        {{ t('longTasks.none') }}
-      </v-card-text>
-    </v-card>
-
     <!-- Long-running search queries -->
     <v-card
-      v-if="data?.longTasks?.search?.items?.length"
+      v-if="data"
       variant="flat"
       class="mb-4"
     >
@@ -220,6 +206,7 @@
         :items="data.longTasks.search.items"
         item-value="id"
         :items-per-page="25"
+        :no-data-text="t('longTasks.noneSearch')"
         density="compact"
         show-expand
       >
@@ -288,7 +275,7 @@
 
     <!-- Other long-running tasks -->
     <v-card
-      v-if="data?.longTasks?.other?.items?.length"
+      v-if="data"
       variant="flat"
       class="mb-4"
     >
@@ -308,6 +295,7 @@
         :items="data.longTasks.other.items"
         item-value="id"
         :items-per-page="25"
+        :no-data-text="t('longTasks.noneOther')"
         density="compact"
         show-expand
       >
@@ -576,7 +564,8 @@ fr:
     title: Tâches longues
     searchTitle: Requêtes de recherche longues
     otherTitle: Autres tâches longues
-    none: Aucune tâche au-delà du seuil
+    noneSearch: Aucune requête de recherche au-delà du seuil
+    noneOther: Aucune autre tâche au-delà du seuil
     otherTargets: Autres cibles
     sourceQuery: Requête source
     sourceQueryOversized: Requête trop volumineuse pour être affichée — description brute ci-dessous
@@ -626,7 +615,8 @@ en:
     title: Long-running tasks
     searchTitle: Long-running search queries
     otherTitle: Other long-running tasks
-    none: No long-running tasks above the configured threshold
+    noneSearch: No search queries above the configured threshold
+    noneOther: No other tasks above the configured threshold
     otherTargets: Other targets
     sourceQuery: Source query
     sourceQueryOversized: Query too large to display inline — raw description below
