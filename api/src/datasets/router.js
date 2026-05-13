@@ -58,7 +58,7 @@ import { reqAdminMode, reqSession, reqSessionAuthenticated, session } from '@dat
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
-import { queryAdvice } from '../misc/utils/query-advice.ts'
+import { queryAdvice, attachQueryHint } from '../misc/utils/query-advice.ts'
 import { can } from '../misc/utils/permissions.ts'
 import { emit as workerPing } from '../workers/ping.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
@@ -867,6 +867,7 @@ const readLines = async (req, res) => {
   const [_, size] = findUtils.pagination(query)
 
   let esResponse
+  const esSearchStart = Date.now()
   if (vectorTileRequested && sampling === 'max' && !query.collapse) {
     let previousEsResponse
     let totalLength = 0
@@ -897,6 +898,7 @@ const readLines = async (req, res) => {
       await manageESError(req, err)
     }
   }
+  const esSearchDurationMs = Date.now() - esSearchStart
   observe.reqStep(req, 'search')
 
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
@@ -959,7 +961,7 @@ const readLines = async (req, res) => {
     return res.status(200).send(tile)
   }
 
-  const result = { total: esResponse.hits.total?.value }
+  let result = { total: esResponse.hits.total?.value }
   if (nextLinkURL) result.next = nextLinkURL.href
   if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = []
@@ -995,6 +997,7 @@ const readLines = async (req, res) => {
     return res.status(200).send(sheet)
   }
 
+  result = attachQueryHint(req, esSearchDurationMs, result)
   res.status(200).send(result)
 }
 router.get('/:datasetId/lines', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), readLines)
@@ -1021,11 +1024,13 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
   let result
   const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
   const esAbortContext = esUtils.createEsRequestOptions(req, res)
+  const esGeoAggStart = Date.now()
   try {
     result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl, flatten, esAbortContext)
   } catch (err) {
     await manageESError(req, err)
   }
+  const esGeoAggDurationMs = Date.now() - esGeoAggStart
 
   if (req.query.format === 'geojson') {
     const geojson = geo.aggs2geojson(result)
@@ -1044,6 +1049,8 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
     return res.status(200).send(tile)
   }
 
+  // @ts-ignore — manageESError throws on errors, so result is defined here
+  result = attachQueryHint(req, esGeoAggDurationMs, result)
   res.status(200).send(result)
 })
 
@@ -1073,6 +1080,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   let result
   const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
   const esAbortContext = esUtils.createEsRequestOptions(req, res)
+  const esValuesAggStart = Date.now()
   try {
     result = await esUtils.valuesAgg(req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain, flatten, undefined, undefined, esAbortContext)
     if (result.next) {
@@ -1091,6 +1099,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   } catch (err) {
     await manageESError(req, err)
   }
+  const esValuesAggDurationMs = Date.now() - esValuesAggStart
 
   if (req.query.format === 'geojson') {
     const geojson = geo.aggs2geojson(result)
@@ -1112,6 +1121,8 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   // @ts-ignore
   if (explain) result.explain = explain
 
+  // @ts-ignore — manageESError throws on errors, so result is defined here
+  result = attachQueryHint(req, esValuesAggDurationMs, result)
   res.status(200).send(result)
 })
 

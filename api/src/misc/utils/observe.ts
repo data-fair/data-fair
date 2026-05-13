@@ -7,6 +7,10 @@ import { reqUser } from '@data-fair/lib-express'
 
 const debugReq = debug('df:observe:req')
 
+// Threshold above which a request step is considered slow. Used both for the slow-request log
+// below and as the auto-mode trigger for query hints (see query-advice.ts attachQueryHint).
+export const SLOW_REQUEST_THRESHOLD_MS = 1000
+
 const reqStepHisto = new client.Histogram({
   name: 'df_req_step_seconds',
   help: 'Duration in seconds of steps in API requests',
@@ -38,7 +42,7 @@ export const reqStep = (req: Request, stepName: string) => {
   const duration = now - (stepName === 'total' ? req[reqObserveKey].start : req[reqObserveKey].step)
   reqStepHisto.labels(Array.isArray(req[reqObserveKey].routeName) ? req[reqObserveKey].routeName[0] : req[reqObserveKey].routeName, stepName).observe(duration / 1000)
   debugReq('request', req.method, req.originalUrl, stepName, duration, 'ms')
-  if (duration > 1000 && stepName !== 'total' && stepName !== 'finish') {
+  if (duration > SLOW_REQUEST_THRESHOLD_MS && stepName !== 'total' && stepName !== 'finish') {
     const referer = req.headers.referer || req.headers.referrer || 'unknown'
     const user = reqUser(req)
     const userStr = user ? `${user.name}(${user.id})` : 'anonymous'
