@@ -343,3 +343,26 @@ test.describe('OrphanIndices', () => {
     assert.equal(w.find(x => x.code === 'OrphanIndices'), undefined)
   })
 })
+
+test.describe('pickPrimaryCode', () => {
+  test('returns the highest-priority code regardless of input order', () => {
+    const ws: any[] = [
+      { code: 'OrphanIndices', severity: 'info', message: '' },
+      { code: 'MissingIndex', severity: 'error', message: '' },
+      { code: 'HighSegmentCount', severity: 'warning', message: '' }
+    ]
+    assert.equal(pickPrimaryCode(ws), 'MissingIndex')
+  })
+
+  test('returns null on empty', () => {
+    assert.equal(pickPrimaryCode([]), null)
+  })
+
+  test('ordering: ShardingRecommended beats HighSegmentCount', () => {
+    const ws: any[] = [
+      { code: 'HighSegmentCount', severity: 'warning', message: '' },
+      { code: 'ShardingRecommended', severity: 'warning', message: '' }
+    ]
+    assert.equal(pickPrimaryCode(ws), 'ShardingRecommended')
+  })
+})
