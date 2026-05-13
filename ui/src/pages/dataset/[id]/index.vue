@@ -325,6 +325,20 @@
       </template>
     </df-section-tabs>
 
+    <!-- Diagnose section (superadmin only) -->
+    <df-section-tabs
+      v-if="sections.diagnose"
+      id="diagnose"
+      :svg="dataMaintenanceSvg"
+      svg-no-margin
+      color="admin"
+      :title="sections.diagnose.title"
+    >
+      <template #content>
+        <dataset-diagnose />
+      </template>
+    </df-section-tabs>
+
     <!-- Danger zone section -->
     <df-section-tabs
       v-if="sections.dangerZone"
@@ -540,6 +554,7 @@ fr:
   traceability: Traçabilité
   notifications: Notifications
   webhooks: Webhooks
+  diagnose: Diagnostic
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer ce jeu de données à un autre propriétaire.
@@ -593,6 +608,7 @@ en:
   traceability: Traceability
   notifications: Notifications
   webhooks: Webhooks
+  diagnose: Diagnose
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this dataset to another owner.
@@ -617,6 +633,7 @@ import metadataSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
 import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
+import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
@@ -642,6 +659,8 @@ const route = useRoute<'/dataset/[id]/'>()
 const router = useRouter()
 const { sendUiNotif } = useUiNotif()
 const { accountRole } = useSessionAuthenticated()
+const session = useSession()
+const adminMode = computed(() => !!session.state.user?.adminMode)
 const { canContribDep } = usePermissions()
 const { height: windowHeight } = useWindowSize()
 
@@ -1024,6 +1043,11 @@ const sections = computedDeepDiff(() => {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
     result.activity = { title: t('tracking'), tabs: activityTabs }
+  }
+
+  // Diagnose section (superadmin only)
+  if (adminMode.value) {
+    result.diagnose = { title: t('diagnose'), tabs: [] }
   }
 
   // Danger zone section
