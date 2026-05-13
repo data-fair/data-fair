@@ -730,7 +730,9 @@ const otherTaskHeaders = [
   { title: '', key: 'data-table-expand' }
 ]
 
-const categoryColor = (c: string): string | undefined =>
+// Items in the "other" bucket carry categories 'write' | 'admin' | 'other'.
+// 'search' never appears here — the API splits search tasks into a separate bucket.
+const categoryColor = (c: 'write' | 'admin' | 'other'): string | undefined =>
   c === 'write' ? 'warning' : c === 'admin' ? 'info' : undefined
 
 const unassignedShardRows = computed(() =>
