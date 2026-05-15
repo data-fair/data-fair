@@ -15,29 +15,37 @@ export class ParquetWriterStream extends Transform {
   }
 
   _transform (row: any, _: BufferEncoding, callback: TransformCallback): void {
-    // convert to timestamps
-    for (const prop of this.schema) {
-      if (prop.type === 'string' && prop.format === 'date-time' && row[prop.key]) {
-        row[prop.key] = new Date(row[prop.key]).getTime()
+    try {
+      // convert to timestamps
+      for (const prop of this.schema) {
+        if (prop.type === 'string' && prop.format === 'date-time' && row[prop.key]) {
+          row[prop.key] = new Date(row[prop.key]).getTime()
+        }
+        if (prop.type === 'string' && prop.format === 'date' && row[prop.key]) {
+          row[prop.key] = Math.floor(new Date(row[prop.key]).getTime() / millisPerDay)
+        }
+        if (row[prop.key] === null) delete row[prop.key]
       }
-      if (prop.type === 'string' && prop.format === 'date' && row[prop.key]) {
-        row[prop.key] = Math.floor(new Date(row[prop.key]).getTime() / millisPerDay)
+      this.rows.push(row)
+      if (this.rows.length >= 20000) {
+        const buffer = this.parquetWriter.addRows(this.rows)
+        this.rows = []
+        callback(null, buffer)
+      } else {
+        callback()
       }
-      if (row[prop.key] === null) delete row[prop.key]
-    }
-    this.rows.push(row)
-    if (this.rows.length >= 20000) {
-      const buffer = this.parquetWriter.addRows(this.rows)
-      this.rows = []
-      callback(null, buffer)
-    } else {
-      callback()
+    } catch (err) {
+      callback(err instanceof Error ? err : new Error(String(err)))
     }
   }
 
   _flush (callback: TransformCallback): void {
-    let buffer = this.parquetWriter.addRows(this.rows)
-    buffer = Buffer.concat([buffer, this.parquetWriter.finish()])
-    callback(null, buffer)
+    try {
+      let buffer = this.parquetWriter.addRows(this.rows)
+      buffer = Buffer.concat([buffer, this.parquetWriter.finish()])
+      callback(null, buffer)
+    } catch (err) {
+      callback(err instanceof Error ? err : new Error(String(err)))
+    }
   }
 }

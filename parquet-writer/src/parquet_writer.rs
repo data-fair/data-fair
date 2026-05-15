@@ -51,7 +51,7 @@ impl<'a> ParquetWriter {
             definition_levels.push(1);
           }
         }
-        if values.len() > 0 {
+        if !rows.is_empty() {
           column_writer
             .write_batch(&values, Some(&definition_levels), None)
             .unwrap();
@@ -70,7 +70,7 @@ impl<'a> ParquetWriter {
             definition_levels.push(1);
           }
         }
-        if values.len() > 0 {
+        if !rows.is_empty() {
           column_writer
             .write_batch(&values, Some(&definition_levels), None)
             .unwrap();
@@ -89,7 +89,7 @@ impl<'a> ParquetWriter {
             definition_levels.push(1);
           }
         }
-        if values.len() > 0 {
+        if !rows.is_empty() {
           column_writer
             .write_batch(&values, Some(&definition_levels), None)
             .unwrap();
@@ -109,7 +109,7 @@ impl<'a> ParquetWriter {
               definition_levels.push(1);
             }
           }
-          if values.len() > 0 {
+          if !rows.is_empty() {
             column_writer
               .write_batch(&values, Some(&definition_levels), None)
               .unwrap();
@@ -128,7 +128,7 @@ impl<'a> ParquetWriter {
               definition_levels.push(1);
             }
           }
-          if values.len() > 0 {
+          if !rows.is_empty() {
             column_writer
               .write_batch(&values, Some(&definition_levels), None)
               .unwrap();
@@ -147,7 +147,7 @@ impl<'a> ParquetWriter {
               definition_levels.push(1);
             }
           }
-          if values.len() > 0 {
+          if !rows.is_empty() {
             column_writer
               .write_batch(&values, Some(&definition_levels), None)
               .unwrap();
