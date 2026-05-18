@@ -1339,10 +1339,13 @@ export const applyTTL = async (dataset: RestDataset) => {
   // @ts-ignore
   const iter = iterHits(dataset, { size: 1000, qs })
   await pump(
-    Readable.from(iter),
+    // tight hwm: see comment at api-compat/ods/index.ts — keep ~1-2 batches in flight rather than
+    // the default 16 to bound per-stream retained memory.
+    Readable.from(iter, { highWaterMark: 2 }),
     // @ts-ignore
     new Transform({
       objectMode: true,
+      writableHighWaterMark: 2,
       transform (hits, encoding, callback) {
         for (const hit of hits) {
           this.push({ _action: 'delete', _id: hit._id })

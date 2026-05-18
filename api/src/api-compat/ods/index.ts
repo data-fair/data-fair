@@ -390,7 +390,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
 
 const maxChunkSize = 1000
 
-async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, totalSize, grouped, composite, timezone = 'utc', preserveArrays = false) {
+async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, totalSize, grouped, composite, timezone = 'utc', preserveArrays = false, abortContext?: esUtils.EsAbortContext) {
   const flatten = getFlatten(dataset, preserveArrays, selectSource)
 
   let chunkSize = maxChunkSize
@@ -404,7 +404,7 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
       body: { ...esQuery, size },
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
-    }))
+    }, abortContext))
 
     const lines = []
     if (grouped) {
@@ -448,6 +448,13 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   const { grouped, from, esQuery, selectAggs, selectSource, selectFinalKeys, selectTransforms, aliases, composite } = prepareEsQuery(dataset, query, 'exports')
 
   if (from) throw httpError(400, 'offset parameter is not supported for exports')
+
+  // abort the streaming ES iteration as soon as the http client goes away — without this, iterHits
+  // keeps paging from ES while csv-stringify / format streams keep buffering parsed rows in memory
+  // until server.requestTimeout (15 min) fires. The AbortController fires on res 'close' (unless
+  // writableEnded), cancels the in-flight ES search, and the iterHits generator throws AbortError
+  // → pump tears the pipeline down, releasing every batch/Buffer along the way.
+  const esAbortContext = esUtils.createEsRequestOptions(req, res)
 
   if (req.params.format === 'geojson') {
     const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
@@ -505,7 +512,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       const worksheet = workbookWriter.addWorksheet('Feuille 1')
       // Define columns (optional)
       worksheet.columns = columns
-      const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone)
+      const iter = iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone, false, esAbortContext)
       for await (const items of iter) {
         for (const item of items) {
           worksheet.addRow(item).commit()
@@ -516,7 +523,8 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       // compatReqCounter.inc({ route: 'exports', status: 'ok' })
     } catch (err) {
       const { message, status } = esUtils.extractError(err)
-      logCompatODSError(err, req.url, 'exports', 'xlsx-error', dataset.id)
+      // 499 = the http client gave up, the search was aborted: nothing to log or report
+      if (status !== 499) logCompatODSError(err, req.url, 'exports', 'xlsx-error', dataset.id)
       throw httpError(status, (status === 504 || status === 429) ? message + queryAdvice(req) : message)
     }
     // return early, xlsx export is written directly ro response,
@@ -600,9 +608,14 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone, preserveArrays)),
+      // tight hwm: iterHits yields whole batches (~1000 hits each). With the default object-mode
+      // hwm of 16 the upstream readable + downstream writable would pre-buffer up to ~32 batches
+      // (~32 000 hits) per stuck/slow stream — concurrent slow consumers multiply that into GiBs of
+      // retained external memory. Keep ~1-2 batches in flight instead.
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone, preserveArrays, esAbortContext), { highWaterMark: 2 }),
       new Transform({
         objectMode: true,
+        writableHighWaterMark: 2,
         transform (items, encoding, callback) {
           for (const item of items) this.push(item)
           callback(null)
@@ -614,7 +627,8 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     )
   } catch (err) {
     const { message, status } = esUtils.extractError(err)
-    logCompatODSError(err, req.url, 'exports', 'stream-error', dataset.id)
+    // 499 = the http client gave up, the search was aborted: nothing to log or report
+    if (status !== 499) logCompatODSError(err, req.url, 'exports', 'stream-error', dataset.id)
     throw httpError(status, (status === 504 || status === 429) ? message + queryAdvice(req) : message)
   }
   // compatReqCounter.inc({ route: 'exports', status: 'ok' })
