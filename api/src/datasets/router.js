@@ -1361,6 +1361,7 @@ router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewa
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
 router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
+  if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
   if (await filesStorage.pathExists(datasetUtils.fullFilePath(req.dataset))) {
     await downloadFileFromStorage(datasetUtils.fullFilePath(req.dataset), req, res)
   } else {
