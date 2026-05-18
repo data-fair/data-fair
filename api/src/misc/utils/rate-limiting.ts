@@ -55,7 +55,11 @@ export const clear = () => {
 export const getRateLimiter = (req: Request, limitType: string, throttlingKey = '') => {
   const user = reqUser(req)
   const throttlingId = throttlingKey + '_' + (user ? user.id : requestIp.getClientIp(req)) + '_' + limitType
+  // init lastUsed at creation so the 20-min sweep can detect this entry as idle later — without it,
+  // a limiter that's never followed by a consume() (or whose consume() path errors out) stays with
+  // lastUsed=undefined forever (undefined < threshold is always false → never deleted).
   const rateLimiter = rateLimiters[throttlingId] = rateLimiters[throttlingId] || {
+    lastUsed: Date.now(),
     rateLimiter: new RateLimiter({
       tokensPerInterval: config.defaultLimits.apiRate[limitType].nb,
       interval: config.defaultLimits.apiRate[limitType].duration * 1000
@@ -104,8 +108,13 @@ export const getTokenBucket = (req, limitType, bandwidthType) => {
   const user = reqUser(req)
   const throttlingId = user ? user.id : requestIp.getClientIp(req)
   const bucketSize = config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] * burstFactor
+  // init lastUsed at creation so the 20-min sweep can detect this entry as idle later — every call
+  // to res.throttle() creates a bucket via this path but lastUsed is only set inside the Throttle
+  // _transform; a stream that never receives bytes (empty body, immediate error before any chunk)
+  // would leave lastUsed=undefined and the sweep would skip it forever.
   const tokenBucket: TokenBucketWrapper = tokenBuckets[throttlingId + bandwidthType] = tokenBuckets[throttlingId + bandwidthType] || {
     bucketSize,
+    lastUsed: Date.now(),
     bucket: new TokenBucket({
       bucketSize,
       tokensPerInterval: config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType],
@@ -117,18 +126,29 @@ export const getTokenBucket = (req, limitType, bandwidthType) => {
 
 class Throttle extends Transform {
   tokenBucket: TokenBucketWrapper
+  // resolves to `true` once the Throttle is closed (normal end or destroy/abort). Used to race against
+  // `removeTokens`: without this the slice currently waiting for tokens would be retained for up to one
+  // refill window (bucketSize / bandwidth seconds) after the request was aborted, multiplied by every
+  // stalled stream from the same client. Underscore-prefixed to avoid clashing with Readable.closed.
+  private _closedPromise: Promise<true>
 
   constructor (tokenBucket: TokenBucketWrapper) {
     super()
     this.tokenBucket = tokenBucket
+    this._closedPromise = new Promise<true>(resolve => this.once('close', () => resolve(true)))
   }
 
   async transformPromise (chunk: Buffer, encoding: string) {
     this.tokenBucket.lastUsed = Date.now()
     let pos = 0
     while (chunk.length > pos) {
+      if (this.destroyed) return
       const slice = chunk.subarray(pos, pos + this.tokenBucket.bucketSize)
-      await this.tokenBucket.bucket.removeTokens(slice.length)
+      const stop = await Promise.race([
+        this.tokenBucket.bucket.removeTokens(slice.length).then(() => false as const),
+        this._closedPromise
+      ])
+      if (stop) return // stream torn down mid-wait — drop the slice, let it be GC'd
       this.push(slice)
       pos += slice.length
     }
@@ -139,11 +159,20 @@ class Throttle extends Transform {
   }
 }
 
-const throttledEnd = async (res: Response, buffer: Buffer, tokenBucket) => {
+const throttledEnd = async (res: Response, buffer: Buffer, tokenBucket: TokenBucketWrapper) => {
+  // mirror the Throttle abort race for the wrapped res.end path — if the client disconnects while we're
+  // waiting on tokens, stop awaiting and drop the rest of `buffer` instead of holding it for the full
+  // refill window
+  const closed = new Promise<true>(resolve => res.once('close', () => resolve(true)))
   let pos = 0
   while (buffer.length > pos) {
+    if (res.writableEnded || res.destroyed) return
     const slice = buffer.subarray(pos, pos + tokenBucket.bucketSize)
-    await tokenBucket.bucket.removeTokens(slice.length)
+    const stop = await Promise.race([
+      tokenBucket.bucket.removeTokens(slice.length).then(() => false as const),
+      closed
+    ])
+    if (stop) return
     res.write(slice)
     pos += slice.length
   }
