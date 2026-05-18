@@ -591,7 +591,7 @@ const confirmUpgrade = async () => {
   try {
     await patch({ urlDraft: upgradeAvailable.value.url })
     showUpgradeDialog.value = false
-    router.push(`/application/${route.params.id}/config`)
+    await router.push(`/application/${route.params.id}/config`)
   } finally {
     upgrading.value = false
   }

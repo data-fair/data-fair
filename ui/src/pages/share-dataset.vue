@@ -469,7 +469,7 @@ async function publish () {
   if (template && (template.includes('{id}') || template.includes('{slug}'))) {
     window.location.href = template.replace('{id}', id).replace('{slug}', datasetServer.value.slug)
   } else {
-    router.push({ path: `/dataset/${id}` })
+    await router.push({ path: `/dataset/${id}` })
   }
 }
 
@@ -488,7 +488,7 @@ async function requestPublication () {
     }
   })
   resetServerSnapshots({ requestedPublicationSites: reqSites })
-  router.push({ path: '/' })
+  await router.push({ path: '/' })
 }
 
 const doPublish = useAsyncAction(async () => {

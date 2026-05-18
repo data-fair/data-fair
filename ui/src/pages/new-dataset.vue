@@ -741,7 +741,7 @@ async function createFileDataset () {
 
   const dataset = res.data
   if (dataset.error) throw new Error(dataset.error)
-  router.push(`/dataset/${dataset.id}`)
+  await router.push(`/dataset/${dataset.id}`)
 }
 
 async function createRestDataset () {
@@ -783,7 +783,7 @@ async function createRestDataset () {
     body,
     query: params
   })
-  router.push(`/dataset/${dataset.id}`)
+  await router.push(`/dataset/${dataset.id}`)
 }
 
 async function createVirtualDataset () {
@@ -836,7 +836,7 @@ async function createVirtualDataset () {
     method: 'POST',
     body
   })
-  router.push(`/dataset/${dataset.id}`)
+  await router.push(`/dataset/${dataset.id}`)
 }
 
 async function createMetaOnlyDataset () {
@@ -853,7 +853,7 @@ async function createMetaOnlyDataset () {
     method: 'POST',
     body
   })
-  router.push(`/dataset/${dataset.id}`)
+  await router.push(`/dataset/${dataset.id}`)
 }
 </script>
 
