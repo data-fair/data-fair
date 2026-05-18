@@ -131,6 +131,12 @@ export default async function (dataset: DatasetInternal) {
       }
     }
   }
+  // sync dataset.validateDraft with the patch decided above so phase B reads
+  // all lines (instead of the 100-line draft sample) when we are about to
+  // promote the draft. The mongo doc still has the pre-run value, which is
+  // unset in the auto-validation flow — without this sync extend() would
+  // truncate the extended file to 100 lines and indexLines would inherit it.
+  if (patch.validateDraft) dataset.validateDraft = true
 
   // ----- single DiagnosticWriter for the whole run -----
   const writer = new DiagnosticWriter(dataset)

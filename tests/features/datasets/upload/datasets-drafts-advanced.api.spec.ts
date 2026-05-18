@@ -232,6 +232,47 @@ other
     assert.ok(errorEvent.data.includes('un concept nécessaire'))
   })
 
+  test('Auto-validate a draft larger than the 100-line sample with active extensions', async () => {
+    // Regression test for the bug where process-file.ts's phase B (extensions)
+    // received undefined for ignoreDraftLimit during auto-validation because
+    // `dataset.validateDraft` was unset (the flag had been added to `patch`
+    // but not propagated into `dataset`). The extended file was therefore
+    // truncated to 100 lines and the alias-swap published a 100-line dataset.
+    const ax = testUser1
+
+    // Initial dataset (2 rows) with the address concept + geocoder extension.
+    let form = new FormData()
+    form.append('file', 'label,adr\nkoumoul,19 rue de la voie lactée saint avé\nother,unknown\n', 'initial.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    let dataset = (await waitForFinalize(ax, res.data.id))
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: 10, lon: 10, matchLevel: 'match' }, indexFields: ['matchLevel'] } })
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+    })
+    dataset = await waitForFinalize(ax, dataset.id)
+    assert.equal(dataset.count, 2)
+
+    // Upload a new file with 150 rows as a draft. validationMode defaults to
+    // 'compatible' (existing dataset, ?draft=true, no breaking changes), so
+    // process-file is expected to auto-validate the draft after extensions.
+    const rows = ['label,adr']
+    for (let i = 0; i < 150; i++) rows.push(`row-${i},19 rue de la voie lactée saint avé`)
+    form = new FormData()
+    form.append('file', rows.join('\n') + '\n', 'larger.csv')
+    res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
+    assert.equal(res.status, 200)
+    dataset = await waitForFinalize(ax, dataset.id, 30000)
+
+    // The dataset must reflect the full file, not the 100-line draft sample.
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.count, 150)
+    assert.equal(!!dataset.draftReason, false)
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 0 } })).data
+    assert.equal(lines.total, 150)
+  })
+
   test('Delete a dataset in draft state', async () => {
     const ax = testUser1
 
