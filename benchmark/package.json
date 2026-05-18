@@ -4,10 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/index.ts"
+    "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/index.ts",
+    "benchmark-csv": "node --expose-gc --experimental-strip-types --disable-warning=ExperimentalWarning src/csv-serialize/bench.ts"
   },
   "dependencies": {
-    "autocannon": "^8.0.0"
+    "@fast-csv/format": "^4.3.5",
+    "autocannon": "^8.0.0",
+    "csv-stringify": "^6.5.2"
   },
   "devDependencies": {
     "@types/autocannon": "^7.12.0"

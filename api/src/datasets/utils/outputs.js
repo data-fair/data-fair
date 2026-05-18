@@ -1,9 +1,8 @@
-import { stringify as csvStrStream } from 'csv-stringify'
-import { stringify as csvStrSync } from 'csv-stringify/sync'
 import { Transform } from 'stream'
 import path from 'path'
 import { Piscina } from 'piscina'
 import mongo from '#mongo'
+import { getCsvSerializer } from './csv-jit.ts'
 
 export const results2sheetPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/results2sheet.js'),
@@ -19,58 +18,63 @@ export const geojson2shpPiscina = new Piscina({
   maxThreads: 1
 })
 
-export const csvStringifyOptions = (dataset, query = {}, useTitle = false) => {
-  const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
-  const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
-  return {
-    bom: true,
-    columns: properties.map(field => ({ key: field.key, header: (useTitle ? field.title : field['x-originalName']) || field['x-originalName'] || field.key })),
-    header: query.header !== 'false',
-    // quoted_string to prevent bugs with strings containing \r or other edge cases
-    quoted_string: true,
+// Resolve the columns to emit + the JIT-compiled serializer for them.
+// Matches the historical csvStringifyOptions shape: select via query.select
+// (falls back to all non-calculated schema fields), x-originalName / title
+// for headers, custom delimiter via query.sep, header opt-out via
+// query.header === 'false'. \0 stripping is inlined by the serializer.
+const compileForRequest = (dataset, query = {}, useTitle = false) => {
+  const selectKeys = (query.select && query.select !== '*')
+    ? query.select.split(',')
+    : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
+  return getCsvSerializer({
+    dataset,
+    selectKeys,
+    useTitle,
     delimiter: query.sep || ',',
-    cast: {
-      boolean: (value) => {
-        if (value) return '1'
-        if (value === false) return '0'
-        return ''
-      }
-    }
-  }
+    header: query.header !== 'false'
+  })
 }
 
-const sliceSize = 200
+const yieldEvery = 200
 
 export const results2csv = async (req, results) => {
-  let csv = ''
-
-  const options = csvStringifyOptions(req.dataset, req.query)
-
-  if (results.length < sliceSize) {
-    // escape special null char (see test-it/resources/csv-cases/rge-null-chars.csv)
-    csv += csvStrSync(results, options).replace(/\0/g, '')
-  } else {
-    let i = 0
-    while (i < results.length) {
-      // escape special null char (see test-it/resources/csv-cases/rge-null-chars.csv)
-      const sliceOptions = i === 0 ? options : { ...options, header: false, bom: false }
-      csv += csvStrSync(results.slice(i, i + sliceSize), sliceOptions).replace(/\0/g, '')
-      i += sliceSize
-      // avoid blocking the event loop
+  const { prologue, row } = compileForRequest(req.dataset, req.query)
+  const parts = new Array(results.length + 1)
+  parts[0] = prologue
+  for (let i = 0; i < results.length; i++) {
+    parts[i + 1] = row(results[i])
+    // yield to the event loop every `yieldEvery` rows; skip on the last row
+    // and naturally never fires for small result sets
+    if ((i + 1) % yieldEvery === 0 && i + 1 < results.length) {
       await new Promise(resolve => setTimeout(resolve, 0))
     }
   }
-
-  return csv
+  return parts.join('')
 }
 
 export const csvStreams = (dataset, query = {}, useTitle = false) => {
+  const { prologue, row } = compileForRequest(dataset, query, useTitle)
+  let emitted = false
   return [
-    csvStrStream(csvStringifyOptions(dataset, query, useTitle)),
     new Transform({
+      writableObjectMode: true,
       transform (item, encoding, callback) {
-        // escape special null char (see test-it/resources/csv-cases/rge-null-chars.csv)
-        callback(null, item.toString().replace(/\0/g, ''))
+        if (!emitted) {
+          emitted = true
+          this.push(prologue + row(item))
+        } else {
+          this.push(row(item))
+        }
+        callback()
+      },
+      flush (callback) {
+        // ensure an empty result set still produces the header row
+        if (!emitted) {
+          emitted = true
+          this.push(prologue)
+        }
+        callback()
       }
     })
   ]
