@@ -65,6 +65,8 @@ export const accepted = [
   '.txt',
   '.dif',
   '.tsv',
+  '.json',
+  '.ndjson',
   '.kml',
   '.kmz',
   '.xml',
