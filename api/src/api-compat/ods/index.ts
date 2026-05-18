@@ -600,9 +600,14 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   }
   try {
     await pump(
-      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone, preserveArrays)),
+      // tight hwm: iterHits yields whole batches (~1000 hits each). With the default object-mode
+      // hwm of 16 the upstream readable + downstream writable would pre-buffer up to ~32 batches
+      // (~32 000 hits) per stuck/slow stream — concurrent slow consumers multiply that into GiBs of
+      // retained external memory. Keep ~1-2 batches in flight instead.
+      Readable.from(iterHits(esClient, dataset, esQuery, aliases, selectSource, selectAggs, selectTransforms, query.limit ? Number(query.limit) : -1, grouped, composite, query.timezone, preserveArrays), { highWaterMark: 2 }),
       new Transform({
         objectMode: true,
+        writableHighWaterMark: 2,
         transform (items, encoding, callback) {
           for (const item of items) this.push(item)
           callback(null)
