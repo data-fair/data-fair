@@ -118,13 +118,16 @@ test.describe('datasets in draft mode - lifecycle', () => {
   test('create a draft when updating the data file', async () => {
     const notifCollector = await collectNotifications()
 
-    // Send dataset
+    // Send dataset (use a title with apostrophe and accents to detect HTML-encoding regressions in i18n)
+    const titleWithSpecialChars = "test d'apostrophe + àccéent"
     const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
+    form.append('title', titleWithSpecialChars)
     const ax = testUser1
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     let dataset = await waitForFinalize(ax, res.data.id)
+    assert.equal(dataset.title, titleWithSpecialChars)
 
     // upload a new file with incompatible schema
     const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset2.csv')
@@ -198,6 +201,11 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(notifications[0].topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
     assert.equal(notifications[1].topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
     assert.equal(notifications[2].topic.key, 'data-fair:dataset-draft-draft-validated:' + dataset.slug)
+    // notification title and body must not be HTML-encoded (apostrophes, accents must be preserved as-is)
+    assert.equal(notifications[0].title.fr, `Nouveau jeu de données ${titleWithSpecialChars}`)
+    assert.equal(notifications[0].title.en, `New dataset ${titleWithSpecialChars}`)
+    assert.ok(notifications[0].body.fr.includes(titleWithSpecialChars), 'notification body should contain the raw title')
+    assert.ok(!JSON.stringify(notifications[0]).includes('&#39;'), 'notification must not contain HTML-encoded apostrophes')
   })
 
   test('create a draft when updating the data file and cancel it', async () => {
