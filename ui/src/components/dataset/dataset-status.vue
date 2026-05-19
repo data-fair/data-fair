@@ -9,7 +9,9 @@
         <p
           v-if="lastProdEvent"
           style="white-space: pre-line"
-        >{{ lastProdEvent.data }}</p>
+        >
+          {{ lastProdEvent.data }}
+        </p>
         <template #append>
           <v-btn
             color="primary"
@@ -67,12 +69,16 @@
           v-if="draftError"
           class="mt-4 font-weight-bold"
           style="white-space: pre-line"
-        >{{ draftError.data }}</p>
+        >
+          {{ draftError.data }}
+        </p>
         <p
           v-if="draftValidationError"
           class="mt-4 font-weight-bold"
           style="white-space: pre-line"
-        >{{ draftValidationError.data }}</p>
+        >
+          {{ draftValidationError.data }}
+        </p>
         <p class="mt-4">
           <span v-if="dataset.draftReason.key === 'file-new'">
             {{ t('draftNew2') }}&nbsp;

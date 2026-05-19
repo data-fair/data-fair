@@ -515,7 +515,7 @@ const sort = computed<{ key: string, direction: 1 | -1 } | undefined>({
 
 const display = useDisplay()
 
-const { dataset, id: datasetId } = useDatasetStore()
+const { dataset, id: datasetId, imageField } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
 const allCols = computed(() => dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName').map(p => p.key) ?? [])
@@ -562,7 +562,11 @@ const dataQualityContext = computed(() => {
 })
 
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
-const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
+const extraParams = computed(() => ({
+  ...filtersQueryParams.value,
+  ...conceptFilters,
+  ...(imageField.value ? { thumbnail: '40x40' } : {})
+}))
 const indexedAt = ref<string>()
 const { baseFetchUrl, total, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
 

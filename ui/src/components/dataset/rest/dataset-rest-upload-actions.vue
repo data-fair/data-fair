@@ -48,7 +48,7 @@
               variant="outlined"
               density="compact"
               hide-details
-              accept=".csv,.geojson,.xlsx,.ods,.xls"
+              accept=".csv,.tsv,.geojson,.json,.ndjson,.xlsx,.ods,.fods,.xls,.dbf"
               :rules="[(file) => !!file || '']"
             >
               <template

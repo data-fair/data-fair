@@ -66,6 +66,8 @@
       data-fair/catalogs: Gestion des catalogues
       data-fair/processings: Gestion des traitements
       data-fair/portals: Gestion des portails
+      data-fair/agents: Gestion des agents IA
+      data-fair/metrics: Suivi d'audience
       data-fair/openapi-viewer: Visualisateur de documentation d'API
   en:
     info: Services information
@@ -78,6 +80,8 @@
       data-fair/catalogs: Catalogs management
       data-fair/processings: Processings management
       data-fair/portals: Portals management
+      data-fair/agents: AI agents management
+      data-fair/metrics: Audience tracking
       data-fair/openapi-viewer: API documentation viewer
   </i18n>
 
@@ -107,6 +111,12 @@ if ($uiConfig.processingsIntegration) {
 }
 if ($uiConfig.portalsIntegration) {
   services.value.push({ name: 'data-fair/portals', infoUrl: '/portals-manager/api/admin/info' })
+}
+if ($uiConfig.agentsIntegration) {
+  services.value.push({ name: 'data-fair/agents', infoUrl: '/agents/api/admin/info' })
+}
+if ($uiConfig.metricsIntegration) {
+  services.value.push({ name: 'data-fair/metrics', infoUrl: '/metrics/api/admin/info' })
 }
 if ($uiConfig.openapiViewerIntegration) {
   services.value.push({ name: 'data-fair/openapi-viewer', infoUrl: '/openapi-viewer/api/admin/info' })

@@ -849,7 +849,7 @@ const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLin
 const confirmRemove = useAsyncAction(async () => {
   showDeleteDialog.value = false
   await remove()
-  router.push('/datasets')
+  await router.push('/datasets')
 }, { success: t('deleteDatasetSuccess') })
 
 const confirmDeleteAllLines = useAsyncAction(async () => {

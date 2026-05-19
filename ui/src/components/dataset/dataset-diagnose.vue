@@ -57,8 +57,12 @@
                   :key="row.key"
                   class="py-0"
                 >
-                  <dt class="d-inline text-medium-emphasis">{{ row.label }}:</dt>
-                  <dd class="d-inline ml-1">{{ row.value }}</dd>
+                  <dt class="d-inline text-medium-emphasis">
+                    {{ row.label }}:
+                  </dt>
+                  <dd class="d-inline ml-1">
+                    {{ row.value }}
+                  </dd>
                 </div>
               </dl>
             </v-card-text>

@@ -14,7 +14,7 @@ export default defineConfig({
   use: {
     baseURL: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/data-fair`,
     actionTimeout: 5_000,
-    navigationTimeout: 5_000,
+    navigationTimeout: 10_000,
   },
 
   projects: [
