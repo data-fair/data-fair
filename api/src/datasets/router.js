@@ -36,6 +36,8 @@ import * as outputs from './utils/outputs.js'
 import * as limits from '../limits/service.ts'
 import { extend } from './utils/extensions.ts'
 import * as notifications from '../misc/utils/notifications.ts'
+import * as webhooks from '../misc/utils/webhooks.ts'
+import i18n from 'i18n'
 import userNotificationSchema from '../../contract/user-notification.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { bulkSearchStreams } from './utils/master-data.js'
@@ -211,9 +213,29 @@ router.patch('/:datasetId',
           throw httpError(400, req.__('errors.dupSlug'))
         })
 
-      if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
+      // applyPatch may overwrite patch.status to 'indexed' when ES accepts the new mapping
+      // in place (REST column added), so check the schema diff directly.
+      const schemaChanged = !!patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, req.dataset.schema, true)
+      const reprocessingTriggered = patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated'
+      if (schemaChanged || reprocessingTriggered) {
         await journals.log('datasets', dataset, { type: 'structure-updated' })
         await notifications.sendResourceEvent('datasets', dataset, sessionState, 'structure-updated', { extra: { patch: Object.keys(patch).join(', ') } })
+      }
+
+      // REST datasets skip the draft-validation flow that emits breaking-change in service.js;
+      // emit it inline here on backward-incompatible PATCHes.
+      if (req.dataset.isRest && patch.schema) {
+        const breakingChanges = getSchemaBreakingChanges(req.dataset.schema, patch.schema, false, false)
+        if (breakingChanges.length) {
+          const breakingChangesList = breakingChanges.map(bc => bc.summary).join(', ')
+          const localizedParams = i18n.getLocales().reduce((a, l) => {
+            a[l] = { breakingChanges: breakingChangesList }
+            return a
+          }, {})
+          const i18nKey = breakingChanges.length === 1 ? 'breaking-change' : 'breaking-changes'
+          webhooks.trigger('datasets', dataset, { type: 'breaking-change', body: localizedParams })
+          await notifications.sendResourceEvent('datasets', dataset, sessionState, 'breaking-change', { i18nKey, localizedParams })
+        }
       }
 
       eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
@@ -325,8 +347,8 @@ router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddleware
     resource: { type: 'dataset', title: dataset.title, id: dataset.id },
     sender: { ...dataset.owner, role: 'admin' }
   }
-  eventsQueue.pushEvent(event, sessionState)
-  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
+  await notifications.send(event, sessionState)
+  await notifications.send({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
 
   await syncRemoteService(patchedDataset)
 
@@ -350,7 +372,7 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
 
   eventsLog.info('df.datasets.delete', `dataset deleted ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
   const sessionState = await session.req(req)
-  eventsQueue.pushEvent({
+  await notifications.send({
     title: 'Jeu de données supprimé',
     body: `${dataset.title} (${dataset.slug})`,
     topic: {
@@ -533,7 +555,8 @@ const updateDatasetRoute = async (req, res, next) => {
 
       if (files) {
         await journals.log('datasets', dataset, { type: 'data-updated' })
-        await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated')
+        const i18nKey = `data-updated-${dataset.isRest ? 'rest' : 'file'}`
+        await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated', { i18nKey })
       }
       await syncRemoteService(dataset)
     }
@@ -563,7 +586,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
   const patch = { status: 'validated', validateDraft: true }
   await applyPatch(dataset, patch)
   await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' })
-  await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-validated', { localizedParams: { cause: { fr: 'validation manuelle', en: 'manual validation' } } })
+  await notifications.sendResourceEvent('datasets', dataset, sessionState, 'validated', { localizedParams: { cause: { fr: 'validation manuelle', en: 'manual validation' } } })
   eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
   return res.send(dataset)
@@ -587,7 +610,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   await journals.log('datasets', dataset, { type: 'draft-cancelled' }, false, sessionState)
 
   eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
-  await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-cancelled')
+  await notifications.sendResourceEvent('datasets', dataset, sessionState, 'cancelled')
 
   await updateStorage(datasetFull)
 
