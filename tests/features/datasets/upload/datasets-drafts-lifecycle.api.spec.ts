@@ -190,17 +190,26 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
     assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
-    // TODO: notification assertions disabled - worker-thread notifications are not reliably
-    // captured in the dev environment due to module re-evaluation issues with piscina.
-    // The journal assertions above verify the same event flow.
-    const notifications = await notifCollector.waitForCount(3)
+    // dual slug+id emission per event (see notifications.md §12) → 3 events * 2 = 6
+    const notifications = await notifCollector.waitForCount(6)
     await notifCollector.close()
-    assert.equal(notifications[0].topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
-    assert.equal(notifications[1].topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
-    assert.equal(notifications[2].topic.key, 'data-fair:dataset-draft-draft-validated:' + dataset.slug)
+    const expectedPairs = [
+      'data-fair:dataset-dataset-created',
+      'data-fair:dataset-draft-data-updated',
+      'data-fair:dataset-draft-validated'
+    ]
+    for (const base of expectedPairs) {
+      const slugMatch = notifications.find(n => n.topic.key === `${base}:${dataset.slug}`)
+      const idMatch = notifications.find(n => n.topic.key === `${base}:${dataset.id}`)
+      assert.ok(slugMatch, `expected notif on slug topic ${base}:${dataset.slug}`)
+      assert.ok(idMatch, `expected notif on id topic ${base}:${dataset.id}`)
+      assert.equal(slugMatch._id, idMatch._id, `slug+id emissions for ${base} must share the same _id for dedup`)
+    }
     // the localized "cause" param must be interpolated into the notification body
-    assert.ok(notifications[2].body.fr.includes('validation manuelle'), `fr body should mention the cause, got "${notifications[2].body.fr}"`)
-    assert.ok(notifications[2].body.en.includes('manual validation'), `en body should mention the cause, got "${notifications[2].body.en}"`)
+    const validated = notifications.find(n => n.topic.key === `data-fair:dataset-draft-validated:${dataset.slug}`)
+    assert.ok(validated, 'expected a draft-validated notification')
+    assert.ok(validated.body.fr.includes('validation manuelle'), `fr body should mention the cause, got "${validated.body.fr}"`)
+    assert.ok(validated.body.en.includes('manual validation'), `en body should mention the cause, got "${validated.body.en}"`)
   })
 
   // a compatible schema patch is applied to the index through a partial mapping update instead of
