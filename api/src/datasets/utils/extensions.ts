@@ -653,7 +653,8 @@ export const applyCalculations = async (dataset: Dataset, item: any) => {
         const stats = await filesStorage.fileStats(filePath)
 
         if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
-          if (stats.size > config.defaultLimits.attachmentIndexed) {
+          // -1 is the "unlimited" sentinel used across config.defaultLimits (see storage.ts)
+          if (config.defaultLimits.attachmentIndexed !== -1 && stats.size > config.defaultLimits.attachmentIndexed) {
             warning = 'Pièce jointe trop volumineuse pour être analysée'
           } else {
             const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
