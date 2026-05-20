@@ -39,11 +39,6 @@
 		"requires": "requires ",
 		"requiresJoin": " and "
 	},
-	"hasBreakingChanges": "the dataset \"{{title}}\" has breaking changes:",
-	"breakingChanges": {
-		"missing": "the column \"{{key}}\" doesn't exist anymore",
-		"type": "the column \"{{key}}\" changed type"
-	},
 	"sheets": {
 		"data": "Data",
 		"metadata": "Metadata",
@@ -93,11 +88,11 @@
 		"datasets": {
 			"error": {
 				"title": "Error of dataset {{label}}",
-				"body": "There was an error during processing of the dataset {{label}}: {{detail}}."
+				"body": "There was an error on the dataset {{label}}: {{detail}}."
 			},
 			"draft-error": {
 				"title": "Error of draft dataset {{label}}",
-				"body": "There was an error during processing of the draft of the dataset {{label}}: {{detail}}."
+				"body": "There was an error on the draft of the dataset {{label}}: {{detail}}."
 			},
 			"validation-error": {
 				"title": "Validation errors on dataset {{label}}",
@@ -128,12 +123,36 @@
 				"body": "The dataset {{label}} has been published on {{publicationSite}} in the topic {{topic}}."
 			},
 			"draft-data-updated": {
+				"title": "Draft data updated {{label}}",
+				"body": "The data of the draft of the dataset {{label}} was updated."
+			},
+			"draft-data-updated-file": {
 				"title": "Draft file updated {{label}}",
 				"body": "A new file was loaded on the dataset {{label}} in draft mode."
 			},
+			"draft-data-updated-rest": {
+				"title": "Draft data updated {{label}}",
+				"body": "The data of the draft of the dataset {{label}} was updated."
+			},
 			"data-updated": {
+				"title": "Data updated {{label}}",
+				"body": "The data of the dataset {{label}} was updated."
+			},
+			"data-updated-file": {
 				"title": "File updated {{label}}",
 				"body": "A new file was loaded on the dataset {{label}}."
+			},
+			"data-updated-rest": {
+				"title": "Data updated {{label}}",
+				"body": "The data of the dataset {{label}} was updated."
+			},
+			"data-updated-lines": {
+				"title": "Data updated {{label}}",
+				"body": "The data of the dataset {{label}} was updated: {{details}}."
+			},
+			"draft-data-updated-lines": {
+				"title": "Draft data updated {{label}}",
+				"body": "The data of the draft of the dataset {{label}} was updated: {{details}}."
 			},
 			"structure-updated": {
 				"title": "Structure change of {{label}}",
@@ -143,15 +162,19 @@
 				"title": "Structure change of draft {{label}}",
 				"body": "The structure of the draft of the dataset {{label}} was modified."
 			},
-			"draft-draft-validated": {
+			"draft-validated": {
 				"title": "Draft validated {{label}}",
 				"body": "The draft of the dataset {{label}} has been validated ({{cause}})."
 			},
 			"breaking-change": {
-				"title": "Breaking change {{label}}",
-				"body": "The dataset {{label}} was modified in a way that might entail breakages : {{breakingChangesDesc}}."
+				"title": "Breaking change of {{label}}",
+				"body": "The structure of the dataset {{label}} was modified and contains a breaking change: {{breakingChanges}}."
 			},
-			"draft-draft-cancelled": {
+			"breaking-changes": {
+				"title": "Breaking changes of {{label}}",
+				"body": "The structure of the dataset {{label}} was modified and contains breaking changes: {{breakingChanges}}."
+			},
+			"draft-cancelled": {
 				"title": "Draft cancelled {{label}}",
 				"body": "The draft of the dataset {{label}} was cancelled, it is back to its previous validated state."
 			}
