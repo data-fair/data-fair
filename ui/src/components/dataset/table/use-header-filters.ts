@@ -57,6 +57,7 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
     if (header.value.property['x-labels']) return false
     if (header.value.property.type !== 'string') return false
     if (header.value.property.format && header.value.property.format !== 'uri-reference') return false
+    if (header.value.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
     if (!header.value.property['x-capabilities'] || header.value.property['x-capabilities'].text !== false || header.value.property['x-capabilities'].textStandard !== false) return true
     return false
   })
