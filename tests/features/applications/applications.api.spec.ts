@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl, mockAppId } from '../../support/axios.ts'
 import { sendDataset, fileExists, clearDatasetCache } from '../../support/workers.ts'
+import { TestEventClient } from '../../support/events.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -433,6 +434,24 @@ test.describe('Applications', () => {
     // dataset B is now referenced
     const dsB = (await ax.get('/api/v1/datasets/' + datasetB.id)).data
     assert.equal(dsB.extras.applications.length, 1)
+  })
+
+  test('emits application-created notif on POST', async () => {
+    const ax = testUser1
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
+
+      const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'notif-test-app' })
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      const notif = notifs.find((n: any) => n.topic.key === `data-fair:application-application-created:${app.slug || app.id}`)
+      assert.ok(notif, `expected application-created notif, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
+    } finally {
+      events.close()
+    }
   })
 
   test('Upload a simple attachment on an application', async () => {
