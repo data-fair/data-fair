@@ -27,9 +27,9 @@ export const log = async function (resourceType: ResourceType, resource: Resourc
 
     webhooks.trigger(resourceType, resource, event, null)
 
-    if (event.type === 'error') {
-      // other notifs/events are sent explicitly not through journals.log for greater control
-      // except for error for simplicity
+    // error + validation-error both fan out to `dataset-error`; error-retry is excluded (too noisy).
+    // Other event types send notifications explicitly elsewhere for finer control.
+    if (event.type === 'error' || event.type === 'validation-error') {
       await sendResourceEvent(resourceType, resource, 'data-fair-worker', 'error', { params: { detail: event.data ?? '' } })
     }
   } catch (err) {
