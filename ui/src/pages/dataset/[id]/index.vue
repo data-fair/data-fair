@@ -457,9 +457,13 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card :loading="confirmRemove.loading.value ? 'warning' : undefined">
-        <v-card-title>{{ t('deleteDataset') }}</v-card-title>
-        <v-card-text>{{ t('deleteMsg', { title: dataset?.title }) }}</v-card-text>
+      <v-card
+        :title="t('deleteDataset')"
+        :loading="confirmRemove.loading.value ? 'warning' : undefined"
+      >
+        <v-card-text class="pb-0">
+          {{ t('deleteMsg', { title: dataset?.title }) }}
+        </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
@@ -488,13 +492,8 @@
         :title="t('deleteAllLinesTitle')"
         :loading="confirmDeleteAllLines.loading.value ? 'warning' : undefined"
       >
-        <v-card-text>
-          <v-alert
-            type="error"
-            variant="outlined"
-          >
-            {{ t('deleteAllLinesWarning', { title: dataset?.title }) }}
-          </v-alert>
+        <v-card-text class="pb-0">
+          {{ t('deleteAllLinesWarning', { title: dataset?.title }) }}
         </v-card-text>
         <v-card-actions>
           <v-spacer />
