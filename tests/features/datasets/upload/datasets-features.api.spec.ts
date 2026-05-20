@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockUrl } from '../../../support/axios.ts'
-import { waitForFinalize, sendDataset, setupMockRoute, clearMockRoutes, getRawDataset } from '../../../support/workers.ts'
+import { waitForFinalize, sendDataset, setupMockRoute, clearMockRoutes, getRawDataset, doAndWaitForFinalize } from '../../../support/workers.ts'
 import { TestEventClient } from '../../../support/events.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
@@ -277,6 +277,176 @@ test.describe('datasets - features', () => {
       ])
       await testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
       await testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' })
+    } finally {
+      events.close()
+    }
+  })
+
+  test('emits structure-updated notif when a REST column is dropped', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'struct-update notif drop',
+      schema: [{ key: 'str', type: 'string' }, { key: 'drop_me', type: 'string' }]
+    })).data
+
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
+
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      await doAndWaitForFinalize(ax, dataset.id, () => ax.patch(`/api/v1/datasets/${dataset.id}`, {
+        schema: dataset.schema.filter((f: any) => f.key !== 'drop_me')
+      }))
+
+      const notif = notifs.find((n: any) => n.topic.key === `data-fair:dataset-structure-updated:${dataset.slug}`)
+      assert.ok(notif, `expected structure-updated notif, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
+    } finally {
+      events.close()
+    }
+  })
+
+  test('emits structure-updated notif when a REST column is added', async () => {
+    // regression: applyPatch overwrites patch.status back to 'indexed' on in-place ES mapping update
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'struct-update notif add',
+      schema: [{ key: 'str', type: 'string' }]
+    })).data
+
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
+
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      await doAndWaitForFinalize(ax, dataset.id, () => ax.patch(`/api/v1/datasets/${dataset.id}`, {
+        schema: [...dataset.schema, { key: 'added', type: 'string' }]
+      }))
+
+      const notif = notifs.find((n: any) => n.topic.key === `data-fair:dataset-structure-updated:${dataset.slug}`)
+      assert.ok(notif, `expected structure-updated notif, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
+
+      // added column is not a breaking change
+      const breaking = notifs.find((n: any) => n.topic.key === `data-fair:dataset-breaking-change:${dataset.slug}`)
+      assert.ok(!breaking, `did not expect breaking-change notif on column add, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
+    } finally {
+      events.close()
+    }
+  })
+
+  test('emits breaking-change notif when a REST column is removed', async () => {
+    // regression: breaking-change was previously only emitted from the file draft-validation flow
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'breaking-change notif rest',
+      schema: [{ key: 'str', type: 'string' }, { key: 'drop_me', type: 'string' }]
+    })).data
+
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
+
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      await doAndWaitForFinalize(ax, dataset.id, () => ax.patch(`/api/v1/datasets/${dataset.id}`, {
+        schema: dataset.schema.filter((f: any) => f.key !== 'drop_me')
+      }))
+
+      const notif = notifs.find((n: any) => n.topic.key === `data-fair:dataset-breaking-change:${dataset.slug}`)
+      assert.ok(notif, `expected breaking-change notif, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
+      assert.ok(JSON.stringify(notif.body).includes('drop_me'), `expected body to mention dropped column, got: ${JSON.stringify(notif.body)}`)
+    } finally {
+      events.close()
+    }
+  })
+
+  test('resource events are emitted on both slug and id topics with a shared _id', async () => {
+    // see notifications.md §12
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'dual-emit topics',
+      schema: [{ key: 'str', type: 'string' }, { key: 'drop_me', type: 'string' }]
+    })).data
+    assert.notEqual(dataset.id, dataset.slug, 'precondition: id should differ from slug')
+
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      await doAndWaitForFinalize(ax, dataset.id, () => ax.patch(`/api/v1/datasets/${dataset.id}`, {
+        schema: dataset.schema.filter((f: any) => f.key !== 'drop_me')
+      }))
+
+      for (const base of ['data-fair:dataset-structure-updated', 'data-fair:dataset-breaking-change']) {
+        const slugMatch = notifs.find((n: any) => n.topic.key === `${base}:${dataset.slug}`)
+        const idMatch = notifs.find((n: any) => n.topic.key === `${base}:${dataset.id}`)
+        assert.ok(slugMatch, `expected ${base} on slug key, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
+        assert.ok(idMatch, `expected ${base} on id key, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
+        assert.equal(slugMatch._id, idMatch._id, `slug+id emissions for ${base} must share the same _id for dedup`)
+      }
+    } finally {
+      events.close()
+    }
+  })
+
+  test('emits change-owner notif on PUT /owner', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'change-owner notif',
+      schema: [{ key: 'str', type: 'string' }]
+    })).data
+    assert.equal(dataset.owner.type, 'user')
+
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
+
+      await ax.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      const matching = notifs.filter((n: any) => n.topic.key === `data-fair:dataset-change-owner:${dataset.id}`)
+      assert.ok(matching.length >= 1, `expected change-owner notif, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
+    } finally {
+      events.close()
+    }
+  })
+
+  test('emits delete notif on DELETE', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'delete notif',
+      schema: [{ key: 'str', type: 'string' }]
+    })).data
+
+    const events = new TestEventClient()
+    await events.ready
+    try {
+      const notifs: any[] = []
+      events.on('notification', (n: any) => notifs.push(n))
+
+      await ax.delete(`/api/v1/datasets/${dataset.id}`)
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      const notif = notifs.find((n: any) => n.topic.key === `data-fair:dataset-delete:${dataset.id}`)
+      assert.ok(notif, `expected delete notif, got: ${JSON.stringify(notifs.map((n: any) => n.topic.key))}`)
     } finally {
       events.close()
     }
