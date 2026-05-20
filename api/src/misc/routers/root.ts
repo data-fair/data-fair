@@ -4,7 +4,6 @@ import apiDocs from '../../../contract/api-docs.ts'
 import projections from '../../../contract/projections.js'
 import * as settingsUtils from '../utils/settings.ts'
 import * as ajv from '../utils/ajv.ts'
-import { topicsCatalog } from '../utils/topics-catalog.ts'
 import config from '#config'
 import { reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 
@@ -45,11 +44,6 @@ router.get('/configurable-remote-services', (req, res) => {
 router.get('/configurable-catalogs', (req, res) => {
   reqSessionAuthenticated(req)
   res.json(config.catalogs)
-})
-
-// Public catalog of notification topics, consumed by the UI subscription/webhook config.
-router.get('/notifications/topics-catalog', (req, res) => {
-  res.json(topicsCatalog)
 })
 
 export default router

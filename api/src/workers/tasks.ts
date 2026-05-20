@@ -62,6 +62,7 @@ const createWorkers = () => {
       }
     })
   }
+
   for (const worker of Object.values(workers)) {
     worker.on('message', (message) => {
       if (!(message as any)?.topic?.key) return
@@ -70,9 +71,7 @@ const createWorkers = () => {
         testEvents.emit('notification', message)
       }
       // workers forward events here; their own queue can't drain (Piscina suspends them)
-      if (config.privateEventsUrl) {
-        eventsQueue.pushEvent(message)
-      }
+      if (config.privateEventsUrl) eventsQueue.pushEvent(message)
     })
   }
 

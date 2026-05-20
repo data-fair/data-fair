@@ -34,10 +34,9 @@ The three layers are deliberately separate: a journal can be very chatty without
 | File | Responsibility |
 |---|---|
 | `api/src/misc/utils/notifications.ts` | Canonical entry points: `sendResourceEvent`, `send`, `subscribe`. Owns the `draft-` prefix logic and the dev/test routing. |
-| `api/src/misc/utils/topics-catalog.ts` | Single source of truth for subscribable / webhook topic keys; consumed both by the back-office UI and the webhook event allow-list. |
+| `api/types/settings/schema.js` | Single source of truth for subscribable / webhook topic keys (`webhooks.items.properties.events.items.oneOf`); each option carries `title` (EN) + `x-i18n-title.fr`. Consumed by VJSF in the settings webhook form and by the back-office subscription UI. |
 | `api/src/misc/utils/journals.ts` | Append-only journal log; separate concern, see §1. |
 | `api/src/misc/utils/webhooks.ts` | Webhook dispatch; separate concern, see §1. |
-| `api/src/misc/routers/root.ts:53` | `GET /api/v1/notifications/topics-catalog` — public catalog endpoint. |
 | `api/src/misc/routers/test-env.ts` | `/events/buffer`, `/events` (SSE) used by e2e tests. |
 
 ## 3. Entry points
@@ -79,10 +78,18 @@ See §8 for the topics whose key shape predates these conventions and are kept t
 
 ## 5. Catalog and webhook allow-list
 
-`api/src/misc/utils/topics-catalog.ts` is the single source of truth for the topics the back-office UI offers as subscribable or webhook-triggerable. Each entry declares its `audience` (`'subscription'`, `'webhook'`, or `'both'`) and an i18n `title`. Two consumers read it:
+There is no separate catalog file. The single source of truth is the webhook events allow-list inside the settings schema, at `api/types/settings/schema.js` under `properties.webhooks.items.properties.events.items.oneOf`. Each option carries:
 
-- **UI**: `ui/src/pages/notifications.vue` fetches `GET /api/v1/notifications/topics-catalog` (handler at `api/src/misc/routers/root.ts:53`) and builds the dataset / application subscription sections from the entries whose audience is `'subscription'` or `'both'`.
-- **Webhook schema**: `api/types/settings/schema.js` lists the webhook event allow-list. It is kept manually aligned with the catalog entries whose audience is `'webhook'` or `'both'`. Until that schema is fully derived from the catalog at build time, both files must be edited together.
+- `const` — the canonical topic key (without the `data-fair:` prefix and without the trailing `:<id>` scope),
+- `title` — English label,
+- `x-i18n-title.fr` — French label (VJSF picks the locale-appropriate one when `xI18n: true` is set on the form).
+
+Two consumers read this list directly via the static `import settingsSchema from 'api/types/settings/schema.js'` (no API round-trip):
+
+- **Settings webhook form** — `ui/src/components/settings/settings-webhooks.vue` renders the whole settings schema with VJSF; the `oneOf` becomes a multi-select of event types, automatically translated.
+- **Back-office subscription UI** — `ui/src/pages/notifications.vue` (global subscription page) and `ui/src/components/common/event-notifications.vue` (per-resource subscription widget) filter the same `oneOf` by resource prefix (`dataset-*` / `application-*`) and read `x-i18n-title[locale]` for the label. The per-resource widget additionally overrides the label for a handful of keys to switch from the indefinite article ("Un jeu de données…") to the definite article ("Le jeu de données…") since the user is already on the resource page.
+
+To add or remove a subscribable / webhook-triggerable topic, edit the `oneOf` — both UIs pick it up automatically.
 
 ## 6. Dev / test mode
 
@@ -181,14 +188,25 @@ The topic key stays `data-fair:dataset-data-updated:<slug>` (resp. `dataset-draf
 
 ## 11. Tests
 
-E2e tests that already exercise notifications (run with `npx playwright test <file>`):
+Notification assertions live **inline** alongside the feature that emits them — touching an endpoint's behaviour means touching its notif assertion in the same test. Cross-cutting invariants of the dispatch layer itself go in a dedicated infra file.
 
-- `tests/features/datasets/upload/datasets-features.api.spec.ts` — user-notification, data-updated (file wording), structure-updated, change-owner, delete.
-- `tests/features/datasets/upload/datasets-drafts-lifecycle.api.spec.ts` — dataset-created, draft-data-updated, draft-validated.
-- `tests/features/datasets/rest/rest-line-notifications.api.spec.ts` — `data-updated` on `deleteLine`, `createOrUpdateLine` (create + update + no-op), `patchLine`, `bulkLines`, `deleteAllLines`.
-- `tests/features/applications/publication-sites.api.spec.ts` — publication-requested.
-- `tests/features/applications/applications.api.spec.ts` — application-created.
-- `tests/features/infra/notifications-catalog.api.spec.ts` — `/notifications/topics-catalog` endpoint shape.
+Helpers (use these, do not roll your own):
+
+- `tests/support/notifications.ts` — `collectNotifs()` (buffer-based, race-free; preferred over `TestEventClient` for notifs), `expectNotif`, `expectNoNotif`, `expectNotifPair` (for slug+id dual emission).
+
+Inline coverage:
+
+- `tests/features/datasets/rest/rest-datasets-crud.api.spec.ts` — `data-updated` on POST/PUT/PATCH/DELETE lines, no-emit on 304 idempotent PUT, delete-all body wording.
+- `tests/features/datasets/rest/rest-datasets-bulk.api.spec.ts` — single summarised emission on `_bulk_lines`.
+- `tests/features/datasets/upload/datasets-features.api.spec.ts` — `user-notification`, `structure-updated` (drop + add), `breaking-change`, `change-owner`, `delete`.
+- `tests/features/datasets/upload/datasets-drafts-lifecycle.api.spec.ts` — `dataset-created`, `draft-data-updated`, `draft-validated` (with slug+id pairing).
+- `tests/features/datasets/upload/file-validation.api.spec.ts` — error umbrella fan-out on file validation failure.
+- `tests/features/applications/publication-sites.api.spec.ts` — `publication-requested` (org and department scopes).
+- `tests/features/applications/applications.api.spec.ts` — `application-created`.
+
+Cross-cutting infra:
+
+- `tests/features/infra/notifications-system.api.spec.ts` — dual slug+id emission with shared `_id` (§12). Worker → main thread forwarding (`api/src/workers/tasks.ts`) and umbrella fan-out (§3/§13) are covered incidentally by the file-validation test.
 
 Topics still without dedicated coverage (consider adding tests when touched):
 
@@ -217,11 +235,9 @@ Emission order is id-first then slug — `resource.id` is the canonical, stable 
 ## 13. Quick map of the relevant files
 
 - `api/src/misc/utils/notifications.ts` — emission entry points and draft-prefix logic.
-- `api/src/misc/utils/topics-catalog.ts` — UI/webhook topic catalog.
 - `api/src/misc/utils/publication-sites.ts` — publication-site notifications (`published`, `published-topic`, `publication-requested`).
-- `api/src/misc/routers/root.ts` — `GET /api/v1/notifications/topics-catalog`.
 - `api/src/misc/routers/test-env.ts` — test SSE + buffer.
 - `api/src/settings/router.ts` — API key lifecycle events.
-- `api/types/settings/schema.js` — webhook event allow-list (kept aligned with the catalog).
+- `api/types/settings/schema.js` — single source of truth for the subscribable / webhook topic list (the `oneOf` of `webhooks.items.properties.events.items`).
 - `api/i18n/messages/{fr,en}.json` — i18n titles and bodies under `notifications.<resourceType>.*`.
-- `ui/src/pages/notifications.vue` — back-office subscription UI; consumes the catalog endpoint.
+- `ui/src/pages/notifications.vue`, `ui/src/components/common/event-notifications.vue`, `ui/src/components/settings/settings-webhooks.vue` — consumers of the schema `oneOf`.
