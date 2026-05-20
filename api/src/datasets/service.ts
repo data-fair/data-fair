@@ -645,7 +645,14 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
 
   if (datasetFull.file) {
     webhooks.trigger('datasets', patchedDataset, { type: 'data-updated' }, null)
-    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
+    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated', { i18nKey: 'data-updated-file' })
+
+    // reuse the canonical compatibility check (strips innocuous props like description/title/enum)
+    // so this path matches the router PATCH behaviour.
+    if (!datasetUtils.schemasFullyCompatible(datasetFull.schema, patchedDataset.schema, true)) {
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'structure-updated', { extra: { patch: 'schema' } })
+    }
+
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
       const breakingChangesDesc = i18n.getLocales().reduce<Record<string, Record<string, string>>>((a, locale) => {
@@ -656,11 +663,12 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
         a[locale] = { breakingChanges: msg }
         return a
       }, {})
+      const i18nKey = breakingChanges.length === 1 ? 'breaking-change' : 'breaking-changes'
       webhooks.trigger('datasets', patchedDataset, {
         type: 'breaking-change',
         body: breakingChangesDesc
       })
-      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc as Record<Locale, Record<string, string>> })
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { i18nKey, localizedParams: breakingChangesDesc as Record<Locale, Record<string, string>> })
     }
   }
 
