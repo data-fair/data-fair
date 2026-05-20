@@ -231,33 +231,26 @@
                 <p class="mb-3">
                   {{ t('updateMsg') }}
                 </p>
-                <v-row
+                <div
                   v-if="updateDataset.loading.value"
-                  class="mx-0 my-3"
+                  class="d-flex align-center my-3"
+                  style="max-width: 600px;"
                 >
-                  <v-progress-linear
+                  <file-upload-progress
                     v-if="uploadProgress"
-                    v-model="uploadProgress.percent"
-                    class="my-1"
-                    rounded
-                    height="28"
-                    color="primary"
-                    style="max-width: 600px;"
-                  >
-                    {{ truncateMiddle(file.name, 36, 4, '...') }}
-                    <template v-if="uploadProgress.total && uploadProgress.percent !== undefined">
-                      {{ Math.floor(uploadProgress.percent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
-                    </template>
-                  </v-progress-linear>
+                    :percent="uploadProgress.percent"
+                    :total="uploadProgress.total"
+                    class="flex-grow-1"
+                  />
                   <v-btn
                     :icon="mdiCancel"
                     color="warning"
                     density="compact"
-                    class="mt-1 ml-2"
+                    class="ml-2"
                     :title="t('cancel')"
                     @click="cancelUpdateDataset"
                   />
-                </v-row>
+                </div>
                 <v-btn
                   color="primary"
                   :disabled="updateDataset.loading.value"
@@ -405,7 +398,6 @@ en:
 import truncateMiddle from 'truncate-middle'
 import { accepted } from '~/utils/dataset'
 import axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
-import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { type ListedDataset } from '../dataset/select/utils'
 import { type DatasetStore } from '~/composables/dataset/dataset-store'
 import DatasetStoreProvider from '~/components/provide/dataset-store-provider.vue'
@@ -419,7 +411,7 @@ const props = defineProps({
   datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
 })
 const { sendUiNotif } = useUiNotif()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const { height } = useWindowSize()
 
 const currentStep = ref(1)

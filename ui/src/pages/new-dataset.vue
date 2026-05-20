@@ -331,22 +331,16 @@
           />
 
           <!-- Upload progress for file type -->
-          <v-row
+          <div
             v-if="createAction.loading.value && datasetType === 'file'"
-            class="mx-0 my-3"
-            align="center"
+            class="d-flex align-center my-3"
+            style="max-width: 500px;"
           >
-            <v-progress-linear
-              v-model="uploadPercent"
-              color="primary"
-              height="20"
-              rounded
-              style="max-width: 500px;"
-            >
-              <template v-if="uploadProgress.total && uploadPercent !== undefined">
-                {{ Math.floor(uploadPercent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
-              </template>
-            </v-progress-linear>
+            <file-upload-progress
+              :percent="uploadPercent"
+              :total="uploadProgress.total"
+              class="flex-grow-1"
+            />
             <v-btn
               :icon="mdiCancel"
               color="warning"
@@ -356,7 +350,7 @@
               :title="t('cancel')"
               @click="cancelUpload"
             />
-          </v-row>
+          </div>
         </v-stepper-window-item>
       </v-stepper-window>
 
@@ -394,7 +388,6 @@
 <script setup lang="ts">
 import { mdiAllInclusive, mdiCancel, mdiCheckAll, mdiChevronDown, mdiChevronUp, mdiCog, mdiContentCopy, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiShape, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
-import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { $apiPath } from '~/context'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
@@ -661,10 +654,7 @@ const uploadPercent = computed(() => {
   return (uploadProgress.value.loaded / uploadProgress.value.total) * 100
 })
 let cancelSource: CancelTokenSource | null = null
-
-function cancelUpload () {
-  cancelSource?.cancel(t('cancelled'))
-}
+function cancelUpload () { cancelSource?.cancel(t('cancelled')) }
 
 // ---- Create ----
 const createAction = useAsyncAction(async () => {
@@ -903,7 +893,6 @@ fr:
   back: Retour
   import: Lancer l'import
   createDataset: Créer le jeu de données
-  of: de
   cancel: Annuler
   cancelled: Chargement annulé par l'utilisateur
   fileTooLarge: Le fichier est trop volumineux pour être importé
@@ -954,7 +943,6 @@ en:
   back: Back
   import: Proceed with import
   createDataset: Create the dataset
-  of: of
   cancel: Cancel
   cancelled: Loading cancelled by user
   fileTooLarge: The file is too large to be imported
