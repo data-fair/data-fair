@@ -15,6 +15,7 @@
         : t('datasetsUserEvents') }}
     </h2>
     <d-frame
+      v-if="datasetsSubscribeUrl"
       :src="datasetsSubscribeUrl"
       resize
       @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
@@ -26,6 +27,7 @@
         : t('appsUserEvents') }}
     </h2>
     <d-frame
+      v-if="appsSubscribeUrl"
       :src="appsSubscribeUrl"
       resize
       @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
@@ -76,22 +78,35 @@
 </template>
 
 <script setup lang="ts">
-import settingsSchema from '../../../api/types/settings/schema.js'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { sendUiNotif } = useUiNotif()
 const { account, accountRole } = useSessionAuthenticated()
 const breadcrumbs = useBreadcrumbs()
 breadcrumbs.receive({ breadcrumbs: [{ text: t('notifications') }] })
 
-const webhooksSchema = settingsSchema.properties.webhooks
+type TopicCatalogEntry = {
+  key: string
+  title: { fr: string, en: string }
+  audience: 'subscription' | 'webhook' | 'both'
+  urlTemplate?: 'dataset' | 'application' | 'me'
+}
+
+const topicsCatalogFetch = useFetch<TopicCatalogEntry[]>(() => $apiPath + '/notifications/topics-catalog')
 
 const datasetsSubscribeUrl = computed(() => {
-  const webhooks = webhooksSchema.items.properties.events.items.oneOf
-    .filter((item: any) => item.const.startsWith('dataset') && item.const !== 'dataset-finalize-end')
-  const keysParam = webhooks.map((w: any) => 'data-fair:' + w.const).join(',')
-  const titlesParam = webhooks.map((w: any) => w.title.replace(/,/g, ' ')).join(',')
+  const catalog = topicsCatalogFetch.data.value
+  if (!catalog) return null
+  const entries = catalog.filter(e =>
+    e.key.startsWith('dataset-') &&
+    (e.audience === 'subscription' || e.audience === 'both') &&
+    e.key !== 'dataset-finalize-end'
+  )
+  if (!entries.length) return null
+  const keysParam = entries.map(e => 'data-fair:' + e.key).join(',')
+  const lang = locale.value === 'en' ? 'en' : 'fr'
+  const titlesParam = entries.map(e => (e.title[lang] ?? e.title.fr).replace(/,/g, ' ')).join(',')
   const urlTemplate = $siteUrl + '/data-fair/dataset/{id}'
   const searchParams = new URLSearchParams({
     key: keysParam,
@@ -104,10 +119,16 @@ const datasetsSubscribeUrl = computed(() => {
 })
 
 const appsSubscribeUrl = computed(() => {
-  const webhooks = webhooksSchema.items.properties.events.items.oneOf
-    .filter((item: any) => item.const.startsWith('application'))
-  const keysParam = webhooks.map((w: any) => 'data-fair:' + w.const).join(',')
-  const titlesParam = webhooks.map((w: any) => w.title.replace(/,/g, ' ')).join(',')
+  const catalog = topicsCatalogFetch.data.value
+  if (!catalog) return null
+  const entries = catalog.filter(e =>
+    e.key.startsWith('application-') &&
+    (e.audience === 'subscription' || e.audience === 'both')
+  )
+  if (!entries.length) return null
+  const keysParam = entries.map(e => 'data-fair:' + e.key).join(',')
+  const lang = locale.value === 'en' ? 'en' : 'fr'
+  const titlesParam = entries.map(e => (e.title[lang] ?? e.title.fr).replace(/,/g, ' ')).join(',')
   const urlTemplate = $siteUrl + '/data-fair/application/{id}'
   const searchParams = new URLSearchParams({
     key: keysParam,

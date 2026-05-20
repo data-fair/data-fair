@@ -255,7 +255,7 @@ export default async function (dataset: DatasetInternal) {
 
   if (patch.validateDraft) {
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' } as any)
-    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'draft-validated', {
+    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validated', {
       localizedParams: { fr: { cause: 'validation automatique' }, en: { cause: 'automatic validation' } }
     })
   }

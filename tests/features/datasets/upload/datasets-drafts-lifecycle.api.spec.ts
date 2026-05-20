@@ -190,14 +190,21 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
     assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
-    // TODO: notification assertions disabled - worker-thread notifications are not reliably
-    // captured in the dev environment due to module re-evaluation issues with piscina.
-    // The journal assertions above verify the same event flow.
-    const notifications = await notifCollector.waitForCount(3)
+    // dual slug+id emission per event (see notifications.md §12) → 3 events * 2 = 6
+    const notifications = await notifCollector.waitForCount(6)
     await notifCollector.close()
-    assert.equal(notifications[0].topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
-    assert.equal(notifications[1].topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
-    assert.equal(notifications[2].topic.key, 'data-fair:dataset-draft-draft-validated:' + dataset.slug)
+    const expectedPairs = [
+      'data-fair:dataset-dataset-created',
+      'data-fair:dataset-draft-data-updated',
+      'data-fair:dataset-draft-validated'
+    ]
+    for (const base of expectedPairs) {
+      const slugMatch = notifications.find(n => n.topic.key === `${base}:${dataset.slug}`)
+      const idMatch = notifications.find(n => n.topic.key === `${base}:${dataset.id}`)
+      assert.ok(slugMatch, `expected notif on slug topic ${base}:${dataset.slug}`)
+      assert.ok(idMatch, `expected notif on id topic ${base}:${dataset.id}`)
+      assert.equal(slugMatch._id, idMatch._id, `slug+id emissions for ${base} must share the same _id for dedup`)
+    }
   })
 
   test('create a draft when updating the data file and cancel it', async () => {

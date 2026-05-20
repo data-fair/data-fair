@@ -94,10 +94,10 @@ export default {
                 title: 'Un nouveau jeu de données a été créé'
               }, {
                 const: 'dataset-draft-data-updated',
-                title: 'Le fichier d\'un jeu de données a été mis à jour en mode brouillon'
+                title: 'Les données d\'un jeu de données ont été mises à jour en mode brouillon'
               }, {
                 const: 'dataset-data-updated',
-                title: 'Le fichier d\'un jeu de données a été mis à jour'
+                title: 'Les données d\'un jeu de données ont été mises à jour'
               }, {
                 const: 'dataset-structure-updated',
                 title: 'La structure d\'un jeu de données a été mise à jour'
@@ -111,17 +111,11 @@ export default {
                 const: 'dataset-finalize-end',
                 title: 'Un jeu de données a été finalisé'
               }, {
-                const: 'dataset-publication',
-                title: 'Un jeu de données a été publié sur un catalogue'
-              }, {
                 const: 'application-application-created',
                 title: 'Une nouvelle visualisation a été créée'
               }, {
                 const: 'application-error',
                 title: 'Une visualisation a rencontré une erreur'
-              }, {
-                const: 'application-publication',
-                title: 'Une visualisation a été publiée sur un catalogue'
               }]
             }
           },
