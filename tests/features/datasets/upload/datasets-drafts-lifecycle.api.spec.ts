@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, datasetEsMappingProperties, getRawDataset, collectNotifications, waitForJournalEvent } from '../../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, datasetEsMappingProperties, getRawDataset, waitForJournalEvent } from '../../../support/workers.ts'
+import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -116,7 +117,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
   })
 
   test('create a draft when updating the data file', async () => {
-    const notifCollector = await collectNotifications()
+    const notifs = await collectNotifs()
 
     // Send dataset
     const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
@@ -191,22 +192,16 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
     // dual slug+id emission per event (see notifications.md §12) → 3 events * 2 = 6
-    const notifications = await notifCollector.waitForCount(6)
-    await notifCollector.close()
-    const expectedPairs = [
+    const captured = await notifs.waitFor(6)
+    for (const base of [
       'data-fair:dataset-dataset-created',
       'data-fair:dataset-draft-data-updated',
       'data-fair:dataset-draft-validated'
-    ]
-    for (const base of expectedPairs) {
-      const slugMatch = notifications.find(n => n.topic.key === `${base}:${dataset.slug}`)
-      const idMatch = notifications.find(n => n.topic.key === `${base}:${dataset.id}`)
-      assert.ok(slugMatch, `expected notif on slug topic ${base}:${dataset.slug}`)
-      assert.ok(idMatch, `expected notif on id topic ${base}:${dataset.id}`)
-      assert.equal(slugMatch._id, idMatch._id, `slug+id emissions for ${base} must share the same _id for dedup`)
+    ]) {
+      expectNotifPair(captured, base, dataset)
     }
     // the localized "cause" param must be interpolated into the notification body
-    const validated = notifications.find(n => n.topic.key === `data-fair:dataset-draft-validated:${dataset.slug}`)
+    const validated = captured.find((n: any) => n.topic.key === `data-fair:dataset-draft-validated:${dataset.slug}`)
     assert.ok(validated, 'expected a draft-validated notification')
     assert.ok(validated.body.fr.includes('validation manuelle'), `fr body should mention the cause, got "${validated.body.fr}"`)
     assert.ok(validated.body.en.includes('manual validation'), `en body should mention the cause, got "${validated.body.en}"`)

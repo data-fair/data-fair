@@ -42,7 +42,8 @@ const iframeUrl = computed(() => {
       if (item.const === 'dataset-draft-data-updated' && !canHaveDraft) return false
       return true
     })
-  const keysParam = webhooks.map((w: any) => `data-fair:${w.const}:${props.resource.slug}`).join(',')
+  // subscribe by stable id (not slug — slugs change on rename); the portal app does the same.
+  const keysParam = webhooks.map((w: any) => `data-fair:${w.const}:${props.resource.id}`).join(',')
   // on a resource page we use the definite article ("Le ..."); fall back to the generic schema title.
   const resourceTitle = (key: string): string | undefined => {
     const i18nKey = `resourceTitles.${key}`

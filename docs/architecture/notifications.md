@@ -48,7 +48,7 @@ Highest-level helper, used everywhere except the few topics that don't map to a 
 1. Derives the singular resource type (`'datasets'` → `'dataset'`).
 2. Picks a `sender` (defaults to `resource.owner`, can be overridden by `options.sender`).
 3. Computes the **i18n keys** as `notifications.<resourceType>.<draftPrefix><i18nKey or key>.{title,body}` (line 31-32).
-4. Computes the **topic key** as `data-fair:<singularType>(-draft)?-<key>:<tail>` (line 43). It emits the event **twice** when `resource.slug` differs from `resource.id`: once with `tail = slug` (the topic key subscribed to by portal apps via slug-bearing URLs) and once with `tail = id` (the topic key subscribed to by the back-office UI). Both pushes carry the same `nanoid()` `_id` so the events service deduplicates the stored event and per-recipient notifications (see §12).
+4. Computes the **topic key** as `data-fair:<singularType>(-draft)?-<key>:<tail>` (line 43). It emits the event **twice** when `resource.slug` differs from `resource.id`: once with `tail = id` (back-office subscriptions) and once with `tail = slug` (portal-side subscriptions, and back-compat with slug-based subs created before the back-office migration). Both pushes carry the same `nanoid()` `_id` so the events service deduplicates the stored event on its `_id` unique index (see §12).
 5. Decides public vs private visibility via `permissions.isPublic` (line 50).
 6. Delegates to `send` (once per topic tail).
 
@@ -214,21 +214,20 @@ Topics still without dedicated coverage (consider adding tests when touched):
 - `application-patched-properties`, `application-updated`, `application-write-keys`, `application-change-owner`, `application-delete`, `application-error`
 - `settings:api-key-created`, `settings:api-key-deleted`
 
-## 12. Dual emission on slug + id (changed 2026-05-18)
+## 12. Dual emission on slug + id
 
-The back-office UI subscribes to resource events keyed by `resource.slug` (`ui/src/components/common/event-notifications.vue:47`, `ui/src/components/common/event-webhooks.vue:14`). Portal apps subscribe keyed by `resource.id` — for example the data-fair portal at `portals/portal/app/components/dataset/dataset-notifications.vue:39` subscribes to `data-fair:dataset-data-updated:<id>` and `data-fair:dataset-breaking-change:<id>`. Both shapes coexist because each surface naturally identifies the resource by what it has in hand — the back-office walks the slug-based URL, portal apps and external API consumers reach the dataset via its stable id.
+Both topic shapes are first-class and stay emitted in parallel:
 
-Previously `sendResourceEvent` keyed the emitted topic on `resource.slug || resource.id` (slug only when available), so portal-side subscriptions on the id-based shape never matched. Both surfaces had a half-broken subscription experience.
+- **`<topic>:<id>`** is what the back-office subscribes to (`ui/src/components/common/event-notifications.vue`, `ui/src/components/common/event-webhooks.vue`). The id is the stable identifier — it never changes when the resource is renamed — so it is the right shape for long-lived back-office subscriptions.
+- **`<topic>:<slug>`** is what portal apps subscribe to. Portals build their URLs from the slug (e.g. a data-fair portal exposes `/datasets/<slug>`), and a user subscribing from a portal page naturally ends up keyed by slug. The data-fair-portal at `portals/portal/app/components/dataset/dataset-notifications.vue` is one such example. The slug shape also keeps any pre-existing slug-based subscription record (back-office subs created before this branch) working.
 
-Since the events service supports event deduplication based on `_id` ([events#4](https://github.com/data-fair/events/commit/5e108008ebdcf1977a74f52b92017c7258d941f7)), `sendResourceEvent` now emits the same event **twice** when `resource.slug` ≠ `resource.id`: once with the slug-based topic key, once with the id-based topic key. Both pushes carry the same `nanoid()` `_id`, so:
+`sendResourceEvent` therefore emits the event **twice** when `resource.slug` ≠ `resource.id`. Both pushes carry the same `nanoid()` `_id`, so the events service deduplicates the stored event on its `_id` unique index ([events#4](https://github.com/data-fair/events/commit/5e108008ebdcf1977a74f52b92017c7258d941f7) — `api/src/events/service.ts` keeps the client-supplied `_id` and catches `MongoBulkWriteError` code 11000 on conflict):
 
-- The `events` collection stores a single event (second insert is dropped on the `_id` unique index).
-- Subscribers on the slug-based topic receive a notification; subscribers on the id-based topic also receive one. A user subscribed to both surfaces — rare in practice — receives two records (notification `_id`s are independently generated per recipient).
-- Webhook deliveries fire once per subscription, regardless of the dual emission.
+- The `events` collection stores a single event. Emission order is id-first, so the stored event carries the id-based topic shape.
+- A back-office subscriber matching the id topic and a portal subscriber matching the slug topic each get their own notification record — these go through the per-subscription notifications path which uses fresh `_id`s, so dedup does not apply there.
+- Webhook deliveries fire once per matching webhook subscription, regardless of the dual emission.
 
-The dev-mode test buffer (`testEvents.emit` + `capturedNotifications`) captures **both** pushes, so e2e tests must look for either key (or assert that both are present with a matching `_id`). The reference test is `'resource events are emitted on both slug and id topics with a shared _id'` in `datasets-features.api.spec.ts`.
-
-Emission order is id-first then slug — `resource.id` is the canonical, stable identifier so the stored event (the first successful insert wins under the `_id` unique constraint) carries the id-based topic shape. This is irrelevant to subscription matching (which is per-topic) but affects the activity feed's "raw event" display in `/events/...`.
+The dev-mode test buffer captures **both** pushes verbatim (the shared `_id` is preserved in the `event` object before it reaches the events service), so e2e tests must look for either key or use `expectNotifPair` (`tests/support/notifications.ts`) to assert both with a shared `_id`. The reference test lives in `tests/features/infra/notifications-system.api.spec.ts`.
 
 **One topic is intentionally not dual-emitted**: `dataset-user-notification:<slug>:<topic>` (`api/src/datasets/router.js:1480`) is an inbound API designed for portal-side pushes that already supply a slug. It is not a resource lifecycle event and is documented in §8.3.
 
