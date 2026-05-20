@@ -99,15 +99,13 @@
           value="init"
         >
           <v-alert
+            :text="t('optionalStep')"
             type="info"
             variant="outlined"
             density="compact"
-            max-width="500"
+            max-width="800"
             class="mb-4"
-          >
-            {{ t('optionalStep') }}
-          </v-alert>
-
+          />
           <dataset-init-from
             v-model="initFrom"
             v-model:source-title="initFromSourceTitle"
@@ -119,45 +117,46 @@
         <v-stepper-window-item value="params">
           <!-- FILE params -->
           <template v-if="datasetType === 'file'">
-            <p class="text-body-large mb-4">
-              {{ t('loadMainFile') }}
-            </p>
-            <v-file-input
-              v-model="fileInputValue"
-              :label="t('selectFile')"
-              variant="outlined"
-              density="compact"
-              hide-details
-              style="max-width: 500px;"
-              prepend-icon=""
-              :prepend-inner-icon="mdiPaperclip"
-              :disabled="initFromData"
-              @update:model-value="onFileChange"
-            />
+            <template v-if="!initFromData">
+              <p class="text-body-large mb-4">
+                {{ t('loadMainFile') }}
+              </p>
+              <v-file-input
+                v-model="fileInputValue"
+                :label="t('selectFile')"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="max-width: 500px;"
+                prepend-icon=""
+                :prepend-inner-icon="mdiPaperclip"
+                @update:model-value="onFileChange"
+              />
 
-            <v-file-input
-              v-if="!initFromData && !isSimple"
-              v-model="attachmentsInputValue"
-              :label="t('selectAttachments')"
-              variant="outlined"
-              density="compact"
-              hide-details
-              accept=".zip"
-              class="mt-4"
-              style="max-width: 500px;"
-              prepend-icon=""
-              :prepend-inner-icon="mdiZipBox"
-              clearable
-            />
+              <v-file-input
+                v-if="!isSimple"
+                v-model="attachmentsInputValue"
+                :label="t('selectAttachments')"
+                variant="outlined"
+                density="compact"
+                hide-details
+                accept=".zip"
+                class="mt-4"
+                style="max-width: 500px;"
+                prepend-icon=""
+                :prepend-inner-icon="mdiZipBox"
+                clearable
+              />
 
-            <v-alert
-              v-if="suggestArchive"
-              type="info"
-              variant="outlined"
-              class="mt-2 mb-2"
-            >
-              {{ t('suggestArchive', { name: file?.name }) }}
-            </v-alert>
+              <v-alert
+                v-if="suggestArchive"
+                type="info"
+                variant="outlined"
+                class="mt-2 mb-2"
+              >
+                {{ t('suggestArchive', { name: file?.name }) }}
+              </v-alert>
+            </template>
 
             <v-text-field
               v-model="fileTitle"
@@ -169,55 +168,58 @@
               class="mt-4"
             />
 
-            <v-checkbox
-              v-if="attachments && !initFromData"
-              v-model="attachmentsAsImage"
-              hide-details
-              :label="t('attachmentsAsImage')"
-            />
-
-            <dataset-normalize-options
-              v-if="isSpreadsheet"
-              v-model="normalizeOptions"
-            />
-
-            <!-- Advanced options -->
-            <div
-              class="text-title-small mt-4 mb-2 d-flex align-center"
-              style="cursor: pointer"
-              @click="showAdvanced = !showAdvanced"
-            >
-              {{ t('advancedOptions') }}
-              <v-icon
-                class="ml-1"
-                :icon="showAdvanced ? mdiChevronUp : mdiChevronDown"
-              />
-            </div>
-            <template v-if="showAdvanced">
-              <v-select
-                v-model="escapeKeyAlgorithm"
-                :label="t('escapeKeyAlgorithm')"
-                :items="escapeKeyOptions"
-                variant="outlined"
+            <template v-if="!initFromData">
+              <v-checkbox
+                v-if="attachments"
+                v-model="attachmentsAsImage"
+                :label="t('attachmentsAsImage')"
                 density="compact"
-                clearable
-                :hint="t('escapeKeyAlgorithmHint')"
-                persistent-hint
-                style="max-width: 500px;"
-                class="mb-4"
+                hide-details
               />
-              <v-combobox
-                v-if="isTextFile"
-                v-model="fileEncoding"
-                :label="t('encoding')"
-                :items="commonEncodings"
-                variant="outlined"
-                density="compact"
-                clearable
-                :hint="t('encodingHint')"
-                persistent-hint
-                style="max-width: 500px;"
+
+              <dataset-normalize-options
+                v-if="isSpreadsheet"
+                v-model="normalizeOptions"
               />
+
+              <!-- Advanced options -->
+              <div
+                class="text-title-small mt-4 mb-2 d-flex align-center"
+                style="cursor: pointer"
+                @click="showAdvanced = !showAdvanced"
+              >
+                {{ t('advancedOptions') }}
+                <v-icon
+                  class="ml-1"
+                  :icon="showAdvanced ? mdiChevronUp : mdiChevronDown"
+                />
+              </div>
+              <template v-if="showAdvanced">
+                <v-select
+                  v-model="escapeKeyAlgorithm"
+                  :label="t('escapeKeyAlgorithm')"
+                  :items="escapeKeyOptions"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  :hint="t('escapeKeyAlgorithmHint')"
+                  persistent-hint
+                  style="max-width: 500px;"
+                  class="mb-4"
+                />
+                <v-combobox
+                  v-if="isTextFile"
+                  v-model="fileEncoding"
+                  :label="t('encoding')"
+                  :items="commonEncodings"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  :hint="t('encodingHint')"
+                  persistent-hint
+                  style="max-width: 500px;"
+                />
+              </template>
             </template>
           </template>
 
@@ -235,25 +237,29 @@
             />
             <v-checkbox
               v-model="restHistory"
-              hide-details
               :label="t('history')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-if="session.state.user?.adminMode"
               v-model="restLineOwnership"
-              hide-details
               :label="t('lineOwnership')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-model="restAttachments"
-              hide-details
               :label="t('attachments')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-if="restAttachments"
               v-model="restAttachmentsAsImage"
-              hide-details
               :label="t('attachmentsAsImage')"
+              density="comfortable"
+              hide-details
             />
           </template>
 
@@ -281,18 +287,21 @@
 
             <v-checkbox
               v-model="virtualFillSchema"
-              hide-details
               :label="t('virtualDatasetFill')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-model="virtualInitFromDesc"
-              hide-details
               :label="t('virtualDatasetInitFromDesc')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-model="virtualInitFromAttachments"
-              hide-details
               :label="t('virtualDatasetInitFromAttachments')"
+              density="comfortable"
+              hide-details
             />
           </template>
 
@@ -303,7 +312,7 @@
               :label="t('title')"
               class="mt-2"
               variant="outlined"
-              density="compact"
+              density="comfortable"
               max-width="500"
               hide-details="auto"
               :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
@@ -375,7 +384,7 @@
     </v-stepper>
 
     <v-card
-      v-if="step === 'params' && datasetType === 'file'"
+      v-if="step === 'params' && datasetType === 'file' && !initFromData"
       class="ma-4 mt-0"
     >
       <v-card-title>{{ t('formats') }}</v-card-title>

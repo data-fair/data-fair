@@ -1,57 +1,64 @@
 <template>
-  <div>
-    <dataset-select
-      v-model="initFromDataset"
-      :label="t('initFromDataset')"
-      :extra-params="{ queryable: true, select: '' }"
-      master-data="standardSchema"
-      class="mt-2"
-    />
+  <dataset-select
+    v-model="initFromDataset"
+    :label="t('initFromDataset')"
+    :extra-params="{ queryable: true, select: '' }"
+    master-data="standardSchema"
+    class="mt-2"
+  />
 
-    <template v-if="initFromDataset && modelValue">
+  <div
+    v-if="initFromDataset && modelValue"
+    class="ml-2"
+  >
+    <div
+      v-if="allowData"
+      class="d-flex align-center"
+    >
       <v-checkbox
-        v-if="allowData"
         :model-value="modelValue.parts.includes('data')"
         :disabled="sourceHasNoData"
-        hide-details
-        class="pl-2"
         :label="t('initFromData')"
+        density="comfortable"
+        hide-details
         @update:model-value="togglePart('data')"
-      />
-      <v-alert
-        v-if="sourceHasNoData"
-        type="info"
-        variant="tonal"
-        density="compact"
-        class="ml-8 mt-1"
-        max-width="500"
       >
-        {{ t('sourceHasNoData') }}
-      </v-alert>
-      <v-checkbox
-        v-if="initFromDataset.extensions?.length"
-        :model-value="modelValue.parts.includes('extensions')"
-        hide-details
-        class="pl-2"
-        :label="t('initFromExtensions')"
-        @update:model-value="togglePart('extensions')"
-      />
-      <v-checkbox
-        v-if="initFromDataset.attachments?.length"
-        :model-value="modelValue.parts.includes('metadataAttachments')"
-        hide-details
-        class="pl-2"
-        :label="t('initFromAttachments')"
-        @update:model-value="togglePart('metadataAttachments')"
-      />
-      <v-checkbox
-        :model-value="modelValue.parts.includes('description')"
-        hide-details
-        class="pl-2"
-        :label="t('initFromDescription')"
-        @update:model-value="togglePart('description')"
-      />
-    </template>
+        <template
+          v-if="sourceHasNoData"
+          #append
+        >
+          <span class="text-warning font-italic">
+            {{ t('sourceHasNoData') }}
+          </span>
+        </template>
+      </v-checkbox>
+    </div>
+
+    <v-checkbox
+      v-if="initFromDataset.extensions?.length"
+      :model-value="modelValue.parts.includes('extensions')"
+      :label="t('initFromExtensions')"
+      density="comfortable"
+      hide-details
+      @update:model-value="togglePart('extensions')"
+    />
+
+    <v-checkbox
+      v-if="initFromDataset.attachments?.length"
+      :model-value="modelValue.parts.includes('metadataAttachments')"
+      :label="t('initFromAttachments')"
+      density="comfortable"
+      hide-details
+      @update:model-value="togglePart('metadataAttachments')"
+    />
+
+    <v-checkbox
+      :model-value="modelValue.parts.includes('description')"
+      :label="t('initFromDescription')"
+      density="comfortable"
+      hide-details
+      @update:model-value="togglePart('description')"
+    />
   </div>
 </template>
 
