@@ -9,6 +9,7 @@ import { type ResourceType } from '#types'
 import { type AccountKeys } from '@data-fair/lib-express'
 import testEvents from '../misc/utils/test-events.ts'
 import { capturedNotifications as _testNotifBuffer } from '../misc/utils/test-notif-buffer.ts'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
 
 const createWorkers = () => {
   const workers = {
@@ -61,13 +62,18 @@ const createWorkers = () => {
       }
     })
   }
-  if (process.env.NODE_ENV === 'development') {
-    for (const worker of Object.values(workers)) {
-      worker.on('message', (message) => {
-        if ((message as any)?.topic?.key) _testNotifBuffer.push(message)
+  for (const worker of Object.values(workers)) {
+    worker.on('message', (message) => {
+      if (!(message as any)?.topic?.key) return
+      if (process.env.NODE_ENV === 'development') {
+        _testNotifBuffer.push(message)
         testEvents.emit('notification', message)
-      })
-    }
+      }
+      // workers forward events here; their own queue can't drain (Piscina suspends them)
+      if (config.privateEventsUrl) {
+        eventsQueue.pushEvent(message)
+      }
+    })
   }
 
   return workers
