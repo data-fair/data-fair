@@ -150,12 +150,15 @@ test.describe('publication sites', () => {
 
       // Wait briefly for notification to arrive via SSE
       await new Promise(resolve => setTimeout(resolve, 500))
-      const notif = notifs.find((n: any) => n.topic?.key?.includes('publication-requested'))
-      assert.ok(notif, 'expected a publication-requested notification')
-      assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
-      assert.equal(notif.sender.type, 'organization')
-      assert.equal(notif.sender.id, 'test_org1')
-      assert.equal(notif.sender.department, undefined)
+      const base = 'data-fair:dataset-publication-requested:data-fair-portals:portal1'
+      const slugNotif = notifs.find((n: any) => n.topic?.key === `${base}:${dataset.slug}`)
+      const idNotif = notifs.find((n: any) => n.topic?.key === `${base}:${dataset.id}`)
+      assert.ok(slugNotif, `expected publication-requested notif on slug key, got: ${JSON.stringify(notifs.map((n: any) => n.topic?.key))}`)
+      assert.ok(idNotif, `expected publication-requested notif on id key, got: ${JSON.stringify(notifs.map((n: any) => n.topic?.key))}`)
+      assert.equal(slugNotif._id, idNotif._id, 'slug+id emissions must share the same _id for dedup')
+      assert.equal(idNotif.sender.type, 'organization')
+      assert.equal(idNotif.sender.id, 'test_org1')
+      assert.equal(idNotif.sender.department, undefined)
     } finally {
       events.close()
     }
@@ -208,12 +211,15 @@ test.describe('publication sites', () => {
 
       // Wait briefly for notification to arrive via SSE
       await new Promise(resolve => setTimeout(resolve, 500))
-      const notif = notifs.find((n: any) => n.topic?.key?.includes('publication-requested'))
-      assert.ok(notif, 'expected a publication-requested notification')
-      assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
-      assert.equal(notif.sender.type, 'organization')
-      assert.equal(notif.sender.id, 'test_org1')
-      assert.equal(notif.sender.department, 'dep1')
+      const base = 'data-fair:dataset-publication-requested:data-fair-portals:portal1'
+      const slugNotif = notifs.find((n: any) => n.topic?.key === `${base}:${dataset.slug}`)
+      const idNotif = notifs.find((n: any) => n.topic?.key === `${base}:${dataset.id}`)
+      assert.ok(slugNotif, `expected publication-requested notif on slug key, got: ${JSON.stringify(notifs.map((n: any) => n.topic?.key))}`)
+      assert.ok(idNotif, `expected publication-requested notif on id key, got: ${JSON.stringify(notifs.map((n: any) => n.topic?.key))}`)
+      assert.equal(slugNotif._id, idNotif._id, 'slug+id emissions must share the same _id for dedup')
+      assert.equal(idNotif.sender.type, 'organization')
+      assert.equal(idNotif.sender.id, 'test_org1')
+      assert.equal(idNotif.sender.department, 'dep1')
     } finally {
       events.close()
     }
