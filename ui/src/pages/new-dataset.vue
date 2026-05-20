@@ -160,7 +160,6 @@
             </v-alert>
 
             <v-text-field
-              v-if="!initFromData"
               v-model="fileTitle"
               :label="t('title')"
               variant="outlined"
@@ -594,6 +593,7 @@ const paramsSubtitle = computed(() => {
 
 const paramsValid = computed(() => {
   if (datasetType.value === 'file') {
+    if (!fileTitle.value || fileTitle.value.length <= 3) return false
     return initFromData.value || !!file.value
   }
   if (datasetType.value === 'rest') {
