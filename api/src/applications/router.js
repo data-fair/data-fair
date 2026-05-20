@@ -408,7 +408,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
     sender: { ...application.owner, role: 'admin' }
   }
   eventsQueue.pushEvent(event, sessionState)
-  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
+  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
   await syncDatasets(patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl, req.publicationSite))

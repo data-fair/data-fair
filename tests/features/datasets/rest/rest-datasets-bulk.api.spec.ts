@@ -7,6 +7,7 @@ import zlib from 'zlib'
 import iconv from 'iconv-lite'
 import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, setConfig } from '../../../support/workers.ts'
+import { collectNotifs, expectNotif } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser5 = await axiosAuth('test_user5@test.com')
@@ -93,11 +94,16 @@ test.describe('REST datasets - Bulk', () => {
         { key: 'attr4', type: 'string', format: 'date-time' }
       ]
     })
+    // bulk should emit a single summarised `dataset-data-updated` notif (api/src/datasets/utils/rest.ts emitLinesUpdated)
+    const notifs = await collectNotifs()
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3,attr4
 line1,test1,test1,oui,2015-03-18T00:58:59Z
 line2,test1,test1,non,
 line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
     await waitForFinalize(ax, 'restcsv')
+    const captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:dataset-data-updated:restcsv' })
+    const summary = expectNotif(captured, 'data-fair:dataset-data-updated:restcsv')
+    assert.match(summary.body.fr, /3 lignes créées/)
     res = await ax.get('/api/v1/datasets/restcsv')
     assert.equal(res.data.count, 3)
     let lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results

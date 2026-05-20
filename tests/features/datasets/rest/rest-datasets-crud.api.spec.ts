@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne } from '../../../support/workers.ts'
+import { collectNotifs, expectNotif, expectNoNotif } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -51,6 +52,9 @@ test.describe('REST datasets - CRUD', () => {
       title: 'rest1',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
+    // Each REST line mutation below should emit a `dataset-data-updated` notification
+    // (api/src/datasets/utils/rest.ts emitLinesUpdated). Collect upfront, assert at the end.
+    const notifs = await collectNotifs()
     res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
     await waitForFinalize(ax, 'rest1')
     assert.equal(res.status, 201)
@@ -83,6 +87,32 @@ test.describe('REST datasets - CRUD', () => {
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4' }), (err: any) => err.status === 404)
     await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
     await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
+
+    // 2 POST (create) + 1 PUT (update) + 1 PATCH + 1 DELETE = 5 data-updated emissions, no dual emit (slug = id).
+    const captured = await notifs.waitFor(5, { keyPrefix: 'data-fair:dataset-data-updated:rest1' })
+    const updates = captured.filter(n => n.topic.key === 'data-fair:dataset-data-updated:rest1')
+    assert.equal(updates.length, 5, `expected 5 data-updated notifs, got bodies: ${JSON.stringify(updates.map(u => u.body.fr))}`)
+    assert.ok(updates.some(u => /ligne créée/.test(u.body.fr)), 'expected at least one create-flavoured notif')
+    assert.ok(updates.some(u => /ligne modifiée/.test(u.body.fr)), 'expected at least one update-flavoured notif')
+    assert.ok(updates.some(u => /1 ligne supprimée/.test(u.body.fr)), 'expected at least one single-delete notif')
+  })
+
+  test('PUT with identical body returns 304 and emits no data-updated notif', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'noop-line notif',
+      schema: [{ key: 'str', type: 'string' }]
+    })).data
+    const line = (await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { str: 'hello' })).data
+    await waitForFinalize(ax, dataset.id)
+
+    const notifs = await collectNotifs()
+    await ax.put(`/api/v1/datasets/${dataset.id}/lines/${line._id}`, { str: 'hello' }, {
+      validateStatus: (status: number) => status === 304 || (status >= 200 && status < 300)
+    })
+    const captured = await notifs.drain()
+    expectNoNotif(captured, `data-fair:dataset-data-updated:${dataset.slug}`)
   })
 
   test('Patch with empty string and null should remove properties', async () => {
@@ -499,11 +529,17 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.get('/api/v1/datasets/restdel')
     assert.equal(res.data.count, 4)
 
+    // collect only around the delete-all so we can ignore the bulk emission above
+    const notifs = await collectNotifs()
     await ax.delete('/api/v1/datasets/restdel/lines')
     await waitForFinalize(ax, 'restdel')
     res = await ax.get('/api/v1/datasets/restdel')
     assert.equal(res.data.count, 0)
     assert.equal(await restCollectionCount('restdel', {}), 0)
+
+    const captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:dataset-data-updated:restdel' })
+    const notif = expectNotif(captured, 'data-fair:dataset-data-updated:restdel')
+    assert.match(notif.body.fr, /toutes les lignes/i)
   })
 
   test('Accept date detected as ISO by JS but not by elasticsearch', async () => {

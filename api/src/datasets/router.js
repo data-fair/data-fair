@@ -348,7 +348,7 @@ router.put('/:datasetId/owner', readDataset({ noCache: true }), apiKeyMiddleware
     sender: { ...dataset.owner, role: 'admin' }
   }
   await notifications.send(event, sessionState)
-  await notifications.send({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
+  await notifications.send({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
   await syncRemoteService(patchedDataset)
 

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, waitForJournalEvent, collectNotifications } from '../../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, waitForJournalEvent } from '../../../support/workers.ts'
+import { collectNotifs, expectNotif } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -61,7 +62,7 @@ test.describe('file datasets with validation rules', () => {
 
   test('create an invalid dataset with initial validation rules', async () => {
     // subscribe before upload so journals.log fan-out lands in the buffer
-    const notifCollector = await collectNotifications()
+    const notifs = await collectNotifs()
     const form = new FormData()
     form.append('file', fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
@@ -73,17 +74,13 @@ test.describe('file datasets with validation rules', () => {
     assert.ok(errorEvent)
     assert.ok(errorEvent.data.includes('ont une erreur de validation'))
 
-    const captured = await notifCollector.getAll()
-    await notifCollector.close()
-    // specific + umbrella dataset-error share the same _id
-    const topics = captured.map((n: any) => n.topic?.key)
-    const umbrellaNotif = captured.find((n: any) => n.topic?.key === `data-fair:dataset-error:${dataset.id}`)
-    assert.ok(umbrellaNotif, `expected umbrella dataset-error notif, got: ${JSON.stringify(topics)}`)
-    const specificNotif = captured.find((n: any) => n.topic?.key === `data-fair:dataset-validation-error:${dataset.id}`)
-    assert.ok(specificNotif, `expected specific dataset-validation-error notif, got: ${JSON.stringify(topics)}`)
-    const matchingUmbrella = captured.find((n: any) => n.topic?.key === `data-fair:dataset-error:${dataset.id}` && n._id === specificNotif._id)
-    assert.ok(matchingUmbrella, 'umbrella push should share _id with the specific validation-error push')
-    assert.ok(JSON.stringify(umbrellaNotif.body).includes('ont une erreur de validation'), `notif body should carry the validation detail, got: ${JSON.stringify(umbrellaNotif.body)}`)
+    // umbrella `dataset-error` fans out from the specific `dataset-validation-error`
+    // emission (notifications.ts §13) with a shared _id for events-service dedup.
+    const captured = await notifs.waitFor(2, { keyPrefix: 'data-fair:dataset-' })
+    const specific = expectNotif(captured, `data-fair:dataset-validation-error:${dataset.id}`)
+    const umbrella = expectNotif(captured, `data-fair:dataset-error:${dataset.id}`)
+    assert.equal(umbrella._id, specific._id, 'umbrella push should share _id with the specific validation-error push')
+    assert.ok(JSON.stringify(umbrella.body).includes('ligne(s) en erreur'), `notif body should carry the validation detail, got: ${JSON.stringify(umbrella.body)}`)
 
     // apply a transformation to fix the issue
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema: schemaWithFix })).data

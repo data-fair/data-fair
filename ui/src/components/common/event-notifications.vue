@@ -46,8 +46,9 @@ const iframeUrl = computed(() => {
   const topics = topicsByResource[props.resourceType]
     .filter(key => key !== 'dataset-draft-data-updated' || canHaveDraft)
 
+  // subscribe by stable id (not slug — slugs change on rename); the portal app does the same.
   const keysParam = topics
-    .map(key => `data-fair:${key}:${props.resource.slug}`)
+    .map(key => `data-fair:${key}:${props.resource.id}`)
     .join(',')
 
   // Commas are reserved as the multi-value separator on the events service side,
