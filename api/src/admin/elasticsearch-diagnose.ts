@@ -223,6 +223,16 @@ export const categorizeTaskAction = (action: string): LongTaskCategory => {
   return 'other'
 }
 
+// ES persistent-task coordinator slots ("[c]" suffix) are started at cluster boot
+// and never finish — their running_time grows without bound and would otherwise
+// dominate the "other long tasks" panel. Drop the known ones so real outliers
+// stay visible. Add an entry here whenever a new noisy persistent task surfaces.
+export const TASK_ACTION_DENYLIST: ReadonlySet<string> = new Set([
+  'geoip-downloader[c]',
+  'health-node[c]',
+  'security-token-key[c]'
+])
+
 export type ExtractedSourceQuery = {
   sourceQuery: object | null
   sourceQueryOversized: boolean
@@ -306,6 +316,7 @@ export const mapLongTasks = (
     for (const [taskId, task] of Object.entries<any>(nodeBlock.tasks ?? {})) {
       const runningMs = Number(task.running_time_in_nanos ?? 0) / 1e6
       if (runningMs <= longTaskMs) continue
+      if (TASK_ACTION_DENYLIST.has(task.action)) continue
       const rawDesc: string = task.description ?? ''
       const description = rawDesc.length > 500 ? rawDesc.slice(0, 500) : rawDesc
       const indexNames = extractIndexNames(rawDesc, indicesPrefix)

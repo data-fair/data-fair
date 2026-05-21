@@ -239,6 +239,26 @@ test.describe('mapLongTasks', () => {
     assert.equal(otherCat.o, 'other')
   })
 
+  test('excludes ES persistent-task coordinator slots (denylist)', () => {
+    const tasksResponse = {
+      nodes: {
+        n: {
+          name: 'n',
+          tasks: {
+            gp: { action: 'geoip-downloader[c]', running_time_in_nanos: 100_000_000_000_000, description: '' },
+            hn: { action: 'health-node[c]', running_time_in_nanos: 100_000_000_000_000, description: '' },
+            stk: { action: 'security-token-key[c]', running_time_in_nanos: 100_000_000_000_000, description: '' },
+            real: { action: 'indices:data/read/search', running_time_in_nanos: 5_000_000_000, description: '' }
+          }
+        }
+      }
+    }
+    const out = mapLongTasks(tasksResponse as any, 1000, 'dataset-test', new Map(), 100)
+    assert.equal(out.other.items.length, 0, 'persistent-task slots must not appear in other bucket')
+    assert.equal(out.search.items.length, 1, 'real search task still surfaces')
+    assert.equal(out.search.items[0].action, 'indices:data/read/search')
+  })
+
   test('caps each bucket independently and reports truncation', () => {
     const mk = (i: number, action: string) => ([
       `t${i}`,

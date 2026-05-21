@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import moment from 'moment'
 import zlib from 'zlib'
 import iconv from 'iconv-lite'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, setConfig } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -572,5 +572,43 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(res.data.results[0]._geocorners)
     assert.ok(res.data.results[1]._geopoint)
     assert.ok(res.data.results[1]._geocorners)
+  })
+
+  // An API consumer must never be able to crash the whole API process.
+  // Concurrent _bulk_lines requests reusing the same uploaded filename land on
+  // the same temp path; one request removing that file while another is still
+  // reading it used to surface as an unhandled 'error' event (ENOENT) that took
+  // the process down. The worst acceptable outcome is an HTTP error.
+  test('Concurrent bulk requests reusing an actions filename cannot crash the API', async () => {
+    const ax = testUser5
+    const n = 8
+    const ids = Array.from({ length: n }, (_, i) => 'restbulkrace' + i)
+    for (const id of ids) {
+      await ax.post('/api/v1/datasets/' + id, { isRest: true, title: id, schema: [{ key: 'label', type: 'string' }] })
+    }
+
+    const sendBulk = (id: string) => {
+      const form = new FormData()
+      // every request deliberately uploads under the very same filename
+      form.append('actions', Buffer.from(JSON.stringify({ _action: 'create', label: id }) + '\n'), 'shared-name.ndjson')
+      return ax.post('/api/v1/datasets/' + id + '/_bulk_lines?drop=true', form, {
+        headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+        validateStatus: () => true
+      })
+    }
+
+    const results = await Promise.allSettled(ids.map(sendBulk))
+    for (const [i, result] of results.entries()) {
+      // a rejected promise means the connection dropped — i.e. the API crashed
+      assert.equal(result.status, 'fulfilled', `bulk request ${i} got no HTTP response, the API process likely crashed`)
+      assert.equal(typeof (result as PromiseFulfilledResult<{ status: number }>).value.status, 'number')
+    }
+
+    // the API process must still be alive and serving requests
+    await waitForWorkerIdle()
+    for (const id of ids) {
+      const res = await ax.get('/api/v1/datasets/' + id + '/lines', { validateStatus: () => true })
+      assert.equal(res.status, 200, 'the API must still serve requests after concurrent bulk uploads')
+    }
   })
 })
