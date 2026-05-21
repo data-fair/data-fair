@@ -916,6 +916,8 @@ const emitLinesUpdated = (dataset: RestDataset, sessionState: SessionStateAuthen
   // fire-and-forget
   notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated', { i18nKey, localizedParams })
     .catch(err => internalError('lines-updated-notif', err))
+  notifications.propagateDataUpdatedToVirtualParents(dataset, sessionState, { i18nKey, localizedParams })
+    .catch(err => internalError('lines-updated-notif-virtual-parents', err))
 }
 
 export const readLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {

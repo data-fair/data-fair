@@ -222,9 +222,9 @@ router.patch('/:datasetId',
         await notifications.sendResourceEvent('datasets', dataset, sessionState, 'structure-updated', { extra: { patch: Object.keys(patch).join(', ') } })
       }
 
-      // REST datasets skip the draft-validation flow that emits breaking-change in service.js;
-      // emit it inline here on backward-incompatible PATCHes.
-      if (req.dataset.isRest && patch.schema) {
+      // REST and virtual datasets skip the draft-validation flow that emits breaking-change
+      // in service.js; emit it inline here on backward-incompatible PATCHes.
+      if ((req.dataset.isRest || req.dataset.isVirtual) && patch.schema) {
         const breakingChanges = getSchemaBreakingChanges(req.dataset.schema, patch.schema, false, false)
         if (breakingChanges.length) {
           const breakingChangesList = breakingChanges.map(bc => bc.summary).join(', ')
@@ -557,6 +557,9 @@ const updateDatasetRoute = async (req, res, next) => {
         await journals.log('datasets', dataset, { type: 'data-updated' })
         const i18nKey = `data-updated-${dataset.isRest ? 'rest' : 'file'}`
         await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated', { i18nKey })
+        // No propagation to virtual parents here: file uploads create a draft on the child,
+        // so the data isn't visible to virtual parents yet. Propagation runs from service.js
+        // validateDraft once the draft has been merged into the main collection.
       }
       await syncRemoteService(dataset)
     }

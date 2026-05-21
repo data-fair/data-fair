@@ -1,4 +1,5 @@
 import config from '#config'
+import mongo from '#mongo'
 import axios from './axios.js'
 import debugLib from 'debug'
 import i18n from 'i18n'
@@ -73,6 +74,20 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
         await send(event, originator)
       }
     }
+  }
+}
+
+// Mirror a child dataset's data-updated emission on every parent virtual dataset
+// referencing it via `virtual.children`. Same i18nKey/localizedParams are passed
+// through so portal-side subscribers see a uniform body, with no leakage of child
+// identity or virtual-ness. The mongo lookup uses the `virtual.children_1` index.
+export const propagateDataUpdatedToVirtualParents = async (
+  childDataset: Pick<Dataset, 'id'>,
+  originator: SessionStateAuthenticated | string,
+  options: Pick<SendResourceEventOptions, 'i18nKey' | 'localizedParams' | 'params' | 'extra'> = {}
+) => {
+  for await (const virtualParent of mongo.datasets.find({ 'virtual.children': childDataset.id })) {
+    await sendResourceEvent('datasets', virtualParent, originator, 'data-updated', options)
   }
 }
 
