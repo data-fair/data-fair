@@ -993,8 +993,13 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     }
 
     // The list of actions/operations/transactions is either in a "actions" file
-    // or directly in the body
-    let inputStream, mimeType, skipDecoding
+    // or directly in the body.
+    // The input stream is built lazily, right when it is handed to pump(): pump
+    // attaches its 'error' handler synchronously, so a failure to open/read it
+    // (e.g. the temp file vanished because of a concurrent request) rejects the
+    // pipeline instead of crashing the process with an unhandled 'error' event.
+    let getInputStream: () => Readable
+    let mimeType, skipDecoding
     const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
     let fileProps = {
       fieldsDelimiter: req.query.sep || ',',
@@ -1010,7 +1015,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
         const directory = await unzipper.Open.file(req.files.actions[0].path)
         if (directory.files.length !== 1) return res.status(400).type('text/plain').send('only accept zip archive with a single file inside')
         mimeType = mime.lookup(directory.files[0].path)
-        inputStream = directory.files[0].stream()
+        getInputStream = () => directory.files[0].stream()
       } else if (tabularTypes.has(req.files.actions[0].mimetype)) {
         const actionFile = req.files.actions[0]
         const destination = actionFile.path + '.csv'
@@ -1024,11 +1029,12 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
           mimetype: 'text/csv',
           path: destination
         })
-        inputStream = fs.createReadStream(destination)
+        getInputStream = () => fs.createReadStream(destination)
         mimeType = 'text/csv'
         fileProps = { fieldsDelimiter: ',', escape: '"', quote: '"', newline: '\n' }
       } else {
-        inputStream = fs.createReadStream(req.files.actions[0].path)
+        const actionsPath = req.files.actions[0].path
+        getInputStream = () => fs.createReadStream(actionsPath)
         // handle .csv.gz file or other .gz files
         if (req.files.actions[0].originalname.endsWith('.gz')) {
           mimeType = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
@@ -1036,7 +1042,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
         }
       }
     } else {
-      inputStream = req
+      getInputStream = () => req
       skipDecoding = true
       const contentType = req.get('Content-Type')
       mimeType = (contentType && contentType.split(';')[0]) || 'application/json'
@@ -1084,7 +1090,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 
     try {
       await pump(
-        inputStream,
+        getInputStream(),
         ...parseStreams,
         transactionStream
       )
@@ -1108,13 +1114,21 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
         }
       }
     } catch (err: any) {
-      const status = err.status ?? err.statusCode ?? 500
+      let status = err.status ?? err.statusCode ?? 500
+      let message = err.message
+      // a low-level read error on the uploaded payload (for instance the temp
+      // file removed by a concurrent request) is a transient client-side
+      // problem: surface it as a 400 rather than logging an internal error
+      if (status === 500 && typeof err.code === 'string' && ['ENOENT', 'EACCES', 'EISDIR', 'EBADF', 'EPERM'].includes(err.code)) {
+        status = 400
+        message = 'Le fichier de transactions n\'a pas pu être lu, merci de réessayer.'
+      }
       if (status === 500) internalError('bulk-lines', err)
       if (firstBatch) {
         res.writeHead(status, { 'Content-Type': 'application/json' })
       }
       summary.nbErrors += 1
-      summary.errors.push({ line: -1, error: err.message, status })
+      summary.errors.push({ line: -1, error: message, status })
 
       if (drop) {
         summary.cancelled = true
@@ -1139,8 +1153,10 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 
     storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
   } finally {
+    // best-effort cleanup: never let a temp-file removal error (e.g. the file
+    // already gone) mask the response or escape as an unhandled rejection
     for (const file of req.files?.actions || []) {
-      await fs.unlink(file.path)
+      await fs.remove(file.path).catch((err) => console.warn('failed to clean up bulk actions temp file', file.path, err))
     }
   }
 }

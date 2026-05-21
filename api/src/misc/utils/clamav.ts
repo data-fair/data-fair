@@ -125,7 +125,6 @@ export const middleware = async (req: Request, res: Response, next: NextFunction
 export const checkFiles = async (files: Express.Multer.File[], user: User) => {
   if (!config.clamav.active) return true
   for (const file of files) {
-    const stream = isInFilesStorage(file.path) ? (await filesStorage.readStream(file.path)).body : fs.createReadStream(file.path)
     if (file.path.endsWith('.zip')) {
       const zipDirectory = isInFilesStorage(file.path) ? await filesStorage.zipDirectory(file.path) : await unzipper.Open.file(file.path)
       for (const zipFile of zipDirectory.files) {
@@ -133,6 +132,10 @@ export const checkFiles = async (files: Express.Multer.File[], user: User) => {
         await scanStream(zipFile.stream(), file.path + '/' + zipFile.path, user)
       }
     } else {
+      // create the stream only where it is consumed by scanStream — an unused
+      // stream (e.g. on a missing file) would emit an unhandled 'error' event
+      // and crash the process
+      const stream = isInFilesStorage(file.path) ? (await filesStorage.readStream(file.path)).body : fs.createReadStream(file.path)
       await scanStream(stream, file.path, user)
     }
   }
