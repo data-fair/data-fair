@@ -33,7 +33,7 @@ The three layers are deliberately separate: a journal can be very chatty without
 
 | File | Responsibility |
 |---|---|
-| `api/src/misc/utils/notifications.ts` | Canonical entry points: `sendResourceEvent`, `send`, `subscribe`. Owns the `draft-` prefix logic and the dev/test routing. |
+| `api/src/misc/utils/notifications.ts` | Canonical entry points: `sendResourceEvent`, `send`, `subscribe`, `propagateDataUpdatedToVirtualParents`. Owns the `draft-` prefix logic and the dev/test routing. |
 | `api/types/settings/schema.js` | Single source of truth for subscribable / webhook topic keys (`webhooks.items.properties.events.items.oneOf`); each option carries `title` (EN) + `x-i18n-title.fr`. Consumed by VJSF in the settings webhook form and by the back-office subscription UI. |
 | `api/src/misc/utils/journals.ts` | Append-only journal log; separate concern, see §1. |
 | `api/src/misc/utils/webhooks.ts` | Webhook dispatch; separate concern, see §1. |
@@ -61,6 +61,10 @@ Lower-level helper for events that don't fit the resource pattern (settings even
 ### `subscribe(req, subscription)`
 
 Creates a subscription on the events service on behalf of the current user. Used for implicit subscriptions (publication-sites at `settings/router.ts:401-422`). Posts to `<privateEventsUrl>/api/v1/subscriptions` with the request cookie.
+
+### `propagateDataUpdatedToVirtualParents(childDataset, originator, options?)`
+
+Mirror helper used at the two commit-time `data-updated` emission points (file `validateDraft` in `service.js:587`, REST line ops in `rest.ts:917`). Looks up parent virtual datasets via `mongo.datasets.find({ 'virtual.children': childDataset.id })` (indexed by `virtual.children_1` in `mongo.ts:69`) and re-emits `data-updated` on each parent through `sendResourceEvent`, passing the **same `i18nKey` and `localizedParams` as the child emission** so subscribers on a virtual see a body identical to subscribers on the underlying child — no leakage of child identity or virtual-ness, transparent for portal-side subscribers. See §10.1 for the rationale of where it is wired and why `router.js:559` (file upload entry point) is deliberately skipped.
 
 ## 4. Topic key conventions
 
@@ -186,6 +190,22 @@ The topic key stays `data-fair:dataset-data-updated:<slug>` (resp. `dataset-draf
 
 **Per-request emission, no debouncing.** Each HTTP request to a line endpoint produces one notification — there is no aggregation across requests. Inline-edit UIs that PATCH a single cell at a time will therefore emit one notification per edit. This is intentional: per-edit feedback matches user expectations, and any caller batching many writes is expected to use `_bulk_lines` (which already produces a single recap). The `bulkLines` handler additionally suppresses its summary emission on a mid-stream stream-level failure (`api/src/datasets/utils/rest.ts` — the `streamErrored` flag): the caller already gets the error in the HTTP response, no point claiming a success that did not happen.
 
+### 10.1 Child → virtual parent propagation
+
+Subscribers on a virtual dataset's `data-updated` topic expect to be notified when the data they see changes — which only happens through child datasets. Every commit-time `data-updated` emission on a child therefore mirrors onto each parent virtual via `propagateDataUpdatedToVirtualParents` (see §3):
+
+| Wired at | Emits on virtual parent? | Why |
+|---|---|---|
+| `service.js:587` (`validateDraft` file path) | yes | Draft has just been merged into the main collection; virtual now serves the new data. |
+| `rest.ts:917` (`emitLinesUpdated`, all five REST handlers) | yes | REST line ops commit immediately; virtual sees the change at the next query. |
+| `router.js:559` (file upload entry point) | **no** | The child enters draft (`patch.draftReason = 'file-updated'`) and the upload-time notif is `dataset-draft-data-updated:<child>`. Virtual parents do not query draft data, so propagating here would fire a `dataset-data-updated:<virtual>` while the virtual still serves the OLD data. The propagation at `service.js:587` then fires again with the new data — double notif. Skipping at the upload entry point means the virtual fires exactly once, at the moment new data becomes visible. |
+
+The virtual notif **reuses the same `i18nKey` and `localizedParams` as the child emission**, so its rendered title/body is identical to what a subscriber on the underlying child would see (e.g. `3 lignes créées` for a REST bulk). This keeps the topic surface uniform between regular and virtual datasets — portal-side subscribers cannot tell from the notification alone that the resource is virtual.
+
+Topic key on the virtual parent is the standard `data-fair:dataset-data-updated:<virtual-id>` (and `:<virtual-slug>`, see §12). No new topic shape, no new i18n key.
+
+**One notif per parent.** If multiple virtual datasets reference the same child, each gets its own emission (since `sendResourceEvent` is called per parent inside the helper). Conversely, a single line PATCH that triggers one child notif produces N propagated notifs (one per parent), in line with the rest of the system's per-event semantics.
+
 ## 11. Tests
 
 Notification assertions live **inline** alongside the feature that emits them — touching an endpoint's behaviour means touching its notif assertion in the same test. Cross-cutting invariants of the dispatch layer itself go in a dedicated infra file.
@@ -201,6 +221,7 @@ Inline coverage:
 - `tests/features/datasets/upload/datasets-features.api.spec.ts` — `user-notification`, `structure-updated` (drop + add), `breaking-change`, `change-owner`, `delete`.
 - `tests/features/datasets/upload/datasets-drafts-lifecycle.api.spec.ts` — `dataset-created`, `draft-data-updated`, `draft-validated` (with slug+id pairing).
 - `tests/features/datasets/upload/file-validation.api.spec.ts` — error umbrella fan-out on file validation failure.
+- `tests/features/datasets/virtual/virtual-datasets-features.api.spec.ts` — `breaking-change` on virtual schema PATCH (`isVirtual` gate, see §10.1), `data-updated` propagation from child→virtual on file re-upload, REST single line, REST bulk lines.
 - `tests/features/applications/publication-sites.api.spec.ts` — `publication-requested` (org and department scopes).
 - `tests/features/applications/applications.api.spec.ts` — `application-created`.
 
@@ -210,7 +231,7 @@ Cross-cutting infra:
 
 Topics still without dedicated coverage (consider adding tests when touched):
 
-- `dataset-patched-properties`, `dataset-breaking-change`
+- `dataset-patched-properties`
 - `application-patched-properties`, `application-updated`, `application-write-keys`, `application-change-owner`, `application-delete`, `application-error`
 - `settings:api-key-created`, `settings:api-key-deleted`
 

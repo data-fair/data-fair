@@ -191,9 +191,9 @@ export const registerMetadataRoutes = (router: Router) => {
           await notifications.sendResourceEvent('datasets', dataset, sessionState, 'structure-updated', { extra: { patch: Object.keys(patch).join(', ') } })
         }
 
-        // REST datasets skip the draft-validation flow that emits breaking-change in service.ts;
-        // emit it inline here on backward-incompatible PATCHes.
-        if (dataset.isRest && patch.schema) {
+        // REST and virtual datasets skip the draft-validation flow that emits breaking-change
+        // in service.ts; emit it inline here on backward-incompatible PATCHes.
+        if ((dataset.isRest || dataset.isVirtual) && patch.schema) {
           const breakingChanges = getSchemaBreakingChanges(previousSchema, patch.schema, false, false)
           if (breakingChanges.length) {
             const localizedParams = i18n.getLocales().reduce<Record<string, Record<string, string>>>((a, locale) => {

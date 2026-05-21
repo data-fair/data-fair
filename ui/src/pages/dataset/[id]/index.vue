@@ -1152,8 +1152,10 @@ const sections = computedDeepDiff(() => {
     if (can('readJournal').value) {
       activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this dataset (who did what, when).' })
     }
-    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell, agentDesc: 'Subscribe the current user to in-app / email notifications for events on this dataset (errors, publication, etc.).' })
-    if (can('setPermissions').value) {
+    if (!d.isMetaOnly) {
+      activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell, agentDesc: 'Subscribe the current user to in-app / email notifications for events on this dataset (errors, publication, etc.).' })
+    }
+    if (can('setPermissions').value && !d.isMetaOnly) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure outbound HTTP webhooks fired on dataset events.' })
     }
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }

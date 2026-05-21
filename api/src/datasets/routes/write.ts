@@ -210,6 +210,9 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
 
       if (files) {
         await journals.log('datasets', dataset, { type: 'data-updated' } as Event)
+        // No propagation to virtual parents here: file uploads create a draft on the child,
+        // so the data isn't visible to virtual parents yet. Propagation runs from service.ts
+        // validateDraft once the draft has been merged into the main collection.
         const i18nKey = `data-updated-${dataset.isRest ? 'rest' : 'file'}`
         await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated', { i18nKey })
       }

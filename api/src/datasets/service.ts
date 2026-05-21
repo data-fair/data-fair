@@ -11,7 +11,7 @@ import * as datasetUtils from './utils/index.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.ts'
 import * as webhooks from '../misc/utils/webhooks.ts'
-import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import { sendResourceEvent, propagateDataUpdatedToVirtualParents } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
@@ -646,6 +646,7 @@ export const validateDraft = async (dataset: any, datasetFull: any, patch: any) 
   if (datasetFull.file) {
     webhooks.trigger('datasets', patchedDataset, { type: 'data-updated' }, null)
     await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated', { i18nKey: 'data-updated-file' })
+    await propagateDataUpdatedToVirtualParents(patchedDataset, 'data-fair-worker', { i18nKey: 'data-updated-file' })
 
     // reuse the canonical compatibility check (strips innocuous props like description/title/enum)
     // so this path matches the router PATCH behaviour.
