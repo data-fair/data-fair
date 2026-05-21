@@ -214,6 +214,7 @@
           :base-color="fieldColor('attachmentsAsImage')"
           :color="fieldColor('attachmentsAsImage')"
           density="compact"
+          class="mb-4"
         />
 
         <template v-if="datasetsMetadata?.custom?.length">
@@ -298,7 +299,7 @@ fr:
   spatial: Couverture spatiale
   temporal: Couverture temporelle
   modified: Date de modification de la source
-  attachmentsAsImage: Afficher les pièces jointes comme des images
+  attachmentsAsImage: Afficher les pièces jointes de lignes comme des images
   relatedDatasets: Jeux de données liés
   seeAlsoDescription: Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.
 en:
@@ -336,7 +337,7 @@ en:
   spatial: Spatial coverage
   temporal: Temporal coverage
   modified: Source modification date
-  attachmentsAsImage: Display attachments as images
+  attachmentsAsImage: Display row attachments as images
   relatedDatasets: Related datasets
   seeAlsoDescription: Select other related datasets (same topic, similar structure, or other criteria) to suggest to portal users.
 </i18n>

@@ -401,6 +401,6 @@ export const sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
       }
     }
   }))
-  if (currentLine === 0) throw new Error('[noretry] Échec de l\'échantillonage des données')
+  if (currentLine === 0) throw new Error('[noretry] Aucune ligne n\'a pu être lue dans le fichier (fichier vide, encodage incorrect,...)')
   return sampleValues
 }

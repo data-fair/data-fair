@@ -54,25 +54,16 @@
           class="mb-4"
         />
 
-        <v-progress-linear
+        <file-upload-progress
           v-if="upload.loading.value"
-          v-model="uploadPercent"
+          :percent="uploadPercent"
+          :total="uploadProgress.total"
           class="mb-2"
-          height="28"
-          color="primary"
-          rounded
-        >
-          <template v-if="uploadProgress.total && uploadPercent">
-            {{ Math.floor(uploadPercent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
-          </template>
-        </v-progress-linear>
+        />
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn
-          :disabled="upload.loading.value"
-          @click="showDialog = false"
-        >
+        <v-btn @click="upload.loading.value ? cancelSource?.cancel(t('cancelled')) : (showDialog = false)">
           {{ t('cancel') }}
         </v-btn>
         <v-btn
@@ -98,9 +89,9 @@ fr:
   encoding: Encodage du fichier
   encodingAuto: Détection automatique
   cancel: Annuler
+  cancelled: Chargement annulé par l'utilisateur
   upload: Charger
   close: Fermer
-  of: de
   uploadSuccess: Fichier chargé avec succès
   fileTooLarge: Le fichier est trop volumineux pour être importé
 en:
@@ -111,9 +102,9 @@ en:
   encoding: File encoding
   encodingAuto: Auto-detection
   cancel: Cancel
+  cancelled: Loading cancelled by user
   upload: Upload
   close: Close
-  of: of
   uploadSuccess: File uploaded successfully
   fileTooLarge: The file is too large to be imported
 </i18n>
@@ -121,11 +112,10 @@ en:
 <script setup lang="ts">
 import { mdiPaperclip, mdiZipBox } from '@mdi/js'
 import axios, { type AxiosRequestConfig, type CancelTokenSource } from 'axios'
-import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import useDatasetStore from '~/composables/dataset/dataset-store'
 import { accepted } from '~/utils/dataset'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const { sendUiNotif } = useUiNotif()
 const { id: datasetId, datasetFetch, digitalDocumentField } = useDatasetStore()
 
@@ -202,6 +192,7 @@ const upload = useAsyncAction(async () => {
     datasetFetch.refresh()
     sendUiNotif({ type: 'success', msg: t('uploadSuccess') })
   } catch (error: any) {
+    if (axios.isCancel(error)) return
     const status = error.response && error.response.status
     if (status === 413) {
       sendUiNotif({ type: 'error', msg: t('fileTooLarge') })

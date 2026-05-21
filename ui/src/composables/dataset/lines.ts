@@ -87,7 +87,7 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
           if (property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
             if (raw._attachment_url) {
               extendedValue.raw = raw._attachment_url
-              const pathName = new URL(raw._attachment_url).pathname.split('/').pop()
+              const pathName = decodeURIComponent(new URL(raw._attachment_url).pathname.split('/').pop() ?? '')
               extendedValue.formatted = pathName ? truncateMiddle(pathName, truncate.value - 4, 4, '...') : raw._attachment_url
             } else if (raw[property.key]) {
               extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10, '...')

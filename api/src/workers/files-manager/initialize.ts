@@ -187,6 +187,14 @@ export default async function (dataset: DatasetInternal) {
         } else {
           throw new Error('dataset cannot be used to init data')
         }
+        // when extensions are kept on the target, their columns must be excluded from the
+        // intermediate CSV: they'll be (re)computed by the extension step on the new file.
+        // otherwise the CSV header contains the x-extension keys, file analysis sees them
+        // as empty columns and they collide with the keys the extension would produce.
+        const csvSelect = (patch.schema ?? dataset.schema ?? [])
+          .filter(p => !p['x-calculated'] && !p['x-extension'])
+          .map(p => p.key)
+          .join(',')
         const readStream = compose(
           ...inputStreams,
           new Transform({
@@ -201,7 +209,7 @@ export default async function (dataset: DatasetInternal) {
               }
             }
           }),
-          ...(await import('../../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch })
+          ...(await import('../../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }, { select: csvSelect })
         )
         await filesStorage.writeStream(readStream, filePath)
         const loadedFileStats = await filesStorage.fileStats(filePath)

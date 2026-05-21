@@ -99,15 +99,13 @@
           value="init"
         >
           <v-alert
+            :text="t('optionalStep')"
             type="info"
             variant="outlined"
             density="compact"
-            max-width="500"
+            max-width="800"
             class="mb-4"
-          >
-            {{ t('optionalStep') }}
-          </v-alert>
-
+          />
           <dataset-init-from
             v-model="initFrom"
             v-model:source-title="initFromSourceTitle"
@@ -119,48 +117,48 @@
         <v-stepper-window-item value="params">
           <!-- FILE params -->
           <template v-if="datasetType === 'file'">
-            <p class="text-body-large mb-4">
-              {{ t('loadMainFile') }}
-            </p>
-            <v-file-input
-              v-model="fileInputValue"
-              :label="t('selectFile')"
-              variant="outlined"
-              density="compact"
-              hide-details
-              style="max-width: 500px;"
-              prepend-icon=""
-              :prepend-inner-icon="mdiPaperclip"
-              :disabled="initFromData"
-              @update:model-value="onFileChange"
-            />
+            <template v-if="!initFromData">
+              <p class="text-body-large mb-4">
+                {{ t('loadMainFile') }}
+              </p>
+              <v-file-input
+                v-model="fileInputValue"
+                :label="t('selectFile')"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="max-width: 500px;"
+                prepend-icon=""
+                :prepend-inner-icon="mdiPaperclip"
+                @update:model-value="onFileChange"
+              />
 
-            <v-file-input
-              v-if="!initFromData && !isSimple"
-              v-model="attachmentsInputValue"
-              :label="t('selectAttachments')"
-              variant="outlined"
-              density="compact"
-              hide-details
-              accept=".zip"
-              class="mt-4"
-              style="max-width: 500px;"
-              prepend-icon=""
-              :prepend-inner-icon="mdiZipBox"
-              clearable
-            />
+              <v-file-input
+                v-if="!isSimple"
+                v-model="attachmentsInputValue"
+                :label="t('selectAttachments')"
+                variant="outlined"
+                density="compact"
+                hide-details
+                accept=".zip"
+                class="mt-4"
+                style="max-width: 500px;"
+                prepend-icon=""
+                :prepend-inner-icon="mdiZipBox"
+                clearable
+              />
 
-            <v-alert
-              v-if="suggestArchive"
-              type="info"
-              variant="outlined"
-              class="mt-2 mb-2"
-            >
-              {{ t('suggestArchive', { name: file?.name }) }}
-            </v-alert>
+              <v-alert
+                v-if="suggestArchive"
+                type="info"
+                variant="outlined"
+                class="mt-2 mb-2"
+              >
+                {{ t('suggestArchive', { name: file?.name }) }}
+              </v-alert>
+            </template>
 
             <v-text-field
-              v-if="!initFromData"
               v-model="fileTitle"
               :label="t('title')"
               variant="outlined"
@@ -170,55 +168,58 @@
               class="mt-4"
             />
 
-            <v-checkbox
-              v-if="attachments && !initFromData"
-              v-model="attachmentsAsImage"
-              hide-details
-              :label="t('attachmentsAsImage')"
-            />
-
-            <dataset-normalize-options
-              v-if="isSpreadsheet"
-              v-model="normalizeOptions"
-            />
-
-            <!-- Advanced options -->
-            <div
-              class="text-title-small mt-4 mb-2 d-flex align-center"
-              style="cursor: pointer"
-              @click="showAdvanced = !showAdvanced"
-            >
-              {{ t('advancedOptions') }}
-              <v-icon
-                class="ml-1"
-                :icon="showAdvanced ? mdiChevronUp : mdiChevronDown"
-              />
-            </div>
-            <template v-if="showAdvanced">
-              <v-select
-                v-model="escapeKeyAlgorithm"
-                :label="t('escapeKeyAlgorithm')"
-                :items="escapeKeyOptions"
-                variant="outlined"
+            <template v-if="!initFromData">
+              <v-checkbox
+                v-if="attachments"
+                v-model="attachmentsAsImage"
+                :label="t('attachmentsAsImage')"
                 density="compact"
-                clearable
-                :hint="t('escapeKeyAlgorithmHint')"
-                persistent-hint
-                style="max-width: 500px;"
-                class="mb-4"
+                hide-details
               />
-              <v-combobox
-                v-if="isTextFile"
-                v-model="fileEncoding"
-                :label="t('encoding')"
-                :items="commonEncodings"
-                variant="outlined"
-                density="compact"
-                clearable
-                :hint="t('encodingHint')"
-                persistent-hint
-                style="max-width: 500px;"
+
+              <dataset-normalize-options
+                v-if="isSpreadsheet"
+                v-model="normalizeOptions"
               />
+
+              <!-- Advanced options -->
+              <div
+                class="text-title-small mt-4 mb-2 d-flex align-center"
+                style="cursor: pointer"
+                @click="showAdvanced = !showAdvanced"
+              >
+                {{ t('advancedOptions') }}
+                <v-icon
+                  class="ml-1"
+                  :icon="showAdvanced ? mdiChevronUp : mdiChevronDown"
+                />
+              </div>
+              <template v-if="showAdvanced">
+                <v-select
+                  v-model="escapeKeyAlgorithm"
+                  :label="t('escapeKeyAlgorithm')"
+                  :items="escapeKeyOptions"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  :hint="t('escapeKeyAlgorithmHint')"
+                  persistent-hint
+                  style="max-width: 500px;"
+                  class="mb-4"
+                />
+                <v-combobox
+                  v-if="isTextFile"
+                  v-model="fileEncoding"
+                  :label="t('encoding')"
+                  :items="commonEncodings"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  :hint="t('encodingHint')"
+                  persistent-hint
+                  style="max-width: 500px;"
+                />
+              </template>
             </template>
           </template>
 
@@ -236,25 +237,29 @@
             />
             <v-checkbox
               v-model="restHistory"
-              hide-details
               :label="t('history')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-if="session.state.user?.adminMode"
               v-model="restLineOwnership"
-              hide-details
               :label="t('lineOwnership')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-model="restAttachments"
-              hide-details
               :label="t('attachments')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-if="restAttachments"
               v-model="restAttachmentsAsImage"
-              hide-details
               :label="t('attachmentsAsImage')"
+              density="comfortable"
+              hide-details
             />
           </template>
 
@@ -282,18 +287,21 @@
 
             <v-checkbox
               v-model="virtualFillSchema"
-              hide-details
               :label="t('virtualDatasetFill')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-model="virtualInitFromDesc"
-              hide-details
               :label="t('virtualDatasetInitFromDesc')"
+              density="comfortable"
+              hide-details
             />
             <v-checkbox
               v-model="virtualInitFromAttachments"
-              hide-details
               :label="t('virtualDatasetInitFromAttachments')"
+              density="comfortable"
+              hide-details
             />
           </template>
 
@@ -304,7 +312,7 @@
               :label="t('title')"
               class="mt-2"
               variant="outlined"
-              density="compact"
+              density="comfortable"
               max-width="500"
               hide-details="auto"
               :rules="[val => (val && val.length > 3) || t('titleTooShort')]"
@@ -331,22 +339,16 @@
           />
 
           <!-- Upload progress for file type -->
-          <v-row
+          <div
             v-if="createAction.loading.value && datasetType === 'file'"
-            class="mx-0 my-3"
-            align="center"
+            class="d-flex align-center my-3"
+            style="max-width: 500px;"
           >
-            <v-progress-linear
-              v-model="uploadPercent"
-              color="primary"
-              height="20"
-              rounded
-              style="max-width: 500px;"
-            >
-              <template v-if="uploadProgress.total && uploadPercent !== undefined">
-                {{ Math.floor(uploadPercent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
-              </template>
-            </v-progress-linear>
+            <file-upload-progress
+              :percent="uploadPercent"
+              :total="uploadProgress.total"
+              class="flex-grow-1"
+            />
             <v-btn
               :icon="mdiCancel"
               color="warning"
@@ -356,7 +358,7 @@
               :title="t('cancel')"
               @click="cancelUpload"
             />
-          </v-row>
+          </div>
         </v-stepper-window-item>
       </v-stepper-window>
 
@@ -382,7 +384,7 @@
     </v-stepper>
 
     <v-card
-      v-if="step === 'params' && datasetType === 'file'"
+      v-if="step === 'params' && datasetType === 'file' && !initFromData"
       class="ma-4 mt-0"
     >
       <v-card-title>{{ t('formats') }}</v-card-title>
@@ -394,7 +396,6 @@
 <script setup lang="ts">
 import { mdiAllInclusive, mdiCancel, mdiCheckAll, mdiChevronDown, mdiChevronUp, mdiCog, mdiContentCopy, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiShape, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
-import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 import { $apiPath } from '~/context'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
@@ -601,6 +602,7 @@ const paramsSubtitle = computed(() => {
 
 const paramsValid = computed(() => {
   if (datasetType.value === 'file') {
+    if (!fileTitle.value || fileTitle.value.length <= 3) return false
     return initFromData.value || !!file.value
   }
   if (datasetType.value === 'rest') {
@@ -661,10 +663,7 @@ const uploadPercent = computed(() => {
   return (uploadProgress.value.loaded / uploadProgress.value.total) * 100
 })
 let cancelSource: CancelTokenSource | null = null
-
-function cancelUpload () {
-  cancelSource?.cancel(t('cancelled'))
-}
+function cancelUpload () { cancelSource?.cancel(t('cancelled')) }
 
 // ---- Create ----
 const createAction = useAsyncAction(async () => {
@@ -903,7 +902,6 @@ fr:
   back: Retour
   import: Lancer l'import
   createDataset: Créer le jeu de données
-  of: de
   cancel: Annuler
   cancelled: Chargement annulé par l'utilisateur
   fileTooLarge: Le fichier est trop volumineux pour être importé
@@ -954,7 +952,6 @@ en:
   back: Back
   import: Proceed with import
   createDataset: Create the dataset
-  of: of
   cancel: Cancel
   cancelled: Loading cancelled by user
   fileTooLarge: The file is too large to be imported

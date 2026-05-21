@@ -57,7 +57,7 @@
         class="d-flex justify-end ga-1 mb-2"
       >
         <confirm-menu
-          v-if="editable && dataset && dataset.isRest"
+          v-if="editable && dataset && dataset.isRest && !column['x-extension'] && !column['x-calculated']"
           :title="t('deleteColumnTitle')"
           :text="t('deleteColumnText')"
           :tooltip="t('deleteColumnTitle')"

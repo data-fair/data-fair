@@ -4,12 +4,16 @@
     <a
       v-if="typeof extendedValue.raw === 'string' && extendedValue.raw"
       :href="extendedValue.raw"
+      :title="t('download', { name: extendedValue.formatted })"
+      target="_blank"
+      rel="noopener"
     >{{ extendedValue.formatted }}</a>
   </template>
   <template v-else-if="property['x-refersTo'] === 'https://schema.org/WebPage'">
     <a
       v-if="typeof extendedValue.raw === 'string' && extendedValue.raw"
       target="_blank"
+      rel="noopener"
       :href="extendedValue.raw"
     >{{ extendedValue.formatted }}</a>
   </template>
@@ -82,9 +86,11 @@
 fr:
   filterValue: Filtrer les lignes qui ont la même valeur dans cette colonne
   showFullValue: Afficher la valeur entière
+  download: "Télécharger {name} (nouvelle fenêtre)"
 en:
   filterValue: Filter the lines that have the same value in this column
   showFullValue: Show full value
+  download: "Download {name} (new window)"
 </i18n>
 
 <script setup lang="ts">
