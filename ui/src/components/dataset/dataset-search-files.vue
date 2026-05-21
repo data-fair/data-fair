@@ -1,11 +1,11 @@
-<!-- eslint-disable vue/no-v-html -->
 <template>
   <v-toolbar
     density="compact"
-    color="surface"
+    color="background"
     flat
   >
     <dataset-nb-results
+      unit="files"
       :total="total"
       :limit="0"
       style="min-width:80px;max-width:80px;"
@@ -19,42 +19,78 @@
     :items="results"
   >
     <template #default="{ item, index }">
-      <v-row
+      <div
         v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)"
-        class="ma-0"
+        class="pt-4 px-3"
       >
-        <v-col
-          cols="12"
-          class="pt-4"
+        <!-- attachment_url is empty if the value is an external link -->
+        <a
+          :href="item.raw._attachment_url || item.raw[digitalDocumentField!.key]"
+          :title="downloadTitle(item)"
+          target="_blank"
+          rel="noopener"
+        >{{ filename(item) }}</a>
+        <span
+          v-if="item.raw['_file.content_length']"
+          class="text-caption text-medium-emphasis ml-2"
+        >— {{ formatBytes(item.raw['_file.content_length'], locale) }}</span>
+        <p
+          v-if="showPath(item)"
+          class="text-caption text-medium-emphasis font-italic mb-0"
+          style="word-break:break-all;"
         >
-          <!-- attachment_url is empty if the value is an external link -->
-
-          <a :href="item.raw._attachment_url || item.raw[digitalDocumentField!.key]">{{ item.raw[digitalDocumentField!.key] }}</a>
-          <p
-            class="text-body-large"
-            style="word-break:break-word;"
-            v-html="item.raw._highlight['_file.content'].join('... ')"
-          />
-        </v-col>
-      </v-row>
+          {{ item.raw[digitalDocumentField!.key] }}
+        </p>
+      </div>
     </template>
   </v-virtual-scroll>
 </template>
 
 <script setup lang="ts">
 import type { VVirtualScroll } from 'vuetify/components'
+import type { ExtendedResult } from '../../composables/dataset/lines'
+import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
 
 const { height } = defineProps({ height: { type: Number, required: true } })
 const q = defineModel<string>('q', { default: '' })
 
 const { digitalDocumentField } = useDatasetStore()
+const { t, locale } = useI18n()
 
-const cols = computed(() => [digitalDocumentField.value!.key, '_file.content_type', '_file.content_length', '_attachment_url'])
+const indexAttachment = computed(() => digitalDocumentField.value?.['x-capabilities']?.indexAttachment !== false)
+const cols = computed(() => {
+  const c = [digitalDocumentField.value!.key, '_attachment_url']
+  if (indexAttachment.value) c.push('_file.content_length')
+  return c
+})
 const extraParams = computed(() => ({
   select: cols.value.join(','),
-  highlight: '_file.content',
   qs: `_exists_:${digitalDocumentField.value?.key}`
 }))
+
+const filename = (item: ExtendedResult) => {
+  if (item.raw._attachment_url) {
+    return decodeURIComponent(new URL(item.raw._attachment_url).pathname.split('/').pop() ?? '')
+  }
+  return item.raw[digitalDocumentField.value!.key]?.split('/').pop() ?? ''
+}
+
+// REST single-line uploads produce technical paths of the form
+// `{lineId}/{md5-hex}/{filename}` — hide those, they carry no user-meaningful info.
+const technicalPathRe = /^[^/]+\/[0-9a-f]{32}\/[^/]+$/
+const showPath = (item: ExtendedResult) => {
+  const p = item.raw[digitalDocumentField.value!.key]
+  if (!p || typeof p !== 'string') return false
+  if (!p.includes('/')) return false
+  return !technicalPathRe.test(p)
+}
+
+const downloadTitle = (item: ExtendedResult) => {
+  const name = filename(item)
+  const size = item.raw['_file.content_length']
+  if (size) return t('downloadWithSize', { name, size: formatBytes(size, locale.value) })
+  return t('download', { name })
+}
 const pageSize = 10
 const { baseFetchUrl, total, results, fetchResults } = useLines('list', pageSize, cols, q, '', extraParams, undefined)
 
@@ -74,10 +110,11 @@ const onScrollItem = async (index: number) => {
 const virtualScroll = ref<VVirtualScroll>()
 </script>
 
-<style lang="less">
-  .search-results {
-    .highlighted {
-      font-weight: bold;
-    }
-  }
-</style>
+<i18n lang="yaml">
+fr:
+  download: "Télécharger {name} (nouvelle fenêtre)"
+  downloadWithSize: "Télécharger {name} — {size} (nouvelle fenêtre)"
+en:
+  download: "Download {name} (new window)"
+  downloadWithSize: "Download {name} — {size} (new window)"
+</i18n>
