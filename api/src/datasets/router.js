@@ -1468,11 +1468,11 @@ router.post(
   }
 )
 
-router.get('/:datasetId/thumbnail', readDataset({ fillDescendants: true }), apiKeyMiddlewareRead, permissions.middleware('readDescription', 'read'), async (req, res, next) => {
+router.get('/:datasetId/thumbnail', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('readDescription', 'read'), async (req, res, next) => {
   if (!req.dataset.image) return res.status(404).send("dataset doesn't have an image")
   await getThumbnail(req, res, req.dataset.image)
 })
-router.get('/:datasetId/thumbnail/:thumbnailId', readDataset({ fillDescendants: true }), apiKeyMiddlewareRead, permissions.middleware('readLines', 'read'), async (req, res, next) => {
+router.get('/:datasetId/thumbnail/:thumbnailId', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, permissions.middleware('readLines', 'read'), async (req, res, next) => {
   const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
   if (req.dataset.attachmentsAsImage && url.startsWith('/attachments/')) {
     if (req.dataset.isVirtual) {
