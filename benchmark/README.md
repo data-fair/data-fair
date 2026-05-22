@@ -1,39 +1,49 @@
 # data-fair benchmark
 
-HTTP benchmark for the data-fair API, focused on the GET `/lines` endpoint.
+An Elasticsearch query evaluation harness for data-fair. Measures per-query ES cost on
+large, realistically-shaped datasets and runs A/B comparisons of query variants.
 
-## Usage
+See [`../docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md`](../docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md)
+for the design and [`INVESTIGATIONS.md`](./INVESTIGATIONS.md) for the follow-up backlog.
 
-From the repository root, run these commands in separate terminals:
+## Setup
 
-```sh
-# 1. Start infrastructure (mongo, elasticsearch, simple-directory, etc.)
-npm run test-deps
+From the repository root, in separate terminals:
 
-# 2. Start the API server + worker with benchmark config (relaxed rate/storage limits)
-npm run dev-benchmark
+    npm run test-deps      # mongo, elasticsearch, simple-directory, ...
+    npm run dev-benchmark  # API server + worker, benchmark config (relaxed limits)
 
-# 3. Run the benchmark (seeds data on first run, then benchmarks)
-npm run benchmark
-```
+The harness auto-discovers the dev environment from the repo `.env` (`DEV_HOST`,
+`NGINX_PORT1`, `ES_PORT`). Override with the `BENCHMARK_URL`, `BENCHMARK_DIRECTORY_URL`
+and `BENCHMARK_ES_NODES` environment variables if needed.
 
-The first run seeds two datasets (1k and 100k rows) which takes a few minutes. Subsequent runs skip seeding if the datasets already exist.
+## Commands
 
-## Options
+    # Seed datasets (idempotent; first multi-million-row seed is slow)
+    npm run benchmark -- seed --preset=small
+    npm run benchmark -- seed --preset=tall --rows=5000000
+    npm run benchmark -- seed --preset=wide-text --shards=3
 
-```sh
-# Run specific scenarios
-npm run benchmark -- --scenarios=simple-list,fulltext-search
+    # Raw-ES A/B experiments (--rows runs against a smaller seeding)
+    npm run benchmark -- experiment --name=track-total-hits --profile
+    npm run benchmark -- experiment --name=search-catchall:wide-q --cold
+    npm run benchmark -- experiment --name=all --runs=20
 
-# Adjust duration and concurrency
-npm run benchmark -- --duration=30 --connections=20
+    # End-to-end data-fair API query
+    npm run benchmark -- query --dataset=bench-tall --params="q=analyse&size=20" --runs=10
 
-# Skip saving results to disk
-npm run benchmark -- --no-save
-```
+    # Autocannon throughput test
+    npm run benchmark -- throughput --duration=30 --connections=20
 
-Available scenarios: `simple-list`, `fulltext-search`, `filter-eq`, `filter-range`, `sort`, `deep-pagination`, `geo-bbox`, `combined`, `small-dataset`.
+Presets: `small` (1k rows), `tall` (2M, for track_total_hits), `wide-text` (300k, ~40
+text columns), `mixed` (500k, all types). Experiments: `track-total-hits:*`,
+`search-catchall:wide-q`, `min-should-match:wide-q`.
 
 ## Results
 
-Results are printed to the console and saved as JSON in `benchmark/results/`.
+Experiment and throughput results print to the console and are saved as JSON in
+`benchmark/results/`, tagged with the git commit.
+
+## Tests
+
+    npm -w benchmark test  # pure-unit tests (generator, metrics, presets, runner, ...)

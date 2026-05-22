@@ -1,3 +1,4 @@
+import './env.ts'
 import { Client } from '@elastic/elasticsearch'
 
 /** data-fair names a dataset's alias `${indicesPrefix}-${datasetId}` (see commons.js aliasName). */
@@ -5,18 +6,24 @@ export function aliasName (indicesPrefix: string, datasetId: string): string {
   return `${indicesPrefix}-${datasetId}`
 }
 
-// The dev-benchmark API runs with NODE_ENV=benchmark, so indicesPrefix is `dataset-benchmark`
-// (api/config/default.cjs: `indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development')`).
-/** Resolve a single ES node URL, tolerating ES_NODES given as a JSON array (this repo's env format). */
+/**
+ * Resolve a single ES node URL. Explicit BENCHMARK_ES_NODES / ES_NODES win
+ * (tolerating a JSON-array value, this repo's env format); otherwise derive from
+ * the repo .env ES_PORT (loaded by ./env.ts).
+ */
 function resolveEsNode (): string {
-  const raw = (process.env.BENCHMARK_ES_NODES || process.env.ES_NODES || 'http://localhost:9200').trim()
-  if (raw.startsWith('[')) {
-    try {
-      const arr: unknown = JSON.parse(raw)
-      if (Array.isArray(arr) && arr.length > 0) return String(arr[0])
-    } catch { /* not valid JSON — fall through to comma split */ }
+  const explicit = (process.env.BENCHMARK_ES_NODES || process.env.ES_NODES || '').trim()
+  if (explicit) {
+    if (explicit.startsWith('[')) {
+      try {
+        const arr: unknown = JSON.parse(explicit)
+        if (Array.isArray(arr) && arr.length > 0) return String(arr[0])
+      } catch { /* not valid JSON — fall through to comma split */ }
+    }
+    return explicit.split(',')[0]
   }
-  return raw.split(',')[0]
+  if (process.env.ES_PORT) return `http://localhost:${process.env.ES_PORT}`
+  return 'http://localhost:9200'
 }
 
 const esNode = resolveEsNode()

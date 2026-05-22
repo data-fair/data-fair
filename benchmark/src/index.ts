@@ -21,7 +21,7 @@ Commands:
   seed        Generate & idempotently load datasets
               --preset=<all|name,...>  --rows=<n>  --shards=<n>  --seed=<n>
   experiment  Raw-ES A/B: baseline vs. variant query bodies
-              --name=<all|experiment|group>  --runs=<n>  --profile  --cold  --no-save
+              --name=<all|experiment|group>  --runs=<n>  --rows=<n>  --profile  --cold  --no-save
   query       Run a real data-fair API request N times
               --dataset=<id>  --params=<querystring>  --runs=<n>
   throughput  Autocannon concurrency test over GET /lines
@@ -61,6 +61,7 @@ async function experimentCommand (argv: string[]): Promise<void> {
     options: {
       name: { type: 'string', default: 'all' },
       runs: { type: 'string', default: '10' },
+      rows: { type: 'string' },
       profile: { type: 'boolean', default: false },
       cold: { type: 'boolean', default: false },
       'no-save': { type: 'boolean', default: false }
@@ -70,6 +71,7 @@ async function experimentCommand (argv: string[]): Promise<void> {
   const results: ExperimentResult[] = []
   for (const exp of selectExperiments(values.name!)) {
     const spec = getPreset(exp.preset)
+    if (values.rows) spec.rows = parseInt(values.rows)
     await seedDataset(spec)
     const index = await resolveIndex(spec.id)
     const ctx = schemaContext(generateSchema(spec))
