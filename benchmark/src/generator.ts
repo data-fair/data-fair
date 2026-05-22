@@ -150,7 +150,7 @@ function generateValue (col: GeneratedColumn, rand: () => number): unknown {
 }
 
 /** Lazily yield generated rows — used by the seeder to avoid holding millions of rows in memory. */
-export function * rowIterator (spec: DatasetSpec, count = spec.rows): Generator<Row> {
+export function * rowIterator (spec: DatasetSpec, count = spec.rows): Generator<Row, void, unknown> {
   const columns = generateColumns(spec)
   const rand = mulberry32(spec.seed ?? 42)
   for (let i = 0; i < count; i++) {
