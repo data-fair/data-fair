@@ -147,7 +147,12 @@ async function main (): Promise<void> {
   }
 }
 
-main().catch(err => {
-  console.error('Benchmark failed:', err)
-  process.exit(1)
-})
+// Exit explicitly: axiosAuth keeps a token-refresh timer running, so the process
+// would otherwise hang after the command's work is done.
+main().then(
+  () => process.exit(0),
+  (err) => {
+    console.error('Benchmark failed:', err)
+    process.exit(1)
+  }
+)
