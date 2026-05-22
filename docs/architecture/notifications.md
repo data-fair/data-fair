@@ -76,6 +76,7 @@ Notification topics live under the `data-fair:` namespace on the events service.
 | Draft resource event | `data-fair:<resource>-draft-<event>:<id>` | Same, automatically when `resource.draftReason` is truthy (`notifications.ts:43`). |
 | Publication-site event | `data-fair:<resource>-<event>:<siteType>:<siteId>[:<topicId>]` | `publication-sites.ts:57,63,89,102,117,123`. Implicit subscriptions for these topics live at `settings/router.ts:407,415`. |
 | Settings event | `data-fair:settings:<event>` | `settings/router.ts:200,240`. |
+| Resource event with state sub-key | `data-fair:api-key-expiration:<apiKeyId>:expiring` and `:expired` | `api/src/settings/api-keys-expiration-worker.ts`. A single user subscription on the parent `data-fair:api-key-expiration:<apiKeyId>` receives both milestones via the prefix matching at `events/api/src/events/operations.ts:23-25`. |
 | User-custom | `data-fair:dataset-user-notification:<slug>:<topic>` | `datasets/router.js:1411`. `<topic>` is free text supplied by the caller (typically a portal). |
 
 See §8 for the topics whose key shape predates these conventions and are kept that way deliberately.
@@ -170,7 +171,6 @@ Discovered during the refacto but intentionally left for a follow-up:
 - **`notifications.subscribe()` returns `500`** — implicit subscriptions for publication-sites (`api/src/settings/router.ts:401-422`) silently fail against the events service. Root cause is architectural, not a payload issue: data-fair calls `POST ${privateEventsUrl}/api/v1/subscriptions` from the **backend**, forwarding `req.headers.cookie`. The cookie's JWT was issued for the public domain (e.g. `master.localhost`) and `session.reqAuthenticated` on the events side cannot validate it when reached via the internal URL, so the handler throws and returns 500. The error is wrapped in `.catch(err => internalError('subscribe-push', err))` (`notifications.ts:93`) so it never surfaces to the user. The events `senderSubscribe` schema (`events/api/types/partial/schema.js:28-61`) accepts the payload data-fair sends — it is not a validation problem.
 
   Reference pattern: `customers` auto-subscribes the ticket creator to comment events from the **frontend** (`customers/ui/src/components/issues/issue-new.vue:74-86`), calling `${window.location.origin}/events/api/subscriptions` so the browser cookie has the correct scope. Any new auto-subscribe in data-fair should follow the same UI-side pattern, or the events service should grow a service-to-service auth path keyed off `config.secretKeys.events`.
-- **Proactive notification for API key expiration is not implemented yet** — API keys expire silently and the first call after `expireAt` returns `403`. A proactive J-3 / post-expiration notification was prototyped during the refacto but reverted because data-fair has no in-process scheduled-task infrastructure today (no `node-cron` / `cron` usage in `api/src/`). Other Koumoul services (`customers/api/src/limits/worker.ts`, `simple-directory/api/src/users/worker.ts`) use `node-cron` + `@data-fair/lib-node/locks` and are the recommended template when the feature is reintroduced.
 
 ## 10. REST line operations (added 2026-05-11)
 
@@ -224,6 +224,7 @@ Inline coverage:
 - `tests/features/datasets/virtual/virtual-datasets-features.api.spec.ts` — `breaking-change` on virtual schema PATCH (`isVirtual` gate, see §10.1), `data-updated` propagation from child→virtual on file re-upload, REST single line, REST bulk lines.
 - `tests/features/applications/publication-sites.api.spec.ts` — `publication-requested` (org and department scopes).
 - `tests/features/applications/applications.api.spec.ts` — `application-created`.
+- `tests/features/settings/api-keys-expiration.api.spec.ts` — J-3 / J emission, idempotency across runs, catch-up when J-3 was missed, no-emit for far-future and missing-expireAt keys.
 
 Cross-cutting infra:
 

@@ -168,12 +168,35 @@
             v-if="apiKey.expireAt"
             class="mb-4"
           >
-            {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('l') }}
+            {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('L') }}
           </p>
         </v-card-text>
 
         <v-card-actions>
           <v-spacer />
+          <v-menu
+            v-if="apiKey.id"
+            location="top"
+            :close-on-content-click="false"
+          >
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                variant="text"
+                color="primary"
+                :icon="mdiBell"
+                :title="t('subscribeToExpiration')"
+              />
+            </template>
+            <v-card
+              :title="t('subscribeToExpiration')"
+              :subtitle="t('subscribeToExpirationDetails')"
+            >
+              <v-card-text class="pa-0">
+                <d-frame :src="eventsSubscribeUrl(apiKey)" />
+              </v-card-text>
+            </v-card>
+          </v-menu>
           <confirm-menu
             variant="menu"
             yes-color="warning"
@@ -209,6 +232,9 @@ fr:
   expireAt: Date d'expiration
   deleteKey: Supprimer cette clé d'API
   deleteKeyDetails: Voulez-vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
+  subscribeToExpiration: S'abonner aux notifications d'expiration
+  subscribeToExpirationDetails: Une notification est envoyée 3 jours avant l'expiration et une le jour même.
+  expirationTopicTitle: "Expiration de la clé d'API {title}"
   datasets: Jeux de données - toutes opérations
   datasets-read: Jeux de données - lecture
   datasets-write: Jeux de données - écriture
@@ -237,6 +263,9 @@ en:
   expireAt: Expiration date
   deleteKey: Delete this API key
   deleteKeyDetails: Do you really want to delete this API key ? Softwares or scripts that use this key won't work anymore.
+  subscribeToExpiration: Subscribe to expiration notifications
+  subscribeToExpirationDetails: One notification is sent 3 days before expiration and one on the expiration day.
+  expirationTopicTitle: "API key {title} expiration"
   datasets: Datasets - all operations
   datasets-read: Datasets - read
   datasets-write: Datasets - write
@@ -248,8 +277,9 @@ en:
 
 <script setup lang="ts">
 import type { Settings } from '#api/types'
-import { mdiPlus } from '@mdi/js'
+import { mdiPlus, mdiBell } from '@mdi/js'
 import { VDateInput } from 'vuetify/labs/VDateInput'
+import '@data-fair/frame/lib/d-frame.js'
 
 const { restrictedScopes } = defineProps<{
   restrictedScopes?: string[]
@@ -311,6 +341,20 @@ const removeApiKey = (rowIndex: number) => {
   const newApiKeys = [...apiKeys.value ?? []]
   newApiKeys!.splice(rowIndex, 1)
   apiKeys.value = newApiKeys
+}
+
+const eventsSubscribeUrl = (apiKey: NonNullable<Settings['apiKeys']>[number]) => {
+  const key = `data-fair:api-key-expiration:${apiKey.id}`
+  const title = t('expirationTopicTitle', { title: apiKey.title })
+  const urlTemplate = window.location.href
+  const params = new URLSearchParams({
+    key,
+    title,
+    'url-template': urlTemplate,
+    register: 'false',
+    header: 'no'
+  })
+  return `/events/embed/subscribe?${params.toString()}`
 }
 
 const scopes = [

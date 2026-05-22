@@ -200,6 +200,16 @@
 				"title": "Publication of {{label}} in {{topic}}",
 				"body": "The application {{label}} has been published on {{publicationSite}} in the topic {{topic}}."
 			}
+		},
+		"api-key": {
+			"expiring": {
+				"title": "Your API key {{title}} is about to expire",
+				"body": "API key {{title}} expires on {{expireAt}} (in 3 days)."
+			},
+			"expired": {
+				"title": "Your API key {{title}} has expired",
+				"body": "API key {{title}} expired on {{expireAt}}."
+			}
 		}
 	}
 }

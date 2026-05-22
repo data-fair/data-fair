@@ -242,6 +242,18 @@ export default {
           },
           clearKey: {
             type: 'string'
+          },
+          notifiedJ3At: {
+            type: 'string',
+            format: 'date-time',
+            readOnly: true,
+            description: 'Internal — timestamp set when the J-3 expiration notification was emitted. Not user-writable.'
+          },
+          notifiedJAt: {
+            type: 'string',
+            format: 'date-time',
+            readOnly: true,
+            description: 'Internal — timestamp set when the J-day expiration notification was emitted. Not user-writable.'
           }
         }
       }

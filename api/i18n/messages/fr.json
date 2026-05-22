@@ -202,6 +202,16 @@
 				"title": "Publication de {{label}} dans {{topic}}",
 				"body": "L'application {{label}} a été publiée sur {{publicationSite}} dans la thématique {{topic}}."
 			}
+		},
+		"api-key": {
+			"expiring": {
+				"title": "Votre clé d'API {{title}} expire bientôt",
+				"body": "La clé d'API {{title}} expire le {{expireAt}} (dans 3 jours)."
+			},
+			"expired": {
+				"title": "Votre clé d'API {{title}} a expiré",
+				"body": "La clé d'API {{title}} a expiré le {{expireAt}}."
+			}
 		}
 	}
 }

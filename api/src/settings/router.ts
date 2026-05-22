@@ -99,6 +99,8 @@ function cleanSettings (settings: Settings | DepartmentSettings) {
   if (settings.apiKeys) {
     for (const apiKey of settings.apiKeys) {
       delete apiKey.key
+      delete apiKey.notifiedJ3At
+      delete apiKey.notifiedJAt
     }
   }
   // @ts-ignore
@@ -159,6 +161,11 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
     if (apiKey.key) {
       eventsLog.alert('df.apikeys.writesecret', 'a user attempted to write an api key internal secret', { req, account: req.owner })
       throw httpError(403, 'Attempt to write an api key secret')
+    }
+
+    if (apiKey.notifiedJ3At !== undefined || apiKey.notifiedJAt !== undefined) {
+      eventsLog.alert('df.apikeys.writeflag', 'a user attempted to write an api key internal notification flag', { req, account: req.owner })
+      throw httpError(400, 'API key notification flags are internal and not user-writable')
     }
 
     if (!apiKey.id) {

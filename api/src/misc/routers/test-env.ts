@@ -218,6 +218,28 @@ router.post('/rest-collection-update-one/:datasetId', async (req, res, next) => 
   }
 })
 
+// Update one document in the settings collection (for injecting internal fields in tests)
+router.post('/settings-update-one', async (req, res, next) => {
+  try {
+    const { filter, update } = req.body
+    await mongo.settings.updateOne(filter, update)
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Trigger the api-keys expiration cron task on demand (test-only)
+router.post('/api-keys-expiration/run', async (req, res, next) => {
+  try {
+    const { task } = await import('../../settings/api-keys-expiration-worker.ts')
+    await task()
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Count ES indices matching a dataset prefix
 router.get('/dataset-es-indices-count/:datasetId', async (req, res, next) => {
   try {
