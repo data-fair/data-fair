@@ -9,7 +9,15 @@ const development = require('./development.cjs')
 
 module.exports = {
   ...development,
-  mongo: { ...development.mongo, maxBulkOps: 1000 },
+  // Isolate benchmark data from the regular dev environment: a separate mongo db and
+  // data dir, so dev-benchmark and dev-api never share/corrupt dataset state. (The ES
+  // index prefix is already `dataset-benchmark` via NODE_ENV — see default.cjs.)
+  dataDir: '../data/benchmark',
+  mongo: {
+    ...development.mongo,
+    url: `mongodb://localhost:${process.env.MONGO_PORT}/data-fair-benchmark`,
+    maxBulkOps: 1000
+  },
   defaultLimits: {
     ...development.defaultLimits,
     totalStorage: 10000000000,
