@@ -1,4 +1,14 @@
 <template>
+  <dataset-conforms-to-edit
+    v-if="conformsToActive"
+    :model-value="conformsTo ?? null"
+    :original-value="originalConformsTo ?? null"
+    :owner="owner ?? null"
+    :active="!!conformsToActive"
+    :disabled="!can('writeDescription')"
+    @update:model-value="v => emit('update:conformsTo', v)"
+  />
+
   <div class="d-flex align-center flex-wrap ga-2 mb-2">
     <h3
       v-if="editableColumns.length"
@@ -117,17 +127,24 @@ const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
+type ConformsTo = { title?: string | null, version?: string | null, url?: string | null }
+
 const props = defineProps<{
   modelValue: SchemaProperty[]
   originalSchema?: SchemaProperty[]
   primaryKey?: string[]
   projection?: { title?: string, code?: string } | null
+  conformsTo?: ConformsTo | null
+  originalConformsTo?: ConformsTo | null
+  owner?: { type: string, id: string } | null
+  conformsToActive?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: SchemaProperty[]]
   'update:primaryKey': [value: string[]]
   'update:projection': [value: { title?: string, code?: string } | null]
+  'update:conformsTo': [value: ConformsTo | null]
 }>()
 
 const { t } = useI18n()

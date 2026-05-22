@@ -56,8 +56,13 @@
             :original-schema="structureEditFetch.serverData.value?.schema"
             :primary-key="structureEditFetch.data.value.primaryKey"
             :projection="structureEditFetch.data.value.projection ?? null"
+            :conforms-to="structureEditFetch.data.value.conformsTo ?? null"
+            :original-conforms-to="structureEditFetch.serverData.value?.conformsTo ?? null"
+            :owner="dataset?.owner ?? null"
+            :conforms-to-active="!!datasetsMetadata?.conformsTo?.active"
             @update:primary-key="pk => { if (structureEditFetch.data.value) structureEditFetch.data.value.primaryKey = pk }"
             @update:projection="p => { if (structureEditFetch.data.value) structureEditFetch.data.value.projection = p }"
+            @update:conforms-to="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.conformsTo = c }"
           />
         </v-tabs-window-item>
 
@@ -682,6 +687,7 @@ import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { hasInvalidExprEvalExtension } from '~/composables/dataset/expr-eval-validation'
+import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -707,6 +713,8 @@ watch(shareTab, (tab) => {
 
 const store = useDatasetStore()
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
+
+const { datasetsMetadata } = useDatasetsMetadata(computed(() => dataset.value?.owner))
 
 const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
   await savePermissions(newPermissions)
@@ -892,7 +900,10 @@ const schemaHasDiff = computed(() => {
   const d = structureEditFetch.data.value
   const s = structureEditFetch.serverData.value
   if (!d || !s) return false
-  return !equal(d.schema, s.schema) || !equal(d.primaryKey, s.primaryKey) || !equal(d.projection, s.projection)
+  return !equal(d.schema, s.schema) ||
+    !equal(d.primaryKey, s.primaryKey) ||
+    !equal(d.projection, s.projection) ||
+    !equal(d.conformsTo, s.conformsTo)
 })
 
 const extensionsHasDiff = computed(() => {
