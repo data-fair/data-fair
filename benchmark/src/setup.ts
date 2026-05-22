@@ -17,7 +17,7 @@ let ax: AxiosInstance | undefined
 export async function init (): Promise<void> {
   console.log(`[setup] connecting to ${baseUrl}`)
   ax = await axiosAuth({
-    email: 'dmeadus0@answers.com',
+    email: 'test_superadmin@test.com',
     password: 'passwd',
     directoryUrl,
     axiosOpts: { baseURL: baseUrl, headers: { 'x-cache-bypass': '1' } }
