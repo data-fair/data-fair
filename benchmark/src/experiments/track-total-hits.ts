@@ -10,8 +10,9 @@ import type { SchemaContext } from '../generator.ts'
 
 const TERMS = 'analyse population transport'
 
-/** First full-text column of the `tall` preset. */
-const ft = (ctx: SchemaContext): string => ctx.fullTextFields[0]
+/** Analyzed `.text` sub-field of the first full-text column — data-fair full-text
+ *  content lives in the analyzed sub-fields, not the bare keyword main field. */
+const ft = (ctx: SchemaContext): string => `${ctx.fullTextFields[0]}.text`
 
 function tthExperiment (
   name: string,
