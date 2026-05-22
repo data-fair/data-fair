@@ -343,4 +343,30 @@ test.describe('Datasets with auto-initialization from another one', () => {
     assert.equal(initFromDataset.owner.department, 'dep1')
     assert.equal(initFromDataset.count, 2)
   })
+
+  test('Inherit conformsTo from a public reference dataset across accounts', async () => {
+    // user1 publishes a reference dataset and marks it as conforming to an external schema
+    const ref = await sendDataset('datasets/dataset1.csv', testUser1)
+    await testUser1.patch(`/api/v1/datasets/${ref.id}`, {
+      conformsTo: { title: 'Public Reference Schema', version: '1.0', url: 'https://example.com/ref.json' }
+    })
+    // make it publicly readable so any other account can use it as an initFrom source
+    await testUser1.put(`/api/v1/datasets/${ref.id}/permissions`, [{ classes: ['read'] }])
+
+    // user5 (different account) creates a new dataset initialized from the reference
+    const res = await testUser5.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'inherited across accounts',
+      initFrom: { dataset: ref.id, parts: ['schema'] }
+    })
+    assert.equal(res.status, 201)
+    const inherited = await waitForFinalize(testUser5, res.data.id)
+    assert.equal(inherited.owner.type, 'user')
+    assert.equal(inherited.owner.id, 'test_user5')
+    assert.deepEqual(inherited.conformsTo, {
+      title: 'Public Reference Schema',
+      version: '1.0',
+      url: 'https://example.com/ref.json'
+    })
+  })
 })
