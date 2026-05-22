@@ -1,97 +1,147 @@
 import { parseArgs } from 'node:util'
-import autocannon from 'autocannon'
-import { init, seedDatasets, getBaseUrl, getAxios } from './setup.ts'
-import { scenarios } from './scenarios.ts'
-import { printResults, saveResults, type ScenarioResult } from './reporter.ts'
+import { init, getAxios } from './setup.ts'
+import { presets, getPreset } from './presets.ts'
+import { seedDataset } from './seeder.ts'
+import { resolveIndex, reindexWithShards } from './es.ts'
+import { generateSchema, schemaContext } from './generator.ts'
+import { selectExperiments } from './experiments.ts'
+import { runQuery } from './runner.ts'
+import { aggregate } from './metrics.ts'
+import { runThroughput } from './throughput.ts'
+import {
+  printExperimentReport, saveExperimentResults,
+  type ExperimentResult, type VariantResult
+} from './reporter.ts'
 
-const { values: args } = parseArgs({
-  options: {
-    scenarios: { type: 'string', default: 'all' },
-    duration: { type: 'string', default: '10' },
-    connections: { type: 'string', default: '10' },
-    warmup: { type: 'string', default: '3' },
-    'no-save': { type: 'boolean', default: false }
-  }
-})
+const USAGE = `data-fair benchmark — Elasticsearch query evaluation harness
 
-const selectedNames = args.scenarios === 'all'
-  ? scenarios.map(s => s.name)
-  : args.scenarios!.split(',')
+Usage: npm run benchmark -- <command> [options]
 
-const selectedScenarios = scenarios.filter(s => selectedNames.includes(s.name))
-if (selectedScenarios.length === 0) {
-  console.error(`No matching scenarios. Available: ${scenarios.map(s => s.name).join(', ')}`)
-  process.exit(1)
-}
+Commands:
+  seed        Generate & idempotently load datasets
+              --preset=<all|name,...>  --rows=<n>  --shards=<n>  --seed=<n>
+  experiment  Raw-ES A/B: baseline vs. variant query bodies
+              --name=<all|experiment|group>  --runs=<n>  --profile  --cold  --no-save
+  query       Run a real data-fair API request N times
+              --dataset=<id>  --params=<querystring>  --runs=<n>
+  throughput  Autocannon concurrency test over GET /lines
+              --scenarios=<all|name,...>  --duration=<s>  --connections=<n>  --warmup=<s>  --no-save
 
-const duration = parseInt(args.duration!)
-const connections = parseInt(args.connections!)
-const warmupDuration = parseInt(args.warmup!)
+Presets: ${Object.keys(presets).join(', ')}`
 
-async function runScenario (scenario: typeof scenarios[0]): Promise<ScenarioResult> {
-  const baseUrl = getBaseUrl()
-  const url = `${baseUrl}/api/v1/datasets/${scenario.datasetId}/lines?${scenario.queryParams}`
-
-  // Verify the endpoint works before benchmarking
-  const ax = getAxios()
-  const check = await ax.get(`/api/v1/datasets/${scenario.datasetId}/lines?${scenario.queryParams}`)
-  if (check.status !== 200) {
-    throw new Error(`Pre-check failed for ${scenario.name}: status ${check.status}`)
-  }
-  console.log(`  pre-check ok: ${check.data.total} total results`)
-
-  // Warmup
-  if (warmupDuration > 0) {
-    console.log(`  warmup (${warmupDuration}s)...`)
-    await autocannon({ url, connections, duration: warmupDuration })
-  }
-
-  // Benchmark
-  console.log(`  benchmarking (${duration}s, ${connections} connections)...`)
-  const result = await autocannon({ url, connections, duration })
-
-  return {
-    scenario,
-    latency: {
-      p50: result.latency.p50,
-      p97_5: result.latency.p97_5,
-      p99: result.latency.p99,
-      avg: result.latency.average
-    },
-    throughput: {
-      avg: result.requests.average,
-      total: result.requests.total
-    },
-    errors: result.errors,
-    duration
-  }
-}
-
-async function main () {
-  console.log('Starting benchmark...')
-  console.log(`Scenarios: ${selectedScenarios.map(s => s.name).join(', ')}`)
-  console.log(`Duration: ${duration}s, Connections: ${connections}, Warmup: ${warmupDuration}s`)
-  console.log('')
-
+async function seedCommand (argv: string[]): Promise<void> {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      preset: { type: 'string', default: 'all' },
+      rows: { type: 'string' },
+      shards: { type: 'string' },
+      seed: { type: 'string' }
+    }
+  })
   await init()
-  await seedDatasets()
-
-  const results: ScenarioResult[] = []
-
-  for (const scenario of selectedScenarios) {
-    console.log(`\n[${scenario.name}] ${scenario.description}`)
-    try {
-      const result = await runScenario(scenario)
-      results.push(result)
-    } catch (err) {
-      console.error(`  FAILED: ${err}`)
+  const names = values.preset === 'all' ? Object.keys(presets) : values.preset!.split(',')
+  for (const name of names) {
+    const spec = getPreset(name)
+    if (values.rows) spec.rows = parseInt(values.rows)
+    if (values.seed) spec.seed = parseInt(values.seed)
+    if (values.shards) spec.shards = parseInt(values.shards)
+    await seedDataset(spec)
+    if (spec.shards) {
+      const index = await resolveIndex(spec.id)
+      const copy = await reindexWithShards(index, spec.shards)
+      console.log(`[seed] ${spec.id}: ${spec.shards}-shard copy ready at ${copy}`)
     }
   }
+}
 
-  printResults(results)
+async function experimentCommand (argv: string[]): Promise<void> {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      name: { type: 'string', default: 'all' },
+      runs: { type: 'string', default: '10' },
+      profile: { type: 'boolean', default: false },
+      cold: { type: 'boolean', default: false },
+      'no-save': { type: 'boolean', default: false }
+    }
+  })
+  await init()
+  const results: ExperimentResult[] = []
+  for (const exp of selectExperiments(values.name!)) {
+    const spec = getPreset(exp.preset)
+    await seedDataset(spec)
+    const index = await resolveIndex(spec.id)
+    const ctx = schemaContext(generateSchema(spec))
+    const variants = [
+      { ...exp.baseline, isBaseline: true },
+      ...exp.variants.map(v => ({ ...v, isBaseline: false }))
+    ]
+    console.log(`\n[experiment] ${exp.name}`)
+    const variantResults: VariantResult[] = []
+    for (const v of variants) {
+      console.log(`  running variant: ${v.name}`)
+      const result = await runQuery({
+        index,
+        body: v.body(ctx),
+        runs: parseInt(values.runs!),
+        cold: values.cold,
+        profile: values.profile
+      })
+      variantResults.push({ variant: v.name, description: v.description, isBaseline: v.isBaseline, result })
+    }
+    const er: ExperimentResult = {
+      experiment: exp.name,
+      description: exp.description,
+      preset: exp.preset,
+      rows: spec.rows,
+      variants: variantResults
+    }
+    printExperimentReport(er)
+    results.push(er)
+  }
+  if (!values['no-save']) saveExperimentResults(results)
+}
 
-  if (!args['no-save']) {
-    saveResults(results)
+async function queryCommand (argv: string[]): Promise<void> {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      dataset: { type: 'string' },
+      params: { type: 'string', default: '' },
+      runs: { type: 'string', default: '10' }
+    }
+  })
+  if (!values.dataset) throw new Error('query: --dataset is required')
+  await init()
+  const ax = getAxios()
+  const runs = parseInt(values.runs!)
+  const url = `/api/v1/datasets/${values.dataset}/lines?${values.params}`
+  const latencies: number[] = []
+  let total = 0
+  let bytes = 0
+  for (let r = 0; r < runs; r++) {
+    const t0 = performance.now()
+    const res = await ax.get(url)
+    latencies.push(performance.now() - t0)
+    total = res.data.total
+    bytes = Buffer.byteLength(JSON.stringify(res.data))
+  }
+  const e2e = aggregate(latencies)
+  console.log('')
+  console.log(`Query: GET ${url}`)
+  console.log(`runs=${runs}  total=${total}  bytes=${bytes}`)
+  console.log(`e2e latency (ms): p50=${e2e.median.toFixed(1)}  min=${e2e.min.toFixed(1)}  max=${e2e.max.toFixed(1)}`)
+}
+
+async function main (): Promise<void> {
+  const [command, ...rest] = process.argv.slice(2)
+  switch (command) {
+    case 'seed': await seedCommand(rest); break
+    case 'experiment': await experimentCommand(rest); break
+    case 'query': await queryCommand(rest); break
+    case 'throughput': await runThroughput(rest); break
+    default: console.log(USAGE)
   }
 }
 
