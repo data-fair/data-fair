@@ -8,13 +8,26 @@ const FINALIZE_TIMEOUT_S = 1800
 export async function seedDataset (spec: DatasetSpec): Promise<void> {
   const ax = getAxios()
 
+  let existing: { status?: string, count?: number } | undefined
   try {
     const res = await ax.get(`/api/v1/datasets/${spec.id}`)
-    if (res.data.status === 'finalized' && res.data.count >= spec.rows) {
-      console.log(`[seed] ${spec.id} already finalized (${res.data.count} rows), skipping`)
+    existing = res.data
+  } catch (err: any) {
+    const status = err.response?.status ?? err.status
+    if (status !== 404) throw err
+    // 404 — dataset does not exist yet, fall through to create it
+  }
+
+  if (existing) {
+    if (existing.status === 'finalized' && (existing.count ?? 0) >= spec.rows) {
+      console.log(`[seed] ${spec.id} already finalized (${existing.count} rows), skipping`)
       return
     }
-  } catch { /* dataset does not exist yet — create it below */ }
+    if (existing.status !== 'finalized' && existing.status !== 'error') {
+      throw new Error(`[seed] ${spec.id} exists with status "${existing.status}" — wait for it to finalize or delete it first`)
+    }
+    // 'finalized' but too few rows, or 'error' — fall through to re-create
+  }
 
   console.log(`[seed] creating ${spec.id} (${spec.rows.toLocaleString()} rows)...`)
   await ax.put(`/api/v1/datasets/${spec.id}`, {
