@@ -300,8 +300,10 @@ Three experiments ship — **definitions only**; running them at scale is follow
   `['_search', '_search.text_standard']`. Both run against the **same index** (both
   field sets exist in the mapping), isolating the parse/execute cost of the wide
   `fields` array.
-- **`min-should-match`** (preset `wide-text`). Baseline = `simple_query_string` with no
-  `minimum_should_match`; variants `"1"`, `"2"`, `"75%"`, `"-25%"`.
+- **`min-should-match`** (preset `wide-text`). A fixed 5-term `simple_query_string`;
+  baseline has no `minimum_should_match` (ES default ≈ 1 of 5 terms); variants set
+  absolute thresholds `"2"`, `"3"`, `"4"`, `"5"` so each yields a distinct, unambiguous
+  required-term count.
 
 ### 7.4 Result divergence
 

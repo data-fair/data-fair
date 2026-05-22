@@ -100,28 +100,32 @@ recorded in `load-management.md` §6.
 ## 4. `minimum_should_match` on `simple_query_string`
 
 **Background.** A `q` full-text search becomes a `simple_query_string` whose terms are
-all optional (`OR`). Adding a small `minimum_should_match` could let ES skip documents
-that match too few terms, simplifying some heavy queries — *if* the percentage is small
+all optional (`OR`) — ES's default is that 1 term must match. Adding a
+`minimum_should_match` makes ES require more terms, which lets it skip documents that
+match too few — potentially simplifying some heavy queries — *if* the threshold is small
 enough not to change results for typical queries.
 
-**Hypothesis.** A small `minimum_should_match` (e.g. `-25%`, or `"1"`) speeds up
-multi-term `q` queries on wide datasets with limited impact on which documents match for
-typical short queries — but it *does* change results, so the trade-off must be measured,
-not assumed.
+**Hypothesis.** Requiring a few more terms speeds up multi-term `q` queries on wide
+datasets, with the result set drifting further as the threshold rises — so there may be
+a low threshold that gives a worthwhile speedup with acceptable divergence.
 
 **Run.**
 ```sh
 npm run benchmark -- experiment --name=min-should-match --profile
 ```
 
-**Look for.** Δ% on `took` for each `minimum_should_match` variant (`"1"`, `"2"`,
-`"75%"`, `"-25%"`) **and** the result-divergence flag — how far `hits.total` and the
-top-N hit ids move from the baseline. The useful variant is the one with a real speedup
-and minimal divergence.
+**Look for.** The experiment uses a fixed 5-term `q`; the variants set absolute
+`minimum_should_match` thresholds (`"2"`, `"3"`, `"4"`, `"5"`) so each is a distinct,
+unambiguous required-term count (the ES default is 1 of 5). For each: Δ% on `took`
+**and** the result-divergence flag — how far `hits.total` and the top-N hit ids move
+from the baseline. The useful threshold is the one with a real speedup and minimal
+divergence.
 
-**Decision & where it lands.** If a small percentage gives a worthwhile speedup with
-acceptable divergence, propose it as a default in `prepareQuery`; otherwise document why
-not. Record in `load-management.md` §6.
+**Decision & where it lands.** A data-fair default would be expressed as a *percentage*
+(it must work for queries of any length); translate the best absolute threshold from
+this 5-term experiment into a percentage. If a small percentage gives a worthwhile
+speedup with acceptable divergence, propose it as a default in `prepareQuery`; otherwise
+document why not. Record in `load-management.md` §6.
 
 ## 5. Audit & document unbounded-complexity requests
 
