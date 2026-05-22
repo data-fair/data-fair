@@ -2,7 +2,7 @@
   <template v-if="application && publicationSitesFetch.data.value">
     <slug-edit-dialog
       :slug="application.slug ?? application.id"
-      :can-edit="can('writeDescriptionBreaking')"
+      :can-edit="can('writeDescription')"
       @update:slug="slug => patch({ slug })"
     />
 
