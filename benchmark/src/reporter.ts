@@ -61,7 +61,8 @@ export function sameHits (a: RunResult, b: RunResult): boolean {
 }
 
 export function printExperimentReport (er: ExperimentResult): void {
-  const baseline = er.variants.find(v => v.isBaseline)!
+  const baseline = er.variants.find(v => v.isBaseline)
+  if (!baseline) throw new Error(`printExperimentReport: no baseline variant in experiment "${er.experiment}"`)
   console.log('')
   console.log(`Experiment: ${er.experiment} — ${er.description}`)
   console.log(`Dataset: ${er.preset} (${er.rows.toLocaleString()} rows), runs=${baseline.result.runs}, ${baseline.result.cold ? 'cold' : 'warm'} cache`)
@@ -144,6 +145,7 @@ function fmtReqs (v: number): string {
 }
 
 function fmtPct (v: number): string {
+  if (!Number.isFinite(v)) return 'n/a'.padStart(8)
   const s = v >= 0 ? `+${v.toFixed(1)}` : v.toFixed(1)
   return `${s}%`.padStart(8)
 }

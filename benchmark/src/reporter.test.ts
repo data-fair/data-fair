@@ -7,6 +7,7 @@ test('pctDelta computes signed percentage change', () => {
   assert.equal(pctDelta(100, 50), -50)
   assert.equal(pctDelta(100, 150), 50)
   assert.equal(pctDelta(0, 0), 0)
+  assert.equal(pctDelta(0, 5), Infinity)
 })
 
 test('sameHits compares top hit ids, ignoring the total', () => {
