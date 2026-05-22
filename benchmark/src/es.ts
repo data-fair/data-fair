@@ -7,7 +7,19 @@ export function aliasName (indicesPrefix: string, datasetId: string): string {
 
 // The dev-benchmark API runs with NODE_ENV=benchmark, so indicesPrefix is `dataset-benchmark`
 // (api/config/default.cjs: `indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development')`).
-const esNode = (process.env.ES_NODES || process.env.BENCHMARK_ES_NODES || 'http://localhost:9200').split(',')[0]
+/** Resolve a single ES node URL, tolerating ES_NODES given as a JSON array (this repo's env format). */
+function resolveEsNode (): string {
+  const raw = (process.env.BENCHMARK_ES_NODES || process.env.ES_NODES || 'http://localhost:9200').trim()
+  if (raw.startsWith('[')) {
+    try {
+      const arr: unknown = JSON.parse(raw)
+      if (Array.isArray(arr) && arr.length > 0) return String(arr[0])
+    } catch { /* not valid JSON — fall through to comma split */ }
+  }
+  return raw.split(',')[0]
+}
+
+const esNode = resolveEsNode()
 const indicesPrefix = process.env.BENCHMARK_INDICES_PREFIX || 'dataset-benchmark'
 
 let client: Client | undefined
