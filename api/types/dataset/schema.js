@@ -487,6 +487,25 @@ const datasetProperties = {
       }
     }
   },
+  conformsTo: {
+    type: 'object',
+    description: 'Reference to an external schema or standard the dataset conforms to.',
+    additionalProperties: false,
+    properties: {
+      title: {
+        type: 'string',
+        description: 'Short title of the schema / standard.'
+      },
+      version: {
+        type: 'string',
+        description: 'Version of the schema / standard.'
+      },
+      url: {
+        type: 'string',
+        description: 'URL of the schema / standard specification.'
+      }
+    }
+  },
   license: {
     type: 'object',
     additionalProperties: false,
