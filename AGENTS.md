@@ -76,6 +76,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [AI Agent Integration](docs/architecture/agent-integration-architecture.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
 - [Load Management](docs/architecture/load-management.md) — rate limiting, request timeouts and Elasticsearch query controls across the app and the reverse-proxy layer, plus notes on possible further hardening
 - [Caching & cache headers](docs/architecture/caching.md) — the five caching layers (reverse-proxy cache, HTTP cache headers, `memoizee` in-process caches, MongoDB-backed caches, ad-hoc object caches), how they coordinate freshness, and the config reference
+- [Application Keys](docs/architecture/application-keys.md) — intermediate-security tier for un-connected access to applications and the datasets they embed: data model, URL shapes, the two enforcement points (proxy + dataset middleware), permission scoping, owner boundary, and the anti-spam stack for anonymous writes
 
 ## Common Development Tasks
 

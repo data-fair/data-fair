@@ -296,6 +296,33 @@ test.describe('API keys', () => {
     assert.equal(res.status, 200)
   })
 
+  test('Application key still works after the application owner is transferred', async () => {
+    const ax = testUser1Org
+    let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const appId = res.data.id
+
+    res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
+    const key = res.data[0].id
+
+    // key works pre-transfer (owner = org)
+    res = await anonymous.get(`/app/${appId}/?key=${key}`, { maxRedirects: 0 })
+    assert.equal(res.status, 200)
+
+    // transfer the application to the personal account of the same user
+    await ax.put(`/api/v1/applications/${appId}/owner`, { type: 'user', id: 'test_user1', name: 'Test User 1' })
+
+    // confirm the transfer actually went through — otherwise the next assertion would pass
+    // trivially because application.owner and applications-keys.owner would stay aligned at the old value
+    res = await ax.get(`/api/v1/applications/${appId}`)
+    assert.equal(res.data.owner.type, 'user')
+    assert.equal(res.data.owner.id, 'test_user1')
+
+    // key must still resolve — the applications-keys.owner field needs to track the transfer,
+    // otherwise the ownerFilter in proxy.js silently drops the match and the anon access 302s to login
+    res = await anonymous.get(`/app/${appId}/?key=${key}`, { maxRedirects: 0 })
+    assert.equal(res.status, 200)
+  })
+
   test('Use an application key to access datasets referenced in config', async () => {
     const ax = testUser1
     let res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })

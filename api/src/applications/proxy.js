@@ -62,7 +62,7 @@ const setResource = async (req, res, next) => {
       } else {
         // ths application key can be matched to a parent application key (case of dashboards, etc)
         const isParentApplicationKey = await mongo.db.collection('applications')
-          .count({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
+          .countDocuments({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
         if (isParentApplicationKey) {
           // @ts-ignore
           req.matchingApplicationKey = applicationKeyId
