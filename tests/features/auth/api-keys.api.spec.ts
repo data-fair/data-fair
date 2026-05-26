@@ -459,9 +459,16 @@ test.describe('API keys', () => {
     res = await anonymous.get('/api/v1/datasets/restcrowd/schema', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
     const anonymousToken = (await anonymous.get(directoryUrl + '/api/auth/anonymous-action')).data
-    // rejected because token is too young
+    const origin = new URL(config.publicUrl).origin
+
+    // rejected because the request looks cross-origin (no Origin header → treated as non-browser)
     await assert.rejects(
       anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
+      (err: any) => err.status === 405)
+
+    // rejected because token is too young
+    await assert.rejects(
+      anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { Origin: origin, referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
       (err: any) => err.status === 429)
 
     // clear rate limiting state then wait for the anonymous token to age
@@ -469,13 +476,13 @@ test.describe('API keys', () => {
     await new Promise(resolve => setTimeout(resolve, 2000))
 
     // accepted because token is the right age
-    res = await anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
+    res = await anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { Origin: origin, referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
     assert.equal(res.status, 201)
     await waitForFinalize(ax, 'restcrowd')
 
     // rejected because of simple rate limiting
     await assert.rejects(
-      anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
+      anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { Origin: origin, referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
       (err: any) => err.status === 429)
   })
 
@@ -501,7 +508,7 @@ test.describe('API keys', () => {
     const key = res.data[0].id
     const anonymousToken = (await testUser3.get(directoryUrl + '/api/auth/anonymous-action')).data
     await new Promise(resolve => setTimeout(resolve, 2000))
-    const headers = { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken }
+    const headers = { Origin: new URL(config.publicUrl).origin, referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken }
 
     await assert.rejects(
       testUser3.get('/api/v1/datasets/restcrowdown/lines', { headers }),

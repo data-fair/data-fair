@@ -10,10 +10,13 @@ import debugModule from 'debug'
 
 const debug = debugModule('application-keys')
 
+// strict same-origin gate for anonymous writes: requires the Origin header (browsers always send
+// it on POST; missing Origin is treated as a non-browser client and rejected) and compares URL
+// origins, not string prefixes (`startsWith` let a domain like `app.example.co` pass for
+// `app.example.com` because the shorter is a prefix of the longer)
 const matchingHost = (req: Request) => {
-  if (!req.headers.origin) return true
-  if ((req as Request & { publicBaseUrl: string }).publicBaseUrl.startsWith(req.headers.origin)) return true
-  return false
+  if (!req.headers.origin) return false
+  return new URL((req as Request & { publicBaseUrl: string }).publicBaseUrl).origin === req.headers.origin
 }
 
 export default async (req: RequestWithResource, res: Response, next: NextFunction) => {
@@ -121,7 +124,7 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
             return res.status(401).type('text/plain').send('Invalid token')
           }
         }
-        if (!tokenContent.anonymousAction) throw new Error('wrong type of token used for anonymous action')
+        if (!tokenContent.anonymousAction) return res.status(401).type('text/plain').send('Invalid token')
 
         // 3rd level of anti-spam protection, simple rate limiting based on ip
         if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat)) {
@@ -132,7 +135,7 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
 
       // apply some permissions based on app configuration
       // some dataset might need to be readable, some other writable only for createLine, etc
-      const datasetIndex = matchingApplication.configuration?.datasets?.findIndex(d => d && d.href === datasetHref)
+      const datasetIndex = matchingApplication.configuration?.datasets?.findIndex(d => d && (d.href === datasetHref || d.id === dataset.id))
       if (datasetIndex === undefined || datasetIndex === -1) {
         debug('dataset is not referenced in app configuration')
         return next()
