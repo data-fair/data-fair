@@ -393,6 +393,12 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   const patchedApp = await db.collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })
 
+  // keep applications-keys.owner in sync — the application-key middleware queries this collection
+  // with an ownerFilter built from the dataset's owner, so a stale owner here silently breaks
+  // existing protected links after an ownership transfer
+  await db.collection('applications-keys')
+    .updateOne({ _id: req.params.applicationId }, { $set: { owner: patch.owner } })
+
   const arrowStr = `${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
   const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${arrowStr}`
   eventsLog.info('df.applications.changeOwnerFrom', eventLogMessage, { req, account: application.owner })
@@ -408,7 +414,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
     sender: { ...application.owner, role: 'admin' }
   }
   eventsQueue.pushEvent(event, sessionState)
-  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
+  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
   await syncDatasets(patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl, req.publicationSite))
