@@ -71,11 +71,11 @@
 
 <i18n lang="yaml">
 fr:
-  title: Titre
+  title: Titre du schéma de référence
   version: Version
   url: URL
 en:
-  title: Title
+  title: Title of the reference schema
   version: Version
   url: URL
 </i18n>
