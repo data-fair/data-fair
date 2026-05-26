@@ -43,8 +43,14 @@ const iframeUrl = computed(() => {
   const canHaveDraft = props.resourceType === 'dataset' &&
     !props.resource.isRest && !props.resource.isVirtual && !props.resource.isMetaOnly
 
+  // data-updated is not emitted on REST line operations (per-write notifications would
+  // spam any script polling/editing on a regular cadence). The topic remains valid for
+  // file-based and virtual datasets.
+  const hasDataUpdated = props.resourceType !== 'dataset' || !props.resource.isRest
+
   const topics = topicsByResource[props.resourceType]
     .filter(key => key !== 'dataset-draft-data-updated' || canHaveDraft)
+    .filter(key => key !== 'dataset-data-updated' || hasDataUpdated)
 
   // subscribe by stable id (not slug — slugs change on rename); the portal app does the same.
   const keysParam = topics
