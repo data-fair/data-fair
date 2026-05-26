@@ -40,6 +40,10 @@ const iframeUrl = computed(() => {
       // with no integrity would be a subscription that can never fire
       if (item.const.startsWith('dataset-integrity-')) return !!props.resource.integrity?.active
       if (item.const === 'dataset-draft-data-updated' && !canHaveDraft) return false
+      // data-updated is not emitted on REST line operations (per-write notifications would
+      // spam any script polling/editing on a regular cadence). The topic remains valid for
+      // file-based and virtual datasets.
+      if (item.const === 'dataset-data-updated' && props.resourceType === 'dataset' && props.resource.isRest) return false
       return true
     })
   // subscribe by stable id (not slug — slugs change on rename); the portal app does the same.

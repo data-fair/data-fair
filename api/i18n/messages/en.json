@@ -146,14 +146,6 @@
 				"title": "Data updated {{label}}",
 				"body": "The data of the dataset {{label}} was updated."
 			},
-			"data-updated-lines": {
-				"title": "Data updated {{label}}",
-				"body": "The data of the dataset {{label}} was updated: {{details}}."
-			},
-			"draft-data-updated-lines": {
-				"title": "Draft data updated {{label}}",
-				"body": "The data of the draft of the dataset {{label}} was updated: {{details}}."
-			},
 			"structure-updated": {
 				"title": "Structure change of {{label}}",
 				"body": "The structure of the dataset {{label}} was modified."

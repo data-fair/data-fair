@@ -23,7 +23,6 @@ import * as storageUtils from './storage.ts'
 import * as extensionsUtils from './extensions.ts'
 import { extensionOwnedKeys } from '../../integrity/lines-operations.ts'
 import * as findUtils from '../../misc/utils/find.ts'
-import * as notifications from '../../misc/utils/notifications.ts'
 import * as fieldsSniffer from './fields-sniffer.ts'
 import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
@@ -1089,37 +1088,6 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
   }
 }
 
-type LinesUpdateCounts = { nbCreated?: number, nbModified?: number, nbDeleted?: number, deletedAll?: boolean }
-
-const formatLinesDetails = (counts: LinesUpdateCounts, locale: 'fr' | 'en'): string => {
-  if (counts.deletedAll) {
-    return locale === 'fr' ? 'toutes les lignes supprimées' : 'all lines deleted'
-  }
-  const parts: string[] = []
-  const plural = (n: number, fr: [string, string], en: [string, string]) =>
-    locale === 'fr' ? `${n} ${n > 1 ? fr[1] : fr[0]}` : `${n} ${n > 1 ? en[1] : en[0]}`
-  if (counts.nbCreated) parts.push(plural(counts.nbCreated, ['ligne créée', 'lignes créées'], ['line created', 'lines created']))
-  if (counts.nbModified) parts.push(plural(counts.nbModified, ['ligne modifiée', 'lignes modifiées'], ['line modified', 'lines modified']))
-  if (counts.nbDeleted) parts.push(plural(counts.nbDeleted, ['ligne supprimée', 'lignes supprimées'], ['line deleted', 'lines deleted']))
-  if (!parts.length) return locale === 'fr' ? 'aucune modification' : 'no change'
-  return parts.join(', ')
-}
-
-const emitLinesUpdated = (dataset: RestDataset, sessionState: SessionStateAuthenticated, counts: LinesUpdateCounts) => {
-  const total = (counts.nbCreated ?? 0) + (counts.nbModified ?? 0) + (counts.nbDeleted ?? 0)
-  if (!counts.deletedAll && total === 0) return
-  const i18nKey = 'data-updated-lines'
-  const localizedParams = {
-    fr: { details: formatLinesDetails(counts, 'fr') },
-    en: { details: formatLinesDetails(counts, 'en') }
-  }
-  // fire-and-forget
-  notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated', { i18nKey, localizedParams })
-    .catch(err => internalError('lines-updated-notif', err))
-  notifications.propagateDataUpdatedToVirtualParents(dataset, sessionState, { i18nKey, localizedParams })
-    .catch(err => internalError('lines-updated-notif-virtual-parents', err))
-}
-
 export const readLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
   const c = collection(dataset)
@@ -1151,7 +1119,6 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
-  emitLinesUpdated(dataset, reqSessionAuthenticated(req), { nbDeleted: 1 })
 }
 
 // the write routes are gated by their default operation (createLine / updateLine and Own
@@ -1213,7 +1180,6 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   await commitLines(dataset, [fullLine._id])
 
   const eventsLog = (await import('@data-fair/lib-express/events-log.js')).default
-  let finalStatus = 204
   if (_action === 'delete') {
     eventsLog.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
     res.status(204).send()
@@ -1224,14 +1190,9 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
       eventsLog.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account })
     }
     const line = getLineFromOperation(operation, rawBody ?? req.body)
-    finalStatus = operation._status || (definedId ? 200 : 201)
-    res.status(finalStatus).send(cleanLine(line))
+    res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
   }
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after createOrUpdateLine', err))
-  const sessionState = reqSessionAuthenticated(req)
-  if (finalStatus === 204) emitLinesUpdated(dataset, sessionState, { nbDeleted: 1 })
-  else if (finalStatus === 201) emitLinesUpdated(dataset, sessionState, { nbCreated: 1 })
-  else if (finalStatus === 200) emitLinesUpdated(dataset, sessionState, { nbModified: 1 })
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -1256,7 +1217,6 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after patchLine', err))
-  if (operation._status !== 304) emitLinesUpdated(dataset, reqSessionAuthenticated(req), { nbModified: 1 })
 }
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -1278,7 +1238,6 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
 
   res.status(204).send()
   storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
-  emitLinesUpdated(dataset, reqSessionAuthenticated(req), { deletedAll: true })
 }
 
 type ReqFile = { filename: string, originalname: string, mimetype: string, path: string }
@@ -1397,7 +1356,6 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
       }
     })
 
-    let streamErrored = false
     try {
       await pump(
         getInputStream(),
@@ -1439,8 +1397,6 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
       }
       summary.nbErrors += 1
       summary.errors.push({ line: -1, error: message, status })
-      // suppress data-updated notif: stream aborted mid-way, partial writes only
-      streamErrored = true
 
       if (drop) {
         summary.cancelled = true
@@ -1464,14 +1420,6 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     res.end()
 
     storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
-    if (!summary.cancelled && !streamErrored) {
-      emitLinesUpdated(dataset, reqSessionAuthenticated(req), {
-        nbCreated: summary.nbCreated,
-        nbModified: summary.nbModified,
-        nbDeleted: summary.nbDeleted,
-        deletedAll: summary.dropped
-      })
-    }
   } finally {
     // best-effort cleanup: never let a temp-file removal error (e.g. the file
     // already gone) mask the response or escape as an unhandled rejection
