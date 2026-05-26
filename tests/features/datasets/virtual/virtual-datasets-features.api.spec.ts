@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks, config } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, doAndWaitForFinalize } from '../../../support/workers.ts'
-import { collectNotifs, expectNotif } from '../../../support/notifications.ts'
+import { collectNotifs, expectNotif, expectNoNotif } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser3 = await axiosAuth('test_user3@test.com')
@@ -360,17 +360,17 @@ test.describe('virtual datasets features', () => {
     expectNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.slug}`)
   })
 
-  test('propagates data-updated notif to virtual parent on child REST line patch', async () => {
+  test('does not emit nor propagate data-updated on a child REST line write', async () => {
     const ax = testUser1
     const childRes = await ax.post('/api/v1/datasets', {
       isRest: true,
-      title: 'data-updated propagation rest child',
+      title: 'no propagation rest child',
       schema: [{ key: 'attr1', type: 'string' }]
     })
     const child = await waitForFinalize(ax, childRes.data.id)
     const virtualRes = await ax.post('/api/v1/datasets', {
       isVirtual: true,
-      title: 'data-updated propagation rest virtual',
+      title: 'no propagation rest virtual',
       virtual: { children: [child.id] },
       schema: [{ key: 'attr1' }]
     })
@@ -378,40 +378,14 @@ test.describe('virtual datasets features', () => {
 
     const notifs = await collectNotifs()
     await ax.post(`/api/v1/datasets/${child.id}/lines`, { attr1: 'v1' })
-    // 4 = slug+id dual emission × {child, virtual parent}
-    const captured = await notifs.waitFor(4, { keyPrefix: 'data-fair:dataset-data-updated:' })
-
-    expectNotif(captured, `data-fair:dataset-data-updated:${child.slug}`)
-    expectNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.slug}`)
-  })
-
-  test('propagates data-updated notif to virtual parent on child REST bulk lines', async () => {
-    const ax = testUser1
-    const childRes = await ax.post('/api/v1/datasets', {
-      isRest: true,
-      title: 'bulk propagation rest child',
-      schema: [{ key: 'attr1', type: 'string' }]
-    })
-    const child = await waitForFinalize(ax, childRes.data.id)
-    const virtualRes = await ax.post('/api/v1/datasets', {
-      isVirtual: true,
-      title: 'bulk propagation rest virtual',
-      virtual: { children: [child.id] },
-      schema: [{ key: 'attr1' }]
-    })
-    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
-
-    const notifs = await collectNotifs()
     await ax.post(`/api/v1/datasets/${child.id}/_bulk_lines`, [
       { attr1: 'a' }, { attr1: 'b' }, { attr1: 'c' }
     ])
-    // 4 = slug+id dual emission × {child, virtual parent}
-    const captured = await notifs.waitFor(4, { keyPrefix: 'data-fair:dataset-data-updated:' })
+    const captured = await notifs.drain()
 
-    const childNotif = expectNotif(captured, `data-fair:dataset-data-updated:${child.slug}`)
-    const virtualNotif = expectNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.slug}`)
-    // both notifs share the same body since propagation passes the same i18nKey+localizedParams
-    assert.match(childNotif.body.fr, /3 lignes créées/)
-    assert.match(virtualNotif.body.fr, /3 lignes créées/)
+    expectNoNotif(captured, `data-fair:dataset-data-updated:${child.slug}`)
+    expectNoNotif(captured, `data-fair:dataset-data-updated:${child.id}`)
+    expectNoNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.slug}`)
+    expectNoNotif(captured, `data-fair:dataset-data-updated:${virtualDataset.id}`)
   })
 })

@@ -148,14 +148,6 @@
 				"title": "Données mises à jour {{label}}",
 				"body": "Les données du jeu de données {{label}} ont été mises à jour."
 			},
-			"data-updated-lines": {
-				"title": "Données mises à jour {{label}}",
-				"body": "Les données du jeu de données {{label}} ont été mises à jour : {{details}}."
-			},
-			"draft-data-updated-lines": {
-				"title": "Données brouillon mises à jour {{label}}",
-				"body": "Les données du brouillon du jeu de données {{label}} ont été mises à jour : {{details}}."
-			},
 			"structure-updated": {
 				"title": "Changement de structure {{label}}",
 				"body": "La structure du jeu de données {{label}} a été modifiée."

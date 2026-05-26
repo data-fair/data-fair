@@ -64,7 +64,7 @@ Creates a subscription on the events service on behalf of the current user. Used
 
 ### `propagateDataUpdatedToVirtualParents(childDataset, originator, options?)`
 
-Mirror helper used at the two commit-time `data-updated` emission points (file `validateDraft` in `service.js:587`, REST line ops in `rest.ts:917`). Looks up parent virtual datasets via `mongo.datasets.find({ 'virtual.children': childDataset.id })` (indexed by `virtual.children_1` in `mongo.ts:69`) and re-emits `data-updated` on each parent through `sendResourceEvent`, passing the **same `i18nKey` and `localizedParams` as the child emission** so subscribers on a virtual see a body identical to subscribers on the underlying child — no leakage of child identity or virtual-ness, transparent for portal-side subscribers. See §10.1 for the rationale of where it is wired and why `router.js:559` (file upload entry point) is deliberately skipped.
+Mirror helper called at the single commit-time `data-updated` emission point (file `validateDraft` in `service.js:587`). Looks up parent virtual datasets via `mongo.datasets.find({ 'virtual.children': childDataset.id })` (indexed by `virtual.children_1` in `mongo.ts:69`) and re-emits `data-updated` on each parent through `sendResourceEvent`, passing the **same `i18nKey` and `localizedParams` as the child emission** so subscribers on a virtual see a body identical to subscribers on the underlying child — no leakage of child identity or virtual-ness, transparent for portal-side subscribers. See §10 for why REST line operations deliberately do **not** participate in this propagation and why `router.js:559` (file upload entry point) is also skipped.
 
 ## 4. Topic key conventions
 
@@ -172,39 +172,25 @@ Discovered during the refacto but intentionally left for a follow-up:
   Reference pattern: `customers` auto-subscribes the ticket creator to comment events from the **frontend** (`customers/ui/src/components/issues/issue-new.vue:74-86`), calling `${window.location.origin}/events/api/subscriptions` so the browser cookie has the correct scope. Any new auto-subscribe in data-fair should follow the same UI-side pattern, or the events service should grow a service-to-service auth path keyed off `config.secretKeys.events`.
 - **Proactive notification for API key expiration is not implemented yet** — API keys expire silently and the first call after `expireAt` returns `403`. A proactive J-3 / post-expiration notification was prototyped during the refacto but reverted because data-fair has no in-process scheduled-task infrastructure today (no `node-cron` / `cron` usage in `api/src/`). Other Koumoul services (`customers/api/src/limits/worker.ts`, `simple-directory/api/src/users/worker.ts`) use `node-cron` + `@data-fair/lib-node/locks` and are the recommended template when the feature is reintroduced.
 
-## 10. REST line operations (added 2026-05-11)
+## 10. REST line operations: notifications intentionally suppressed
 
-Until 2026-05-11, `data-updated` was only emitted on file uploads (`api/src/datasets/router.js:535`, `api/src/datasets/service.js:587`). REST line operations were silent — subscribing to `data-fair:dataset-data-updated:<id>` on a REST dataset never fired despite obvious data changes. This was ticket #1288.
+REST/editable datasets do **not** emit `data-updated` on line operations — POST/PUT/PATCH/DELETE on `/lines`, `DELETE /lines`, and `POST /_bulk_lines` are all silent on the notification bus. The handlers in `api/src/datasets/utils/rest.ts` only update storage and respond; no `sendResourceEvent`, no propagation to virtual parents.
 
-The five REST handlers in `api/src/datasets/utils/rest.ts` now emit `data-updated` via the local helper `emitLinesUpdated`:
+**Why.** REST writes are designed for high-frequency callers: inline-edit UIs PATCH one cell at a time, integration scripts can run every minute, and `_bulk_lines` is itself often invoked on a tight schedule. Wiring a notification per request would let any well-meaning script silently spam every subscriber of the dataset (and, through propagation, every virtual parent and every portal subscription on those parents). The single legitimate signal — "the data behind this view changed" — has no cheap throttling story today, so the safer default is to emit nothing.
 
-| Handler | When | Counts passed to the notification |
+**Consequence for virtual parents.** Since `propagateDataUpdatedToVirtualParents` is only called from `service.js:587` (file `validateDraft`), a virtual dataset whose only child is a REST dataset never receives a `data-updated` notification. A virtual dataset that has at least one file-based child still receives `data-updated` when that child is re-uploaded. This is reflected in the per-dataset subscription UI: `ui/src/components/common/event-notifications.vue` hides the `data-updated` subscribe button when `dataset.isRest === true` so users do not subscribe to a topic that will never fire.
+
+**Where the emit points are wired:**
+
+| Wired at | Emits `data-updated`? | Propagates to virtual parents? |
 |---|---|---|
-| `deleteLine` | After 204 response | `{ nbDeleted: 1 }` |
-| `createOrUpdateLine` | After response (HTTP 200 or 201) | `{ nbCreated: 1 }` (201) or `{ nbModified: 1 }` (200); skipped on 304 |
-| `patchLine` | After 200 response | `{ nbModified: 1 }`; skipped if `operation._status === 304` |
-| `bulkLines` | After response stream closes | full summary `{ nbCreated, nbModified, nbDeleted }`; replaced by `{ deletedAll: true }` when `?drop=true` succeeded |
-| `deleteAllLines` | After 204 response | `{ deletedAll: true }` |
+| `service.js:587` (`validateDraft`, file path) | yes | yes |
+| `router.js:559` (file upload entry point) | yes — as `dataset-draft-data-updated:<child>` | **no** — the child enters draft (`patch.draftReason = 'file-updated'`) and virtual parents do not query draft data, so propagating here would fire `dataset-data-updated:<virtual>` while the virtual still serves the OLD data. The propagation at `service.js:587` then fires again with the new data once the draft is validated. Skipping at the upload entry point means the virtual fires exactly once, at the moment new data becomes visible. |
+| `rest.ts` (`deleteLine`, `createOrUpdateLine`, `patchLine`, `deleteAllLines`, `bulkLines`) | **no** | **no** — see above. |
 
-The topic key stays `data-fair:dataset-data-updated:<slug>` (resp. `dataset-draft-data-updated`) so that existing user subscriptions transparently start receiving these events. Only the rendered title/body differs: the new i18n keys `notifications.datasets.data-updated-lines` and `notifications.datasets.draft-data-updated-lines` include a `{{details}}` placeholder that summarises the operation.
+The propagation helper reuses the **same `i18nKey` and `localizedParams` as the child emission**, so a notification on a virtual parent has a body identical to what a subscriber on the underlying child would see. This keeps the topic surface uniform between regular and virtual datasets — portal-side subscribers cannot tell from the notification alone that the resource is virtual.
 
-**Per-request emission, no debouncing.** Each HTTP request to a line endpoint produces one notification — there is no aggregation across requests. Inline-edit UIs that PATCH a single cell at a time will therefore emit one notification per edit. This is intentional: per-edit feedback matches user expectations, and any caller batching many writes is expected to use `_bulk_lines` (which already produces a single recap). The `bulkLines` handler additionally suppresses its summary emission on a mid-stream stream-level failure (`api/src/datasets/utils/rest.ts` — the `streamErrored` flag): the caller already gets the error in the HTTP response, no point claiming a success that did not happen.
-
-### 10.1 Child → virtual parent propagation
-
-Subscribers on a virtual dataset's `data-updated` topic expect to be notified when the data they see changes — which only happens through child datasets. Every commit-time `data-updated` emission on a child therefore mirrors onto each parent virtual via `propagateDataUpdatedToVirtualParents` (see §3):
-
-| Wired at | Emits on virtual parent? | Why |
-|---|---|---|
-| `service.js:587` (`validateDraft` file path) | yes | Draft has just been merged into the main collection; virtual now serves the new data. |
-| `rest.ts:917` (`emitLinesUpdated`, all five REST handlers) | yes | REST line ops commit immediately; virtual sees the change at the next query. |
-| `router.js:559` (file upload entry point) | **no** | The child enters draft (`patch.draftReason = 'file-updated'`) and the upload-time notif is `dataset-draft-data-updated:<child>`. Virtual parents do not query draft data, so propagating here would fire a `dataset-data-updated:<virtual>` while the virtual still serves the OLD data. The propagation at `service.js:587` then fires again with the new data — double notif. Skipping at the upload entry point means the virtual fires exactly once, at the moment new data becomes visible. |
-
-The virtual notif **reuses the same `i18nKey` and `localizedParams` as the child emission**, so its rendered title/body is identical to what a subscriber on the underlying child would see (e.g. `3 lignes créées` for a REST bulk). This keeps the topic surface uniform between regular and virtual datasets — portal-side subscribers cannot tell from the notification alone that the resource is virtual.
-
-Topic key on the virtual parent is the standard `data-fair:dataset-data-updated:<virtual-id>` (and `:<virtual-slug>`, see §12). No new topic shape, no new i18n key.
-
-**One notif per parent.** If multiple virtual datasets reference the same child, each gets its own emission (since `sendResourceEvent` is called per parent inside the helper). Conversely, a single line PATCH that triggers one child notif produces N propagated notifs (one per parent), in line with the rest of the system's per-event semantics.
+**One notif per parent.** If multiple virtual datasets reference the same file-based child, each gets its own emission (since `sendResourceEvent` is called per parent inside the helper).
 
 ## 11. Tests
 
@@ -221,7 +207,8 @@ Inline coverage:
 - `tests/features/datasets/upload/datasets-features.api.spec.ts` — `user-notification`, `structure-updated` (drop + add), `breaking-change`, `change-owner`, `delete`.
 - `tests/features/datasets/upload/datasets-drafts-lifecycle.api.spec.ts` — `dataset-created`, `draft-data-updated`, `draft-validated` (with slug+id pairing).
 - `tests/features/datasets/upload/file-validation.api.spec.ts` — error umbrella fan-out on file validation failure.
-- `tests/features/datasets/virtual/virtual-datasets-features.api.spec.ts` — `breaking-change` on virtual schema PATCH (`isVirtual` gate, see §10.1), `data-updated` propagation from child→virtual on file re-upload, REST single line, REST bulk lines.
+- `tests/features/datasets/rest/rest-datasets-crud.api.spec.ts` — single guard test asserting no `data-updated` notif on REST line operations (see §10).
+- `tests/features/datasets/virtual/virtual-datasets-features.api.spec.ts` — `breaking-change` on virtual schema PATCH (`isVirtual` gate), `data-updated` propagation from child→virtual on file re-upload, single guard test asserting REST writes do not propagate to a virtual parent.
 - `tests/features/applications/publication-sites.api.spec.ts` — `publication-requested` (org and department scopes).
 - `tests/features/applications/applications.api.spec.ts` — `application-created`.
 
