@@ -397,7 +397,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   // with an ownerFilter built from the dataset's owner, so a stale owner here silently breaks
   // existing protected links after an ownership transfer
   await db.collection('applications-keys')
-    .updateOne({ _id: req.params.applicationId }, { $set: { owner: patch.owner } })
+    .updateOne({ _id: application.id }, { $set: { owner: patch.owner } })
 
   const arrowStr = `${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
   const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${arrowStr}`

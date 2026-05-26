@@ -250,11 +250,11 @@ When the matched route is a write (anything but `GET`/`HEAD`) — the realistic 
 "submit a form" into a `lineOwnership` dataset — three additional checks fire **before** the
 bypass is applied (`application-key.ts:104-131`):
 
-1. **Same-origin check** (`matchingHost`) — the request **must** carry an `Origin` header and its
-   value must equal the `origin` of the configured `publicBaseUrl` (URL-origin compare, not string
-   prefix). Cross-origin POSTs *and* POSTs without an `Origin` header are rejected with 405
-   `errors.noCrossDomain`. Browsers always send `Origin` on POST, so the missing-Origin path
-   targets scripted non-browser clients.
+1. **Same-origin check** (`matchingHost`) — when the request carries an `Origin` header its value
+   must equal the `origin` of the configured `publicBaseUrl` (URL-origin compare, not string
+   prefix; the earlier `startsWith` would have let `app.example.co` pass for `app.example.com`).
+   A missing `Origin` is accepted so that non-browser clients keep working; cross-origin POSTs
+   are rejected with 405 `errors.noCrossDomain`.
 2. **Anonymous-action token** — the client must include an `x-anonymousToken` header carrying a
    JWT minted by `simple-directory`'s `/api/auth/anonymous-action` endpoint. Two failure modes:
    - missing → 401 `errors.requireAnonymousToken`

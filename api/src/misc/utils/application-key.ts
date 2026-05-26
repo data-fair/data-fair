@@ -10,12 +10,11 @@ import debugModule from 'debug'
 
 const debug = debugModule('application-keys')
 
-// strict same-origin gate for anonymous writes: requires the Origin header (browsers always send
-// it on POST; missing Origin is treated as a non-browser client and rejected) and compares URL
-// origins, not string prefixes (`startsWith` let a domain like `app.example.co` pass for
-// `app.example.com` because the shorter is a prefix of the longer)
+// same-origin gate for anonymous writes — compares URL origins (`startsWith` previously let
+// `app.example.co` pass for `app.example.com` because the shorter is a prefix of the longer);
+// a missing Origin header is still accepted to keep non-browser clients working
 const matchingHost = (req: Request) => {
-  if (!req.headers.origin) return false
+  if (!req.headers.origin) return true
   return new URL((req as Request & { publicBaseUrl: string }).publicBaseUrl).origin === req.headers.origin
 }
 
