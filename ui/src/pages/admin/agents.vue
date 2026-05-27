@@ -6,13 +6,18 @@
       </h2>
       <v-autocomplete
         v-model="selectedOwner"
+        v-model:search="search"
         :items="owners"
         item-title="name"
         :item-value="(o: any) => o"
         :label="t('org')"
         :loading="ownersFetch.loading.value"
+        :no-filter="true"
+        :return-object="true"
+        :placeholder="t('searchName')"
         density="compact"
         hide-details
+        hide-no-data
         max-width="300"
         variant="outlined"
       />
@@ -38,9 +43,11 @@
 fr:
   agents: Agents
   org: Organisation
+  searchName: Saisissez un nom d'organisation
 en:
   agents: Agents
   org: Organization
+  searchName: Search an organization name
 </i18n>
 
 <script setup lang="ts">
@@ -53,12 +60,15 @@ const { stateChangeAdapter, onMessage } = useDFramePage()
 
 const selectedOwner = ref<{ type: string, id: string, name: string } | null>(null)
 
-const ownersFetch = useFetch<{ results: { type: string, id: string, name: string }[] }>($sitePath + '/simple-directory/api/accounts', {
-  query: computed(() => ({ type: 'organization', size: 1000 })), watch: false
-})
-ownersFetch.refresh()
+const search = ref('')
+const query = () => ({ type: 'organization', q: search.value, size: 20 })
+const ownersFetch = useFetch<{ results: { type: string, id: string, name: string }[] }>($sitePath + '/simple-directory/api/accounts', { query })
 
 const owners = computed(() => {
-  return ownersFetch.data.value?.results ?? []
+  const results = ownersFetch.data.value?.results ?? []
+  if (selectedOwner.value && !results.find(o => o.id === selectedOwner.value!.id && o.type === selectedOwner.value!.type)) {
+    return [selectedOwner.value, ...results]
+  }
+  return results
 })
 </script>
