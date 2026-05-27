@@ -227,7 +227,7 @@ const session = useSession()
 const publicationSitesById = ref<Record<string, any>>({})
 const pubSitesPath = computed(() => {
   const a = session.account.value
-  return a ? $apiPath + '/settings/' + a.type + '/' + a.id + '/publication-sites' : null
+  return a ? $apiPath + '/settings/' + a.type + '/' + a.id + ':*/publication-sites' : null
 })
 const pubSitesFetch = useFetch<any[]>(() => pubSitesPath.value)
 watch(() => pubSitesFetch.data.value, (sites) => {
