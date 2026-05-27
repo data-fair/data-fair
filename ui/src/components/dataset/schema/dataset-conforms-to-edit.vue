@@ -16,7 +16,7 @@
         :disabled="disabled"
         :base-color="fieldColor('title')"
         :color="fieldColor('title')"
-        :loading="loading"
+        :loading="fetchSuggestions.loading.value"
         clearable
         hide-details="auto"
         density="comfortable"
@@ -37,7 +37,7 @@
         :disabled="disabled"
         :base-color="fieldColor('version')"
         :color="fieldColor('version')"
-        :loading="loading"
+        :loading="fetchSuggestions.loading.value"
         hide-details="auto"
         density="comfortable"
         variant="outlined"
@@ -56,7 +56,7 @@
         :disabled="disabled"
         :base-color="fieldColor('url')"
         :color="fieldColor('url')"
-        :loading="loading"
+        :loading="fetchSuggestions.loading.value"
         clearable
         hide-details="auto"
         density="comfortable"
@@ -74,10 +74,12 @@ fr:
   title: Titre du schéma de référence
   version: Version
   url: URL
+  fetchSuggestionsError: Erreur lors du chargement des suggestions de schémas
 en:
   title: Title of the reference schema
   version: Version
   url: URL
+  fetchSuggestionsError: Failed to load schema suggestions
 </i18n>
 
 <script setup lang="ts">
@@ -138,23 +140,21 @@ const fieldColor = (field: keyof Triple): string | undefined => {
 // --- Suggestions ---
 
 const triples = ref<Triple[]>([])
-const loading = ref(false)
 let fetched = false
 
-const onAnyFocus = async (focused: boolean) => {
+const fetchSuggestions = useAsyncAction(async () => {
+  if (!props.owner) return
+  const ownerParam = `${props.owner.type}:${props.owner.id}`
+  const res = await $fetch<{ facets?: { conformsTo?: { value: Triple, count: number }[] } }>(`${$apiPath}/datasets`, {
+    query: { size: 0, facets: 'conformsTo', owner: ownerParam }
+  })
+  triples.value = (res?.facets?.conformsTo ?? []).map(f => f.value)
+}, { error: t('fetchSuggestionsError') })
+
+const onAnyFocus = (focused: boolean) => {
   if (!focused || fetched || !props.owner) return
   fetched = true
-  loading.value = true
-  try {
-    const ownerParam = `${props.owner.type}:${props.owner.id}`
-    const res = await $fetch<{ facets?: { conformsTo?: { value: Triple, count: number }[] } }>(`${$apiPath}/datasets`, {
-      query: { size: 0, facets: 'conformsTo', owner: ownerParam }
-    })
-    triples.value = (res?.facets?.conformsTo ?? []).map(f => f.value)
-  } catch (e) {
-    console.error('Failed to fetch conformsTo suggestions', e)
-  }
-  loading.value = false
+  fetchSuggestions.execute()
 }
 
 const unique = (arr: (string | null | undefined)[]): string[] => {
