@@ -1038,7 +1038,7 @@ const sections = computedDeepDiff(() => {
       { key: 'table', title: t('table'), icon: mdiTable, agentDesc: 'Paginated table of the rows with toolbar: free-text search (`q`), faceted filters, column selector, download menu (CSV/XLSX/Parquet/…), display-mode switch. Two help buttons: **Filter help** → `dataset_data` subagent (then `navigate` applies the filterQuery as URL query params); **Check quality** → `data_quality_checker` subagent (6-step audit: completeness, uniqueness, outliers, format consistency, distribution anomalies).' }
     ]
     if (d.bbox) {
-      explorationTabs.push({ key: 'map', title: t('map'), icon: mdiMap, agentDesc: 'Interactive map of geolocalized rows. Accepts the same filter query params as the table tab (including `bbox` and `geo_distance`).' })
+      explorationTabs.push({ key: 'map', title: t('map'), icon: mdiMap, agentDesc: 'Interactive map of geolocalized rows. Accepts the same filter query params as the table tab (including `_c_bbox` and `_c_geo_distance`).' })
     }
     if (digitalDocumentField.value) {
       explorationTabs.push({ key: 'files', title: t('files'), icon: mdiContentCopy, agentDesc: 'Browse the digital-document files attached to rows (when the schema has a documentURI / file field).' })

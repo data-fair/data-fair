@@ -77,7 +77,7 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
         '**Detail pages** (require an ID, use list_datasets or list_applications to find IDs):\n' +
         '- Dataset overview: /dataset/{id}\n' +
         '- Dataset data: /dataset/{id}/data\n' +
-        '- Dataset table: /dataset/{id}/table — accepts filter query params (same format as search_data filters: column_key + suffix like nom_search, age_lte, ville_eq). Also accepts q (full-text search), sort, select, bbox, geo_distance, date_match. Use the filterQuery from dataset_data subagent Context directly as the query parameter.\n' +
+        '- Dataset table: /dataset/{id}/table — accepts filter query params (same format as search_data filters: column_key + suffix like nom_search, age_lte, ville_eq). Also accepts _c_q (full-text search), sort, select, _c_bbox, _c_geo_distance, _c_date_match. The `_c_` prefix on q/bbox/geo_distance/date_match is required for URL sync. Use the filterQuery from dataset_data subagent Context directly as the query parameter.\n' +
         '- Dataset map: /dataset/{id}/map — for geolocalized datasets, accepts the same filter query params as the table page\n' +
         '- Dataset files: /dataset/{id}/files\n' +
         '- Edit dataset data: /dataset/{id}/edit-data\n' +
@@ -123,7 +123,7 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
         },
         query: {
           type: 'string' as const,
-          description: 'Optional query string to append to the URL (without leading "?"). For dataset table pages, use the filterQuery from the dataset_data subagent Context. Example: "nom_search=Jean&age_lte=30&q=Paris"'
+          description: 'Optional query string to append to the URL (without leading "?"). For dataset table pages, use the filterQuery from the dataset_data subagent Context. Example: "nom_search=Jean&age_lte=30&_c_q=Paris"'
         }
       },
       required: ['path'] as const
