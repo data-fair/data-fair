@@ -100,6 +100,7 @@ export default async function (dataset: DatasetInternal) {
       if (parentDataset.attachmentsAsImage) patch.attachmentsAsImage = parentDataset.attachmentsAsImage
       if (parentDataset.timeZone) patch.timeZone = parentDataset.timeZone
       if (parentDataset.projection) patch.projection = parentDataset.projection
+      if (parentDataset.conformsTo) patch.conformsTo = parentDataset.conformsTo
     }
 
     if (dataset.initFrom.parts.includes('extensions')) {

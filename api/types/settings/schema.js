@@ -446,6 +446,26 @@ export default {
             }
           }
         },
+        conformsTo: {
+          type: 'object',
+          properties: {
+            active: {
+              title: 'Schéma',
+              type: 'boolean',
+              default: false,
+              layout: { cols: 6 }
+            },
+            title: {
+              title: 'Libellé personnalisé',
+              type: 'string',
+              layout: {
+                if: 'parent.data.active',
+                cols: 6,
+                props: { variant: 'outlined', placeholder: 'Schéma' }
+              }
+            }
+          }
+        },
         custom: {
           type: 'array',
           title: 'Métadonnées spécifiques',

@@ -387,6 +387,16 @@ export const facetsQuery = (reqQuery, sessionState, resourceType, facetFields = 
         facet.push({ $group: { _id: { [f]: '$base-application', id: '$id' } } })
         facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
         facet.push({ $sortByCount: '$' + f })
+      } else if (f === 'conformsTo') {
+        // conformsTo is a single object per dataset (not an array) — group by its triple
+        facet.push({ $match: { conformsTo: { $exists: true } } })
+        facet.push({
+          $group: {
+            _id: { title: '$conformsTo.title', version: '$conformsTo.version', url: '$conformsTo.url' },
+            count: { $sum: 1 }
+          }
+        })
+        facet.push({ $sort: { count: -1 } })
       } else if (f === 'topics') {
         facet.push({
           $unwind: {
