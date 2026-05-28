@@ -686,6 +686,7 @@ import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
+import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
 import { hasInvalidExprEvalExtension } from '~/composables/dataset/expr-eval-validation'
 import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 
@@ -959,12 +960,13 @@ useLeaveGuard(metadataEditFetch.hasDiff, { locale })
 const sections = computedDeepDiff(() => {
   if (!dataset.value) return {}
   const d = dataset.value
-  const result: Record<string, { title: string, tabs?: any[], subtitle?: string }> = {}
+  const result: Record<string, { title: string, tabs?: any[], subtitle?: string, agentDesc?: string }> = {}
 
   // Informations section
   result.informations = {
     title: t('informations'),
-    subtitle: t('informationsSubtitle')
+    subtitle: t('informationsSubtitle'),
+    agentDesc: 'Read-only summary of the dataset: owner, record count, source file (for file datasets), key dates (creation, last data update, last metadata update), processing status. No edit controls here — descriptive metadata is edited in the Metadata section below.'
   }
 
   // Structure section (new)
@@ -973,7 +975,8 @@ const sections = computedDeepDiff(() => {
       key: 'schema',
       title: t('schema'),
       icon: mdiTableCog,
-      color: schemaHasDiff.value ? 'accent' : undefined
+      color: schemaHasDiff.value ? 'accent' : undefined,
+      agentDesc: 'Columns list with their types, formats and indexing capabilities. For REST datasets: add/remove columns and set the primary key. Optional geo projection selector. Optionally a "conformsTo" editor at the top to declare schemas the dataset conforms to. Toolbar help buttons: **Annotate schema** (suggest titles/descriptions) → `schema_annotator`; **Configure properties** (type overrides, indexing capabilities) → `property_config_advisor`.'
     }]
 
     if (!d.isVirtual && !d.isMetaOnly) {
@@ -981,7 +984,8 @@ const sections = computedDeepDiff(() => {
         key: 'extensions',
         title: t('extensions'),
         icon: mdiPuzzle,
-        color: extensionsHasDiff.value ? 'accent' : undefined
+        color: extensionsHasDiff.value ? 'accent' : undefined,
+        agentDesc: '**Column-value transformations and row enrichments live here.** Two extension types: (a) remote-service extensions calling external REST APIs (geocoding, SIRENE lookup, geo enrichment, etc.); (b) expr-eval calculated columns (PAD_LEFT, CONCAT, SUBSTRING, REPLACE, TRANSFORM_DATE, MD5, JSON_PARSE, …). Add via the "Add extension" menu. For expr-eval, opening an extension card\'s edit dialog reveals the expression input with a help button next to it → `expression_helper` subagent (writes and tests the expression against sample data).'
       })
     }
 
@@ -990,7 +994,8 @@ const sections = computedDeepDiff(() => {
         key: 'rest-config',
         title: t('restConfig'),
         icon: mdiAllInclusive,
-        color: restHasDiff.value ? 'accent' : undefined
+        color: restHasDiff.value ? 'accent' : undefined,
+        agentDesc: 'Settings specific to REST datasets: row history (revisions), per-row TTL (auto-deletion after N days), history TTL, and whether to track the user who last updated each row.'
       })
     }
 
@@ -999,7 +1004,8 @@ const sections = computedDeepDiff(() => {
         key: 'virtual',
         title: t('virtual'),
         icon: mdiPictureInPictureBottomRightOutline,
-        color: virtualHasDiff.value ? 'accent' : undefined
+        color: virtualHasDiff.value ? 'accent' : undefined,
+        agentDesc: 'Configuration of a virtual dataset: pick child datasets, choose which of their columns to expose, and define row-level filters (in/nin) that restrict the visible rows.'
       })
     }
 
@@ -1009,82 +1015,83 @@ const sections = computedDeepDiff(() => {
         title: t('masterData'),
         icon: mdiStarFourPoints,
         color: !masterDataFormValid.value ? 'error' : (masterDataHasDiff.value ? 'accent' : undefined),
-        appendIcon: !masterDataFormValid.value ? mdiAlertCircle : undefined
+        appendIcon: !masterDataFormValid.value ? mdiAlertCircle : undefined,
+        agentDesc: 'Expose this dataset as a master-data source (reusable as reference data via remote-service extensions on other datasets). Help button "Configure master data" → opens an agent that delegates the form filling to a VJSF subagent.'
       })
     }
 
-    result.structure = { title: t('structure'), tabs: structureTabs }
+    result.structure = { title: t('structure'), tabs: structureTabs, agentDesc: 'Structural definition of the dataset: column schema, calculated-column / remote-service extensions, and storage-mode configuration. Saving structural changes may trigger a reindex.' }
   }
 
   // Metadata section
-  const metadataTabs = [
-    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined }
+  const metadataTabs: any[] = [
+    { key: 'informations', title: t('informations'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), license, origin, image, topics, keywords, creator, frequency, spatial/temporal coverage, modification date, related datasets, conformsTo schemas. Two in-form help buttons: next to the summary → `dataset_summarizer` subagent (generates a ≤300 char summary from sample data); next to the description → `dataset_description_writer` subagent (generates 500-2000 char markdown).' }
   ]
   if (!d.draftReason) {
-    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined })
+    metadataTabs.push({ key: 'attachments', title: t('attachments'), icon: mdiAttachment, color: undefined, agentDesc: 'Upload/edit/delete file attachments for the dataset (PDF references, supporting docs, etc.). An attachment can optionally be set as the dataset thumbnail.' })
   }
-  result.metadata = { title: t('metadata'), tabs: metadataTabs }
+  result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons in the section header. When there are unsaved changes a **Summarize changes** button also appears in the header → `dataset_changes_summarizer` subagent (produces a <500 char plain-text summary of the diff).' }
 
   // Exploration section (direct component tabs)
   if (d.finalizedAt && !d.isMetaOnly) {
-    const explorationTabs = [
-      { key: 'table', title: t('table'), icon: mdiTable }
+    const explorationTabs: any[] = [
+      { key: 'table', title: t('table'), icon: mdiTable, agentDesc: 'Paginated table of the rows with toolbar: free-text search (`q`), faceted filters, column selector, download menu (CSV/XLSX/Parquet/…), display-mode switch. Two help buttons: **Filter help** → `dataset_data` subagent (then `navigate` applies the filterQuery as URL query params); **Check quality** → `data_quality_checker` subagent (6-step audit: completeness, uniqueness, outliers, format consistency, distribution anomalies).' }
     ]
     if (d.bbox) {
-      explorationTabs.push({ key: 'map', title: t('map'), icon: mdiMap })
+      explorationTabs.push({ key: 'map', title: t('map'), icon: mdiMap, agentDesc: 'Interactive map of geolocalized rows. Accepts the same filter query params as the table tab (including `bbox` and `geo_distance`).' })
     }
     if (digitalDocumentField.value) {
-      explorationTabs.push({ key: 'files', title: t('files'), icon: mdiContentCopy })
+      explorationTabs.push({ key: 'files', title: t('files'), icon: mdiContentCopy, agentDesc: 'Browse the digital-document files attached to rows (when the schema has a documentURI / file field).' })
     }
     if (imageField.value) {
-      explorationTabs.push({ key: 'thumbnails', title: t('thumbnails'), icon: mdiImage })
+      explorationTabs.push({ key: 'thumbnails', title: t('thumbnails'), icon: mdiImage, agentDesc: 'Thumbnail grid of the row images (when the schema has an image field).' })
     }
     if (d.rest?.history) {
-      explorationTabs.push({ key: 'revisions', title: t('revisions'), icon: mdiHistory })
+      explorationTabs.push({ key: 'revisions', title: t('revisions'), icon: mdiHistory, agentDesc: 'Per-row revision history. Visible only for REST datasets that have history enabled in the Structure → REST config tab.' })
     }
     if (!d.draftReason || d.draftReason.key === 'file-updated') {
-      explorationTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple })
+      explorationTabs.push({ key: 'applications', title: t('applications'), icon: mdiImageMultiple, agentDesc: 'Visualization applications already configured on top of this dataset, with a "+" button to create a new one.' })
     }
     if (explorationTabs.length) {
-      result.exploration = { title: t('exploration'), tabs: explorationTabs }
+      result.exploration = { title: t('exploration'), tabs: explorationTabs, agentDesc: 'Browse and explore the dataset content.' }
     }
   }
 
   // Share section
   if (!d.draftReason || d.draftReason.key === 'file-updated') {
-    const shareTabs = []
+    const shareTabs: any[] = []
     if (can('getPermissions').value) {
-      shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
+      shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity, agentDesc: 'Grant read / write / admin permissions to specific users, organisations, departments or partners, or open access to "anyone".' })
     }
     if (can('setReadApiKey').value) {
-      shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey })
+      shareTabs.push({ key: 'readApiKey', title: t('readApiKey'), icon: mdiKey, agentDesc: 'Generate and manage a read-only API key — for embedding or programmatic access without a user session.' })
     }
-    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
+    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation, agentDesc: 'Publish or unpublish this dataset on the organisation\'s data portals (open or limited audience).' })
     if ($uiConfig.catalogsIntegration && accountRole.value === 'admin') {
-      shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiTransitConnection })
+      shareTabs.push({ key: 'catalog-publications', title: t('catalogPublications'), icon: mdiTransitConnection, agentDesc: 'Publish this dataset to external catalogs (data.gouv.fr, CKAN, etc.). Rendered as a d-frame from the catalogs service — admin-only.' })
     }
     if (d.finalizedAt) {
-      shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
+      shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags, agentDesc: 'Ready-to-copy iframe snippets and JS embed code to integrate this dataset\'s table / map into external pages.' })
     }
     if (shareTabs.length) {
-      result.share = { title: t('share'), tabs: shareTabs }
+      result.share = { title: t('share'), tabs: shareTabs, agentDesc: 'Access control and publication settings for this dataset.' }
     }
   }
 
   // Activity section
-  const activityTabs = []
+  const activityTabs: any[] = []
   if (can('readJournal').value && !d.isMetaOnly) {
-    activityTabs.push({ key: 'journal', title: t('journal'), icon: mdiCalendarText })
+    activityTabs.push({ key: 'journal', title: t('journal'), icon: mdiCalendarText, agentDesc: 'Chronological processing journal: ingestion, indexing, extension execution, errors. The natural first place to look when investigating why a dataset is stuck or in error state.' })
   }
   if ($uiConfig.eventsIntegration) {
     if (can('readJournal').value) {
-      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
+      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this dataset (who did what, when).' })
     }
-    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell, agentDesc: 'Subscribe the current user to in-app / email notifications for events on this dataset (errors, publication, etc.).' })
     if (can('setPermissions').value) {
-      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
+      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure outbound HTTP webhooks fired on dataset events.' })
     }
-    result.activity = { title: t('tracking'), tabs: activityTabs }
+    result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
   }
 
   // Diagnose section (superadmin only)
@@ -1096,13 +1103,14 @@ const sections = computedDeepDiff(() => {
         { key: 'elasticsearch', title: t('diagnoseTabEs'), icon: mdiDatabaseSearch },
         { key: 'locks', title: t('diagnoseTabLocks'), icon: mdiLock },
         { key: 'rawJson', title: t('diagnoseTabRaw'), icon: mdiCodeJson }
-      ]
+      ],
+      agentDesc: 'Superadmin-only diagnostics: Elasticsearch index state, internal locks held on the dataset, and the raw JSON document as stored in MongoDB. Use to investigate stuck or corrupt datasets.'
     }
   }
 
   // Danger zone section
   if (can('changeOwner').value || canDeleteAllLines.value || can('delete').value) {
-    result.dangerZone = { title: t('dangerZone'), tabs: [] }
+    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Irreversible operations: change owner, delete all lines (REST), delete the entire dataset. Always let the user perform these themselves — never trigger them programmatically.' }
   }
 
   return result
@@ -1114,4 +1122,6 @@ const tocSections = computed(() => {
     title: s.title
   }))
 })
+
+useAgentDatasetPageGuidance(locale, sections)
 </script>
