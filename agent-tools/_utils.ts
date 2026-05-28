@@ -43,12 +43,17 @@ export { datasetIdProperty }
 
 /**
  * Build the filter-relevant query params from common tool input params.
- * Returns a URL query string (e.g. "nom_search=Jean&geo_distance=2.35,48.85,10km").
+ * Returns a URL query string (e.g. "nom_search=Jean&_c_geo_distance=2.35,48.85,10km").
  * Excludes pagination (size, page) and tool-specific params (metric, field, etc.).
+ *
+ * `q`, `bbox`, `geo_distance` and `date_match` are emitted with the `_c_` prefix
+ * (concept filters) so they survive the table/map URL sync, which only forwards
+ * `_c_`-prefixed params through `useConceptFilters`. The API accepts both forms
+ * interchangeably.
  */
 export function buildFilterQueryString (params: { q?: string, filters?: Record<string, any>, sort?: string, select?: string, bbox?: string, geoDistance?: string, dateMatch?: string }): string | undefined {
   const searchParams = new URLSearchParams()
-  if (params.q) searchParams.set('q', params.q)
+  if (params.q) searchParams.set('_c_q', params.q)
   if (params.filters) {
     for (const [key, value] of Object.entries(params.filters)) searchParams.set(key, String(value))
   }
@@ -57,9 +62,9 @@ export function buildFilterQueryString (params: { q?: string, filters?: Record<s
     if (normalized) searchParams.set('sort', normalized)
   }
   if (params.select) searchParams.set('select', params.select)
-  if (params.bbox) searchParams.set('bbox', params.bbox)
-  if (params.geoDistance) searchParams.set('geo_distance', params.geoDistance)
-  if (params.dateMatch) searchParams.set('date_match', params.dateMatch)
+  if (params.bbox) searchParams.set('_c_bbox', params.bbox)
+  if (params.geoDistance) searchParams.set('_c_geo_distance', params.geoDistance)
+  if (params.dateMatch) searchParams.set('_c_date_match', params.dateMatch)
   const qs = searchParams.toString()
   return qs || undefined
 }

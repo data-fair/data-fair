@@ -304,8 +304,9 @@ The user types directly in the chat drawer. The agent has access to all globally
 | `describe_processing` | Connectors | R | `agent/connector-tools.ts` |
 | `list_catalogs` | Connectors | R | `agent/connector-tools.ts` |
 | `describe_catalog` | Connectors | R | `agent/connector-tools.ts` |
+| `page_guidance` | Page guidance | R | `dataset/agent-page-guidance-tools.ts` (dataset detail page) |
 
-All source paths are relative to `ui/src/composables/` unless otherwise noted. **W*** = client-side state only (no server write). Connector tools are conditional on integration flags.
+All source paths are relative to `ui/src/composables/` unless otherwise noted. **W*** = client-side state only (no server write). Connector tools are conditional on integration flags. **`page_guidance`** is a page-scoped fallback tool: each page that registers it (currently only the dataset detail page) carries its own essential anti-misroute facts in the tool description and a full page structure / interaction guide in the returned content. The agent is instructed to call it only when unsure how to help the user on the current page.
 
 ## 6. Subagent Reference
 
