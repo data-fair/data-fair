@@ -39,11 +39,6 @@
 		"requires": "Nécessite ",
 		"requiresJoin": " et "
 	},
-	"hasBreakingChanges": "le jeu de données \"{{title}}\" a des ruptures de compatibilité :",
-	"breakingChanges": {
-		"missing": "la colonne \"{{key}}\" n'existe plus",
-		"type": "la colonne \"{{key}}\" a changé de type"
-	},
 	"sheets": {
 		"data": "Données",
 		"metadata": "Métadonnées",
@@ -95,11 +90,11 @@
 		"datasets": {
 			"error": {
 				"title": "Erreur du jeu de données {{label}}",
-				"body": "Il y a eu une erreur pendant le traitement du jeu de données {{label}} : {{detail}}."
+				"body": "Il y a eu une erreur sur le jeu de données {{label}} : {{detail}}."
 			},
 			"draft-error": {
 				"title": "Erreur du brouillon du jeu de données {{label}}",
-				"body": "Il y a eu une erreur pendant le traitement du brouillon du jeu de données {{label}} : {{detail}}."
+				"body": "Il y a eu une erreur sur le brouillon du jeu de données {{label}} : {{detail}}."
 			},
 			"validation-error": {
 				"title": "Erreurs de validation sur le jeu de données {{label}}",
@@ -130,12 +125,28 @@
 				"body": "Le jeu de données {{label}} a été publié sur {{publicationSite}} dans la thématique {{topic}}."
 			},
 			"draft-data-updated": {
+				"title": "Données brouillon mises à jour {{label}}",
+				"body": "Les données du brouillon du jeu de données {{label}} ont été mises à jour."
+			},
+			"draft-data-updated-file": {
 				"title": "Fichier brouillon mis à jour {{label}}",
 				"body": "Un nouveau fichier a été chargé sur le jeu de données {{label}} en mode brouillon."
 			},
+			"draft-data-updated-rest": {
+				"title": "Données brouillon mises à jour {{label}}",
+				"body": "Les données du brouillon du jeu de données {{label}} ont été mises à jour."
+			},
 			"data-updated": {
+				"title": "Données mises à jour {{label}}",
+				"body": "Les données du jeu de données {{label}} ont été mises à jour."
+			},
+			"data-updated-file": {
 				"title": "Fichier mis à jour {{label}}",
 				"body": "Un nouveau fichier a été chargé sur le jeu de données {{label}}."
+			},
+			"data-updated-rest": {
+				"title": "Données mises à jour {{label}}",
+				"body": "Les données du jeu de données {{label}} ont été mises à jour."
 			},
 			"structure-updated": {
 				"title": "Changement de structure {{label}}",
@@ -145,15 +156,19 @@
 				"title": "Changement de structure brouillon {{label}}",
 				"body": "La structure du brouillon du jeu de données {{label}} a été modifiée."
 			},
-			"draft-draft-validated": {
+			"draft-validated": {
 				"title": "Brouillon validé {{label}}",
 				"body": "Le brouillon du jeu de données {{label}} a été validé ({{cause}})."
 			},
 			"breaking-change": {
 				"title": "Rupture de compatibilité de {{label}}",
-				"body": "Le jeu de données {{label}} a été modifié d'une manière qui inclue des risques de rupture de compatibilité : {{breakingChangesDesc}}."
+				"body": "La structure du jeu de données {{label}} a été modifiée et contient une rupture de compatibilité : {{breakingChanges}}."
 			},
-			"draft-draft-cancelled": {
+			"breaking-changes": {
+				"title": "Ruptures de compatibilité de {{label}}",
+				"body": "La structure du jeu de données {{label}} a été modifiée et contient des ruptures de compatibilité : {{breakingChanges}}."
+			},
+			"draft-cancelled": {
 				"title": "Brouillon annulé {{label}}",
 				"body": "Le brouillon du jeu de données {{label}} a été annulé, il est de retour à son état validé précédent."
 			}
@@ -178,6 +193,16 @@
 			"published-topic": {
 				"title": "Publication de {{label}} dans {{topic}}",
 				"body": "L'application {{label}} a été publiée sur {{publicationSite}} dans la thématique {{topic}}."
+			}
+		},
+		"api-key": {
+			"expiring": {
+				"title": "Votre clé d'API {{title}} expire bientôt",
+				"body": "La clé d'API {{title}} expire le {{expireAt}} (dans 3 jours)."
+			},
+			"expired": {
+				"title": "Votre clé d'API {{title}} a expiré",
+				"body": "La clé d'API {{title}} a expiré le {{expireAt}}."
 			}
 		}
 	}

@@ -938,7 +938,8 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
   const line = getLineFromOperation(operation, req._rawBody ?? req.body)
-  res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
+  const finalStatus = operation._status || (definedId ? 200 : 201)
+  res.status(finalStatus).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 

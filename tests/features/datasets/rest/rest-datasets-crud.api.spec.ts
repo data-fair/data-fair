@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne } from '../../../support/workers.ts'
+import { collectNotifs, expectNoNotif } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -83,6 +84,29 @@ test.describe('REST datasets - CRUD', () => {
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4' }), (err: any) => err.status === 404)
     await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
     await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), (err: any) => err.status === 404)
+  })
+
+  test('REST line operations do not emit data-updated notifications', async () => {
+    // Single guard for an editable dataset: any cadence of REST writes (single line, bulk,
+    // delete-all) must stay silent on the notification bus to avoid script-driven spam.
+    // The matching guard for virtual parents lives in virtual-datasets-features.api.spec.ts.
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest-no-notif',
+      schema: [{ key: 'attr1', type: 'string' }]
+    })).data
+
+    const notifs = await collectNotifs()
+    const line = (await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { attr1: 'a' })).data
+    await ax.patch(`/api/v1/datasets/${dataset.id}/lines/${line._id}`, { attr1: 'b' })
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ attr1: 'c' }, { attr1: 'd' }])
+    await ax.delete(`/api/v1/datasets/${dataset.id}/lines`)
+    await waitForFinalize(ax, dataset.id)
+
+    const captured = await notifs.drain()
+    expectNoNotif(captured, `data-fair:dataset-data-updated:${dataset.id}`)
+    expectNoNotif(captured, `data-fair:dataset-data-updated:${dataset.slug}`)
   })
 
   test('Patch with empty string and null should remove properties', async () => {

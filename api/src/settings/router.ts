@@ -99,6 +99,8 @@ function cleanSettings (settings: Settings | DepartmentSettings) {
   if (settings.apiKeys) {
     for (const apiKey of settings.apiKeys) {
       delete apiKey.key
+      delete apiKey.notifiedJ3At
+      delete apiKey.notifiedJAt
     }
   }
   // @ts-ignore
@@ -161,6 +163,11 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
       throw httpError(403, 'Attempt to write an api key secret')
     }
 
+    if (apiKey.notifiedJ3At !== undefined || apiKey.notifiedJAt !== undefined) {
+      eventsLog.alert('df.apikeys.writeflag', 'a user attempted to write an api key internal notification flag', { req, account: req.owner })
+      throw httpError(400, 'API key notification flags are internal and not user-writable')
+    }
+
     if (!apiKey.id) {
       // creating a new key
 
@@ -195,7 +202,7 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
       eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { req, account: req.owner })
       eventsQueue.pushEvent({
         title: 'Création d\'une clé d\'API',
-        body: `${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`,
+        body: `${apiKey.title} (${apiKey.id}), ${apiKey.scopes.length ? `scopes=${apiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
           key: 'data-fair:settings:api-key-created'
         },
@@ -235,7 +242,7 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
       }
       eventsQueue.pushEvent({
         title: 'Suppression d\'une clé d\'API',
-        body: `${existingApiKey.title} (${existingApiKey.id}), scopes=${existingApiKey.scopes.join(', ')}`,
+        body: `${existingApiKey.title} (${existingApiKey.id}), ${existingApiKey.scopes.length ? `scopes=${existingApiKey.scopes.join(', ')}` : 'aucun scope'}`,
         topic: {
           key: 'data-fair:settings:api-key-deleted'
         },

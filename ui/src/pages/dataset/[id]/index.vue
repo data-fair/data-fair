@@ -1080,8 +1080,10 @@ const sections = computedDeepDiff(() => {
     if (can('readJournal').value) {
       activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
     }
-    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
-    if (can('setPermissions').value) {
+    if (!d.isMetaOnly) {
+      activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    }
+    if (can('setPermissions').value && !d.isMetaOnly) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
     }
     result.activity = { title: t('tracking'), tabs: activityTabs }

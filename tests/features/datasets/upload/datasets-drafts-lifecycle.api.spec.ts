@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, getRawDataset, collectNotifications, waitForJournalEvent } from '../../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, getRawDataset, waitForJournalEvent } from '../../../support/workers.ts'
+import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -116,7 +117,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
   })
 
   test('create a draft when updating the data file', async () => {
-    const notifCollector = await collectNotifications()
+    const notifs = await collectNotifs()
 
     // Send dataset
     const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
@@ -190,14 +191,15 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
     assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
-    // TODO: notification assertions disabled - worker-thread notifications are not reliably
-    // captured in the dev environment due to module re-evaluation issues with piscina.
-    // The journal assertions above verify the same event flow.
-    const notifications = await notifCollector.waitForCount(3)
-    await notifCollector.close()
-    assert.equal(notifications[0].topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
-    assert.equal(notifications[1].topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
-    assert.equal(notifications[2].topic.key, 'data-fair:dataset-draft-draft-validated:' + dataset.slug)
+    // dual slug+id emission per event (see notifications.md §12) → 3 events * 2 = 6
+    const captured = await notifs.waitFor(6)
+    for (const base of [
+      'data-fair:dataset-dataset-created',
+      'data-fair:dataset-draft-data-updated',
+      'data-fair:dataset-draft-validated'
+    ]) {
+      expectNotifPair(captured, base, dataset)
+    }
   })
 
   test('create a draft when updating the data file and cancel it', async () => {

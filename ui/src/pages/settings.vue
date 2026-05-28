@@ -312,6 +312,7 @@ fr:
   privateVocabWarning: Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
   agentChatToggle: Activer l'assistant IA
   compatODS: Activer la compatibilité ODS
+  apiKeyExpirationTopic: "Expiration de la clé d'API {title}"
   sections:
     info:
       title: Informations de contact
@@ -358,6 +359,7 @@ en:
   privateVocabWarning: Warning, if you delete a concept referenced in datasets you may cause malfunctions.
   agentChatToggle: Enable AI assistant
   compatODS: Enable ODS compatibility
+  apiKeyExpirationTopic: "API key {title} expiration"
   sections:
     info:
       title: Contact information
@@ -392,6 +394,7 @@ en:
 <script setup lang="ts">
 import type { Settings } from '#api/types'
 import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdiBookAlphabet } from '@mdi/js'
+import { $fetch } from '../context.js'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
@@ -474,7 +477,39 @@ const compatEdit = settingsEditFetch.createSubEdit(['compatODS'], { success: t('
 
 // Auto-save: trigger save when hasDiff becomes true
 watch(infoEdit.hasDiff, (dirty) => { if (dirty) infoEdit.save.execute() })
-watch(apiKeysEdit.hasDiff, (dirty) => { if (dirty) apiKeysEdit.save.execute() })
+watch(apiKeysEdit.hasDiff, async (dirty) => {
+  if (!dirty) return
+  const prevIds = new Set(
+    (settingsEditFetch.serverData.value?.apiKeys ?? []).map(k => k.id).filter(Boolean)
+  )
+  await apiKeysEdit.save.execute()
+  const afterApiKeys = settingsEditFetch.serverData.value?.apiKeys ?? []
+  const newKeys = afterApiKeys.filter(k => k.id && !prevIds.has(k.id) && k.clearKey)
+  for (const apiKey of newKeys) {
+    try {
+      await $fetch(`${window.location.origin}/events/api/subscriptions`, {
+        method: 'POST',
+        body: {
+          topic: {
+            key: `data-fair:api-key-expiration:${apiKey.id}`,
+            title: t('apiKeyExpirationTopic', { title: apiKey.title })
+          },
+          sender: {
+            id: settingsAccount.value.id,
+            type: settingsAccount.value.type,
+            name: settingsAccount.value.name,
+            ...(settingsAccount.value.department ? { department: settingsAccount.value.department } : {})
+          },
+          outputs: ['devices', 'email'],
+          urlTemplate: window.location.href
+        }
+      })
+    } catch (err: any) {
+      console.error('Failed to auto-subscribe to api-key expiration', err)
+      // Non-fatal — the user can still subscribe manually via the bell button.
+    }
+  }
+})
 watch(webhooksEdit.hasDiff, (dirty) => { if (dirty) webhooksEdit.save.execute() })
 watch(agentChatEdit.hasDiff, (dirty) => { if (dirty) agentChatEdit.save.execute() })
 watch(compatEdit.hasDiff, (dirty) => { if (dirty) compatEdit.save.execute() })

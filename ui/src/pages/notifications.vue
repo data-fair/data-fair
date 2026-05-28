@@ -1,5 +1,6 @@
 <template>
   <v-container>
+    <!-- Devices -->
     <h2 class="mt-8 mb-2 text-title-large">
       {{ t('devices') }}
     </h2>
@@ -9,6 +10,7 @@
       @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
 
+    <!-- Datasets -->
     <h2 class="mt-8 mb-2 text-title-large">
       {{ account.type === 'organization'
         ? t('datasetsOrgEvents', { name: account.name + (account.department ? ' / ' + (account.departmentName || account.department) : '') })
@@ -20,6 +22,7 @@
       @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
 
+    <!-- Applications -->
     <h2 class="mt-8 mb-2 text-title-large">
       {{ account.type === 'organization'
         ? t('appsOrgEvents', { name: account.name + (account.department ? ' / ' + (account.departmentName || account.department) : '') })
@@ -31,6 +34,7 @@
       @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
     />
 
+    <!-- Publication sites -->
     <template v-if="$uiConfig.portalsIntegration">
       <h2 class="mt-8 mb-2 text-title-large">
         {{ t('sites', { name: account.name }) }}
@@ -39,12 +43,12 @@
         v-model="selectedSite"
         :items="publicationSites"
         :item-title="(site: any) => site.title || site.url || site.id"
-        variant="outlined"
-        style="max-width:500px"
         :label="t('selectSite')"
+        style="max-width:500px"
+        variant="outlined"
+        class="mt-6 mb-2"
         hide-details
         return-object
-        class="mt-6 mb-3"
       />
       <template v-if="selectedSite">
         <d-frame
@@ -76,48 +80,43 @@
 </template>
 
 <script setup lang="ts">
-import settingsSchema from '../../../api/types/settings/schema.js'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+import settingsSchema from '../../../api/types/settings/schema.js'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { sendUiNotif } = useUiNotif()
 const { account, accountRole } = useSessionAuthenticated()
 const breadcrumbs = useBreadcrumbs()
 breadcrumbs.receive({ breadcrumbs: [{ text: t('notifications') }] })
 
-const webhooksSchema = settingsSchema.properties.webhooks
+const eventOptions = settingsSchema.properties.webhooks.items.properties.events.items.oneOf as Array<{
+  const: string
+  title: string
+  'x-i18n-title'?: Record<string, string>
+}>
 
-const datasetsSubscribeUrl = computed(() => {
-  const webhooks = webhooksSchema.items.properties.events.items.oneOf
-    .filter((item: any) => item.const.startsWith('dataset') && item.const !== 'dataset-finalize-end')
-  const keysParam = webhooks.map((w: any) => 'data-fair:' + w.const).join(',')
-  const titlesParam = webhooks.map((w: any) => w.title.replace(/,/g, ' ')).join(',')
-  const urlTemplate = $siteUrl + '/data-fair/dataset/{id}'
+const localizedTitle = (opt: typeof eventOptions[number]) =>
+  (opt['x-i18n-title']?.[locale.value] ?? opt.title).replace(/,/g, ' ')
+
+// finalize-end is a webhook-only firehose, skip it from user subscriptions
+const subscriptionExcluded = new Set(['dataset-finalize-end'])
+
+const buildSubscribeUrl = (resourceType: 'dataset' | 'application') => {
+  const entries = eventOptions.filter(o =>
+    o.const.startsWith(resourceType + '-') && !subscriptionExcluded.has(o.const)
+  )
   const searchParams = new URLSearchParams({
-    key: keysParam,
-    title: titlesParam,
-    'url-template': urlTemplate,
+    key: entries.map(o => 'data-fair:' + o.const).join(','),
+    title: entries.map(localizedTitle).join(','),
+    'url-template': `${$siteUrl}/data-fair/${resourceType}/{id}`,
     register: 'false',
     header: 'no'
   }).toString()
   return `${$sitePath}/events/embed/subscribe?${searchParams}`
-})
+}
 
-const appsSubscribeUrl = computed(() => {
-  const webhooks = webhooksSchema.items.properties.events.items.oneOf
-    .filter((item: any) => item.const.startsWith('application'))
-  const keysParam = webhooks.map((w: any) => 'data-fair:' + w.const).join(',')
-  const titlesParam = webhooks.map((w: any) => w.title.replace(/,/g, ' ')).join(',')
-  const urlTemplate = $siteUrl + '/data-fair/application/{id}'
-  const searchParams = new URLSearchParams({
-    key: keysParam,
-    title: titlesParam,
-    'url-template': urlTemplate,
-    register: 'false',
-    header: 'no'
-  }).toString()
-  return `${$sitePath}/events/embed/subscribe?${searchParams}`
-})
+const datasetsSubscribeUrl = computed(() => buildSubscribeUrl('dataset'))
+const appsSubscribeUrl = computed(() => buildSubscribeUrl('application'))
 
 // Load publication sites and topics
 const settingsPublicationSitesFetch = useFetch<any[]>(() => {

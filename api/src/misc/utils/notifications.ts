@@ -1,7 +1,9 @@
 import config from '#config'
+import mongo from '#mongo'
 import axios from './axios.js'
 import debugLib from 'debug'
 import i18n from 'i18n'
+import { nanoid } from 'nanoid'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import eventsQueue, { type PushEvent } from '@data-fair/lib-node/events-queue.js'
 import { type AccountKeys, reqUserAuthenticated, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -41,44 +43,73 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
     en: i18n.__({ phrase: bodyI18nKey, locale: 'en' }, { label: fullLabel, ...options.params, ...options.localizedParams?.en })
   }
   const fullKey = (resource as Dataset).draftReason ? `${singularResourceType}-draft-${key}` : `${singularResourceType}-${key}`
-  const event: PushEvent = {
+  // see notifications.md §3 (error umbrella) and §12 (dual slug/id emission)
+  const umbrellaKey = `${singularResourceType}-error`
+  const emitUmbrella = (key === 'error' || key === 'validation-error') && fullKey !== umbrellaKey
+  const eventId = nanoid()
+  const slug = resource.slug
+  const buildEvent = (topicKey: string, topicTail: string): PushEvent => ({
+    _id: eventId,
     sender,
-    topic: { key: `data-fair:${fullKey}:${resource.slug || resource.id}` },
+    topic: { key: `data-fair:${topicKey}:${topicTail}` },
     title,
     body,
-    urlParams: { id: resource.id, slug: resource.slug ?? '' },
+    urlParams: { id: resource.id, slug: slug ?? '' },
     visibility: permissions.isPublic(resourceType, resource) ? 'public' : 'private',
     resource: { type: singularResourceType, id: resource.id, title: resource.title },
     extra: options.extra
-  }
+  })
 
-  if (typeof originator === 'string') {
-    event.originator = { internalProcess: { id: originator } }
-    await send(event)
-  } else {
-    await send(event, originator)
+  // id+specific first wins the events-service _id unique index → stored event keeps the canonical shape
+  const topicTails = slug && slug !== resource.id ? [resource.id, slug] : [resource.id]
+  const topicKeys = emitUmbrella ? [fullKey, umbrellaKey] : [fullKey]
+
+  for (const topicTail of topicTails) {
+    for (const topicKey of topicKeys) {
+      const event = buildEvent(topicKey, topicTail)
+      if (typeof originator === 'string') {
+        event.originator = { internalProcess: { id: originator } }
+        await send(event)
+      } else {
+        await send(event, originator)
+      }
+    }
+  }
+}
+
+// Mirror a child dataset's data-updated emission on every parent virtual dataset
+// referencing it via `virtual.children`. Same i18nKey/localizedParams are passed
+// through so portal-side subscribers see a uniform body, with no leakage of child
+// identity or virtual-ness. The mongo lookup uses the `virtual.children_1` index.
+export const propagateDataUpdatedToVirtualParents = async (
+  childDataset: Pick<Dataset, 'id'>,
+  originator: SessionStateAuthenticated | string,
+  options: Pick<SendResourceEventOptions, 'i18nKey' | 'localizedParams' | 'params' | 'extra'> = {}
+) => {
+  for await (const virtualParent of mongo.datasets.find({ 'virtual.children': childDataset.id })) {
+    await sendResourceEvent('datasets', virtualParent, originator, 'data-updated', options)
   }
 }
 
 export const send = async (event: PushEvent, sessionState?: SessionState) => {
+  if (!isMainThread) {
+    // Piscina suspends idle workers via Atomics.wait, blocking the events-queue
+    // setTimeout drain loop. Forward to the main thread (handled in workers/tasks.ts).
+    // @ts-ignore
+    parentPort?.postMessage(event)
+    return
+  }
   if (process.env.NODE_ENV === 'development') {
-    if (isMainThread) {
-      testEvents.emit('notification', event)
-      // Also push to test notification buffer
-      const { capturedNotifications } = await import('./test-notif-buffer.ts')
-      capturedNotifications.push(event)
-    } else {
-      // @ts-ignore
-      parentPort?.postMessage(event)
+    testEvents.emit('notification', event)
+    const { capturedNotifications } = await import('./test-notif-buffer.ts')
+    capturedNotifications.push(event)
+  }
+  if (config.privateEventsUrl) {
+    if (sessionState?.user && (sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
+      event.originator = { apiKey: { id: sessionState.user.id.replace('apiKey:', ''), title: sessionState.user.name } }
     }
-  } else {
-    if (config.privateEventsUrl) {
-      if (sessionState?.user && (sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
-        event.originator = { apiKey: { id: sessionState.user.id.replace('apiKey:', ''), title: sessionState.user.name } }
-      }
-      debug('send event to events queue', event)
-      eventsQueue.pushEvent(event, sessionState)
-    }
+    debug('send event to events queue', event)
+    eventsQueue.pushEvent(event, sessionState)
   }
 }
 

@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '../../support/axios.ts'
 import { clearPublicationSitesCache, validateDcat } from '../../support/workers.ts'
-import { TestEventClient } from '../../support/events.ts'
+import { collectNotifs, expectNotifPair } from '../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
@@ -136,29 +136,19 @@ test.describe('publication sites', () => {
   })
 
   test('department admin can request publishing dataset on org site', async () => {
-    const events = new TestEventClient()
-    await events.ready
-    try {
-      const notifs: any[] = []
-      events.on('notification', (n: any) => notifs.push(n))
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
 
-      const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-      await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    const notifs = await collectNotifs()
+    await testUser4Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
+    const base = 'data-fair:dataset-publication-requested:data-fair-portals:portal1'
+    const captured = await notifs.waitFor(2, { keyPrefix: base })
 
-      const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-      await testUser4Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
-
-      // Wait briefly for notification to arrive via SSE
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const notif = notifs.find((n: any) => n.topic?.key?.includes('publication-requested'))
-      assert.ok(notif, 'expected a publication-requested notification')
-      assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
-      assert.equal(notif.sender.type, 'organization')
-      assert.equal(notif.sender.id, 'test_org1')
-      assert.equal(notif.sender.department, undefined)
-    } finally {
-      events.close()
-    }
+    const { id } = expectNotifPair(captured, base, dataset)
+    assert.equal(id.sender.type, 'organization')
+    assert.equal(id.sender.id, 'test_org1')
+    assert.equal(id.sender.department, undefined)
   })
 
   test('department admin can publish dataset on department site', async () => {
@@ -194,29 +184,19 @@ test.describe('publication sites', () => {
   })
 
   test('department contrib can request publishing dataset on department site', async () => {
-    const events = new TestEventClient()
-    await events.ready
-    try {
-      const notifs: any[] = []
-      events.on('notification', (n: any) => notifs.push(n))
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
+    await testUser4Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', portal)
+    const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
 
-      const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-      await testUser4Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', portal)
+    const notifs = await collectNotifs()
+    await testUser6Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
+    const base = 'data-fair:dataset-publication-requested:data-fair-portals:portal1'
+    const captured = await notifs.waitFor(2, { keyPrefix: base })
 
-      const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-      await testUser6Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
-
-      // Wait briefly for notification to arrive via SSE
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const notif = notifs.find((n: any) => n.topic?.key?.includes('publication-requested'))
-      assert.ok(notif, 'expected a publication-requested notification')
-      assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
-      assert.equal(notif.sender.type, 'organization')
-      assert.equal(notif.sender.id, 'test_org1')
-      assert.equal(notif.sender.department, 'dep1')
-    } finally {
-      events.close()
-    }
+    const { id } = expectNotifPair(captured, base, dataset)
+    assert.equal(id.sender.type, 'organization')
+    assert.equal(id.sender.id, 'test_org1')
+    assert.equal(id.sender.department, 'dep1')
   })
 
   test('contrib can publish on a "staging" publication site', async () => {

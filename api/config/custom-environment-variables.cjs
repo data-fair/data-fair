@@ -1,6 +1,7 @@
 module.exports = {
   port: 'PORT',
   mode: 'MODE',
+  apiKeysExpirationCron: 'API_KEYS_EXPIRATION_CRON',
   publicUrl: 'PUBLIC_URL',
   oldPublicUrl: 'OLD_PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',

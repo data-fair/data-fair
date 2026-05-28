@@ -10,7 +10,7 @@ import * as datasetUtils from './utils/index.js'
 import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.js'
 import * as webhooks from '../misc/utils/webhooks.ts'
-import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import { sendResourceEvent, propagateDataUpdatedToVirtualParents } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir } from './utils/files.ts'
@@ -585,22 +585,28 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
 
   if (datasetFull.file) {
     webhooks.trigger('datasets', patchedDataset, { type: 'data-updated' }, null)
-    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
+    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated', { i18nKey: 'data-updated-file' })
+    await propagateDataUpdatedToVirtualParents(patchedDataset, 'data-fair-worker', { i18nKey: 'data-updated-file' })
+
+    // reuse the canonical compatibility check (strips innocuous props like description/title/enum)
+    // so this path matches the router PATCH behaviour.
+    if (!datasetUtils.schemasFullyCompatible(datasetFull.schema, patchedDataset.schema, true)) {
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'structure-updated', { extra: { patch: 'schema' } })
+    }
+
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
-      const breakingChangesDesc = i18n.getLocales().reduce((a, locale) => {
-        let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
-        for (const breakingChange of breakingChanges) {
-          msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
-        }
-        a[locale] = { breakingChanges: msg }
+      const breakingChangesList = breakingChanges.map(bc => bc.summary).join(', ')
+      const localizedParams = i18n.getLocales().reduce((a, locale) => {
+        a[locale] = { breakingChanges: breakingChangesList }
         return a
       }, {})
+      const i18nKey = breakingChanges.length === 1 ? 'breaking-change' : 'breaking-changes'
       webhooks.trigger('datasets', patchedDataset, {
         type: 'breaking-change',
-        body: breakingChangesDesc
+        body: localizedParams
       })
-      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc })
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { i18nKey, localizedParams })
     }
   }
 

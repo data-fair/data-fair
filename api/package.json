@@ -88,6 +88,7 @@
     "multer": "^1.4.5-lts.1",
     "nanoid": "^5.0.9",
     "ngeohash": "^0.6.3",
+    "node-cron": "^4.2.1",
     "node-dir": "^0.1.17",
     "number-abbreviate": "^2.0.0",
     "object-hash": "^3.0.0",
