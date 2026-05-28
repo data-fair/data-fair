@@ -1,7 +1,12 @@
 import type { SchemaContext } from './generator.ts'
 import { trackTotalHitsExperiments } from './experiments/track-total-hits.ts'
 import { searchCatchallExperiments } from './experiments/search-catchall.ts'
+import { searchCatchallCurveExperiments } from './experiments/search-catchall-curve.ts'
+import { keywordMainInQExperiments } from './experiments/keyword-main-in-q.ts'
 import { minShouldMatchExperiments } from './experiments/min-should-match.ts'
+import { msmSearchVsSplitExperiments } from './experiments/msm-search-vs-split.ts'
+import { terminateAfterExperiments } from './experiments/terminate-after.ts'
+import { msmSkewedExperiments } from './experiments/msm-skewed.ts'
 
 export interface QueryVariant {
   name: string
@@ -21,7 +26,12 @@ export interface Experiment {
 export const allExperiments: Experiment[] = [
   ...trackTotalHitsExperiments,
   ...searchCatchallExperiments,
-  ...minShouldMatchExperiments
+  ...searchCatchallCurveExperiments,
+  ...keywordMainInQExperiments,
+  ...minShouldMatchExperiments,
+  ...msmSearchVsSplitExperiments,
+  ...terminateAfterExperiments,
+  ...msmSkewedExperiments
 ]
 
 const byName = new Map(allExperiments.map(e => [e.name, e]))

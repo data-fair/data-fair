@@ -29,7 +29,8 @@ test('selectExperiments throws on an unknown name', () => {
   assert.throws(() => selectExperiments('bogus'), /unknown experiment/)
 })
 
-// --- field-targeting guard (catches experiments querying non-analyzed fields) ---
+// --- field-targeting guard (catches experiments querying invalid fields — e.g. an
+// analyzed column queried via its keyword main when the experiment meant .text) ---
 
 function referencedFields (node: any): string[] {
   if (!node || typeof node !== 'object') return []
@@ -43,19 +44,22 @@ function referencedFields (node: any): string[] {
   return fields
 }
 
-function isAnalyzedTarget (field: string, ctx: SchemaContext): boolean {
+function isValidQueryTarget (field: string, ctx: SchemaContext): boolean {
   if (field === '_search' || field === '_search.text_standard') return true
+  // pure-keyword columns are a valid query target (they have no analyzed inner field —
+  // their main keyword IS the search surface, e.g. the keyword-main-in-q experiment)
+  if (ctx.keywordFields.includes(field)) return true
   const m = field.match(/^(.+)\.(text|text_standard)$/)
   return m !== null && ctx.fullTextFields.includes(m[1])
 }
 
-test('experiment queries only target analyzed text fields', () => {
+test('experiment queries target valid analyzed-text or pure-keyword fields', () => {
   for (const exp of allExperiments) {
     const ctx = schemaContext(generateSchema(getPreset(exp.preset)))
     for (const v of [exp.baseline, ...exp.variants]) {
       for (const field of referencedFields(v.body(ctx).query)) {
-        assert.ok(isAnalyzedTarget(field, ctx),
-          `${exp.name}/${v.name} targets non-analyzed field "${field}"`)
+        assert.ok(isValidQueryTarget(field, ctx),
+          `${exp.name}/${v.name} targets invalid field "${field}"`)
       }
     }
   }

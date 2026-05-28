@@ -14,6 +14,12 @@ restricting consumers more than the evidence justifies.
 > the new §9 "Unbounded-complexity read paths"); raw harness results are under
 > `benchmark/results/`. The only follow-up still open is a dedicated spec for the
 > `track_total_hits` cap (investigation 2) — the one finding that implies a behaviour change.
+>
+> **Round 2 (2026-05-28).** A second round of investigations (E1–E5, items 6–10 below)
+> explored text-search simplification + bounded-complexity threads — findings recorded in
+> the new `docs/architecture/text-search-evaluation.md`, which is the single trace doc for
+> that whole design discussion. This worktree (`perf-es-optims`) holds the benchmark and
+> the discussion only; implementation lands in other worktrees later.
 
 ## Prerequisites
 
@@ -184,6 +190,120 @@ of investigations 2–4 produced it) and a proposed bound.
 source; the streaming-export item was stale (see above). Consolidated into a new
 `load-management.md` §9 "Unbounded-complexity read paths", with the §4 and §8 streaming-export
 descriptions corrected.
+
+---
+
+## Round 2 — text-search simplification & bounded-complexity (2026-05-28)
+
+Brainstorm-derived investigations exploring how `q` query construction could be simplified
+and bounded. The 13 design threads (T1–T13) are catalogued in
+`docs/architecture/text-search-evaluation.md`; the §5 "Recommendations" there is the
+durable artifact this worktree leaves for the implementation worktrees.
+
+## 6. Search-catchall cost curve vs field count
+
+Targets thread **T2** (always materialise `_search`).
+
+**Hypothesis.** The current threshold `Q_SEARCH_FIELDS_THRESHOLD = 30` is conservative;
+`_search` becomes a clear win at far fewer fields. The per-column path's cost grows
+roughly linearly with the field-list length.
+
+**Run.**
+```sh
+npm run benchmark -- experiment --name=search-catchall-curve --profile --runs=20
+```
+
+**Outcome (2026-05-28).** Per-column `took` and profile time grow roughly linearly with
+sub-field count (8 cols / 16 sub-fields = 23 ms, 40 cols / 80 sub-fields = 354 ms);
+`_search` is constant at ~5 ms (profile ~58 ms). Crossover at ~2 cols; `_search` wins
+decisively from 4 cols up. Caveat: the `_search` field measured held the full 40-column
+content, so a real narrow-`_search` is likely faster still. Recorded in
+`docs/architecture/text-search-evaluation.md` (§2 T2 and §5 R2). Result:
+`benchmark/results/experiment-2026-05-28T07-29-45-080Z.json`.
+
+## 7. Cost vs recall of keyword mains in `q`
+
+Targets thread **T1** (drop keyword mains from `qSearchFields`?).
+
+**Hypothesis.** A multi-term `q` can only hit a keyword main on whole-token equality, so
+the mains are dead weight for free-text queries — drop them.
+
+**Run.**
+```sh
+npm run benchmark -- experiment --name=keyword-main-in-q --profile --runs=20
+```
+
+**Outcome (2026-05-28).** Hypothesis **refuted**. Three query shapes on `bench-wide-text`
+with `track_total_hits: 1_000_000` for exact totals: a free-text query (`"analyse
+population"`) shows zero cost difference and identical totals (the kw postings are empty
+for text vocab; ES short-circuits); a mixed query (`"analyse cat-alpha"`) drops 189 hits
+without kw mains; a bare keyword (`"cat-alpha"`) drops to 0 hits — total recall loss.
+**Keep keyword mains in `qSearchFields`.** Recorded in §5 R1. Result:
+`experiment-2026-05-28T07-31-39-045Z.json`.
+
+## 8. msm on a query with genuine match-set skew
+
+Targets thread **T6** (does msm earn its cost when it filters heavily?).
+
+**Hypothesis.** Inv 4 used a uniformly-distributed vocabulary so msm couldn't filter
+anything; this experiment constructs skew (one common analyzed term + 5 keyword
+categories) so msm genuinely drops matches at higher thresholds.
+
+**Run.**
+```sh
+npm run benchmark -- experiment --name=msm-skewed --profile --runs=20
+```
+
+**Outcome (2026-05-28).** Hypothesis **confirmed**. As msm rises and the match set
+shrinks, `took` drops monotonically: msm=4 (1.25× filter) –7.9 %, msm=5 (2.5×) –22.8 %,
+msm=6 (13× filter, the extreme) **–57 %**. Top-20 changes from msm=5 upward (expected —
+different pool). Combined with E4 and Inv 4 the position is: msm is a *conditional*
+tool — useful when the query has real IDF skew, harmful when uniform; must be opt-in;
+must run on `_search`. Recorded in §5 R5. Result:
+`experiment-2026-05-28T07-39-25-618Z.json`.
+
+## 9. msm on `_search` vs on per-column
+
+Targets thread **T7** (which surface should msm run on?).
+
+**Hypothesis.** The match set should be identical (per-term disjunction across fields, msm
+counts terms); the per-column scorer coordinates 80 sub-iterators vs 2 for `_search`, so
+the cost gap should be large.
+
+**Run.**
+```sh
+npm run benchmark -- experiment --name=msm-search-vs-split --profile --runs=20
+```
+
+**Outcome (2026-05-28).** Match sets identical at every msm level (search-msm-5 and
+split-msm-5 both return 298 673). msm on `_search` is **15× cheaper** than msm on
+per-column (search-msm-3 41 ms vs split-msm-3 626 ms; profile 161 ms vs 1923 ms). msm
+*hurts* on `_search` (slower than no-msm — Inv 4 again) but *helps* on per-column
+(–60 % at msm-3) — the per-column win is incidental to its very-high baseline cost. If
+ever exposed, msm must run on `_search`. Recorded in §5 R5 and §3 T7. Result:
+`experiment-2026-05-28T07-34-56-465Z.json`.
+
+## 10. `terminate_after` as a cost cap
+
+Targets thread **T5** (right ceiling value and quality trade-off).
+
+**Hypothesis.** `terminate_after` is the simplest hard latency cap; lower caps trade
+correctness for cost. Find the smallest cap that doesn't drift top-N on representative
+heavy queries.
+
+**Run.**
+```sh
+npm run benchmark -- experiment --name=terminate-after --profile --runs=20
+```
+
+**Outcome (2026-05-28).** The framing shifts: `terminate_after` is a *visit-count* cap,
+not a score-aware one. At `cap=1000` `took` falls 7 → 1 ms but top-20 drifts (the cap
+stops collection in doc-id-within-block order, not by score). At `cap≥100 000` on this
+2M-row corpus the cap doesn't kick in and top-20 matches the baseline exactly. **Use as
+a HIGH ceiling** (cosmetic on normal traffic; bounds pathological queries with accepted
+drift), not a low cap. Recorded in §5 R4 (and reframes the load-management.md §9
+`terminate_after` proposal). Result:
+`experiment-2026-05-28T07-36-25-089Z.json`.
 
 ---
 
