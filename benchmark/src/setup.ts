@@ -52,6 +52,14 @@ export async function init (): Promise<void> {
       for (const cookie of fresh.cookieJar.getCookiesSync(sdOrigin)) {
         ax.cookieJar.setCookieSync(cookie.toString(), sdOrigin)
       }
+      // axios already ran transformRequest on the first attempt, so config.data is now a
+      // serialized JSON string. Retried as-is, axios sends a string body without re-deriving
+      // the Content-Type — and the _bulk_lines endpoint rejects a bodied POST that lacks it
+      // with a 415. Re-assert the JSON Content-Type for string bodies before retrying.
+      if (typeof config.data === 'string') {
+        config.headers = config.headers ?? {}
+        config.headers['Content-Type'] = 'application/json'
+      }
       return ax.request(config)
     }
     return Promise.reject(error)

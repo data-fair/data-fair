@@ -9,9 +9,11 @@ The goal throughout is **guardrails that protect the infrastructure and quality 
 service while keeping queries as powerful and as API-compatible as possible** — not
 restricting consumers more than the evidence justifies.
 
-> Status: the harness ships executable *definitions* for experiments 2–4. Running them
-> at scale and recording the findings is the work tracked here. Experiment 5 is a code
-> audit, not a harness run.
+> Status: investigations 2–5 ran on 2026-05-22 (commit `f0c210acc`) — see the **Outcome**
+> note under each. Findings are recorded in `docs/architecture/load-management.md` (§6 and
+> the new §9 "Unbounded-complexity read paths"); raw harness results are under
+> `benchmark/results/`. The only follow-up still open is a dedicated spec for the
+> `track_total_hits` cap (investigation 2) — the one finding that implies a behaviour change.
 
 ## Prerequisites
 
@@ -73,6 +75,17 @@ scoring requests (those with `q`) — the UI already handles estimated `gte` tot
 lose). Record numbers + recommendation in `docs/architecture/load-management.md` §6/§9;
 a behaviour change gets its own spec.
 
+**Outcome (2026-05-22, commit `f0c210acc`).** Confirmed — with one correction. On `bench-tall`
+(2M rows) capping `track_total_hits` to `10000` cut a heavy scoring disjunction's `took` ~38 %
+(warm + cold) and ~2× its profile query time; high-cardinality term/filter predicates collapsed
+from ~15–27 ms to <1 ms of profile time; a low-cardinality conjunction (~5k matches) was
+unaffected. `cap-100k` did not help the heavy queries — `10000` is the useful cap. The premise
+that *filter-only* is unaffected did **not** hold: exact counting forces a full match enumeration
+even without scoring. Recorded in `load-management.md` §6/§9. The cap is a behaviour change and
+still needs its own spec before implementation. Raw results:
+`benchmark/results/experiment-2026-05-22T14-44-43-724Z.json` (warm),
+`experiment-2026-05-22T14-45-25-052Z.json` (cold).
+
 ## 3. Validate the `_search` catch-all optimization
 
 **Background.** Commit `0bc454fb4` added a `_search` catch-all field for wide datasets:
@@ -96,6 +109,13 @@ Confirm `hits.total` matches closely (the two should be near-equivalent in recal
 
 **Where it lands.** Confirmation (or correction) of the released optimization's effect,
 recorded in `load-management.md` §6.
+
+**Outcome (2026-05-22, commit `f0c210acc`).** Confirmed decisively. On `bench-wide-text` (300k
+rows, 40 text columns) a `q` over the 80 per-column analyzed fields took ~384 ms (`took` p50;
+profile ~968 ms) vs ~5 ms (profile ~61 ms) over the `_search` pair — **~77× cheaper**. Top-k
+ranking differs (merged term statistics) but recall is comparable. Recorded in
+`load-management.md` §6. Raw result:
+`benchmark/results/experiment-2026-05-22T14-46-19-391Z.json`.
 
 ## 4. `minimum_should_match` on `simple_query_string`
 
@@ -127,6 +147,13 @@ this 5-term experiment into a percentage. If a small percentage gives a worthwhi
 speedup with acceptable divergence, propose it as a default in `prepareQuery`; otherwise
 document why not. Record in `load-management.md` §6.
 
+**Outcome (2026-05-22, commit `f0c210acc`).** Hypothesis **refuted** — no default
+`minimum_should_match` should be added. On `bench-wide-text` adding `minimum_should_match` to a
+5-term `q` made it 1.3–2.5× *slower* (none 15.5 ms → msm-2/3/4 ~37–39 ms → msm-5 20 ms) with no
+change to the top-N hits: block-max-WAND skips a plain disjunction more aggressively than the
+N-of-M scorer does. Recorded in `load-management.md` §6. Raw result:
+`benchmark/results/experiment-2026-05-22T14-46-40-709Z.json`.
+
 ## 5. Audit & document unbounded-complexity requests
 
 **Background.** Not a harness run — a code audit. `load-management.md` §6/§9 already
@@ -134,21 +161,29 @@ names several read paths with effectively unbounded ES work.
 
 **Checklist (expand into `load-management.md` updates).**
 
-- [ ] `search.ts` / agg calls — **no `terminate_after`**: a single query can scan an
-      unbounded number of docs per shard.
-- [ ] `values-agg.js` — combined fan-out `Π agg_size × size` only **logs a warning** at
-      100,000; a `400` is thrown only *after* ES returns >10,000 buckets. It does not
-      block before execution.
-- [ ] Deep offset pagination — bounded by `from + size ≤ maxPageSize` (10,000), but
-      still scans up to that depth.
-- [ ] Exact `track_total_hits` on page 1 of very large datasets (→ investigation 2).
-- [ ] Streaming export paths (`/full`, ODS `/exports`, `master-data/bulk-searchs`) — not
-      wired for disconnect-abort and bill 0 against the compute budget.
-- [ ] No `index.search.slowlog` — no ES-side signal for which dataset is being hammered.
+- [x] `search.ts` / agg calls — **no `terminate_after`**: confirmed (zero occurrences in
+      `api/src`); a single query can scan an unbounded number of docs per shard.
+- [x] `values-agg.js` — combined fan-out `Π agg_size × size` is pre-checked before execution
+      *only* when `size > 100` (`values-agg.js:85`); for `size ≤ 100` (incl. `size: 0`) it
+      merely **logs a warning** past 100,000. The hard `400` fires only *after* ES returns
+      >10,000 buckets (`values-agg.js:241`).
+- [x] Deep offset pagination — bounded by `from + size ≤ maxPageSize` (10,000), but still
+      does top-k collection over that depth. Confirmed (`commons.js:162-173`).
+- [x] Exact `track_total_hits` on page 1 of very large datasets (→ investigation 2).
+- [x] Streaming export paths — **claim was stale**: ODS `/exports` *is* wired for
+      disconnect-abort (commit `56249d22a`); `/full` is a pre-computed file download (no ES
+      query). Only `master-data/bulk-searchs` is genuinely unwired and unbilled.
+- [x] No `index.search.slowlog` — confirmed (zero occurrences); no ES-side signal for which
+      dataset is being hammered.
 
 **Where it lands.** A consolidated "unbounded-complexity requests" section in
 `docs/architecture/load-management.md`, each item with the harness evidence (where one
 of investigations 2–4 produced it) and a proposed bound.
+
+**Outcome (2026-05-22).** Audit complete. Five of the six items confirmed against current
+source; the streaming-export item was stale (see above). Consolidated into a new
+`load-management.md` §9 "Unbounded-complexity read paths", with the §4 and §8 streaming-export
+descriptions corrected.
 
 ---
 

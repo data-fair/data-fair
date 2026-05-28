@@ -100,9 +100,11 @@ one and **self-adapts**: when the cluster slows down every query bills more → 
 → fewer queries admitted → the cluster recovers. Limitations (all carried over from the
 request-count limiter): per-pod / per-IP / in-memory (does nothing against a *distributed* flood);
 charged *after* the request, so it throttles a *sustained* heavy consumer rather than an
-instantaneous burst; and the disconnect-only streaming export paths (`/full`, ODS `/exports`,
-`master-data/bulk-searchs`) currently bill 0 (the same set not yet wired for abort, below). Bypassed
-by `x-ignore-rate-limiting`; cleared by the test reset endpoint and the 20-min sweep.
+instantaneous burst; and `master-data/bulk-searchs` bills 0 (not wired for `timedEsCall`). ODS
+`/exports` is wired for disconnect-abort but still bills 0 (it passes the abort context straight to
+`esClient.search`, bypassing `timedEsCall`); `/full` is a pre-computed file download with no ES
+work to bill. Bypassed by `x-ignore-rate-limiting`; cleared by the test reset endpoint and the
+20-min sweep.
 
 The `429 errors.exceedComputeBudget` body (for `GET` requests) carries an appended, localized
 *query-shape advice* sentence derived from the request's own parameters (`queryAdvice`,
@@ -142,7 +144,8 @@ so a throttled client is told what to change, not just that it was throttled.
   `search_after` keyset pagination is the recommended path).
 - `track_total_hits`: `true` on page 1 — i.e. an **exact** hit count, which on a very large dataset
   is itself expensive; `false` when `count=false` or when `after` (keyset) is used; `1000` when
-  `count=estimate`.
+  `count=estimate`. An exact count visits *every* match and forfeits Lucene's block-max-WAND top-k
+  skipping — measured cost and a proposed cap are in §9.
 - `_source` defaults to all schema fields except the heavy geo-index fields (`_geoshape`,
   `_geocorners`); `select` validated against the schema.
 - **Not** set: `terminate_after` — a single query can scan an unbounded number of documents per
@@ -201,13 +204,24 @@ column. For virtual datasets, `_esCopyToSearch` bubbles up as `true` only when e
 has it. When `q_fields` is supplied explicitly the catch-all is bypassed entirely and the query
 targets only the requested columns, as before.
 
+**Measured** (benchmark harness, `wide-text` preset — 300k rows, 40 text columns). The
+`search-catchall` experiment: a `q` spread over the 80 per-column analyzed fields takes ~384 ms
+(`took` p50; profile query time ~968 ms), while the same `q` over the `[_search,
+_search.text_standard]` pair takes ~5 ms (profile ~61 ms) — **~77× cheaper**, decisively confirming
+the optimization. The top-k *ranking* differs (merging columns into one field changes term
+statistics) but match recall is comparable. The `min-should-match` experiment separately evaluated
+adding a default `minimum_should_match` to the `q` `simple_query_string` and **rejected** it: it
+made a 5-term `q` 1.3–2.5× *slower* with no change to the top-N hits — a plain disjunction lets
+block-max-WAND skip more aggressively than the N-of-M scorer.
+
 ### Aggregations (`values-agg.js`, `metric-agg.js`, `geo-agg.js`, `words-agg.js`, `values.js`, `bbox-agg.js`, `small-aggs.js`)
 
 - `values-agg.js`: nested grouping by N fields; per-level `agg_size` ≤ **1000**; the combined
-  fan-out `combinedMaxSize = Π agg_size × size` only **logs a warning** when it exceeds 100000 — it
-  does not block. A `400` is thrown only *after* ES returns more than 10000 buckets. `top_hits`
-  inside buckets, cardinality with `precision_threshold` (default 40000), extra metrics per bucket
-  are all supported.
+  fan-out `combinedMaxSize = Π agg_size × size` is pre-checked before execution only when
+  `size > 100` — for the common `size ≤ 100` case (incl. `size: 0`) it merely **logs a warning**
+  past 100000 and does not block. A hard `400` is otherwise thrown only *after* ES returns more
+  than 10000 buckets (see §9). `top_hits` inside buckets, cardinality with `precision_threshold`
+  (default 40000), extra metrics per bucket are all supported.
 - These agg calls (like `search.ts`) pass `timeout: <searchTimeout>` with
   `allow_partial_search_results: false` — a timeout elapse fails (→ `504`) rather than returning a
   partial aggregation. (The worker's *finalization* calls instead pass `allowPartialResults: true`
@@ -270,30 +284,78 @@ The abort context is threaded through `search.ts`, `values-agg.js`, `metric-agg.
 `multi-search.js` and wired into the dataset read endpoints in `router.js` (`/lines` incl. the
 vector-tile / geojson paths and the neighbor-count `countWithCache`, `/values_agg`, `/geo_agg`,
 `/values`, `/values-labels`, `/metric_agg`, `/simple_metrics_agg`, `/words_agg`, `/max`, `/min`,
-`master-data/single-searchs`) and into `api-compat/ods` `records`. **Not** wired: the streaming
-export paths (`/full`, ODS `/exports`, `master-data/bulk-searchs`) — a fixed per-request timeout is
-wrong for a legitimately long stream, and disconnect-only abort there needs a separate variant of
-the helper.
+`master-data/single-searchs`) and into `api-compat/ods` `records` and `/exports`. ODS `/exports`
+applies the abort context per streamed chunk — each `iterHits` page passes `signal` +
+`requestTimeout` to `esClient.search` — so a long export is not killed by one fixed deadline; the
+per-chunk `requestTimeout` only bounds each ~1000-hit page. **Not** wired: `master-data/bulk-searchs`
+— its handler builds no abort context and `multiSearch` runs without one. `/full` streams a
+*pre-computed file* from object storage (no ES query, nothing to abort). Note ODS `/exports` and
+`records` pass the context directly to `esClient.search` rather than through `timedEsCall`, so they
+abort but do **not** bill the compute budget (§4).
 
-## 9. Possible improvements
+## 9. Unbounded-complexity read paths
+
+A consolidated inventory of read paths whose Elasticsearch work is not bounded ahead of execution.
+Items marked **measured** carry benchmark-harness evidence (`benchmark/`, raw results under
+`benchmark/results/`, each tagged with the git commit). Proposed bounds feed the §10 roadmap.
+
+- **Exact `track_total_hits` on page 1** (`commons.js → prepareQuery`). A page-1 request with a `q`
+  is a scoring `simple_query_string`; `track_total_hits: true` forces an exact count, which visits
+  *every* match and forfeits Lucene's block-max-WAND top-k skipping. **Measured**
+  (`track-total-hits` experiment, `tall` preset, 2M rows): on a heavy scoring disjunction (~839k
+  matches — the shape a multi-term `q` produces) capping `track_total_hits` to `10000` or `false`
+  cuts `took` ~38 % (10.5 → 6.5 ms, warm and cold alike) and roughly halves query-node profile time
+  (~60 → ~29 ms). `cap-100k` gives *no* benefit there — 100k is still below the match count, so
+  `10000` is the useful cap. For very high-cardinality term / filter predicates (~322k matches) the
+  profile collapses from ~15–27 ms to <1 ms; for a low-cardinality conjunction (~5k matches) the
+  effect is negligible. The cost is twofold — exact counting both disables WAND for scoring queries
+  *and* forces a full match enumeration even for non-scoring filters. (Caveat: a 2M-row / 360 MB
+  index sits entirely in RAM, so absolute `took` is 1–11 ms and coarse for the lighter shapes; the
+  *direction* is consistent across four runs — a 5M-row seed would sharpen the figures.) *Proposed
+  bound:* cap `track_total_hits` (`10000`) for scoring `q` requests — `hits.total.relation` becomes
+  `"gte"`, which the UI already handles via `count=estimate`. A behaviour change, so it warrants its
+  own spec.
+- **No `terminate_after`** on `search.ts` or the aggregation calls — a single query can scan an
+  unbounded number of documents per shard. *Proposed bound:* a config'd `terminate_after`
+  (aggregations over the collected subset then become approximate — acceptable as an abuse guard).
+- **`values-agg.js` fan-out** — the combined `Π agg_size × size` is pre-checked before execution
+  only when `size > 100` (`values-agg.js:85`); for the common aggregation case (`size ≤ 100`, incl.
+  `size: 0`) it merely `eventsLog.warn`s past 100000. The hard `400` is thrown only *after* ES
+  returns, when `buckets.length > 10000` (`values-agg.js:241`). *Proposed bound:* enforce the
+  fan-out cap before execution for every `size`.
+- **`master-data/bulk-searchs`** — the handler builds no abort context and `multiSearch` runs
+  without one, so the streamed multi-search is neither disconnect-abortable nor billed against the
+  compute budget. *Proposed bound:* wire a disconnect-only abort context + `timedEsCall`.
+- **No `index.search.slowlog`** (`manage-indices.js`) — no ES-side signal for which dataset is
+  being hammered. *Proposed:* enable `index.search.slowlog.*`.
+- **Deep offset pagination** is *bounded* (`from + size ≤ maxPageSize` = 10000) but still performs
+  top-k collection over that depth; `search_after` keyset pagination remains the cheap path.
+
+Not unbounded, for the record: the wide-dataset `q` blow-up is mitigated by the `_search` catch-all
+(§6 — ~77× measured); `/full` is a pre-computed file download (no ES query); ODS `/exports` streams
+via `iterHits` with a per-chunk abort context (§8).
+
+## 10. Possible improvements
 
 Roughly in priority order. Effort: **S** ≈ a few hours, **M** ≈ a day or two.
 
-- **Bound ES query work** (S). Add `terminate_after` (config'd cap on docs examined per shard) to
-  search & aggregation queries; enforce — not just warn — the aggregation fan-out cap; cap
-  `track_total_hits` for default/anonymous reads instead of always doing an exact count on page 1
-  (`hits.total.relation` becomes `"gte"` past the cap — the UI already handles estimated totals via
-  `count=estimate`). With `terminate_after`, aggregations over the collected subset are approximate
-  — acceptable as a guard against abuse.
+- **Bound ES query work** (S). The §9 inventory items: add `terminate_after` (config'd cap on docs
+  examined per shard) to search & aggregation queries; enforce — not just warn — the aggregation
+  fan-out cap; cap `track_total_hits` for scoring `q` reads instead of always doing an exact count
+  on page 1 — the harness measured ~38 % off a heavy disjunction's `took` and ~2× off its profile
+  time (§9), and `hits.total.relation` becomes `"gte"` past the cap, which the UI already handles
+  via `count=estimate`. With `terminate_after`, aggregations over the collected subset are
+  approximate — acceptable as a guard against abuse.
 - **Concurrency cap on heavy ES reads** (M). An in-app semaphore, per dataset and globally,
   returning `429`/`503` when exceeded — the natural complement to the compute-budget limiter, which
   charges *after* the request and so doesn't constrain an instantaneous burst.
 - **Tighter timeout for untrusted traffic** (S). Lower `searchTimeout` (and thus the read
   `requestTimeout`) for public/anonymous read paths. (A `timeout` elapse must always *fail* → `504`,
   never truncate.)
-- **Wire the streaming export paths for disconnect-abort** (S/M). `/full`, ODS `/exports`,
-  `master-data/bulk-searchs` — needs a disconnect-only variant of `createEsRequestOptions` (no fixed
-  deadline). Also makes them bill ES time against the compute budget.
+- **Wire `master-data/bulk-searchs` for disconnect-abort & billing** (S). It is the last streaming
+  read path with no abort context (§9) — ODS `/exports` is already wired per-chunk (§8) and `/full`
+  is a file download. Also make `bulk-searchs` bill ES time against the compute budget, and ideally
+  route ODS `/exports`/`records` through `timedEsCall` so they bill too.
 - **Distributed-flood protection** (M). The in-memory per-pod/per-IP limiters do nothing against a
   flood spread across many IPs or an application key. Needs a shared counter (e.g. Redis), or tighter
   reverse-proxy `limit_req` zones.

@@ -56,8 +56,11 @@ export async function seedDataset (spec: DatasetSpec): Promise<void> {
   console.log(`[seed] ${spec.id}: waiting for finalization...`)
   for (let attempt = 0; attempt < FINALIZE_TIMEOUT_S; attempt++) {
     const res = await ax.get(`/api/v1/datasets/${spec.id}`)
-    if (res.data.status === 'finalized') {
-      console.log(`[seed] ${spec.id} ready`)
+    // a REST dataset flips to status 'finalized' while its worker is still indexing the
+    // backlog of bulk batches — the row count must also clear spec.rows before the seed
+    // is genuinely complete, otherwise experiments run against a half-filled index
+    if (res.data.status === 'finalized' && (res.data.count ?? 0) >= spec.rows) {
+      console.log(`[seed] ${spec.id} ready (${(res.data.count ?? 0).toLocaleString()} rows)`)
       return
     }
     await new Promise(resolve => setTimeout(resolve, 1000))
