@@ -34,8 +34,8 @@ const datasetIdProperty = { type: 'string' as const, description: 'The exact dat
 
 export const filterProperties = {
   filters: { type: 'object' as const, description: filtersDescription, properties: {} },
-  bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax". Example: "-2.5,43,3,47".' },
-  geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Restricts results to within a distance from a point. Format: "lon,lat,distance". Example: "2.35,48.85,10km". Use distance "0" for point-in-polygon containment.' },
+  bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax" (longitude before latitude). Example: "-2.5,43,3,47".' },
+  geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Restricts results to within a distance from a point. Format: "lon,lat,distance" (longitude before latitude). Example: "2.35,48.85,10km" (lon=2.35, lat=48.85). Use distance "0" for point-in-polygon containment.' },
   dateMatch: { type: 'string' as const, description: 'Temporal filter (only for temporal datasets with date fields). Accepts a single date "YYYY-MM-DD" to match that day, or a date range "YYYY-MM-DD,YYYY-MM-DD" to match an overlapping period. ISO datetimes also accepted. Example: "2023-11-21" or "2023-01-01,2023-12-31".' }
 } as const
 
