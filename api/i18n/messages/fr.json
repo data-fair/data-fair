@@ -87,7 +87,9 @@
 		"url": "URL",
 		"select": "Colonnes sélectionnées",
 		"sort": "Tri",
-		"q": "Recherche textuelle"
+		"q": "Recherche textuelle",
+		"truncated": "Cellules tronquées",
+		"truncatedValue": "{count} cellule(s) dépassant la limite Excel de 32767 caractères ont été tronquées. Colonnes concernées : {columns}."
 	},
 	"data": "data",
 	"dataset": "dataset",
