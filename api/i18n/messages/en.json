@@ -87,7 +87,9 @@
 		"url": "URL",
 		"select": "Selected columns",
 		"sort": "Sort",
-		"q": "Text search"
+		"q": "Text search",
+		"truncated": "Truncated cells",
+		"truncatedValue": "{count} cell(s) exceeding Excel's limit of 32767 characters were truncated. Affected columns: {columns}."
 	},
 	"notifications": {
 		"datasets": {

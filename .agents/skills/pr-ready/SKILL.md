@@ -133,6 +133,8 @@ Required content:
 
 Length guidance: as compact as the change allows. A typo fix is one sentence. A multi-part feature is a short summary plus a tight bullet list. **No filler, no test-plan boilerplate, no marketing tone.** If you find yourself padding, stop.
 
+Line breaks: **no superfluous line breaks.** Only insert a blank line where it marks a genuine section delimitation (e.g. between the summary and a `**Why:**` block, or before a bullet list). Do not separate every sentence with a blank line, do not pad between bullets, and do not add leading or trailing blank lines.
+
 Example, for a small feature:
 
 ```markdown
