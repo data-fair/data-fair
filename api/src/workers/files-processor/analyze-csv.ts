@@ -19,7 +19,7 @@ export default async function (dataset: FileDataset) {
 
   debug('extract file sample')
   const fileSample = await filesStorage.fileSample(datasetUtils.filePath(dataset))
-  if (!fileSample) throw httpError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
+  if (!fileSample) throw httpError(400, '[noretry] Aucun contenu n\'a pu être lu dans le fichier tabulaire (fichier vide,...)')
   let decodedSample
   try {
     decodedSample = (dataset.file.encoding === 'UTF-8' || !dataset.file.encoding)
