@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 34 tools, only 7 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). The creation wizard tools manipulate client-side form state only — no server-side writes.
+- **Read-heavy, write-light**: of 36 tools, only 7 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). The creation wizard tools manipulate client-side form state only — no server-side writes.
 
 ### Activation flow
 
@@ -35,7 +35,7 @@ graph TB
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["34 Tools"]
+            Tools["36 Tools"]
             SubAgents["8 Subagents"]
             TR --> Tools
             SR --> SubAgents
@@ -260,6 +260,16 @@ The user types directly in the chat drawer. The agent has access to all globally
 | **Tools** | `select_dataset_type`, `set_dataset_title`, `set_rest_options`, `skip_init_from_step`, `advance_to_confirmation` |
 | **Source** | `ui/src/composables/dataset/agent-creation-tools.ts`, `ui/src/pages/new-dataset.vue` |
 
+### 4.15 Summarize Service Releases
+
+| | |
+|---|---|
+| **Trigger** | Action button on the `/admin/info` page |
+| **Action ID** | `summarize-releases` |
+| **Pattern** | **Tool-chaining**: agent calls `list_services_versions` for installed versions, then `explore_github` (`/repos/{name}/releases`, falling back to `/tags`) per service, compares semver, and summarizes available-but-not-deployed versions. |
+| **Tools** | `list_services_versions`, `explore_github` |
+| **Source** | `ui/src/composables/agent/releases-tools.ts`, `ui/src/pages/admin/info.vue` |
+
 ## 5. Tool Reference
 
 | Tool | Category | R/W | Source |
@@ -305,6 +315,8 @@ The user types directly in the chat drawer. The agent has access to all globally
 | `list_catalogs` | Connectors | R | `agent/connector-tools.ts` |
 | `describe_catalog` | Connectors | R | `agent/connector-tools.ts` |
 | `page_guidance` | Page guidance | R | `dataset/agent-page-guidance-tools.ts` (dataset detail page) |
+| `list_services_versions` | Service info | R | `agent/releases-tools.ts` |
+| `explore_github` | Service info | R | `agent/releases-tools.ts` |
 
 All source paths are relative to `ui/src/composables/` unless otherwise noted. **W*** = client-side state only (no server write). Connector tools are conditional on integration flags. **`page_guidance`** is a page-scoped fallback tool: each page that registers it (currently only the dataset detail page) carries its own essential anti-misroute facts in the tool description and a full page structure / interaction guide in the returned content. The agent is instructed to call it only when unsure how to help the user on the current page.
 
@@ -333,6 +345,9 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/composables/agent/navigation-tools.ts` | Navigation tools (3) |
 | `ui/src/composables/agent/geo-tools.ts` | Geolocation tools (2) |
 | `ui/src/composables/agent/connector-tools.ts` | Processings & catalogs tools (0-4) |
+| `ui/src/composables/agent/releases-tools.ts` | Service-version + GitHub exploration tools (2) |
+| `ui/src/composables/agent/releases-tools-logic.ts` | Pure helpers for the releases tools (unit-tested) |
+| `ui/src/pages/admin/info.vue` | `summarize-releases` action button + page-scoped tool registration |
 | `ui/src/composables/agent/utils.ts` | Shared helpers: `createAgentTranslator`, `agentToolError`, `csvEscape`, `toCsv`, `cleanRow`, `fetchSampleRows`, `buildPaginatedQuery` |
 | `ui/src/composables/dataset/agent-tools.ts` | Dataset metadata tools (2) + `serializeDatasetInfo` |
 | `ui/src/composables/dataset/agent-data-tools.ts` | Dataset data query tools (5) + `dataset_data` subagent |
