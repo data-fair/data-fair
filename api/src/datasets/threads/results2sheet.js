@@ -13,8 +13,9 @@ export const MAX_CELL_LENGTH = 32767
 // row (row 0). Only strings can exceed the limit, so numbers/dates/nullish are
 // ignored. The per-cell cost is a single O(1) length comparison; slice() runs
 // only in the rare over-limit case.
+// @param {any[][]} dataArray
 // @returns {{ count: number, columns: string[] }}
-export const truncateCells = (dataArray) => {
+export const truncateCells = (/** @type {any[][]} */ dataArray) => {
   let count = 0
   const columns = new Set()
   const header = dataArray[0]
@@ -64,6 +65,8 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
       return value
     }))
   }
+  const truncate = bookType !== 'ods'
+  const truncation = truncate ? truncateCells(dataArray) : { count: 0, columns: [] }
   const dataSheet = XLSX.utils.aoa_to_sheet(dataArray, { cellDates: true })
   dataSheet['!cols'] = fitToColumn(dataArray)
   XLSX.utils.book_append_sheet(workbook, dataSheet, labels.data)
@@ -116,6 +119,16 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
     }
   }
 
+  if (truncation.count > 0) {
+    metadataArray.push([
+      'truncated',
+      labels.truncated,
+      labels.truncatedValue
+        .replace('{count}', truncation.count)
+        .replace('{columns}', truncation.columns.join(', '))
+    ])
+  }
+  if (truncate) truncateCells(metadataArray)
   const metadataSheet = XLSX.utils.aoa_to_sheet(metadataArray, { cellDates: true })
   metadataSheet['!cols'] = fitToColumn(metadataArray)
   XLSX.utils.book_append_sheet(workbook, metadataSheet, labels.metadata)
@@ -137,6 +150,7 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
       concept?.title || ''
     ])
   }
+  if (truncate) truncateCells(schemaArray)
   const schemaSheet = XLSX.utils.aoa_to_sheet(schemaArray, { cellDates: true })
   schemaSheet['!cols'] = fitToColumn(schemaArray)
   XLSX.utils.book_append_sheet(workbook, schemaSheet, labels.schema)
@@ -152,6 +166,7 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
       }
     }
   }
+  if (truncate) truncateCells(labelsArray)
   const labelsSheet = XLSX.utils.aoa_to_sheet(labelsArray, { cellDates: true })
   labelsSheet['!cols'] = fitToColumn(labelsArray)
   XLSX.utils.book_append_sheet(workbook, labelsSheet, labels.labels)
@@ -165,6 +180,7 @@ export default ({ results, bookType, query, dataset, downloadUrl, labels, datase
     [labels.sort, query.sort],
     [labels.q, query.q]
   ]
+  if (truncate) truncateCells(queryArray)
   const querySheet = XLSX.utils.aoa_to_sheet(queryArray, { cellDates: true })
   querySheet['!cols'] = fitToColumn(queryArray)
   XLSX.utils.book_append_sheet(workbook, querySheet, labels.query)
