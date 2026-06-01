@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { buildFilterQueryString } from '../../../agent-tools/_utils.ts'
+import { buildFilterQueryString, formatSchemaColumns } from '../../../agent-tools/_utils.ts'
 
 test.describe('buildFilterQueryString', () => {
   test('returns undefined when no params', () => {
@@ -56,5 +56,25 @@ test.describe('buildFilterQueryString', () => {
     assert.equal(params.get('_c_q'), 'hello')
     assert.equal(params.get('status_eq'), 'active')
     assert.equal(params.get('_c_geo_distance'), '2.35,48.85,10km')
+  })
+})
+
+test.describe('formatSchemaColumns', () => {
+  // _geopoint/_geocorners are stored lat,lon; geo_distance/bbox filters use lon,lat.
+  // The agent must see the contrast where it reads the field, or it inverts the filter.
+  test('warns that geo columns use the reverse coordinate order for filters', () => {
+    const rows = formatSchemaColumns([
+      { key: '_geopoint', type: 'string', title: 'Coordonnée', description: 'Centroïde au format "lat,lon"' },
+      { key: '_geocorners', type: 'array', title: 'Boite', description: 'tableau au format "lat,lon"' }
+    ])
+    assert.ok(rows)
+    assert.ok(rows[0].includes('lon,lat'), '_geopoint row should mention the reverse lon,lat order')
+    assert.ok(rows[1].includes('lon,lat'), '_geocorners row should mention the reverse lon,lat order')
+  })
+
+  test('does not add the geo warning to ordinary columns', () => {
+    const rows = formatSchemaColumns([{ key: 'ville', type: 'string', title: 'Ville' }])
+    assert.ok(rows)
+    assert.ok(!rows[0].includes('REVERSE'))
   })
 })

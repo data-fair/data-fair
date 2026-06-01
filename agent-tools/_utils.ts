@@ -79,6 +79,8 @@ export function formatSchemaColumns (schema: any[]): string[] | undefined {
     .map((col: any) => {
       const notes: string[] = []
       if (col.description) notes.push(col.description)
+      // _geopoint/_geocorners are stored lat,lon — warn that geo_distance/bbox filters use the reverse order
+      if (col.key === '_geopoint' || col.key === '_geocorners') notes.push('⚠️ geo_distance/bbox filters use the REVERSE order (lon,lat)')
       if (col['x-concept']?.title) notes.push(`concept: ${col['x-concept'].title}`)
       if (col.enum) {
         const shown = col.enum.slice(0, 20).join(', ')
