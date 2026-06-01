@@ -1,5 +1,13 @@
 <template>
   <v-container v-if="services && statusFetch.data.value">
+    <df-agent-chat-action
+      v-if="showAgentChat"
+      action-id="summarize-releases"
+      :visible-prompt="t('summarizeReleasesPrompt')"
+      :hidden-context="releasesContext"
+      :btn-props="{ text: t('summarizeReleasesBtn'), class: 'mb-4' }"
+      :title="t('summarizeReleasesPrompt')"
+    />
     <v-expansion-panels>
       <v-expansion-panel
         expand
@@ -59,6 +67,8 @@
     info: Informations sur les services
     installed: installé
     available: disponible
+    summarizeReleasesBtn: Résumer les mises à jour
+    summarizeReleasesPrompt: Fais un résumé des dernières mises à jour des services avec un focus sur les versions disponibles et non encore déployées.
     services:
       data-fair/data-fair: Data Fair - Back Office
       data-fair/simple-directory: Gestion des comptes
@@ -73,6 +83,8 @@
     info: Services information
     installed: installed
     available: available
+    summarizeReleasesBtn: Summarize updates
+    summarizeReleasesPrompt: Summarize the latest service updates with a focus on versions that are available but not yet deployed.
     services:
       data-fair/data-fair: Data Fair - Back Office
       data-fair/simple-directory: Accounts management
@@ -86,9 +98,12 @@
   </i18n>
 
 <script setup lang="ts">
+import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
+import { useAgentServicesInfoTool, useAgentGithubTool } from '~/composables/agent/releases-tools'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const breadcrumbs = useBreadcrumbs()
 breadcrumbs.receive({ breadcrumbs: [{ text: t('info') }] })
 
@@ -121,6 +136,17 @@ if ($uiConfig.metricsIntegration) {
 if ($uiConfig.openapiViewerIntegration) {
   services.value.push({ name: 'data-fair/openapi-viewer', infoUrl: '/openapi-viewer/api/admin/info' })
 }
+
+const showAgentChat = useShowAgentChat()
+
+const releasesContext = `To answer questions about service releases:
+1. Call list_services_versions to get each service and its currently installed version. The service name is the GitHub repo slug (owner/repo).
+2. For each relevant service, call explore_github with "/repos/{name}/releases?per_page=10" to get recent releases. If a repo has no releases, fall back to "/repos/{name}/tags?per_page=10".
+3. Compare the latest available version/tag with the installed version to identify versions that are available but not yet deployed.
+4. Summarize the recent updates, focusing on those available-but-not-deployed versions. Respond in the user's language.`
+
+useAgentServicesInfoTool(locale, services)
+useAgentGithubTool(locale)
 
 onMounted(async () => {
   for (const service of services.value) {
