@@ -28,7 +28,20 @@ export function normalizeSort (sort: string): string {
   }).filter(Boolean).join(',')
 }
 
-export const filtersDescription = 'Column filters as key-value pairs. Key format: column_key + suffix (see server instructions for available suffixes). All values must be strings, even for numbers/dates. If a column key has underscores (e.g., code_postal), just append the suffix: code_postal_eq. Example: { "nom_search": "Jean", "age_lte": "30", "ville_eq": "Paris" }'
+export const filtersDescription = `Column filters as key-value pairs. Key format: column_key + suffix. All values are strings, even for numbers/dates. If a column key has underscores (e.g. code_postal), just append the suffix: code_postal_eq.
+
+Suffixes:
+- _eq / _neq: equals / not equals
+- _in / _nin: in / not in a comma-separated list
+- _gt / _gte / _lt / _lte: numeric or date range comparisons
+- _starts: value starts with a string (prefix)
+- _exists / _nexists: column has / has no value
+- _search: free-text word search (DEFAULT choice for matching text)
+- _contains: substring match — only on columns explicitly enabled for it
+
+Most columns support all of the above except _contains. A few long-text columns disable exact filters, and _search needs a text-analyzed column. You do NOT get a per-column capability list up front: just try the suffix that fits. If the API rejects a filter, the 400 error states exactly which filters that column supports ("Opérations disponibles sur ce champ — …") — read it and switch.
+
+Example: { "nom_search": "Jean", "age_lte": "30", "ville_eq": "Paris" }`
 
 const datasetIdProperty = { type: 'string' as const, description: 'The exact dataset ID from the "id" field in list_datasets results. Do not use the title or slug.' }
 

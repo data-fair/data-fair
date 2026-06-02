@@ -19,6 +19,11 @@ Workflow:
    - aggregate_data: to group rows by columns and count or compute per-group metrics (sum, avg, min, max)
    - calculate_metric: to compute a single global statistic (avg, sum, min, max, stats, percentiles, cardinality)
 
+Filtering:
+- Build column filters as column_key + suffix (_eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search, _contains).
+- Prefer _search for free-text matching; use _eq/_in for exact values; _gte/_lte for ranges.
+- Do not assume a column supports every suffix. If a filter is rejected with a 400, the error lists the operations that column DOES support — switch to one of those instead of retrying the same filter.
+
 Format:
 - Present results concisely with clear labels
 - For numeric results, round to 2 decimal places when appropriate
