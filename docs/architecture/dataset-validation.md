@@ -74,7 +74,7 @@ REST datasets cannot use the file-dataset worker because writes are interactive.
 
 In `api/src/datasets/utils/rest.ts → applyTransactions`:
 
-1. Standard AJV schema validation runs first; rows that fail are flagged with `_status=400, _error='...'`.
+1. Standard AJV schema validation runs first; rows that fail are flagged with `_status=400, _error='...'`. The message is built with the **value-aware `errorsText`** from `shared/ajv.js`: each error is suffixed with ` (valeur : …)` — the rejected value resolved at the error's `instancePath` (JSON-pointer, so nested/array paths like `/attr3/1` work), truncated to 200 chars. This is the same debugging context the diagnostic CSV's `raw_value` column carries, and it matters for callers (e.g. a processing posting `_bulk_lines`) that log the returned validation errors but never the raw input. Errors are localized in place via the shared `localize` Proxy first, so a user-provided `errorMessage` is preserved (the previously-used `@data-fair/lib-validation` `errorsText` re-localized with the raw `ajv-i18n` localizer and dropped custom messages). `nonBlockingValidation` rows get the same enriched text in `_warning`.
 2. If the dataset has at least one `mandatory && active` extension, the surviving operations are passed through `extensionsUtils.extendBatchSync(dataset, mandatoryExtensions, lines, { onLineError })`.
 3. Lines whose mandatory extension fails get `_status=400` and are excluded from the bulk write. Lines that pass have their enriched fields copied back into `operation.fullBody` for persistence.
 4. The MongoDB bulk write proceeds with the survivors.
@@ -103,7 +103,7 @@ The `extend` worker (`api/src/workers/batch-processor/extend-rest.ts`) handles o
 
 ### Format
 
-UTF-8 with BOM, header row `line,error_type,field,message,raw_value`. `error_type` is `validation` or `extension`. `raw_value` is the offending field's source value, truncated to 200 chars and ending with `…` if truncated.
+UTF-8 with BOM, header row `line,error_type,field,message,raw_value`. `error_type` is `validation` or `extension`. `raw_value` is the offending field's source value, truncated to 200 chars and ending with `…` if truncated. It is resolved from the row via the error's `instancePath` (using `valueAtPointer` from `shared/ajv.js`), so nested/array paths such as `/multipattern/1` produce the actual element value rather than an empty cell.
 
 ### Lifecycle
 
@@ -162,7 +162,7 @@ For drafts opened with `validationMode: 'compatibleOrCancel'`, an attempt that p
 | `api/src/workers/batch-processor/process-file.ts` | Combined file-dataset validation + extension worker |
 | `api/src/workers/batch-processor/extend-rest.ts` | REST-only extension worker |
 | `api/types/dataset/schema.js` | `mandatory` field on the `remoteService` extension oneOf branch |
-| `shared/ajv.js` | `ajv-errors` integration + Proxy-wrapped localizer (preserves user `errorMessage` text) |
+| `shared/ajv.js` | `ajv-errors` integration + Proxy-wrapped localizer (preserves user `errorMessage` text); `valueAtPointer` JSON-pointer resolver and value-aware `errorsText` (optional `data` arg appends ` (valeur : …)`) shared by the REST hot path and the diagnostic CSV |
 
 ## Out of scope (follow-ups)
 

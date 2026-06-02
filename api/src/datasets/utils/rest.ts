@@ -5,8 +5,7 @@ import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { ajv } from '@data-fair/data-fair-shared/ajv.js'
-import { errorsText } from '@data-fair/lib-validation'
+import { ajv, errorsText, localize } from '@data-fair/data-fair-shared/ajv.js'
 import { nanoid } from 'nanoid'
 import pump from '../../misc/utils/pipe.ts'
 import multer from 'multer'
@@ -508,10 +507,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       continue
     } if (validate) {
       if (!validate(operation.body)) {
+        // localize in place via the shared Proxy localizer (preserves user-provided
+        // errorMessage text), then build a value-aware message so the rejected value
+        // is visible even to a caller that only logs the returned validation errors.
+        localize.fr(validate.errors)
+        const message = errorsText(validate.errors, '', operation.body)
         if (dataset.nonBlockingValidation) {
-          operation._warning = errorsText(validate.errors, '')
+          operation._warning = message
         } else {
-          operation._error = errorsText(validate.errors, '')
+          operation._error = message
           operation._status = 400
           continue
         }
