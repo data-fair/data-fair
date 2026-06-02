@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { buildFilterQueryString, formatSchemaColumns, filtersDescription } from '../../../agent-tools/_utils.ts'
+import { buildFilterQueryString, formatSchemaColumns, filtersGuide } from '../../../agent-tools/_utils.ts'
 
 test.describe('buildFilterQueryString', () => {
   test('returns undefined when no params', () => {
@@ -79,11 +79,11 @@ test.describe('formatSchemaColumns', () => {
   })
 })
 
-test.describe('filtersDescription', () => {
+test.describe('filtersGuide', () => {
   test('lists the real suffixes and the error-driven correction rule', () => {
     for (const s of ['_eq', '_in', '_gte', '_lte', '_starts', '_search', '_contains', '_exists']) {
-      assert.ok(filtersDescription.includes(s), `missing ${s}`)
+      assert.ok(filtersGuide.includes(s), `missing ${s}`)
     }
-    assert.ok(/error/i.test(filtersDescription)) // mentions reacting to rejection errors
+    assert.ok(/error/i.test(filtersGuide)) // mentions reacting to rejection errors
   })
 })
