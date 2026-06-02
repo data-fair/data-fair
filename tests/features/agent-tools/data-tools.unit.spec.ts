@@ -304,6 +304,27 @@ test.describe('calculate_metric formatResult', () => {
   })
 })
 
+// --- hint surfacing ---
+
+test.describe('formatResult surfaces the API hint', () => {
+  test('search_data includes the hint line when present', () => {
+    const { text } = searchData.formatResult({ total: 1, results: [{ a: 1 }], hint: 'Some parameters were ignored : _c_x' }, { datasetId: 'd' } as any)
+    assert.match(text, /Some parameters were ignored/)
+  })
+  test('search_data omits the hint line when absent', () => {
+    const { text } = searchData.formatResult({ total: 1, results: [{ a: 1 }] }, { datasetId: 'd' } as any)
+    assert.doesNotMatch(text, /Hint:/)
+  })
+  test('aggregate_data includes the hint line when present', () => {
+    const { text } = aggregateData.formatResult({ total: 1, total_values: 1, total_other: 0, aggs: [], hint: 'ignored param X' }, { datasetId: 'd' } as any)
+    assert.match(text, /ignored param X/)
+  })
+  test('calculate_metric includes the hint line when present', () => {
+    const { text } = calculateMetric.formatResult({ total: 1, metric: 5, hint: 'ignored param Y' }, { datasetId: 'd', metric: 'avg', fieldKey: 'age' } as any)
+    assert.match(text, /ignored param Y/)
+  })
+})
+
 // --- get_field_values ---
 
 test.describe('get_field_values buildQuery', () => {
