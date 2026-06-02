@@ -23,7 +23,7 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
  */
 export const requiredCapability = (prop: any, filterName: string, capability: string = 'index'): void => {
   if (!hasCapability(prop, capability)) {
-    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
+    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
 }
 
@@ -75,6 +75,17 @@ export const getColumnOperations = (prop: any): { filters: string[], sortable: b
     metric: ['number', 'integer'].includes(prop.type) && caps.values !== false,
     wordAgg: hasCapability(prop, 'textAgg')
   }
+}
+
+/**
+ * A French, agent- and user-friendly sentence describing what a column supports.
+ * Appended to capability-rejection errors so the caller can self-correct.
+ * NOTE: allocates — call only on error paths.
+ */
+export const columnOperationsHint = (prop: any): string => {
+  const ops = getColumnOperations(prop)
+  const filters = ops.filters.length ? ops.filters.join(', ') : 'aucun'
+  return `Opérations disponibles sur ce champ — filtres : ${filters} ; tri : ${ops.sortable ? 'oui' : 'non'} ; groupement : ${ops.groupable ? 'oui' : 'non'}.`
 }
 
 export const tooLongError: ExtractedError = {

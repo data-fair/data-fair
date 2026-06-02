@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { FILTER_CAPABILITIES, getColumnFilters, getColumnOperations } from '../../../../api/src/datasets/es/operations.ts'
+import { FILTER_CAPABILITIES, getColumnFilters, getColumnOperations, columnOperationsHint, requiredCapability } from '../../../../api/src/datasets/es/operations.ts'
 
 const DEFAULT_FILTERS = ['_eq', '_neq', '_in', '_nin', '_lt', '_lte', '_gt', '_gte', '_starts', '_exists', '_nexists', '_search']
 
@@ -54,5 +54,28 @@ test.describe('getColumnOperations', () => {
   })
   test('_geo* columns are not groupable', () => {
     assert.equal(getColumnOperations({ key: '_geopoint', type: 'string' }).groupable, false)
+  })
+})
+
+test.describe('columnOperationsHint', () => {
+  test('lists filters and sort/group flags for a default column', () => {
+    const hint = columnOperationsHint({ key: 'name', type: 'string' })
+    assert.ok(hint.includes('_eq'))
+    assert.ok(hint.includes('_search'))
+    assert.ok(/tri\s*:\s*oui/.test(hint))
+    assert.ok(/groupement\s*:\s*oui/.test(hint))
+  })
+  test('says "aucun" when no filters are available', () => {
+    const hint = columnOperationsHint({ key: 'bio', type: 'string', 'x-capabilities': { index: false, text: false, textStandard: false } })
+    assert.ok(hint.includes('aucun'))
+  })
+})
+
+test.describe('requiredCapability error', () => {
+  test('rejection message names the available filters for the column', () => {
+    assert.throws(
+      () => requiredCapability({ key: 'name', type: 'string', 'x-capabilities': { wildcard: false } }, '_contains', 'wildcard'),
+      (err: any) => err.status === 400 && err.message.includes('_eq') && err.message.includes('_search')
+    )
   })
 })
