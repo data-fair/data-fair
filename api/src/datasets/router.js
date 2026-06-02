@@ -1173,6 +1173,7 @@ router.get('/:datasetId/metric_agg', readDataset({ fillDescendants: true }), app
     await manageESError(req, err)
   }
   // correctness hint only (metric_agg does not time the ES step); perf advice stays off at duration 0
+  // @ts-ignore — manageESError throws on errors, so result is defined here
   result = attachQueryHint(req, 0, result)
   res.status(200).send(result)
 })

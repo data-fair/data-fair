@@ -50,6 +50,8 @@ export const queryAdvice = (req: Request & { dataset?: { schema?: any[] } }): st
 // params declared in api/contract/dataset-api-docs.ts and consumed in es/commons.js and
 // es/*-agg.js. Anything else is silently ignored by the API — surfaced via ignoredParamsAdvice.
 // Keep in sync with those sources (the drift-guard unit test enumerates the documented set).
+const FILTER_SUFFIXES = Object.keys(FILTER_CAPABILITIES)
+
 const RECOGNIZED_PARAMS = new Set([
   // pagination / output shaping
   'size', 'page', 'after', 'count', 'select', 'sort', 'truncate', 'thumbnail', 'html', 'format', 'hint', 'draft',
@@ -78,18 +80,17 @@ export const ignoredParamsAdvice = (req: Request & { dataset?: { schema?: any[] 
   const schema = req.dataset?.schema
   const columnKeys = new Set((schema ?? []).map((p: any) => p.key))
   const conceptIds = new Set((schema ?? []).filter((p: any) => p['x-concept']?.primary).map((p: any) => p['x-concept'].id))
-  const suffixes = Object.keys(FILTER_CAPABILITIES)
   const items: string[] = []
 
   for (const key of Object.keys(q)) {
     if (RECOGNIZED_PARAMS.has(key)) continue
-    const suffix = suffixes.find(s => key.endsWith(s))
+    const suffix = FILTER_SUFFIXES.find(s => key.endsWith(s))
     // a bare column filter (<columnKey><suffix> for a real column) is recognized
     if (suffix && !key.startsWith('_c_') && columnKeys.has(key.slice(0, key.length - suffix.length))) continue
 
     if (key.startsWith('_c_')) {
       const inner = key.slice(3, suffix ? key.length - suffix.length : key.length)
-      if (conceptIds.has(inner)) continue // legit concept filter that resolved
+      if (suffix && conceptIds.has(inner)) continue // legit concept filter that resolved (suffix required; bare _c_<concept> is dropped by commons.js)
       if (suffix && columnKeys.has(inner)) {
         items.push(req.__('errors.queryAdviceConceptUseColumn', key, inner + suffix)) // Tier 1: typo
       } else {
