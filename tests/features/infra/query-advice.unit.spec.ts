@@ -142,6 +142,26 @@ test.describe('attachQueryHint', () => {
     assert.equal('hint' in attachQueryHint(req, 500, { total: 5 }), false)
     assert.ok(typeof attachQueryHint(req, 1500, { total: 5 }).hint === 'string')
   })
+  test('emits the correctness hint on a fast auto query (duration-independent)', () => {
+    const ds = { schema: [{ key: 'ville', type: 'string' }] }
+    const req = fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds)
+    const out = attachQueryHint(req, 0, { total: 5 })
+    assert.match(out.hint as string, /errors\.queryAdviceConceptUseColumn/)
+  })
+  test('hint=false suppresses the correctness hint too', () => {
+    const ds = { schema: [{ key: 'ville', type: 'string' }] }
+    const req = fakeReq('/abc/lines', { hint: 'false', _c_ville_eq: 'Paris' }, ds)
+    assert.equal('hint' in attachQueryHint(req, 0, { total: 5 }), false)
+  })
+  test('combines correctness advice (first) with perf advice on a slow wide query', () => {
+    const ds = { schema: Array.from({ length: 25 }, (_, i) => ({ key: 'f' + i })).concat([{ key: 'ville' } as any]) }
+    const req = fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds)
+    const out = attachQueryHint(req, 1500, { total: 5 })
+    const hint = out.hint as string
+    assert.match(hint, /errors\.queryAdviceConceptUseColumn/)
+    assert.match(hint, /errors\.queryAdviceSelect/)
+    assert.ok(hint.indexOf('errors.queryAdviceIgnoredIntro') < hint.indexOf('errors.queryAdviceIntro'))
+  })
 })
 
 test.describe('ignoredParamsAdvice', () => {

@@ -134,16 +134,20 @@ export const attachQueryHint = <T extends Record<string, any>> (
   result: T
 ): T => {
   const mode = parseHintMode(req.query?.hint)
-  if (!shouldEmitHint(mode, esStepDurationMs)) return result
+  if (mode === 'false') return result
   const adviceReq = req.publicOperation
     ? {
         path: req.path,
         query: req.query,
         dataset: req.dataset,
-        __: (key: string) => i18n.__({ phrase: key, locale: 'en' })
+        __: (key: string, ...args: any[]) => i18n.__({ phrase: key, locale: 'en' }, ...args)
       } as any
     : req
-  const advice = queryAdvice(adviceReq).trim()
+  // correctness advice (misused/ignored params) is duration-independent — always on unless hint=false
+  const ignored = ignoredParamsAdvice(adviceReq).trim()
+  // performance advice keeps its slow-auto / explicit-true gate
+  const perf = shouldEmitHint(mode, esStepDurationMs) ? queryAdvice(adviceReq).trim() : ''
+  const advice = [ignored, perf].filter(Boolean).join(' ')
   if (!advice) return result
   return { hint: advice, ...result }
 }
