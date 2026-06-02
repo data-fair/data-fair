@@ -150,6 +150,15 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   /** @type {any} */
   const esQuery = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
+  if (qFields) {
+    for (const qField of qFields) {
+      const prop = dataset.schema.find(p => p.key === qField)
+      if (!prop) throw httpError(400, `Impossible de rechercher sur le champ ${qField}, il n'existe pas dans le jeu de données.`)
+      const caps = prop['x-capabilities'] || {}
+      const searchable = caps.text !== false || caps.textStandard !== false || caps.index !== false || caps.wildcard === true
+      if (!searchable) throw httpError(400, `Impossible de rechercher sur le champ ${qField}. Aucune fonctionnalité de recherche n'est activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
+    }
+  }
 
   // track_total_hits is expensive on large datasets
   // skip it on pages 2+ (client already has the total from page 1)

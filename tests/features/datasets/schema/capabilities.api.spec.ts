@@ -256,6 +256,27 @@ test.describe('Properties capabilities', () => {
     assert.equal(res.data.total, 2)
   })
 
+  test('q_fields with an unknown column errors instead of silently searching nothing', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/rest-qfields', {
+      isRest: true,
+      title: 'rest-qfields',
+      schema: [{ key: 'nom', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/rest-qfields/_bulk_lines', [{ nom: 'Jean' }, { nom: 'Paul' }])
+    await waitForFinalize(ax, 'rest-qfields')
+    const res = await ax.get('/api/v1/datasets/rest-qfields/lines', { params: { q: 'Jean', q_fields: 'nom' } })
+    assert.equal(res.data.total, 1)
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-qfields/lines', { params: { q: 'Jean', q_fields: 'nom,unknownCol' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('unknownCol'))
+        return true
+      }
+    )
+  })
+
   test('Disable extracting text from attachment', async () => {
     const ax = testUser3
 
