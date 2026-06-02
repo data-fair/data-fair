@@ -282,7 +282,7 @@ test.describe('REST datasets - CRUD', () => {
     })
 
     await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 111 }), (err: any) => {
-      assert.equal(err.data, '/attr1 doit être de type string')
+      assert.equal(err.data, '/attr1 doit être de type string (valeur : 111)')
       assert.equal(err.status, 400)
       return true
     })
@@ -290,13 +290,13 @@ test.describe('REST datasets - CRUD', () => {
     await ax.put('/api/v1/datasets/rest4/lines/line1', { attr1: 'test', attr2: 'test1' })
 
     await assert.rejects(ax.put('/api/v1/datasets/rest4/lines/line1', { attr1: 111 }), (err: any) => {
-      assert.equal(err.data, '/attr1 doit être de type string')
+      assert.equal(err.data, '/attr1 doit être de type string (valeur : 111)')
       assert.equal(err.status, 400)
       return true
     })
 
     await assert.rejects(ax.patch('/api/v1/datasets/rest4/lines/line1', { attr1: 111 }), (err: any) => {
-      assert.equal(err.data, '/attr1 doit être de type string')
+      assert.equal(err.data, '/attr1 doit être de type string (valeur : 111)')
       assert.equal(err.status, 400)
       return true
     })
@@ -322,7 +322,7 @@ test.describe('REST datasets - CRUD', () => {
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.errors.length, 1)
     assert.equal(res.data.errors[0].line, 1)
-    assert.equal(res.data.errors[0].error, '/attr1 doit être de type string')
+    assert.equal(res.data.errors[0].error, '/attr1 doit être de type string (valeur : 111)')
 
     let line = await ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1, test2' }).then(r => r.data)
     assert.equal(line.attr3, 'test1, test2')
@@ -358,7 +358,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.errors[0].line, 2)
     assert.ok(res.data.errors[0].error.startsWith('/attr3/1 doit correspondre au format'))
     assert.equal(res.data.errors[1].line, 5)
-    assert.ok(res.data.errors[1].error.endsWith('/attr4 doit correspondre à exactement un schéma de "oneOf"'))
+    assert.ok(res.data.errors[1].error.includes('/attr4 doit correspondre à exactement un schéma de "oneOf"'))
 
     res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { attr1: 'test1', attr2: 'test1', attr3: 'test1' },
@@ -410,7 +410,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbWarnings, 1)
     assert.equal(res.data.warnings.length, 1)
     assert.equal(res.data.warnings[0].line, 1)
-    assert.equal(res.data.warnings[0].warning, '/attr1 doit être de type string')
+    assert.equal(res.data.warnings[0].warning, '/attr1 doit être de type string (valeur : 111)')
 
     await waitForFinalize(ax, 'rest4')
   })

@@ -3,6 +3,7 @@ import config from '#config'
 import * as journals from '../../misc/utils/journals.ts'
 import { jsonSchema } from '../../datasets/utils/data-schema.ts'
 import * as ajv from '../../misc/utils/ajv.ts'
+import { valueAtPointer } from '@data-fair/data-fair-shared/ajv.js'
 import pump from '../../misc/utils/pipe.ts'
 import { sendResourceEvent } from '../../misc/utils/notifications.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
@@ -55,7 +56,10 @@ class ValidateStream extends Writable {
     const writerErrors = rawErrors.length
       ? rawErrors.map(err => {
         const field = (err?.instancePath ?? '').replace(/^\//, '') || err?.params?.missingProperty || ''
-        const rawValue = field ? String((chunk as any)?.[field] ?? '') : ''
+        // resolve the actual rejected value via the JSON-pointer so nested/array
+        // paths (e.g. /attr3/1) are handled, not just top-level fields.
+        const resolved = valueAtPointer(chunk, err?.instancePath ?? '')
+        const rawValue = resolved === undefined ? '' : String(resolved)
         return {
           field,
           message: err?.message ?? JSON.stringify(err),
