@@ -150,7 +150,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   /** @type {any} */
   const esQuery = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
-  if (qFields) {
+  if (qFields && (query.q || query._c_q || query.qs)) {
     for (const qField of qFields) {
       const prop = dataset.schema.find(p => p.key === qField)
       if (!prop) throw httpError(400, `Impossible de rechercher sur le champ ${qField}, il n'existe pas dans le jeu de données.`)
