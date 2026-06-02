@@ -76,13 +76,13 @@ export const updateDatasetMapping = async (dataset, oldDataset) => {
 const getAliases = async (dataset) => {
   let prodAlias
   try {
-    prodAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }), local: false })
+    prodAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }) })
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
   let draftAlias
   try {
-    draftAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }), local: false })
+    draftAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }) })
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
