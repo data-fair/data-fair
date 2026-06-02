@@ -27,6 +27,56 @@ export const requiredCapability = (prop: any, filterName: string, capability: st
   }
 }
 
+/**
+ * The single source of truth: maps each filter suffix to the capability it requires.
+ * Declared in canonical order (matches OpenAPI doc output). `_search` is any-of (text OR textStandard).
+ */
+export const FILTER_CAPABILITIES: Record<string, string | string[]> = {
+  _eq: 'index',
+  _neq: 'index',
+  _in: 'index',
+  _nin: 'index',
+  _lt: 'index',
+  _lte: 'index',
+  _gt: 'index',
+  _gte: 'index',
+  _starts: 'index',
+  _exists: 'index',
+  _nexists: 'index',
+  _contains: 'wildcard',
+  _search: ['text', 'textStandard']
+}
+
+/**
+ * The filter suffixes valid for a column, in canonical order.
+ * NOTE: allocates — call only on error/doc paths, never on the query success path.
+ */
+export const getColumnFilters = (prop: any): string[] => {
+  const filters: string[] = []
+  for (const suffix of Object.keys(FILTER_CAPABILITIES)) {
+    const cap = FILTER_CAPABILITIES[suffix]
+    const ok = Array.isArray(cap) ? cap.some(c => hasCapability(prop, c)) : hasCapability(prop, cap)
+    if (ok) filters.push(suffix)
+  }
+  return filters
+}
+
+/**
+ * A fuller summary of the query operations a column supports.
+ * Mirrors the enforcement in commons.js (parseSort), values-agg.js, metric-agg.js, words-agg.js.
+ * NOTE: allocates — call only on error/doc paths.
+ */
+export const getColumnOperations = (prop: any): { filters: string[], sortable: boolean, groupable: boolean, metric: boolean, wordAgg: boolean } => {
+  const caps = prop['x-capabilities'] ?? {}
+  return {
+    filters: getColumnFilters(prop),
+    sortable: caps.values !== false || caps.insensitive !== false,
+    groupable: !String(prop.key).startsWith('_geo') && caps.values !== false,
+    metric: ['number', 'integer'].includes(prop.type) && caps.values !== false,
+    wordAgg: hasCapability(prop, 'textAgg')
+  }
+}
+
 export const tooLongError: ExtractedError = {
   message: 'Cette requête est trop longue, son traitement a été interrompu.',
   status: 504
