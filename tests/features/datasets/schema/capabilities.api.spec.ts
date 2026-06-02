@@ -277,6 +277,26 @@ test.describe('Properties capabilities', () => {
     )
   })
 
+  test('highlight on a non-text-capable column errors instead of returning empty highlights', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/rest-highlight', {
+      isRest: true,
+      title: 'rest-highlight',
+      schema: [{ key: 'code', type: 'string', 'x-capabilities': { text: false, textStandard: false } }]
+    })
+    await ax.post('/api/v1/datasets/rest-highlight/_bulk_lines', [{ code: 'ABC' }])
+    await waitForFinalize(ax, 'rest-highlight')
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-highlight/lines', { params: { q: 'ABC', highlight: 'code' } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        assert.ok(err.data.includes('code'))
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
+        return true
+      }
+    )
+  })
+
   test('Disable extracting text from attachment', async () => {
     const ax = testUser3
 

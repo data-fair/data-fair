@@ -237,6 +237,11 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
     for (const key of query.highlight.split(',')) {
       if (!fields.includes(key)) throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      const prop = dataset.schema.find(p => p.key === key)
+      const caps = (prop && prop['x-capabilities']) || {}
+      if (caps.text === false && caps.textStandard === false) {
+        throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}. La fonctionnalité de recherche plein texte n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
+      }
       esQuery.highlight.fields[key + '.text'] = {}
       esQuery.highlight.fields[key + '.text_standard'] = {}
     }
