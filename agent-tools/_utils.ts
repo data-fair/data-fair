@@ -28,7 +28,12 @@ export function normalizeSort (sort: string): string {
   }).filter(Boolean).join(',')
 }
 
-export const filtersDescription = `Column filters as key-value pairs. Key format: column_key + suffix. All values are strings, even for numbers/dates. If a column key has underscores (e.g. code_postal), just append the suffix: code_postal_eq.
+// Full filtering guide — the single rich source. Embedded once into the dataset_data
+// subagent prompt. Covers column filters AND the geo/temporal params (bbox, geoDistance,
+// dateMatch), so the spec lives in one place instead of being repeated across every tool.
+export const filtersGuide = `Filtering covers column filters (the \`filters\` object) plus three separate geo/temporal params (bbox, geoDistance, dateMatch).
+
+Column filters — key-value pairs, key = column_key + suffix. All values are strings, even for numbers/dates. If a column key has underscores (e.g. code_postal), just append the suffix: code_postal_eq.
 
 Suffixes:
 - _eq / _neq: equals / not equals
@@ -40,16 +45,24 @@ Suffixes:
 - _contains: substring match — only on columns explicitly enabled for it
 
 Columns support the suffixes that make sense for their data. Just try the suffix you need; if it's rejected, the 400 error lists what that column supports — read it and adapt. Never prefix a column filter with _c_ (reserved for concept filters, silently ignored otherwise): use the bare column_key + suffix (ville_eq, not _c_ville_eq).
+Example filters: { "nom_search": "Jean", "age_lte": "30", "ville_eq": "Paris" }
 
-Example: { "nom_search": "Jean", "age_lte": "30", "ville_eq": "Paris" }`
+Geo/temporal params are top-level, not part of the filters object, and only apply to geolocalized/temporal datasets:
+- bbox — bounding box "lonMin,latMin,lonMax,latMax" (longitude before latitude). Example: "-2.5,43,3,47".
+- geoDistance — proximity "lon,lat,distance" (longitude first). Example: "2.35,48.85,10km". Use distance "0" for point-in-polygon containment.
+- dateMatch — a single date "YYYY-MM-DD" to match that day, or "YYYY-MM-DD,YYYY-MM-DD" for an overlapping range. ISO datetimes also accepted. Example: "2023-11-21" or "2023-01-01,2023-12-31".`
+
+// Terse, self-contained stub kept on the filters param. Enough for a flat WebMCP client to
+// build the common filters; the full suffix table and geo/date detail live in filtersGuide.
+export const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes include _eq, _in, _gt/_lt, _search and more; if one is rejected the 400 error lists what the column supports. Never _c_-prefix a column filter (use ville_eq, not _c_ville_eq).'
 
 const datasetIdProperty = { type: 'string' as const, description: 'The exact dataset ID from the "id" field in list_datasets results. Do not use the title or slug.' }
 
 export const filterProperties = {
   filters: { type: 'object' as const, description: filtersDescription, properties: {} },
-  bbox: { type: 'string' as const, description: 'Geographic bounding box filter (only for geolocalized datasets). Format: "lonMin,latMin,lonMax,latMax" (longitude before latitude). Example: "-2.5,43,3,47".' },
-  geoDistance: { type: 'string' as const, description: 'Geographic proximity filter (only for geolocalized datasets). Restricts results to within a distance from a point. Format: "lon,lat,distance" (longitude before latitude). Example: "2.35,48.85,10km" (lon=2.35, lat=48.85). Use distance "0" for point-in-polygon containment.' },
-  dateMatch: { type: 'string' as const, description: 'Temporal filter (only for temporal datasets with date fields). Accepts a single date "YYYY-MM-DD" to match that day, or a date range "YYYY-MM-DD,YYYY-MM-DD" to match an overlapping period. ISO datetimes also accepted. Example: "2023-11-21" or "2023-01-01,2023-12-31".' }
+  bbox: { type: 'string' as const, description: 'Bounding box "lonMin,latMin,lonMax,latMax" (lon before lat), e.g. "-2.5,43,3,47". Geolocalized datasets only.' },
+  geoDistance: { type: 'string' as const, description: 'Proximity filter "lon,lat,distance" (lon first), e.g. "2.35,48.85,10km"; distance "0" = point-in-polygon. Geolocalized datasets only.' },
+  dateMatch: { type: 'string' as const, description: 'Date "YYYY-MM-DD" (single day) or "YYYY-MM-DD,YYYY-MM-DD" (range), e.g. "2023-11-21". Temporal datasets only.' }
 } as const
 
 export { datasetIdProperty }
