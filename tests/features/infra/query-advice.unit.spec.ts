@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { queryAdvice, shouldEmitHint, attachQueryHint } from '../../../api/src/misc/utils/query-advice.ts'
+import { queryAdvice, shouldEmitHint, attachQueryHint, ignoredParamsAdvice } from '../../../api/src/misc/utils/query-advice.ts'
 
 // minimal fake of the bits of an express Request the helper reads.
 // `__` echoes the key so assertions can match on key names instead of translated text.
@@ -141,5 +141,92 @@ test.describe('attachQueryHint', () => {
     const req = fakeReq('/abc/lines', { hint: 'banana' }, wide)
     assert.equal('hint' in attachQueryHint(req, 500, { total: 5 }), false)
     assert.ok(typeof attachQueryHint(req, 1500, { total: 5 }).hint === 'string')
+  })
+})
+
+test.describe('ignoredParamsAdvice', () => {
+  const ds = {
+    schema: [
+      { key: 'ville', type: 'string' },
+      { key: 'age', type: 'integer' },
+      { key: 'cp', type: 'string', 'x-concept': { id: 'postalCode', primary: true } }
+    ]
+  }
+
+  test('empty when only recognized params and valid column filters are present', () => {
+    assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', { size: '10', select: 'ville', sort: '-age', q: 'x', q_fields: 'ville' }, ds)), '')
+    assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', { ville_eq: 'Paris', age_gte: '18' }, ds)), '')
+    assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', { _c_q: 'x', _c_bbox: '0,0,1,1' }, ds)), '')
+  })
+
+  test('legit concept filter that resolves to a primary concept is not flagged', () => {
+    assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', { _c_postalCode_eq: '75001' }, ds)), '')
+  })
+
+  test('Tier 1: _c_ on a column key suggests the bare column filter', () => {
+    const out = ignoredParamsAdvice(fakeReq('/abc/lines', { _c_ville_eq: 'Paris' }, ds))
+    assert.match(out, /errors\.queryAdviceIgnoredIntro/)
+    assert.match(out, /errors\.queryAdviceConceptUseColumn/)
+  })
+
+  test('Tier 2: _c_ matching no concept and no column is flagged as inert', () => {
+    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { _c_foo_eq: 'x' }, ds)), /errors\.queryAdviceConceptUnknown/)
+    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { _c_foo: 'x' }, ds)), /errors\.queryAdviceConceptUnknown/)
+  })
+
+  test('unknown / misspelled parameter is flagged', () => {
+    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { siez: '10' }, ds)), /errors\.queryAdviceUnknownParam/)
+  })
+
+  test('no schema on request: still flags unrecognized scalar params, skips column checks', () => {
+    assert.match(ignoredParamsAdvice(fakeReq('/abc/lines', { siez: '10' })), /errors\.queryAdviceUnknownParam/)
+    assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', { size: '10' })), '')
+  })
+
+  test('drift guard: no documented data-endpoint param is ever flagged', () => {
+    const documented = {
+      size: '1',
+      page: '1',
+      after: '["x"]',
+      count: 'false',
+      select: 'ville',
+      sort: 'age',
+      truncate: '100',
+      thumbnail: '300x200',
+      html: 'true',
+      format: 'json',
+      hint: 'true',
+      draft: 'true',
+      q: 'x',
+      q_fields: 'ville',
+      q_mode: 'complete',
+      qs: 'ville:Paris',
+      highlight: 'ville',
+      owner: 'u',
+      account: 'a',
+      bbox: '0,0,1,1',
+      geo_distance: '0,0,1km',
+      date_match: '2020-01-01',
+      xyz: '1,2,3',
+      wkt: 'POINT(0 0)',
+      _c_q: 'x',
+      _c_bbox: '0,0,1,1',
+      _c_geo_distance: '0,0,1km',
+      _c_date_match: '2020-01-01',
+      agg_size: '10',
+      field: 'ville',
+      metric: 'avg',
+      metric_field: 'age',
+      metrics: 'avg',
+      extra_metrics: 'x',
+      percents: '50',
+      precision_threshold: '100',
+      interval: 'month',
+      calendar: 'true',
+      missing: '0',
+      analysis: 'standard',
+      sampling: 'neighbors'
+    }
+    assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', documented, ds)), '')
   })
 })
