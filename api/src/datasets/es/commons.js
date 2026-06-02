@@ -24,13 +24,19 @@ import {
   isBoostEligible,
   hasManyQSearchFields,
   getFilterableFields,
-  buildQClauses
+  buildQClauses,
+  FILTER_CAPABILITIES,
+  getColumnFilters,
+  columnOperationsHint
 } from './operations.ts'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
-const filterSuffixes = ['_in', '_nin', '_eq', '_neq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts', '_exists', '_nexists']
+// derived from the single source of truth — keep no second hardcoded list.
+// order differs from the old array but is collision-free for endsWith detection
+// (every suffix is underscore-prefixed, so none is a suffix-substring of another).
+const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
 // thin wrapper around the pure helper to keep the existing single-arg call sites working —
 // supplies the runtime analyzer from config so mapping creation behaves unchanged
@@ -69,7 +75,7 @@ export const parseSort = (sortStr, fields, dataset) => {
     const field = dataset.schema.find(f => f.key === key)
     const capabilities = (field && field['x-capabilities']) || {}
     if (capabilities.values === false && capabilities.insensitive === false) {
-      throw httpError(400, `Impossible de trier sur le champ ${key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible de trier sur le champ ${key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
     }
     if (capabilities.insensitive !== false && field && field.type === 'string' && (field.format === 'uri-reference' || !field.format)) {
       // ignore_unmapped is necessary to maintain compatibility with older indices
@@ -138,7 +144,7 @@ function checkQuery (query, schema, esFields, currentField) {
   if (query.right) checkQuery(query.right, schema, esFields, query.field)
 }
 
-export { hasCapability, requiredCapability }
+export { hasCapability, requiredCapability, getColumnFilters }
 
 export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter, ignoreInvalidQS) => {
   /** @type {any} */
@@ -296,8 +302,10 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${propKey}, il n'existe pas dans le jeu de données.`)
     }
 
+    // single source of truth: every suffix except the any-of _search requires exactly one capability
+    if (filterSuffix !== '_search') requiredCapability(prop, filterSuffix, FILTER_CAPABILITIES[filterSuffix])
+
     if (filterSuffix === '_in') {
-      requiredCapability(prop, filterSuffix)
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
         if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
@@ -306,7 +314,6 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     } else if (filterSuffix === '_nin') {
-      requiredCapability(prop, filterSuffix)
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
         if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
@@ -315,16 +322,12 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     } else if (filterSuffix === '_eq') {
-      requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ term: { [prop.key]: query[queryKey] } })
     } else if (filterSuffix === '_neq') {
-      requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       filter.push({ bool: { must_not: { term: { [prop.key]: query[queryKey] } } } })
     } else if (filterSuffix === '_gt') {
-      // TODO: check if this filter required a "index" capability or "values"
-      requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { gt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
@@ -332,7 +335,6 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
       }
     } else if (filterSuffix === '_gte') {
-      requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { gte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
@@ -340,7 +342,6 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
       }
     } else if (filterSuffix === '_lt') {
-      requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { lt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
@@ -348,7 +349,6 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
       }
     } else if (filterSuffix === '_lte') {
-      requiredCapability(prop, filterSuffix)
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { lte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
@@ -356,10 +356,8 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
       }
     } else if (filterSuffix === '_starts') {
-      requiredCapability(prop, filterSuffix)
       filter.push({ prefix: { [prop.key]: query[queryKey] } })
     } else if (filterSuffix === '_contains') {
-      requiredCapability(prop, filterSuffix, 'wildcard')
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
       const subfields = []
@@ -368,10 +366,8 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
       must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
     } else if (filterSuffix === '_exists') {
-      requiredCapability(prop, filterSuffix)
       filter.push({ exists: { field: prop.key } })
     } else if (filterSuffix === '_nexists') {
-      requiredCapability(prop, filterSuffix)
       mustNot.push({ exists: { field: prop.key } })
     }
   }
