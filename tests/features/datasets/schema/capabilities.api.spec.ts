@@ -88,6 +88,8 @@ test.describe('Properties capabilities', () => {
       (err: any) => {
         assert.equal(err.status, 400)
         assert.ok(err.data.includes('Impossible de trier'))
+        // self-orienting: the error names the operations the column does support
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
         return true
       }
     )
@@ -96,6 +98,7 @@ test.describe('Properties capabilities', () => {
       (err: any) => {
         assert.equal(err.status, 400)
         assert.ok(err.data.includes('Impossible de grouper'))
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
         return true
       }
     )
@@ -168,6 +171,8 @@ test.describe('Properties capabilities', () => {
       (err: any) => {
         assert.equal(err.status, 400)
         assert.ok(err.data.includes('Impossible d\'appliquer un filtre'))
+        // self-orienting: the filter-loop rejection lists the column's available operations
+        assert.ok(err.data.includes('Opérations disponibles sur ce champ'))
         return true
       }
     )
