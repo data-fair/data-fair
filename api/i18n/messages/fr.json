@@ -182,5 +182,17 @@
 				"body": "L'application {{label}} a été publiée sur {{publicationSite}} dans la thématique {{topic}}."
 			}
 		}
+	},
+	"mails": {
+		"api-key": {
+			"expiring": {
+				"subject": "Votre clé d'API {{title}} expire bientôt",
+				"text": "La clé d'API {{title}} arrive à expiration le {{expireAt}}."
+			},
+			"expired": {
+				"subject": "Votre clé d'API {{title}} arrive à expiration",
+				"text": "La clé d'API {{title}} arrive à expiration le {{expireAt}}."
+			}
+		}
 	}
 }
