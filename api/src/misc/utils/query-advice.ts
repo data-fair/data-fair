@@ -64,7 +64,9 @@ const RECOGNIZED_PARAMS = new Set([
   '_c_q', '_c_bbox', '_c_geo_distance', '_c_date_match',
   // aggregations
   'agg_size', 'field', 'metric', 'metric_field', 'metrics', 'extra_metrics',
-  'percents', 'precision_threshold', 'interval', 'calendar', 'missing', 'analysis', 'sampling'
+  'percents', 'precision_threshold', 'interval', 'calendar', 'missing', 'analysis', 'sampling',
+  // output formatting / export / misc read params
+  'collapse', 'arrays', 'explain', 'fields', 'mimeType', 'finalizedAt',
 ])
 
 /**

@@ -245,7 +245,13 @@ test.describe('ignoredParamsAdvice', () => {
       calendar: 'true',
       missing: '0',
       analysis: 'standard',
-      sampling: 'neighbors'
+      sampling: 'neighbors',
+      collapse: 'ville',
+      arrays: 'true',
+      explain: 'true',
+      fields: 'val',
+      mimeType: 'text/csv',
+      finalizedAt: '2020-01-01T00:00:00Z',
     }
     assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', documented, ds)), '')
   })
