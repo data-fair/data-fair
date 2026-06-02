@@ -566,7 +566,9 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       {
         in: 'query',
         name: 'calculated',
-        description: "Inclure les colonnes calculées (non issues du fichier d'origine).",
+        description: "Inclure ou non les colonnes calculées par Data Fair, c'est-à-dire les colonnes qui ne sont pas issues du fichier d'origine.\n\n" +
+          'Par défaut ces colonnes sont **incluses**. Mettre `false` pour les exclure.\n\n' +
+          '*Exception : avec le format `mimeType=application/schema+json` elles sont par défaut exclues.*',
         required: false,
         schema: {
           title: 'Inclure les colonnes calculées',
