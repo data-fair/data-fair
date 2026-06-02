@@ -297,6 +297,28 @@ test.describe('Properties capabilities', () => {
     )
   })
 
+  test('geo_agg metric_field referencing an unknown column errors', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/rest-geoagg', {
+      isRest: true,
+      title: 'rest-geoagg',
+      schema: [
+        { key: 'latlon', type: 'string', 'x-refersTo': 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long' },
+        { key: 'val', type: 'number' }
+      ]
+    })
+    await ax.post('/api/v1/datasets/rest-geoagg/_bulk_lines', [{ latlon: '48.85,2.35', val: 3 }, { latlon: '45.75,4.85', val: 7 }])
+    await waitForFinalize(ax, 'rest-geoagg')
+    // valid metric still works
+    const res = await ax.get('/api/v1/datasets/rest-geoagg/geo_agg', { params: { metric: 'avg', metric_field: 'val' } })
+    assert.equal(res.status, 200)
+    // unknown metric_field → 400
+    await assert.rejects(
+      ax.get('/api/v1/datasets/rest-geoagg/geo_agg', { params: { metric: 'avg', metric_field: 'nope' } }),
+      (err: any) => { assert.equal(err.status, 400); assert.ok(err.data.includes('nope')); return true }
+    )
+  })
+
   test('Disable extracting text from attachment', async () => {
     const ax = testUser3
 
