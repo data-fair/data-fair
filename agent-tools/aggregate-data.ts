@@ -109,6 +109,9 @@ export function formatResult (data: any, params: Params): { text: string, struct
   if (filterQueryString) {
     lines.push('', `Filter query: ${filterQueryString}`)
   }
+  if (data.hint) {
+    lines.push('', `> Hint: ${data.hint}`)
+  }
   const text = lines.join('\n')
 
   return {

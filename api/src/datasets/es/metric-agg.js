@@ -4,6 +4,7 @@ import config from '#config'
 import { prepareQuery, aliasName } from './commons.js'
 import { timedEsCall } from './abort.js'
 import capabilities from '../../../contract/capabilities.js'
+import { columnOperationsHint } from './operations.ts'
 
 const acceptedMetricAggsByType = {
   number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
@@ -65,7 +66,7 @@ export const agg = async (client, dataset, query, abortContext) => {
   const field = dataset.schema.find(f => f.key === metricField)
   if (!field) throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
   if (field['x-capabilities'] && field['x-capabilities'].values === false) {
-    throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
   }
   assertMetricAccepted(field, query.metric)
 
@@ -120,7 +121,7 @@ export const simpleMetricsAgg = async (client, dataset, query, abortContext) => 
     const field = dataset.schema.find(f => f.key === metricField)
     if (!field) throw httpError(400, `Impossible de calculer des métriques sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
     if (field['x-capabilities'] && field['x-capabilities'].values === false) {
-      throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
     }
     if (globalMetrics) {
       for (const metric of globalMetrics) {

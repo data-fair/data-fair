@@ -1,6 +1,6 @@
 import { type Request } from 'express'
 import i18n from 'i18n'
-import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields, FILTER_CAPABILITIES } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
 
 // Builds a short, localized, advisory sentence appended to overload errors (429 compute-budget,
@@ -46,6 +46,67 @@ export const queryAdvice = (req: Request & { dataset?: { schema?: any[] } }): st
   return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + keys.map(k => req.__(k)).join(' ; ') + '.'
 }
 
+// Parameters recognized by the dataset data endpoints (/lines, /*_agg). Mirrors the query
+// params declared in api/contract/dataset-api-docs.ts and consumed in es/commons.js and
+// es/*-agg.js. Anything else is silently ignored by the API — surfaced via ignoredParamsAdvice.
+// Keep in sync with those sources (the drift-guard unit test enumerates the documented set).
+const FILTER_SUFFIXES = Object.keys(FILTER_CAPABILITIES)
+
+const RECOGNIZED_PARAMS = new Set([
+  // pagination / output shaping
+  'size', 'page', 'after', 'count', 'select', 'sort', 'truncate', 'thumbnail', 'html', 'format', 'hint', 'draft',
+  // full-text search
+  'q', 'q_fields', 'q_mode', 'qs', 'highlight',
+  // ownership / account scoping
+  'owner', 'account',
+  // geo / temporal (+ their _c_ concept forms)
+  'bbox', 'geo_distance', 'date_match', 'xyz', 'wkt',
+  '_c_q', '_c_bbox', '_c_geo_distance', '_c_date_match',
+  // aggregations
+  'agg_size', 'field', 'metric', 'metric_field', 'metrics', 'extra_metrics',
+  'percents', 'precision_threshold', 'interval', 'calendar', 'missing', 'analysis', 'sampling',
+  // output formatting / export / misc read params
+  'collapse', 'arrays', 'explain', 'fields', 'mimeType', 'finalizedAt',
+])
+
+/**
+ * Advisory for parameters the API silently ignored: a `_c_` concept prefix misapplied to a
+ * column filter, an inert `_c_` filter that matched no concept, or an unrecognized/misspelled
+ * parameter. Returns '' when nothing applies. Pure — reads only req.query + req.dataset.schema.
+ *
+ * Unlike queryAdvice (a *performance* advisory gated on slow queries), this is a *correctness*
+ * signal: attachQueryHint emits it regardless of query duration, still suppressed by hint=false.
+ */
+export const ignoredParamsAdvice = (req: Request & { dataset?: { schema?: any[] } }): string => {
+  const q: Record<string, any> = req.query || {}
+  const schema = req.dataset?.schema
+  const columnKeys = new Set((schema ?? []).map((p: any) => p.key))
+  const conceptIds = new Set((schema ?? []).filter((p: any) => p['x-concept']?.primary).map((p: any) => p['x-concept'].id))
+  const items: string[] = []
+
+  for (const key of Object.keys(q)) {
+    if (RECOGNIZED_PARAMS.has(key)) continue
+    const suffix = FILTER_SUFFIXES.find(s => key.endsWith(s))
+    // a bare column filter (<columnKey><suffix> for a real column) is recognized
+    if (suffix && !key.startsWith('_c_') && columnKeys.has(key.slice(0, key.length - suffix.length))) continue
+
+    if (key.startsWith('_c_')) {
+      const inner = key.slice(3, suffix ? key.length - suffix.length : key.length)
+      if (suffix && conceptIds.has(inner)) continue // legit concept filter that resolved (suffix required; bare _c_<concept> is dropped by commons.js)
+      if (suffix && columnKeys.has(inner)) {
+        items.push(req.__('errors.queryAdviceConceptUseColumn', key, inner + suffix)) // Tier 1: typo
+      } else {
+        items.push(req.__('errors.queryAdviceConceptUnknown', key)) // Tier 2: inert
+      }
+    } else {
+      items.push(req.__('errors.queryAdviceUnknownParam', key))
+    }
+  }
+
+  if (!items.length) return ''
+  return ' ' + req.__('errors.queryAdviceIgnoredIntro') + ' : ' + items.join(' ; ') + '.'
+}
+
 export type HintMode = 'auto' | 'true' | 'false'
 
 /**
@@ -76,16 +137,20 @@ export const attachQueryHint = <T extends Record<string, any>> (
   result: T
 ): T => {
   const mode = parseHintMode(req.query?.hint)
-  if (!shouldEmitHint(mode, esStepDurationMs)) return result
+  if (mode === 'false') return result
   const adviceReq = req.publicOperation
     ? {
         path: req.path,
         query: req.query,
         dataset: req.dataset,
-        __: (key: string) => i18n.__({ phrase: key, locale: 'en' })
+        __: (key: string, ...args: any[]) => i18n.__({ phrase: key, locale: 'en' }, ...args)
       } as any
     : req
-  const advice = queryAdvice(adviceReq).trim()
+  // correctness advice (misused/ignored params) is duration-independent — always on unless hint=false
+  const ignored = ignoredParamsAdvice(adviceReq).trim()
+  // performance advice keeps its slow-auto / explicit-true gate
+  const perf = shouldEmitHint(mode, esStepDurationMs) ? queryAdvice(adviceReq).trim() : ''
+  const advice = [ignored, perf].filter(Boolean).join(' ')
   if (!advice) return result
   return { hint: advice, ...result }
 }

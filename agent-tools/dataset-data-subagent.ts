@@ -1,3 +1,5 @@
+import { filtersGuide } from './_utils.js'
+
 export const annotations = {
   fr: {
     title: 'Interroger les données d\'un jeu de données',
@@ -18,6 +20,9 @@ Workflow:
    - search_data: to retrieve specific rows matching filters or text search. Do NOT use for statistics.
    - aggregate_data: to group rows by columns and count or compute per-group metrics (sum, avg, min, max)
    - calculate_metric: to compute a single global statistic (avg, sum, min, max, stats, percentiles, cardinality)
+
+Filtering:
+${filtersGuide}
 
 Format:
 - Present results concisely with clear labels

@@ -9,7 +9,7 @@ import * as datasetUtils from '../src/datasets/utils/index.js'
 import { acceptedMetricAggs } from '../src/datasets/es/metric-agg.js'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
-import { hasCapability } from '../src/datasets/es/commons.js'
+import { getColumnFilters } from '../src/datasets/es/commons.js'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
@@ -143,28 +143,10 @@ export default (
   const filterItems: any[] = []
   if (!isSampleDataset) {
     for (const p of schema) {
-      if (hasCapability(p, 'index') || hasCapability(p, 'wildcard') || hasCapability(p, 'text') || hasCapability(p, 'textStandard')) {
-        filterItems.push({ header: true, title: p.title ?? p['x-originalName'] ?? p.key })
-      }
-      if (hasCapability(p, 'index')) {
-        filterItems.push(p.key + '_eq')
-        filterItems.push(p.key + '_neq')
-        filterItems.push(p.key + '_in')
-        filterItems.push(p.key + '_nin')
-        filterItems.push(p.key + '_lt')
-        filterItems.push(p.key + '_lte')
-        filterItems.push(p.key + '_gt')
-        filterItems.push(p.key + '_gte')
-        filterItems.push(p.key + '_starts')
-        filterItems.push(p.key + '_exists')
-        filterItems.push(p.key + '_nexists')
-      }
-      if (hasCapability(p, 'wildcard')) {
-        filterItems.push(p.key + '_contains')
-      }
-      if (hasCapability(p, 'textStandard') || hasCapability(p, 'text')) {
-        filterItems.push(p.key + '_search')
-      }
+      const colFilters = getColumnFilters(p)
+      if (!colFilters.length) continue
+      filterItems.push({ header: true, title: p.title ?? p['x-originalName'] ?? p.key })
+      for (const suffix of colFilters) filterItems.push(p.key + suffix)
     }
   }
 
