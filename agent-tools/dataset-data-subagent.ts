@@ -32,6 +32,7 @@ Your response will be read by a parent assistant that may need to ask you follow
 
 2. **Context** (after a "---" separator): a structured summary for the parent assistant containing:
    - **datasetId**: the dataset ID(s) you queried
+   - **datasetSlug**: the dataset slug(s) from the schema
    - **datasetTitle**: the dataset title(s) from the schema
    - **columns**: the column keys and titles that were relevant to the query
    - **filters**: the exact filters, q, bbox, geoDistance, dateMatch, and sort parameters you used (as key-value pairs), so the parent assistant can refine or extend them in follow-up queries

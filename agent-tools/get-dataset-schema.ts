@@ -27,7 +27,7 @@ export function buildQuery (params: Params): {
 } {
   const id = encodeURIComponent(params.datasetId)
   return {
-    schemaReq: { path: `datasets/${id}`, query: { select: 'schema,title' } },
+    schemaReq: { path: `datasets/${id}`, query: { select: 'schema,title,slug' } },
     samplesReq: { path: `datasets/${id}/lines`, query: { size: '3' } }
   }
 }
@@ -38,6 +38,7 @@ export function formatResult (dataset: any, linesData: any): string {
 
   return [
     `# Schema: ${dataset.title}`,
+    ...(dataset.slug ? [`- **Slug:** ${dataset.slug}`, ''] : []),
     '| Key | Type | Title | Notes |',
     '|-----|------|-------|-------|',
     ...(schema || []),

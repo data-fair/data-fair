@@ -131,7 +131,7 @@ The user types directly in the chat drawer. The agent has access to all globally
 |---|---|
 | **Trigger** | Free chat or via filter/quality actions |
 | **Subagent** | `dataset_data` — data analyst that queries dataset content |
-| **Pattern** | Schema-first exploration: always reads schema before querying. Returns "Navigation params" for table filtering handoff. |
+| **Pattern** | Schema-first exploration: always reads schema before querying. Returns "Navigation params" for table filtering handoff, including the dataset `slug` (read from `get_dataset_schema`). |
 | **Tools** | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | **Source** | `ui/src/composables/dataset/agent-data-tools.ts` |
 
