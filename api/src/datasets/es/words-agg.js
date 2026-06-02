@@ -3,6 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
 import { timedEsCall } from './abort.js'
 import capabilities from '../../../contract/capabilities.js'
+import { columnOperationsHint } from './operations.ts'
 
 /** @param {import('./abort.js').EsAbortContext} [abortContext] */
 export default async (client, dataset, query, abortContext) => {
@@ -12,7 +13,7 @@ export default async (client, dataset, query, abortContext) => {
     throw httpError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
   if (prop['x-capabilities'] && !prop['x-capabilities'].textAgg) {
-    throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties.textAgg.title}" n'est pas activée dans la configuration technique du champ.`)
+    throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties.textAgg.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
 
   const field = query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'

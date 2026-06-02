@@ -2,6 +2,7 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { parseSort, prepareQuery, aliasName, prepareResultItem } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
+import { columnOperationsHint } from './operations.ts'
 import { assertMetricAccepted } from './metric-agg.js'
 import { timedEsCall } from './abort.js'
 import es from '#es'
@@ -47,7 +48,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   for (let i = 0; i < valuesFields.length; i++) {
     if (!props[i]) throw httpError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
     if (props[i]['x-capabilities'] && props[i]['x-capabilities'].values === false) {
-      throw httpError(400, `Impossible de grouper sur le champ ${props[i].key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible de grouper sur le champ ${props[i].key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(props[i])}`)
     }
 
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
