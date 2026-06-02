@@ -23,6 +23,7 @@ Filtering:
 - Build column filters as column_key + suffix (_eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search, _contains).
 - Prefer _search for free-text matching; use _eq/_in for exact values; _gte/_lte for ranges.
 - Do not assume a column supports every suffix. If a filter is rejected with a 400, the error lists the operations that column DOES support — switch to one of those instead of retrying the same filter.
+- Never put a _c_ prefix on a column filter (use ville_eq, not _c_ville_eq). _c_ is reserved for concept filters and a _c_-prefixed column filter is silently ignored.
 
 Format:
 - Present results concisely with clear labels

@@ -39,7 +39,7 @@ Suffixes:
 - _search: free-text word search (DEFAULT choice for matching text)
 - _contains: substring match — only on columns explicitly enabled for it
 
-Most columns support all of the above except _contains. A few long-text columns disable exact filters, and _search needs a text-analyzed column. You do NOT get a per-column capability list up front: just try the suffix that fits. If the API rejects a filter, the 400 error states exactly which filters that column supports ("Opérations disponibles sur ce champ — …") — read it and switch.
+Most columns support all of the above except _contains. A few long-text columns disable exact filters, and _search needs a text-analyzed column. You do NOT get a per-column capability list up front: just try the suffix that fits. If the API rejects a filter, the 400 error states exactly which filters that column supports ("Opérations disponibles sur ce champ — …") — read it and switch. Never prefix a column filter with _c_ (e.g. _c_ville_eq is wrong): the _c_ prefix is reserved for concept filters (full-text/geo/date) handled by separate params, and a _c_-prefixed column filter is silently ignored, not applied — use the bare column_key + suffix (ville_eq).
 
 Example: { "nom_search": "Jean", "age_lte": "30", "ville_eq": "Paris" }`
 
