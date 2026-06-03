@@ -9,7 +9,7 @@
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"
-    @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+    @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
   />
 </template>
 
