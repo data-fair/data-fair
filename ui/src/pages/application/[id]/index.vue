@@ -362,11 +362,15 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card :title="t('deleteApp')">
+      <v-card
+        :title="t('deleteApp')"
+        :loading="confirmRemove.loading.value ? 'warning' : undefined"
+      >
         <v-card-text>{{ t('deleteMsg', { title: application?.title }) }}</v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
+            :disabled="confirmRemove.loading.value"
             @click="showDeleteDialog = false"
           >
             {{ t('no') }}
@@ -374,7 +378,8 @@
           <v-btn
             color="warning"
             variant="flat"
-            @click="confirmRemove"
+            :loading="confirmRemove.loading.value"
+            @click="confirmRemove.execute()"
           >
             {{ t('yes') }}
           </v-btn>
@@ -427,6 +432,7 @@ fr:
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer cette application à un autre propriétaire.
   deleteApp: Supprimer l'application
+  deleteAppSuccess: L'application a bien été supprimée.
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
   deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
   yes: Oui
@@ -468,6 +474,7 @@ en:
   changeOwner: Change owner
   changeOwnerDesc: Transfer this application to another owner.
   deleteApp: Delete application
+  deleteAppSuccess: Application was deleted successfully.
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
   deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
   yes: Yes
@@ -597,11 +604,10 @@ const confirmUpgrade = async () => {
   }
 }
 
-const confirmRemove = async () => {
-  showDeleteDialog.value = false
+const confirmRemove = useAsyncAction(async () => {
   await remove()
-  router.push('/applications')
-}
+  await router.push('/applications')
+}, { success: t('deleteAppSuccess') })
 
 const sections = computedDeepDiff(() => {
   if (!application.value) return {} as Record<string, { title: string, subtitle?: string, tabs?: any[] }>

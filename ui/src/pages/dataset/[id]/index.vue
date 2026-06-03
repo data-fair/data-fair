@@ -855,7 +855,6 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
 const confirmRemove = useAsyncAction(async () => {
-  showDeleteDialog.value = false
   await remove()
   await router.push('/datasets')
 }, { success: t('deleteDatasetSuccess') })
