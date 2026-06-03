@@ -274,13 +274,22 @@ fr:
     virtual: Virtuel
     metaOnly: Métadonnées
   statusValues:
+    draft: Brouillon
+    created: Créé
+    remote: Distant
+    uploaded: Téléversé
+    loaded: Chargé
+    imported: Importé
+    stored: Stocké
+    analyzed: Analysé
+    normalized: Normalisé
+    validated: Validé
+    'validation-updated': Validation mise à jour
+    schematized: Schématisé
+    indexed: Indexé
+    extended: Étendu
     finalized: Finalisé
     error: Erreur
-    draft: Brouillon
-    indexed: Indexé
-    loaded: Chargé
-    analyzed: Analysé
-    schematized: Schématisé
   draftStatusValues:
     created: Créé
     loaded: Chargé
@@ -316,13 +325,22 @@ en:
     virtual: Virtual
     metaOnly: Metadata only
   statusValues:
+    draft: Draft
+    created: Created
+    remote: Remote
+    uploaded: Uploaded
+    loaded: Loaded
+    imported: Imported
+    stored: Stored
+    analyzed: Analyzed
+    normalized: Normalized
+    validated: Validated
+    'validation-updated': Validation updated
+    schematized: Schematized
+    indexed: Indexed
+    extended: Extended
     finalized: Finalized
     error: Error
-    draft: Draft
-    indexed: Indexed
-    loaded: Loaded
-    analyzed: Analyzed
-    schematized: Schematized
   draftStatusValues:
     created: Created
     loaded: Loaded
