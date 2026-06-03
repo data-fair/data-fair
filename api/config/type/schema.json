@@ -250,10 +250,11 @@
     },
     "worker": {
       "type": "object",
-      "required": ["interval", "baseConcurrency", "errorRetryDelay", "closeTimeout"],
+      "required": ["interval", "baseConcurrency", "concurrencyLimitPerAccount", "errorRetryDelay", "closeTimeout"],
       "properties": {
         "interval": { "type": "number" },
         "baseConcurrency": { "type": "number" },
+        "concurrencyLimitPerAccount": { "type": "number" },
         "errorRetryDelay": { "type": "number" },
         "closeTimeout": { "type": "number" }
       }

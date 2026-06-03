@@ -106,9 +106,14 @@ Each worker type defines a MongoDB filter (see `api/src/workers/tasks.ts`) that 
 
 ### Fair allocation
 
-To prevent a single owner from monopolizing workers:
-- No owner can use more than **50%** of available slots
-- The last available slot is reserved for a different owner
+Fair allocation is controlled by the `worker.concurrencyLimitPerAccount` config (env var `WORKER_CONCURRENCY_LIMIT_PER_ACCOUNT`), the fraction of a worker's slots a single account/owner may use concurrently:
+
+- **`1` (default)** — full concurrency: a single owner can use every slot. The fair-allocation rules below are disabled. Suitable for small mono-organization deployments where all slots must be usable.
+- **`< 1` (e.g. `0.5`)** — on shared multi-organization deployments, to prevent a single owner from monopolizing workers:
+  - No owner can use more than that fraction (e.g. **50%**) of a worker's available slots
+  - The last available slot is reserved for a different owner
+
+These rules only apply to workers with at least 2 slots.
 
 ### Draft priority
 

@@ -13,7 +13,7 @@ import * as ping from './ping.ts'
 import taskProgress from '../datasets/utils/task-progress.ts'
 import { Histogram, Gauge } from 'prom-client'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { type AccountKeys } from '@data-fair/lib-express'
+import { computeExcludedOwners } from './concurrency.ts'
 
 const debug = debugLib('workers')
 
@@ -49,37 +49,17 @@ export const hook = async (key: string) => {
   return newResource
 }
 
-const matchOwner = (o1: AccountKeys, o2: AccountKeys) => o1.type === o2.type && o1.id === o2.id
-
 const getWorkersStatus = () => {
   return (Object.keys(workers) as WorkerId[])
     .map(key => {
       const pending = pendingTasks[key] ?? {}
       const maxConcurrency = workers[key].options.maxThreads * workers[key].options.concurrentTasksPerWorker
       const currentConcurrency = Object.keys(pending).length
-      const excludedOwners: AccountKeys[] = []
-      if (maxConcurrency >= 2) {
-        // 1rst rule: prevent a owner from using more than half the available slots
-        const maxOwnerConcurrency = Math.floor(maxConcurrency / 2)
-        for (const task of Object.values(pending)) {
-          if (!excludedOwners.some(o => matchOwner(o, task.owner))) {
-            const nbOwnerTasks = Object.values(pending).filter(t => matchOwner(t.owner, task.owner)).length
-            if (nbOwnerTasks >= maxOwnerConcurrency) {
-              debug('owner uses more than half concurrency slots for worker, exclude them', key, task.owner)
-              excludedOwners.push(task.owner)
-            }
-          }
-        }
-        // 2nd rule: prevent a owner who already has a running task from using the last slot
-        if (Object.keys(pending).length >= maxConcurrency - 1) {
-          for (const task of Object.values(pending)) {
-            if (!excludedOwners.some(o => matchOwner(o, task.owner))) {
-              debug('owner uses a concurrency slot for worker and there is only one left, exclude them', key, task.owner)
-              excludedOwners.push(task.owner)
-            }
-          }
-        }
-      }
+      // concurrencyLimitPerAccount is the fraction (0-1) of a worker's slots a single owner may use.
+      // At 1 (the default) a single owner can use all the slots, which suits small mono-organization
+      // deployments. Lower it (e.g. 0.5) on shared multi-organization deployments. See ./concurrency.ts.
+      const excludedOwners = computeExcludedOwners(maxConcurrency, Object.values(pending), config.worker.concurrencyLimitPerAccount)
+      if (excludedOwners.length) debug('exclude owners from fair allocation on worker', key, excludedOwners)
       return { key, maxConcurrency, currentConcurrency, excludedOwners }
     })
 }

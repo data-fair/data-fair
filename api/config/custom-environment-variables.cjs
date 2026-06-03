@@ -218,6 +218,10 @@ module.exports = {
       __name: 'WORKER_BASE_CONCURRENCY',
       __format: 'json'
     },
+    concurrencyLimitPerAccount: {
+      __name: 'WORKER_CONCURRENCY_LIMIT_PER_ACCOUNT',
+      __format: 'json'
+    },
     errorRetryDelay: {
       __name: 'WORKER_ERROR_RETRY_DELAY',
       __format: 'json'
