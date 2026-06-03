@@ -27,8 +27,12 @@ test.describe('computeDueMilestones', () => {
     assert.deepEqual(computeDueMilestones({ expireAt: NOW }, NOW), ['expired'])
   })
 
-  test('already expired (yesterday) -> only expired', () => {
-    assert.deepEqual(computeDueMilestones({ expireAt: plus(-1) }, NOW), ['expired'])
+  test('already expired (yesterday) -> nothing (we never notify the past)', () => {
+    assert.deepEqual(computeDueMilestones({ expireAt: plus(-1) }, NOW), [])
+  })
+
+  test('expired long ago -> nothing', () => {
+    assert.deepEqual(computeDueMilestones({ expireAt: plus(-30) }, NOW), [])
   })
 
   test('expires in 10 days -> nothing', () => {
@@ -42,9 +46,9 @@ test.describe('computeDueMilestones', () => {
     )
   })
 
-  test('expired already notified -> nothing', () => {
+  test('expires today but day-of already notified -> nothing', () => {
     assert.deepEqual(
-      computeDueMilestones({ expireAt: plus(-1), notifiedJAt: '2026-06-02T03:00:00.000Z' }, NOW),
+      computeDueMilestones({ expireAt: NOW, notifiedJAt: '2026-06-02T03:00:00.000Z' }, NOW),
       []
     )
   })

@@ -40,24 +40,29 @@ const tryEmit = async (
   milestone: Milestone
 ) => {
   const flag = milestoneFlag[milestone]
-  // atomic conditional set — wins exactly one race across all data-fair pods
-  const res = await mongo.settings.updateOne(
+  // send first: a failed mail must not flag the key as notified (it retries next run).
+  // The task-level lock guarantees a single pod runs at a time, so sending before the
+  // flag is set cannot duplicate mails; the arrayFilter guard below keeps idempotency
+  // across runs/retries.
+  const sent = await sendMail(renderMail(milestone, apiKey, buildRecipients(settingsDoc)))
+  if (!sent) return
+  await mongo.settings.updateOne(
     { _id: settingsDoc._id },
     { $set: { [`apiKeys.$[k].${flag}`]: new Date().toISOString() } },
     { arrayFilters: [{ 'k.id': apiKey.id, [`k.${flag}`]: { $exists: false } }] }
   )
-  if (res.modifiedCount !== 1) return // another pod already emitted this milestone
-  await sendMail(renderMail(milestone, apiKey, buildRecipients(settingsDoc)))
 }
 
 const runOnce = async () => {
   const now = dayjs().format('YYYY-MM-DD')
   const j3 = dayjs().add(3, 'day').format('YYYY-MM-DD')
-  // cheap pre-filter; computeDueMilestones is the authoritative decision
+  // cheap pre-filter; computeDueMilestones is the authoritative decision.
+  // Lower bound `>= now` skips keys that expired in the past — we never notify those
+  // anymore, so there is no point scanning them on every run.
   const cursor = mongo.settings.find({
     apiKeys: {
       $elemMatch: {
-        expireAt: { $exists: true, $lte: j3 },
+        expireAt: { $exists: true, $gte: now, $lte: j3 },
         $or: [{ notifiedJ3At: { $exists: false } }, { notifiedJAt: { $exists: false } }]
       }
     }
@@ -76,7 +81,11 @@ export const task = async () => {
   if (stopped) return
   try {
     debug('run api-keys expiration cron task')
-    await locks.acquire('api-keys-expiration-task')
+    const ack = await locks.acquire('api-keys-expiration-task')
+    if (!ack) {
+      debug('another pod holds the api-keys-expiration lock, skipping this run')
+      return
+    }
     try {
       await runOnce()
     } finally {

@@ -15,10 +15,11 @@ export const milestoneFlag: Record<Milestone, FlagField> = {
  * comparison on that format is chronological.
  *
  * - 'expiring' : strictly in the future, within 3 days (today < expireAt <= today+3)
- * - 'expired'  : the expiry day or later (expireAt <= today)
- *   Note: 'expired' fires on the expiry day itself (expireAt <= now), deliberately superseding
- *   the previous worker behaviour that announced expiry only the day after; the day-of mail uses
- *   forward-looking wording ("arrive à expiration"), so this is correct.
+ * - 'expired'  : the expiry day itself, and only that day (expireAt === today)
+ *   The day-of mail uses forward-looking wording ("arrive à expiration"), so firing on the
+ *   expiry day is correct. We deliberately do NOT notify keys that expired in the past: on a
+ *   fresh deploy (or after the send secret is enabled) this avoids a backlog of mails for keys
+ *   that expired long ago, and a key still gets at least its J-3 warning beforehand.
  *
  * Anti-spam: a key expiring today yields only 'expired' (never 'expiring').
  */
@@ -30,6 +31,6 @@ export const computeDueMilestones = (
   const j3 = dayjs(now).add(3, 'day').format('YYYY-MM-DD')
   const due: Milestone[] = []
   if (apiKey.expireAt > now && apiKey.expireAt <= j3 && !apiKey.notifiedJ3At) due.push('expiring')
-  if (apiKey.expireAt <= now && !apiKey.notifiedJAt) due.push('expired')
+  if (apiKey.expireAt === now && !apiKey.notifiedJAt) due.push('expired')
   return due
 }

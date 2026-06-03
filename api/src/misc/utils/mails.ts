@@ -15,14 +15,17 @@ export type Mail = {
 
 /**
  * Send a mail through simple-directory's internal /api/mails endpoint.
- * Fire-and-forget: failures are reported via internalError, never thrown,
- * so a mail outage cannot break the cron task.
+ * Failures are reported via internalError and never thrown, so a mail outage
+ * cannot break the cron task. Returns true only when the mail actually went
+ * out, so callers can avoid recording a notification that was never sent.
  */
-export const sendMail = async (mail: Mail) => {
+export const sendMail = async (mail: Mail): Promise<boolean> => {
   const directoryUrl = config.privateDirectoryUrl || config.directoryUrl
   try {
     await axios.post(directoryUrl + '/api/mails', mail, { params: { key: config.secretKeys.sendMails } })
+    return true
   } catch (err) {
     internalError('send-mail', err)
+    return false
   }
 }
