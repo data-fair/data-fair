@@ -184,5 +184,17 @@
 				"body": "The application {{label}} has been published on {{publicationSite}} in the topic {{topic}}."
 			}
 		}
+	},
+	"mails": {
+		"api-key": {
+			"expiring": {
+				"subject": "Your API key {{title}} is about to expire",
+				"text": "API key {{title}} expires on {{expireAt}}."
+			},
+			"expired": {
+				"subject": "Your API key {{title}} expires on {{expireAt}}",
+				"text": "API key {{title}} expires on {{expireAt}}."
+			}
+		}
 	}
 }

@@ -52,7 +52,8 @@
     "assertImmutable",
     "remoteAttachmentCacheDuration",
     "extensionUpdateDelay",
-    "apiKeysMaxDuration"
+    "apiKeysMaxDuration",
+    "apiKeysExpirationCron"
   ],
   "properties": {
     "mode": {
@@ -274,6 +275,7 @@
         "catalogs": { "type": ["string", "null"] },
         "notifications": { "type": ["string", "null"] },
         "events": { "type": ["string", "null"] },
+        "sendMails": { "type": ["string", "null"] },
         "ignoreRateLimiting": { "type": ["string", "null"] }
       }
     },
@@ -460,6 +462,9 @@
     },
     "apiKeysMaxDuration": {
       "type": "number"
+    },
+    "apiKeysExpirationCron": {
+      "type": "string"
     }
   },
   "$defs": {

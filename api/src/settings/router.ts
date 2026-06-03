@@ -99,6 +99,8 @@ function cleanSettings (settings: Settings | DepartmentSettings) {
   if (settings.apiKeys) {
     for (const apiKey of settings.apiKeys) {
       delete apiKey.key
+      delete apiKey.notifiedJ3At
+      delete apiKey.notifiedJAt
     }
   }
   // @ts-ignore
@@ -161,6 +163,11 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
       throw httpError(403, 'Attempt to write an api key secret')
     }
 
+    if (apiKey.notifiedJ3At !== undefined || apiKey.notifiedJAt !== undefined) {
+      eventsLog.alert('df.apikeys.writeflag', 'a user attempted to write an api key internal notification flag', { req, account: req.owner })
+      throw httpError(400, 'API key notification flags are internal and not user-writable')
+    }
+
     if (!apiKey.id) {
       // creating a new key
 
@@ -219,7 +226,11 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
       } else {
         eventsLog.warn('df.apikeys.missingKey', `an API ${apiKey.id} key seems to be missing its internal secret`, { req, account: req.owner })
       }
-      if (!equal(existingApiKey, apiKey)) {
+      // notifiedJ3At / notifiedJAt are internal flags set by the expiration worker; they are
+      // stripped from API responses and never sent back by the user, so exclude them from the
+      // immutability comparison (otherwise any key the worker has notified becomes un-resavable).
+      const { notifiedJ3At: _nj3, notifiedJAt: _nj, ...comparableExistingApiKey } = existingApiKey as any
+      if (!equal(comparableExistingApiKey, apiKey)) {
         eventsLog.alert('df.apikeys.mutate', `a user tried to mutate an existing api key ${existingApiKey.title} (${existingApiKey.id})`, { req, account: req.owner })
         throw httpError(400, 'existing API keys are immutable')
       }

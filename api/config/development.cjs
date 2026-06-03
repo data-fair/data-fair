@@ -100,7 +100,8 @@ module.exports = {
     identities: 'identities-test-key',
     limits: 'limits-test-key',
     events: 'secret-notifications',
-    catalogs: 'secret-catalogs'
+    catalogs: 'secret-catalogs',
+    sendMails: 'testkey'
   },
   nuxtBuild: {
     active: false

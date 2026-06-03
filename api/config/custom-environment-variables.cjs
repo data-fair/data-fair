@@ -1,6 +1,7 @@
 module.exports = {
   port: 'PORT',
   mode: 'MODE',
+  apiKeysExpirationCron: 'API_KEYS_EXPIRATION_CRON',
   publicUrl: 'PUBLIC_URL',
   oldPublicUrl: 'OLD_PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',
@@ -109,6 +110,7 @@ module.exports = {
     limits: 'SECRET_LIMITS',
     catalogs: 'SECRET_CATALOGS',
     events: 'SECRET_EVENTS',
+    sendMails: 'SECRET_SENDMAILS',
     ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
   },
   brand: {

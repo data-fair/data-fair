@@ -168,7 +168,7 @@
             v-if="apiKey.expireAt"
             class="mb-4"
           >
-            {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('l') }}
+            {{ t('expireAt') }} : {{ dayjs(new Date(apiKey.expireAt)).format('L') }}
           </p>
         </v-card-text>
 

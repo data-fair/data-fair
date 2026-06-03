@@ -185,6 +185,7 @@ module.exports = {
     catalogs: null,
     notifications: null, // DEPRECATED
     events: null,
+    sendMails: null,
     ignoreRateLimiting: null
   },
   locks: {
@@ -308,5 +309,6 @@ module.exports = {
   remoteAttachmentCacheDuration: 1000 * 5,
   extensionUpdateDelay: 600,
   compatODS: false,
-  apiKeysMaxDuration: 2 * 365 // in days
+  apiKeysMaxDuration: 2 * 365, // in days
+  apiKeysExpirationCron: '0 3 * * *', // daily at 3 AM, scan apiKeys expireAt and notify J-3 / J
 }

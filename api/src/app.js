@@ -262,6 +262,8 @@ export const run = async () => {
       internalError('workers-loop-error', error)
       throw error
     })
+    const apiKeysExpirationWorker = await import('./settings/api-keys-expiration-worker.ts')
+    apiKeysExpirationWorker.start()
   }
 
   if (config.mode.includes('server')) {
@@ -324,6 +326,7 @@ export const stop = async () => {
 
   if (config.mode.includes('worker')) {
     await (await import('./workers/index.ts')).stop()
+    await (await import('./settings/api-keys-expiration-worker.ts')).stop()
   }
 
   await locks.stop()
