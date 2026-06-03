@@ -172,6 +172,10 @@ module.exports = {
     // base interval for polling the database for new resources to work on
     interval: 4000,
     baseConcurrency: 2,
+    // fraction (0-1) of a worker's slots a single account/owner may use concurrently.
+    // 1 = full concurrency (a single owner can use every slot, fair-allocation rules disabled), suitable for
+    // mono-organization deployments. Lower it (e.g. 0.5) on shared multi-organization deployments.
+    concurrencyLimitPerAccount: 1,
     errorRetryDelay: 600000, // 10 minutes
     closeTimeout: 60000 // 10 minutes to finish running tasks before shutting down
   },
