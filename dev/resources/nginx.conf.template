@@ -53,8 +53,8 @@ server {
     return 302 /data-fair/;
   }
 
-  # API routes served by API server (prefix match, more specific than /data-fair)
-  location /data-fair/api {
+  # use regex to match /data-fair/api/ and /data-fair/api? but not /data-fair/api-doc
+  location ~ ^/data-fair/api(/|$|\?) {
     rewrite ^/data-fair/(.*) /$1 break;
     proxy_pass http://localhost:${DEV_API_PORT};
   }
