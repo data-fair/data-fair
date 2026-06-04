@@ -12,6 +12,7 @@ import debugModule from 'debug'
 import { S3ReadStream } from 's3-readstream'
 import { NodeHttpHandler } from '@smithy/node-http-handler'
 import { HttpAgent, HttpsAgent } from 'agentkeepalive'
+import { retryOnMissing } from './s3-retry.ts'
 
 const debug = debugModule('s3')
 
@@ -107,13 +108,18 @@ export class S3Backend implements FileBackend {
     }
   }
 
-  async readStream (path: string, ifModifiedSince?: string, range?: string, slow?: boolean) {
+  async readStream (path: string, ifModifiedSince?: string, range?: string, slow?: boolean, retryMissing?: boolean) {
     debug('readStream', path)
     const ifModifiedSinceDate = ifModifiedSince ? new Date(ifModifiedSince) : undefined
 
     const bucketParams = { Bucket: config.s3.bucket, Key: bucketPath(path), IfModifiedSince: ifModifiedSinceDate, }
     try {
-      const headObject = await this.dataClient.send(new HeadObjectCommand(bucketParams))
+      // retryMissing is set by callers that just wrote the file and so expect it to exist;
+      // it absorbs read-after-write inconsistency on some S3 providers. It must stay off for
+      // client-facing reads where a 404 is a normal, must-stay-fast response.
+      const headObject = retryMissing
+        ? await retryOnMissing(() => this.dataClient.send(new HeadObjectCommand(bucketParams)))
+        : await this.dataClient.send(new HeadObjectCommand(bucketParams))
 
       // this shouldn't happen except if the s3 provider does not support conditional header
       if (ifModifiedSinceDate && Math.floor(headObject.LastModified!.getTime() / 1000) <= Math.floor(ifModifiedSinceDate.getTime() / 1000)) {
@@ -309,7 +315,9 @@ export class S3Backend implements FileBackend {
       Key: bucketPath(path),
       Range: 'bytes=0-' + (1024 * 1024)
     })
-    const response = await this.dataClient.send(command)
+    // fileSample is only ever called right after the file was written (storer / csv analysis),
+    // so retry transient NoSuchKey caused by read-after-write inconsistency on some S3 providers.
+    const response = await retryOnMissing(() => this.dataClient.send(command))
     return Buffer.from(await response.Body!.transformToByteArray())
   }
 }

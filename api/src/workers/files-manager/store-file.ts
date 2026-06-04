@@ -9,7 +9,6 @@ import { Transform } from 'node:stream'
 import split2 from 'split2'
 import pump from '../../misc/utils/pipe.ts'
 import debugLib from 'debug'
-import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import filesStorage from '#files-storage'
@@ -29,13 +28,10 @@ export default async function (dataset: DatasetInternal) {
   if (datasetFile) {
     const loadedFilePath = datasetUtils.loadedFilePath(dataset)
 
-    if (!await filesStorage.pathExists(loadedFilePath)) {
-      // we should not have to do this
-      // this is a weird thing, maybe an unsolved race condition ?
-      // let's wait a bit and try again to mask this problem temporarily
-      internalError('storer-missing-file', 'file missing when storer started working ' + loadedFilePath)
-      await new Promise(resolve => setTimeout(resolve, 10000))
-    }
+    // the file was just written by the upload (a separate process), but some S3 providers
+    // do not guarantee read-after-write consistency across connections/processes: the reads
+    // below (fileSample, readStream with retryMissing, moveFile after them) absorb the
+    // transient NoSuchKey via the backend's retry-on-missing logic instead of failing here.
 
     // manage some special cases of invalid files
     // some ESRI files have invalid geojson with stuff like this:
@@ -46,7 +42,7 @@ export default async function (dataset: DatasetInternal) {
       await fs.ensureFile(fixedFile.path)
       const globalIdRegexp = /"GLOBALID": \{(.*)\}/g
       await pump(
-        (await filesStorage.readStream(loadedFilePath)).body,
+        (await filesStorage.readStream(loadedFilePath, undefined, undefined, undefined, true)).body,
         split2(),
         new Transform({
           objectMode: true,
