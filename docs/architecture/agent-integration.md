@@ -131,7 +131,7 @@ The user types directly in the chat drawer. The agent has access to all globally
 |---|---|
 | **Trigger** | Free chat or via filter/quality actions |
 | **Subagent** | `dataset_data` — data analyst that queries dataset content |
-| **Pattern** | Schema-first exploration: always reads schema before querying. Returns "Navigation params" for table filtering handoff, including the dataset `slug` (read from `get_dataset_schema`). |
+| **Pattern** | Optimistic exploration: queries directly when the parent already supplied column keys/types (it usually has them from `describe_dataset` or the current page), and only calls `get_dataset_schema` when it lacks column info or needs sample values — relying on the 400 "valid operations" errors to self-correct. Returns a "Context" block for table filtering handoff, including the dataset `slug`. |
 | **Tools** | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | **Source** | `ui/src/composables/dataset/agent-data-tools.ts` |
 
@@ -155,7 +155,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button on dataset table toolbar |
 | **Action ID** | `help-filter-table` |
-| **Pattern** | **Subagent-to-navigation handoff**: asks user intent, delegates to `dataset_data` subagent, then uses `navigate` with query params to apply filters to the table page. Query params are reactively bound to the table's filter composable. |
+| **Pattern** | **Subagent-to-navigation handoff**: asks user intent, delegates to `dataset_data` subagent (passing the already-known table columns so it skips `get_dataset_schema`), then uses `navigate` with query params to apply filters to the table page. The subagent's `filterQuery` is passed as the `navigate` `query` string; `navigate` defensively unwraps the occasional `filterQuery=<whole query string>` mistake rather than relying on extra prompt warnings. Query params are reactively bound to the table's filter composable. |
 | **Source** | `ui/src/components/dataset/table/dataset-table.vue` |
 
 ### 4.4 Check Data Quality

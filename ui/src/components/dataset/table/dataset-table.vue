@@ -552,7 +552,8 @@ const filterHelpContext = computed(() => {
   const d = dataset.value
   if (!d) return ''
   const activeFilters = filters.value.map(f => `${f.property.title || f.property.key} ${f.operator} ${f.formattedValue || f.value}`).join(', ')
-  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent. After exploring, use the navigate tool to apply filters to this table page: the dataset_data subagent includes in its Context a filterQuery (URL query string) and columns (relevant column keys). Use the filterQuery as the query parameter of the navigate tool, adding select=col1,col2,col3 from the columns keys.`
+  const columns = d.schema?.filter((f: any) => !['_i', '_id', '_rand'].includes(f.key)).map((f: any) => `${f.key} (${f.title || f.key}, ${f.type})`).join(', ')
+  return `The user is viewing the table page of dataset "${d.title}" (id: ${d.id}).${activeFilters ? ` Active filters: ${activeFilters}.` : ' No filters are currently applied.'} Ask the user what data they want to see or filter before using the data exploration subagent.${columns ? ` When you delegate to the dataset_data subagent, pass it these known columns so it can query directly without re-fetching the schema: ${columns}.` : ''} After exploring, use the navigate tool to apply filters to this table page: the dataset_data subagent includes in its Context a filterQuery (URL query string) and columns (relevant column keys). Use the filterQuery as the query parameter of the navigate tool, adding select=col1,col2,col3 from the columns keys.`
 })
 
 const dataQualityContext = computed(() => {

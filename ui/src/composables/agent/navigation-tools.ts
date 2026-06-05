@@ -1,6 +1,7 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
+import { unwrapFilterQuery } from '@data-fair/agent-tools-data-fair/_utils'
 import { createAgentTranslator } from './utils'
 import type { NavGroup } from '~/composables/layout/use-navigation-items'
 import type { BreadcrumbItem } from '~/composables/layout/use-breadcrumbs'
@@ -130,7 +131,8 @@ export function useAgentNavigationTools ({ route, router, navigationGroups, brea
     },
     execute: async (params) => {
       try {
-        const query = params.query ? Object.fromEntries(new URLSearchParams(params.query as string)) : undefined
+        const queryString = unwrapFilterQuery(params.query as string | undefined)
+        const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : undefined
         await router.push(query ? { path: params.path, query } : params.path)
         await new Promise(resolve => setTimeout(resolve, 500))
         const currentRoute = router.currentRoute.value

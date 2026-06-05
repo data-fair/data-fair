@@ -7,7 +7,7 @@ export const annotations = {
 
 export const schema = {
   name: 'get_dataset_schema',
-  description: 'Get column schema and 3 sample rows for a dataset. Always call this first before querying data to understand the structure.',
+  description: 'Get column schema and 3 sample rows for a dataset. Call this when you do not already know the column keys and types — if they were provided to you (e.g. by the parent assistant), skip it and query directly. A rejected filter/sort/metric returns a 400 listing the column\'s valid operations, so you can self-correct without fetching the schema upfront.',
   inputSchema: {
     type: 'object' as const,
     properties: {
