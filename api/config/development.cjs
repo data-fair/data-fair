@@ -103,9 +103,6 @@ module.exports = {
     catalogs: 'secret-catalogs',
     sendMails: 'testkey'
   },
-  nuxtBuild: {
-    active: false
-  },
   applications: [{
     title: 'App test1',
     url: `http://localhost:${process.env.MOCK_PORT}/monapp1`,
@@ -142,7 +139,6 @@ module.exports = {
   assertImmutable: true,
   remoteAttachmentCacheDuration: 1000,
   compatODS: true,
-  browserLogLevel: 'debug',
   catalogs: [{
     title: 'Data.gouv.fr',
     href: 'https://www.data.gouv.fr'
@@ -150,7 +146,6 @@ module.exports = {
     title: 'Mydatacatalogue',
     href: 'https://app.dawizz.fr/mydatacatalogue/'
   }],
-  proxyNuxt: true,
   extraNavigationItems: [
     {
       id: 'test',

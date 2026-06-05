@@ -16,7 +16,6 @@
     "data",
     "parquet_writer",
     "ui",
-    "ui-legacy",
     "test-it"
   ]
 }

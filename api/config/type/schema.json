@@ -29,9 +29,6 @@
     "datasetStateRetries",
     "cache",
     "tiles",
-    "analytics",
-    "browserLogLevel",
-    "nuxtDev",
     "applicationsDirectories",
     "applications",
     "applicationsPrivateMapping",
@@ -313,15 +310,6 @@
         "maxThreads": { "type": "number" }
       }
     },
-    "analytics": {
-      "type": "object"
-    },
-    "browserLogLevel": {
-      "type": "string"
-    },
-    "nuxtDev": {
-      "type": "boolean"
-    },
     "applicationsDirectories": {
       "type": "array",
       "items": { "type": "string" }
@@ -371,9 +359,6 @@
       "type": "boolean"
     },
     "disablePublicationSites": {
-      "type": "boolean"
-    },
-    "proxyNuxt": {
       "type": "boolean"
     },
     "ogr2ogr": {

@@ -1,8 +1,6 @@
 node_modules
 coverage
 .nyc_output
-.nuxt
 data
-ui/nuxt-dist
 /doc
 .git

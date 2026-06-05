@@ -26,14 +26,6 @@ Run the 2 development servers with these commands in separate shells:
 
 When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `dev/resources/users.json` to login with its email.
 
-Test built nuxt distributable in dev:
-
-```
-# first set proxyNuxt to false in config/development.js
-NODE_ENV=development npm run build
-npm run dev-server
-```
-
 Run test suite:
 
 ```

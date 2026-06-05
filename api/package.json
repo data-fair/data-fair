@@ -25,7 +25,6 @@
     "@e965/xlsx": "0.20.3",
     "@elastic/elasticsearch": "^8.17.1",
     "@koumoul/icalendar": "^0.7.3",
-    "@koumoul/nuxt-config-inject": "^0.4.12",
     "@mapbox/vector-tile": "^2.0.4",
     "@terraformer/wkt": "^2.2.1",
     "@turf/bbox": "^7.2.0",
