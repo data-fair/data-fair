@@ -3,18 +3,18 @@ import { filtersGuide } from './_utils.js'
 export const annotations = {
   fr: {
     title: 'Interroger les données d\'un jeu de données',
-    description: 'Interroger les lignes d\'un jeu de données, calculer des agrégations et explorer les valeurs des colonnes. Fournissez l\'identifiant du jeu de données et décrivez les données dont vous avez besoin.'
+    description: 'Interroger les lignes d\'un jeu de données, calculer des agrégations et explorer les valeurs des colonnes. Fournissez l\'identifiant du jeu de données et décrivez les données dont vous avez besoin ; si vous connaissez déjà les colonnes (clés et types), transmettez-les pour qu\'il interroge directement sans refaire un appel au schéma.'
   },
   en: {
     title: 'Query dataset data',
-    description: 'Query dataset rows, compute aggregations, and explore field values. Provide the dataset ID and describe what data you need.'
+    description: 'Query dataset rows, compute aggregations, and explore field values. Provide the dataset ID and describe what data you need; if you already know the columns (keys and types), pass them too so it can query directly without re-fetching the schema.'
   }
 } as const
 
 export const prompt = `You are a data analyst assistant for a data platform. You help users explore and understand datasets by querying their content.
 
 Workflow:
-1. Always call get_dataset_schema first to understand column names, types, and sample data before using other tools.
+1. Know the columns before querying — but don't fetch what you already have. If your task already lists the relevant column keys and types (the parent assistant usually provides them, since it has already inspected the dataset), trust that and issue your first query directly. Only call get_dataset_schema when you have no column information, are unsure of an exact key spelling, or need sample values. The query tools return a 400 error listing a column's valid operations whenever a filter/sort/metric is rejected, so starting optimistically and self-correcting is cheaper than always fetching the schema first.
 2. Choose the right tool for the task:
    - get_field_values: to discover distinct values of a column before filtering
    - search_data: to retrieve specific rows matching filters or text search. Do NOT use for statistics.

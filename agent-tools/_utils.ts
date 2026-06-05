@@ -96,6 +96,20 @@ export function buildFilterQueryString (params: { q?: string, filters?: Record<s
 }
 
 /**
+ * Consumer-side counterpart to buildFilterQueryString, for browser apps that feed a
+ * filterQuery into their `navigate` tool. The dataset_data subagent returns filterQuery as
+ * a complete query string and the caller is told to pass it verbatim, but LLMs sometimes
+ * wrap it as "filterQuery=<the whole query string>". Detect that single-param mistake and
+ * return the inner query string; otherwise return the input unchanged.
+ */
+export function unwrapFilterQuery (query: string | undefined): string | undefined {
+  if (!query) return query
+  const match = /^filterQuery=(.+)$/s.exec(query.trim())
+  if (!match) return query
+  try { return decodeURIComponent(match[1]) } catch { return match[1] }
+}
+
+/**
  * Format schema columns into markdown table rows.
  * Filters out internal columns (_i, _id, _rand).
  */
