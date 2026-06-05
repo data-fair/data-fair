@@ -213,9 +213,6 @@ module.exports = {
     vtPrepareMaxZoom: 10,
     maxThreads: 1
   },
-  analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
-  browserLogLevel: 'error',
-  nuxtDev: false,
   // used to configure service workers in cacheFirst mode for common directories of base applications source code
   applicationsDirectories: [
     'https://koumoul.com/apps/',
@@ -261,7 +258,6 @@ module.exports = {
   disableApplications: false,
   disableRemoteServices: false,
   disablePublicationSites: false,
-  proxyNuxt: false,
   ogr2ogr: {
     skip: false,
     timeout: 360000 // 6 minutes

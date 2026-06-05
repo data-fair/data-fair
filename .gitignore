@@ -4,11 +4,9 @@ node_modules
 /coverage
 /.nyc_output
 /ui/src/bundles
-/ui/.nuxt/
 /ui/src/pages/interoperate
 /ui/src/pages/user-guide
 /ui/dist/
-/ui/nuxt-dist
 /ui/src/assets/css/
 /ui/src/assets/fonts/
 /doc/dist

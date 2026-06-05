@@ -63,10 +63,6 @@ module.exports = {
       __format: 'json'
     }
   },
-  analytics: {
-    __name: 'ANALYTICS',
-    __format: 'json'
-  },
   elasticsearch: {
     host: 'ES_HOST',
     nodes: {
@@ -231,7 +227,6 @@ module.exports = {
       __format: 'json'
     },
   },
-  browserLogLevel: 'BROWSER_LOG_LEVEL',
   listenWhenReady: {
     __name: 'LISTEN_WHEN_READY',
     __format: 'json'
