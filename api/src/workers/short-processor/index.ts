@@ -20,7 +20,9 @@ export const renewApiKey = async function (dataset: DatasetInternal) {
 }
 
 export const manageTTL = async function (dataset: RestDataset) {
-  await mongo.connect(true)
+  // es.connect is required because applyTTL iterates elasticsearch hits (iterHits -> es.client)
+  // to find the expired lines to delete
+  await Promise.all([mongo.connect(true), es.connect()])
   const restUtils = await import('../../datasets/utils/rest.ts')
   return restUtils.applyTTL(dataset)
 }
