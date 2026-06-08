@@ -142,11 +142,32 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
   }, mongoOptions).toArray()
 
   if (children.length !== dataset.virtual.children.length) {
-    throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il utilise un jeu de données pour lequel ce compte n\'a pas de permission de lecture ou qui n\'existe plus.')
+    const foundIds = new Set(children.map(c => c.id))
+    const missingIds = dataset.virtual.children.filter(id => !foundIds.has(id))
+    // re-query the missing children ignoring the permissions filter to tell apart
+    // "the dataset does not exist anymore" from "it exists but is not readable by the
+    // account owning the virtual dataset" — and report exactly which child is at fault
+    const existingMissing = await mongo.datasets
+      .find({ id: { $in: missingIds } }, { projection: { id: 1, title: 1, owner: 1 } })
+      .toArray()
+    const existingMissingById = new Map(existingMissing.map(c => [c.id, c]))
+    const details = missingIds.map(id => {
+      const child = existingMissingById.get(id)
+      if (!child) return `le jeu de données "${id}" n'existe plus`
+      const owner = child.owner
+      const ownerLabel = owner.department
+        ? `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}" / département "${owner.departmentName ?? owner.department}"`
+        : `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}"`
+      return `le jeu de données "${child.title ?? id}" (${id}, propriété de ${ownerLabel}) n'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel`
+    })
+    throw httpError(501, `[noretry] Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : ${details.join(' ; ')}.`)
   }
   for (const child of children) {
     if (child.isVirtual && (child.virtual?.filters?.length || child.virtual?.filterActiveAccount)) {
-      throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il utilise un autre jeu de données virtuel avec des filtres ce qui n\'est pas supporté.')
+      const filterKind = child.virtual?.filters?.length
+        ? `des filtres (${child.virtual.filters.map((f: any) => f.key).filter(Boolean).join(', ')})`
+        : 'un filtre sur le compte actif'
+      throw httpError(501, `[noretry] Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : il utilise le jeu de données virtuel enfant "${child.id}" qui définit ${filterKind}, ce qui n'est pas supporté.`)
     }
     if (child.isVirtual) {
       await recurseDescendants(descendants, child as VirtualDataset, mongoOptions)
