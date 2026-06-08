@@ -20,7 +20,9 @@ export const indexLines = async function (dataset: Dataset) {
 }
 
 export const validateFile = async function (dataset: FileDataset) {
-  await mongo.connect(true)
+  // es.connect is required because validateFile now also runs extensions (process-file.ts phase B),
+  // and local master-data extensions read from elasticsearch via es.client
+  await Promise.all([mongo.connect(true), es.connect()])
   await wsEmitter.init(mongo.db)
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   const processFile = await import('./process-file.ts')
