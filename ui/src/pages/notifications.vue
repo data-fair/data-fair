@@ -6,7 +6,7 @@
     <d-frame
       :src="`${$sitePath}/events/embed/devices`"
       resize
-      @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+      @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
     />
 
     <h2 class="mt-8 mb-2 text-title-large">
@@ -17,7 +17,7 @@
     <d-frame
       :src="datasetsSubscribeUrl"
       resize
-      @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+      @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
     />
 
     <h2 class="mt-8 mb-2 text-title-large">
@@ -28,7 +28,7 @@
     <d-frame
       :src="appsSubscribeUrl"
       resize
-      @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+      @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
     />
 
     <template v-if="$uiConfig.portalsIntegration">
@@ -50,25 +50,25 @@
         <d-frame
           :src="selectedSite.subscribeUrl"
           resize
-          @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+          @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
         />
         <d-frame
           v-if="requestedDatasetPublicationSiteUrl"
           :src="requestedDatasetPublicationSiteUrl"
           resize
-          @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+          @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
         />
         <d-frame
           v-if="requestedApplicationPublicationSiteUrl"
           :src="requestedApplicationPublicationSiteUrl"
           resize
-          @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+          @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
         />
         <d-frame
           v-if="userCreationPublicationSiteUrl"
           :src="userCreationPublicationSiteUrl"
           resize
-          @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+          @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
         />
       </template>
     </template>

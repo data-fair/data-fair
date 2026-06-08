@@ -7,7 +7,7 @@
     sync-params
     emit-iframe-messages
     :adapter.prop="stateChangeAdapter"
-    @notif="(e: any) => sendUiNotif({ msg: e.detail.title || e.detail.detail, type: e.detail.type })"
+    @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
   />
 </template>
 

@@ -6,7 +6,7 @@
     :owner="owner ?? null"
     :active="!!conformsToActive"
     :disabled="!can('writeDescription')"
-    @update:model-value="v => emit('update:conformsTo', v)"
+    @update:model-value="(v: ConformsTo | null) => emit('update:conformsTo', v)"
   />
 
   <div class="d-flex align-center flex-wrap ga-2 mb-2">
