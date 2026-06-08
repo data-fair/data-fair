@@ -70,6 +70,14 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     waitFor: () => !!dataset.value
   })
 
+  // Activable/custom metadata field definitions, scoped to the dataset owner's settings.
+  // Lazy (immediate: false) since only metadata views/forms need it; shared via the store so
+  // every consumer reads the same reactive ref instead of racing on a hand-rolled cache.
+  const datasetsMetadataFetch = useFetch<Record<string, any>>(() => {
+    const owner = dataset.value?.owner
+    return owner ? `${$apiPath}/settings/${owner.type}/${owner.id}/datasets-metadata` : null
+  }, { immediate: false, notifError: false })
+
   const imageField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/image'))
   const labelField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))
   const descriptionField = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/description'))
@@ -192,6 +200,7 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     taskProgressFetch,
     taskProgress,
     jsonSchemaFetch,
+    datasetsMetadataFetch,
     imageField,
     labelField,
     descriptionField,
