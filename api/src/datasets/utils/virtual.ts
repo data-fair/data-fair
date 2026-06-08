@@ -136,14 +136,17 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
 const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDataset, 'id' | 'owner' | 'virtual'>, mongoOptions: any) => {
   const pseudoSessionState = getPseudoSessionState(dataset.owner, 'virtual-dataset', '_virtual-dataset', 'admin')
   const permissionsFilter = filterCan(pseudoSessionState, 'datasets', 'read')
+  // dedupe in case the same child is referenced twice, otherwise the count
+  // comparison below would wrongly report a missing/unreadable child
+  const childrenIds = [...new Set(dataset.virtual.children)]
   const children = await mongo.datasets.find({
-    id: { $in: dataset.virtual.children },
+    id: { $in: childrenIds },
     $or: permissionsFilter
   }, mongoOptions).toArray()
 
-  if (children.length !== dataset.virtual.children.length) {
+  if (children.length !== childrenIds.length) {
     const foundIds = new Set(children.map(c => c.id))
-    const missingIds = dataset.virtual.children.filter(id => !foundIds.has(id))
+    const missingIds = childrenIds.filter(id => !foundIds.has(id))
     // re-query the missing children ignoring the permissions filter to tell apart
     // "the dataset does not exist anymore" from "it exists but is not readable by the
     // account owning the virtual dataset" — and report exactly which child is at fault
