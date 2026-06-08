@@ -237,14 +237,12 @@ import {
   mdiUpdate
 } from '@mdi/js'
 import useDatasetStore from '~/composables/dataset/dataset-store'
-import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 
-const { dataset, can } = useDatasetStore()
+const { dataset, can, datasetsMetadataFetch } = useDatasetStore()
+if (!datasetsMetadataFetch.initialized.value) datasetsMetadataFetch.refresh()
+const datasetsMetadata = datasetsMetadataFetch.data
 
 const { t, locale } = useI18n()
-
-const owner = computed(() => dataset.value?.owner)
-const { datasetsMetadata } = useDatasetsMetadata(owner)
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''

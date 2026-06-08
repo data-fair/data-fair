@@ -688,7 +688,6 @@ import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schem
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
 import { hasInvalidExprEvalExtension } from '~/composables/dataset/expr-eval-validation'
-import { useDatasetsMetadata } from '~/composables/dataset/use-metadata'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -713,9 +712,9 @@ watch(shareTab, (tab) => {
 })
 
 const store = useDatasetStore()
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
 
-const { datasetsMetadata } = useDatasetsMetadata(computed(() => dataset.value?.owner))
+const datasetsMetadata = datasetsMetadataFetch.data
 
 const onSavePermissions = async (newPermissions: import('#api/types').Permission[]) => {
   await savePermissions(newPermissions)
@@ -886,6 +885,7 @@ watch(dataset, (d) => {
   if (can('readJournal').value && !taskProgressFetch.initialized.value) taskProgressFetch.refresh()
   if (d.finalizedAt && !applicationsFetch.initialized.value) applicationsFetch.refresh()
   if (d.draftReason?.key === 'file-updated' && !publishedDatasetFetch.initialized.value) publishedDatasetFetch.refresh()
+  if (!datasetsMetadataFetch.initialized.value) datasetsMetadataFetch.refresh()
 }, { immediate: true })
 
 const applications = computed(() => applicationsFetch.data.value?.results ?? [])
