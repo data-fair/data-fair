@@ -222,7 +222,15 @@ export const run = async () => {
           return directives
         }
       },
-      privateDirectoryUrl: config.privateDirectoryUrl
+      // serveSpa's getSiteHashes fetches `${privateDirectoryUrl}/simple-directory/api/sites/_hashes`
+      // to fill the {PUBLIC_SITE_INFO_HASH}/{THEME_CSS_HASH} placeholders in index.html.
+      // In a dual-machine deployment (data-fair split from simple-directory) privateDirectoryUrl
+      // is unset, so this fetch hit `null/...` and the SPA shipped the unresolved placeholders
+      // (the session util then throws "vuetifySessionOptions requires fetching site info").
+      // Fall back to the origin of the public directoryUrl — which the reverse proxy routes to
+      // simple-directory — mirroring the directoryUrl fallback already used by session.init and
+      // the jwks status check.
+      privateDirectoryUrl: config.privateDirectoryUrl || new URL(config.directoryUrl).origin
     }))
 
     server = (await import('http')).createServer(app)
