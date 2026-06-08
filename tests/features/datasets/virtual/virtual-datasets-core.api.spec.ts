@@ -478,7 +478,9 @@ test.describe('virtual datasets core', () => {
 
     await assert.rejects(testUser3.get(`/api/v1/datasets/${res.data.id}/lines`), (err: any) => {
       assert.equal(err.status, 501)
-      assert.ok(err.data.includes('il utilise un jeu de données pour lequel ce compte n\'a pas de permission de lecture'))
+      // the error now pinpoints the exact child dataset that is not readable
+      assert.ok(err.data.includes(dataset.id))
+      assert.ok(err.data.includes('n\'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel'))
       return true
     })
   })
