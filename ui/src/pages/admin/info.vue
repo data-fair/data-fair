@@ -122,7 +122,7 @@ if ($uiConfig.catalogsIntegration) {
   services.value.push({ name: 'data-fair/catalogs', infoUrl: '/catalogs/api/admin/info' })
 }
 if ($uiConfig.processingsIntegration) {
-  services.value.push({ name: 'data-fair/processings', infoUrl: '/processings/api/admin/info' })
+  services.value.push({ name: 'data-fair/processings', infoUrl: '/processings/api/v1/admin/info' })
 }
 if ($uiConfig.portalsIntegration) {
   services.value.push({ name: 'data-fair/portals', infoUrl: '/portals-manager/api/admin/info' })
