@@ -1,7 +1,7 @@
 <template>
   <d-frame
-    id="catalogs"
-    :src="$sitePath + '/catalogs/admin/plugins/'"
+    id="registry"
+    :src="$sitePath + '/registry/'"
     class="fill-height"
     sync-params
     resize="no"
