@@ -18,6 +18,7 @@ export const uiConfig = {
   agentsIntegration: !!config.privateAgentsUrl,
   metricsIntegration: !!config.privateMetricsUrl,
   openapiViewerIntegration: !!config.privateOpenapiViewerUrl,
+  registryIntegration: !!config.privateRegistryUrl,
   extraNavigationItems: config.extraNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
   extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
   extraDocLinks: config.extraDocLinks as { icon?: string, href: string, title: string | Record<string, string> }[],
