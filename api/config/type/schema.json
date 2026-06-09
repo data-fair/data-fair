@@ -136,6 +136,9 @@
     "privateOpenapiViewerUrl": {
       "type": ["string", "null"]
     },
+    "privateRegistryUrl": {
+      "type": ["string", "null"]
+    },
     "subscriptionUrl": {
       "type": ["string", "null"]
     },
@@ -274,7 +277,8 @@
         "notifications": { "type": ["string", "null"] },
         "events": { "type": ["string", "null"] },
         "sendMails": { "type": ["string", "null"] },
-        "ignoreRateLimiting": { "type": ["string", "null"] }
+        "ignoreRateLimiting": { "type": ["string", "null"] },
+        "registry": { "type": ["string", "null"] }
       }
     },
     "locks": {

@@ -29,6 +29,7 @@ module.exports = {
   privateMetricsUrl: 'PRIVATE_METRICS_URL',
   privateAgentsUrl: 'PRIVATE_AGENTS_URL',
   privateOpenapiViewerUrl: 'PRIVATE_OPENAPI_VIEWER_URL',
+  privateRegistryUrl: 'PRIVATE_REGISTRY_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
   mongo: {
     url: 'MONGO_URL',
@@ -107,7 +108,8 @@ module.exports = {
     catalogs: 'SECRET_CATALOGS',
     events: 'SECRET_EVENTS',
     sendMails: 'SECRET_SENDMAILS',
-    ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
+    ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING',
+    registry: 'SECRET_REGISTRY'
   },
   brand: {
     logo: 'BRAND_LOGO',

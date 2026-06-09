@@ -32,6 +32,7 @@ module.exports = {
   privateMetricsUrl: null,
   privateAgentsUrl: null,
   privateOpenapiViewerUrl: null,
+  privateRegistryUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
   mongo: {
@@ -190,7 +191,8 @@ module.exports = {
     notifications: null, // DEPRECATED
     events: null,
     sendMails: null,
-    ignoreRateLimiting: null
+    ignoreRateLimiting: null,
+    registry: null // shared with the registry service; reserved for future server-to-server calls
   },
   locks: {
     // in seconds
