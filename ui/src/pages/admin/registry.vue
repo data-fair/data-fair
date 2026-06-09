@@ -2,7 +2,7 @@
   <d-frame
     id="registry"
     :src="$sitePath + '/registry/'"
-    :sync-path="$sitePath + '/admin/registry/'"
+    :sync-path="$sitePath + '/data-fair/admin/registry/'"
     class="fill-height"
     sync-params
     resize="no"
