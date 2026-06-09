@@ -41,7 +41,6 @@ export const run = async () => {
 
   if (config.mode.includes('server')) {
     const limits = await import('./limits/router.ts')
-    const rateLimiting = await import('./misc/utils/rate-limiting.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
     const { reqIsInternal, reqHost, createSiteMiddleware } = await import('@data-fair/lib-express/index.js')
     session.init(config.privateDirectoryUrl || config.directoryUrl)
@@ -144,7 +143,9 @@ export const run = async () => {
     app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.js')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
-    app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
+    // rate limiting is applied per-route inside the datasets router, after the api-key middleware, so that
+    // requests authenticated with an api key are throttled at the `user` tier rather than as anonymous
+    app.use('/api/v1/datasets', (await import('./datasets/router.js')).default)
     app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
     app.use('/api/v1/settings', (await import('./settings/router.ts')).default)
     app.use('/api/v1/admin', (await import('./admin/router.js')).default)
@@ -152,7 +153,7 @@ export const run = async () => {
     app.use('/api/v1/activity', (await import('./activity/router.js')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
-      app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./api-compat/ods/index.ts')).default)
+      app.use('/api/v1/compat-ods', (await import('./api-compat/ods/index.ts')).default)
     }
     if (process.env.NODE_ENV === 'development') {
       app.use('/api/v1/test-env', (await import('./misc/routers/test-env.ts')).default)

@@ -49,7 +49,12 @@ defence; the in-app limiter (§4) backs it up and adds cost-awareness.
 - `express.json({ limit: '1000kb' })` body parser, bypassed for routes ending in `_bulk` or
   containing `bulk-searchs` (those stream).
 - Graceful shutdown via `http-terminator`.
-- Rate-limiting middleware is mounted on `/api/v1/datasets` and `/api/v1/compat-ods`.
+- Rate-limiting middleware is applied **per-route** inside the datasets and ODS routers — a single shared
+  `rateLimiting.middleware` instance placed right after each `apiKeyMiddlewareRead/Write/Admin`. It
+  deliberately runs *after* api-key resolution so a request authenticated with an api key is throttled at
+  the `user` tier rather than as anonymous; the trade-off is that each route opts in (routes with no
+  api-key middleware — e.g. `_diagnose`, `_reindex`, `read-api-key` — are not throttled, which is fine for
+  those admin paths). Remote-service proxy traffic uses its own `rateLimiting.remoteServiceMiddleware`.
 
 ## 4. In-app rate limiting (`api/src/misc/utils/rate-limiting.ts`)
 
@@ -73,6 +78,14 @@ expensive the query is. Bandwidth is throttled separately: handlers call `res.th
 4 burst factor). The middleware picks `user` vs `anonymous` based on `reqUser(req)`; specific limit
 types are passed explicitly elsewhere (application keys, captures, remote services). The header
 `x-ignore-rate-limiting: <SECRET_IGNORE_RATE_LIMITING>` bypasses everything (internal callers).
+
+> **Who counts as a "user":** the limiter keys the tier and the bucket off `rateLimitUser(req)`, not
+> `reqUser(req)` directly. It returns the request's user **except** for application-key sessions
+> (the pseudo-user the application-key middleware sets for embed / public `?key=` access, flagged
+> `isApplicationKey`), which are deliberately rate-limited as anonymous (by IP) — they are public-style
+> traffic the anonymous tier is meant to bound. Real users (JWT/cookie) and api keys get the `user`
+> tier. Because the limiter runs per-route after the api-key middleware (§3), `reqUser` is already
+> populated when it reads it.
 
 > **Weakness:** uniform cost-per-request, plus per-pod / per-IP scope. A burst of expensive queries
 > from one IP is allowed up to 600/min (anon) or 1200/min (user); a *distributed* flood (many IPs,
