@@ -15,6 +15,7 @@ services:
       - EVENTS_PORT=${EVENTS_PORT}
       - CATALOGS_PORT=${CATALOGS_PORT}
       - AGENTS_PORT=${AGENTS_PORT}
+      - REGISTRY_PORT=${REGISTRY_PORT}
     volumes:
       - ./dev/resources/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
 
@@ -184,6 +185,29 @@ services:
       - MONGO_URL=mongodb://localhost:${MONGO_PORT}/agents
       - CIPHER_PASSWORD=test
       - OBSERVER_ACTIVE=false
+
+  # registry-side dev container — same domain as data-fair under /registry
+  registry:
+    profiles:
+      - dev
+    image: ghcr.io/data-fair/registry:main
+    network_mode: host
+    depends_on:
+      - mongodb
+      - sd
+    environment:
+      - PORT=${REGISTRY_PORT}
+      - MONGO_URL=mongodb://localhost:${MONGO_PORT}/data-fair-registry
+      - PRIVATE_DIRECTORY_URL=http://localhost:${SD_PORT}
+      - SECRET_INTERNAL_SERVICES=secret-registry-internal
+      - CIPHER_PASSWORD=1234567890123456789012345678901234567890
+      - API_KEYS_SALT=1234567890123456789012345678901234567890
+      - OBSERVER_ACTIVE=false
+      - FILES_STORAGE=fs
+      # /tmp is world-writable in the registry image; the container runs as
+      # uid 1000 ("node") and can't write to a docker-managed volume without an
+      # init step. Tarballs are throwaway in dev so keep them in the container.
+      - DATA_DIR=/tmp/registry-data
 
   clamav:
     image: clamav/clamav:1.5.1

@@ -107,6 +107,12 @@ server {
   location /agents {
     proxy_pass http://localhost:${AGENTS_PORT};
   }
+
+  # Registry expects the /registry prefix in the URL itself
+  # (PUBLIC_URL=...registry); pass the full path through unchanged.
+  location /registry/ {
+    proxy_pass http://localhost:${REGISTRY_PORT};
+  }
 }
 
 # secondary exposition to simulate a publication site
