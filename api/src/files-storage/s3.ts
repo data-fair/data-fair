@@ -173,6 +173,14 @@ export class S3Backend implements FileBackend {
 
   async moveFromFs (tmpPath: string, path: string): Promise<void> {
     await this.writeStream(createReadStream(tmpPath), path)
+    // Confirm the object is actually readable before deleting the local source. Some S3
+    // providers can ack a write without durably storing the object, which then surfaces as
+    // a NoSuchKey when a worker reads the file in another process. Verifying here (like the
+    // multer upload path does with fileStats) turns that silent miss into a loud failure at
+    // upload time instead. retryOnMissing absorbs the transient cross-connection
+    // inconsistency (we write on dataClient and HEAD on metadataClient) so only a persistent
+    // miss — the durable loss we actually want to catch — fails the upload.
+    await retryOnMissing(() => this.metadataClient.send(new HeadObjectCommand({ Bucket: config.s3.bucket, Key: bucketPath(path) })))
     await unlink(tmpPath)
   }
 
