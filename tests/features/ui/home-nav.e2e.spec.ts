@@ -86,9 +86,9 @@ test.describe('navigation drawer', () => {
 
   test('monitoring group shows storage', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/', 'test_user1')
-    // Expand monitoring group
-    await expect(page.locator('nav').getByText('Suivi')).toBeVisible({ timeout: 10000 })
-    await page.locator('nav').getByText('Suivi').click()
+    // Expand monitoring group (exact match to not also catch "Suivi des agents")
+    await expect(page.locator('nav').getByText('Suivi', { exact: true })).toBeVisible({ timeout: 10000 })
+    await page.locator('nav').getByText('Suivi', { exact: true }).click()
     await expect(page.locator('nav').getByText('Stockage')).toBeVisible()
   })
 
