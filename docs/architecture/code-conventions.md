@@ -44,9 +44,11 @@ Good existing examples of the target pattern: `remote-services/operations.ts`,
 
 ## 2. Request context: symbol accessors replace `req` mutation
 
-**The problem:** ~35 distinct properties are mutated onto `req` across 10+ files. Any function that
-reads them is coupled to Express. The accessor pattern (following `@data-fair/lib-express`
-`session.ts` / `site.ts`) puts all casts in one place and makes the context contract explicit.
+**The problem:** ~30 distinct properties are mutated onto `req` across 10+ files (casts like
+`(req as any).prop = …` escape a plain-property grep — when migrating a module, also grep for
+`(req as any)`). Any function that reads them is coupled to Express. The accessor pattern (following
+`@data-fair/lib-express` `session.ts` / `site.ts`) puts all casts in one place and makes the
+context contract explicit.
 
 ### The factory
 
@@ -85,7 +87,7 @@ call site. Its return type encodes the contract:
 
 | Exported name | Type | Source |
 |---|---|---|
-| `reqResource` / `setReqResource` | `Resource` (throws) | `applications/router.js`, `datasets/middlewares.js` |
+| `reqResource` / `setReqResource` | `Resource` (throws) | `applications/router.js`, `applications/proxy.js`, `datasets/middlewares.js`, `remote-services/router.js` |
 | `reqResourceOptional` | `Resource \| undefined` | same |
 | `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | several routers |
 | `reqBypassPermissions` / `setReqBypassPermissions` | `BypassPermissions \| undefined` | `api-key.ts`, `application-key.ts` |
@@ -106,18 +108,18 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 | File | Properties set |
 |---|---|
 | `api/src/app.js` | `publicBaseUrl`, `publicWsBaseUrl`, `publicationSite`, `mainPublicationSite` |
-| `api/src/datasets/middlewares.js` | `dataset`, `datasetFull`, `noCache`, `url` |
+| `api/src/datasets/middlewares.js` | `dataset`, `resource`, `datasetFull`, `noCache`, `url` |
 | `api/src/datasets/router.js` | `resourceType`, `linesOwner`, `body`, `_draft` |
 | `api/src/datasets/utils/rest.ts` | `_fixedFormBody`, `body`, `_rawBody`, `_uploadedAttachmentPath` |
 | `api/src/datasets/es/abort.js` | `esAbortContext` |
-| `api/src/applications/router.js` | `resourceType`, `resource`, `baseApp`, `isNewApplication` |
-| `api/src/applications/proxy.js` | `application`, `resourceType`, `matchingApplicationKey` |
+| `api/src/applications/router.js` | `resourceType`, `resource`, `application`, `baseApp`, `isNewApplication` |
+| `api/src/applications/proxy.js` | `application`, `resource`, `resourceType`, `matchingApplicationKey` |
 | `api/src/settings/router.ts` | `owner`, `department`, `ownerFilter` |
-| `api/src/remote-services/router.js` | `resourceType`, `remoteService` |
+| `api/src/remote-services/router.js` | `resourceType`, `remoteService`, `resource` |
 | `api/src/catalog/router.js` | `resourceType`, `publicationSite` |
 | `api/src/misc/utils/permissions.ts` | `publicOperation` |
 | `api/src/misc/utils/api-key.ts` | `bypassPermissions` |
-| `api/src/misc/utils/application-key.ts` | `bypassPermissions`, `matchingApplicationKey` |
+| `api/src/misc/utils/application-key.ts` | `bypassPermissions` |
 | `api/src/api-compat/ods/index.ts` | `resourceType`, `noModifiedCache` |
 
 ### Migration mechanics per property
