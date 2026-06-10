@@ -5,8 +5,8 @@ import slug from 'slugify'
 import dayjs from 'dayjs'
 import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid as validateSettings } from '#types/settings/index.js'
-import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
+import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings } from '#types/settings/index.js'
+import { type DepartmentSettings } from '#types/department-settings/index.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as topicsUtils from '../misc/utils/topics.ts'
@@ -16,11 +16,13 @@ import mongo from '#mongo'
 import standardLicenses from '../../contract/licenses.js'
 import debugLib from 'debug'
 import { reqHost } from '@data-fair/lib-express/req-origin.js'
-import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type SessionStateAuthenticated, type User } from '@data-fair/lib-express'
+import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type Request } from '#types'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
+import { validate, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings } from './operations.ts'
+export { isMainSettings, isUserSettings, isDepartmentSettings } from './operations.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -28,27 +30,9 @@ const router = express.Router()
 
 const allowedTypes = new Set(['user', 'organization'])
 
-function validate (settings: any): asserts settings is Settings | DepartmentSettings {
-  if ((settings as DepartmentSettings).department) {
-    validateDepartmentSettings(settings)
-  } else {
-    validateSettings(settings)
-  }
-}
-
 type SettingsRequest = Request & { owner: AccountKeys, department?: string, ownerFilter: any }
 function assertSettingsRequest (req: ExpressRequest): asserts req is SettingsRequest {
   if (!(req as SettingsRequest).owner) throw new Error('middleware not applied')
-}
-
-export function isMainSettings (settings: Settings | DepartmentSettings): settings is Settings {
-  return !(settings as DepartmentSettings).department
-}
-export function isUserSettings (settings: Settings | DepartmentSettings): settings is Settings {
-  return (settings as DepartmentSettings).type === 'user'
-}
-export function isDepartmentSettings (settings: Settings | DepartmentSettings): settings is DepartmentSettings {
-  return !!(settings as DepartmentSettings).department
 }
 
 // @ts-ignore
@@ -95,19 +79,6 @@ function isOwnerMember (req: ExpressRequest, res: Response, next: NextFunction) 
   next()
 }
 
-function cleanSettings (settings: Settings | DepartmentSettings) {
-  if (settings.apiKeys) {
-    for (const apiKey of settings.apiKeys) {
-      delete apiKey.key
-      delete apiKey.notifiedJ3At
-      delete apiKey.notifiedJAt
-    }
-  }
-  // @ts-ignore
-  delete settings._id
-  return settings
-}
-
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
   assertSettingsRequest(req)
@@ -116,26 +87,6 @@ router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) =>
     .findOne(req.ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
   res.status(200).send(result ? cleanSettings(result) : {})
 })
-
-const fillSettings = (owner: AccountKeys, user: User, settings: any): Settings | DepartmentSettings => {
-  Object.assign(settings, owner)
-  if (owner.type === 'user') {
-    settings.name = user.name
-    settings.email = user.email
-  } else {
-    const org = user.organizations.find(o => o.id === owner.id)
-    if (!org) throw new Error('base org ref in user')
-    settings.name = org.name
-    if (owner.department) settings.name += ' - ' + owner.department
-  }
-  settings.apiKeys = settings.apiKeys || []
-  for (const apiKey of settings.apiKeys) {
-    delete apiKey.clearKey
-  }
-  settings.publicationSites = settings.publicationSites || []
-  delete settings.operationsPermissions // deprecated
-  return settings
-}
 
 const writeSettings = async (req: SettingsRequest, existingSettings: Settings | DepartmentSettings | null, settings: any, sessionState: SessionStateAuthenticated) => {
   const user = sessionState.user
@@ -282,14 +233,6 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
   }
 
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
-}
-
-const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
-  if (datasetsMetadata.custom) {
-    for (const customMedata of datasetsMetadata.custom) {
-      if (!customMedata.key) customMedata.key = slug.default(customMedata.title, { lower: true, strict: true })
-    }
-  }
 }
 
 const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees, newDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
