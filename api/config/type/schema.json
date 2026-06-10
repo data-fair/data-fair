@@ -133,6 +133,9 @@
     "privateAgentsUrl": {
       "type": ["string", "null"]
     },
+    "openapiViewerUrl": {
+      "type": ["string", "null"]
+    },
     "privateOpenapiViewerUrl": {
       "type": ["string", "null"]
     },

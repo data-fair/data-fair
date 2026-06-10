@@ -17,7 +17,11 @@ export const uiConfig = {
   subscriptionUrl: config.subscriptionUrl,
   agentsIntegration: !!config.privateAgentsUrl,
   metricsIntegration: !!config.privateMetricsUrl,
-  openapiViewerIntegration: !!config.privateOpenapiViewerUrl,
+  // In a dual-machine deployment openapi-viewer runs on the catalog VM and is not
+  // reachable through a private URL from data-fair, but it is still served to the
+  // browser via the public site path. So enable the integration when either the
+  // private or the public openapi-viewer URL is configured.
+  openapiViewerIntegration: !!(config.privateOpenapiViewerUrl || config.openapiViewerUrl),
   registryIntegration: !!config.privateRegistryUrl,
   extraNavigationItems: config.extraNavigationItems as { id: string, iframe?: string, [key: string]: any }[],
   extraAdminNavigationItems: config.extraAdminNavigationItems as { id: string, iframe?: string, [key: string]: any }[],

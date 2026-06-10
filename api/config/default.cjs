@@ -31,6 +31,7 @@ module.exports = {
   privateProcessingsUrl: null,
   privateMetricsUrl: null,
   privateAgentsUrl: null,
+  openapiViewerUrl: null,
   privateOpenapiViewerUrl: null,
   privateRegistryUrl: null,
   subscriptionUrl: null,

@@ -28,6 +28,7 @@ module.exports = {
   privateProcessingsUrl: 'PRIVATE_PROCESSINGS_URL',
   privateMetricsUrl: 'PRIVATE_METRICS_URL',
   privateAgentsUrl: 'PRIVATE_AGENTS_URL',
+  openapiViewerUrl: 'OPENAPI_VIEWER_URL',
   privateOpenapiViewerUrl: 'PRIVATE_OPENAPI_VIEWER_URL',
   privateRegistryUrl: 'PRIVATE_REGISTRY_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
