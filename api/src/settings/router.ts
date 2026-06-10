@@ -7,8 +7,6 @@ import { reqSessionAuthenticated } from '@data-fair/lib-express'
 import { buildPublicationSiteSubscriptions } from './operations.ts'
 import * as service from './service.ts'
 import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, reqSettingsParams, reqWriteContext } from './middlewares.ts'
-// TODO(task 1.4): remove this shim once api-key.ts imports operations.ts directly
-export { isMainSettings, isUserSettings, isDepartmentSettings } from './operations.ts'
 
 const router = express.Router()
 
