@@ -15,11 +15,15 @@ export type ReqContext<T> = {
 
 // legacyProp: name of the legacy mutated req property to fall back to while
 // setters are migrated module by module. Remove the argument (and the legacy
-// member in api/types) once `grep -rn "req.<prop> *=" api/src` is empty.
+// member in api/types) once `grep -rnE "req\.<prop> *= [^=]" api/src` is empty.
+// While legacyProp is set, set() dual-writes the legacy property so readers and setters can migrate in any order.
 export const defineReqContext = <T>(name: string, legacyProp?: string): ReqContext<T> => {
   const key = Symbol(name)
   return {
-    set: (req, value) => { (req as any)[key] = value },
+    set: (req, value) => {
+      (req as any)[key] = value
+      if (legacyProp) (req as any)[legacyProp] = value
+    },
     get: (req) => {
       const value = (req as any)[key] ?? (legacyProp ? (req as any)[legacyProp] : undefined)
       if (value === undefined) throw new Error(`req context "${name}" was not set (middleware missing?)`)

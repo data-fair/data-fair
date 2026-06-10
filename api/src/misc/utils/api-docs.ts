@@ -24,19 +24,22 @@ export const operationsClasses: Record<ResourceType, Record<string, string[]>> =
     write: ['writeDescription'],
     admin: ['delete', 'getPermissions', 'setPermissions'],
     use: ['readDatasets', 'harvestDataset', 'harvestDatasetResource']
-  }
+  },
+  'remote-services': {}
 }
 
 export const adminOperationsClasses: Record<ResourceType, string[]> = {
   datasets: ['manageMasterData'],
   catalogs: ['post'],
-  applications: []
+  applications: [],
+  'remote-services': []
 }
 
 export const contribOperationsClasses: Record<ResourceType, string[]> = {
   datasets: ['post'],
   applications: ['post'],
-  catalogs: ['list', 'read', 'use']
+  catalogs: ['list', 'read', 'use'],
+  'remote-services': []
 }
 
 // WARNING: this util is used both in UI and server
@@ -53,7 +56,8 @@ export const operations = (apiDoc: any): { id: string, title: string }[] => {
 export const classByOperation: Record<ResourceType, Record<string, string>> = {
   datasets: {},
   applications: {},
-  catalogs: {}
+  catalogs: {},
+  'remote-services': {}
 }
 for (const resourceType of Object.keys(operationsClasses) as ResourceType[]) {
   for (const classe of Object.keys(operationsClasses[resourceType])) {

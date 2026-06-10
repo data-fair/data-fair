@@ -37,4 +37,13 @@ test.describe('defineReqContext', () => {
     a.set(req, '1')
     assert.equal(b.getOptional(req), undefined)
   })
+
+  test('a set value of false does not throw and does not fall back to legacy', () => {
+    const ctx = defineReqContext<boolean>('flag', 'flag')
+    const req: any = { flag: true }
+    ctx.set(req, false)
+    assert.equal(ctx.get(req), false)
+    assert.equal(ctx.getOptional(req), false)
+    assert.equal(req.flag, false) // dual-write keeps the legacy prop in sync
+  })
 })
