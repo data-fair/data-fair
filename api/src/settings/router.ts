@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import express, { type Request as ExpressRequest, type Response, type NextFunction } from 'express'
+import express from 'express'
 import nanoid from '../misc/utils/nanoid.js'
 import slug from 'slugify'
 import dayjs from 'dayjs'
@@ -7,7 +7,6 @@ import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings } from '#types/settings/index.js'
 import { type DepartmentSettings } from '#types/department-settings/index.js'
-import * as permissions from '../misc/utils/permissions.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as topicsUtils from '../misc/utils/topics.ts'
 import * as notifications from '../misc/utils/notifications.ts'
@@ -22,6 +21,7 @@ import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings } from './operations.ts'
+import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, reqSettingsParams } from './middlewares.ts'
 // TODO(task 1.4): remove this shim once api-key.ts imports operations.ts directly
 export { isMainSettings, isUserSettings, isDepartmentSettings } from './operations.ts'
 
@@ -29,69 +29,21 @@ const debugPublicationSites = debugLib('publication-sites')
 
 const router = express.Router()
 
-const allowedTypes = new Set(['user', 'organization'])
-
-type SettingsRequest = Request & { owner: AccountKeys, department?: string, ownerFilter: any }
-function assertSettingsRequest (req: ExpressRequest): asserts req is SettingsRequest {
-  if (!(req as SettingsRequest).owner) throw new Error('middleware not applied')
-}
-
-// @ts-ignore
-router.use('/:type/:id', (req: ExpressRequest, res: Response, next: NextFunction) => {
-  if (req.params.type !== 'user' && req.params.type !== 'organization') {
-    res.status(400).type('text/plain').send('Invalid type, it must be one of the following : ' + Array.from(allowedTypes).join(', '))
-    return
-  }
-  const [id, department] = req.params.id.split(':')
-  req.owner = { type: req.params.type, id }
-  if (department) {
-    req.department = department
-    if (department !== '*') req.owner.department = department
-  }
-  req.ownerFilter = { ...req.owner }
-  if (!department) req.ownerFilter.department = { $exists: false }
-
-  next()
-})
-
-function isOwnerAdmin (req: ExpressRequest, res: Response, next: NextFunction) {
-  assertSettingsRequest(req)
-  const sessionState = reqSessionAuthenticated(req)
-  if (sessionState.user.adminMode) {
-    // ok
-  } else if (permissions.getOwnerRole(req.owner, sessionState) !== 'admin') {
-    eventsLog.alert('df.apikeys.permission', 'a user attempted to overwrite settings from another account', { req, account: req.owner })
-    res.sendStatus(403)
-    return
-  }
-  next()
-}
-
-function isOwnerMember (req: ExpressRequest, res: Response, next: NextFunction) {
-  assertSettingsRequest(req)
-  const sessionState = reqSessionAuthenticated(req)
-  if (sessionState.user.adminMode) {
-    // ok
-  } else if (!permissions.getOwnerRole(req.owner, sessionState, true)) {
-    // do not check belonging to department, some settings are shared from top org to its departments
-    res.sendStatus(403)
-    return
-  }
-  next()
-}
+router.use('/:type/:id', settingsParamsMiddleware)
 
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
-  assertSettingsRequest(req)
+  const { ownerFilter } = reqSettingsParams(req)
   const settings = mongo.settings
   const result = await settings
-    .findOne(req.ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
+    .findOne(ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
   res.status(200).send(result ? cleanSettings(result) : {})
 })
 
-const writeSettings = async (req: SettingsRequest, existingSettings: Settings | DepartmentSettings | null, settings: any, sessionState: SessionStateAuthenticated) => {
+const writeSettings = async (req: Request, existingSettings: Settings | DepartmentSettings | null, settings: any, sessionState: SessionStateAuthenticated) => {
+  const { owner, ownerFilter } = reqSettingsParams(req)
   const user = sessionState.user
-  fillSettings(req.owner, user, settings)
+  fillSettings(owner, user, settings)
   validateSettings(settings)
 
   settings.apiKeys = settings.apiKeys ?? []
@@ -106,17 +58,17 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
     // this check should not be necessary as later on we check adminMode at creation then immutability
     // this is just here as an extra safety
     if (apiKey.adminMode && !user.isAdmin) {
-      eventsLog.alert('df.apikeys.manageadmin', 'a non-admin user attempted to manage settings that include an adminMode api key', { req, account: req.owner })
+      eventsLog.alert('df.apikeys.manageadmin', 'a non-admin user attempted to manage settings that include an adminMode api key', { req, account: owner })
       throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
     }
 
     if (apiKey.key) {
-      eventsLog.alert('df.apikeys.writesecret', 'a user attempted to write an api key internal secret', { req, account: req.owner })
+      eventsLog.alert('df.apikeys.writesecret', 'a user attempted to write an api key internal secret', { req, account: owner })
       throw httpError(403, 'Attempt to write an api key secret')
     }
 
     if (apiKey.notifiedJ3At !== undefined || apiKey.notifiedJAt !== undefined) {
-      eventsLog.alert('df.apikeys.writeflag', 'a user attempted to write an api key internal notification flag', { req, account: req.owner })
+      eventsLog.alert('df.apikeys.writeflag', 'a user attempted to write an api key internal notification flag', { req, account: owner })
       throw httpError(400, 'API key notification flags are internal and not user-writable')
     }
 
@@ -125,11 +77,11 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
 
       const returnedApiKey = returnedApiKeys[i]
       if (apiKey.adminMode && !user.adminMode) {
-        eventsLog.alert('df.apikeys.createadmin', 'a user attempted to create an adminMode api key', { req, account: req.owner })
+        eventsLog.alert('df.apikeys.createadmin', 'a user attempted to create an adminMode api key', { req, account: owner })
         throw httpError(403, 'Only superadmin can create api keys with adminMode=true')
       }
       if (apiKey.email) {
-        eventsLog.alert('df.apikeys.setemail', 'a user attempted to define the email address of an api key', { req, account: req.owner })
+        eventsLog.alert('df.apikeys.setemail', 'a user attempted to define the email address of an api key', { req, account: owner })
         throw httpError(403, 'API key email is readonly')
       }
       if (apiKey.expireAt && apiKey.expireAt > dayjs().add(config.apiKeysMaxDuration + 1, 'day').format('YYYY-MM-DD')) {
@@ -137,8 +89,8 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
       }
       returnedApiKey.id = apiKey.id = nanoid()
 
-      const clearKeyParts = [req.owner.type.slice(0, 1), req.owner.id]
-      if (req.owner.department) clearKeyParts.push(req.owner.department)
+      const clearKeyParts = [owner.type.slice(0, 1), owner.id]
+      if (owner.department) clearKeyParts.push(owner.department)
       clearKeyParts.push(nanoid())
       returnedApiKey.clearKey = Buffer.from(clearKeyParts.join(':')).toString('base64url')
       const hash = crypto.createHash('sha512')
@@ -151,39 +103,39 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
         returnedApiKey.email = apiKey.email = `${slug.default(apiKey.title, { lower: true, strict: true })}-${apiKey.id}@api-key.${reqHost(req)}`
       }
 
-      eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { req, account: req.owner })
+      eventsLog.info('df.apikeys.create', `a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { req, account: owner })
       eventsQueue.pushEvent({
         title: 'Création d\'une clé d\'API',
         body: `${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`,
         topic: {
           key: 'data-fair:settings:api-key-created'
         },
-        sender: req.owner
+        sender: owner
       }, sessionState)
     } else {
       // re-sending an existing key
 
       const existingApiKey = existingApiKeys.find(k => k.id === apiKey.id)
       if (!existingApiKey) {
-        eventsLog.alert('df.apikeys.setid', 'a user tried to create an api key with id', { req, account: req.owner })
+        eventsLog.alert('df.apikeys.setid', 'a user tried to create an api key with id', { req, account: owner })
         throw httpError(400, 'API key cannot be created with an id')
       }
       // should be covered by next general immutability check, but double check to be sure
       if (apiKey.adminMode && !existingApiKey.adminMode && !user.adminMode) {
-        eventsLog.alert('df.apikeys.setadmin', 'a user attempted to mutate an api key and make it admin', { req, account: req.owner })
+        eventsLog.alert('df.apikeys.setadmin', 'a user attempted to mutate an api key and make it admin', { req, account: owner })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
       if (existingApiKey.key) {
         apiKey.key = existingApiKey.key
       } else {
-        eventsLog.warn('df.apikeys.missingKey', `an API ${apiKey.id} key seems to be missing its internal secret`, { req, account: req.owner })
+        eventsLog.warn('df.apikeys.missingKey', `an API ${apiKey.id} key seems to be missing its internal secret`, { req, account: owner })
       }
       // notifiedJ3At / notifiedJAt are internal flags set by the expiration worker; they are
       // stripped from API responses and never sent back by the user, so exclude them from the
       // immutability comparison (otherwise any key the worker has notified becomes un-resavable).
       const { notifiedJ3At: _nj3, notifiedJAt: _nj, ...comparableExistingApiKey } = existingApiKey as any
       if (!equal(comparableExistingApiKey, apiKey)) {
-        eventsLog.alert('df.apikeys.mutate', `a user tried to mutate an existing api key ${existingApiKey.title} (${existingApiKey.id})`, { req, account: req.owner })
+        eventsLog.alert('df.apikeys.mutate', `a user tried to mutate an existing api key ${existingApiKey.title} (${existingApiKey.id})`, { req, account: owner })
         throw httpError(400, 'existing API keys are immutable')
       }
     }
@@ -193,7 +145,7 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
   for (const existingApiKey of existingApiKeys) {
     if (!settings.apiKeys.some(k => k.id === existingApiKey.id)) {
       if (existingApiKey.adminMode && !user.adminMode) {
-        eventsLog.alert('df.apikeys.deleteadmin', 'a user attempted to delete an admin api key', { req, account: req.owner })
+        eventsLog.alert('df.apikeys.deleteadmin', 'a user attempted to delete an admin api key', { req, account: owner })
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
       eventsQueue.pushEvent({
@@ -202,7 +154,7 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
         topic: {
           key: 'data-fair:settings:api-key-deleted'
         },
-        sender: req.owner
+        sender: owner
       }, sessionState)
     }
   }
@@ -223,14 +175,14 @@ const writeSettings = async (req: SettingsRequest, existingSettings: Settings | 
   if (isMainSettings(settings) && settings.datasetsMetadata) {
     cleanDatasetsMetadata(settings.datasetsMetadata)
   }
-  const oldSettings = (await mongo.settings.findOneAndReplace(req.ownerFilter, settings, { upsert: true }))
+  const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
 
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
-    await topicsUtils.updateTopics(req.owner, oldSettings.topics || [], settings.topics)
+    await topicsUtils.updateTopics(owner, oldSettings.topics || [], settings.topics)
   }
 
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.datasetsMetadata) {
-    await updateDatasetsMetadata(req.owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
+    await updateDatasetsMetadata(owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
   }
 
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
@@ -252,18 +204,18 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
 
 // update settings as owner
 router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
-  assertSettingsRequest(req)
+  const { ownerFilter } = reqSettingsParams(req)
   const settings = req.body
   const sessionState = reqSessionAuthenticated(req)
-  const existingSettings = await mongo.settings.findOne(req.ownerFilter)
+  const existingSettings = await mongo.settings.findOne(ownerFilter)
   const returnedSettings = await writeSettings(req, existingSettings, settings, sessionState)
   res.status(200).send(returnedSettings)
 })
 router.patch('/:type/:id', isOwnerAdmin, async (req, res) => {
-  assertSettingsRequest(req)
+  const { ownerFilter } = reqSettingsParams(req)
   const partialSettings = req.body
   const sessionState = reqSessionAuthenticated(req)
-  const existingSettings = await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0 } })
+  const existingSettings = await mongo.settings.findOne(ownerFilter, { projection: { _id: 0 } })
   const settings = cleanSettings({ ...(clone(existingSettings ?? {})), ...partialSettings })
   const returnedSettings = await writeSettings(req, existingSettings, settings, sessionState)
   res.status(200).send(returnedSettings)
@@ -271,9 +223,9 @@ router.patch('/:type/:id', isOwnerAdmin, async (req, res) => {
 
 // Get topics list as owner
 router.get('/:type/:id/topics', isOwnerMember, async (req, res) => {
-  assertSettingsRequest(req)
+  const { ownerFilter } = reqSettingsParams(req)
   const settings = mongo.settings
-  const result = await settings.findOne(req.ownerFilter)
+  const result = await settings.findOne(ownerFilter)
   const topics = result && isMainSettings(result) && result.topics ? result.topics : []
   for (const topic of topics) {
     if (topic.icon) topic.icon = { name: topic.icon.name, svgPath: topic.icon.svgPath }
@@ -283,9 +235,9 @@ router.get('/:type/:id/topics', isOwnerMember, async (req, res) => {
 
 // Get licenses list as anyone
 router.get('/:type/:id/licenses', cacheHeaders.noCache, async (req, res) => {
-  assertSettingsRequest(req)
+  const { ownerFilter } = reqSettingsParams(req)
   const settings = mongo.settings
-  const result = await settings.findOne(req.ownerFilter)
+  const result = await settings.findOne(ownerFilter)
   const licenses: { href: string, title: string }[] = []
   for (const l of standardLicenses) {
     licenses.push({ href: l.href, title: l.title })
@@ -301,28 +253,28 @@ router.get('/:type/:id/licenses', cacheHeaders.noCache, async (req, res) => {
 
 // Get datasets metadata settings as owner
 router.get('/:type/:id/datasets-metadata', isOwnerMember, async (req, res) => {
-  assertSettingsRequest(req)
+  const { ownerFilter } = reqSettingsParams(req)
   const settings = mongo.settings
-  const result = await settings.findOne(req.ownerFilter)
+  const result = await settings.findOne(ownerFilter)
   res.status(200).send(result && isMainSettings(result) && result.datasetsMetadata ? result.datasetsMetadata : {})
 })
 
 // Get agent chat setting as member
 router.get('/:type/:id/agent-chat', isOwnerMember, cacheHeaders.noCache, async (req, res) => {
-  assertSettingsRequest(req)
-  const result = await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0, agentChat: 1 } })
+  const { ownerFilter } = reqSettingsParams(req)
+  const result = await mongo.settings.findOne(ownerFilter, { projection: { _id: 0, agentChat: 1 } })
   res.status(200).send({ agentChat: !!(result && isMainSettings(result) && result.agentChat) })
 })
 
 // Get publication sites as owner
 router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
-  assertSettingsRequest(req)
+  const { owner, ownerFilter, department } = reqSettingsParams(req)
   reqSessionAuthenticated(req)
-  const filter = [req.ownerFilter]
-  if (req.owner.department) {
-    filter.push({ ...req.ownerFilter, department: { $exists: false } })
-  } else if (req.department === '*') {
-    filter[0] = { ...req.ownerFilter }
+  const filter = [ownerFilter]
+  if (owner.department) {
+    filter.push({ ...ownerFilter, department: { $exists: false } })
+  } else if (department === '*') {
+    filter[0] = { ...ownerFilter }
     delete filter[0].department
   }
   const settingsArray = await mongo.settings.find({ $or: filter }, { projection: { _id: 0 } }).toArray()
@@ -330,7 +282,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
   for (const settings of settingsArray) {
     for (const publicationSite of settings.publicationSites || []) {
       if (isDepartmentSettings(settings)) publicationSite.department = settings.department
-      if (req.owner.department && publicationSite.settings?.contributorDepartments?.includes(req.owner.department)) {
+      if (owner.department && publicationSite.settings?.contributorDepartments?.includes(owner.department)) {
         (publicationSite as any).canContributeAsDepartment = true
       }
       publicationSites.push(publicationSite)
@@ -340,14 +292,14 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
 })
 // create/update publication sites as owner (used by data-fair-portals to sync portals)
 router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
-  assertSettingsRequest(req)
+  const { owner, ownerFilter } = reqSettingsParams(req)
   debugPublicationSites('post site', req.body)
-  if (req.owner.department && req.body.settings?.contributorDepartments && req.body.settings.contributorDepartments.length) {
+  if (owner.department && req.body.settings?.contributorDepartments && req.body.settings.contributorDepartments.length) {
     throw httpError(400, 'contributorDepartments is only allowed on org-root publication sites')
   }
-  let settings = (await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0 } })) as Settings | DepartmentSettings
+  let settings = (await mongo.settings.findOne(ownerFilter, { projection: { _id: 0 } })) as Settings | DepartmentSettings
   if (!settings) {
-    settings = fillSettings(req.owner, reqUserAuthenticated(req), {})
+    settings = fillSettings(owner, reqUserAuthenticated(req), {})
   }
   settings.publicationSites = settings.publicationSites || []
   const index = settings.publicationSites.findIndex(ps => ps.type === req.body.type && ps.id === req.body.id)
@@ -356,7 +308,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
     const baseSubscription = {
       outputs: ['devices', 'email'],
       locale: 'fr',
-      sender: req.owner,
+      sender: owner,
       visibility: 'private'
     }
     notifications.subscribe(req, {
@@ -379,22 +331,22 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
     settings.publicationSites[index] = { ...req.body, settings: { ...(settings.publicationSites[index].settings || {}), ...(req.body.settings || {}) } }
   }
   validateSettings(settings)
-  await mongo.settings.replaceOne(req.owner, settings, { upsert: true })
+  await mongo.settings.replaceOne(owner, settings, { upsert: true })
   res.status(200).send(req.body)
 })
 // delete publication sites as owner (used by data-fair-portals to sync portals)
 router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, async (req, res) => {
   debugPublicationSites('delete site', req.params)
-  assertSettingsRequest(req)
+  const { owner, ownerFilter } = reqSettingsParams(req)
 
-  let settings = (await mongo.settings.findOne(req.ownerFilter, { projection: { _id: 0 } })) as Settings | DepartmentSettings
+  let settings = (await mongo.settings.findOne(ownerFilter, { projection: { _id: 0 } })) as Settings | DepartmentSettings
   if (!settings) {
-    settings = fillSettings(req.owner, reqUserAuthenticated(req), {})
+    settings = fillSettings(owner, reqUserAuthenticated(req), {})
   }
   settings.publicationSites = settings.publicationSites || []
   settings.publicationSites = settings.publicationSites.filter(ps => ps.type !== req.params.siteType || ps.id !== req.params.siteId)
   validateSettings(settings)
-  await mongo.settings.replaceOne(req.ownerFilter, settings, { upsert: true })
+  await mongo.settings.replaceOne(ownerFilter, settings, { upsert: true })
   const ref = `${req.params.siteType}:${req.params.siteId}`
   await mongo.datasets.updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
   await mongo.applications.updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
