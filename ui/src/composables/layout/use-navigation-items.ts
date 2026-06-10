@@ -130,6 +130,9 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     if (canAdmin.value && $uiConfig.eventsIntegration) {
       monitor.push({ to: '/events', icon: mdiClipboardTextClock, title: t('events') })
     }
+    if ($uiConfig.agentsIntegration && canAdmin.value) {
+      monitor.push({ to: '/agents-activity', icon: mdiRobotOutline, title: t('agentsActivity') })
+    }
     if (monitor.length) groups.push({ key: 'monitor', title: t('group.monitor'), items: monitor })
 
     // Help group

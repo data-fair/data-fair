@@ -135,6 +135,7 @@ fr:
   metrics: Audience
   metricsSub: Téléchargements, API
   events: Traçabilité (bêta)
+  agentsActivity: Suivi des agents
   subscription: Abonnement
   assistance: Assistance
   services: Services distants
@@ -171,6 +172,7 @@ en:
   metrics: Audience
   metricsSub: Downloads, API
   events: Traceability (beta)
+  agentsActivity: Agents activity
   subscription: Subscription
   assistance: Support
   services: Remote services
