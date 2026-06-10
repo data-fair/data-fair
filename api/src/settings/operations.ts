@@ -62,6 +62,33 @@ export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJ
   }
 }
 
+export const buildPublicationSiteSubscriptions = (owner: AccountKeys, site: any, publicUrl: string) => {
+  const baseSubscription = {
+    outputs: ['devices', 'email'],
+    locale: 'fr',
+    sender: owner,
+    visibility: 'private'
+  }
+  return [
+    {
+      ...baseSubscription,
+      topic: {
+        key: `data-fair:dataset-publication-requested:${site.type}:${site.id}`,
+        title: `Un contributeur demande de publier un jeu de données sur ${site.title || site.url || site.id}`
+      },
+      urlTemplate: publicUrl + '/dataset/{id}'
+    },
+    {
+      ...baseSubscription,
+      topic: {
+        key: `data-fair:application-publication-requested:${site.type}:${site.id}`,
+        title: `Un contributeur demande de publier une application sur ${site.title || site.url || site.id}`
+      },
+      urlTemplate: publicUrl + '/application/{id}'
+    }
+  ]
+}
+
 export type SettingsParams = { owner: AccountKeys, department?: string, ownerFilter: Record<string, any> }
 
 export const parseOwnerParams = (type: 'user' | 'organization', idParam: string): SettingsParams => {

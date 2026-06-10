@@ -1,4 +1,5 @@
 import { type RequestHandler } from 'express'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { reqSessionAuthenticated } from '@data-fair/lib-express'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { defineReqContext } from '../misc/utils/req-context.ts'
@@ -10,6 +11,7 @@ export const setReqSettingsParams = settingsParams.set
 export const reqSettingsParams = settingsParams.get
 
 export const settingsParamsMiddleware: RequestHandler = (req, res, next) => {
+  if (typeof req.params.type !== 'string' || typeof req.params.id !== 'string') throw httpError(400, 'invalid path parameters')
   if (req.params.type !== 'user' && req.params.type !== 'organization') {
     res.status(400).type('text/plain').send('Invalid type, it must be one of the following : user, organization')
     return
