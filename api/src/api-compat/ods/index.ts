@@ -9,6 +9,7 @@ import { Counter } from 'prom-client'
 import { getFlatten } from '../../datasets/utils/flatten.ts'
 import config from '#config'
 import datasetsRouter, { apiKeyMiddlewareRead } from '../../datasets/router.js'
+import * as rateLimiting from '../../misc/utils/rate-limiting.ts'
 import { parse as parseWhere } from './where.peg.js'
 import { parse as parseSelect } from './select.peg.js'
 import { parse as parseOrderBy } from './order-by.peg.js'
@@ -643,6 +644,7 @@ router.get(
   '/v2.1/catalog/datasets/:datasetId/records',
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
+  rateLimiting.middleware,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheNowMiddleware,
   cacheHeaders.resourceBased('finalizedAt'),
@@ -652,6 +654,7 @@ router.get(
   '/v2.0/catalog/datasets/:datasetId/records',
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
+  rateLimiting.middleware,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheNowMiddleware,
   cacheHeaders.resourceBased('finalizedAt'),
@@ -661,6 +664,7 @@ router.get(
   '/v2.1/catalog/datasets/:datasetId/exports/:format',
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
+  rateLimiting.middleware,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
   cacheHeaders.noCache,
   exports('2.1')
@@ -669,6 +673,7 @@ router.get(
   '/v2.0/catalog/datasets/:datasetId/exports/:format',
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
+  rateLimiting.middleware,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
   cacheHeaders.noCache,
   exports('2.0')
@@ -679,6 +684,7 @@ datasetsRouter.get(
   '/:datasetId/compat-ods/records',
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
+  rateLimiting.middleware,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheNowMiddleware,
   cacheHeaders.resourceBased('finalizedAt'),
@@ -688,6 +694,7 @@ datasetsRouter.get(
   '/:datasetId/compat-ods/exports/:format',
   readDataset({ fillDescendants: true }),
   apiKeyMiddlewareRead,
+  rateLimiting.middleware,
   permissions.middleware('readCompatODSExports', 'read', 'readDataAPI'),
   cacheNowMiddleware,
   cacheHeaders.resourceBased('finalizedAt'),

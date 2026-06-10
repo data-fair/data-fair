@@ -34,6 +34,7 @@ module.exports = {
   privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
   privateAgentsUrl: `http://localhost:${process.env.AGENTS_PORT}`,
   privateOpenapiViewerUrl: `http://localhost:${process.env.OAV_PORT}`,
+  privateRegistryUrl: `http://localhost:${process.env.REGISTRY_PORT}`,
   brand: {
     embed: '<div>application embed</div>'
   },
@@ -101,7 +102,8 @@ module.exports = {
     limits: 'limits-test-key',
     events: 'secret-notifications',
     catalogs: 'secret-catalogs',
-    sendMails: 'testkey'
+    sendMails: 'testkey',
+    registry: 'secret-registry-internal'
   },
   applications: [{
     title: 'App test1',

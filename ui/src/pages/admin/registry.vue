@@ -1,10 +1,12 @@
 <template>
   <d-frame
-    id="catalogs"
-    :src="$sitePath + '/catalogs/admin/plugins/'"
+    id="registry"
+    :src="$sitePath + '/registry/'"
+    :sync-path="$sitePath + '/data-fair/admin/registry/'"
     class="fill-height"
     sync-params
     resize="no"
+    emit-iframe-messages
     :adapter.prop="stateChangeAdapter"
     @message="onMessage"
     @iframe-message="onMessage"

@@ -145,6 +145,7 @@ fr:
   elasticsearch: Elasticsearch
   baseApplications: Modèles d'application
   accountsManagement: Gestion des comptes
+  registry: Registre
   apiDoc: Utiliser l'API
   group:
     content: Contenus
@@ -181,6 +182,7 @@ en:
   elasticsearch: Elasticsearch
   baseApplications: Application models
   accountsManagement: Accounts management
+  registry: Registry
   apiDoc: Use the API
   group:
     content: Contents

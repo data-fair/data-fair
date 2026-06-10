@@ -9,6 +9,7 @@ import { Transform } from 'node:stream'
 import split2 from 'split2'
 import pump from '../../misc/utils/pipe.ts'
 import debugLib from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import filesStorage from '#files-storage'
@@ -27,6 +28,15 @@ export default async function (dataset: DatasetInternal) {
   const datasetFile = dataset.loaded?.dataset
   if (datasetFile) {
     const loadedFilePath = datasetUtils.loadedFilePath(dataset)
+
+    // TEMPORARY diagnostic: some uploads reach the storer with their loaded file missing from
+    // storage (a NoSuchKey on S3 when reading it below). Until the root cause is fixed, log what
+    // the loading dir actually contains so a wrong/absent key can be told apart from a read delay.
+    // Remove this block once the root cause is identified and fixed.
+    if (!await filesStorage.pathExists(loadedFilePath)) {
+      const existing = await filesStorage.lsrWithStats(loadingDir).catch(() => [])
+      internalError('storer-missing-file', `loaded file missing when storer started: expected ${loadedFilePath} — loading dir contents: ${JSON.stringify(existing)}`)
+    }
 
     // the file was just written by the upload (a separate process), but some S3 providers
     // do not guarantee read-after-write consistency across connections/processes: the reads

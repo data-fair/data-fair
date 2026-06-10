@@ -216,7 +216,7 @@ async function getAppOwner (req) {
 
 // Use the proxy as a user of an application
 // always apply restrictive rate limiting to remote services, privileged access does not go through here
-router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remoteService'), async (req, res, next) => {
+router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddleware, async (req, res, next) => {
   const appOwner = await getAppOwner(req)
   debug('Referer application owner', appOwner)
 

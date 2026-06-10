@@ -5,11 +5,21 @@ import requestIp from 'request-ip'
 import debug from 'debug'
 import promClient from 'prom-client'
 import { type Request, type Response } from 'express'
-import { reqUser } from '@data-fair/lib-express'
+import { reqUser, reqSession, type SessionState } from '@data-fair/lib-express'
 import { ComputeBucket } from './compute-budget.ts'
 import { queryAdvice } from './query-advice.ts'
 
 const debugLimits = debug('limits')
+
+// The user the rate limiter accounts a request to. Application keys are a loose, anonymous-style access
+// tier (the application-key middleware sets a pseudo-user for embed / public `?key=` access); we
+// deliberately rate-limit them as anonymous (keyed by IP), since they are exactly the kind of public
+// traffic the anonymous tier is meant to bound. Real users (JWT/cookie) and api keys keep the user tier.
+const rateLimitUser = (req: Request) => {
+  const user = reqUser(req)
+  if (!user) return undefined
+  return (reqSession(req) as SessionState & { isApplicationKey?: boolean }).isApplicationKey ? undefined : user
+}
 
 // IMPORTANT NOTE: all rate limiting is based on memory only, to be strictly applied when scaling the service
 // load balancing has to be based on a hash of the rate limiting key i.e the origin IP
@@ -53,7 +63,7 @@ export const clear = () => {
 }
 
 export const getRateLimiter = (req: Request, limitType: string, throttlingKey = '') => {
-  const user = reqUser(req)
+  const user = rateLimitUser(req)
   const throttlingId = throttlingKey + '_' + (user ? user.id : requestIp.getClientIp(req)) + '_' + limitType
   // init lastUsed at creation so the 20-min sweep can detect this entry as idle later — without it,
   // a limiter that's never followed by a consume() (or whose consume() path errors out) stays with
@@ -82,7 +92,7 @@ const getComputeBucket = (req: Request, limitType: string): ComputeBucket | unde
   if (!limit || !('computeMs' in limit) || !limit.computeMs || limit.computeMs <= 0) return undefined
   const budgetMs = limit.computeMs
   const windowMs = limit.duration * 1000
-  const user = reqUser(req)
+  const user = rateLimitUser(req)
   const key = (user ? user.id : requestIp.getClientIp(req)) + '_' + limitType
   let bucket = computeBuckets[key]
   // recreate the bucket if the configured budget/window changed (e.g. tests tweaking config at runtime)
@@ -105,7 +115,7 @@ export const debitComputeBudget = (req: Request, limitType: string, ms: number):
 
 const burstFactor = 4
 export const getTokenBucket = (req, limitType, bandwidthType) => {
-  const user = reqUser(req)
+  const user = rateLimitUser(req)
   const throttlingId = user ? user.id : requestIp.getClientIp(req)
   const bucketSize = config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] * burstFactor
   // init lastUsed at creation so the 20-min sweep can detect this entry as idle later — every call
@@ -180,8 +190,11 @@ const throttledEnd = async (res: Response, buffer: Buffer, tokenBucket: TokenBuc
   res._originalEnd()
 }
 
-export const middleware = (_limitType) => async (req, res, next) => {
-  const user = reqUser(req)
+// builds a rate-limiting middleware; `_limitType` forces a tier, otherwise it is auto-detected
+// (`user` when there is a user, else `anonymous`). The returned middleware is stateless (all state lives
+// in the module-level buckets keyed per client), so a single instance can be reused across every route.
+const buildMiddleware = (_limitType) => async (req, res, next) => {
+  const user = rateLimitUser(req)
   const limitType = _limitType || (user ? 'user' : 'anonymous')
 
   const ignoreRateLimiting = config.secretKeys.ignoreRateLimiting && req.get('x-ignore-rate-limiting') === config.secretKeys.ignoreRateLimiting
@@ -232,3 +245,9 @@ export const middleware = (_limitType) => async (req, res, next) => {
   }
   next()
 }
+
+// the default, shared instance — auto-detects user vs anonymous; reused on every dataset/ODS route
+export const middleware = buildMiddleware()
+
+// remote-service proxy traffic is forced onto its own tier
+export const remoteServiceMiddleware = buildMiddleware('remoteService')
