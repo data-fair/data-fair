@@ -180,6 +180,14 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
       admin.push({ href: `${$sdUrl}/admin/users`, icon: mdiAccountSupervisor, title: t('accountsManagement') })
       if ($uiConfig.registryIntegration) {
         admin.push({ to: '/admin/registry', icon: mdiPackageVariantClosed, title: t('registry') })
+      } else {
+        // retro-compat with older catalogs/processings services that haven't moved their plugins management to the registry
+        if ($uiConfig.catalogsIntegration) {
+          admin.push({ to: '/admin/catalogs-plugins', icon: mdiTransitConnection, title: t('catalogs'), subtitle: 'Plugins' })
+        }
+        if ($uiConfig.processingsIntegration) {
+          admin.push({ to: '/admin/processings-plugins', icon: mdiCogTransferOutline, title: t('processings'), subtitle: 'Plugins' })
+        }
       }
       for (const extra of ($uiConfig.extraAdminNavigationItems ?? [])) {
         admin.push({
