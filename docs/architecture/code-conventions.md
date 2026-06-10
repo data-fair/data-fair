@@ -2,6 +2,7 @@
 
 This document is the **pattern book** for all new and refactored API code. It was introduced by the
 express-decoupling refactor series ([master plan](../superpowers/plans/2026-06-10-code-quality-refactor.md)).
+That plan is a local working file (gitignored under `docs/superpowers/`), not committed — this doc is the committed reference.
 Legacy code converges to these conventions module by module across that series; until a module's
 phase lands, old patterns coexist — that is expected.
 
@@ -49,6 +50,8 @@ Good existing examples of the target pattern: `remote-services/operations.ts`,
 `(req as any)`). Any function that reads them is coupled to Express. The accessor pattern (following
 `@data-fair/lib-express` `session.ts` / `site.ts`) puts all casts in one place and makes the
 context contract explicit.
+
+Accessors exist so middlewares can hand context to later handlers; they are never a substitute for passing explicit params into services (§3).
 
 ### The factory
 
@@ -101,7 +104,7 @@ call site. Its return type encodes the contract:
 Module-specific accessors live next to the middleware that sets them (e.g. `reqSettingsParams` in
 `settings/middlewares.ts`, `reqDataset` in `datasets/middlewares.*`).
 
-### Current legacy mutation sites (as of 2026-06-10)
+### Current legacy mutation sites (as of 2026-06-10 — regenerate with `grep -rnE "req\.[a-zA-Z_]+ *= [^=]" api/src --include='*.js' --include='*.ts'` plus the `(req as any)` sweep)
 
 The following `req.<prop> = …` assignments remain while phases migrate them:
 
@@ -124,16 +127,19 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 
 ### Migration mechanics per property
 
+Brand-new context properties never pass `legacyProp`; dual-write and the fallback read are migration-only mechanisms for properties that already exist as plain mutations.
+
 1. Phase 0 shipped the accessor with `legacyProp` configured. `set()` dual-writes — both the
    symbol key and the legacy plain property — so **setters and readers can migrate in any order**.
 2. Each module phase converts its readers and setters to use the accessors.
-3. Once both greps are empty, drop the `legacyProp` argument (ends dual-write) and remove the
+3. Once all three greps are empty, drop the `legacyProp` argument (ends dual-write) and remove the
    corresponding member from `RequestWithResource` / ad-hoc types in `api/types/index.ts`:
 
 ```bash
-# When both return nothing, the property is fully migrated:
+# When all three return nothing, the property is fully migrated:
 grep -rnE "req\.<prop> *= [^=]" api/src          # setters
 grep -rnE "\breq\.<prop>\b" api/src               # readers
+grep -rn "(req as any)" api/src | grep "<prop>"   # cast-escaped accesses
 ```
 
 Final state: `api/types/index.ts` `Request`/`RequestWithResource` intersections shrink away;
@@ -180,7 +186,8 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
   ```
 
   When a PR improves the count, the script updates `dev/type-errors-baseline.txt` automatically —
-  commit that file with the PR. Baseline as of 2026-06-10: **1807 errors**.
+  commit that file with the PR. `dev/type-errors-baseline.txt` is the source of truth for the
+  current baseline (1807 errors as of 2026-06-10).
 
 ---
 
@@ -193,9 +200,9 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
   (additions only).
 - **Mechanical moves only:** function bodies move verbatim. Signature changes are limited to
   replacing `req` with explicit params. Resist drive-by cleanups — record in the plan's parking
-  lot instead.
+  lot instead; if you don't have the local plan file, record it in the PR description or an issue instead.
 - **Suspected bugs found while moving:** preserved bit-for-bit in the move, recorded in the plan's
-  parking lot (`§9`), never fixed inline. They get a dedicated later PR with a test.
+  parking lot (`§9`), never fixed inline (if the local plan is unavailable, note them in the PR description or a new issue). They get a dedicated later PR with a test.
 - **Mount and middleware chain order preserved exactly:** load-management depends on it (rate
   limiter runs after api-key resolution — see `docs/architecture/load-management.md §3`).
 - **One phase = one worktree = one PR.** Target ≤ ~800 changed LOC per PR where feasible. Datasets
