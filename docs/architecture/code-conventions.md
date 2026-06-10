@@ -27,6 +27,22 @@ Each domain module (`datasets`, `applications`, `settings`, …) converges on:
   types.ts         # module-local types (optional)
 ```
 
+**File splitting:** one `service.ts` / `operations.ts` per module until the file reaches
+~400–500 lines **or** a sub-resource accumulates a cluster of ≥3 functions; then split into
+`module/service/<sub-resource>.ts` (likewise `module/operations/<sub-resource>.ts`), mirroring the
+router's sub-paths. The router stays one file per mount — very large routers may split into
+`module/routes/*.ts` adapters composed by `router.ts` (planned for the datasets phase of the master
+plan), but the mount point remains a single `router.ts`. `settings/service.ts` (~300 lines, with
+publication-sites at 3 functions) sits just under both thresholds and stays whole.
+
+**Guards & error style:** new middleware code reports failures by throwing `httpError(...)` —
+never `res.status(...).send(...)` / `res.sendStatus(...)`. The `res.status(400).send(…)` and
+`res.sendStatus(403)` forms still visible in `settings/middlewares.ts` are legacy behavior
+preserved bit-for-bit by the refactor (§5); do not copy them into fresh code. A guard middleware
+that composes a **single** existing express-free predicate (e.g. `isOwnerMember` calling
+`permissions.getOwnerRole`) may keep that call inline; a guard composing **multiple** conditions or
+data sources extracts an exported express-free predicate, per the `middlewares.ts` contract above.
+
 **Dependency direction (enforced by review; candidate for a lint rule later):**
 
 - `router → middlewares → service → operations`
@@ -104,6 +120,28 @@ call site. Its return type encodes the contract:
 Module-specific accessors live next to the middleware that sets them (e.g. `reqSettingsParams` in
 `settings/middlewares.ts`, `reqDataset` in `datasets/middlewares.*`).
 
+The same co-location applies to **context builders**: helpers that assemble a service write
+context from `req` live in `middlewares.ts` next to the accessors they compose — not in
+`router.ts`. Example: `reqWriteContext` in `settings/middlewares.ts`, which combines
+`reqSettingsParams`, `reqSessionAuthenticated`, `reqHost` and `reqEventLogContext` into a
+`SettingsWriteContext`.
+
+### Path param narrowing (Express 5)
+
+Express 5 types `req.params.x` as `string | string[]`. The single blessed, cast-free narrowing
+idiom is:
+
+```ts
+if (typeof req.params.type !== 'string' || typeof req.params.id !== 'string') throw httpError(400, 'invalid path parameters')
+```
+
+(see `settingsParamsMiddleware` in `settings/middlewares.ts`). Use this one idiom everywhere —
+never `as string` or ad-hoc per-handler variants. When a route file reads many params, put the
+guard in the param middleware (`router.use('/:type/:id', …)`) so downstream handlers read the
+narrowed context instead of re-checking; params that appear in a single route (e.g.
+`:siteType/:siteId` in the settings publication-sites delete) keep the same guard at the top of
+that handler.
+
 ### Current legacy mutation sites (as of 2026-06-10 — regenerate with `grep -rnE "req\.[a-zA-Z_]+ *= [^=]" api/src --include='*.js' --include='*.ts'` plus the `(req as any)` sweep)
 
 The following `req.<prop> = …` assignments remain while phases migrate them:
@@ -117,13 +155,16 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 | `api/src/datasets/es/abort.js` | `esAbortContext` |
 | `api/src/applications/router.js` | `resourceType`, `resource`, `application`, `baseApp`, `isNewApplication` |
 | `api/src/applications/proxy.js` | `application`, `resource`, `resourceType`, `matchingApplicationKey` |
-| `api/src/settings/router.ts` | `owner`, `department`, `ownerFilter` |
 | `api/src/remote-services/router.js` | `resourceType`, `remoteService`, `resource` |
 | `api/src/catalog/router.js` | `resourceType`, `publicationSite` |
 | `api/src/misc/utils/permissions.ts` | `publicOperation` |
 | `api/src/misc/utils/api-key.ts` | `bypassPermissions` |
 | `api/src/misc/utils/application-key.ts` | `bypassPermissions` |
 | `api/src/api-compat/ods/index.ts` | `resourceType`, `noModifiedCache` |
+
+Rows disappear as module phases land: `settings` (Phase 1) is fully migrated — its former
+`owner` / `department` / `ownerFilter` row is gone and the three greps below come back empty for
+those properties.
 
 ### Migration mechanics per property
 
@@ -149,12 +190,28 @@ Final state: `api/types/index.ts` `Request`/`RequestWithResource` intersections 
 
 ## 3. Express-free services
 
-Service functions receive plain data, never `req`. Recurring shapes:
+Service functions receive plain data, never `req`.
+
+**Service signatures:** every exported service function takes the module's params/context object
+as its **first argument** — `<Module>Params` for reads, `<Module>WriteContext` for writes — never a
+bare mongo filter. The WriteContext carries only request-derived ambient data (parsed path params /
+resource refs, `sessionState`, `host`, `logCtx`) that **at least two** functions consume; payloads
+and per-operation flags stay explicit arguments. Worked example, `settings/service.ts`:
 
 ```ts
-// owner context extracted once by the router, passed to service calls
-type OwnerContext = { owner: AccountKeys, ownerFilter: Record<string, any> }
+// reads: parsed once by the param middleware, first arg of every read function
+type SettingsParams = { owner: AccountKeys, department?: string, ownerFilter: Record<string, any> }
+// writes: ambient request-derived context shared by all write functions
+type SettingsWriteContext = SettingsParams & { sessionState: SessionStateAuthenticated, host: string, logCtx: LogContext }
 
+getTopics(params: SettingsParams)
+updateSettings(ctx: SettingsWriteContext, settings)               // payload = explicit arg
+deletePublicationSite(ctx: SettingsWriteContext, siteType, siteId)
+```
+
+Other recurring shapes:
+
+```ts
 // audit-log context without req — same EventLog output as passing { req }
 const logCtx = reqEventLogContext(req)  // { user, account, ip, host }
 // usage in service:
@@ -187,7 +244,7 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
 
   When a PR improves the count, the script updates `dev/type-errors-baseline.txt` automatically —
   commit that file with the PR. `dev/type-errors-baseline.txt` is the source of truth for the
-  current baseline (1807 errors as of 2026-06-10).
+  current baseline (1800 errors as of 2026-06-10).
 
 ---
 
@@ -196,8 +253,9 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
 - **API/e2e specs are the behavior contract:** never modified by refactors. They pin routes,
   status codes, payloads, and permissions.
 - **Unit specs:** assertions never change; import paths may be updated in the same PR when a
-  tested file moves; new specs for newly extracted `operations.ts` functions are encouraged
-  (additions only).
+  tested file moves. Newly extracted `operations.ts` functions get pinning unit specs **in the same
+  PR** — additions only — at `tests/features/<module>/<module>-operations.unit.spec.ts`
+  (e.g. `tests/features/settings/settings-operations.unit.spec.ts`).
 - **Mechanical moves only:** function bodies move verbatim. Signature changes are limited to
   replacing `req` with explicit params. Resist drive-by cleanups — record in the plan's parking
   lot instead; if you don't have the local plan file, record it in the PR description or an issue instead.
