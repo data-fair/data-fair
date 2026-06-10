@@ -21,7 +21,8 @@ import { type Request } from '#types'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
-import { validate, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings } from './operations.ts'
+import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings } from './operations.ts'
+// TODO(task 1.4): remove this shim once api-key.ts imports operations.ts directly
 export { isMainSettings, isUserSettings, isDepartmentSettings } from './operations.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
@@ -91,7 +92,7 @@ router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) =>
 const writeSettings = async (req: SettingsRequest, existingSettings: Settings | DepartmentSettings | null, settings: any, sessionState: SessionStateAuthenticated) => {
   const user = sessionState.user
   fillSettings(req.owner, user, settings)
-  validate(settings)
+  validateSettings(settings)
 
   settings.apiKeys = settings.apiKeys ?? []
   const existingApiKeys = existingSettings?.apiKeys ?? []
@@ -377,7 +378,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
   } else {
     settings.publicationSites[index] = { ...req.body, settings: { ...(settings.publicationSites[index].settings || {}), ...(req.body.settings || {}) } }
   }
-  validate(settings)
+  validateSettings(settings)
   await mongo.settings.replaceOne(req.owner, settings, { upsert: true })
   res.status(200).send(req.body)
 })
@@ -392,7 +393,7 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
   }
   settings.publicationSites = settings.publicationSites || []
   settings.publicationSites = settings.publicationSites.filter(ps => ps.type !== req.params.siteType || ps.id !== req.params.siteId)
-  validate(settings)
+  validateSettings(settings)
   await mongo.settings.replaceOne(req.ownerFilter, settings, { upsert: true })
   const ref = `${req.params.siteType}:${req.params.siteId}`
   await mongo.datasets.updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })

@@ -1,13 +1,13 @@
 import slug from 'slugify'
-import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid as validateSettings } from '#types/settings/index.js'
+import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
 import { type AccountKeys, type User } from '@data-fair/lib-express'
 
-export function validate (settings: any): asserts settings is Settings | DepartmentSettings {
+export function validateSettings (settings: any): asserts settings is Settings | DepartmentSettings {
   if ((settings as DepartmentSettings).department) {
     validateDepartmentSettings(settings)
   } else {
-    validateSettings(settings)
+    assertValidSettings(settings)
   }
 }
 
