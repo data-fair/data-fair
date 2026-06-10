@@ -1,10 +1,12 @@
-import { type RequestHandler } from 'express'
+import { type Request, type RequestHandler } from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { reqSessionAuthenticated } from '@data-fair/lib-express'
+import { reqHost } from '@data-fair/lib-express/req-origin.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
-import { defineReqContext } from '../misc/utils/req-context.ts'
+import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import { parseOwnerParams, type SettingsParams } from './operations.ts'
+import { type SettingsWriteContext } from './service.ts'
 
 const settingsParams = defineReqContext<SettingsParams>('settings-params')
 export const setReqSettingsParams = settingsParams.set
@@ -41,3 +43,10 @@ export const isOwnerMember: RequestHandler = (req, res, next) => {
   }
   next()
 }
+
+export const reqWriteContext = (req: Request): SettingsWriteContext => ({
+  ...reqSettingsParams(req),
+  sessionState: reqSessionAuthenticated(req),
+  host: reqHost(req),
+  logCtx: reqEventLogContext(req)
+})

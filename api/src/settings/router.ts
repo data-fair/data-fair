@@ -1,15 +1,12 @@
-import express, { type Request } from 'express'
+import express from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as notifications from '../misc/utils/notifications.ts'
 import config from '#config'
-import { reqHost } from '@data-fair/lib-express/req-origin.js'
 import { reqSessionAuthenticated } from '@data-fair/lib-express'
-import { reqEventLogContext } from '../misc/utils/req-context.ts'
 import { buildPublicationSiteSubscriptions } from './operations.ts'
 import * as service from './service.ts'
-import { type SettingsWriteContext } from './service.ts'
-import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, reqSettingsParams } from './middlewares.ts'
+import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, reqSettingsParams, reqWriteContext } from './middlewares.ts'
 // TODO(task 1.4): remove this shim once api-key.ts imports operations.ts directly
 export { isMainSettings, isUserSettings, isDepartmentSettings } from './operations.ts'
 
@@ -17,16 +14,9 @@ const router = express.Router()
 
 router.use('/:type/:id', settingsParamsMiddleware)
 
-const reqWriteContext = (req: Request): SettingsWriteContext => ({
-  ...reqSettingsParams(req),
-  sessionState: reqSessionAuthenticated(req),
-  host: reqHost(req),
-  logCtx: reqEventLogContext(req)
-})
-
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
-  res.status(200).send(await service.getSettings(reqSettingsParams(req).ownerFilter))
+  res.status(200).send(await service.getSettings(reqSettingsParams(req)))
 })
 
 // update settings as owner
@@ -39,22 +29,22 @@ router.patch('/:type/:id', isOwnerAdmin, async (req, res) => {
 
 // Get topics list as owner
 router.get('/:type/:id/topics', isOwnerMember, async (req, res) => {
-  res.status(200).send(await service.getTopics(reqSettingsParams(req).ownerFilter))
+  res.status(200).send(await service.getTopics(reqSettingsParams(req)))
 })
 
 // Get licenses list as anyone
 router.get('/:type/:id/licenses', cacheHeaders.noCache, async (req, res) => {
-  res.status(200).send(await service.getLicenses(reqSettingsParams(req).ownerFilter))
+  res.status(200).send(await service.getLicenses(reqSettingsParams(req)))
 })
 
 // Get datasets metadata settings as owner
 router.get('/:type/:id/datasets-metadata', isOwnerMember, async (req, res) => {
-  res.status(200).send(await service.getDatasetsMetadata(reqSettingsParams(req).ownerFilter))
+  res.status(200).send(await service.getDatasetsMetadata(reqSettingsParams(req)))
 })
 
 // Get agent chat setting as member
 router.get('/:type/:id/agent-chat', isOwnerMember, cacheHeaders.noCache, async (req, res) => {
-  res.status(200).send(await service.getAgentChat(reqSettingsParams(req).ownerFilter))
+  res.status(200).send(await service.getAgentChat(reqSettingsParams(req)))
 })
 
 // Get publication sites as owner

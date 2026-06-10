@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { parseOwnerParams, cleanSettings, fillSettings } from '../../../api/src/settings/operations.ts'
+import { parseOwnerParams, cleanSettings, fillSettings, buildPublicationSiteSubscriptions } from '../../../api/src/settings/operations.ts'
 
 test.describe('parseOwnerParams', () => {
   test('org without department — owner has no department, ownerFilter has $exists:false', () => {
@@ -128,5 +128,47 @@ test.describe('fillSettings', () => {
     const result: any = fillSettings(owner, user, settings)
     assert.equal('clearKey' in result.apiKeys[0], false)
     assert.equal('operationsPermissions' in result, false)
+  })
+})
+
+test.describe('buildPublicationSiteSubscriptions', () => {
+  test('full site with title — returns two subscriptions with correct topic keys, titles, urlTemplates, and metadata', () => {
+    const owner = { type: 'organization' as const, id: 'o1' }
+    const site = { type: 'data-fair-portals', id: 'p1', title: 'Mon portail' }
+    const publicUrl = 'https://example.com/data-fair'
+    const result = buildPublicationSiteSubscriptions(owner, site, publicUrl)
+    assert.deepEqual(result, [
+      {
+        outputs: ['devices', 'email'],
+        locale: 'fr',
+        sender: owner,
+        visibility: 'private',
+        topic: {
+          key: 'data-fair:dataset-publication-requested:data-fair-portals:p1',
+          title: 'Un contributeur demande de publier un jeu de données sur Mon portail'
+        },
+        urlTemplate: 'https://example.com/data-fair/dataset/{id}'
+      },
+      {
+        outputs: ['devices', 'email'],
+        locale: 'fr',
+        sender: owner,
+        visibility: 'private',
+        topic: {
+          key: 'data-fair:application-publication-requested:data-fair-portals:p1',
+          title: 'Un contributeur demande de publier une application sur Mon portail'
+        },
+        urlTemplate: 'https://example.com/data-fair/application/{id}'
+      }
+    ])
+  })
+
+  test('title-less site with url — title fallback uses url (site.title || site.url || site.id)', () => {
+    const owner = { type: 'organization' as const, id: 'o1' }
+    const site = { type: 't', id: 'i', url: 'https://site' }
+    const publicUrl = 'https://example.com/data-fair'
+    const result = buildPublicationSiteSubscriptions(owner, site, publicUrl)
+    assert.equal(result[0].topic.title, 'Un contributeur demande de publier un jeu de données sur https://site')
+    assert.equal(result[1].topic.title, 'Un contributeur demande de publier une application sur https://site')
   })
 })

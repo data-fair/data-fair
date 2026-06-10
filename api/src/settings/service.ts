@@ -26,7 +26,8 @@ export type SettingsWriteContext = SettingsParams & {
   logCtx: LogContext
 }
 
-export const getSettings = async (ownerFilter: Record<string, any>) => {
+export const getSettings = async (params: SettingsParams) => {
+  const { ownerFilter } = params
   const settings = mongo.settings
   const result = await settings
     .findOne(ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
@@ -206,7 +207,8 @@ export const patchSettings = async (ctx: SettingsWriteContext, partialSettings: 
   return writeSettings(ctx, existingSettings, settings)
 }
 
-export const getTopics = async (ownerFilter: Record<string, any>) => {
+export const getTopics = async (params: SettingsParams) => {
+  const { ownerFilter } = params
   const settings = mongo.settings
   const result = await settings.findOne(ownerFilter)
   const topics = result && isMainSettings(result) && result.topics ? result.topics : []
@@ -216,7 +218,8 @@ export const getTopics = async (ownerFilter: Record<string, any>) => {
   return topics
 }
 
-export const getLicenses = async (ownerFilter: Record<string, any>) => {
+export const getLicenses = async (params: SettingsParams) => {
+  const { ownerFilter } = params
   const settings = mongo.settings
   const result = await settings.findOne(ownerFilter)
   const licenses: { href: string, title: string }[] = []
@@ -232,13 +235,15 @@ export const getLicenses = async (ownerFilter: Record<string, any>) => {
   return licenses
 }
 
-export const getDatasetsMetadata = async (ownerFilter: Record<string, any>) => {
+export const getDatasetsMetadata = async (params: SettingsParams) => {
+  const { ownerFilter } = params
   const settings = mongo.settings
   const result = await settings.findOne(ownerFilter)
   return result && isMainSettings(result) && result.datasetsMetadata ? result.datasetsMetadata : {}
 }
 
-export const getAgentChat = async (ownerFilter: Record<string, any>) => {
+export const getAgentChat = async (params: SettingsParams) => {
+  const { ownerFilter } = params
   const result = await mongo.settings.findOne(ownerFilter, { projection: { _id: 0, agentChat: 1 } })
   return { agentChat: !!(result && isMainSettings(result) && result.agentChat) }
 }
