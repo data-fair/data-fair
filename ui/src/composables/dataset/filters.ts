@@ -14,6 +14,14 @@ export type DatasetFilter = {
 
 export const operators: Operator[] = ['in', 'nin', 'eq', 'neq', 'gt', 'lt', 'gte', 'lte', 'search', 'contains', 'starts', 'exists', 'nexists']
 
+// addFilter normalizes single-value "in"/"nin" filters to "eq"/"neq", so an internal filter
+// may not carry the operator of the URL param it originated from. Treat those as equivalent
+// when reconciling internal filters against the query params.
+const matchesQueryOperator = (queryOperator: Operator, filterOperator: Operator) =>
+  queryOperator === filterOperator ||
+  (filterOperator === 'eq' && queryOperator === 'in') ||
+  (filterOperator === 'neq' && queryOperator === 'nin')
+
 export const findEqFilter = (filters: DatasetFilter[], property: SchemaProperty, result: ExtendedResult) => {
   return filters.find(f => f.property.key === property.key && f.operator === 'eq' && (Array.isArray(result.values[property.key])
     ? (result.values[property.key] as ExtendedResultValue[]).some(v => v.raw === f.value)
@@ -101,9 +109,17 @@ export const useFilters = (datasetRef: MaybeRefOrGetter<ExtendedDataset | null>,
   })
 
   watch(queryParamsFilters, () => {
+    // add filters newly present in the URL
     for (const filter of queryParamsFilters.value) {
       if (filters.value.some(f => f.property.key === filter.property.key && f.operator === filter.operator)) continue
       addFilter(filter)
+    }
+    // remove filters whose query param disappeared from the URL (e.g. an embedding parent
+    // dropping a key via <d-frame>). excludeKeys are managed outside this sync, leave them be.
+    for (const filter of [...filters.value]) {
+      if (excludeKeys.includes(`${filter.property.key}_${filter.operator}`) || excludeKeys.includes(filter.property.key)) continue
+      if (queryParamsFilters.value.some(f => f.property.key === filter.property.key && matchesQueryOperator(f.operator, filter.operator))) continue
+      removeFilter(filter)
     }
   }, { immediate: true })
 
