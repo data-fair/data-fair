@@ -1,8 +1,8 @@
 # API code conventions
 
 This document is the **pattern book** for all new and refactored API code. It was introduced by the
-express-decoupling refactor series ([master plan](../superpowers/plans/2026-06-10-code-quality-refactor.md)).
-That plan is a local working file (gitignored under `docs/superpowers/`), not committed — this doc is the committed reference.
+express-decoupling refactor series ([master plan](../plans/2026-06-10-code-quality-refactor.md)).
+The plan carries the phase sequencing, sub-plan briefs and the parking lot; this doc carries the conventions.
 Legacy code converges to these conventions module by module across that series; until a module's
 phase lands, old patterns coexist — that is expected.
 
@@ -257,10 +257,10 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
   PR** — additions only — at `tests/features/<module>/<module>-operations.unit.spec.ts`
   (e.g. `tests/features/settings/settings-operations.unit.spec.ts`).
 - **Mechanical moves only:** function bodies move verbatim. Signature changes are limited to
-  replacing `req` with explicit params. Resist drive-by cleanups — record in the plan's parking
-  lot instead; if you don't have the local plan file, record it in the PR description or an issue instead.
+  replacing `req` with explicit params. Resist drive-by cleanups — record in the master plan's parking
+  lot (`docs/plans/2026-06-10-code-quality-refactor.md §9`) instead.
 - **Suspected bugs found while moving:** preserved bit-for-bit in the move, recorded in the plan's
-  parking lot (`§9`), never fixed inline (if the local plan is unavailable, note them in the PR description or a new issue). They get a dedicated later PR with a test.
+  parking lot (`§9`), never fixed inline. They get a dedicated later PR with a test.
 - **Mount and middleware chain order preserved exactly:** load-management depends on it (rate
   limiter runs after api-key resolution — see `docs/architecture/load-management.md §3`).
 - **One phase = one worktree = one PR.** Target ≤ ~800 changed LOC per PR where feasible. Datasets
