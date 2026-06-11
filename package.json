@@ -30,7 +30,8 @@
     "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc && tsc -p test-it/tsconfig.json && npm -w ui run check-types",
-    "quality": "npm run lint && npm run build-types && npm -w ui run check-types && npm -w ui run build && npm -w parquet-writer run build && npm test && npm audit --omit=dev --audit-level=critical",
+    "check-types-ratchet": "bash dev/check-types-ratchet.sh",
+    "quality": "npm run lint && npm run check-types-ratchet && npm run build-types && npm -w ui run check-types && npm -w ui run build && npm -w parquet-writer run build && npm test && npm audit --omit=dev --audit-level=critical",
     "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning benchmark/src/index.ts"
   },
   "engines": {

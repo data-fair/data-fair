@@ -11,10 +11,11 @@ import * as visibilityUtils from './visibility.js'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 
-const resourceTypesLabels = {
+const resourceTypesLabels: Record<ResourceType, string> = {
   datasets: 'Le jeu de données',
   applications: 'L\'application',
-  catalogs: 'Le connecteur'
+  catalogs: 'Le connecteur',
+  'remote-services': 'Le service distant'
 }
 
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
