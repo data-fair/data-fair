@@ -1,11 +1,14 @@
 // Typed request-scoped context, replacing ad-hoc mutation of req properties.
 // Pattern follows @data-fair/lib-express session.ts / site.ts: symbol keys,
-// typed accessors, casts contained in this module, get() throws when the
+// typed accessors, casts contained in the factory, get() throws when the
 // middleware that sets the value was not applied.
+// Accessors are defined topically, next to the code that owns the context
+// (e.g. reqSettingsParams in settings/middlewares.ts) — see the placement
+// table in docs/architecture/code-conventions.md §2. This module only hosts
+// the factory and req-free context helpers.
 import type { IncomingMessage } from 'node:http'
 import type { Request } from 'express'
 import { reqSession, type User, type Account } from '@data-fair/lib-express'
-import type { Resource, ResourceType, BypassPermissions } from '#types'
 
 export type ReqContext<T> = {
   set: (req: IncomingMessage, value: T) => void
@@ -32,49 +35,6 @@ export const defineReqContext = <T>(name: string, legacyProp?: string): ReqConte
     getOptional: (req) => (req as any)[key] ?? (legacyProp ? (req as any)[legacyProp] : undefined)
   }
 }
-
-// ---- cross-cutting contexts (read by permissions, cache-headers, find, …) ----
-// Setters stay where they are today (app.js, module middlewares) until the
-// owning module's phase switches them from mutation to set*().
-
-const resource = defineReqContext<Resource>('resource', 'resource')
-export const setReqResource = resource.set
-export const reqResource = resource.get
-export const reqResourceOptional = resource.getOptional
-
-const resourceType = defineReqContext<ResourceType>('resourceType', 'resourceType')
-export const setReqResourceType = resourceType.set
-export const reqResourceType = resourceType.get
-
-const bypassPermissions = defineReqContext<BypassPermissions>('bypassPermissions', 'bypassPermissions')
-export const setReqBypassPermissions = bypassPermissions.set
-export const reqBypassPermissions = bypassPermissions.getOptional
-
-const publicOperation = defineReqContext<boolean>('publicOperation', 'publicOperation')
-export const setReqPublicOperation = publicOperation.set
-export const reqPublicOperation = publicOperation.getOptional
-
-const noCache = defineReqContext<boolean>('noCache', 'noCache')
-export const setReqNoCache = noCache.set
-export const reqNoCache = noCache.getOptional
-
-const publicBaseUrl = defineReqContext<string>('publicBaseUrl', 'publicBaseUrl')
-export const setReqPublicBaseUrl = publicBaseUrl.set
-export const reqPublicBaseUrl = publicBaseUrl.get
-
-const publicWsBaseUrl = defineReqContext<string>('publicWsBaseUrl', 'publicWsBaseUrl')
-export const setReqPublicWsBaseUrl = publicWsBaseUrl.set
-export const reqPublicWsBaseUrl = publicWsBaseUrl.get
-
-// publicationSite / mainPublicationSite are loose shapes today; typed any until
-// a PublicationSite-with-owner type is extracted in Phase 5
-const publicationSite = defineReqContext<any>('publicationSite', 'publicationSite')
-export const setReqPublicationSite = publicationSite.set
-export const reqPublicationSite = publicationSite.getOptional
-
-const mainPublicationSite = defineReqContext<any>('mainPublicationSite', 'mainPublicationSite')
-export const setReqMainPublicationSite = mainPublicationSite.set
-export const reqMainPublicationSite = mainPublicationSite.getOptional
 
 // ---- audit-log context without req (same EventLog output as passing { req }) ----
 export type LogContext = { user?: User, account?: Account, ip?: string, host?: string }

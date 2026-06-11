@@ -102,23 +102,35 @@ call site. Its return type encodes the contract:
 
 **Choose based on the setter's runtime guarantee, not by analogy with another accessor.**
 
-### Cross-cutting accessors (in `misc/utils/req-context.ts`)
+### Placement: topical, defined at migration time
 
-| Exported name | Type | Source |
-|---|---|---|
-| `reqResource` / `setReqResource` | `Resource` (throws) | `applications/router.js`, `applications/proxy.js`, `datasets/middlewares.js`, `remote-services/router.js` |
-| `reqResourceOptional` | `Resource \| undefined` | same |
-| `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | several routers |
-| `reqBypassPermissions` / `setReqBypassPermissions` | `BypassPermissions \| undefined` | `api-key.ts`, `application-key.ts` |
-| `reqPublicOperation` / `setReqPublicOperation` | `boolean \| undefined` | `permissions.ts` |
-| `reqNoCache` / `setReqNoCache` | `boolean \| undefined` | `datasets/middlewares.js` |
-| `reqPublicBaseUrl` / `setReqPublicBaseUrl` | `string` (throws) | `app.js` |
-| `reqPublicWsBaseUrl` / `setReqPublicWsBaseUrl` | `string` (throws) | `app.js` |
-| `reqPublicationSite` / `setReqPublicationSite` | `any \| undefined` | `app.js`, `catalog/router.js` |
-| `reqMainPublicationSite` / `setReqMainPublicationSite` | `any \| undefined` | `app.js` |
+Accessors live next to the code that owns the context — `misc/utils/req-context.ts` hosts only
+the `defineReqContext` factory and req-free context helpers (`reqEventLogContext`), never
+accessors. Module-specific accessors sit next to the middleware that sets them (e.g.
+`reqSettingsParams` in `settings/middlewares.ts`, `reqDataset` in `datasets/middlewares.*`).
+Cross-cutting contexts (set in one module, read in others) go with their **semantic owner** —
+the module that defines what the value means, usually its main reader. Define each accessor in
+the phase that migrates its setter or readers, never ahead of need.
 
-Module-specific accessors live next to the middleware that sets them (e.g. `reqSettingsParams` in
-`settings/middlewares.ts`, `reqDataset` in `datasets/middlewares.*`).
+Planned homes for the cross-cutting contexts (names and `get`/`getOptional` contracts are fixed;
+create each accessor when its phase lands):
+
+| Accessor | Type | Home | Set from |
+|---|---|---|---|
+| `reqResource` / `setReqResource` | `Resource` (throws) | `misc/utils/permissions.ts` | `applications/router.js`, `applications/proxy.js`, `datasets/middlewares.js`, `remote-services/router.js` |
+| `reqResourceOptional` | `Resource \| undefined` | same | same |
+| `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | `misc/utils/permissions.ts` | several routers |
+| `reqBypassPermissions` / `setReqBypassPermissions` | `BypassPermissions \| undefined` | `misc/utils/permissions.ts` | `api-key.ts`, `application-key.ts` |
+| `reqPublicOperation` / `setReqPublicOperation` | `boolean \| undefined` | `misc/utils/permissions.ts` | `permissions.ts` |
+| `reqNoCache` / `setReqNoCache` | `boolean \| undefined` | `misc/utils/cache-headers.*` (at its `.ts` conversion) | `datasets/middlewares.js` |
+| `reqPublicBaseUrl` / `setReqPublicBaseUrl` | `string` (throws) | small dedicated module created when `app.js` migrates (setter middleware + accessors co-located) | `app.js` |
+| `reqPublicWsBaseUrl` / `setReqPublicWsBaseUrl` | `string` (throws) | same | `app.js` |
+| `reqPublicationSite` / `setReqPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js`, `catalog/router.js` |
+| `reqMainPublicationSite` / `setReqMainPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js` |
+
+`permissions.ts` and the rest of `misc/utils` may be relocated in Phase 5; accessors move with
+their host file. Accessors add no imports, so hosting them in `permissions.ts` is not expected to
+create import cycles — still worth a quick check when the first ones land.
 
 The same co-location applies to **context builders**: helpers that assemble a service write
 context from `req` live in `middlewares.ts` next to the accessors they compose — not in
@@ -170,8 +182,9 @@ those properties.
 
 Brand-new context properties never pass `legacyProp`; dual-write and the fallback read are migration-only mechanisms for properties that already exist as plain mutations.
 
-1. Phase 0 shipped the accessor with `legacyProp` configured. `set()` dual-writes — both the
-   symbol key and the legacy plain property — so **setters and readers can migrate in any order**.
+1. The migrating phase defines the accessor in its topical home (table above) with `legacyProp`
+   configured. `set()` dual-writes — both the symbol key and the legacy plain property — so
+   **setters and readers can migrate in any order**.
 2. Each module phase converts its readers and setters to use the accessors.
 3. Once all three greps are empty, drop the `legacyProp` argument (ends dual-write) and remove the
    corresponding member from `RequestWithResource` / ad-hoc types in `api/types/index.ts`:
