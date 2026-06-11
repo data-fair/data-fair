@@ -203,6 +203,11 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
     }
   }
   if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
+  // _attachment_url holds an absolute URL (publicUrl + datasetId + lineId + md5 + filename) that can
+  // easily exceed the keyword ignore_above:200 limit (e.g. sha256 line ids or long filenames). Over the
+  // limit the value is dropped from the index (kept only in _source), so _exists_ / term / agg / sort
+  // silently return nothing. The wildcard type is built for long machine strings and has no such limit.
+  if (prop.key === '_attachment_url') esProp = { type: 'wildcard' }
   if (prop.key === '_i') esProp = { type: 'long' }
   if (prop.key === '_rand') esProp = { type: 'integer' }
   if (prop.key === '_id') return null

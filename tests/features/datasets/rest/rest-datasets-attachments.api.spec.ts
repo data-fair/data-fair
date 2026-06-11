@@ -234,6 +234,58 @@ test.describe('REST datasets - Attachments', () => {
     await waitForFinalize(ax, 'restsync')
   })
 
+  test('_exists_ filter on _attachment_url works regardless of the attachment path/url length', async () => {
+    const ax = testUser1
+    // _attachment_url is an absolute URL (publicUrl + datasetId + lineId + md5 + filename) stored in the
+    // index. Mapped as a keyword with ignore_above:200, any value over 200 chars is silently dropped from
+    // the index (kept only in _source) so _exists_ / term / agg / sort return nothing while normal
+    // responses still show the value. A long filename pushes BOTH attachmentPath and _attachment_url well
+    // over 200, so the fix must be length-independent (a higher ignore_above or switching field would not
+    // be enough).
+    let res = await ax.post('/api/v1/datasets/rest-attachment-long-url', {
+      isRest: true,
+      title: 'rest attachment long url',
+      primaryKey: ['attr1'],
+      rest: { primaryKeyMode: 'sha256' },
+      schema: [
+        { key: 'attr1', type: 'string' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    assert.equal(res.status, 201)
+
+    const longName = 'long-attachment-filename-' + 'x'.repeat(140) + '.pdf'
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf')
+    form.append('attachment', attachmentContent, longName)
+    form.append('attr1', 'key1')
+    // a primaryKey upsert returns 200 (not 201); just make sure the line was stored with its attachment path
+    res = await ax.post('/api/v1/datasets/rest-attachment-long-url/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.ok([200, 201].includes(res.status))
+    assert.ok(res.data.attachmentPath?.endsWith('/' + longName))
+    assert.ok(res.data.attachmentPath.length > 200, `expected attachmentPath > 200 chars, got ${res.data.attachmentPath.length}`)
+    await waitForFinalize(ax, 'rest-attachment-long-url')
+
+    // the _attachment_url is present in normal responses and is well over 200 chars
+    res = await ax.get('/api/v1/datasets/rest-attachment-long-url/lines', { params: { select: '_attachment_url' } })
+    assert.equal(res.data.total, 1)
+    const url = res.data.results[0]._attachment_url
+    assert.ok(url, 'expected _attachment_url to be present in the response')
+    assert.ok(url.length > 200, `expected _attachment_url longer than 200 chars to reproduce the bug, got ${url.length}`)
+
+    // filtering on the existence of _attachment_url must still find the line
+    res = await ax.get('/api/v1/datasets/rest-attachment-long-url/lines', { params: { qs: '_exists_:_attachment_url' } })
+    assert.equal(res.data.total, 1)
+
+    // exact-match (eq/in) filtering must also still work on the wildcard-mapped field, at any length
+    res = await ax.get('/api/v1/datasets/rest-attachment-long-url/lines', { params: { _attachment_url_eq: url } })
+    assert.equal(res.data.total, 1)
+    res = await ax.get('/api/v1/datasets/rest-attachment-long-url/lines', { params: { _attachment_url_eq: url + 'x' } })
+    assert.equal(res.data.total, 0)
+    res = await ax.get('/api/v1/datasets/rest-attachment-long-url/lines', { params: { _attachment_url_in: url } })
+    assert.equal(res.data.total, 1)
+  })
+
   test('Send attachment with special chars', async () => {
     const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {
