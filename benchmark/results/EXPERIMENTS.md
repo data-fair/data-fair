@@ -74,7 +74,10 @@ on-demand `GET /cpu-profile` (avoids the exit-flush problem of --cpu-prof with S
 ## Open / blocked
 
 - **T15/T13 — ES response parse + response stringify** (~70% of main-thread CPU on large pages
-  combined): start with `filter_path` (cheap, measurable), then evaluate passthrough serialization.
+  combined). The easy parts (filter_path, plain-JSON.parse deserializer) were **measured and
+  rejected** (2026-06-12): 18% smaller ES bodies, zero end-to-end change — the irreducible cost
+  is JSON.parse of `_source` itself. Only the passthrough end-game remains (see the updated
+  handoff doc docs/plans/2026-06-12-t15-es-response-overhead.md).
 - **T2 — session JWT verify cost**: upstream lib-node token cache (−3..−7% req/s measured on
   cheap reads). Upstream repo work.
 - **Long-lived-process drift**: same code measured 870 vs 430 ms p50 depending on process

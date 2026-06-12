@@ -36,6 +36,28 @@ matters for large pages, exports, wide datasets, compat-ods-style consumers.**
 - Output serialization: `res.send(result)` in `readLines` (`api/src/datasets/router.js`, end of
   readLines) — the monolithic stringify (T13).
 
+## ⚠️ Steps 1-3 MEASURED AND REJECTED (2026-06-12, same day)
+
+The "easy parts" were implemented and A/B-measured (fresh process per arm, 11 byte-identical
+equivalence probes incl. zero-hit/collapse/aggs — the correctness approach works and is
+documented in the harness):
+
+- `filter_path` (step 1) shrinks the ES response body by a measured **18%** (3.97 MB → 3.29 MB
+  for 10k rows)… and changes **nothing measurable** end-to-end (json 23→22 req/s, csv 20→19,
+  wide-list 119→118 — all within noise).
+- plain `JSON.parse` deserializer (step 2): also no measurable change.
+
+**Why**: the profile frame attributed to `secure-json-parse._parse` is dominated by the
+`JSON.parse` builtin called *inside* it (self-time attribution artifact); the poisoning regex
+scan is comparatively cheap. The irreducible cost is parsing the `_source` payload itself, which
+neither step touches. Both changes were reverted (the serializer dropped a security layer for
+nothing; filter_path adds a response-shape allowlist that future consumers must remember to
+extend).
+
+**Conclusion: only step 4 (passthrough) can move this block.** Steps 1-3 below are kept for
+reference but should NOT be retried in isolation. Step 1 may still be bundled into step 4 if
+passthrough lands (less bytes to slice through).
+
 ## Stepped plan (measure after each step, stop when the curve flattens)
 
 1. **`filter_path`** (cheap, do first). What readLines actually consumes from the response:
