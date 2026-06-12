@@ -19,6 +19,9 @@ import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqSession, reqAdminMode } from '@data-fair/lib-express'
+import { setReqResource, setReqResourceType } from '../misc/utils/permissions.ts'
+import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
+import { setReqRemoteService, reqRemoteService } from './middlewares.ts'
 
 const debug = debugModule('remote-services')
 const debugMasterData = debugModule('master-data')
@@ -28,16 +31,14 @@ const cacheableLookup = new CacheableLookup()
 export const router = express.Router()
 
 router.use((req, res, next) => {
-  // @ts-ignore
-  req.resourceType = 'remote-services'
+  setReqResourceType(req, 'remote-services')
   next()
 })
 
 // Get the list of remote-services
 // Accessible to anybody
 router.get('', cacheHeaders.noCache, async (req, res) => {
-  // @ts-ignore
-  const publicationSite = req.publicationSite
+  const publicationSite = reqPublicationSite(req)
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
 
@@ -51,8 +52,7 @@ export const actionsRouter = express.Router()
 
 // get the unpacked list of actions inside the remote services
 actionsRouter.get('', cacheHeaders.noCache, async (req, res) => {
-  // @ts-ignore
-  const publicationSite = req.publicationSite
+  const publicationSite = reqPublicationSite(req)
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
   // @ts-ignore
@@ -97,7 +97,9 @@ const readService = async (req, res, next) => {
   const service = await mongo.remoteServices
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
-  req.remoteService = req.resource = mongoEscape.unescape(service, true)
+  const svc = mongoEscape.unescape(service, true)
+  setReqRemoteService(req, svc)
+  setReqResource(req, svc)
   next()
 }
 
@@ -106,7 +108,7 @@ router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased(), (req,
   // TODO: allow based on privateAccess ?
   const sessionState = reqAdminMode(req)
 
-  res.status(200).send(clean(req.remoteService, sessionState, req.query.html))
+  res.status(200).send(clean(reqRemoteService(req), sessionState, req.query.html))
 })
 
 // PUT used to create or update as super admin
@@ -127,9 +129,10 @@ router.put('/:remoteServiceId', attemptInsert, readService, async (req, res) => 
   debugMasterData(`PUT remote service manually by ${sessionState.user.name} (${sessionState.user.id})`, req.params.remoteServiceId, newService.id)
   // preserve all readonly properties, the rest is overwritten
   const { schema: servicePatch } = await import('#doc/remote-services/patch-req/index.js')
-  for (const key of Object.keys(req.remoteService)) {
+  const svc = reqRemoteService(req)
+  for (const key of Object.keys(svc)) {
     if (!servicePatch.properties.body.properties[key]) {
-      newService[key] = req.remoteService[key]
+      newService[key] = svc[key]
     }
   }
   newService.updatedAt = moment().toISOString()
@@ -178,20 +181,21 @@ router.delete('/:remoteServiceId', readService, async (req, res) => {
 router.post('/:remoteServiceId/_update', readService, async (req, res) => {
   const sessionState = reqAdminMode(req)
 
-  if (!req.remoteService.url) return res.sendStatus(204)
+  const svc = reqRemoteService(req)
+  if (!svc.url) return res.sendStatus(204)
 
   debugMasterData(`Force update remote service manually by ${sessionState.user.name} (${sessionState.user.id})`, req.params.remoteServiceId)
 
-  const reponse = await axios.get(req.remoteService.url)
+  const reponse = await axios.get(svc.url)
   validateOpenApi(reponse.data)
-  req.remoteService.updatedAt = moment().toISOString()
-  req.remoteService.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
-  req.remoteService.apiDoc = reponse.data
-  req.remoteService.actions = computeActions(req.remoteService.apiDoc)
+  svc.updatedAt = moment().toISOString()
+  svc.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
+  svc.apiDoc = reponse.data
+  svc.actions = computeActions(svc.apiDoc)
   await mongo.remoteServices.replaceOne({
     id: req.params.remoteServiceId
-  }, mongoEscape.escape(req.remoteService, true))
-  res.status(200).json(clean(req.remoteService, sessionState))
+  }, mongoEscape.escape(svc, true))
+  res.status(200).json(clean(svc, sessionState))
 })
 
 // use the current referer url to determine the application that was used to call this remote service
@@ -316,5 +320,5 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddl
 
 // Anybody can read the API doc
 router.get('/:remoteServiceId/api-docs.json', readService, cacheHeaders.resourceBased(), (req, res) => {
-  res.send(remoteServiceAPIDocs(req.remoteService))
+  res.send(remoteServiceAPIDocs(reqRemoteService(req)))
 })

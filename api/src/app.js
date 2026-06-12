@@ -140,7 +140,7 @@ export const run = async () => {
     app.use('/api/v1', (await import('./misc/routers/root.ts')).default)
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
-    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.js')).default)
+    app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.ts')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
     // rate limiting is applied per-route inside the datasets router, after the api-key middleware, so that
@@ -148,9 +148,9 @@ export const run = async () => {
     app.use('/api/v1/datasets', (await import('./datasets/router.js')).default)
     app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
     app.use('/api/v1/settings', (await import('./settings/router.ts')).default)
-    app.use('/api/v1/admin', (await import('./admin/router.js')).default)
-    app.use('/api/v1/identities', (await import('./identities/router.js')).default)
-    app.use('/api/v1/activity', (await import('./activity/router.js')).default)
+    app.use('/api/v1/admin', (await import('./admin/router.ts')).default)
+    app.use('/api/v1/identities', (await import('./identities/router.ts')).default)
+    app.use('/api/v1/activity', (await import('./activity/router.ts')).default)
     app.use('/api/v1/limits', limits.router)
     if (config.compatODS) {
       app.use('/api/v1/compat-ods', (await import('./api-compat/ods/index.ts')).default)

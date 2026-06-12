@@ -10,6 +10,19 @@ import * as apiDocsUtil from './api-docs.ts'
 import * as visibilityUtils from './visibility.js'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
+import { defineReqContext } from './req-context.ts'
+
+// permissions is the semantic owner of the resource / resourceType request context.
+// legacyProp dual-write keeps the legacy `req.resource` / `req.resourceType` reads in this file
+// (and the setters in other modules' routers) working while modules migrate to the accessors.
+const resourceCtx = defineReqContext<Resource>('resource', 'resource')
+export const setReqResource = resourceCtx.set
+export const reqResource = resourceCtx.get
+export const reqResourceOptional = resourceCtx.getOptional
+
+const resourceTypeCtx = defineReqContext<ResourceType>('resourceType', 'resourceType')
+export const setReqResourceType = resourceTypeCtx.set
+export const reqResourceType = resourceTypeCtx.get
 
 const resourceTypesLabels: Record<ResourceType, string> = {
   datasets: 'Le jeu de données',
