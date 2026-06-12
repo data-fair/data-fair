@@ -3,6 +3,7 @@ import autocannon from 'autocannon'
 import { init, seedDatasets } from './setup.ts'
 import { scenarios, buildContext, type HttpScenario, type OneShotScenario } from './scenarios.ts'
 import { printResults, saveResults, type ScenarioResult, type HttpScenarioResult, type OneShotScenarioResult } from './reporter.ts'
+import { sampleMetrics, diffSteps, rssDeltaMb, type StepDelta } from './metrics.ts'
 
 const { values: args } = parseArgs({
   options: {
@@ -67,7 +68,9 @@ async function runHttpScenario (scenario: HttpScenario, ctx: ReturnType<typeof b
   }
 
   console.log(`  benchmarking (${duration}s, ${connections} connections)...`)
+  const before = await sampleMetrics()
   const result = await autocannon({ ...opts, duration })
+  const after = await sampleMetrics()
 
   return {
     kind: 'http',
@@ -77,25 +80,37 @@ async function runHttpScenario (scenario: HttpScenario, ctx: ReturnType<typeof b
     throughput: { avg: result.requests.average, total: result.requests.total },
     errors: result.errors,
     non2xx: result.non2xx,
-    duration
+    duration,
+    steps: diffSteps(before, after),
+    rssDeltaMb: rssDeltaMb(before, after)
   }
 }
 
 async function runOneShotScenario (scenario: OneShotScenario, ctx: ReturnType<typeof buildContext>): Promise<OneShotScenarioResult> {
   const repetitions = args.repetitions ? parseInt(args.repetitions) : (scenario.repetitions ?? 1)
   const metrics: Record<string, number[]> = {}
+  let lastSteps: StepDelta[] | undefined
+  let lastRss: number | undefined
   for (let rep = 0; rep < repetitions; rep++) {
     if (scenario.prepare) {
       console.log(`  rep ${rep + 1}/${repetitions}: preparing...`)
       await scenario.prepare(ctx)
     }
     console.log(`  rep ${rep + 1}/${repetitions}: running...`)
+    // sample server-side metrics around the last repetition only (one representative run)
+    const isLast = rep === repetitions - 1
+    const before = isLast ? await sampleMetrics() : null
     const m = await scenario.run(ctx)
+    const after = isLast ? await sampleMetrics() : null
+    if (isLast) {
+      lastSteps = diffSteps(before, after)
+      lastRss = rssDeltaMb(before, after)
+    }
     for (const [key, value] of Object.entries(m)) {
       (metrics[key] = metrics[key] || []).push(value)
     }
   }
-  return { kind: 'oneshot', name: scenario.name, description: scenario.description, repetitions, metrics }
+  return { kind: 'oneshot', name: scenario.name, description: scenario.description, repetitions, metrics, steps: lastSteps, rssDeltaMb: lastRss }
 }
 
 async function main () {
