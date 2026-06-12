@@ -12,6 +12,9 @@ const nginxPort = process.env.NGINX_PORT1 || '5307'
 const devHost = process.env.DEV_HOST || 'localhost'
 const baseUrl = process.env.BENCHMARK_URL || `http://${devHost}:${nginxPort}/data-fair`
 const directoryUrl = process.env.BENCHMARK_DIRECTORY_URL || `http://${devHost}:${nginxPort}/simple-directory`
+// direct API port, no nginx: long synchronous requests (large _bulk_lines) outlive
+// nginx's proxy_read_timeout, like the test suite we talk to the API directly for those
+const apiUrl = process.env.BENCHMARK_API_URL || `http://localhost:${process.env.DEV_API_PORT || '5317'}`
 
 let ax: AxiosInstance
 let sessionCookie: string
@@ -84,7 +87,16 @@ export async function seedDatasets () {
 
 export async function seedRows (datasetId: string, rows: any[], batchSize = 1000) {
   for (let i = 0; i < rows.length; i += batchSize) {
-    await ax.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, rows.slice(i, i + batchSize))
+    // retry on 409: a blocking operation (indexing of the previous batch) can still hold the dataset
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await ax.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, rows.slice(i, i + batchSize))
+        break
+      } catch (err: any) {
+        if (err.status !== 409 || attempt >= 60) throw err
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
     if ((i + batchSize) % 10000 === 0 || i + batchSize >= rows.length) {
       console.log(`[seed] ${datasetId}: ${Math.min(i + batchSize, rows.length)}/${rows.length} rows`)
     }
@@ -120,7 +132,12 @@ export async function recreateDataset (id: string, schema: any[] = benchSchema) 
 }
 
 export function getBaseUrl () { return baseUrl }
+export function getApiUrl () { return apiUrl }
 export function getAxios () { return ax }
+/** authenticated axios talking directly to the API port (no nginx, no proxy timeouts) */
+export function getDirectAxios () {
+  return axios.create({ baseURL: apiUrl, headers: { cookie: sessionCookie, 'x-cache-bypass': '1' } })
+}
 export function getAnonAxios () { return axios.create({ baseURL: baseUrl, validateStatus: () => true }) }
 export function getSessionCookie () { return sessionCookie }
 export function getApiKey () { return apiKey }

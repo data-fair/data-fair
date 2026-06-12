@@ -1,4 +1,4 @@
-import { getBaseUrl, getAxios, getAnonAxios, getSessionCookie, getApiKey, recreateDataset, seedRows, waitForLinesTotal } from './setup.ts'
+import { getBaseUrl, getAxios, getAnonAxios, getDirectAxios, getSessionCookie, getApiKey, recreateDataset, seedRows, waitForLinesTotal } from './setup.ts'
 import { generateRows, wideSchema } from './seed.ts'
 import type { AxiosInstance } from 'axios'
 
@@ -53,9 +53,12 @@ const lines = (datasetId: string, queryParams: string): ((ctx: BenchContext) => 
 
 const toNdjson = (rows: any[]) => rows.map(r => JSON.stringify(r)).join('\n')
 
+// large bulk requests go directly to the API port: their synchronous mongo phase
+// outlives nginx's proxy_read_timeout, and we measure the API anyway
 const postBulk = async (ctx: BenchContext, datasetId: string, body: string) => {
+  const directAx = getDirectAxios()
   const t0 = performance.now()
-  await ctx.ax.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, body, {
+  await directAx.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, body, {
     headers: { 'content-type': 'application/x-ndjson' },
     maxBodyLength: Infinity,
     maxContentLength: Infinity
@@ -106,6 +109,12 @@ export const scenarios: Scenario[] = [
     name: 'large-page-csv',
     description: '10000-row CSV page',
     request: lines('bench-large', 'size=10000&format=csv')
+  },
+  {
+    kind: 'http',
+    name: 'large-page-truncate',
+    description: '10000-row JSON page with truncate (legacy per-key schema scans, T1 worst case)',
+    request: lines('bench-large', 'size=10000&truncate=50')
   },
   {
     kind: 'http',
@@ -173,7 +182,7 @@ export const scenarios: Scenario[] = [
       body: JSON.stringify({ _id: '[<id>]', str1: 'analyse population', str2: 'cat-alpha', num1: 42, num2: 3.14, date1: '2024-01-15', lat: 45.1, lon: 1.5 }),
       idReplacement: true
     }),
-    expectStatus: 201
+    expectStatus: 200
   },
   {
     kind: 'http',
@@ -191,6 +200,6 @@ export const scenarios: Scenario[] = [
         idReplacement: true
       }
     },
-    expectStatus: 201
+    expectStatus: 200
   }
 ]
