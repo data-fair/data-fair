@@ -3,12 +3,26 @@
 import crypto from 'crypto'
 import config from '#config'
 import mongo from '#mongo'
+import memoize from 'memoizee'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account, assertReqInternal } from '@data-fair/lib-express'
 import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../../settings/operations.ts'
 import dayjs from 'dayjs'
+
+// this lookup runs on every request presenting an api key (M2M harvesters pay it per call);
+// keyed on the hashed key, same staleness budget as the application-key middleware and the
+// dataset cache (key revocation/expiry propagates within 30s per process); negative results
+// are cached too. The cached doc is shared across requests: do NOT mutate it downstream.
+const findApiKeySettings = memoize(async (hashedApiKey: string) => {
+  return mongo.settings
+    .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, department: 1, name: 1, email: 1, 'apiKeys.$': 1 } })
+}, { profileName: 'apiKeySettings', promise: true, primitive: true, max: 10000, maxAge: 1000 * 30 })
+
+// called on settings writes: same-node api key creation/revocation applies immediately
+// (other nodes converge within the 30s TTL)
+export const clearApiKeysCache = () => { findApiKeySettings.clear() }
 
 export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
   if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
@@ -30,8 +44,7 @@ export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?
     const hash = crypto.createHash('sha512')
     hash.update(rawApiKey)
     const hashedApiKey = hash.digest('hex')
-    const settings = await mongo.settings
-      .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, department: 1, name: 1, email: 1, 'apiKeys.$': 1 } })
+    const settings = await findApiKeySettings(hashedApiKey)
     if (!settings) throw httpError(401, 'Cette clé d\'API est inconnue.')
     const apiKey = settings.apiKeys?.[0]
     if (!apiKey) throw httpError(401, 'Cette clé d\'API est inconnue.')

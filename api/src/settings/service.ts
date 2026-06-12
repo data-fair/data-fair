@@ -16,6 +16,7 @@ import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import { type LogContext } from '../misc/utils/req-context.ts'
+import { clearApiKeysCache } from '../misc/utils/api-key.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, isMainSettings, isDepartmentSettings, type SettingsParams } from './operations.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
@@ -170,6 +171,9 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     cleanDatasetsMetadata(settings.datasetsMetadata)
   }
   const oldSettings = (await mongo.settings.findOneAndReplace(ownerFilter, settings, { upsert: true }))
+
+  // api key creation/revocation must apply immediately on this node
+  clearApiKeysCache()
 
   if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
     await topicsUtils.updateTopics(owner, oldSettings.topics || [], settings.topics)

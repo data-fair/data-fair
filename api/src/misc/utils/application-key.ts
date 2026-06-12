@@ -51,6 +51,15 @@ const findMatchingApplication = memoize(async (appId: string, datasetHref: strin
   }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
 }, { ...memoOpts, profileName: 'applicationKeyMatchingApp' })
 
+// called on applications-keys writes: same-node key changes apply immediately
+// (other nodes converge within the 30s TTL)
+export const clearApplicationKeysCaches = () => {
+  findApplicationKey.clear()
+  countParentApplicationOfDataset.clear()
+  countParentApplicationOfApp.clear()
+  findMatchingApplication.clear()
+}
+
 // same-origin gate for anonymous writes — compares URL origins (`startsWith` previously let
 // `app.example.co` pass for `app.example.com` because the shorter is a prefix of the longer);
 // a missing Origin header is still accepted to keep non-browser clients working

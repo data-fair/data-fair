@@ -10,6 +10,7 @@ import { nanoid } from 'nanoid'
 import applicationAPIDocs from '../../contract/application-api-docs.ts'
 import * as ajv from '../misc/utils/ajv.ts'
 import applicationKeys from '../../contract/application-keys.js'
+import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as usersUtils from '../misc/utils/users.ts'
@@ -332,6 +333,8 @@ router.patch('/:applicationId',
       if (err.code !== 11000) throw err
       throw httpError(400, req.__('errors.dupSlug'))
     }
+    // configuration.datasets changes affect the application-key middleware matching
+    clearApplicationKeysCaches()
 
     eventsLog.info('df.applications.patch', `patched application ${patchedApplication.slug} (${patchedApplication.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: patchedApplication.owner })
 
@@ -398,6 +401,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   // existing protected links after an ownership transfer
   await db.collection('applications-keys')
     .updateOne({ _id: application.id }, { $set: { owner: patch.owner } })
+  clearApplicationKeysCaches()
 
   const arrowStr = `${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
   const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${arrowStr}`
@@ -429,6 +433,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
   await db.collection('applications').deleteOne({ id: req.params.applicationId })
   await db.collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
   await db.collection('applications-keys').deleteOne({ _id: application.id })
+  clearApplicationKeysCaches()
   try {
     await filesStorage.removeFile(await capture.path(application))
   } catch (err) {
@@ -630,6 +635,7 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
     if (!key.id) key.id = nanoid()
   }
   await mongo.db.collection('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys: req.body, owner: application.owner }, { upsert: true })
+  clearApplicationKeysCaches()
 
   eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { req, account: application.owner })
 

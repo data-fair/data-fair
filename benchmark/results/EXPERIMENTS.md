@@ -30,7 +30,12 @@ caveats in `BASELINE.md`. T-ids refer to `benchmark/perf-scan-notes.md`.
   `matchingApplication` cloned on use because the datasetsFilters defaults mutate it): removes
   2-3 sequential mongo round trips in front of every data request from embedded apps/portals.
   Done on principle — the dedicated benchmark scenario (needs a configured application) was
-  judged not worth the harness complexity. Validated by the application-keys test suite at push.
+  judged not worth the harness complexity. Caches cleared on applications/applications-keys
+  writes and in test-env cleanup.
+- **T8 — api-key settings lookup memoized** (same pattern as T7, 30 s TTL): removes the
+  per-request mongo round trip behind `x-apiKey` auth (measured −9..−14% req/s vs anonymous
+  before the fix). Cleared on settings writes, so same-node key revocation stays immediate —
+  verified live: create key → 200 (miss) → 200 (cache hit) → revoke → immediate 401.
 
 ## Abandoned
 
@@ -70,7 +75,7 @@ on-demand `GET /cpu-profile` (avoids the exit-flush problem of --cpu-prof with S
 
 - **T15/T13 — ES response parse + response stringify** (~70% of main-thread CPU on large pages
   combined): start with `filter_path` (cheap, measurable), then evaluate passthrough serialization.
-- **T2/T8 — auth costs**: upstream lib-node token cache + api-key memoization (−3..−14% req/s
-  measured on cheap reads). Upstream repo work.
+- **T2 — session JWT verify cost**: upstream lib-node token cache (−3..−7% req/s measured on
+  cheap reads). Upstream repo work.
 - **Long-lived-process drift**: same code measured 870 vs 430 ms p50 depending on process
   age/heap history — needs a soak scenario before trusting any single-process production tuning.
