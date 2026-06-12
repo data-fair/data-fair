@@ -15,6 +15,7 @@ import moment from 'moment'
 import crc from 'crc'
 import md5File from 'md5-file'
 import stableStringify from 'fast-json-stable-stringify'
+import memoize from 'memoizee'
 import LinkHeader from 'http-link-header'
 import unzipper from 'unzipper'
 import dayjs from 'dayjs'
@@ -707,11 +708,13 @@ class TransactionStream extends Writable {
   options: TransactionStreamOptions
   i: number
   transactions: DatasetLineAction[]
+  transactionIds: Set<string>
   constructor (options: TransactionStreamOptions) {
     super({ objectMode: true })
     this.options = options
     this.i = 0
     this.transactions = []
+    this.transactionIds = new Set()
   }
 
   async applyTransactions () {
@@ -726,6 +729,7 @@ class TransactionStream extends Writable {
     }
 
     this.transactions = []
+    this.transactionIds.clear()
     if (bulkOpResult) {
       this.options.summary.nbCreated += bulkOpResult.upsertedCount
       this.options.summary.nbCreated += bulkOpResult.insertedCount
@@ -771,14 +775,18 @@ class TransactionStream extends Writable {
     }
 
     // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
-    if (chunk._id && this.transactions.find(c => c._id === chunk._id)) {
+    if (chunk._id && this.transactionIds.has(chunk._id)) {
       await this.applyTransactions()
       // weirdly the separation of transactions is not always sufficient to ensure that the operations
       // are performed in the same order (some test regularly breaks)
+      // TODO: the mechanism is _i time-bucket separation between batches (10ms buckets in
+      // timestamp3 mode + random per-batch component); replacing the sleep with monotonic
+      // batch timestamps requires validating against the rest test suite
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
     this.transactions.push(chunk)
+    if (chunk._id) this.transactionIds.add(chunk._id)
 
     // WARNING: changing this number has impact on the _i generation logic
     if (this.transactions.length > config.mongo.maxBulkOps) await this.applyTransactions()
@@ -795,14 +803,23 @@ class TransactionStream extends Writable {
   }
 }
 
-const compileSchema = (dataset: RestDataset, adminMode: boolean) => {
+// memoized: ajv.compile is codegen (ms-scale, main-thread) and was run per write request;
+// worse, each call leaked an entry in ajv's internal strong-ref schema cache.
+// keyed on dataset.updatedAt: any schema change bumps it
+const compileSchema = memoize((dataset: RestDataset, adminMode: boolean) => {
   const schema = jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history
   if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
   return ajv.compile(schema)
-}
+}, {
+  profileName: 'compileRestSchema',
+  primitive: true,
+  max: 1000,
+  maxAge: 1000 * 60, // 1min
+  normalizer: ([dataset, adminMode]: [RestDataset, boolean]) => `${dataset.id}:${dataset.updatedAt}:${adminMode}`
+})
 
 async function checkMatchingAttachment (req: { body: any }, lineId: string, dir: string, pathField: { key: string }) {
   if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {

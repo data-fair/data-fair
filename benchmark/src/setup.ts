@@ -133,7 +133,15 @@ export async function recreateDataset (id: string, schema: any[] = benchSchema) 
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
-  await ax.put(`/api/v1/datasets/${id}`, { isRest: true, title: id, schema })
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await ax.put(`/api/v1/datasets/${id}`, { isRest: true, title: id, schema })
+      break
+    } catch (err: any) {
+      if (err.status !== 409 || attempt >= 60) throw err
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
   await waitForDataset(id, d => d.status === 'finalized', 60)
 }
 
