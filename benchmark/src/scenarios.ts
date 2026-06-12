@@ -1,4 +1,5 @@
-import { getBaseUrl, getAxios, getAnonAxios, getSessionCookie, getApiKey } from './setup.ts'
+import { getBaseUrl, getAxios, getAnonAxios, getSessionCookie, getApiKey, recreateDataset, seedRows, waitForLinesTotal } from './setup.ts'
+import { generateRows } from './seed.ts'
 import type { AxiosInstance } from 'axios'
 
 export interface BenchContext {
@@ -50,6 +51,18 @@ export type Scenario = HttpScenario | OneShotScenario
 const lines = (datasetId: string, queryParams: string): ((ctx: BenchContext) => HttpRequestSpec) =>
   () => ({ path: `/api/v1/datasets/${datasetId}/lines?${queryParams}` })
 
+const toNdjson = (rows: any[]) => rows.map(r => JSON.stringify(r)).join('\n')
+
+const postBulk = async (ctx: BenchContext, datasetId: string, body: string) => {
+  const t0 = performance.now()
+  await ctx.ax.post(`/api/v1/datasets/${datasetId}/_bulk_lines`, body, {
+    headers: { 'content-type': 'application/x-ndjson' },
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity
+  })
+  return performance.now() - t0
+}
+
 export const scenarios: Scenario[] = [
   { kind: 'http', name: 'simple-list', description: 'Baseline paginated list', request: lines('bench-large', 'size=20') },
   { kind: 'http', name: 'fulltext-search', description: 'Full-text search', request: lines('bench-large', 'q=analyse+population&size=20') },
@@ -99,5 +112,51 @@ export const scenarios: Scenario[] = [
     name: 'wide-list',
     description: '100 rows of a 300-column dataset (schema-scan sensitivity, T1/T16)',
     request: lines('bench-wide', 'size=100')
+  },
+
+  // --- bulk write path (T4 mark-indexed findOne/line, T9 bulk size, T10 O(n²)+$or, T11 per-line costs) ---
+  {
+    kind: 'oneshot',
+    name: 'bulk-ndjson-unique',
+    description: '100k unique-id createOrUpdate NDJSON: request time (mongo phase) + indexing time (worker phase)',
+    prepare: async () => { await recreateDataset('bench-write') },
+    run: async (ctx) => {
+      const count = 100000
+      const requestMs = await postBulk(ctx, 'bench-write', toNdjson(generateRows(count)))
+      const t1 = performance.now()
+      await waitForLinesTotal('bench-write', count, 600)
+      const indexMs = performance.now() - t1
+      return { requestMs, indexMs, linesPerSec: count / ((requestMs + indexMs) / 1000) }
+    }
+  },
+  {
+    kind: 'oneshot',
+    name: 'bulk-ndjson-duplicates',
+    description: '10k lines cycling 100 ids: duplicate-in-batch flush + 100ms sleep penalty (T6)',
+    prepare: async () => { await recreateDataset('bench-write') },
+    run: async (ctx) => {
+      const rows = generateRows(10000).map((r, i) => ({ ...r, _id: `dup-${i % 100}` }))
+      const requestMs = await postBulk(ctx, 'bench-write', toNdjson(rows))
+      await waitForLinesTotal('bench-write', 100, 120)
+      return { requestMs, linesPerSec: 10000 / (requestMs / 1000) }
+    }
+  },
+  {
+    kind: 'oneshot',
+    name: 'bulk-patch',
+    description: '50k patches on existing lines: read-back pass with O(n²) scans and $or filters (T10)',
+    prepare: async () => {
+      await recreateDataset('bench-write')
+      await seedRows('bench-write', generateRows(50000))
+      await waitForLinesTotal('bench-write', 50000, 600)
+    },
+    run: async (ctx) => {
+      const patches = Array.from({ length: 50000 }, (_, i) => ({ _id: `row-${i}`, _action: 'patch', str2: 'patched' }))
+      const requestMs = await postBulk(ctx, 'bench-write', toNdjson(patches))
+      const t1 = performance.now()
+      await waitForLinesTotal('bench-write', 50000, 600, '&str2_eq=patched')
+      const indexMs = performance.now() - t1
+      return { requestMs, indexMs, linesPerSec: 50000 / ((requestMs + indexMs) / 1000) }
+    }
   }
 ]
