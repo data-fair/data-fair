@@ -432,11 +432,13 @@ test.describe('validation diagnostic file', () => {
       headers: { 'Content-Length': badForm.getLengthSync(), ...badForm.getHeaders() },
       params: { draft: 'compatibleOrCancel' }
     })
+    let cancelled = false
     for (let i = 0; i < 60; i++) {
       const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-      if (journal.find((e: any) => e.type === 'draft-cancelled')) break
+      if (journal.find((e: any) => e.type === 'draft-cancelled')) { cancelled = true; break }
       await new Promise(resolve => setTimeout(resolve, 500))
     }
+    assert.ok(cancelled, 'expected draft-cancelled event before re-contribution')
     assert.equal((await fetchCancelledDiagnostic(dataset.id)).status, 200)
 
     // good contribution -> draft validated/promoted, relocated diagnostic removed
