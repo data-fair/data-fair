@@ -179,7 +179,7 @@ const isDraft = computed(() => !!dataset.value?.draftReason)
 
 const isFileDataset = computed(() => {
   const d = dataset.value
-  return d && !d.isRest && !d.isVirtual && !d.isMetaOnly && d.file
+  return d && !d.isRest && !d.isVirtual && !d.isMetaOnly && (d.file || d.originalFile)
 })
 
 const labelKeys: Record<string, string> = {
