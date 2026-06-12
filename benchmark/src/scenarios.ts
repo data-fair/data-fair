@@ -175,14 +175,15 @@ export const scenarios: Scenario[] = [
     name: 'single-line-writes',
     description: 'concurrent POST /lines, unique ids (T3 compile/leak + T12 wait_for); watch rssDelta across runs',
     prepare: async () => { await recreateDataset('bench-single') },
+    // no _id in the body: the API generates a nanoid per line. autocannon's
+    // idReplacement corrupts content-length when the generated id length differs
     request: ctx => ({
       path: '/api/v1/datasets/bench-single/lines',
       method: 'POST',
       headers: { cookie: ctx.sessionCookie, 'content-type': 'application/json' },
-      body: JSON.stringify({ _id: '[<id>]', str1: 'analyse population', str2: 'cat-alpha', num1: 42, num2: 3.14, date1: '2024-01-15', lat: 45.1, lon: 1.5 }),
-      idReplacement: true
+      body: JSON.stringify({ str1: 'analyse population', str2: 'cat-alpha', num1: 42, num2: 3.14, date1: '2024-01-15', lat: 45.1, lon: 1.5 })
     }),
-    expectStatus: 200
+    expectStatus: 201
   },
   {
     kind: 'http',
@@ -190,16 +191,15 @@ export const scenarios: Scenario[] = [
     description: 'concurrent POST /lines on the 300-column dataset (ajv compile cost scales with schema, T3)',
     prepare: async () => { await recreateDataset('bench-single-wide', wideSchema) },
     request: ctx => {
-      const body: Record<string, any> = { _id: '[<id>]' }
+      const body: Record<string, any> = {}
       for (let c = 0; c < 300; c++) body[`col${c}`] = c % 3 === 2 ? 7 : 'v'
       return {
         path: '/api/v1/datasets/bench-single-wide/lines',
         method: 'POST',
         headers: { cookie: ctx.sessionCookie, 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-        idReplacement: true
+        body: JSON.stringify(body)
       }
     },
-    expectStatus: 200
+    expectStatus: 201
   }
 ]
