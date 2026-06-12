@@ -167,16 +167,19 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 | `api/src/datasets/es/abort.js` | `esAbortContext` |
 | `api/src/applications/router.js` | `resourceType`, `resource`, `application`, `baseApp`, `isNewApplication` |
 | `api/src/applications/proxy.js` | `application`, `resource`, `resourceType`, `matchingApplicationKey` |
-| `api/src/remote-services/router.js` | `resourceType`, `remoteService`, `resource` |
-| `api/src/catalog/router.js` | `resourceType`, `publicationSite` |
 | `api/src/misc/utils/permissions.ts` | `publicOperation` |
 | `api/src/misc/utils/api-key.ts` | `bypassPermissions` |
 | `api/src/misc/utils/application-key.ts` | `bypassPermissions` |
 | `api/src/api-compat/ods/index.ts` | `resourceType`, `noModifiedCache` |
 
-Rows disappear as module phases land: `settings` (Phase 1) is fully migrated — its former
-`owner` / `department` / `ownerFilter` row is gone and the three greps below come back empty for
-those properties.
+Rows disappear as module phases land. `settings` (Phase 1) is fully migrated. `catalog` and
+`remote-services` (Phase 2 / partial Phase 3, 2026-06-12) now set `resourceType` / `resource` /
+`publicationSite` / `remoteService` through accessors (`setReqResourceType`, `setReqResource`,
+`setReqPublicationSite`, `setReqRemoteService`) instead of raw mutation. The cross-cutting accessors
+now live in their topical homes: `resource` / `resourceType` in `misc/utils/permissions.ts`,
+`publicationSite` / `mainPublicationSite` in `misc/utils/publication-sites.ts`,
+`remoteService` in `remote-services/middlewares.ts` — all keep `legacyProp` dual-write because
+datasets/applications routers still set `resource` / `resourceType` by raw mutation.
 
 ### Migration mechanics per property
 
