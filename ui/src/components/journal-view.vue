@@ -51,7 +51,7 @@
             {{ event.date ? dayjs(event.date).format('lll') : dayjs().format('lll') }}
           </span>
           <v-btn
-            v-if="event.type === 'validation-error' && (event as any).hasDiagnosticFile && diagnosticDownloadHref(event)"
+            v-if="(event as any).hasDiagnosticFile && diagnosticDownloadHref(event)"
             variant="text"
             size="small"
             color="error"
@@ -112,6 +112,11 @@ const { journal, type, after } = defineProps<{
 const datasetStore = inject<DatasetStore | undefined>(datasetStoreKey, undefined)
 const diagnosticDownloadHref = (event: Event) => {
   if (type !== 'dataset' || !datasetStore) return undefined
+  // an auto-cancelled contribution stores its diagnostic in a distinct slot on the
+  // main dataset (the draft is gone), served by a dedicated route, no ?draft
+  if (event.type === 'draft-cancelled') {
+    return `${datasetStore.resourceUrl.value}/cancelled-draft-diagnostic.csv`
+  }
   const qs = event.draft ? '?draft=true' : ''
   return `${datasetStore.resourceUrl.value}/validation-diagnostic.csv${qs}`
 }
