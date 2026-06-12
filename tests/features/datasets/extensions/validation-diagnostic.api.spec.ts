@@ -13,6 +13,13 @@ const fetchDiagnostic = async (datasetId: string) => {
   })
 }
 
+const fetchCancelledDiagnostic = async (datasetId: string) => {
+  return testUser1.get(`/api/v1/datasets/${datasetId}/cancelled-draft-diagnostic.csv`, {
+    responseType: 'text',
+    validateStatus: () => true
+  })
+}
+
 const findEvent = async (datasetId: string, type: string) => {
   const journal = (await testUser1.get(`/api/v1/datasets/${datasetId}/journal`)).data
   return journal.find((e: any) => e.type === type)
@@ -341,5 +348,59 @@ test.describe('validation diagnostic file', () => {
     // diagnostic endpoint should 404 (the draft directory was wiped)
     const diag = await fetchDiagnostic(dataset.id)
     assert.equal(diag.status, 404)
+  })
+
+  test('compatibleOrCancel preserves a downloadable cancelled-draft diagnostic', async () => {
+    const initialCsv = 'id,n\na,5\nb,10\n'
+    const form = new FormData()
+    form.append('file', Buffer.from(initialCsv), 'simple.csv')
+    let dataset = (await testUser1.post('/api/v1/datasets', form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+    })).data
+    dataset = await waitForFinalize(testUser1, dataset.id)
+
+    const patchRes = await testUser1.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        mandatory: true,
+        type: 'exprEval',
+        expr: 'n == 0 ? "zero" : n',
+        property: { key: 'inverse', type: 'number' }
+      }]
+    })
+    assert.equal(patchRes.status, 200)
+    await waitForFinalize(testUser1, dataset.id)
+
+    // draft with one failing row (n=0) — schema-compatible, extension fails
+    const draftCsv = 'id,n\nc,7\nd,0\n'
+    const form2 = new FormData()
+    form2.append('file', Buffer.from(draftCsv), 'simple.csv')
+    await testUser1.post(`/api/v1/datasets/${dataset.id}`, form2, {
+      headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() },
+      params: { draft: 'compatibleOrCancel' }
+    })
+
+    // poll for the draft-cancelled event
+    let cancelEvent: any
+    for (let i = 0; i < 60; i++) {
+      const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+      cancelEvent = journal.find((e: any) => e.type === 'draft-cancelled')
+      if (cancelEvent) break
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    assert.ok(cancelEvent, 'expected draft-cancelled event')
+    assert.equal(cancelEvent.hasDiagnosticFile, true)
+    assert.ok((cancelEvent.diagnosticErrorCount ?? 0) > 0)
+
+    // canonical slot untouched (still 404)
+    assert.equal((await fetchDiagnostic(dataset.id)).status, 404)
+
+    // relocated diagnostic is downloadable and lists the failing row
+    const diag = await fetchCancelledDiagnostic(dataset.id)
+    assert.equal(diag.status, 200)
+    const rows = diag.data.replace(/^\uFEFF/, '').trim().split('\n')
+    assert.equal(rows[0], 'line,error_type,field,message,raw_value')
+    assert.ok(rows.slice(1).some((r: string) => r.includes(',extension,')), `expected an extension error row: ${diag.data}`)
   })
 })
