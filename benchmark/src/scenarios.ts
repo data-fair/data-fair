@@ -59,5 +59,25 @@ export const scenarios: Scenario[] = [
   { kind: 'http', name: 'deep-pagination', description: 'Deep offset pagination', request: lines('bench-large', 'page=500&size=20&sort=_i') },
   { kind: 'http', name: 'geo-bbox', description: 'Geo bounding box filter', request: lines('bench-large', 'bbox=-5,42,8,51&size=20') },
   { kind: 'http', name: 'combined', description: 'Search + filter + sort combined', request: lines('bench-large', 'q=analyse&num1_gte=100&sort=num1&size=20') },
-  { kind: 'http', name: 'small-dataset', description: 'Small dataset baseline', request: lines('bench-small', 'size=20') }
+  { kind: 'http', name: 'small-dataset', description: 'Small dataset baseline', request: lines('bench-small', 'size=20') },
+
+  // --- auth overhead: identical query, different auth contexts (scan findings T2, T8) ---
+  {
+    kind: 'http',
+    name: 'auth-anonymous',
+    description: 'simple-list, no auth (baseline for auth-* comparison)',
+    request: lines('bench-large', 'size=20')
+  },
+  {
+    kind: 'http',
+    name: 'auth-session',
+    description: 'simple-list with session cookie (JWT verify per request, T2)',
+    request: ctx => ({ path: '/api/v1/datasets/bench-large/lines?size=20', headers: { cookie: ctx.sessionCookie } })
+  },
+  {
+    kind: 'http',
+    name: 'auth-apikey',
+    description: 'simple-list with x-apiKey (uncached settings findOne per request, T8)',
+    request: ctx => ({ path: '/api/v1/datasets/bench-large/lines?size=20', headers: { 'x-apikey': ctx.apiKey } })
+  }
 ]
