@@ -79,5 +79,25 @@ export const scenarios: Scenario[] = [
     name: 'auth-apikey',
     description: 'simple-list with x-apiKey (uncached settings findOne per request, T8)',
     request: ctx => ({ path: '/api/v1/datasets/bench-large/lines?size=20', headers: { 'x-apikey': ctx.apiKey } })
+  },
+
+  // --- large pages: result preparation + serialization + etag dominate (T1, T5, T13, T14, T17) ---
+  {
+    kind: 'http',
+    name: 'large-page-json',
+    description: '10000-row JSON page',
+    request: lines('bench-large', 'size=10000')
+  },
+  {
+    kind: 'http',
+    name: 'large-page-csv',
+    description: '10000-row CSV page',
+    request: lines('bench-large', 'size=10000&format=csv')
+  },
+  {
+    kind: 'http',
+    name: 'wide-list',
+    description: '100 rows of a 300-column dataset (schema-scan sensitivity, T1/T16)',
+    request: lines('bench-wide', 'size=100')
   }
 ]
