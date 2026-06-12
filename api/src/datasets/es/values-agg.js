@@ -1,6 +1,6 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { parseSort, prepareQuery, aliasName, prepareResultItem } from './commons.js'
+import { parseSort, prepareQuery, aliasName, prepareResultItem, prepareResultContext } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
 import { assertMetricAccepted } from './metric-agg.js'
@@ -222,7 +222,8 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
 
   const response = { total: esResponse.hits.total.value }
   if (esResponse.timed_out) response.timed_out = true
-  recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl, flatten, 0, valuesFields)
+  const resultCtx = prepareResultContext(dataset, query)
+  recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl, flatten, 0, valuesFields, resultCtx)
 
   if (aggSizes[0] > 0 && response.aggs?.length === aggSizes[0]) {
     const lastValue = response.aggs[response.aggs.length - 1].value
@@ -235,7 +236,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   return response
 }
 
-const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, flatten, i, valuesFields) => {
+const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, flatten, i, valuesFields, resultCtx) => {
   if (aggRes.card) response.total_values = aggRes.card.value
   if (!aggRes.values) return response
   response.total_other = aggRes.values.sum_other_doc_count
@@ -254,7 +255,7 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, fla
     const aggItem = {
       total: b.doc_count,
       value,
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl)) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
@@ -265,7 +266,7 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, fla
       }
     }
     if (b.values) {
-      recurseAggResponse(aggItem, b, dataset, query, publicBaseUrl, flatten, i + 1, valuesFields)
+      recurseAggResponse(aggItem, b, dataset, query, publicBaseUrl, flatten, i + 1, valuesFields, resultCtx)
     }
     if (b.centroid) {
       aggItem.centroid = b.centroid.location

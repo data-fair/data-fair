@@ -674,10 +674,11 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
     await manageESError(req, err)
   }
   const flatten = getFlatten(req.dataset)
+  const resultCtx = esUtils.prepareResultContext(req.dataset, req.query)
   const result = {
     total: esResponse.hits.total?.value,
     results: esResponse.hits.hits.map(hit => {
-      const item = esUtils.prepareResultItem(hit, req.dataset, req.query, flatten, req.publicBaseUrl)
+      const item = esUtils.prepareResultItem(hit, req.dataset, req.query, flatten, req.publicBaseUrl, resultCtx)
       let label = item[singleSearch.output.key]
       if (singleSearch.label && item[singleSearch.label.key]) label += ` (${item[singleSearch.label.key]})`
       return { output: item[singleSearch.output.key], label, score: item._score || undefined }
@@ -968,10 +969,11 @@ const readLines = async (req, res) => {
   if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = []
   const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
+  const resultCtx = esUtils.prepareResultContext(req.dataset, query)
   for (let i = 0; i < esResponse.hits.hits.length; i++) {
     // avoid blocking the event loop
     if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
-    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, query, flatten, req.publicBaseUrl))
+    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, query, flatten, req.publicBaseUrl, resultCtx))
   }
 
   observe.reqStep(req, 'prepareResultItems')
