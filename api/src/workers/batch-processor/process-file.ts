@@ -214,7 +214,10 @@ export default async function (dataset: DatasetInternal) {
       // draft directory into a stable slot on the main dataset before cancelDraft
       // wipes the draft dir — so the contributor keeps a downloadable report.
       const fileResult = await writer.finalize()
-      await filesStorage.moveFile(validationDiagnosticFilePath(dataset), cancelledDraftDiagnosticFilePath(dataset))
+      const srcDiagnostic = validationDiagnosticFilePath(dataset)
+      if (await filesStorage.pathExists(srcDiagnostic)) {
+        await filesStorage.moveFile(srcDiagnostic, cancelledDraftDiagnosticFilePath(dataset))
+      }
       delete patch.validateDraft
       await journals.log('datasets', dataset, {
         type: 'draft-cancelled',
