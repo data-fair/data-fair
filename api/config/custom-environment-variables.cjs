@@ -88,6 +88,14 @@ module.exports = {
       __name: 'ES_MAX_BULK_CHARS',
       __format: 'json'
     },
+    indexBulkLines: {
+      __name: 'ES_INDEX_BULK_LINES',
+      __format: 'json'
+    },
+    indexBulkChars: {
+      __name: 'ES_INDEX_BULK_CHARS',
+      __format: 'json'
+    },
     maxShardSize: {
       __name: 'ES_MAX_SHARD_SIZE',
       __format: 'json'

@@ -66,8 +66,8 @@ class IndexStream extends Transform {
     this.i += 1
 
     if (
-      this.body.length / 2 >= config.elasticsearch.maxBulkLines ||
-        this.bulkChars >= config.elasticsearch.maxBulkChars
+      this.body.length / 2 >= config.elasticsearch.indexBulkLines ||
+        this.bulkChars >= config.elasticsearch.indexBulkChars
     ) {
       await this.sendBulk()
     }
