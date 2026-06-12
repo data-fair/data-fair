@@ -5,6 +5,8 @@ import axios from '../misc/utils/axios.js'
 import * as clamav from '../misc/utils/clamav.ts'
 import filesStorage from '#files-storage'
 import debugModule from 'debug'
+import * as findUtils from '../misc/utils/find.js'
+import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 
 const debug = debugModule('status')
 
@@ -66,6 +68,159 @@ export async function listDatasetsWithEsWarnings (size = 1000, skip = 0) {
     .project({ _id: 0, id: 1, title: 1, owner: 1, esWarning: 1, status: 1 })
     .toArray()
   const [count, results] = await Promise.all([datasets.countDocuments(query), resultsPromise])
+  return { count, results }
+}
+
+export async function findDatasetsErrors (reqQuery: Record<string, any>) {
+  const datasets = mongo.db.collection('datasets')
+  const query = { status: 'error' }
+  const [skip, size] = findUtils.pagination(reqQuery)
+
+  const aggregatePromise = datasets.aggregate([
+    { $match: query },
+    { $project: { _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1 } },
+    { $sort: { updatedAt: -1 } },
+    { $skip: skip },
+    { $limit: size },
+    { $lookup: { from: 'journals', localField: 'id', foreignField: 'id', as: 'journal' } },
+    { $unwind: '$journal' },
+    { $match: { 'journal.type': 'dataset' } },
+    { $addFields: { event: { $arrayElemAt: ['$journal.events', -1] } } },
+    { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } }
+  ]).toArray()
+
+  const [count, results] = await Promise.all([datasets.countDocuments(query), aggregatePromise])
+  return { count, results }
+}
+
+export async function findDatasetsEsWarnings (reqQuery: Record<string, any>) {
+  const [skip, size] = findUtils.pagination(reqQuery)
+  return listDatasetsWithEsWarnings(size, skip)
+}
+
+export async function findApplicationsErrors (reqQuery: Record<string, any>) {
+  const applications = mongo.db.collection('applications')
+  const query = { errorMessage: { $exists: true } }
+  const [skip, size] = findUtils.pagination(reqQuery)
+  const resultsPromise = applications
+    .find(query)
+    .skip(skip)
+    .limit(size)
+    .project({ _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, errorMessage: 1, status: 1 })
+    .toArray()
+  const [count, results] = await Promise.all([applications.countDocuments(query), resultsPromise])
+  return { count, results }
+}
+
+export async function findApplicationsDraftErrors (reqQuery: Record<string, any>) {
+  const applications = mongo.db.collection('applications')
+  const query = { errorMessageDraft: { $exists: true } }
+  const [skip, size] = findUtils.pagination(reqQuery)
+  const resultsPromise = applications
+    .find(query)
+    .skip(skip)
+    .limit(size)
+    .project({ _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, errorMessageDraft: 1, status: 1 })
+    .toArray()
+  const [count, results] = await Promise.all([applications.countDocuments(query), resultsPromise])
+  return { count, results }
+}
+
+export async function findOwners (reqQuery: Record<string, any>) {
+  const limits = mongo.db.collection('limits')
+  const [skip, size] = findUtils.pagination(reqQuery)
+  const query: any = {}
+  if (reqQuery.q) query.$text = { $search: reqQuery.q }
+
+  const agg = [{
+    $match: query
+  }, {
+    $sort: { name: 1 }
+  }, {
+    $skip: skip
+  }, {
+    $limit: size
+  }, {
+    // imperfect.. we should do a lookup on both owner.id and owner.type
+    $lookup: {
+      from: 'datasets',
+      localField: 'id',
+      foreignField: 'owner.id',
+      as: 'datasets'
+    }
+  }, {
+    // imperfect.. we should do a lookup on both owner.id and owner.type
+    $lookup: {
+      from: 'applications',
+      localField: 'id',
+      foreignField: 'owner.id',
+      as: 'applications'
+    }
+  }, {
+    $project: {
+      id: 1,
+      type: 1,
+      name: 1,
+      nbDatasets: { $size: '$datasets' },
+      nbApplications: { $size: '$applications' },
+      consumption: 1,
+      storage: 1
+    }
+  }]
+
+  const aggPromise = limits.aggregate(agg).toArray()
+  const [count, results] = await Promise.all([limits.countDocuments(query), aggPromise])
+  return { count, results }
+}
+
+export async function findBaseApplications (reqQuery: Record<string, any>, publicBaseUrl: string) {
+  const baseApps = mongo.db.collection('base-applications')
+  const [skip, size] = findUtils.pagination(reqQuery)
+  const query: any = {}
+  if (reqQuery.public) query.public = true
+  if (reqQuery.q) query.$text = { $search: reqQuery.q }
+
+  const agg = [{
+    $match: query
+  }, {
+    $sort: { public: -1 }
+  }, {
+    $skip: skip
+  }, {
+    $limit: size
+  }, {
+    $lookup: {
+      from: 'applications',
+      localField: 'url',
+      foreignField: 'url',
+      as: 'applications'
+    }
+  }, {
+    $project: {
+      id: 1,
+      title: 1,
+      applicationName: 1,
+      version: 1,
+      description: 1,
+      category: 1,
+      meta: 1,
+      url: 1,
+      image: 1,
+      deprecated: 1,
+      public: 1,
+      privateAccess: 1,
+      nbApplications: { $size: '$applications' },
+      servicesFilters: 1,
+      datasetsFilters: 1
+    }
+  }]
+
+  const aggPromise = baseApps.aggregate(agg).toArray()
+  const [count, results] = await Promise.all([baseApps.countDocuments(query), aggPromise])
+  for (const result of results) {
+    cleanBaseApp(publicBaseUrl, result, reqQuery.thumbnail)
+    result.privateAccess = result.privateAccess || []
+  }
   return { count, results }
 }
 
