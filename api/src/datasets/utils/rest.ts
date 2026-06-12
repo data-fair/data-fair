@@ -37,7 +37,7 @@ import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
-import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
+import type { Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
@@ -1297,34 +1297,44 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
 
 class MarkIndexedStream extends Writable {
   c: Collection<DatasetLine>
-  i: number = 0
-  bulkOp: UnorderedBulkOperation | null = null
+  buffer: DatasetLine[] = []
 
   constructor (dataset: RestDataset) {
     super({ objectMode: true })
     this.c = collection(dataset)
   }
 
-  async _write (chunk: DatasetLine, encoding: BufferEncoding, cb: (error?: Error) => void) {
-    try {
-      this.i = this.i || 0
-      this.bulkOp = this.bulkOp || this.c.initializeUnorderedBulkOp()
-      const line = await this.c.findOne({ _id: chunk._id })
+  // batched read-back: one $in query per batch instead of one findOne per line
+  async flush () {
+    if (!this.buffer.length) return
+    const chunks = this.buffer
+    this.buffer = []
+    const updatedAts = new Map<string, number>()
+    const cursor = this.c.find({ _id: { $in: chunks.map(c => c._id) } }, { projection: { _updatedAt: 1 } })
+    for await (const line of cursor) {
+      if (line._updatedAt) updatedAts.set(line._id, line._updatedAt.getTime())
+    }
+    let i = 0
+    const bulkOp = this.c.initializeUnorderedBulkOp()
+    for (const chunk of chunks) {
       // if the line was updated in the interval since reading for indexing
       // do not mark it as properly indexed
-      if (chunk._updatedAt && line?._updatedAt && chunk._updatedAt.getTime() === line._updatedAt.getTime()) {
-        this.i += 1
+      if (chunk._updatedAt && updatedAts.get(chunk._id) === chunk._updatedAt.getTime()) {
+        i += 1
         if (chunk._deleted) {
-          this.bulkOp.find({ _id: chunk._id }).deleteOne()
+          bulkOp.find({ _id: chunk._id }).deleteOne()
         } else {
-          this.bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
+          bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
         }
       }
-      if (this.i === config.mongo.maxBulkOps) {
-        await this.bulkOp.execute()
-        this.i = 0
-        this.bulkOp = null
-      }
+    }
+    if (i) await bulkOp.execute()
+  }
+
+  async _write (chunk: DatasetLine, encoding: BufferEncoding, cb: (error?: Error) => void) {
+    try {
+      this.buffer.push(chunk)
+      if (this.buffer.length >= config.mongo.maxBulkOps) await this.flush()
       cb()
     } catch (err: any) {
       cb(err)
@@ -1333,7 +1343,7 @@ class MarkIndexedStream extends Writable {
 
   async _final (cb: (err?: Error) => void) {
     try {
-      if (this.bulkOp && this.i) await this.bulkOp.execute()
+      await this.flush()
       cb()
     } catch (err: any) {
       cb(err)
