@@ -47,7 +47,8 @@ export const results2csv = async (req, results) => {
     // yield to the event loop every `yieldEvery` rows; skip on the last row
     // and naturally never fires for small result sets
     if ((i + 1) % yieldEvery === 0 && i + 1 < results.length) {
-      await new Promise(resolve => setTimeout(resolve, 0))
+      // setImmediate, not setTimeout(0): timers are clamped to ~1ms and run in a later loop phase
+      await new Promise(resolve => setImmediate(resolve))
     }
   }
   return parts.join('')

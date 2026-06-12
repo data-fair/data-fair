@@ -972,7 +972,8 @@ const readLines = async (req, res) => {
   const resultCtx = esUtils.prepareResultContext(req.dataset, query)
   for (let i = 0; i < esResponse.hits.hits.length; i++) {
     // avoid blocking the event loop
-    if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
+    // setImmediate, not setTimeout(0): timers are clamped to ~1ms and run in a later loop phase
+    if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
     result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, query, flatten, req.publicBaseUrl, resultCtx))
   }
 
