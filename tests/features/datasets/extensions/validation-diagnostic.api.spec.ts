@@ -451,5 +451,12 @@ test.describe('validation diagnostic file', () => {
     await waitForFinalize(testUser1, dataset.id)
 
     assert.equal((await fetchCancelledDiagnostic(dataset.id)).status, 404)
+
+    // the stale draft-cancelled event must no longer advertise a diagnostic, so the
+    // UI stops rendering a download button that would 404
+    const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    const staleCancel = journal.find((e: any) => e.type === 'draft-cancelled')
+    assert.ok(staleCancel, 'expected the draft-cancelled event to still be in the journal')
+    assert.ok(!staleCancel.hasDiagnosticFile, 'expected hasDiagnosticFile to be cleared after re-contribution')
   })
 })

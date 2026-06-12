@@ -651,6 +651,13 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
   const staleCancelledDiagnostic = cancelledDraftDiagnosticFilePath(patchedDataset)
   if (await filesStorage.pathExists(staleCancelledDiagnostic)) {
     await filesStorage.removeFile(staleCancelledDiagnostic)
+    // the now-removed file was referenced by a past draft-cancelled event; clear
+    // its hasDiagnosticFile flag so the UI stops offering a download that 404s
+    await mongo.db.collection('journals').updateOne(
+      { type: 'dataset', id: patchedDataset.id, 'owner.type': patchedDataset.owner.type, 'owner.id': patchedDataset.owner.id },
+      { $unset: { 'events.$[stale].hasDiagnosticFile': '' } },
+      { arrayFilters: [{ 'stale.type': 'draft-cancelled', 'stale.hasDiagnosticFile': true }] }
+    )
   }
 
   await validateDraftAlias(dataset)
