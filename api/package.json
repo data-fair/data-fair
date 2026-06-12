@@ -3,7 +3,8 @@
   "type": "module",
   "scripts": {
     "dev": "mkdir -p ../dev/logs && NODE_ENV=development EVENTS_LOG_LEVEL=error nodemon --verbose -e js,ts,json --exec \"node --experimental-strip-types --disable-warning=ExperimentalWarning index.ts || (sleep 2 && touch index.ts)\" 2>&1 | tee ../dev/logs/dev-api.log",
-    "dev-benchmark": "NODE_ENV=benchmark node --watch --experimental-strip-types --disable-warning=ExperimentalWarning index.ts"
+    "dev-benchmark": "NODE_ENV=benchmark node --watch --experimental-strip-types --disable-warning=ExperimentalWarning index.ts",
+    "dev-benchmark-prof": "NODE_ENV=benchmark node --cpu-prof --cpu-prof-dir=../dev/profiles --experimental-strip-types --disable-warning=ExperimentalWarning index.ts"
   },
   "imports": {
     "#config": "./src/config.ts",
