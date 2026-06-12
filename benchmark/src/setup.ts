@@ -9,8 +9,9 @@ try {
 } catch { /* no .env, rely on explicit BENCHMARK_* vars */ }
 
 const nginxPort = process.env.NGINX_PORT1 || '5307'
-const baseUrl = process.env.BENCHMARK_URL || `http://localhost:${nginxPort}/data-fair`
-const directoryUrl = process.env.BENCHMARK_DIRECTORY_URL || `http://localhost:${nginxPort}/simple-directory`
+const devHost = process.env.DEV_HOST || 'localhost'
+const baseUrl = process.env.BENCHMARK_URL || `http://${devHost}:${nginxPort}/data-fair`
+const directoryUrl = process.env.BENCHMARK_DIRECTORY_URL || `http://${devHost}:${nginxPort}/simple-directory`
 
 let ax: AxiosInstance
 let sessionCookie: string
@@ -18,8 +19,9 @@ let apiKey: string
 
 export async function init () {
   console.log(`[setup] connecting to ${baseUrl}`)
+  // test users come from dev/resources/users.json, loaded by simple-directory (file storage)
   ax = await axiosAuth({
-    email: 'dmeadus0@answers.com',
+    email: 'test_user1@test.com',
     password: 'passwd',
     directoryUrl,
     axiosOpts: { baseURL: baseUrl, headers: { 'x-cache-bypass': '1' } }

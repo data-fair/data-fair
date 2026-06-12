@@ -39,6 +39,9 @@ const warmupDuration = parseInt(args.warmup!)
 async function runHttpScenario (scenario: HttpScenario, ctx: ReturnType<typeof buildContext>): Promise<HttpScenarioResult> {
   if (scenario.prepare) await scenario.prepare(ctx)
   const spec = scenario.request(ctx)
+  // always bypass the nginx reverse-proxy cache: we measure the API, not nginx
+  // (without this, anonymous GET scenarios are ~99% served by the proxy cache)
+  spec.headers = { 'x-cache-bypass': '1', ...spec.headers }
   const url = ctx.baseUrl + spec.path
 
   // probe with the exact same request shape autocannon will send
@@ -140,7 +143,10 @@ async function main () {
   if (!args['no-save']) saveResults(results)
 }
 
-main().catch(err => {
+main().then(() => {
+  // keep-alive sockets (axios agents, autocannon) hold the event loop open: exit explicitly
+  process.exit(0)
+}, err => {
   console.error('Benchmark failed:', err)
   process.exit(1)
 })
