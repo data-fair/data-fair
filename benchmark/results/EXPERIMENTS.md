@@ -23,14 +23,24 @@ caveats in `BASELINE.md`. T-ids refer to `benchmark/perf-scan-notes.md`.
 - Concurrent `wait_for` waiters coalesce on one refresh (10 concurrent POSTs all ~0.94 s) — the
   refresh wall does not stack.
 
-## Open / blocked
+## Also done without dedicated measurement
 
-- **T6b — the 100 ms inter-batch sleep** (duplicates still 11.3 s for 10k lines, ×13 vs unique):
-  mechanism understood — it separates `_i` time-buckets across batches (10 ms buckets in
-  `timestamp3` mode + random per-batch `chunkRand`, so same-bucket batches can invert order).
-  A fix (monotonic per-stream batch timestamps, or deterministic per-batch sequence replacing
-  `chunkRand`) must be validated against the rest test suite — the `test-env` router is
-  development-only, so the suite can't run against the benchmark server. Run with dev-api panes.
+- **T7 — application-key middleware lookups memoized** (30 s TTL, negative results cached,
+  `matchingApplication` cloned on use because the datasetsFilters defaults mutate it): removes
+  2-3 sequential mongo round trips in front of every data request from embedded apps/portals.
+  Done on principle — the dedicated benchmark scenario (needs a configured application) was
+  judged not worth the harness complexity. Validated by the application-keys test suite at push.
+
+## Abandoned
+
+- **T6b — the 100 ms inter-batch sleep** (duplicates ×13 vs unique ingest): mechanism understood —
+  it separates `_i` time-buckets across batches (10 ms buckets in `timestamp3` mode + random
+  per-batch `chunkRand`, so same-bucket batches can invert order); a fix would need monotonic
+  per-stream batch timestamps validated against the rest test suite. **Abandoned by decision:
+  write throughput is not a goal — the priority for writes is resource efficiency and not
+  blocking the event loop, and the sleep is idle time, not CPU.**
+
+## Open / blocked
 - **T11 — per-line pipeline CPU**: after T4, indexing is ~170 µs/line and ES bulk size doesn't move
   it (T9) → the remaining cost is per-line CPU (`applyCalculations` flatten/schema scans/arc4
   seed, double stringify) and ES-side ingest. Next step: `npm run dev-benchmark-prof` + a 100k

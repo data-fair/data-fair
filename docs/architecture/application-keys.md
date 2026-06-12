@@ -109,6 +109,12 @@ write endpoint, the `own/:owner/...` line endpoints, and the thumbnail/attachmen
 runs *before* `permissions.middleware(...)`, so it can grant a bypass that the permission check
 will honor.
 
+Since this path fronts every data request issued by embedded apps, its MongoDB lookups
+(application key, parent-application checks, matching application) are memoized for 30 s —
+same staleness budget as the dataset cache; a revoked key or modified app configuration can
+keep granting/denying its bypass for up to 30 s per API process (see
+[caching.md](./caching.md), layer 3).
+
 The middleware uses the HTTP `Referer` header — i.e. it trusts that the browser will report the
 page that issued the request — to identify the calling application:
 

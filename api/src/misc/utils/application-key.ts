@@ -2,6 +2,8 @@
 import requestIp from 'request-ip'
 import config from '#config'
 import mongo from '#mongo'
+import memoize from 'memoizee'
+import clone from '@data-fair/lib-utils/clone.js'
 import * as rateLimiting from './rate-limiting.ts'
 import { type Request, type Response, type NextFunction } from 'express'
 import { type ApplicationKey, type RequestWithResource } from '#types'
@@ -9,6 +11,45 @@ import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
 import debugModule from 'debug'
 
 const debug = debugModule('application-keys')
+
+// these lookups run in front of every data request sent by embedded apps/portals and depend
+// only on slow-moving documents -> short-TTL memoization, same pattern and 30s staleness
+// budget as memoizedGetDataset (negative results are cached too, bogus keys are also hot)
+const memoOpts = { promise: true, primitive: true, max: 10000, maxAge: 1000 * 30 }
+
+const ownerFilterFromParts = (ownerType: string, ownerId: string, ownerDep: string) => ({
+  'owner.type': ownerType,
+  'owner.id': ownerId,
+  'owner.department': ownerDep || { $exists: false }
+})
+
+const findApplicationKey = memoize(async (applicationKeyId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilterFromParts(ownerType, ownerId, ownerDep) })
+}, { ...memoOpts, profileName: 'applicationKey' })
+
+const countParentApplicationOfDataset = memoize(async (appId: string, datasetHref: string, datasetId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.db.collection('applications').countDocuments({
+    id: appId,
+    $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': datasetId }],
+    ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
+  })
+}, { ...memoOpts, profileName: 'applicationKeyParentDataset' })
+
+const countParentApplicationOfApp = memoize(async (parentAppId: string, appId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.db.collection('applications').countDocuments({
+    id: parentAppId,
+    'configuration.applications.id': appId,
+    ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
+  })
+}, { ...memoOpts, profileName: 'applicationKeyParentApp' })
+
+const findMatchingApplication = memoize(async (appId: string, datasetHref: string, datasetId: string, ownerType: string, ownerId: string, ownerDep: string) => {
+  return mongo.applications.findOne({
+    id: appId,
+    $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': datasetId }],
+    ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
+  }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
+}, { ...memoOpts, profileName: 'applicationKeyMatchingApp' })
 
 // same-origin gate for anonymous writes — compares URL origins (`startsWith` previously let
 // `app.example.co` pass for `app.example.com` because the shorter is a prefix of the longer);
@@ -33,11 +74,9 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
 
   const dataset = req.resource
 
-  const ownerFilter = {
-    'owner.type': dataset.owner.type,
-    'owner.id': dataset.owner.id,
-    'owner.department': dataset.owner.department ? dataset.owner.department : { $exists: false }
-  }
+  const ownerType = dataset.owner.type
+  const ownerId = dataset.owner.id
+  const ownerDep = dataset.owner.department || ''
   const datasetHref = `${config.publicUrl}/api/v1/datasets/${dataset.id}`
   let appId: string | undefined
   let applicationKey: ApplicationKey | null = null
@@ -54,15 +93,10 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
       }
     }
     if (!applicationKeyId) return next()
-    applicationKey = await mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    applicationKey = await findApplicationKey(applicationKeyId, ownerType, ownerId, ownerDep)
     if (!applicationKey) return next()
     appId = applicationKey._id
-    const isParentApplicationKey = await mongo.db.collection('applications')
-      .countDocuments({
-        id: applicationKey._id,
-        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
-        ...ownerFilter
-      })
+    const isParentApplicationKey = await countParentApplicationOfDataset(applicationKey._id, datasetHref, dataset.id, ownerType, ownerId, ownerDep)
     if (!isParentApplicationKey) return next()
   }
 
@@ -80,25 +114,21 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
       }
     }
     if (!applicationKeyId) return next()
-    applicationKey = await mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    applicationKey = await findApplicationKey(applicationKeyId, ownerType, ownerId, ownerDep)
     debug('found applicationKey', applicationKey, appId)
     if (!applicationKey) return next()
     if (applicationKey._id !== appId) {
       // the application key can be matched to a parent application key (case of dashboards, etc)
-      const isParentApplicationKey = await mongo.db.collection('applications')
-        .countDocuments({ id: applicationKey._id, 'configuration.applications.id': appId, ...ownerFilter })
+      const isParentApplicationKey = await countParentApplicationOfApp(applicationKey._id, appId, ownerType, ownerId, ownerDep)
       debug('found isParentApplicationKey', isParentApplicationKey)
       if (!isParentApplicationKey) return next()
     }
   }
 
   if (applicationKey && appId) {
-    const matchingApplication = await mongo.applications
-      .findOne({
-        id: appId,
-        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
-        ...ownerFilter
-      }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
+    const cachedMatchingApplication = await findMatchingApplication(appId, datasetHref, dataset.id, ownerType, ownerId, ownerDep)
+    // cloned: the datasetsFilters defaults below mutate the doc, the cached copy must stay pristine
+    const matchingApplication = cachedMatchingApplication && clone(cachedMatchingApplication)
     debug('matchingApplication', matchingApplication)
     if (matchingApplication) {
       // this is basically the "crowd-sourcing" use case
