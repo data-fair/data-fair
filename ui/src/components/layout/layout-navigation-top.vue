@@ -53,10 +53,11 @@
 
     <v-spacer />
 
-    <df-notification-queue
-      v-if="$uiConfig.eventsIntegration && user"
-      :events-url="$sitePath + '/events'"
-    />
+    <v-toolbar-items v-if="$uiConfig.eventsIntegration && user">
+      <df-notification-queue
+        :events-url="$sitePath + '/events'"
+      />
+    </v-toolbar-items>
     <df-theme-switcher />
     <df-personal-menu>
       <template #actions-before>
