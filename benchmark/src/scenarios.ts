@@ -1,5 +1,5 @@
 import { getBaseUrl, getAxios, getAnonAxios, getSessionCookie, getApiKey, recreateDataset, seedRows, waitForLinesTotal } from './setup.ts'
-import { generateRows } from './seed.ts'
+import { generateRows, wideSchema } from './seed.ts'
 import type { AxiosInstance } from 'axios'
 
 export interface BenchContext {
@@ -158,5 +158,39 @@ export const scenarios: Scenario[] = [
       const indexMs = performance.now() - t1
       return { requestMs, indexMs, linesPerSec: 50000 / ((requestMs + indexMs) / 1000) }
     }
+  },
+
+  // --- single-line writes: ajv compile per request (T3), sync index + refresh wait_for (T12), events-log (T22) ---
+  {
+    kind: 'http',
+    name: 'single-line-writes',
+    description: 'concurrent POST /lines, unique ids (T3 compile/leak + T12 wait_for); watch rssDelta across runs',
+    prepare: async () => { await recreateDataset('bench-single') },
+    request: ctx => ({
+      path: '/api/v1/datasets/bench-single/lines',
+      method: 'POST',
+      headers: { cookie: ctx.sessionCookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ _id: '[<id>]', str1: 'analyse population', str2: 'cat-alpha', num1: 42, num2: 3.14, date1: '2024-01-15', lat: 45.1, lon: 1.5 }),
+      idReplacement: true
+    }),
+    expectStatus: 201
+  },
+  {
+    kind: 'http',
+    name: 'wide-single-line-writes',
+    description: 'concurrent POST /lines on the 300-column dataset (ajv compile cost scales with schema, T3)',
+    prepare: async () => { await recreateDataset('bench-single-wide', wideSchema) },
+    request: ctx => {
+      const body: Record<string, any> = { _id: '[<id>]' }
+      for (let c = 0; c < 300; c++) body[`col${c}`] = c % 3 === 2 ? 7 : 'v'
+      return {
+        path: '/api/v1/datasets/bench-single-wide/lines',
+        method: 'POST',
+        headers: { cookie: ctx.sessionCookie, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+        idReplacement: true
+      }
+    },
+    expectStatus: 201
   }
 ]
