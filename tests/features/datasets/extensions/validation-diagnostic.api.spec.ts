@@ -403,4 +403,51 @@ test.describe('validation diagnostic file', () => {
     assert.equal(rows[0], 'line,error_type,field,message,raw_value')
     assert.ok(rows.slice(1).some((r: string) => r.includes(',extension,')), `expected an extension error row: ${diag.data}`)
   })
+
+  test('a successful re-contribution clears the cancelled-draft diagnostic', async () => {
+    const initialCsv = 'id,n\na,5\nb,10\n'
+    const form = new FormData()
+    form.append('file', Buffer.from(initialCsv), 'simple.csv')
+    let dataset = (await testUser1.post('/api/v1/datasets', form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+    })).data
+    dataset = await waitForFinalize(testUser1, dataset.id)
+
+    await testUser1.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        mandatory: true,
+        type: 'exprEval',
+        expr: 'n == 0 ? "zero" : n',
+        property: { key: 'inverse', type: 'number' }
+      }]
+    })
+    await waitForFinalize(testUser1, dataset.id)
+
+    // failing contribution -> draft cancelled, diagnostic relocated
+    const badForm = new FormData()
+    badForm.append('file', Buffer.from('id,n\nc,7\nd,0\n'), 'simple.csv')
+    await testUser1.post(`/api/v1/datasets/${dataset.id}`, badForm, {
+      headers: { 'Content-Length': badForm.getLengthSync(), ...badForm.getHeaders() },
+      params: { draft: 'compatibleOrCancel' }
+    })
+    for (let i = 0; i < 60; i++) {
+      const journal = (await testUser1.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+      if (journal.find((e: any) => e.type === 'draft-cancelled')) break
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    assert.equal((await fetchCancelledDiagnostic(dataset.id)).status, 200)
+
+    // good contribution -> draft validated/promoted, relocated diagnostic removed
+    const goodForm = new FormData()
+    goodForm.append('file', Buffer.from('id,n\nc,7\nd,8\n'), 'simple.csv')
+    await testUser1.post(`/api/v1/datasets/${dataset.id}`, goodForm, {
+      headers: { 'Content-Length': goodForm.getLengthSync(), ...goodForm.getHeaders() },
+      params: { draft: 'compatibleOrCancel' }
+    })
+    await waitForFinalize(testUser1, dataset.id)
+
+    assert.equal((await fetchCancelledDiagnostic(dataset.id)).status, 404)
+  })
 })

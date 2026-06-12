@@ -13,7 +13,7 @@ import * as webhooks from '../misc/utils/webhooks.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
-import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir } from './utils/files.ts'
+import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.js'
@@ -644,6 +644,13 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
   await filesStorage.moveFile(draftFilePath, newFilePath)
   if (oldFilePath && newFilePath !== oldFilePath) {
     await filesStorage.removeFile(oldFilePath)
+  }
+
+  // a previous contribution to this dataset may have left a cancelled-draft
+  // diagnostic; now that a contribution succeeded it is stale, remove it
+  const staleCancelledDiagnostic = cancelledDraftDiagnosticFilePath(patchedDataset)
+  if (await filesStorage.pathExists(staleCancelledDiagnostic)) {
+    await filesStorage.removeFile(staleCancelledDiagnostic)
   }
 
   await validateDraftAlias(dataset)
