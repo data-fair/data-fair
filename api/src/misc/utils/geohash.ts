@@ -1,13 +1,13 @@
 import geolib from 'geolib'
 import ngeohash from 'ngeohash'
 
-const geohash = {}
+const geohash: any = {}
 
 // source https://en.wikipedia.org/wiki/Geohash
 const errorsPerPrecision = [2500, 630, 78, 20, 2.4, 0.61, 0.076, 0.019]
 geohash.precision2area = errorsPerPrecision.map(error => (error * 2) * (error * 2))
 
-geohash.bbox2area = function (bbox) {
+geohash.bbox2area = function (bbox: any) {
   const width = geolib.getDistance({
     longitude: bbox[0], // left
     latitude: bbox[1] // bottom
@@ -27,7 +27,7 @@ geohash.bbox2area = function (bbox) {
   return width * height
 }
 
-geohash.bbox2precision = function (bbox, facetMax) {
+geohash.bbox2precision = function (bbox: any, facetMax: any) {
   const bboxArea = geohash.bbox2area(bbox)
   let precision = 1
   while (geohash.precision2area[precision] && (bboxArea / geohash.precision2area[precision]) < facetMax) {
@@ -36,13 +36,13 @@ geohash.bbox2precision = function (bbox, facetMax) {
   return precision
 }
 
-geohash.hash2bbox = function (hash) {
+geohash.hash2bbox = function (hash: any) {
   // from a ngeohash (minlat,minlon,maxlat,maxlon) to a geojson (minlon,minlat,maxlon,maxlat) bounding box
   const ngeohashBBox = ngeohash.decode_bbox(hash)
   return [ngeohashBBox[1], ngeohashBBox[0], ngeohashBBox[3], ngeohashBBox[2]]
 }
 
-geohash.hash2coord = function (hash) {
+geohash.hash2coord = function (hash: any) {
   const r = ngeohash.decode(hash)
   return [r.longitude, r.latitude]
 }

@@ -1,6 +1,6 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import geohash from '../../misc/utils/geohash.js'
+import geohash from '../../misc/utils/geohash.ts'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'
 import { timedEsCall } from './abort.js'
 import capabilities from '../../../contract/capabilities.js'
