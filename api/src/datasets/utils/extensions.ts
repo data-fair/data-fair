@@ -18,6 +18,7 @@ import taskProgress from './task-progress.ts'
 import * as permissionsUtils from '../../misc/utils/permissions.ts'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import debugLib from 'debug'
+import zlib from 'node:zlib'
 import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
@@ -36,23 +37,6 @@ export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js
 const debugMasterData = debugLib('master-data')
 const debug = debugLib('extensions')
 const debugOverwrite = debugLib('extensions-overwrite')
-
-// deterministic uniform value in [0, 1000000) for the _rand sampling sort.
-// FNV-1a + murmur finalizer: replaces random-seed whose per-call ARC4 key scheduling
-// was ~69% of the indexing thread CPU (one generator was built per indexed line)
-const deterministicRand = (seed: string) => {
-  let h = 0x811c9dc5
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
-  }
-  h ^= h >>> 16
-  h = Math.imul(h, 0x85ebca6b)
-  h ^= h >>> 13
-  h = Math.imul(h, 0xc2b2ae35)
-  h ^= h >>> 16
-  return (h >>> 0) % 1000000
-}
 
 export const prepareExtensions = (locale: string, extensions: any[], oldExtensions?: any[]) => {
   for (const e of extensions) {
@@ -698,8 +682,9 @@ export const applyCalculations = async (dataset: Dataset, item: any) => {
     }
   }
 
-  // Add a pseudo-random number for random sorting (more natural distribution)
-  item._rand = deterministicRand(dataset.id + item._i)
+  // Deterministic pseudo-random number for the _rand sampling sort. crc32 (native, fast) replaces
+  // random-seed, whose per-line ARC4 key scheduling was ~69% of the indexing-thread CPU.
+  item._rand = zlib.crc32(dataset.id + item._i) % 1000000
 
   // split the fields that have a separator in their schema
   for (const field of dataset.schema ?? []) {
