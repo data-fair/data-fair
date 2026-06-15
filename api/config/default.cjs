@@ -56,10 +56,6 @@ module.exports = {
     defaultAnalyzer: 'custom_french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,
-    // flush thresholds of the ES indexing stream, decoupled from maxBulkLines/maxBulkChars
-    // which also gate the sync-vs-worker decision and memory bounds of _bulk_lines requests
-    indexBulkLines: 2000,
-    indexBulkChars: 200000,
     maxShardSize: 10000000000, // 10go
     nbReplicas: 1,
     maxPageSize: 10000,

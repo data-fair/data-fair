@@ -13,7 +13,6 @@ caveats in `BASELINE.md`. T-ids refer to `benchmark/perf-scan-notes.md`.
 | T4 | batch MarkIndexedStream `$in` (838d85347) | 100k-line ingest: indexing phase 35.3→17.7 s (×2.0), 2284→3831 lines/s; 0 `_needsIndexing` left both arms | **kept — biggest write-path win** |
 | T3 | memoize `compileSchema` (857777612) | with `singleLineOpRefresh=false`: narrow +30% req/s, 300-col ×3.1 (50→157 req/s, p50 198→63 ms); also fixes the unbounded ajv-cache leak | **kept** |
 | T6a | Set-based duplicate detection (857777612) | neutral on scenarios (sleeps dominate) | kept as hygiene |
-| T9 | decouple index-stream flush config (af31932de) | 200 KB vs 4 MB bulks: indexing −5.6% only (local ES) | config kept (defaults unchanged), **bulk size is not a lever locally** |
 | T11 | FNV hash replaces per-line ARC4 `_rand` (bb571419d) | CPU profile: random-seed = ~69% of indexing-thread busy CPU; A/B: indexing phase 17.7→8.6 s (×2.06), 3842→5856 lines/s; random-seed dep dropped | **kept — cumulative with T4: indexing ×4.1, ingest ×2.6** |
 
 ## Measured observations (no code change)
@@ -39,6 +38,10 @@ caveats in `BASELINE.md`. T-ids refer to `benchmark/perf-scan-notes.md`.
 
 ## Abandoned
 
+- **T9 — decouple index-stream flush config** (was af31932de): 200 KB vs 4 MB bulks moved indexing
+  only −5.6% on local ES — bulk size is not a lever locally. The decoupling added two config knobs
+  (`indexBulkLines`/`indexBulkChars`) and two env vars whose defaults equalled `maxBulkLines`/
+  `maxBulkChars`, i.e. config surface with no demonstrated gain. **Reverted before merge.**
 - **T6b — the 100 ms inter-batch sleep** (duplicates ×13 vs unique ingest): mechanism understood —
   it separates `_i` time-buckets across batches (10 ms buckets in `timestamp3` mode + random
   per-batch `chunkRand`, so same-bucket batches can invert order); a fix would need monotonic
