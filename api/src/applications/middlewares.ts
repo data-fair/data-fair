@@ -13,19 +13,24 @@ import { matchApplicationKey } from './proxy-service.ts'
 import { clean } from './utils.ts'
 import type { Application, BaseApp, Request } from '#types'
 
+// `application` keeps its legacyProp dual-write: a vestigial reader remains in app.js
+// (the `/app-sw.js` route reads `req.application`, where it is never set → undefined).
+// Drop the second arg once app.js migrates in Phase 5.
 const application = defineReqContext<Application>('application', 'application')
 export const setReqApplication = application.set
 export const reqApplication = application.get
 
-const baseApp = defineReqContext<BaseApp>('baseApp', 'baseApp')
+// baseApp / isNewApplication / matchingApplicationKey are fully internal to the applications
+// module; all readers/setters use the accessors, so the legacyProp dual-write was dropped (Task 7).
+const baseApp = defineReqContext<BaseApp>('baseApp')
 export const setReqBaseApp = baseApp.set
 export const reqBaseApp = baseApp.get
 
-const isNewApplication = defineReqContext<boolean>('isNewApplication', 'isNewApplication')
+const isNewApplication = defineReqContext<boolean>('isNewApplication')
 export const setReqIsNewApplication = isNewApplication.set
 export const reqIsNewApplication = isNewApplication.getOptional
 
-const matchingApplicationKey = defineReqContext<string>('matchingApplicationKey', 'matchingApplicationKey')
+const matchingApplicationKey = defineReqContext<string>('matchingApplicationKey')
 export const setReqMatchingApplicationKey = matchingApplicationKey.set
 export const reqMatchingApplicationKey = matchingApplicationKey.getOptional
 
