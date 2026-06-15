@@ -1,11 +1,17 @@
 import { type RequestHandler } from 'express'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.js'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
+import * as permissions from '../misc/utils/permissions.ts'
 import { setReqResource, setReqResourceType } from '../misc/utils/permissions.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
-import { defineReqContext } from '../misc/utils/req-context.ts'
-import type { Application, BaseApp } from '#types'
+import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
+import * as usersUtils from '../misc/utils/users.ts'
+import * as service from './service.ts'
+import { clean } from './utils.ts'
+import type { Application, BaseApp, Request } from '#types'
 
 const application = defineReqContext<Application>('application', 'application')
 export const setReqApplication = application.set
@@ -43,5 +49,27 @@ export const readBaseApp: RequestHandler = async (req, res, next) => {
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   cleanBaseApp(req.publicBaseUrl, baseApp)
   setReqBaseApp(req, baseApp)
+  next()
+}
+
+// PUT used to create or update: try insertion if the user is authorized,
+// in case of conflict go on with the update scenario
+export const attemptInsert: RequestHandler = async (req, res, next) => {
+  if (typeof req.params.applicationId !== 'string') throw httpError(400, 'invalid path parameters')
+  const { returnValid } = await import('#types/application/index.ts')
+  const newApplication = returnValid(await service.initNewApplication(req.body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req), req.params.applicationId)) as Application
+  const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+
+  permissions.initResourcePermissions(newApplication)
+
+  // Try insertion if the user is authorized, in case of conflict go on with the update scenario
+  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {
+    const inserted = await service.tryInsertApplication(ctx, newApplication)
+    if (inserted) {
+      setReqIsNewApplication(req, true)
+      res.status(201).json(clean(newApplication, (req as Request).publicBaseUrl, reqPublicationSite(req)))
+      return
+    }
+  }
   next()
 }

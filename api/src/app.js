@@ -142,7 +142,7 @@ export const run = async () => {
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
     app.use('/api/v1/catalog', apiKey(['datasets', 'datasets-read']), (await import('./catalog/router.ts')).default)
     app.use('/api/v1/base-applications', (await import('./base-applications/router.ts')).router)
-    app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
+    app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.ts')).default)
     // rate limiting is applied per-route inside the datasets router, after the api-key middleware, so that
     // requests authenticated with an api key are throttled at the `user` tier rather than as anonymous
     app.use('/api/v1/datasets', (await import('./datasets/router.js')).default)
