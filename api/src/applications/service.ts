@@ -13,6 +13,7 @@ import * as permissions from '../misc/utils/permissions.ts'
 import * as journals from '../misc/utils/journals.ts'
 import * as capture from '../misc/utils/capture.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
+import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
@@ -267,6 +268,8 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
     if (err.code !== 11000) throw err
     throw httpError(400, 'errors.dupSlug')
   }
+  // configuration.datasets changes affect the application-key middleware matching
+  clearApplicationKeysCaches()
 
   eventsLog.info('df.applications.patch', `patched application ${patchedApplication!.slug} (${patchedApplication!.id}), keys=${JSON.stringify(Object.keys(patch))}`, { ...ctx.logCtx, account: patchedApplication!.owner })
 
@@ -324,6 +327,7 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   // existing protected links after an ownership transfer
   await mongo.applicationsKeys
     .updateOne({ _id: application.id }, { $set: { owner: patch.owner } })
+  clearApplicationKeysCaches()
 
   const arrowStr = `${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
   const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${arrowStr}`
@@ -351,6 +355,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
   await db.collection('applications').deleteOne({ id: application.id })
   await db.collection('journals').deleteOne({ type: 'application', id: application.id })
   await mongo.applicationsKeys.deleteOne({ _id: application.id })
+  clearApplicationKeysCaches()
   try {
     await filesStorage.removeFile(await (capture as any).path(application))
   } catch (err) {
@@ -481,6 +486,7 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
   }
   // replaceOne with custom schema shape — the runtime doc has {_id, keys, owner} which doesn't match ApplicationKey's id/title fields
   await mongo.db.collection<{ _id: string }>('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys, owner: application.owner } as any, { upsert: true })
+  clearApplicationKeysCaches()
 
   eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 

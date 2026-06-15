@@ -19,6 +19,7 @@ node_modules
 .env
 .vscode
 dev/logs/
+dev/profiles/
 test-results/
 /benchmark/results/*.json
 /docs/**/*.pdf

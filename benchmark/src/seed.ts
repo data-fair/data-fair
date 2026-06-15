@@ -32,6 +32,27 @@ export const benchSchema = [
   { key: 'lon', type: 'number', 'x-refersTo': 'http://schema.org/longitude' }
 ]
 
+// 300-column schema: amplifies any per-request/per-line O(schema) cost
+// (ajv compile T3, schema scans T1/T9/T16 in benchmark/perf-scan-notes.md)
+export const wideSchema = Array.from({ length: 300 }, (_, i) => (
+  i % 3 === 2
+    ? { key: `col${i}`, type: 'number' }
+    : { key: `col${i}`, type: 'string' }
+))
+
+export function generateWideRows (count: number, seed = 7) {
+  const rand = mulberry32(seed)
+  const rows = []
+  for (let i = 0; i < count; i++) {
+    const row: Record<string, any> = { _id: `wrow-${i}` }
+    for (let c = 0; c < wideSchema.length; c++) {
+      row[`col${c}`] = c % 3 === 2 ? Math.floor(rand() * 100000) : `val-${Math.floor(rand() * 1000)}`
+    }
+    rows.push(row)
+  }
+  return rows
+}
+
 export function generateRows (count: number, seed = 42) {
   const rand = mulberry32(seed)
   const rows = []

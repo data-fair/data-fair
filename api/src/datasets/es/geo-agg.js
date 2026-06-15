@@ -1,7 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.js'
-import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'
+import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResultContext } from './commons.js'
 import { timedEsCall } from './abort.js'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
@@ -56,6 +56,7 @@ export default async (client, dataset, query, publicBaseUrl, flatten, abortConte
 
 const prepareGeoAggResponse = (esResponse, dataset, query, publicBaseUrl, flatten) => {
   const response = { total: esResponse.hits.total.value }
+  const resultCtx = prepareResultContext(dataset, query)
   response.aggs = esResponse.aggregations.geo.buckets.map(b => {
     const center = geohash.hash2coord(b.key)
     const aggItem = {
@@ -64,7 +65,7 @@ const prepareGeoAggResponse = (esResponse, dataset, query, publicBaseUrl, flatte
       centroid: b.centroid.location,
       center: { lat: center[1], lon: center[0] },
       bbox: geohash.hash2bbox(b.key),
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl)) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
