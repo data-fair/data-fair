@@ -5,7 +5,7 @@ import axios from '../misc/utils/axios.js'
 import * as clamav from '../misc/utils/clamav.ts'
 import filesStorage from '#files-storage'
 import debugModule from 'debug'
-import * as findUtils from '../misc/utils/find.js'
+import * as findUtils from '../misc/utils/find.ts'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 
 const debug = debugModule('status')

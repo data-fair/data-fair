@@ -8,7 +8,7 @@ import { type AccountKeys, type SessionState, type SessionStateAuthenticated } f
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
-import * as findUtils from '../misc/utils/find.js'
+import * as findUtils from '../misc/utils/find.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as journals from '../misc/utils/journals.ts'
 import * as capture from '../misc/utils/capture.ts'

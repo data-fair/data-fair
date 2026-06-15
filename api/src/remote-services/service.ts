@@ -1,5 +1,5 @@
 import mongo from '#mongo'
-import * as findUtils from '../misc/utils/find.js'
+import * as findUtils from '../misc/utils/find.ts'
 import { clean, computeActions, initNew } from './operations.ts'
 import mongoEscape from 'mongo-escape'
 import config from '#config'
