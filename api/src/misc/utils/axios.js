@@ -1,7 +1,7 @@
 // prepare an axios instance with improved error management
 
 import axios from 'axios'
-import { httpAgent, httpsAgent } from './http-agents.js'
+import { httpAgent, httpsAgent } from './http-agents.ts'
 
 const axiosInstance = axios.create({
   httpAgent,

@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import nanoid from '../misc/utils/nanoid.js'
+import nanoid from '../misc/utils/nanoid.ts'
 import slug from 'slugify'
 import dayjs from 'dayjs'
 import equal from 'fast-deep-equal'
