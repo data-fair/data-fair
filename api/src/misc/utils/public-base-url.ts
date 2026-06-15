@@ -7,8 +7,9 @@ const publicBaseUrlCtx = defineReqContext<string>('publicBaseUrl', 'publicBaseUr
 export const setReqPublicBaseUrl = publicBaseUrlCtx.set
 export const reqPublicBaseUrl = publicBaseUrlCtx.get
 
-// publicWsBaseUrl keeps its legacyProp until Task A6: applications/proxy.ts still reads
-// req.publicWsBaseUrl directly. A6 migrates that reader, then drops this legacyProp.
-const publicWsBaseUrlCtx = defineReqContext<string>('publicWsBaseUrl', 'publicWsBaseUrl')
+// publicWsBaseUrl has no legacyProp: the legacyProp was dropped in Task A6 now that the
+// setter (app.js, via setReqPublicWsBaseUrl) and the sole reader (applications/proxy.ts,
+// via reqPublicWsBaseUrl) both go through the accessor.
+const publicWsBaseUrlCtx = defineReqContext<string>('publicWsBaseUrl')
 export const setReqPublicWsBaseUrl = publicWsBaseUrlCtx.set
 export const reqPublicWsBaseUrl = publicWsBaseUrlCtx.get

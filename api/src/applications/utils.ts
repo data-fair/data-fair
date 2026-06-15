@@ -15,6 +15,7 @@ import { ownerDir } from '../datasets/utils/files.ts'
 import { updateTotalStorage } from '../datasets/utils/storage.ts'
 import { prepareThumbnailUrl } from '../misc/utils/thumbnails.ts'
 import { reqSession } from '@data-fair/lib-express'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import type { Application, PublicationSite, Request } from '#types'
 import filesStorage from '#files-storage'
 
@@ -61,7 +62,7 @@ const memoizedGetFreshDataset = memoize(async (id) => {
 })
 
 export const refreshConfigDatasetsRefs = async (req: Request, application: Application, draft: boolean, checkWithPersonalSession = false, schemaOnly = false) => {
-  const publicBaseUrl = req.publicBaseUrl
+  const publicBaseUrl = reqPublicBaseUrl(req)
 
   const configuration = (draft ? (application.configurationDraft || application.configuration) : application.configuration) || {}
 

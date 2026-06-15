@@ -16,6 +16,7 @@ import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { checkStorage } from '../datasets/middlewares.js'
 import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as clamav from '../misc/utils/clamav.ts'
@@ -48,7 +49,7 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   const response = await service.findApplications(
     req.getLocale(),
     reqPublicationSite(req),
-    (req as Request).publicBaseUrl,
+    reqPublicBaseUrl(req),
     req.query as Record<string, string>,
     reqSession(req)
   )
@@ -65,7 +66,7 @@ router.post('', async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   const created = await service.createApplication(ctx, application)
   // NOTE: preserved bug — old code passes publicationSite as publicUrl arg and publicBaseUrl as publicationSite arg (swapped vs clean's signature). Preserved verbatim; casts encode the deliberate mismatch.
-  res.status(201).json(clean(created, reqPublicationSite(req), (req as Request).publicBaseUrl as unknown as PublicationSite))
+  res.status(201).json(clean(created, reqPublicationSite(req), reqPublicBaseUrl(req) as unknown as PublicationSite))
 })
 
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
@@ -78,14 +79,14 @@ router.get('/:applicationId', readApplication, permissionMiddleware('readDescrip
   const application = reqApplication(req)
   // userPermissions is a request-time enrichment not in the Application schema (same gap as utils.ts clean); precise cast, not `any`
   ;(application as Application & { userPermissions?: string[] }).userPermissions = permissions.list('applications', application, reqSession(req))
-  res.status(200).send(clean(application, (req as Request).publicBaseUrl, reqPublicationSite(req), req.query as Record<string, string>))
+  res.status(200).send(clean(application, reqPublicBaseUrl(req), reqPublicationSite(req), req.query as Record<string, string>))
 })
 
 // PUT used to create or update
 router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
-  res.status(200).json(clean(newApplication, (req as Request).publicBaseUrl, reqPublicationSite(req)))
+  res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 
 const permissionsWritePublications = permissionMiddleware('writePublications', 'admin')
@@ -100,8 +101,8 @@ router.patch('/:applicationId',
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
 
     // Strip publicBaseUrl from image URL for multi-domain compatibility
-    if (patch.image?.startsWith((req as Request).publicBaseUrl)) {
-      patch.image = patch.image.slice((req as Request).publicBaseUrl.length)
+    if (patch.image?.startsWith(reqPublicBaseUrl(req))) {
+      patch.image = patch.image.slice(reqPublicBaseUrl(req).length)
     }
 
     const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
@@ -112,7 +113,7 @@ router.patch('/:applicationId',
       if (err?.message === 'errors.dupSlug') throw httpError(400, req.__('errors.dupSlug'))
       throw err
     }
-    res.status(200).json(clean(patched, (req as Request).publicBaseUrl, reqPublicationSite(req)))
+    res.status(200).json(clean(patched, reqPublicBaseUrl(req), reqPublicationSite(req)))
   }
 )
 
@@ -125,7 +126,7 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
 
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
   const patchedApp = await service.changeApplicationOwner(ctx, reqApplication(req), req.body)
-  res.status(200).json(clean(patchedApp, (req as Request).publicBaseUrl, reqPublicationSite(req)))
+  res.status(200).json(clean(patchedApp, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 
 // Delete an application configuration
@@ -179,14 +180,14 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
 })
 
 router.get('/:applicationId/base-application', readApplication, permissionMiddleware('readBaseApp', 'read'), readBaseApp, cacheHeaders.noCache, async (req, res) => {
-  res.send(cleanBaseApp((req as Request).publicBaseUrl, reqBaseApp(req), (req as Request).publicBaseUrl, req.query.html as unknown as boolean))
+  res.send(cleanBaseApp(reqPublicBaseUrl(req), reqBaseApp(req), reqPublicBaseUrl(req), req.query.html as unknown as boolean))
 })
 
 router.get('/:applicationId/api-docs.json', readApplication, permissionMiddleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   const application = reqApplication(req)
   const settings = await mongo.db.collection('settings')
     .findOne({ type: application.owner.type, id: application.owner.id }, { projection: { info: 1 } })
-  res.send(applicationAPIDocs(application, (settings && settings.info) || {}, (req as Request).publicBaseUrl))
+  res.send(applicationAPIDocs(application, (settings && settings.info) || {}, reqPublicBaseUrl(req)))
 })
 
 router.get('/:applicationId/status', readApplication, permissionMiddleware('readConfig', 'read'), cacheHeaders.noCache, (req, res) => {

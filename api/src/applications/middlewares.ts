@@ -6,12 +6,13 @@ import * as findUtils from '../misc/utils/find.js'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
 import * as usersUtils from '../misc/utils/users.ts'
 import * as service from './service.ts'
 import { matchApplicationKey } from './proxy-service.ts'
 import { clean } from './utils.ts'
-import type { Application, BaseApp, Request } from '#types'
+import type { Application, BaseApp } from '#types'
 
 // `application` keeps its legacyProp dual-write: a vestigial reader remains in app.js
 // (the `/app-sw.js` route reads `req.application`, where it is never set → undefined).
@@ -54,7 +55,7 @@ export const readApplication: RequestHandler = async (req, res, next) => {
 export const setProxyResource: RequestHandler = async (req, res, next) => {
   const publicationSite = reqPublicationSite(req)
   const mainPublicationSite = reqMainPublicationSite(req)
-  const publicBaseUrl = (req as Request).publicBaseUrl
+  const publicBaseUrl = reqPublicBaseUrl(req)
 
   // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
   let application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params as Record<string, string>, 'application', null) as Application | undefined
@@ -85,7 +86,7 @@ export const setProxyResource: RequestHandler = async (req, res, next) => {
 export const readBaseApp: RequestHandler = async (req, res, next) => {
   const baseApp = await mongo.db.collection('base-applications').findOne({ url: reqApplication(req).url }) as BaseApp | null
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
-  cleanBaseApp(req.publicBaseUrl, baseApp)
+  cleanBaseApp(reqPublicBaseUrl(req), baseApp)
   setReqBaseApp(req, baseApp)
   next()
 }
@@ -108,7 +109,7 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
     const inserted = await service.tryInsertApplication(ctx, newApplication)
     if (inserted) {
       setReqIsNewApplication(req, true)
-      res.status(201).json(clean(newApplication, (req as Request).publicBaseUrl, reqPublicationSite(req)))
+      res.status(201).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
       return
     }
   }

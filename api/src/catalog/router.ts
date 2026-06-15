@@ -10,6 +10,7 @@ import { setReqResourceType } from '../misc/utils/permissions.ts'
 import { reqPublicationSite, reqMainPublicationSite, setReqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { buildDcatCatalog } from './operations.ts'
 import { findCatalogDatasets, getCatalogApiDocs } from './service.ts'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 
 const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
 
@@ -31,7 +32,7 @@ router.get('/datasets', apiKeyMiddlewareRead, cacheHeaders.listBased, async (req
     mongo.db,
     req.getLocale(),
     reqPublicationSite(req),
-    req.publicBaseUrl,
+    reqPublicBaseUrl(req),
     req.query,
     reqSession(req),
     { catalogMode: true }
@@ -45,12 +46,12 @@ router.get('/datasets', apiKeyMiddlewareRead, cacheHeaders.listBased, async (req
 })
 
 router.get('/api-docs.json', async (req, res) => {
-  res.json(await getCatalogApiDocs(reqPublicationSite(req), req.publicBaseUrl))
+  res.json(await getCatalogApiDocs(reqPublicationSite(req), reqPublicBaseUrl(req)))
 })
 
 router.get('/dcat', async (req, res) => {
   const publicationSite = reqPublicationSite(req)
   const datasets = await findCatalogDatasets(publicationSite, reqSession(req))
   res.type('application/ld+json')
-  res.json(buildDcatCatalog(datasets, publicationSite, req.publicBaseUrl))
+  res.json(buildDcatCatalog(datasets, publicationSite, reqPublicBaseUrl(req)))
 })

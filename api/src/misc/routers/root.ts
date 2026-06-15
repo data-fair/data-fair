@@ -6,6 +6,7 @@ import * as settingsUtils from '../utils/settings.ts'
 import * as ajv from '../utils/ajv.ts'
 import config from '#config'
 import { reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
+import { reqPublicBaseUrl } from '../utils/public-base-url.ts'
 
 const validateApi = ajv.compile('openapi-3.1')
 const router = express.Router()
@@ -17,7 +18,7 @@ router.get('/ping', status.ping)
 router.get('/api-docs.json', (req, res) => {
   const session = reqSession(req)
   const authenticatedSession = session.user ? (session as Parameters<typeof apiDocs>[1]) : undefined
-  res.json(apiDocs(req.publicBaseUrl, authenticatedSession))
+  res.json(apiDocs(reqPublicBaseUrl(req), authenticatedSession))
 })
 
 router.get('/vocabulary', async (req, res) => {

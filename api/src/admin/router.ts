@@ -13,6 +13,7 @@ import {
   findBaseApplications
 } from './service.ts'
 import { getElasticsearchDiagnose } from './elasticsearch-diagnose-service.ts'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 
 const router = express.Router()
 export default router
@@ -66,5 +67,5 @@ router.get('/owners', async (req, res) => {
 })
 
 router.get('/base-applications', async (req, res) => {
-  res.send(await findBaseApplications(req.query, req.publicBaseUrl))
+  res.send(await findBaseApplications(req.query, reqPublicBaseUrl(req)))
 })
