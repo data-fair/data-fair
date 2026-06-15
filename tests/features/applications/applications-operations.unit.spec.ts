@@ -54,4 +54,15 @@ test.describe('applications operations', () => {
     assert.ok(html.includes('color:red'))
     assert.ok(html.includes('bad'))
   })
+  test('buildLoginHtml: escapes HTML in the error message', () => {
+    const tpl = '{ERROR}'
+    const html = buildLoginHtml(tpl, {
+      siteUrl: 'https://h',
+      application: { owner: { type: 'user', id: 'u' } } as any,
+      applicationId: 'a',
+      error: '<script>alert(1)</script>'
+    })
+    assert.ok(!html.includes('<script>'))
+    assert.ok(html.includes('&lt;script&gt;'))
+  })
 })

@@ -1,6 +1,8 @@
 import type { Application } from '#types'
 import escapeHtml from 'escape-html'
 
+type ApplicationWithExposedUrl = Application & { exposedUrl: string }
+
 export const setUniqueRefs = (application: Application): void => {
   if (application.slug) {
     application._uniqueRefs = [application.id]
@@ -8,13 +10,13 @@ export const setUniqueRefs = (application: Application): void => {
   }
 }
 
-export const buildManifest = (application: Application, baseApp: { id: string }, publicBaseUrl: string): Record<string, any> => {
+export const buildManifest = (application: ApplicationWithExposedUrl, baseApp: { id: string }, publicBaseUrl: string): Record<string, any> => {
   return {
     name: application.title,
     short_name: application.title,
     description: application.description,
-    start_url: new URL(application.exposedUrl as string).pathname + '/',
-    scope: new URL(application.exposedUrl as string).pathname + '/',
+    start_url: new URL(application.exposedUrl).pathname + '/',
+    scope: new URL(application.exposedUrl).pathname + '/',
     display: 'standalone',
     background_color: '#ffffff',
     theme_color: '#1e88e5',
