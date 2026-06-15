@@ -95,6 +95,9 @@ export const readBaseApp: RequestHandler = async (req, res, next) => {
 export const attemptInsert: RequestHandler = async (req, res, next) => {
   if (typeof req.params.applicationId !== 'string') throw httpError(400, 'invalid path parameters')
   const { returnValid } = await import('#types/application/index.ts')
+  // reqUserAuthenticated (below) throws 401 for an anonymous request — same as the legacy code,
+  // where initNew() called reqUserAuthenticated() before the session/permission checks. So an
+  // anonymous PUT 401s here, exactly as before; it does not fall through to readApplication.
   const newApplication = returnValid(await service.initNewApplication(req.body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req), req.params.applicationId)) as Application
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
 
