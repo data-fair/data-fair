@@ -27,14 +27,14 @@ export const matchApplicationKey = async (application: any, applicationKeyId: st
 }
 
 export const getManifestBaseApp = (url: string) => {
-  return mongo.db.collection('base-applications').findOne({ url }, { projection: { id: 1, meta: 1 } })
+  return mongo.baseApplications.findOne({ url }, { projection: { id: 1, meta: 1 } })
 }
 
 export const getProxyBaseAppAndLimits = (application: any, applicationUrl: string, accessFilter: any[]) => {
   const db = mongo.db
   return Promise.all([
     db.collection('limits').findOne({ type: application.owner.type, id: application.owner.id }),
-    db.collection('base-applications').findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1, meta: 1 } })
+    mongo.baseApplications.findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1, meta: 1 } })
   ])
 }
 

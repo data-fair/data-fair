@@ -48,7 +48,7 @@ router.get('/:applicationId/manifest.json', setProxyResource, async (req, res) =
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   res.setHeader('Content-Type', 'application/manifest+json')
   // exposedUrl is a request-time enrichment added by setResourceLinks (same gap as utils.ts clean); precise cast, not `any`
-  res.send(buildManifest(reqApplication(req) as ProxyApplication, baseApp as unknown as { id: string }, (req as Request).publicBaseUrl))
+  res.send(buildManifest(reqApplication(req) as ProxyApplication, baseApp, (req as Request).publicBaseUrl))
 })
 
 // Login is a special small UI page on /app/appId/login
@@ -102,7 +102,8 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   // TODO: captureUrl should be on same domain too ?
   application.captureUrl = config.captureUrl
   application.wsUrl = (req as Request).publicWsBaseUrl
-  if (reqMatchingApplicationKey(req)) application.applicationKey = reqMatchingApplicationKey(req)
+  const matchingKey = reqMatchingApplicationKey(req)
+  if (matchingKey) application.applicationKey = matchingKey
 
   const draft = req.query.draft === 'true'
   if (draft) {
@@ -130,7 +131,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   const extraPathParts = req.params.extraPath ? [...req.params.extraPath] : []
   if (!req.params.extraPath || incomingUrl.pathname.endsWith('/')) extraPathParts.push('index.html')
   targetUrl.pathname = path.join(targetUrl.pathname, ...extraPathParts)
-  targetUrl.search = incomingUrl.searchParams as any
+  targetUrl.search = incomingUrl.searchParams.toString()
 
   if (extraPathParts.length !== 1 || extraPathParts[0] !== 'index.html') {
     // TODO: check the logs in production, if this line never appears then we can cleanup the code
