@@ -102,13 +102,16 @@ export const run = async () => {
 
     // set current baseUrl, i.e. the url of data-fair on the current user's domain
     // check for the matching publicationSite, etc
+    const { setReqPublicBaseUrl, setReqPublicWsBaseUrl } = await import('./misc/utils/public-base-url.ts')
+    const { setReqPublicationSite, setReqMainPublicationSite } = await import('./misc/utils/publication-sites.ts')
     const parsedPublicUrl = new URL(config.publicUrl)
 
     app.use('/', async (req, res, next) => {
       const mainDomain = reqIsInternal(req) || reqHost(req) === parsedPublicUrl.host
-      req.publicBaseUrl = mainDomain ? config.publicUrl : (reqSiteUrl(req) + '/data-fair')
-      req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
-      debugDomain('req.publicBaseUrl', req.publicBaseUrl)
+      const publicBaseUrl = mainDomain ? config.publicUrl : (reqSiteUrl(req) + '/data-fair')
+      setReqPublicBaseUrl(req, publicBaseUrl)
+      setReqPublicWsBaseUrl(req, publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/')
+      debugDomain('req.publicBaseUrl', publicBaseUrl)
 
       const siteUrl = mainDomain ? parsedPublicUrl.origin : reqSiteUrl(req)
       const settings = await memoizedGetPublicationSiteSettings(siteUrl, mainDomain && req.query.publicationSites, mongo.db)
@@ -123,13 +126,13 @@ export const run = async () => {
         }
         if (mainDomain) {
           if (publicationSite.url === siteUrl) {
-            req.mainPublicationSite = publicationSite
+            setReqMainPublicationSite(req, publicationSite)
           }
           if (req.query.publicationSites === publicationSite.type + ':' + publicationSite.id) {
-            req.publicationSite = publicationSite
+            setReqPublicationSite(req, publicationSite)
           }
         } else {
-          req.publicationSite = publicationSite
+          setReqPublicationSite(req, publicationSite)
         }
       }
       next()
