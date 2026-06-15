@@ -295,7 +295,7 @@ router.post('/ws-emit', async (req, res, next) => {
 // Validate DCAT JSON
 router.post('/validate-dcat', async (req, res, next) => {
   try {
-    const validateDcat = (await import('../utils/dcat/validate.js')).default
+    const validateDcat = (await import('../utils/dcat/validate.ts')).default
     const valid = validateDcat(req.body)
     res.json({ valid, errors: valid ? undefined : validateDcat.errors })
   } catch (err) {

@@ -8,7 +8,7 @@ import pump from '../pipe.ts'
  * @param {string} baseIRI
  * @returns
  */
-export const fromXML = async (dcat, baseIRI) => {
+export const fromXML = async (dcat: string, baseIRI: string) => {
   const intoStream = (await import('into-stream')).default
   const myParser = new RdfXmlParser({ validateUri: false, baseIRI })
   const mySerializer = new JsonLdSerializer({ space: '  ' })
