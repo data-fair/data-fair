@@ -45,7 +45,7 @@ process-file worker
   │    non-mandatory remoteService errors stay in the row's error field, not in the diagnostic
   └─ Aggregate decision
        if writer.errorCount > 0:
-         (compatibleOrCancel draft → discard writer, emit draft-cancelled, cancelDraft)
+         (compatibleOrCancel draft → finalize writer, move diagnostic to cancelled-draft slot, emit draft-cancelled, cancelDraft)
          else → finalize file, emit validation-error, throw [validation-error]
        else:
          discard writer, advance status to 'extended' or 'validated'
@@ -143,7 +143,16 @@ A failed run emits exactly one `validation-error` journal event with these field
 
 A user notification is sent via `sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', { params: { nbErrors, diagnosticUrl } })`. The `notifications.datasets.validation-error` and `.draft-validation-error` keys are localized in `api/i18n/messages/{fr,en}.json`.
 
-For drafts opened with `validationMode: 'compatibleOrCancel'`, an attempt that produces row errors emits a **`draft-cancelled`** event (with the same breakdown counts) instead of `validation-error`. The diagnostic file is discarded because the draft directory is wiped — there would be nowhere stable to point a download link.
+For drafts opened with `validationMode: 'compatibleOrCancel'`, an attempt that produces
+row errors emits a **`draft-cancelled`** event (with the same breakdown counts) instead
+of `validation-error`. The diagnostic file is **finalized as usual and then moved** out
+of the draft directory (which `cancelDraft` wipes) into a distinct slot on the main
+dataset, `datasets/<id>/data-files/cancelled-draft-diagnostic.csv`, served by
+`GET /api/v1/datasets/:datasetId/cancelled-draft-diagnostic.csv` (same `readJournal` /
+`readAdvanced` gate as the canonical diagnostic). The `draft-cancelled` event carries
+`hasDiagnosticFile: true` so the UI shows a download link. The dataset's own
+`validation-diagnostic.csv` slot is left untouched. The file is overwritten by a later
+cancelled contribution and removed by `validateDraft` once a contribution succeeds.
 
 ## UI surface
 

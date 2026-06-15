@@ -60,6 +60,11 @@ export const validationDiagnosticFilePath = (dataset: any) => {
   return resolvePath(dataFilesDir(dataset), 'validation-diagnostic.csv')
 }
 
+export const cancelledDraftDiagnosticFilePath = (dataset: any) => {
+  // always the main (non-draft) dir: this file outlives the cancelled draft
+  return resolvePath(dataFilesDir({ ...dataset, draftReason: null }), 'cancelled-draft-diagnostic.csv')
+}
+
 export const loadedAttachmentsFilePath = (dataset: any) => {
   return resolvePath(loadingDir(dataset), 'attachments.zip')
 }

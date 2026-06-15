@@ -13,7 +13,7 @@ import * as webhooks from '../misc/utils/webhooks.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
-import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir } from './utils/files.ts'
+import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.js'
@@ -644,6 +644,20 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
   await filesStorage.moveFile(draftFilePath, newFilePath)
   if (oldFilePath && newFilePath !== oldFilePath) {
     await filesStorage.removeFile(oldFilePath)
+  }
+
+  // a previous contribution to this dataset may have left a cancelled-draft
+  // diagnostic; now that a contribution succeeded it is stale, remove it
+  const staleCancelledDiagnostic = cancelledDraftDiagnosticFilePath(patchedDataset)
+  if (await filesStorage.pathExists(staleCancelledDiagnostic)) {
+    await filesStorage.removeFile(staleCancelledDiagnostic)
+    // the now-removed file was referenced by a past draft-cancelled event; clear
+    // its hasDiagnosticFile flag so the UI stops offering a download that 404s
+    await mongo.db.collection('journals').updateOne(
+      { type: 'dataset', id: patchedDataset.id, 'owner.type': patchedDataset.owner.type, 'owner.id': patchedDataset.owner.id },
+      { $unset: { 'events.$[stale].hasDiagnosticFile': '' } },
+      { arrayFilters: [{ 'stale.type': 'draft-cancelled', 'stale.hasDiagnosticFile': true }] }
+    )
   }
 
   await validateDraftAlias(dataset)
