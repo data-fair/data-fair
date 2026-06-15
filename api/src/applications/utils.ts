@@ -13,7 +13,7 @@ import { getPseudoSessionState } from '../misc/utils/users.ts'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { ownerDir } from '../datasets/utils/files.ts'
 import { updateTotalStorage } from '../datasets/utils/storage.ts'
-import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
+import { prepareThumbnailUrl } from '../misc/utils/thumbnails.ts'
 import { reqSession } from '@data-fair/lib-express'
 import type { Application, PublicationSite, Request } from '#types'
 import filesStorage from '#files-storage'
