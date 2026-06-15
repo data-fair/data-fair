@@ -14,6 +14,7 @@ import proj4 from 'proj4'
 import { wktToGeoJSON, geojsonToWKT } from '@terraformer/wkt'
 import debugLib from 'debug'
 import { geometrySelfIntersects } from './geo-self-intersection.ts'
+import { simplifyToVertexBudget } from './geo-simplify.ts'
 import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
 import _config from 'config'
@@ -167,6 +168,11 @@ export const geometry2fields = async (dataset, doc) => {
   } catch (err) {
     debug('Failure while applying cleanCoords to geojson', err)
   }
+  // Simplify oversized geometries so _geoshape (and the tiles/geojson/wkt payloads
+  // and spatial queries built from it) stay bounded. Runs before the self-intersection
+  // repair (so repair operates on the reduced geometry and catches any kinks simplify
+  // introduces) and before vtPrepare tiling. The raw geometry column is untouched.
+  feature.geometry = simplifyToVertexBudget(feature.geometry, config.tiles.simplifyMaxVertices)
   const geometries = feature.geometry.type === 'GeometryCollection' ? feature.geometry.geometries : [feature.geometry]
   for (const geometry of geometries) {
     try {
