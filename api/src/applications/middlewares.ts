@@ -5,7 +5,6 @@ import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.js'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
-import { setReqResource, setReqResourceType } from '../misc/utils/permissions.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
 import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
 import * as usersUtils from '../misc/utils/users.ts'
@@ -38,8 +37,8 @@ export const readApplication: RequestHandler = async (req, res, next) => {
   const application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params as Record<string, string>, 'application', null) as Application | undefined
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
 
-  setReqResourceType(req, 'applications')
-  setReqResource(req, application)
+  permissions.setReqResourceType(req, 'applications')
+  permissions.setReqResource(req, application)
   setReqApplication(req, application)
   next()
 }

@@ -239,8 +239,6 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
 }
 
 export const patchApplication = async (ctx: ApplicationWriteContext, application: Application, patch: any) => {
-  const db = mongo.db
-
   // Retry previously failed publications
   if (!patch.publications) {
     const failedPublications = (application.publications || []).filter((p: any) => p.status === 'error')
@@ -263,7 +261,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
 
   let patchedApplication
   try {
-    patchedApplication = await db.collection('applications')
+    patchedApplication = await mongo.applications
       .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
   } catch (err: any) {
     if (err.code !== 11000) throw err
@@ -284,11 +282,10 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   }, sessionState)
 
   await syncDatasets(patchedApplication!, application)
-  return patchedApplication!
+  return patchedApplication! as Application
 }
 
 export const changeApplicationOwner = async (ctx: ApplicationWriteContext, application: Application, newOwner: any) => {
-  const db = mongo.db
   const sessionState = ctx.sessionState
 
   const patch: any = {
@@ -319,7 +316,7 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   })
   await permissions.initResourcePermissions(patch, preservePermissions)
 
-  const patchedApp = await db.collection('applications')
+  const patchedApp = await mongo.applications
     .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
 
   // keep applications-keys.owner in sync — the application-key middleware queries this collection
@@ -346,7 +343,7 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
 
   await syncDatasets(patchedApp)
-  return patchedApp
+  return patchedApp! as Application
 }
 
 export const deleteApplication = async (ctx: ApplicationWriteContext, application: Application) => {

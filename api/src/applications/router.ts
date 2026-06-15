@@ -8,7 +8,6 @@ import * as ajv from '../misc/utils/ajv.ts'
 import applicationKeys from '../../contract/application-keys.js'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
-import { setReqResourceType } from '../misc/utils/permissions.ts'
 import * as usersUtils from '../misc/utils/users.ts'
 import * as capture from '../misc/utils/capture.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
@@ -40,7 +39,7 @@ const router = express.Router()
 export default router
 
 router.use((req, res, next) => {
-  setReqResourceType(req, 'applications')
+  permissions.setReqResourceType(req, 'applications')
   next()
 })
 
@@ -113,8 +112,7 @@ router.patch('/:applicationId',
       if (err?.message === 'errors.dupSlug') throw httpError(400, req.__('errors.dupSlug'))
       throw err
     }
-    // service returns the raw mongo WithId<Document>; clean expects Application (same gap as service.ts internals)
-    res.status(200).json(clean(patched as unknown as Application, (req as Request).publicBaseUrl, reqPublicationSite(req)))
+    res.status(200).json(clean(patched, (req as Request).publicBaseUrl, reqPublicationSite(req)))
   }
 )
 
@@ -127,8 +125,7 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
 
   const ctx = { sessionState, logCtx: reqEventLogContext(req) }
   const patchedApp = await service.changeApplicationOwner(ctx, reqApplication(req), req.body)
-  // service returns the raw mongo WithId<Document> | null; clean expects Application (same gap as service.ts internals)
-  res.status(200).json(clean(patchedApp as unknown as Application, (req as Request).publicBaseUrl, reqPublicationSite(req)))
+  res.status(200).json(clean(patchedApp, (req as Request).publicBaseUrl, reqPublicationSite(req)))
 })
 
 // Delete an application configuration
@@ -140,7 +137,7 @@ router.delete('/:applicationId', readApplication, permissionMiddleware('delete',
 
 // Get only the configuration part of the application
 const getConfig: express.RequestHandler = async (req, res, next) => {
-  await refreshConfigDatasetsRefs(req as unknown as Request, reqApplication(req), false, true)
+  await refreshConfigDatasetsRefs(req as Request, reqApplication(req), false, true)
   res.status(200).send(reqApplication(req).configuration || {})
 }
 // 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
@@ -164,7 +161,7 @@ router.get('/:applicationId/configuration-draft', readApplication, permissionMid
   // app schema. Full enrichment caused phantom drafts on mount (diff between server-enriched
   // configDraft and vjsf-normalized editConfig). We keep the refresh for schema-declared keys
   // (e.g. dataset title) but skip extras like slug and non-schema select fields.
-  await refreshConfigDatasetsRefs(req as unknown as Request, reqApplication(req), true, true, true)
+  await refreshConfigDatasetsRefs(req as Request, reqApplication(req), true, true, true)
   const application = reqApplication(req)
   res.status(200).send(application.configurationDraft || application.configuration || {})
 })
@@ -232,6 +229,7 @@ router.post('/:applicationId/keys', readApplication, permissionMiddleware('setKe
 })
 
 // attachment files
+// clamav.ts types middleware with the DOM Response, not express — cast until clamav.ts is fixed (parking lot)
 router.post('/:applicationId/attachments', readApplication, permissionMiddleware('postAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware as unknown as RequestHandler, async (req, res, next) => {
   req.body.size = req.file!.size
   req.body.updatedAt = moment().toISOString()
