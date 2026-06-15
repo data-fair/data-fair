@@ -339,6 +339,18 @@ Branch off `master` **after 5a merges** (avoids churn collisions on shared impor
 
 ## Execution record
 
-*(fill in after each sub-PR: commits, files, +/− LOC, ratchet before→after, specs run, anything parked)*
+### Sub-PR 5a (2026-06-15, branch `refactor-typescript4`, subagent-driven) — DONE, unpushed (user chose "keep as-is")
+6 commits `34496d28d..dc42743d0` off master (`2cd9696bf`). Per-task implementer + spec review + code-quality review + final whole-branch review (all green). Ratchet **1550 → 1507** (−43). Lint clean repo-wide. No api/e2e/unit test files modified. No new suppressions.
+
+- **A1** `public-base-url.ts` accessor module (publicBaseUrl w/ legacyProp, publicWsBaseUrl w/ legacyProp) + app.js 4 url/site setters → `setReq*`. *Review caught:* publicWsBaseUrl needed a legacyProp (its A6 reader wasn't migrated yet) — fixed; the plan's original "no legacyProp" was wrong (corrected in Task A1 text).
+- **A3** `permissions.ts`: added bypassPermissions/publicOperation accessors; converted in-file reads. *Blocker resolved:* used `reqResource` (throws) at `can()` sites + unconditional derefs, `reqResourceOptional` only at the two genuine guards — `can()`/`list()` signatures kept; no behavior change (resource always present when can() reached; bypassPermissions only set with a resource loaded).
+- **A2** `cache-headers.js→.ts` + noCache **and noModifiedCache** accessors (noModifiedCache was an un-surveyed prop, set in api-compat P7). Enriched `Resource` with `finalizedAt` to drop dateKey casts. *Parked:* the directly-mounted middleware must keep express `RequestHandler` typing (project-`Request` typing breaks mount-site assignability without call-site casts = Phase-6 scope); 5 residual ParsedQs/`new Date(undefined)` errors parked (within ratchet).
+- **A4** `api-key.ts`/`application-key.ts`: bypassPermissions setter + resource/publicBaseUrl reads via accessors (dropped an inline cast). `_readApiKey` typing gap was already resolved (`Resource` carries it).
+- **A5** `capture.ts`/`metadata-attachments.ts`/`query-advice.ts` reader migration + `thumbnails.js→.ts`. *Parked:* query-advice now transitively loads `#config` via permissions.ts (unit test passes under harness; don't relocate accessors — convention fix is lazy config validation).
+- **A6** publicBaseUrl readers → accessor across root/applications(proxy+middlewares+router+utils)/admin/catalog/base-applications (15 casty reads cleaned up, incl. removing `(req as Request)` casts); migrated sole publicWsBaseUrl reader; **dropped publicWsBaseUrl legacyProp + its `Request` type member** (fully migrated). Preserved bug 2h (router.ts swapped `clean()` args) bit-for-bit.
+
+**Remaining legacy (expected, ride legacyProp until P6/P7):** datasets sets resource/resourceType/noCache; api-compat sets resourceType/noModifiedCache; many datasets + remote-services(.js parked) readers of publicBaseUrl/resource/etc.
+
+### Sub-PR 5b — not started (branch off master after 5a integrates).
 </content>
 </invoke>
