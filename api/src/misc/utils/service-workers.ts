@@ -87,7 +87,7 @@ if ('serviceWorker' in navigator) {
     });
   })
 };`
-let minifiedRegister
+let minifiedRegister: any
 export const register = async () => {
   if (debugServiceWorkers) return registerStr
   minifiedRegister = minifiedRegister || await minify(registerStr, { toplevel: true, compress: true, mangle: true })

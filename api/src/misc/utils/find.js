@@ -3,7 +3,7 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import * as permissions from './permissions.ts'
-import * as visibility from './visibility.js'
+import * as visibility from './visibility.ts'
 
 // Util functions shared accross the main find (GET on collection) endpoints
 

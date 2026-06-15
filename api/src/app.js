@@ -98,7 +98,7 @@ export const run = async () => {
     app.use(session.middleware())
 
     // TODO: we could make this better targetted but more verbose by adding it to all routes
-    app.use((await import('./misc/utils/expect-type.js')).default(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
+    app.use((await import('./misc/utils/expect-type.ts')).default(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
 
     // set current baseUrl, i.e. the url of data-fair on the current user's domain
     // check for the matching publicationSite, etc
@@ -167,7 +167,7 @@ export const run = async () => {
     })
 
     // External applications proxy
-    const serviceWorkers = await import('./misc/utils/service-workers.js')
+    const serviceWorkers = await import('./misc/utils/service-workers.ts')
     app.get('/app-sw.js', (req, res) => {
       res.setHeader('Content-Type', 'application/javascript')
       res.send(serviceWorkers.sw(req.application))
