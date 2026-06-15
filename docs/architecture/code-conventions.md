@@ -281,3 +281,39 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
   limiter runs after api-key resolution — see `docs/architecture/load-management.md §3`).
 - **One phase = one worktree = one PR.** Target ≤ ~800 changed LOC per PR where feasible. Datasets
   (Phase 6) is split into four sub-PRs.
+
+## 6. `misc/utils` classification (Phase 5b triage, 2026-06-15)
+
+As of Phase 5b, `api/src/misc/utils/` is **100% TypeScript** (no `.js` remain). The junk-drawer
+dissolution is otherwise *deferred*: files are classified below but **not relocated** in this series
+(bulk moves would be churn with little type/decoupling value; do them opportunistically when a domain
+phase already touches the file).
+
+**Generic utilities — stay in `misc/utils` permanently** (no domain coupling): `ajv`, `axios`,
+`http-agents`, `pipe`, `nanoid`, `bytes`, `heap`, `geohash`, `batch-stream`, `decode-stream`, `bom`,
+`markdown`, `icalendar`, `csv-sniffer`, `xlsx`, `unzip`, `exec`, `cache`, `assert-immutable`,
+`expect-type`, `promisify-middleware`, `compute-budget`, `find` (pure query builder), `service-workers`,
+`visibility`, `observe`, `dcat/*`, `ambient-modules.d.ts`. Request-context infrastructure also stays
+here: `req-context`, `public-base-url`, and the accessor homes `permissions` / `cache-headers` /
+`publication-sites` (see §2 placement table).
+
+**Domain-in-disguise — record target module, relocate later (only when cheap / when its domain phase touches it):**
+
+| File | Target module | Note |
+|---|---|---|
+| `api-key.ts`, `application-key.ts` | auth / sessions | request middlewares; auth domain |
+| `capture.ts`, `thumbnails.ts` | applications | app screenshot/preview generation |
+| `metadata-attachments.ts` | datasets + applications | attachment upload handling |
+| `query-advice.ts` | datasets | query hinting (unit-tested — keep export paths) |
+| `catalogs-publication-queue.ts` | catalogs | |
+| `journals.ts` | journals/events | |
+| `notifications.ts`, `mails.ts` | notifications | |
+| `webhooks.ts` | webhooks | |
+| `topics.ts`, `licenses.ts`, `settings.ts` | settings | settings-scoped data helpers |
+| `users.ts` | identities/users | |
+| `metrics.ts`, `metrics-api.ts` | metrics | |
+| `clamav.ts` | files-storage / security | borderline generic |
+| `rate-limiting.ts` | load-management | borderline generic infra |
+| `api-docs.ts` | api-docs | borderline generic |
+
+`test-events.ts` / `test-notif-buffer.ts` are test infrastructure and stay.

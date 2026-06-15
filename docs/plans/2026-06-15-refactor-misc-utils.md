@@ -351,6 +351,18 @@ Branch off `master` **after 5a merges** (avoids churn collisions on shared impor
 
 **Remaining legacy (expected, ride legacyProp until P6/P7):** datasets sets resource/resourceType/noCache; api-compat sets resourceType/noModifiedCache; many datasets + remote-services(.js parked) readers of publicBaseUrl/resource/etc.
 
-### Sub-PR 5b — not started (branch off master after 5a integrates).
+### Sub-PR 5b (2026-06-15, branch `refactor-typescript4`, STACKED on 5a, subagent-driven) — DONE, unpushed
+Commits `5b5aec1d2..<consolidation>` (B1 3 commits, B2 4, B2b 2, B3 1, + shim consolidation + docs). Per-task implementer + spec + code-quality review (all green). Ratchet **1507 → 1354** (−153). `misc/utils` is now **100% TypeScript** (zero `.js`). No new suppressions; 2 pre-existing `@ts-ignore` removed (find.ts). No api/e2e test changes; dcat unit-spec import paths updated (allowed) + passes.
+
+- **B1** icalendar/markdown/csv-sniffer/batch-stream/assert-immutable/cache/decode-stream → ts. Added 2 ambient shims (icalendar, object-hash) to avoid forbidden `@ts-ignore` on untyped modules.
+- **B2** heap/geohash/exec/promisify-middleware/expect-type/visibility/licenses/service-workers/bytes/http-agents/bom/nanoid → ts. 3 more shims (ngeohash, number-abbreviate, child-process-promise). *Review catch:* child-process-promise shim initially under-declared (`exec` used by geo.js) — fixed. *Lesson:* same-dir `./x.js` relative imports evade a `utils/x.js` grep; also importers exist outside api/src (`api/contract/`).
+- **B2b** find.js (core query builder, JSDoc→inline TS, ~90 implicit-any cleared, 3 `as ResourceType` precise casts, 2 `@ts-ignore` removed) + axios.js (pure rename, ~15 importers incl. same-dir relatives) → ts.
+- **B3** dcat/{context,convert,normalize,validate}.js → ts. validate.ts: precise ajv-draft-04 interop casts + non-null `!` on default export (cleaning its types surfaced consumer `| undefined`; `!` is runtime-neutral, the schema is registered in-module). Unit spec import paths updated, test passes.
+- **Shim consolidation** (reviewer recommendation, B1+B2): the 5 scattered `*-types.d.ts` merged into one audit point `api/src/misc/utils/ambient-modules.d.ts`; ratchet unchanged (1354).
+- **§6 classification** added to `code-conventions.md`: generic utils stay; domain-in-disguise files recorded with target modules, relocation deferred (no moves this series).
+
+**Deferred cosmetic follow-up (not done — out of scope for annotation-only pass):** several converted files retain redundant JSDoc `@param`/`@returns` type stubs now duplicated by inline TS types (find.ts, dcat/normalize.ts, dcat/convert.ts). Harmless; a doc-stripping sweep could remove them later.
+
+**5a+5b together: ratchet 1550 → 1354 (−196).** Both unpushed on `refactor-typescript4` (user chose keep-as-is for 5a; 5b stacked on top). Push/PR pending user decision.
 </content>
 </invoke>
