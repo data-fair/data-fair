@@ -22,7 +22,8 @@ export default {
     version: { type: 'string' },
     category: { type: 'string' },
     meta: {
-      type: 'object'
+      type: 'object',
+      additionalProperties: { type: 'string' }
     },
     public: {
       type: 'boolean'

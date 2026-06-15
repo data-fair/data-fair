@@ -20,6 +20,9 @@ export default {
     },
     store: {
       type: 'boolean' // This is used exclusively in WebSockets.
+    },
+    href: {
+      type: 'string' // optional link attached to the event (used in webhook text and journal entries)
     }
   }
 }
