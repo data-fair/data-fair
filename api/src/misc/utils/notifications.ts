@@ -1,5 +1,5 @@
 import config from '#config'
-import axios from './axios.js'
+import axios from './axios.ts'
 import debugLib from 'debug'
 import i18n from 'i18n'
 import { internalError } from '@data-fair/lib-node/observer.js'

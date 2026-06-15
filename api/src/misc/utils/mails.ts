@@ -1,4 +1,4 @@
-import axios from './axios.js'
+import axios from './axios.ts'
 import config from '#config'
 import { internalError } from '@data-fair/lib-node/observer.js'
 

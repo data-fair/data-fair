@@ -1,6 +1,6 @@
 import config from '#config'
 import path from 'path'
-import axios from './axios.js'
+import axios from './axios.ts'
 import pump from './pipe.ts'
 import * as rateLimiting from './rate-limiting.ts'
 import debug from 'debug'

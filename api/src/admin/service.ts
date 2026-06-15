@@ -1,7 +1,7 @@
 import config from '#config'
 import mongo from '#mongo'
 import moment from 'moment'
-import axios from '../misc/utils/axios.js'
+import axios from '../misc/utils/axios.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import filesStorage from '#files-storage'
 import debugModule from 'debug'

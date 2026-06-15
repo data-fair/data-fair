@@ -1,5 +1,5 @@
 import mongo from '#mongo'
-import axios from './axios.js'
+import axios from './axios.ts'
 import config from '#config'
 import settingsSchema from '#types/settings/schema.js'
 import debugLib from 'debug'
