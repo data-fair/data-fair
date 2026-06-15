@@ -169,7 +169,7 @@ export const run = async () => {
       res.setHeader('Content-Type', 'application/javascript')
       res.send(serviceWorkers.sw(req.application))
     })
-    app.use('/app', (await import('./applications/proxy.js')).default)
+    app.use('/app', (await import('./applications/proxy.ts')).default)
 
     // self hosting of streamsaver man in the middle service worker
     // see https://github.com/jimmywarting/StreamSaver.js/issues/183

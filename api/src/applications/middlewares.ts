@@ -9,6 +9,7 @@ import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/public
 import { defineReqContext, reqEventLogContext } from '../misc/utils/req-context.ts'
 import * as usersUtils from '../misc/utils/users.ts'
 import * as service from './service.ts'
+import { matchApplicationKey } from './proxy-service.ts'
 import { clean } from './utils.ts'
 import type { Application, BaseApp, Request } from '#types'
 
@@ -36,6 +37,39 @@ export const readApplication: RequestHandler = async (req, res, next) => {
   // ParamsDictionary values are strings at runtime for the :applicationId route. find.js → ts in Phase 5 removes this.
   const application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params as Record<string, string>, 'application', null) as Application | undefined
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
+
+  permissions.setReqResourceType(req, 'applications')
+  permissions.setReqResource(req, application)
+  setReqApplication(req, application)
+  next()
+}
+
+// proxy-specific resource resolver: protected application can be given either as
+// /applicationKey:applicationId or /applicationId?key=applicationKey
+export const setProxyResource: RequestHandler = async (req, res, next) => {
+  const publicationSite = reqPublicationSite(req)
+  const mainPublicationSite = reqMainPublicationSite(req)
+  const publicBaseUrl = (req as Request).publicBaseUrl
+
+  // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
+  let application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params as Record<string, string>, 'application', null) as Application | undefined
+  let applicationKeyId = req.query.key as string | undefined
+  if (!application && !applicationKeyId) {
+    const keys = (req.params.applicationId as string).split(':')
+    applicationKeyId = keys[0]
+    const applicationIdCandidate = (req.params.applicationId as string).replace(keys[0] + ':', '')
+    application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params as Record<string, string>, 'application', applicationIdCandidate) as Application | undefined
+  }
+  if (!application) return res.status(404).send(req.__('errors.missingApp'))
+  const ownerFilter = {
+    'owner.type': application.owner.type,
+    'owner.id': application.owner.id,
+    'owner.department': application.owner.department ? application.owner.department : { $exists: false }
+  }
+  if (applicationKeyId && await matchApplicationKey(application, applicationKeyId, ownerFilter)) {
+    setReqMatchingApplicationKey(req, applicationKeyId)
+  }
+  findUtils.setResourceLinks(application, 'application', publicBaseUrl, null, encodeURIComponent(req.params.applicationId as string))
 
   permissions.setReqResourceType(req, 'applications')
   permissions.setReqResource(req, application)
