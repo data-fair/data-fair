@@ -287,7 +287,7 @@ export const run = async () => {
     const permissions = await import('./misc/utils/permissions.ts')
     const { readApiKey } = await import('./misc/utils/api-key.ts')
     await Promise.all([
-      (await import('./misc/utils/cache.js')).init(),
+      (await import('./misc/utils/cache.ts')).init(),
       (await import('./remote-services/service.ts')).init(),
       (await import('./base-applications/router.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {

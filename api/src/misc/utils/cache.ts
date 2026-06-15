@@ -14,25 +14,25 @@ export const init = async () => {
   return mongo.db.collection('cache')
 }
 
-export const get = async (params) => {
+export const get = async (params: any) => {
   const hash = objectHash(params)
-  const result = await mongo.db.collection('cache').findOne({ _id: hash }, { readPreference: 'nearest' })
+  const result = await mongo.db.collection<{ _id: string, value?: any }>('cache').findOne({ _id: hash }, { readPreference: 'nearest' })
   debug('get ', hash, !!result)
   return { hash, value: result && result.value }
 }
 
-export const set = async (hash, value) => {
+export const set = async (hash: any, value: any) => {
   debug('set ', hash, !!value)
   try {
-    await mongo.db.collection('cache').insertOne({ value, _id: hash })
-  } catch (err) {
+    await mongo.db.collection<{ _id: string, value?: any }>('cache').insertOne({ value, _id: hash })
+  } catch (err: any) {
     if (err.code !== 11000) throw err
   }
 }
 
-export const getSet = async (params, getter) => {
+export const getSet = async (params: any, getter: (params: any) => any) => {
   const hash = objectHash(params)
-  const result = await mongo.db.collection('cache').findOne({ _id: hash }, { readPreference: 'nearest' })
+  const result = await mongo.db.collection<{ _id: string, value?: any }>('cache').findOne({ _id: hash }, { readPreference: 'nearest' })
   if (result) {
     debug('getSet return from mongo cache', hash, !!result)
     return result.value
@@ -40,8 +40,8 @@ export const getSet = async (params, getter) => {
   const value = await getter(params)
   debug('getSet used getter and set value in cache', hash)
   try {
-    await mongo.db.collection('cache').insertOne({ value, _id: hash })
-  } catch (err) {
+    await mongo.db.collection<{ _id: string, value?: any }>('cache').insertOne({ value, _id: hash })
+  } catch (err: any) {
     if (err.code !== 11000) throw err
   }
   return value
