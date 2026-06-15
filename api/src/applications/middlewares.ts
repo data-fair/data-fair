@@ -27,6 +27,8 @@ export const readApplication: RequestHandler = async (req, res, next) => {
   const publicationSite = reqPublicationSite(req)
   const mainPublicationSite = reqMainPublicationSite(req)
 
+  // req.params is cast to the shape getByUniqueRef expects (untyped find.js, typed via its caller);
+  // ParamsDictionary values are strings at runtime for the :applicationId route. find.js → ts in Phase 5 removes this.
   const application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params as Record<string, string>, 'application', null) as Application | undefined
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
 
