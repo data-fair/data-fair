@@ -76,15 +76,7 @@ request under concurrent load. End-to-end throughput under concurrency is the gr
 6. autocannon `errors` ≈ nginx `keepalive_requests 1000` socket recycling at high req/s (1–2 per
    connection per 1000 requests) — not request failures; `non2xx` is the failure signal.
 
-## Next experiments, ranked
+## Outcomes
 
-1. **T14** — `setImmediate` instead of `setTimeout(0)` yields in readLines/results2csv: with T1
-   done, the remaining 175 ms step avg on large pages likely contains substantial yield latency.
-2. **T4** — batch MarkIndexedStream `$in` read-back: indexing phase is 4× mongo phase on bulks.
-3. **T9** — raise ES bulk threshold (decouple from the sync/async gate first), with T4.
-4. **T6** — Set-based duplicate detection + rework the 100 ms sleep: ×13 measured penalty.
-5. **T3** — memoize compileSchema; measure with `singleLineOpRefresh: false` + long-run RSS for the
-   leak; also unlocks T12 (opt-out of wait_for) as a config/API-param experiment.
-6. **T5** — cheap ETag on large pages (profile `finish` step share first: 35–53 ms avg on
-   large-page-json).
-7. **T2/T8** — upstream lib-node token cache + api-key memoization (measured −3..−14% req/s).
+These baseline measurements drove the experiments; verdicts and the evidence for each are in
+`EXPERIMENTS.md`, and the full finding catalog (T-ids) is in `../perf-scan-notes.md`.

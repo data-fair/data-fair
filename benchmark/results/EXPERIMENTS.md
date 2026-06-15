@@ -74,14 +74,60 @@ on-demand `GET /cpu-profile` (avoids the exit-flush problem of --cpu-prof with S
   whether the ES client can skip secure-json-parse's prototype-poisoning pass; end-game is
   CSV-JIT-style passthrough of raw `_source` (T13 merges into this).
 
+## T2 — auth middleware caching + freezing (2026-06-15)
+
+Validated the `lib` `perf-faster-auth` branch (commit `a2931ca`) end-to-end. Two independent layers:
+(1) **always-on** — cache the parsed public `KeyObject` per `kid` (skip PEM re-export + re-parse every
+verify), reuse `req.cookies`, drop the dead ajv validation; (2) **opt-in flag** `cacheSessionStates`
+(`session.init(url, lang, onlyDecode, { cacheSessionStates: true })`) — cross-request cache of the
+verified session state, deeply frozen and shared.
+
+**Micro (lib, ground truth):** `jwt.verify(PEM string)` 40.8 µs → `jwt.verify(KeyObject)` 22.1 µs
+(always-on, ~46% off the verify). Full `readStateFromCookie`: 26.6 µs (flag OFF) → **1.97 µs** (flag
+ON cache hit), ~13×. Matches the commit's ~47/26/1.2 µs ballpark.
+
+**End-to-end (data-fair, 3 arms, fresh restart + PID/marker asserted per arm, 10 conns, 15 s, median
+of 2, `x-cache-bypass` on).** A `lines?size=20` ES query buries the auth cost (ES ≈95% of the
+request), so the lever is a new **non-ES, session-gated** scenario — `auth-session-cheap`
+(`GET /api/v1/datasets/:id` metadata) vs `auth-anon-cheap` on the same endpoint.
+
+| Scenario | A: baseline | B: new lib, flag OFF | C: new lib, flag ON |
+|---|---|---|---|
+| auth-anon-cheap (req/s) | 2465 | 2522 | 2497 |
+| auth-session-cheap (req/s) | 1770 | 2083 | 2386 |
+| **session-cheap gap vs anon** | **−28%** | **−17%** | **−4.4%** |
+| auth-anonymous /lines (req/s) | 962 | 981 | 950 |
+| auth-session /lines (req/s) | 911 | 947 | 954 |
+| auth-session /lines gap | −5.3% | −3.5% | ≈0 |
+
+- Always-on (A→B): closes ~11 pp of the cheap gap, session-cheap +18% throughput — transparent, no
+  behavior change.
+- Flag (B→C): closes another ~13 pp; session-cheap **+35% vs baseline**, the anon↔session gap nearly
+  vanishes (−4.4%, within noise).
+- On ES-dominated `/lines` the effect is real but within noise (~5% gap, anon itself varies) — as
+  predicted; the auth CPU is ~0.2% of that request.
+
+**Correctness (flag ON / frozen shared state):** lib unit suite 39/39 (freeze, expiry re-verify,
+KeyObject-per-kid); static scan found no in-place session mutation in data-fair core (only
+`setReqSession`/`setReqUser` full overwrites on the api-key/application-key pseudo-session paths,
+which build fresh non-cached states); live load arm C — `auth-session` (authed read + permission,
+~14k req) and `single-line`/`wide-single-line` writes (authed write + permission) → **0 non2xx, 0
+errors**. The freeze converts any missed mutation into a `TypeError`.
+
+**Verdict:** the **always-on layer is kept** (free, transparent — picked up automatically once the lib
+release lands). The **`cacheSessionStates` flag is dropped**: validated and low-risk on its own
+(staleness budget = token lifetime, the existing contract; org/dep/role are in the cache key), but the
+benefiting traffic — interactive session cookies — is the minority of load (anonymous reads carry no
+token; M2M uses api-keys, already T8-memoized), so the server-wide gain is marginal, and the flag would
+impose a "never mutate session state" invariant on `lib-express`, shared by every data-fair service.
+The session-caching code was reverted in `lib`. Reconsider only for a demonstrably session-heavy
+deployment or if a real-instance profile shows session-verify as a main-thread hotspot.
+
 ## Open / blocked
 
 - **T15/T13 — ES response parse + response stringify** (~70% of main-thread CPU on large pages
   combined). The easy parts (filter_path, plain-JSON.parse deserializer) were **measured and
-  rejected** (2026-06-12): 18% smaller ES bodies, zero end-to-end change — the irreducible cost
-  is JSON.parse of `_source` itself. Only the passthrough end-game remains (see the updated
-  handoff doc docs/plans/2026-06-12-t15-es-response-overhead.md).
-- **T2 — session JWT verify cost**: upstream lib-node token cache (−3..−7% req/s measured on
-  cheap reads). Upstream repo work.
+  rejected**: 18% smaller ES bodies, zero end-to-end change — the irreducible cost is JSON.parse of
+  `_source` itself. Only the raw-`_source` passthrough end-game remains (top read lever).
 - **Long-lived-process drift**: same code measured 870 vs 430 ms p50 depending on process
   age/heap history — needs a soak scenario before trusting any single-process production tuning.

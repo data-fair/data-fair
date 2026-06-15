@@ -96,6 +96,21 @@ export const scenarios: Scenario[] = [
     description: 'simple-list with x-apiKey (uncached settings findOne per request, T8)',
     request: ctx => ({ path: '/api/v1/datasets/bench-large/lines?size=20', headers: { 'x-apikey': ctx.apiKey } })
   },
+  // cheap, non-ES, session-gated endpoint (dataset metadata) so the auth middleware is a real
+  // share of the request rather than ~0.2% of an ES /lines call — the lever to expose T2 caching.
+  // anon vs session on the SAME endpoint isolates the per-request session-verify cost.
+  {
+    kind: 'http',
+    name: 'auth-anon-cheap',
+    description: 'dataset metadata GET, no auth (baseline for auth-session-cheap)',
+    request: () => ({ path: '/api/v1/datasets/bench-large' })
+  },
+  {
+    kind: 'http',
+    name: 'auth-session-cheap',
+    description: 'dataset metadata GET with session cookie (auth-dominated, exposes T2 verify+build cost)',
+    request: ctx => ({ path: '/api/v1/datasets/bench-large', headers: { cookie: ctx.sessionCookie } })
+  },
 
   // --- large pages: result preparation + serialization + etag dominate (T1, T5, T13, T14, T17) ---
   {
