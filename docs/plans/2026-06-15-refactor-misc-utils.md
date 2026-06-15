@@ -331,7 +331,8 @@ Branch off `master` **after 5a merges** (avoids churn collisions on shared impor
 
 - Any `req.resource` read that is unconditional today but should tolerate absence (or vice-versa) — preserve the exact `reqResource` vs `reqResourceOptional` choice that matches current runtime behavior; if the current behavior looks buggy, **park it**, do not switch.
 - `permissions.ts:363` `await req.resource` on a non-promise — preserved as `await reqResource(req)` (no-op await). If confirmed pointless, park a cleanup.
-- `api-key.ts` `_readApiKey` typing gap — if enriching `Resource` is not cheap, park it rather than add a suppression.
+- `api-key.ts` `_readApiKey` typing gap — ALREADY RESOLVED: `Resource` carries `& { _readApiKey?: { current, previous } }` in `api/types/index.ts`. No action needed in A4.
+- **(parked, found in A2)** `cache-headers.ts:39` `new Date(resource[dateKey] || resource.updatedAt)` is `string | undefined` because `Dataset.updatedAt`/`finalizedAt` are optional in the generated types — `new Date(undefined)` has no overload (TS2769). Runtime is fine (datasets always have updatedAt). Not suppressible without a `!`/cast (forbidden). Park: fix by making `updatedAt` required in the dataset schema, or guard. Also parked: the 4 `req.query` ParsedQs reads in cache-headers handlers (lines 65/84/86) — directly-mounted middleware MUST keep express `RequestHandler` typing (the sibling `permissions.ts` project-`Request` typing only works because its call sites cast `as RequestHandler`, which is Phase-6 router scope here). Revisit when the cache-headers handlers can be re-exported through a `RequestHandler`-cast factory during Phase 6.
 
 ---
 
