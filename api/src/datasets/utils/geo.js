@@ -5,7 +5,6 @@ import bboxPolygon from '@turf/bbox-polygon'
 import turfBbox from '@turf/bbox'
 import rewind from '@turf/rewind'
 import cleanCoords from '@turf/clean-coords'
-import kinks from '@turf/kinks'
 import unkink from '@turf/unkink-polygon'
 import geojsonvt from 'geojson-vt'
 import vtpbf from 'vt-pbf'
@@ -14,6 +13,7 @@ import tmp from 'tmp-promise'
 import proj4 from 'proj4'
 import { wktToGeoJSON, geojsonToWKT } from '@terraformer/wkt'
 import debugLib from 'debug'
+import { geometrySelfIntersects } from './geo-self-intersection.ts'
 import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
 import _config from 'config'
@@ -176,8 +176,7 @@ export const geometry2fields = async (dataset, doc) => {
     }
     try {
       if (['Polygon', 'MultiPolygon'].includes(geometry.type)) {
-        const kinked = !!kinks(geometry).features.length
-        if (kinked) {
+        if (geometrySelfIntersects(geometry)) {
           await customUnkink(geometry)
         }
       }
