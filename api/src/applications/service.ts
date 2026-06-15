@@ -145,6 +145,7 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   if (application.initFrom) {
     const parentApplication = await mongo.applications.findOne({ id: application.initFrom.application })
     if (!parentApplication) throw new Error('[noretry] application d\'initialisation inconnue ' + application.initFrom.application)
+    // mongo findOne returns WithId<Application>, not Resource — cast bridges the gap
     const parentApplicationPermissions = permissions.list('applications', parentApplication as any, ctx.sessionState)
     if (!parentApplicationPermissions.includes('readDescription')) {
       throw new Error(`[noretry] permission manquante sur l'application d'initialisation "${parentApplication.slug}" (${parentApplication.id})`)
@@ -242,12 +243,12 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
 
   // Retry previously failed publications
   if (!patch.publications) {
-    const failedPublications = ((application as any).publications || []).filter((p: any) => p.status === 'error')
+    const failedPublications = (application.publications || []).filter((p: any) => p.status === 'error')
     if (failedPublications.length) {
       for (const p of failedPublications) {
         p.status = 'waiting'
       }
-      patch.publications = (application as any).publications
+      patch.publications = application.publications
     }
   }
 
@@ -257,6 +258,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   patch.slug = patch.slug || application.slug
   await curateApplication(patch)
 
+  // Application is not structurally assignable to Resource (Pick<Dataset>); cast until Resource is widened (Phase 5)
   await publicationSites.applyPatch(application as any, { ...application, ...patch }, ctx.sessionState, 'applications')
 
   let patchedApplication
@@ -277,7 +279,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
     topic: {
       key: `data-fair:application-patched-properties:${application.id}`
     },
-    sender: (application as any).owner,
+    sender: application.owner,
     resource: { type: 'application', title: application.title, id: application.id }
   }, sessionState)
 
@@ -294,8 +296,8 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
     updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
     updatedAt: moment().toISOString()
   }
-  const sameOrg = (application as any).owner.type === 'organization' && (application as any).owner.type === newOwner.type && (application as any).owner.id === newOwner.id
-  if (sameOrg && !(application as any).owner.department && newOwner.department) {
+  const sameOrg = application.owner.type === 'organization' && application.owner.type === newOwner.type && application.owner.id === newOwner.id
+  if (sameOrg && !application.owner.department && newOwner.department) {
     // moving from org root to a department, we keep the publicationSites
   } else {
     patch.publicationSites = []
@@ -304,14 +306,14 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
     patch.publications = []
   }
 
-  const preservePermissions = ((application as any).permissions || []).filter((p: any) => {
+  const preservePermissions = (application.permissions || []).filter((p: any) => {
     // keep public permissions
     if (!p.type) return true
     if (sameOrg) {
       // keep individual user permissions (user partners)
       if (p.type === 'user') return true
       // keep permissions to external org (org partners)
-      if (p.type === 'organization' && p.id !== (application as any).owner.id) return true
+      if (p.type === 'organization' && p.id !== application.owner.id) return true
     }
     return false
   })
@@ -326,9 +328,9 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   await mongo.applicationsKeys
     .updateOne({ _id: application.id }, { $set: { owner: patch.owner } })
 
-  const arrowStr = `${(application as any).owner.name} (${(application as any).owner.type}:${(application as any).owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
+  const arrowStr = `${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
   const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${arrowStr}`
-  eventsLog.info('df.applications.changeOwnerFrom', eventLogMessage, { ...ctx.logCtx, account: (application as any).owner })
+  eventsLog.info('df.applications.changeOwnerFrom', eventLogMessage, { ...ctx.logCtx, account: application.owner })
   eventsLog.info('df.applications.changeOwnerTo', eventLogMessage, { ...ctx.logCtx, account: newOwner })
 
   const event = {
@@ -338,7 +340,7 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
       key: `data-fair:application-change-owner:${application.id}`
     },
     resource: { type: 'application', title: application.title, id: application.id },
-    sender: { ...(application as any).owner, role: 'admin' }
+    sender: { ...application.owner, role: 'admin' }
   }
   eventsQueue.pushEvent(event, sessionState)
   eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, role: 'admin' } }, sessionState)
@@ -363,7 +365,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
     console.warn('Failure to remove application directory')
   }
 
-  eventsLog.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { ...ctx.logCtx, account: (application as any).owner })
+  eventsLog.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   const sessionState = ctx.sessionState
   eventsQueue.pushEvent({
@@ -372,7 +374,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
     topic: {
       key: `data-fair:application-delete:${application.id}`
     },
-    sender: (application as any).owner
+    sender: application.owner
   }, sessionState)
 
   await syncDatasets(application)
@@ -400,7 +402,7 @@ export const writeApplicationConfig = async (ctx: ApplicationWriteContext, appli
     }
   )
 
-  eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { ...ctx.logCtx, account: (application as any).owner })
+  eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   await journals.log('applications', application, { type: 'config-updated' } as Event)
   await syncDatasets({ configuration: rawBody })
@@ -421,7 +423,7 @@ export const writeConfigDraft = async (ctx: ApplicationWriteContext, application
       }
     }
   )
-  eventsLog.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { ...ctx.logCtx, account: (application as any).owner })
+  eventsLog.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   await journals.log('applications', application, { type: 'config-draft-updated' } as Event)
 }
@@ -442,7 +444,7 @@ export const deleteConfigDraft = async (ctx: ApplicationWriteContext, applicatio
     }
   )
 
-  eventsLog.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { ...ctx.logCtx, account: (application as any).owner })
+  eventsLog.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   await journals.log('applications', application, { type: 'config-draft-cancelled' } as Event)
 }
@@ -451,8 +453,8 @@ export const getApplicationJournal = async (application: Application) => {
   const journal = await mongo.db.collection('journals').findOne({
     type: 'application',
     id: application.id,
-    'owner.type': (application as any).owner.type,
-    'owner.id': (application as any).owner.id
+    'owner.type': application.owner.type,
+    'owner.id': application.owner.id
   })
   if (!journal) return []
   delete journal.owner
@@ -481,9 +483,9 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
     if (!key.id) key.id = nanoid()
   }
   // replaceOne with custom schema shape — the runtime doc has {_id, keys, owner} which doesn't match ApplicationKey's id/title fields
-  await mongo.db.collection<{ _id: string }>('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys, owner: (application as any).owner } as any, { upsert: true })
+  await mongo.db.collection<{ _id: string }>('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys, owner: application.owner } as any, { upsert: true })
 
-  eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { ...ctx.logCtx, account: (application as any).owner })
+  eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   const sessionState = ctx.sessionState
   eventsQueue.pushEvent({
@@ -492,7 +494,7 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
     topic: {
       key: `data-fair:application-write-keys:${application.id}`
     },
-    sender: { ...(application as any).owner, role: 'admin' },
+    sender: { ...application.owner, role: 'admin' },
     resource: { type: 'application', title: application.title, id: application.id }
   }, sessionState)
 }
