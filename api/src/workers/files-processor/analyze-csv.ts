@@ -1,7 +1,7 @@
 import * as journals from '../../misc/utils/journals.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import iconv from 'iconv-lite'
-import * as csvSniffer from '../../misc/utils/csv-sniffer.js'
+import * as csvSniffer from '../../misc/utils/csv-sniffer.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.js'

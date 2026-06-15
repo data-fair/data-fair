@@ -15,7 +15,7 @@ import * as geo from '../utils/geo.js'
 import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
-import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.js'
+import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.ts'
 import {
   hasCapability,
   requiredCapability,
