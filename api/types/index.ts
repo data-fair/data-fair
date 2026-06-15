@@ -18,7 +18,7 @@ export type { PublicationSite } from './publication-site/index.js'
 export type Request = ExpressRequest & { query: Record<string, string> } & { publicBaseUrl: string, publicWsBaseUrl: string }
 
 export type ResourceType = 'datasets' | 'applications' | 'remote-services' | 'catalogs'
-export type Resource = Pick<Dataset, 'id' | 'slug' | 'title' | 'owner' | 'permissions' | 'publicationSites' | 'requestedPublicationSites' | 'topics' | 'updatedAt'>
+export type Resource = Pick<Dataset, 'id' | 'slug' | 'title' | 'owner' | 'permissions' | 'publicationSites' | 'requestedPublicationSites' | 'topics' | 'updatedAt' | 'finalizedAt'>
   & { _readApiKey?: { current: string, previous: string } }
 export type BypassPermissions = {
   operations?: string[],

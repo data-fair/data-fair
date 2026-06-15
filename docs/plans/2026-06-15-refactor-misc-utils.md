@@ -120,6 +120,8 @@ const { setReqPublicationSite, setReqMainPublicationSite } = await import('./mis
 - Rename + modify: `api/src/misc/utils/cache-headers.js` → `cache-headers.ts`
 
 - [ ] **Step 1: Rename** the file to `.ts` (`git mv api/src/misc/utils/cache-headers.js api/src/misc/utils/cache-headers.ts`).
+**Survey correction (found during A2):** cache-headers also reads `req.noModifiedCache` (set in `api-compat/ods/index.ts:640`, a Phase-7 file). Give it an accessor here too (cache-headers is its topical home), legacyProp `'noModifiedCache'` keeps the Phase-7 setter alive: `const noModifiedCacheCtx = defineReqContext<boolean>('noModifiedCache', 'noModifiedCache'); export const setReqNoModifiedCache = noModifiedCacheCtx.set; export const reqNoModifiedCache = noModifiedCacheCtx.getOptional`. Replace both `req.noModifiedCache` reads with `reqNoModifiedCache(req)`. Also enrich the `Resource` type (`api/types/index.ts`) by adding `'finalizedAt'` to its `Pick<Dataset, …>` (finalizedAt is on Dataset; `dateKey` is only ever `'finalizedAt'` or `'updatedAt'`) and type the `resourceBased` `dateKey` param as `'updatedAt' | 'finalizedAt'` — this lets `resource[dateKey]` / `resource.finalizedAt` type cleanly with NO cast (conventions §3.4: enrich the type, don't cast).
+
 - [ ] **Step 2: Add the `noCache` accessor at the top** (cache-headers is its topical home per conventions §2). Import the cross-cutting readers it needs:
 
 ```ts

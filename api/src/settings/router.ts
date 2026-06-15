@@ -1,6 +1,6 @@
 import express from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import config from '#config'
 import { reqSessionAuthenticated } from '@data-fair/lib-express'

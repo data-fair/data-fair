@@ -2,7 +2,7 @@ import express from 'express'
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import { reqAdminMode } from '@data-fair/lib-express'
-import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import {
   getStatus,
   findDatasetsErrors,
