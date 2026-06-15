@@ -18,7 +18,6 @@ import taskProgress from './task-progress.ts'
 import * as permissionsUtils from '../../misc/utils/permissions.ts'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import debugLib from 'debug'
-import zlib from 'node:zlib'
 import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
@@ -682,9 +681,11 @@ export const applyCalculations = async (dataset: Dataset, item: any) => {
     }
   }
 
-  // Deterministic pseudo-random number for the _rand sampling sort. crc32 (native, fast) replaces
-  // random-seed, whose per-line ARC4 key scheduling was ~69% of the indexing-thread CPU.
-  item._rand = zlib.crc32(dataset.id + item._i) % 1000000
+  // Pseudo-random number for the _rand sampling sort. Intentionally NOT seeded from the line id:
+  // _rand is stored at index time, and pagination tie-breaks on the unique _i, so nothing needs it
+  // to be reproducible (a full reindex just reshuffles the random order). This replaces random-seed,
+  // whose per-line ARC4 key scheduling was ~69% of the indexing-thread CPU.
+  item._rand = Math.floor(Math.random() * 1000000)
 
   // split the fields that have a separator in their schema
   for (const field of dataset.schema ?? []) {

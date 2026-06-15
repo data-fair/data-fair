@@ -23,7 +23,7 @@ result preparation, the auth layer, and the write/indexing pipeline.
 | T8 | API-key auth: uncached `settings.findOne` per request | **done** (memoized, 30 s TTL, invalidated on writes) |
 | T9 | ES bulk flush threshold below ES sweet spot | **reverted** (no local gain; was config surface only) |
 | T10 | O(n²) scans + `$or`-of-1000 in `applyTransactions` | open — not pursued (patch/delete-heavy bulks only) |
-| T11 | Per-line indexing costs; ARC4 `_rand` per line dominated | **done** (native `zlib.crc32`; cumulative with T4: indexing ×4.1) |
+| T11 | Per-line indexing costs; ARC4 `_rand` per line dominated | **done** (`Math.random()`; `_rand` is stored + tie-breaks on unique `_i`, so the seed was vestigial; cumulative with T4: indexing ×4.1) |
 | T12 | Single-line writes capped by `refresh: wait_for` | measured (×20 ceiling); per-request opt-out is a product decision |
 | T13 | JSON response is one synchronous `JSON.stringify` of the page | open — merges into the T15 passthrough end-game |
 | T14 | Event-loop yields used `setTimeout(0)` (≥1 ms clamp) | **done** (`setImmediate`) |

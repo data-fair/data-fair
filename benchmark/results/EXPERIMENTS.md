@@ -13,7 +13,7 @@ caveats in `BASELINE.md`. T-ids refer to `benchmark/perf-scan-notes.md`.
 | T4 | batch MarkIndexedStream `$in` (838d85347) | 100k-line ingest: indexing phase 35.3→17.7 s (×2.0), 2284→3831 lines/s; 0 `_needsIndexing` left both arms | **kept — biggest write-path win** |
 | T3 | memoize `compileSchema` (857777612) | with `singleLineOpRefresh=false`: narrow +30% req/s, 300-col ×3.1 (50→157 req/s, p50 198→63 ms); also fixes the unbounded ajv-cache leak | **kept** |
 | T6a | Set-based duplicate detection (857777612) | neutral on scenarios (sleeps dominate) | kept as hygiene |
-| T11 | native `zlib.crc32` replaces per-line ARC4 `_rand` (bb571419d) | CPU profile: random-seed = ~69% of indexing-thread busy CPU; A/B: indexing phase 17.7→8.6 s (×2.06), 3842→5856 lines/s; random-seed dep dropped | **kept — cumulative with T4: indexing ×4.1, ingest ×2.6** |
+| T11 | `Math.random()` replaces per-line ARC4 `_rand` (bb571419d) | CPU profile: random-seed = ~69% of indexing-thread busy CPU; A/B: indexing phase 17.7→8.6 s (×2.06), 3842→5856 lines/s; random-seed dep dropped | **kept — cumulative with T4: indexing ×4.1, ingest ×2.6** |
 
 ## Measured observations (no code change)
 
