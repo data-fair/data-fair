@@ -1,10 +1,9 @@
 import { aliasName, prepareQuery } from './commons.ts'
-import { timedEsCall } from './abort.ts'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
+import { type Client } from '@elastic/elasticsearch'
 
-/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
-export default async (client, dataset, queries, abortContext) => {
-  /** @type {any[]} */
-  const body = []
+export default async (client: Client, dataset: any, queries: Record<string, any>[], abortContext?: EsAbortContext) => {
+  const body: any[] = []
   for (const query of queries) {
     body.push({ index: aliasName(dataset) })
     body.push(prepareQuery(dataset, query))

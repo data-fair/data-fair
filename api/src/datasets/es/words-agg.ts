@@ -1,14 +1,14 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
-import { timedEsCall } from './abort.ts'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
+import { type Client } from '@elastic/elasticsearch'
 
-/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
-export default async (client, dataset, query, abortContext) => {
+export default async (client: Client, dataset: any, query: Record<string, any>, abortContext?: EsAbortContext) => {
   if (!query.field) throw httpError(400, '"field" parameter is required')
-  const prop = dataset.schema.find(f => f.key === query.field)
+  const prop = dataset.schema.find((f: any) => f.key === query.field)
   if (!prop) {
     throw httpError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
@@ -46,7 +46,7 @@ export default async (client, dataset, query, abortContext) => {
   }
 
   // console.log(esQuery)
-  const esResponse = await timedEsCall(abortContext, () => client.search({
+  const esResponse: any = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
@@ -55,12 +55,12 @@ export default async (client, dataset, query, abortContext) => {
 
   const buckets = esResponse.aggregations.sample.words.buckets
 
-  const words = await Promise.all(buckets.map(bucket => unstem(client, dataset, field, bucket.key, abortContext)))
+  const words = await Promise.all(buckets.map((bucket: any) => unstem(client, dataset, field, bucket.key, abortContext)))
 
   return {
     total: esResponse.hits.total.value,
     sample: esResponse.aggregations.sample.doc_count,
-    results: buckets.map((bucket, i) => ({
+    results: buckets.map((bucket: any, i: number) => ({
       word: words[i],
       total: bucket.doc_count,
       score: bucket.score
@@ -71,9 +71,8 @@ export default async (client, dataset, query, abortContext) => {
 // significant_text does not "unstem"
 // it is suggested that the highlight logic is the closest there is to satisfying this need
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
-/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
-async function unstem (client, dataset, field, key, abortContext) {
-  const res = await timedEsCall(abortContext, () => client.search({
+async function unstem (client: Client, dataset: any, field: string, key: any, abortContext?: EsAbortContext) {
+  const res: any = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: {
       size: 20,
@@ -90,7 +89,7 @@ async function unstem (client, dataset, field, key, abortContext) {
     allow_partial_search_results: false
   }, abortContext))
 
-  const words = {}
+  const words: Record<string, number> = {}
   for (const hit of res.hits.hits) {
     for (let w of hit.highlight[field]) {
       w = w.match(/<>(.*)<>/)[1]

@@ -5,7 +5,7 @@ import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResult
 import { timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
-import { assertMetricAccepted } from './metric-agg.js'
+import { assertMetricAccepted } from './metric-agg.ts'
 
 /** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export default async (client, dataset, query, publicBaseUrl, flatten, abortContext) => {

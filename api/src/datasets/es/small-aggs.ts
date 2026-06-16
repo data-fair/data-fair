@@ -1,12 +1,11 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
-import { timedEsCall } from './abort.ts'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
 import es from '#es'
 
-/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
-export const max = async (dataset, fieldKey, query, abortContext) => {
-  const field = dataset.schema.find(p => p.key === fieldKey)
+export const max = async (dataset: any, fieldKey: string, query: Record<string, any>, abortContext?: EsAbortContext) => {
+  const field = dataset.schema.find((p: any) => p.key === fieldKey)
   if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
@@ -15,7 +14,7 @@ export const max = async (dataset, fieldKey, query, abortContext) => {
       max: { field: fieldKey }
     }
   }
-  const esResponse = await timedEsCall(abortContext, () => es.client.search({
+  const esResponse: any = await timedEsCall(abortContext, () => es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
@@ -24,9 +23,8 @@ export const max = async (dataset, fieldKey, query, abortContext) => {
   return esResponse.aggregations.max.value
 }
 
-/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
-export const min = async (dataset, fieldKey, query, abortContext) => {
-  const field = dataset.schema.find(p => p.key === fieldKey)
+export const min = async (dataset: any, fieldKey: string, query: Record<string, any>, abortContext?: EsAbortContext) => {
+  const field = dataset.schema.find((p: any) => p.key === fieldKey)
   if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
@@ -35,7 +33,7 @@ export const min = async (dataset, fieldKey, query, abortContext) => {
       min: { field: fieldKey }
     }
   }
-  const esResponse = await timedEsCall(abortContext, () => es.client.search({
+  const esResponse: any = await timedEsCall(abortContext, () => es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,

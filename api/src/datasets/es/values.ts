@@ -1,10 +1,10 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
-import { timedEsCall } from './abort.ts'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
+import { type Client } from '@elastic/elasticsearch'
 
-/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
-export default async (client, dataset, fieldKey, query, abortContext) => {
+export default async (client: Client, dataset: any, fieldKey: string, query: Record<string, any>, abortContext?: EsAbortContext) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
   const sort = query.sort ?? 'asc'
@@ -38,7 +38,7 @@ export default async (client, dataset, fieldKey, query, abortContext) => {
     }
   }
   // Bound complexity with a timeout
-  const esResponse = await timedEsCall(abortContext, () => client.search({
+  const esResponse: any = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
