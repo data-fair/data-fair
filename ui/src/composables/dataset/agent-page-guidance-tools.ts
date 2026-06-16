@@ -1,6 +1,9 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { createAgentTranslator } from '~/composables/agent/utils'
+import { buildGuidance, type GuidedSections } from '~/composables/agent/page-guidance'
+
+export type { GuidedTab, GuidedSection, GuidedSections } from '~/composables/agent/page-guidance'
 
 const messages: Record<string, Record<string, string>> = {
   fr: { pageGuidance: 'Guide de la page' },
@@ -16,35 +19,6 @@ const description =
   'help buttons not in the global tool list). Call only when unsure how to ' +
   'help the user here; if another tool obviously fits the need, use it.'
 
-// Section/tab descriptions are co-located with the page's `sections` computed
-// so they evolve together with structural and permission-conditional logic.
-// This composable is a thin renderer.
-export type GuidedTab = { key: string, title: string, agentDesc?: string }
-export type GuidedSection = { title: string, agentDesc?: string, tabs?: GuidedTab[] }
-export type GuidedSections = Record<string, GuidedSection>
-
-function buildGuidance (sections: GuidedSections): string {
-  const lines: string[] = [
-    '# Dataset detail page',
-    '',
-    'Collapsible sections; some have tabs. Only sections and tabs currently visible to this user are listed.',
-    ''
-  ]
-
-  for (const section of Object.values(sections)) {
-    const tabsWithDesc = section.tabs?.filter(t => t.agentDesc) ?? []
-    if (!section.agentDesc && !tabsWithDesc.length) continue
-    lines.push(`## ${section.title}`)
-    if (section.agentDesc) lines.push(section.agentDesc)
-    for (const tab of tabsWithDesc) {
-      lines.push(`- **${tab.title}** — ${tab.agentDesc}`)
-    }
-    lines.push('')
-  }
-
-  return lines.join('\n').trimEnd()
-}
-
 export function useAgentDatasetPageGuidance (locale: Ref<string>, sections: Ref<GuidedSections>) {
   const t = createAgentTranslator(messages, locale)
 
@@ -56,7 +30,11 @@ export function useAgentDatasetPageGuidance (locale: Ref<string>, sections: Ref<
     execute: async () => ({
       content: [{
         type: 'text' as const,
-        text: buildGuidance(sections.value)
+        text: buildGuidance(
+          'Dataset detail page',
+          'Collapsible sections; some have tabs. Only sections and tabs currently visible to this user are listed.',
+          sections.value
+        )
       }]
     })
   })
