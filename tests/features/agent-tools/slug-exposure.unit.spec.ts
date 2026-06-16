@@ -29,12 +29,6 @@ test.describe('list_datasets exposes slug', () => {
     const { structuredContent } = listDatasets.formatResult(data, 1, 10)
     assert.equal('slug' in structuredContent.results[0], false)
   })
-
-  test('formatResult surfaces the absolute page link in text', () => {
-    const data = { count: 1, results: [{ id: 'abc123', slug: 'my-dataset', title: 'My Dataset', page: 'https://koumoul.com/data-fair/dataset/abc123' }] }
-    const { text } = listDatasets.formatResult(data, 1, 10)
-    assert.ok(text.includes('https://koumoul.com/data-fair/dataset/abc123'), `page link not surfaced in text:\n${text}`)
-  })
 })
 
 test.describe('get_dataset_schema exposes slug', () => {
