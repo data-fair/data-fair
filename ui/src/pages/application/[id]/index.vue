@@ -496,6 +496,8 @@ import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+import { useAgentApplicationMetadataTools } from '~/composables/application/agent-metadata-tools'
+import { useAgentApplicationPageGuidance } from '~/composables/application/agent-page-guidance-tools'
 import { $uiConfig, $apiPath } from '~/context'
 
 const { t, locale } = useI18n()
@@ -545,6 +547,13 @@ watch(() => application.value?.image, (newImage) => {
 })
 
 useLeaveGuard(metadataEditFetch.hasDiff, { locale })
+
+// Agent tools for metadata editing
+useAgentApplicationMetadataTools(
+  locale,
+  (s) => { if (metadataEditFetch.data.value) metadataEditFetch.data.value.summary = s },
+  (d) => { if (metadataEditFetch.data.value) metadataEditFetch.data.value.description = d }
+)
 
 const cancelMetadata = () => {
   metadataEditFetch.data.value = JSON.parse(JSON.stringify(metadataEditFetch.serverData.value))
@@ -610,64 +619,66 @@ const confirmRemove = useAsyncAction(async () => {
 }, { success: t('deleteAppSuccess') })
 
 const sections = computedDeepDiff(() => {
-  if (!application.value) return {} as Record<string, { title: string, subtitle?: string, tabs?: any[] }>
+  if (!application.value) return {} as Record<string, { title: string, subtitle?: string, tabs?: any[], agentDesc?: string }>
 
-  const result: Record<string, { title: string, subtitle?: string, tabs?: any[] }> = {}
+  const result: Record<string, { title: string, subtitle?: string, tabs?: any[], agentDesc?: string }> = {}
 
   // Informations section
   result.informations = {
     title: t('info'),
-    subtitle: t('informationsSubtitle')
+    subtitle: t('informationsSubtitle'),
+    agentDesc: 'Read-only overview of the application: owner, application model (base app) and version, key dates. No edit controls here — descriptive metadata is edited in the Metadata section below.'
   }
 
   // Metadata section
   const metadataTabs = [
-    { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined },
-    { key: 'attachments', title: t('attachments'), icon: mdiPaperclip }
+    { key: 'info', title: t('info'), icon: mdiInformation, color: metadataEditFetch.hasDiff.value ? 'accent' : undefined, agentDesc: 'Edit form for descriptive metadata: title, summary, description (markdown), topics, thumbnail image. Two in-form help buttons: next to the summary → application_summarizer subagent (≤300 char summary); next to the description → application_description_writer subagent (500-2000 char markdown).' },
+    { key: 'attachments', title: t('attachments'), icon: mdiPaperclip, agentDesc: 'Upload/edit/delete file attachments for the application; an attachment can be set as the thumbnail.' }
   ]
   if (datasets.value.length) {
-    metadataTabs.push({ key: 'datasets', title: t('datasets'), icon: mdiDatabase })
+    metadataTabs.push({ key: 'datasets', title: t('datasets'), icon: mdiDatabase, agentDesc: 'The datasets used by this application (read-only cards).' })
   }
   if (childrenApps.value.length) {
-    metadataTabs.push({ key: 'children-apps', title: t('childrenApps'), icon: mdiImageMultiple })
+    metadataTabs.push({ key: 'children-apps', title: t('childrenApps'), icon: mdiImageMultiple, agentDesc: 'Other applications used by this application (read-only cards).' })
   }
-  result.metadata = { title: t('metadata'), tabs: metadataTabs }
+  result.metadata = { title: t('metadata'), tabs: metadataTabs, agentDesc: 'Descriptive metadata edition. Save / cancel buttons appear in the section header when there are unsaved changes.' }
 
   // Render section
   result.render = {
     title: t('render'),
-    tabs: [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline }]
+    tabs: [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_form subagent assists). Use get_application_config to read the current validated configuration.' }],
+    agentDesc: 'Rendered application and entry point to its configuration.'
   }
 
   const shareTabs = []
   if (can('getPermissions')) {
-    shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity })
+    shareTabs.push({ key: 'permissions', title: t('permissions'), icon: mdiSecurity, agentDesc: 'Grant read / admin permissions to users, organisations, departments or partners, or open access to "anyone".' })
   }
   if (can('getKeys')) {
-    shareTabs.push({ key: 'protected-links', title: t('protectedLink'), icon: mdiCloudKey })
+    shareTabs.push({ key: 'protected-links', title: t('protectedLink'), icon: mdiCloudKey, agentDesc: 'Manage protected links — unconnected access to the application via signed URLs.' })
   }
   if (!$uiConfig.disablePublicationSites) {
-    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation })
+    shareTabs.push({ key: 'publication-sites', title: t('publicationSites'), icon: mdiPresentation, agentDesc: 'Publish or unpublish this application on the organisation\'s data portals.' })
   }
-  shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags })
+  shareTabs.push({ key: 'integration', title: t('integration'), icon: mdiCodeTags, agentDesc: 'Ready-to-copy iframe / embed snippets to integrate this application into external pages.' })
   if (shareTabs.length) {
-    result.share = { title: t('share'), tabs: shareTabs }
+    result.share = { title: t('share'), tabs: shareTabs, agentDesc: 'Access control and publication settings for this application.' }
   }
 
   if ($uiConfig.eventsIntegration) {
     const activityTabs = []
     if (can('readJournal')) {
-      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock })
+      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this application (who did what, when).' })
     }
-    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell })
+    activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell, agentDesc: 'Subscribe to in-app / email notifications for events on this application.' })
     if (can('setPermissions')) {
-      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook })
+      activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure webhooks fired on events for this application.' })
     }
-    result.activity = { title: t('tracking'), tabs: activityTabs }
+    result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Activity tracking for this application.' }
   }
 
   if (can('delete')) {
-    result.dangerZone = { title: t('dangerZone'), tabs: [] }
+    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Destructive operations: change owner, delete the application.' }
   }
 
   return result
@@ -679,4 +690,6 @@ const tocSections = computed(() => {
     title: s.title
   }))
 })
+
+useAgentApplicationPageGuidance(locale, sections)
 </script>
