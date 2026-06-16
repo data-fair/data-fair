@@ -569,110 +569,25 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
   const res = flatten(hit._source)
   res._score = hit._score
 
-  if (ctx) {
-    // fast path with pre-computed context
-    if (ctx.selectIncludesId) res._id = hit._id
+  if (ctx.selectIncludesId) res._id = hit._id
 
-    if (ctx.highlightKeys) {
-      res._highlight = {}
-      for (const key of ctx.highlightKeys) {
-        const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
-        const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
-        if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {
-          res._highlight[key] = textStandardHighlight
-        } else {
-          res._highlight[key] = textHighlight
-        }
+  if (ctx.highlightKeys) {
+    res._highlight = {}
+    for (const key of ctx.highlightKeys) {
+      const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
+      const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
+      if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {
+        res._highlight[key] = textStandardHighlight
+      } else {
+        res._highlight[key] = textHighlight
       }
     }
-
-    if (query.thumbnail) {
-      if (!ctx.imageField) throw httpError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
-      if (res[ctx.imageField.key]) {
-        let imageUrl = res[ctx.imageField.key]
-        if (dataset.attachmentsAsImage) {
-          imageUrl = imageUrl.replace(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
-          imageUrl = imageUrl.replace(`${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
-        }
-        const thumbnailId = Buffer.from(imageUrl).toString('hex')
-        res._thumbnail = prepareThumbnailUrl(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/thumbnail/${encodeURIComponent(thumbnailId)}`, query.thumbnail, query.draft)
-      }
-    }
-
-    if (query.draft === 'true' && res._attachment_url) res._attachment_url += '?draft=true'
-
-    if (query.html === 'true' || query.html === 'vuetify') {
-      for (const field of ctx.markdownFields) {
-        if (res[field.key]) {
-          if (query.html === 'vuetify') res[field.key] = vuetifyMarked.parse(res[field.key]).trim()
-          else res[field.key] = defaultMarked.parse(res[field.key]).trim()
-          res[field.key] = sanitizeHtml(res[field.key])
-        }
-      }
-      if (ctx.descriptionFieldKey && !ctx.markdownFields.some(f => f.key === ctx.descriptionFieldKey) && res[ctx.descriptionFieldKey]) {
-        if (query.html === 'vuetify') res[ctx.descriptionFieldKey] = vuetifyMarked.parse(res[ctx.descriptionFieldKey]).trim()
-        else res[ctx.descriptionFieldKey] = defaultMarked.parse(res[ctx.descriptionFieldKey]).trim()
-        res[ctx.descriptionFieldKey] = sanitizeHtml(res[ctx.descriptionFieldKey])
-      }
-    }
-
-    if (ctx.truncate) {
-      for (const key in res) {
-        if (typeof res[key] !== 'string') continue
-        if (ctx.skipTruncateKeys.has(key)) continue
-        if (ctx.separatorKeys.has(key)) continue
-        const field = ctx.schemaByKey.get(key)
-        if (query.html === 'true' && field && (field['x-display'] === 'markdown' || field.key === ctx.descriptionFieldKey)) {
-          res[key] = truncateHTML(res[key], ctx.truncate)
-        } else {
-          res[key] = truncateMiddle(res[key], ctx.truncate, 0, '...')
-        }
-      }
-    }
-
-    if (query.wkt === 'true') {
-      if (ctx.geometryField && res[ctx.geometryField.key]) {
-        const geometry = typeof res[ctx.geometryField.key] === 'string' ? JSON.parse(res[ctx.geometryField.key]) : res[ctx.geometryField.key]
-        res[ctx.geometryField.key] = geojsonToWKT(geometry)
-      }
-      if (res._geoshape) res._geoshape = geojsonToWKT(res._geoshape)
-    }
-
-    if (res._geopoint && ctx.geoDistanceParts) {
-      const [lon, lat] = ctx.geoDistanceParts
-      const [centerLat, centerLon] = res._geopoint.split(',')
-      const distance = turfDistance([lon, lat], [centerLon, centerLat])
-      res._geo_distance = distance * 1000
-    }
-
-    return res
   }
 
-  // legacy path without pre-computed context (used by aggregation endpoints)
-  if (dataset.schema.find(f => f.key === '_id')) {
-    if (!query.select || query.select === '*' || query.select.split(',').includes('_id')) {
-      res._id = hit._id
-    }
-  }
-  if (query.highlight) {
-    res._highlight = query.highlight.split(',')
-      .reduce((a, key) => {
-        const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
-        const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
-        if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {
-          a[key] = textStandardHighlight
-        } else {
-          a[key] = textHighlight
-        }
-        return a
-      }, {})
-  }
-
-  const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
   if (query.thumbnail) {
-    if (!imageField) throw httpError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
-    if (res[imageField.key]) {
-      let imageUrl = res[imageField.key]
+    if (!ctx.imageField) throw httpError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
+    if (res[ctx.imageField.key]) {
+      let imageUrl = res[ctx.imageField.key]
       if (dataset.attachmentsAsImage) {
         imageUrl = imageUrl.replace(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
         imageUrl = imageUrl.replace(`${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
@@ -684,55 +599,45 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
 
   if (query.draft === 'true' && res._attachment_url) res._attachment_url += '?draft=true'
 
-  const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')?.key
   if (query.html === 'true' || query.html === 'vuetify') {
-    for (const field of dataset.schema) {
-      if ((field['x-display'] === 'markdown' || field.key === descriptionField) && res[field.key]) {
+    for (const field of ctx.markdownFields) {
+      if (res[field.key]) {
         if (query.html === 'vuetify') res[field.key] = vuetifyMarked.parse(res[field.key]).trim()
         else res[field.key] = defaultMarked.parse(res[field.key]).trim()
         res[field.key] = sanitizeHtml(res[field.key])
       }
     }
+    if (ctx.descriptionFieldKey && !ctx.markdownFields.some(f => f.key === ctx.descriptionFieldKey) && res[ctx.descriptionFieldKey]) {
+      if (query.html === 'vuetify') res[ctx.descriptionFieldKey] = vuetifyMarked.parse(res[ctx.descriptionFieldKey]).trim()
+      else res[ctx.descriptionFieldKey] = defaultMarked.parse(res[ctx.descriptionFieldKey]).trim()
+      res[ctx.descriptionFieldKey] = sanitizeHtml(res[ctx.descriptionFieldKey])
+    }
   }
 
-  if (query.truncate) {
-    const linkField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
-    const emailField = dataset.schema.find(f => f['x-refersTo'] === 'https://www.w3.org/2006/vcard/ns#email')
-    const docField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-    const truncate = Number(query.truncate)
+  if (ctx.truncate) {
     for (const key in res) {
       if (typeof res[key] !== 'string') continue
-      if (imageField && imageField.key === key) continue
-      if (linkField && linkField.key === key) continue
-      if (emailField && emailField.key === key) continue
-      if (docField && docField.key === key) continue
-      if (key === '_thumbnail') continue
-      if (key === '_highlight') continue
-      if (key === '_id') continue
-      if (key === '_geopoint') continue
-      if (key === '_geoshape') continue
-      if (key === '_attachment_url') continue
-      const field = dataset.schema.find(f => f.key === key)
-      if (field && field.separator) continue
-      if (query.html === 'true' && (field['x-display'] === 'markdown' || field.key === descriptionField)) {
-        res[key] = truncateHTML(res[key], truncate)
+      if (ctx.skipTruncateKeys.has(key)) continue
+      if (ctx.separatorKeys.has(key)) continue
+      const field = ctx.schemaByKey.get(key)
+      if (query.html === 'true' && field && (field['x-display'] === 'markdown' || field.key === ctx.descriptionFieldKey)) {
+        res[key] = truncateHTML(res[key], ctx.truncate)
       } else {
-        res[key] = truncateMiddle(res[key], truncate, 0, '...')
+        res[key] = truncateMiddle(res[key], ctx.truncate, 0, '...')
       }
     }
   }
 
   if (query.wkt === 'true') {
-    const geometryField = dataset.schema.find(f => f['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry')
-    if (geometryField && res[geometryField.key]) {
-      const geometry = typeof res[geometryField.key] === 'string' ? JSON.parse(res[geometryField.key]) : res[geometryField.key]
-      res[geometryField.key] = geojsonToWKT(geometry)
+    if (ctx.geometryField && res[ctx.geometryField.key]) {
+      const geometry = typeof res[ctx.geometryField.key] === 'string' ? JSON.parse(res[ctx.geometryField.key]) : res[ctx.geometryField.key]
+      res[ctx.geometryField.key] = geojsonToWKT(geometry)
     }
     if (res._geoshape) res._geoshape = geojsonToWKT(res._geoshape)
   }
 
-  if (res._geopoint && (query.geo_distance ?? query._c_geo_distance)) {
-    const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
+  if (res._geopoint && ctx.geoDistanceParts) {
+    const [lon, lat] = ctx.geoDistanceParts
     const [centerLat, centerLon] = res._geopoint.split(',')
     const distance = turfDistance([lon, lat], [centerLon, centerLat])
     res._geo_distance = distance * 1000

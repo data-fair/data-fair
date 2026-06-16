@@ -8,6 +8,8 @@ import { pendingTasks } from '../../workers/tasks.ts'
 import { reset as resetPing } from '../../workers/ping.ts'
 import { memoizedGetPublicationSiteSettings } from '../utils/settings.ts'
 import { memoizedGetDataset } from '../../datasets/service.js'
+import { clearApiKeysCache } from '../utils/api-key.ts'
+import { clearApplicationKeysCaches } from '../utils/application-key.ts'
 import * as rateLimiting from '../utils/rate-limiting.ts'
 import testEvents from '../utils/test-events.ts'
 import filesStorage from '../../files-storage/index.ts'
@@ -73,6 +75,8 @@ router.delete('/', async (req, res, next) => {
 
     memoizedGetPublicationSiteSettings.clear()
     memoizedGetDataset.clear()
+    clearApiKeysCache()
+    clearApplicationKeysCaches()
     rateLimiting.clear()
     testEvents.removeAllListeners()
 

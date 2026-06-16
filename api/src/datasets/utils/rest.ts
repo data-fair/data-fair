@@ -15,6 +15,7 @@ import moment from 'moment'
 import crc from 'crc'
 import md5File from 'md5-file'
 import stableStringify from 'fast-json-stable-stringify'
+import memoize from 'memoizee'
 import LinkHeader from 'http-link-header'
 import unzipper from 'unzipper'
 import dayjs from 'dayjs'
@@ -37,7 +38,7 @@ import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
-import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
+import type { Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
@@ -707,11 +708,13 @@ class TransactionStream extends Writable {
   options: TransactionStreamOptions
   i: number
   transactions: DatasetLineAction[]
+  transactionIds: Set<string>
   constructor (options: TransactionStreamOptions) {
     super({ objectMode: true })
     this.options = options
     this.i = 0
     this.transactions = []
+    this.transactionIds = new Set()
   }
 
   async applyTransactions () {
@@ -726,6 +729,7 @@ class TransactionStream extends Writable {
     }
 
     this.transactions = []
+    this.transactionIds.clear()
     if (bulkOpResult) {
       this.options.summary.nbCreated += bulkOpResult.upsertedCount
       this.options.summary.nbCreated += bulkOpResult.insertedCount
@@ -771,14 +775,18 @@ class TransactionStream extends Writable {
     }
 
     // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
-    if (chunk._id && this.transactions.find(c => c._id === chunk._id)) {
+    if (chunk._id && this.transactionIds.has(chunk._id)) {
       await this.applyTransactions()
       // weirdly the separation of transactions is not always sufficient to ensure that the operations
       // are performed in the same order (some test regularly breaks)
+      // TODO: the mechanism is _i time-bucket separation between batches (10ms buckets in
+      // timestamp3 mode + random per-batch component); replacing the sleep with monotonic
+      // batch timestamps requires validating against the rest test suite
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
     this.transactions.push(chunk)
+    if (chunk._id) this.transactionIds.add(chunk._id)
 
     // WARNING: changing this number has impact on the _i generation logic
     if (this.transactions.length > config.mongo.maxBulkOps) await this.applyTransactions()
@@ -795,14 +803,23 @@ class TransactionStream extends Writable {
   }
 }
 
-const compileSchema = (dataset: RestDataset, adminMode: boolean) => {
+// memoized: ajv.compile is codegen (ms-scale, main-thread) and was run per write request;
+// worse, each call leaked an entry in ajv's internal strong-ref schema cache.
+// keyed on dataset.updatedAt: any schema change bumps it
+const compileSchema = memoize((dataset: RestDataset, adminMode: boolean) => {
   const schema = jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history
   if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
   return ajv.compile(schema)
-}
+}, {
+  profileName: 'compileRestSchema',
+  primitive: true,
+  max: 1000,
+  maxAge: 1000 * 60, // 1min
+  normalizer: ([dataset, adminMode]: [RestDataset, boolean]) => `${dataset.id}:${dataset.updatedAt}:${adminMode}`
+})
 
 async function checkMatchingAttachment (req: { body: any }, lineId: string, dir: string, pathField: { key: string }) {
   if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {
@@ -1297,34 +1314,44 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
 
 class MarkIndexedStream extends Writable {
   c: Collection<DatasetLine>
-  i: number = 0
-  bulkOp: UnorderedBulkOperation | null = null
+  buffer: DatasetLine[] = []
 
   constructor (dataset: RestDataset) {
     super({ objectMode: true })
     this.c = collection(dataset)
   }
 
-  async _write (chunk: DatasetLine, encoding: BufferEncoding, cb: (error?: Error) => void) {
-    try {
-      this.i = this.i || 0
-      this.bulkOp = this.bulkOp || this.c.initializeUnorderedBulkOp()
-      const line = await this.c.findOne({ _id: chunk._id })
+  // batched read-back: one $in query per batch instead of one findOne per line
+  async flush () {
+    if (!this.buffer.length) return
+    const chunks = this.buffer
+    this.buffer = []
+    const updatedAts = new Map<string, number>()
+    const cursor = this.c.find({ _id: { $in: chunks.map(c => c._id) } }, { projection: { _updatedAt: 1 } })
+    for await (const line of cursor) {
+      if (line._updatedAt) updatedAts.set(line._id, line._updatedAt.getTime())
+    }
+    let i = 0
+    const bulkOp = this.c.initializeUnorderedBulkOp()
+    for (const chunk of chunks) {
       // if the line was updated in the interval since reading for indexing
       // do not mark it as properly indexed
-      if (chunk._updatedAt && line?._updatedAt && chunk._updatedAt.getTime() === line._updatedAt.getTime()) {
-        this.i += 1
+      if (chunk._updatedAt && updatedAts.get(chunk._id) === chunk._updatedAt.getTime()) {
+        i += 1
         if (chunk._deleted) {
-          this.bulkOp.find({ _id: chunk._id }).deleteOne()
+          bulkOp.find({ _id: chunk._id }).deleteOne()
         } else {
-          this.bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
+          bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
         }
       }
-      if (this.i === config.mongo.maxBulkOps) {
-        await this.bulkOp.execute()
-        this.i = 0
-        this.bulkOp = null
-      }
+    }
+    if (i) await bulkOp.execute()
+  }
+
+  async _write (chunk: DatasetLine, encoding: BufferEncoding, cb: (error?: Error) => void) {
+    try {
+      this.buffer.push(chunk)
+      if (this.buffer.length >= config.mongo.maxBulkOps) await this.flush()
       cb()
     } catch (err: any) {
       cb(err)
@@ -1333,7 +1360,7 @@ class MarkIndexedStream extends Writable {
 
   async _final (cb: (err?: Error) => void) {
     try {
-      if (this.bulkOp && this.i) await this.bulkOp.execute()
+      await this.flush()
       cb()
     } catch (err: any) {
       cb(err)

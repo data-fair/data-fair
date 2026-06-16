@@ -14,7 +14,7 @@
     <!-- Logo and title -->
     <div
       class="d-flex align-center"
-      style="min-width: 256px"
+      :style="lgAndUp ? 'min-width: 256px' : undefined"
     >
       <img
         :src="$uiConfig.brand.logo || defaultLogo"
@@ -27,10 +27,11 @@
       </span>
     </div>
 
-    <!-- Same condition as drawer activator mobile-->
     <v-divider
-      v-if="user && lgAndUp"
+      v-if="showBreadcrumbs"
       vertical
+      :inset="!lgAndUp"
+      :class="!lgAndUp ? 'ml-2' : undefined"
     />
 
     <v-breadcrumbs

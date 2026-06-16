@@ -307,11 +307,12 @@
     },
     "tiles": {
       "type": "object",
-      "required": ["geojsonvtTolerance", "vtPrepareMaxZoom", "maxThreads"],
+      "required": ["geojsonvtTolerance", "vtPrepareMaxZoom", "maxThreads", "simplifyMaxVertices"],
       "properties": {
         "geojsonvtTolerance": { "type": "number" },
         "vtPrepareMaxZoom": { "type": "number" },
-        "maxThreads": { "type": "number" }
+        "maxThreads": { "type": "number" },
+        "simplifyMaxVertices": { "type": "number" }
       }
     },
     "applicationsDirectories": {
