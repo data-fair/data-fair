@@ -213,7 +213,12 @@ module.exports = {
   tiles: {
     geojsonvtTolerance: 4, // slightly higher simplification than default (3)
     vtPrepareMaxZoom: 10,
-    maxThreads: 1
+    maxThreads: 1,
+    // geometries with more vertices than this are simplified (Douglas-Peucker) before
+    // being stored in the calculated _geoshape field (used for tiles/geojson/wkt/spatial
+    // queries); the raw geometry column is left at full precision. ~50000 verts ≈ 2MB.
+    // -1 disables simplification.
+    simplifyMaxVertices: 50000
   },
   // used to configure service workers in cacheFirst mode for common directories of base applications source code
   applicationsDirectories: [
