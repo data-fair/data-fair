@@ -11,7 +11,7 @@ The integration follows a **browser-side tool exposure** pattern: the main appli
 - **Tools execute in the browser**: all tool logic runs client-side in the main application frame, with the user's session and permissions. The agent service never directly accesses the Data Fair API.
 - **Bilingual**: all tool annotations, subagent prompts, and the system prompt support French and English.
 - **Progressive activation**: the feature is gated behind an environment variable, an organization setting, and responsive UI rules.
-- **Read-heavy, write-light**: of 36 tools, only 7 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). The creation wizard tools manipulate client-side form state only — no server-side writes.
+- **Read-heavy, write-light**: of 39 tools, only 9 perform writes (navigate, set_expression, set_dataset_summary, set_dataset_description, set_application_summary, set_application_description, set_property_config, open_add_line_dialog, open_edit_line_dialog). These metadata "writes" set the edit-form field client-side — the user still saves. The creation wizard tools manipulate client-side form state only — no server-side writes.
 
 ### Activation flow
 
@@ -35,8 +35,8 @@ graph TB
             FS["Frame Server<br/>(BroadcastChannel)"]
             TR["Tool Registry<br/>(useAgentTool)"]
             SR["Subagent Registry<br/>(useAgentSubAgent)"]
-            Tools["36 Tools"]
-            SubAgents["8 Subagents"]
+            Tools["39 Tools"]
+            SubAgents["10 Subagents"]
             TR --> Tools
             SR --> SubAgents
             FS --> TR
@@ -295,6 +295,16 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Tools** | `list_services_versions`, `explore_github` |
 | **Source** | `ui/src/composables/agent/releases-tools.ts`, `ui/src/pages/admin/info.vue` |
 
+### 4.16 Write Application Summary / Description
+
+| | |
+|---|---|
+| **Trigger** | Action buttons next to the summary textarea and the description markdown editor on the application detail page (Metadata → Info tab) |
+| **Action IDs** | `summarize-application`, `describe-application` |
+| **Subagents** | `application_summarizer` (model `summarizer`) — ≤300 char plain-text summary; `application_description_writer` — 500-2000 char markdown description |
+| **Pattern** | Same as the dataset summary/description flow. The parent passes the current `applicationId` to the subagent (via the action button's hidden-context); the subagent reads context with the global `describe_application` + `get_application_config` tools. Generated text is presented and applied on approval via `set_application_summary` / `set_application_description` (which write the edit-form field — the user still saves). `set_application_summary` validates ≤300 chars and rejects generic openings ("This application is…" / "Cette application est…"), forcing a retry. |
+| **Source** | `ui/src/composables/application/agent-metadata-tools.ts`, `ui/src/components/application/metadata/application-metadata-form.vue`, `ui/src/pages/application/[id]/index.vue` |
+
 ## 5. Tool Reference
 
 | Tool | Category | R/W | Source |
@@ -325,7 +335,10 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `get_user_geolocation` | Geolocation | R | `agent/geo-tools.ts` |
 | `list_applications` | Applications | R | `application/agent-tools.ts` |
 | `describe_application` | Applications | R | `application/agent-tools.ts` |
+| `get_application_config` | Applications | R | `application/agent-tools.ts` |
 | `list_base_applications` | Applications | R | `application/agent-tools.ts` |
+| `set_application_summary` | Application metadata | **W** | `application/agent-metadata-tools.ts` |
+| `set_application_description` | Application metadata | **W** | `application/agent-metadata-tools.ts` |
 | `select_creation_type` | App creation | W* | `application/agent-creation-tools.ts` |
 | `select_base_application` | App creation | W* | `application/agent-creation-tools.ts` |
 | `select_copy_application` | App creation | W* | `application/agent-creation-tools.ts` |
@@ -339,11 +352,11 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `describe_processing` | Connectors | R | `agent/connector-tools.ts` |
 | `list_catalogs` | Connectors | R | `agent/connector-tools.ts` |
 | `describe_catalog` | Connectors | R | `agent/connector-tools.ts` |
-| `page_guidance` | Page guidance | R | `dataset/agent-page-guidance-tools.ts` (dataset detail page) |
+| `page_guidance` | Page guidance | R | `dataset/agent-page-guidance-tools.ts`, `application/agent-page-guidance-tools.ts` |
 | `list_services_versions` | Service info | R | `agent/releases-tools.ts` |
 | `explore_github` | Service info | R | `agent/releases-tools.ts` |
 
-All source paths are relative to `ui/src/composables/` unless otherwise noted. **W*** = client-side state only (no server write). Connector tools are conditional on integration flags. **`page_guidance`** is a page-scoped fallback tool: each page that registers it (currently only the dataset detail page) carries its own essential anti-misroute facts in the tool description and a full page structure / interaction guide in the returned content. The agent is instructed to call it only when unsure how to help the user on the current page.
+All source paths are relative to `ui/src/composables/` unless otherwise noted. **W*** = client-side state only (no server write). Connector tools are conditional on integration flags. **`page_guidance`** is a page-scoped fallback tool: each page that registers it (currently the dataset and application detail pages) carries its own essential anti-misroute facts in the tool description and a full page structure / interaction guide in the returned content. The renderer (`buildGuidance` + the `Guided*` types) is shared in `composables/agent/page-guidance.ts`; each page composable supplies its own heading, intro, and `agentDesc`-annotated `sections`. The agent is instructed to call it only when unsure how to help the user on the current page.
 
 ## 6. Subagent Reference
 
@@ -357,6 +370,8 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `expression_helper` | default | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
 | `schema_annotator` | summarizer | Suggest column titles and descriptions | Schema annotation tools |
 | `property_config_advisor` | summarizer | Suggest type overrides and capability optimizations | `read_property_config`, `set_property_config` |
+| `application_summarizer` | summarizer | Generate ≤300 char application summaries | `describe_application`, `get_application_config` |
+| `application_description_writer` | default | Generate 500-2000 char markdown application descriptions | `describe_application`, `get_application_config` |
 | `appConfig_form` | VJSF-managed | Fill application configuration form via natural language | VJSF form tools |
 | `editLine_form` | VJSF-managed | Fill add/edit line form via natural language | VJSF form tools |
 
@@ -383,7 +398,11 @@ All source paths are relative to `ui/src/composables/` unless otherwise noted. *
 | `ui/src/composables/dataset/agent-expression-tools.ts` | Expression tools (4) + `expression_helper` subagent |
 | `ui/src/composables/dataset/agent-schema-annotation-tools.ts` | Schema annotation tools (2) + `schema_annotator` subagent |
 | `ui/src/composables/dataset/agent-property-config-tools.ts` | Property config tools (2) + `property_config_advisor` subagent |
-| `ui/src/composables/application/agent-tools.ts` | Application tools (3) |
+| `ui/src/composables/agent/page-guidance.ts` | Shared page-guidance renderer (`buildGuidance` + `Guided*` types) for dataset + application |
+| `ui/src/composables/application/agent-tools.ts` | Application tools (4): list, describe, `get_application_config`, list base apps |
+| `ui/src/composables/application/agent-metadata-tools.ts` | Application summary + description set-tools (2) + `application_summarizer` & `application_description_writer` subagents |
+| `ui/src/composables/application/agent-page-guidance-tools.ts` | Application detail page `page_guidance` tool (thin renderer over the shared module) |
+| `ui/src/components/application/metadata/application-metadata-form.vue` | `summarize-application` and `describe-application` action buttons |
 | `ui/src/composables/application/agent-creation-tools.ts` | Application creation wizard tools (4) |
 | `ui/src/composables/dataset/agent-creation-tools.ts` | Dataset creation wizard tools (5) |
 | `ui/src/components/dataset/dataset-info.vue` | `summarize-dataset` and `describe-dataset` action buttons |
