@@ -10,14 +10,14 @@ import filesStorage from '#files-storage'
 const localeTimeZone = moment.tz.guess()
 
 // We want date_only dates to at time 00:00 in the most relevant timezone
-function parseDate (prop, calendarTimeZone) {
+function parseDate (prop: any, calendarTimeZone: any) {
   if (!prop.value.date_only) return moment(prop.value).toISOString()
   if (localeTimeZone === calendarTimeZone) return moment(prop.value).toISOString()
   const valueDay = moment(prop.value).format('YYYY-MM-DD')
   return moment.tz(valueDay, calendarTimeZone).toISOString()
 }
 
-export const parse = async (filePath) => {
+export const parse = async (filePath: string) => {
   const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
   let content = Buffer.from(buf).toString('utf8').trim()
   // fix badly closed openagenda exports
@@ -25,7 +25,7 @@ export const parse = async (filePath) => {
     content += '\nEND:VCALENDAR'
   }
   const cal = icalendar.parse_calendar(content)
-  const infos = {}
+  const infos: Record<string, any> = {}
   for (const p of Object.keys(cal.properties)) {
     let value = cal.properties[p][0].value
     if (Array.isArray(value)) value = value.join(', ')
@@ -46,10 +46,10 @@ export const parse = async (filePath) => {
     infos,
     eventsStream: new Readable({
       objectMode: true,
-      read () {
+      read (this: Readable & { i?: number }) {
         try {
           this.i = this.i || 0
-          let line
+          let line: Record<string, any>
           let pushOk = true
           do {
             const event = events[this.i]
@@ -77,13 +77,13 @@ export const parse = async (filePath) => {
 
             // pre-resolve recurring events, to prioritize ease of reading
             if (line.RRULE) {
-              const opts = {
+              const opts: Record<string, any> = {
                 dtstart: new Date(line.DTSTART)
               }
               for (const k of Object.keys(line.RRULE)) {
                 opts[k.toLowerCase()] = isNaN(line.RRULE[k]) ? line.RRULE[k] : Number(line.RRULE[k])
               }
-              if (opts.freq) opts.freq = rrule.RRule[opts.freq.toUpperCase()]
+              if (opts.freq) opts.freq = (rrule.RRule as Record<string, any>)[opts.freq.toUpperCase()]
               if (!opts.until) opts.until = new Date(Date.UTC(2099, 12, 31))
               if (opts.byday) {
                 opts.byweekday = opts.byday
@@ -93,7 +93,7 @@ export const parse = async (filePath) => {
               const startDates = rule.all().slice(0, 1000)
               const duration = moment(line.DTEND).diff(line.DTSTART)
               for (const startDate of startDates) {
-                const duplicateLine = {
+                const duplicateLine: Record<string, any> = {
                   ...line,
                   DTSTART: startDate.toISOString(),
                   DTEND: moment(startDate).add(duration).toISOString()
@@ -108,21 +108,21 @@ export const parse = async (filePath) => {
             this.i += 1
           } while (pushOk)
         } catch (err) {
-          this.destroy(err)
+          this.destroy(err as Error)
         }
       }
     })
   }
 }
 
-export const prepareSchema = (dataset, icalInfos) => {
+export const prepareSchema = (dataset: any, icalInfos: any) => {
   dataset.extras = dataset.extras || {}
   dataset.extras.iCalendar = icalInfos
   dataset.timeZone = icalInfos.timeZone
   delete icalInfos.timeZone
 
-  if (!dataset.schema.find(f => f.key === 'GEO')) {
-    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://www.w3.org/2003/01/geo/wgs84_pos#lat_long']
+  if (!dataset.schema.find((f: any) => f.key === 'GEO')) {
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['http://www.w3.org/2003/01/geo/wgs84_pos#lat_long']
     dataset.schema.push({
       key: 'GEO',
       'x-originalName': 'GEO',
@@ -132,8 +132,8 @@ export const prepareSchema = (dataset, icalInfos) => {
       'x-refersTo': 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
     })
   }
-  if (!dataset.schema.find(f => f.key === 'URL')) {
-    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['https://schema.org/WebPage']
+  if (!dataset.schema.find((f: any) => f.key === 'URL')) {
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['https://schema.org/WebPage']
     dataset.schema.push({
       key: 'URL',
       'x-originalName': 'URL',
@@ -143,8 +143,8 @@ export const prepareSchema = (dataset, icalInfos) => {
       'x-refersTo': 'https://schema.org/WebPage'
     })
   }
-  if (!dataset.schema.find(f => f.key === 'DTSTART')) {
-    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['https://schema.org/startDate']
+  if (!dataset.schema.find((f: any) => f.key === 'DTSTART')) {
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['https://schema.org/startDate']
     dataset.schema.push({
       key: 'DTSTART',
       'x-originalName': 'DTSTART',
@@ -154,8 +154,8 @@ export const prepareSchema = (dataset, icalInfos) => {
       'x-refersTo': 'https://schema.org/startDate'
     })
   }
-  if (!dataset.schema.find(f => f.key === 'DTEND')) {
-    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['https://schema.org/endDate']
+  if (!dataset.schema.find((f: any) => f.key === 'DTEND')) {
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['https://schema.org/endDate']
     dataset.schema.push({
       key: 'DTEND',
       'x-originalName': 'DTEND',
@@ -165,8 +165,8 @@ export const prepareSchema = (dataset, icalInfos) => {
       'x-refersTo': 'https://schema.org/endDate'
     })
   }
-  if (!dataset.schema.find(f => f.key === 'SUMMARY')) {
-    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://www.w3.org/2000/01/rdf-schema#label']
+  if (!dataset.schema.find((f: any) => f.key === 'SUMMARY')) {
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['http://www.w3.org/2000/01/rdf-schema#label']
     dataset.schema.push({
       key: 'SUMMARY',
       'x-originalName': 'SUMMARY',
@@ -176,8 +176,8 @@ export const prepareSchema = (dataset, icalInfos) => {
       'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label'
     })
   }
-  if (!dataset.schema.find(f => f.key === 'DESCRIPTION')) {
-    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://schema.org/description']
+  if (!dataset.schema.find((f: any) => f.key === 'DESCRIPTION')) {
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['http://schema.org/description']
     dataset.schema.push({
       key: 'DESCRIPTION',
       'x-originalName': 'DESCRIPTION',

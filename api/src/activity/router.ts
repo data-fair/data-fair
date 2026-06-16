@@ -2,7 +2,7 @@
 // for now we create something similar based on recently updated datasets and applications
 
 import { Router } from 'express'
-import * as findUtils from '../misc/utils/find.js'
+import * as findUtils from '../misc/utils/find.ts'
 import { findActivityResources } from './service.ts'
 import { mergeActivity } from './operations.ts'
 

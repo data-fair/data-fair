@@ -1,8 +1,8 @@
 // inspired by https://github.com/danielgindi/node-autodetect-decoder-stream/blob/master/index.js
 
-import iconv from 'iconv-lite'
+import iconv, { type DecoderStream } from 'iconv-lite'
 import chardet from 'chardet'
-import { Transform } from 'stream'
+import { Transform, type TransformCallback } from 'stream'
 import outOfCharacter from 'out-of-character'
 
 const sampleSize = 32768 // 32kb
@@ -10,19 +10,22 @@ const sampleSize = 32768 // 32kb
 const iconvOpts = { stripBOM: false }
 
 class DecodeStream extends Transform {
-  constructor (encoding) {
+  _buffer?: Buffer
+  decoder: DecoderStream | null
+
+  constructor (encoding?: string) {
     super()
     this._buffer = Buffer.alloc(0)
     this.decoder = encoding ? iconv.getDecoder(encoding, iconvOpts) : null
   }
 
-  processBuffer (chunk, flush = false) {
+  processBuffer (chunk: Buffer | null, flush = false) {
     if (!this.decoder) {
-      if (chunk) this._buffer = Buffer.concat([this._buffer, chunk])
-      if (this._buffer.length > sampleSize || flush) {
-        const encoding = chardet.detect(this._buffer) ?? 'UTF-8'
+      if (chunk) this._buffer = Buffer.concat([this._buffer!, chunk])
+      if (this._buffer!.length > sampleSize || flush) {
+        const encoding = chardet.detect(this._buffer!) ?? 'UTF-8'
         this.decoder = iconv.getDecoder(encoding, iconvOpts)
-        chunk = this._buffer
+        chunk = this._buffer!
         delete this._buffer
       }
     }
@@ -38,12 +41,12 @@ class DecodeStream extends Transform {
     }
   }
 
-  _transform (chunk, encoding, callback) {
+  _transform (chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback) {
     this.processBuffer(chunk)
     callback()
   }
 
-  _flush (callback) {
+  _flush (callback: TransformCallback) {
     this.processBuffer(null, true)
     callback()
   }

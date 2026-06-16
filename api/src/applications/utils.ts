@@ -2,10 +2,10 @@ import config from '#config'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import path from 'path'
-import * as visibilityUtils from '../misc/utils/visibility.js'
+import * as visibilityUtils from '../misc/utils/visibility.ts'
 import * as permissions from '../misc/utils/permissions.ts'
-import { prepareMarkdownContent } from '../misc/utils/markdown.js'
-import * as findUtils from '../misc/utils/find.js'
+import { prepareMarkdownContent } from '../misc/utils/markdown.ts'
+import * as findUtils from '../misc/utils/find.ts'
 import clone from '@data-fair/lib-utils/clone.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -13,8 +13,9 @@ import { getPseudoSessionState } from '../misc/utils/users.ts'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { ownerDir } from '../datasets/utils/files.ts'
 import { updateTotalStorage } from '../datasets/utils/storage.ts'
-import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
+import { prepareThumbnailUrl } from '../misc/utils/thumbnails.ts'
 import { reqSession } from '@data-fair/lib-express'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import type { Application, PublicationSite, Request } from '#types'
 import filesStorage from '#files-storage'
 
@@ -61,7 +62,7 @@ const memoizedGetFreshDataset = memoize(async (id) => {
 })
 
 export const refreshConfigDatasetsRefs = async (req: Request, application: Application, draft: boolean, checkWithPersonalSession = false, schemaOnly = false) => {
-  const publicBaseUrl = req.publicBaseUrl
+  const publicBaseUrl = reqPublicBaseUrl(req)
 
   const configuration = (draft ? (application.configurationDraft || application.configuration) : application.configuration) || {}
 

@@ -8,6 +8,8 @@ import * as rateLimiting from './rate-limiting.ts'
 import { type Request, type Response, type NextFunction } from 'express'
 import { type ApplicationKey, type RequestWithResource } from '#types'
 import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
+import { reqResource, setReqBypassPermissions } from './req-context.ts'
+import { reqPublicBaseUrl } from './public-base-url.ts'
 import debugModule from 'debug'
 
 const debug = debugModule('application-keys')
@@ -65,7 +67,7 @@ export const clearApplicationKeysCaches = () => {
 // a missing Origin header is still accepted to keep non-browser clients working
 const matchingHost = (req: Request) => {
   if (!req.headers.origin) return true
-  return new URL((req as Request & { publicBaseUrl: string }).publicBaseUrl).origin === req.headers.origin
+  return new URL(reqPublicBaseUrl(req)).origin === req.headers.origin
 }
 
 export default async (req: RequestWithResource, res: Response, next: NextFunction) => {
@@ -81,7 +83,7 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
   }
   if (!refererUrl) return next()
 
-  const dataset = req.resource
+  const dataset = reqResource(req)
 
   const ownerType = dataset.owner.type
   const ownerId = dataset.owner.id
@@ -190,8 +192,9 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
         }
       }
 
-      req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
-      debug('apply bypass permissions', req.bypassPermissions)
+      const bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
+      setReqBypassPermissions(req, bypassPermissions)
+      debug('apply bypass permissions', bypassPermissions)
       if (!reqUser(req)) {
         debug('set pseudo user')
         setReqUser(

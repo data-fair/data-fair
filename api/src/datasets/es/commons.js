@@ -9,13 +9,13 @@ import truncateHTML from 'truncate-html'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
-import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js'
+import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.ts'
 import * as tiles from '../utils/tiles.ts'
 import * as geo from '../utils/geo.js'
 import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
-import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.js'
+import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.ts'
 import {
   hasCapability,
   requiredCapability,

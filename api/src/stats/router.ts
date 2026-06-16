@@ -1,5 +1,5 @@
 import express from 'express'
-import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as limitsUtils from '../limits/service.ts'
 import mongo from '#mongo'
 import { type Account, reqSessionAuthenticated } from '@data-fair/lib-express'

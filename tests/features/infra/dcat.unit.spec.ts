@@ -2,8 +2,8 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import fs from 'node:fs'
-import dcatNormalize from '../../../api/src/misc/utils/dcat/normalize.js'
-import dcatValidate from '../../../api/src/misc/utils/dcat/validate.js'
+import dcatNormalize from '../../../api/src/misc/utils/dcat/normalize.ts'
+import dcatValidate from '../../../api/src/misc/utils/dcat/validate.ts'
 
 const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '../../../tests/resources/dcat/ods-export.rdf'), 'utf-8')
 const semiceuExample = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../../../tests/resources/dcat/example-semiceu.json'), 'utf8'))

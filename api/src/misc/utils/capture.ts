@@ -1,10 +1,12 @@
 import config from '#config'
 import path from 'path'
-import axios from './axios.js'
+import axios from './axios.ts'
 import pump from './pipe.ts'
 import * as rateLimiting from './rate-limiting.ts'
 import debug from 'debug'
 import * as permissionsUtils from './permissions.ts'
+import { reqResource } from './req-context.ts'
+import { reqPublicBaseUrl } from './public-base-url.ts'
 import resolvePath from 'resolve-path'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { RequestWithResource } from '#types'
@@ -18,8 +20,9 @@ const captureUrl = config.privateCaptureUrl || config.captureUrl
 const capturesDir = path.resolve(config.dataDir, 'captures')
 
 const screenshotRequestOpts = (req: RequestWithResource, isDefaultThumbnail = false): AxiosRequestConfig => {
+  const resource = reqResource(req)
   const screenshotUrl = (captureUrl + '/api/v1/screenshot')
-  const targetUrl = new URL(`${config.publicUrl}/app/${req.resource.id}`)
+  const targetUrl = new URL(`${config.publicUrl}/app/${resource.id}`)
   if (isDefaultThumbnail) targetUrl.searchParams.set('thumbnail', 'true')
   const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
   // forward query params to open application in specific state
@@ -35,14 +38,14 @@ const screenshotRequestOpts = (req: RequestWithResource, isDefaultThumbnail = fa
     type: 'png',
     width: '1050', // 21/9 resolution
     height: '450',
-    filename: req.query.filename ? req.query.filename : ((req.resource.slug || req.resource.id) + '.png')
+    filename: req.query.filename ? req.query.filename : ((resource.slug || resource.id) + '.png')
   }
   if (typeof req.query.width === 'string') qs.width = req.query.width
   if (typeof req.query.height === 'string') qs.height = req.query.height
   if (req.query.type === 'gif') qs.type = 'gif' // will return a gif if the application supports an animation mode, png otherwise
   if (req.query.timer === 'true') qs.timer = 'true'
   const headers: Record<string, string> = {}
-  if (permissionsUtils.isPublic('applications', req.resource)) {
+  if (permissionsUtils.isPublic('applications', resource)) {
     qs.cookies = 'false'
   } else {
     headers.Cookie = cookieText
@@ -57,8 +60,9 @@ const screenshotRequestOpts = (req: RequestWithResource, isDefaultThumbnail = fa
 }
 
 const printRequestOpts = (req: RequestWithResource): AxiosRequestConfig => {
+  const resource = reqResource(req)
   const printUrl = (captureUrl + '/api/v1/print')
-  const targetUrl = new URL(`${config.publicUrl}/app/${req.resource.id}`)
+  const targetUrl = new URL(`${config.publicUrl}/app/${resource.id}`)
   const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
   // forward query params to open application in specific state
   for (const key of Object.keys(req.query)) {
@@ -68,11 +72,11 @@ const printRequestOpts = (req: RequestWithResource): AxiosRequestConfig => {
 
   const qs: Record<string, string> = {
     target: targetUrl.href,
-    filename: req.query.filename ? req.query.filename : ((req.resource.slug || req.resource.id) + '.pdf')
+    filename: req.query.filename ? req.query.filename : ((resource.slug || resource.id) + '.pdf')
   }
   if (req.query.landscape) qs.landscape = req.query.landscape
   const headers: Record<string, string> = {}
-  if (permissionsUtils.isPublic('applications', req.resource)) {
+  if (permissionsUtils.isPublic('applications', resource)) {
     qs.cookies = 'false'
   } else {
     headers.Cookie = cookieText
@@ -113,7 +117,8 @@ const stream2req = async (reqOpts: AxiosRequestConfig, res: Response) => {
 }
 
 export const screenshot = async (req: RequestWithResource, res: Response) => {
-  const capturePath = resolvePath(capturesDir, req.resource.id + '.png')
+  const resource = reqResource(req)
+  const capturePath = resolvePath(capturesDir, resource.id + '.png')
 
   const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt' && k !== 'app_capture-test-error').length === 0
 
@@ -122,7 +127,7 @@ export const screenshot = async (req: RequestWithResource, res: Response) => {
   if (isDefaultThumbnail) {
     if (await filesStorage.pathExists(capturePath)) {
       const stats = await filesStorage.fileStats(capturePath)
-      if (req.resource.updatedAt && Math.floor(stats.lastModified.getTime() / 1000) >= Math.floor(new Date(req.resource.updatedAt).getTime() / 1000)) {
+      if (resource.updatedAt && Math.floor(stats.lastModified.getTime() / 1000) >= Math.floor(new Date(resource.updatedAt).getTime() / 1000)) {
         res.set('x-capture-cache-status', 'HIT')
         return await downloadFileFromStorage(capturePath, req, res)
       } else {
@@ -150,7 +155,7 @@ export const screenshot = async (req: RequestWithResource, res: Response) => {
       await filesStorage.removeFile(capturePath)
       res.set('Cache-Control', 'no-cache')
       res.set('Expires', '-1')
-      return res.redirect(req.publicBaseUrl + '/no-preview.png')
+      return res.redirect(reqPublicBaseUrl(req) + '/no-preview.png')
     }
   } else {
     if (!rateLimiting.consume(req, 'appCaptures')) {

@@ -8,7 +8,7 @@ import { Readable, compose } from 'node:stream'
 import tmp from 'tmp-promise'
 import mime from 'mime-types'
 import resolvePath from 'resolve-path'
-import { displayBytes } from '../../misc/utils/bytes.js'
+import { displayBytes } from '../../misc/utils/bytes.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import * as datasetService from '../../datasets/service.js'
@@ -156,7 +156,7 @@ export default async function (dataset: FileDataset) {
       if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
         throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
       }
-      const icalendar = await import('../../misc/utils/icalendar.js')
+      const icalendar = await import('../../misc/utils/icalendar.ts')
       const { stringify: csvStrStream } = await import('csv-stringify')
 
       const { eventsStream, infos } = await icalendar.parse(originalFilePath)

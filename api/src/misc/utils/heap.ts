@@ -7,9 +7,9 @@ const numberAbbreviate = new NumberAbbreviate([' k', ' M', ' G', ' T'])
 
 if (global.gc) console.log('Manual garbage collection is available')
 
-const f = val => Math.round((val / 1024 / 1024)).toLocaleString({}) + 'Mo'
+const f = (val: any) => (Math.round((val / 1024 / 1024)) as { toLocaleString: (...args: any[]) => string }).toLocaleString({}) + 'Mo'
 
-export const debug = (prefix) => async (key, value) => {
+export const debug = (prefix: any) => async (key: any, value: any) => {
   if (!process.env.DEBUG_HEAP) return
   if (process.env.DEBUG_HEAP !== '*' && !prefix.startsWith(process.env.DEBUG_HEAP)) return
 

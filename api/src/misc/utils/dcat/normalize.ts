@@ -1,6 +1,6 @@
 import jsonld from 'jsonld'
-import context from './context.js'
-import * as convert from './convert.js'
+import context from './context.ts'
+import * as convert from './convert.ts'
 
 // Frame is used to control serialization of nested objects, prefered over a flat graph
 /** @type {import('jsonld').NodeObject} */
@@ -24,7 +24,7 @@ const frame = {
  * @param {any} obj
  * @param {string[]} keys
  */
-const ensureArrays = (obj, keys) => {
+const ensureArrays = (obj: any, keys: string[]) => {
   for (const key of keys) {
     if (obj[key] && !Array.isArray(obj[key])) {
       obj[key] = [obj[key]]
@@ -36,7 +36,7 @@ const ensureArrays = (obj, keys) => {
  * @param {any} obj
  * @param {string[]} keys
  */
-const simplifyIds = (obj, keys) => {
+const simplifyIds = (obj: any, keys: string[]) => {
   for (const key of keys) {
     if (obj[key]?.['@id']) obj[key] = obj[key]['@id']
   }
@@ -46,7 +46,7 @@ const simplifyIds = (obj, keys) => {
  * @param {any} obj
  * @param {string[]} keys
  */
-const simplifyLabels = (obj, keys) => {
+const simplifyLabels = (obj: any, keys: string[]) => {
   for (const key of keys) {
     if (obj[key]?.label) obj[key] = obj[key].label
   }
@@ -56,17 +56,17 @@ const simplifyLabels = (obj, keys) => {
  * @param {any} obj
  * @param {string[]} keys
  */
-const simplifyI18n = (obj, keys) => {
+const simplifyI18n = (obj: any, keys: string[]) => {
   for (const key of keys) {
     if (obj[key]?.['@language'] && obj[key]?.['@value']) obj[key] = obj[key]['@value']
   }
 }
 
-const simplifyType = (obj) => {
+const simplifyType = (obj: any) => {
   if (obj['@type'] && Array.isArray(obj['@type'])) obj['@type'] = obj['@type'][0]
 }
 
-const removePrefix = (obj, key, prefix) => {
+const removePrefix = (obj: any, key: string, prefix: string) => {
   if (obj[key] && typeof obj[key] === 'string' && obj[key].startsWith(prefix)) {
     obj[key] = obj[key].slice(prefix.length)
   }
@@ -76,7 +76,7 @@ const removePrefix = (obj, key, prefix) => {
  * @param {any} dcat
  * @param {string} baseIRI
  */
-export default async (dcat, baseIRI) => {
+export default async (dcat: any, baseIRI: string) => {
   if (typeof dcat === 'string') dcat = await convert.fromXML(dcat, baseIRI)
   dcat = await jsonld.frame(dcat, frame)
   dcat = await jsonld.compact(dcat, context)

@@ -98,17 +98,20 @@ export const run = async () => {
     app.use(session.middleware())
 
     // TODO: we could make this better targetted but more verbose by adding it to all routes
-    app.use((await import('./misc/utils/expect-type.js')).default(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
+    app.use((await import('./misc/utils/expect-type.ts')).default(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
 
     // set current baseUrl, i.e. the url of data-fair on the current user's domain
     // check for the matching publicationSite, etc
+    const { setReqPublicBaseUrl, setReqPublicWsBaseUrl } = await import('./misc/utils/public-base-url.ts')
+    const { setReqPublicationSite, setReqMainPublicationSite } = await import('./misc/utils/publication-sites.ts')
     const parsedPublicUrl = new URL(config.publicUrl)
 
     app.use('/', async (req, res, next) => {
       const mainDomain = reqIsInternal(req) || reqHost(req) === parsedPublicUrl.host
-      req.publicBaseUrl = mainDomain ? config.publicUrl : (reqSiteUrl(req) + '/data-fair')
-      req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
-      debugDomain('req.publicBaseUrl', req.publicBaseUrl)
+      const publicBaseUrl = mainDomain ? config.publicUrl : (reqSiteUrl(req) + '/data-fair')
+      setReqPublicBaseUrl(req, publicBaseUrl)
+      setReqPublicWsBaseUrl(req, publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/')
+      debugDomain('req.publicBaseUrl', publicBaseUrl)
 
       const siteUrl = mainDomain ? parsedPublicUrl.origin : reqSiteUrl(req)
       const settings = await memoizedGetPublicationSiteSettings(siteUrl, mainDomain && req.query.publicationSites, mongo.db)
@@ -123,13 +126,13 @@ export const run = async () => {
         }
         if (mainDomain) {
           if (publicationSite.url === siteUrl) {
-            req.mainPublicationSite = publicationSite
+            setReqMainPublicationSite(req, publicationSite)
           }
           if (req.query.publicationSites === publicationSite.type + ':' + publicationSite.id) {
-            req.publicationSite = publicationSite
+            setReqPublicationSite(req, publicationSite)
           }
         } else {
-          req.publicationSite = publicationSite
+          setReqPublicationSite(req, publicationSite)
         }
       }
       next()
@@ -164,7 +167,7 @@ export const run = async () => {
     })
 
     // External applications proxy
-    const serviceWorkers = await import('./misc/utils/service-workers.js')
+    const serviceWorkers = await import('./misc/utils/service-workers.ts')
     app.get('/app-sw.js', (req, res) => {
       res.setHeader('Content-Type', 'application/javascript')
       res.send(serviceWorkers.sw(req.application))
@@ -284,7 +287,7 @@ export const run = async () => {
     const permissions = await import('./misc/utils/permissions.ts')
     const { readApiKey } = await import('./misc/utils/api-key.ts')
     await Promise.all([
-      (await import('./misc/utils/cache.js')).init(),
+      (await import('./misc/utils/cache.ts')).init(),
       (await import('./remote-services/service.ts')).init(),
       (await import('./base-applications/router.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {

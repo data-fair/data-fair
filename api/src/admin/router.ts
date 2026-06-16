@@ -2,7 +2,7 @@ import express from 'express'
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import { reqAdminMode } from '@data-fair/lib-express'
-import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import {
   getStatus,
   findDatasetsErrors,
@@ -13,6 +13,7 @@ import {
   findBaseApplications
 } from './service.ts'
 import { getElasticsearchDiagnose } from './elasticsearch-diagnose-service.ts'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 
 const router = express.Router()
 export default router
@@ -66,5 +67,5 @@ router.get('/owners', async (req, res) => {
 })
 
 router.get('/base-applications', async (req, res) => {
-  res.send(await findBaseApplications(req.query, req.publicBaseUrl))
+  res.send(await findBaseApplications(req.query, reqPublicBaseUrl(req)))
 })

@@ -8,6 +8,7 @@ import { metadataAttachmentsDir as datasetAttachmentsDir } from '../../datasets/
 import { attachmentsDir as applicationAttachmentsDir } from '../../applications/utils.ts'
 import * as limits from '../../limits/service.ts'
 import filesStorage from '#files-storage'
+import { reqResource, reqResourceType } from './req-context.ts'
 
 const debug = debugLib('attachments')
 const debugLimits = debugLib('limits')
@@ -17,7 +18,8 @@ const debugLimits = debugLib('limits')
 const metadataStorage = {
   async _handleFile (req: any, file: any, cb: (err?: any, file?: any) => void) {
     try {
-      const destination = req.resourceType === 'applications' ? applicationAttachmentsDir(req.resource) : datasetAttachmentsDir(req.resource)
+      const resource = reqResource(req)
+      const destination = reqResourceType(req) === 'applications' ? applicationAttachmentsDir(resource) : datasetAttachmentsDir(resource)
       const filename = file.originalname
       const finalPath = path.join(destination, filename)
       await filesStorage.writeStream(file.stream, finalPath)
@@ -62,11 +64,12 @@ const metadataUploadMulter = multer({
         debugLimits('attachmentStorage/metadataUpload', { attachmentLimit, estimatedFileSize })
         throw httpError(413, 'Attachment size exceeds the authorized limit')
       }
-      const remaining = await limits.remaining(req.resource.owner)
-      const debugInfo = { owner: req.resource.owner, remaining: { ...remaining }, estimatedFileSize }
+      const resource = reqResource(req)
+      const remaining = await limits.remaining(resource.owner)
+      const debugInfo = { owner: resource.owner, remaining: { ...remaining }, estimatedFileSize }
       if (remaining.storage !== -1) {
         // Ignore the size of the attachment we are overwriting
-        const existingAttachment = (req.resource.attachments || []).find(a => a.name === file.originalname)
+        const existingAttachment = (resource.attachments || []).find(a => a.name === file.originalname)
         if (existingAttachment) {
           remaining.storage += existingAttachment.size
           debugInfo.existingAttachment = existingAttachment

@@ -1,5 +1,5 @@
 import mime from 'mime'
-import dcatContext from '../misc/utils/dcat/context.js'
+import dcatContext from '../misc/utils/dcat/context.ts'
 
 // build a DCAT catalog document (mostly useful for harvesting by data.gouv.fr) from the datasets
 // of a publication site. Pure — the unit-test surface for the catalog module.

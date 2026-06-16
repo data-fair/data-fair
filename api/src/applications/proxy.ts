@@ -8,7 +8,7 @@ import * as parse5 from 'parse5'
 import pump from '../misc/utils/pipe.ts'
 import CacheableLookup from 'cacheable-lookup'
 import * as permissions from '../misc/utils/permissions.ts'
-import * as serviceWorkers from '../misc/utils/service-workers.js'
+import * as serviceWorkers from '../misc/utils/service-workers.ts'
 import { refreshConfigDatasetsRefs } from './utils.ts'
 import { buildManifest, buildLoginHtml } from './operations.ts'
 import { setProxyResource, reqApplication, reqMatchingApplicationKey } from './middlewares.ts'
@@ -16,6 +16,7 @@ import { getManifestBaseApp, getProxyBaseAppAndLimits, fetchHTML, getHtmlCache }
 import Debug from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { reqSession, reqSiteUrl, reqUserAuthenticated } from '@data-fair/lib-express'
+import { reqPublicBaseUrl, reqPublicWsBaseUrl } from '../misc/utils/public-base-url.ts'
 import type { Application, Request } from '#types'
 
 // the proxy enriches the loaded application with request-time fields that are not part of the
@@ -48,7 +49,7 @@ router.get('/:applicationId/manifest.json', setProxyResource, async (req, res) =
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   res.setHeader('Content-Type', 'application/manifest+json')
   // exposedUrl is a request-time enrichment added by setResourceLinks (same gap as utils.ts clean); precise cast, not `any`
-  res.send(buildManifest(reqApplication(req) as ProxyApplication, baseApp, (req as Request).publicBaseUrl))
+  res.send(buildManifest(reqApplication(req) as ProxyApplication, baseApp, reqPublicBaseUrl(req)))
 })
 
 // Login is a special small UI page on /app/appId/login
@@ -94,14 +95,14 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   const application = reqApplication(req) as ProxyApplication
 
   if (!permissions.can('applications', application, 'readConfig', reqSession(req)) && !reqMatchingApplicationKey(req)) {
-    return res.redirect(`${(req as Request).publicBaseUrl}/app/${req.params.applicationId}/login`)
+    return res.redirect(`${reqPublicBaseUrl(req)}/app/${req.params.applicationId}/login`)
   }
 
   delete application.permissions
-  application.apiUrl = (req as Request).publicBaseUrl + '/api/v1'
+  application.apiUrl = reqPublicBaseUrl(req) + '/api/v1'
   // TODO: captureUrl should be on same domain too ?
   application.captureUrl = config.captureUrl
-  application.wsUrl = (req as Request).publicWsBaseUrl
+  application.wsUrl = reqPublicWsBaseUrl(req)
   const matchingKey = reqMatchingApplicationKey(req)
   if (matchingKey) application.applicationKey = matchingKey
 
@@ -201,7 +202,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   if (referer) {
     const refererUrl = new URL(referer as string)
     const refererDomain = refererUrl.hostname
-    const iframeRedirectUrl = new URL(`${(req as Request).publicBaseUrl}${req.originalUrl}`)
+    const iframeRedirectUrl = new URL(`${reqPublicBaseUrl(req)}${req.originalUrl}`)
     if (refererDomain !== 'localhost' && refererDomain !== iframeRedirectUrl.hostname && refererDomain !== iframeRedirectUrl.searchParams.get('referer')) {
       iframeRedirectUrl.searchParams.set('referer', refererDomain)
       iframeRedirect = iframeRedirectUrl.href

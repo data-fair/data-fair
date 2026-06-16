@@ -1,10 +1,12 @@
-import { Transform } from 'node:stream'
+import { Transform, type TransformCallback } from 'node:stream'
 
 // TODO: use this util in more places
 
-export default (size) => {
+type BatchTransform = Transform & { _batch?: any[] }
+
+export default (size: number) => {
   return new Transform({
-    transform (line, encoding, callback) {
+    transform (this: BatchTransform, line: any, encoding: BufferEncoding, callback: TransformCallback) {
       this._batch = this._batch || []
       this._batch.push(line)
       if (this._batch.length >= size) {
@@ -13,7 +15,7 @@ export default (size) => {
       }
       callback()
     },
-    flush (callback) {
+    flush (this: BatchTransform, callback: TransformCallback) {
       if (this._batch && this._batch.length) {
         this.push(this._batch)
       }

@@ -7,22 +7,16 @@ import mongo from '#mongo'
 import { Router } from 'express'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as apiDocsUtil from './api-docs.ts'
-import * as visibilityUtils from './visibility.js'
+import * as visibilityUtils from './visibility.ts'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
-import { defineReqContext } from './req-context.ts'
-
-// permissions is the semantic owner of the resource / resourceType request context.
-// legacyProp dual-write keeps the legacy `req.resource` / `req.resourceType` reads in this file
-// (and the setters in other modules' routers) working while modules migrate to the accessors.
-const resourceCtx = defineReqContext<Resource>('resource', 'resource')
-export const setReqResource = resourceCtx.set
-export const reqResource = resourceCtx.get
-export const reqResourceOptional = resourceCtx.getOptional
-
-const resourceTypeCtx = defineReqContext<ResourceType>('resourceType', 'resourceType')
-export const setReqResourceType = resourceTypeCtx.set
-export const reqResourceType = resourceTypeCtx.get
+// The cross-cutting resource / resourceType / bypassPermissions / publicOperation
+// request-context accessors live in the config-free req-context.ts (so config-free
+// consumers can import them without pulling in #config) — see code-conventions.md §2.
+// They are re-exported here so existing `permissions.<accessor>` namespace consumers
+// keep working; config-free consumers import them directly from req-context.ts.
+import { reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
+export { setReqResource, reqResource, reqResourceOptional, setReqResourceType, reqResourceType, setReqBypassPermissions, reqBypassPermissions, setReqPublicOperation, reqPublicOperation } from './req-context.ts'
 
 const resourceTypesLabels: Record<ResourceType, string> = {
   datasets: 'Le jeu de données',
@@ -40,16 +34,17 @@ export const middleware = function (operationId: string, operationClass: string,
   return function (req: RequestWithResource, res: Response, next: NextFunction) {
     const sessionState = reqSession(req)
 
-    if ((acceptMissing && !req.resource)) {
+    if (acceptMissing && !reqResourceOptional(req)) {
       next()
       return
     }
-    if (can(req.resourceType, req.resource, operationId, sessionState, req.bypassPermissions)) {
+    if (can(reqResourceType(req), reqResource(req), operationId, sessionState, reqBypassPermissions(req))) {
       // nothing to do, user can proceed
     } else {
       res.status(403).type('text/plain')
-      const denomination = resourceTypesLabels[req.resourceType] || 'La ressource'
+      const denomination = resourceTypesLabels[reqResourceType(req)] || 'La ressource'
       if (operationId === 'readDescription') {
+        const resource = reqResource(req)
         if (!sessionState.user) {
           res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
           return
@@ -58,15 +53,15 @@ export const middleware = function (operationId: string, operationClass: string,
           let name = org.name || org.id
           if (org.department) name += ' / ' + (org.departmentName || org.department)
           const altSessionState: SessionState = { ...sessionState, account: { type: 'organization', ...org }, accountRole: org.role }
-          if (can(req.resourceType, req.resource, operationId, altSessionState, req.bypassPermissions)) {
+          if (can(reqResourceType(req), resource, operationId, altSessionState, reqBypassPermissions(req))) {
             // expose x-owner so the UI can offer a "switch active account" action without parsing the error body
-            if (req.resource?.owner) {
-              const ownerKey = req.resource.owner.department
-                ? { type: req.resource.owner.type, id: req.resource.owner.id, department: req.resource.owner.department } as AccountKeys
-                : { type: req.resource.owner.type, id: req.resource.owner.id } as AccountKeys
+            if (resource.owner) {
+              const ownerKey = resource.owner.department
+                ? { type: resource.owner.type, id: resource.owner.id, department: resource.owner.department } as AccountKeys
+                : { type: resource.owner.type, id: resource.owner.id } as AccountKeys
               res.setHeader('x-owner', JSON.stringify(ownerKey))
             }
-            res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} (${org.id}) dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
+            res.send(`${denomination} ${resource.title} est accessible depuis l'organisation ${name} (${org.id}) dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
             return
           }
         }
@@ -78,15 +73,16 @@ export const middleware = function (operationId: string, operationClass: string,
     }
 
     // this is stored here to be used by cache headers utils to manage public cache
-    req.publicOperation = can(req.resourceType, req.resource, operationId, { lang: 'fr' })
+    setReqPublicOperation(req, can(reqResourceType(req), reqResource(req), operationId, { lang: 'fr' }))
 
     // these headers can be used to apply other permission/quota/metrics on the gateway
-    if (req.resource) {
-      res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title ?? '') }))
-      if (req.resource.owner) {
-        const ownerKey = req.resource.owner.department
-          ? { type: req.resource.owner.type, id: req.resource.owner.id, department: req.resource.owner.department } as AccountKeys
-          : { type: req.resource.owner.type, id: req.resource.owner.id } as AccountKeys
+    const resource = reqResourceOptional(req)
+    if (resource) {
+      res.setHeader('x-resource', JSON.stringify({ type: reqResourceType(req), id: resource.id, title: encodeURIComponent(resource.title ?? '') }))
+      if (resource.owner) {
+        const ownerKey = resource.owner.department
+          ? { type: resource.owner.type, id: resource.owner.id, department: resource.owner.department } as AccountKeys
+          : { type: resource.owner.type, id: resource.owner.id } as AccountKeys
         res.setHeader('x-owner', JSON.stringify(ownerKey))
       }
     }
@@ -99,8 +95,8 @@ export const middleware = function (operationId: string, operationClass: string,
 /** Express middleware that checks the user can perform a given operation class on the resource's owner (used for cross-owner actions). */
 export const canDoForOwnerMiddleware = function (operationClass: string, ignoreDepartment = false) {
   return function (req: RequestWithResource, res: Response, next: NextFunction) {
-    const owner: AccountKeys = ignoreDepartment ? { ...req.resource.owner, department: undefined } : req.resource.owner
-    if (!canDoForOwner(owner, req.resourceType, operationClass, reqSession(req))) {
+    const owner: AccountKeys = ignoreDepartment ? { ...reqResource(req).owner, department: undefined } : reqResource(req).owner
+    if (!canDoForOwner(owner, reqResourceType(req), operationClass, reqSession(req))) {
       return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')
     }
     next()
@@ -344,7 +340,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
   const router = Router()
 
   router.get('', middleware('getPermissions', 'admin') as RequestHandler, (async (req: RequestWithResource, res, next) => {
-    res.status(200).send(req.resource.permissions || [])
+    res.status(200).send(reqResource(req).permissions || [])
   }) as RequestHandler)
 
   router.put('', middleware('setPermissions', 'admin') as RequestHandler, (async (req, res, next) => {
@@ -360,7 +356,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
     }
     const resources = mongo.db.collection(resourceType)
     try {
-      const resource = await req.resource
+      const resource = await reqResource(req)
       const wasPublic = isPublic(resourceType, resource)
       const willBePublic = isPublic(resourceType, { ...resource, permissions })
 

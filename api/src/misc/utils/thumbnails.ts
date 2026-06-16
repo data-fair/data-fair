@@ -6,21 +6,38 @@ import tmp from 'tmp-promise'
 import { Binary } from 'mongodb'
 import config from '#config'
 import mongo from '#mongo'
-import axios from './axios.js'
-import { setNoCache } from './cache-headers.js'
+import axios from './axios.ts'
+import { setNoCache } from './cache-headers.ts'
 import { tmpDir } from '../../datasets/utils/files.ts'
 import debugLib from 'debug'
 import filesStorage from '#files-storage'
 import { httpError } from '@data-fair/lib-express'
+import { reqPublicOperation } from './req-context.ts'
+import { reqPublicBaseUrl } from './public-base-url.ts'
+import type { Request, Response } from 'express'
 
 const debug = debugLib('thumbnails')
 
-const getCacheEntry = async (db, url, filePath, sharpOptions) => {
+type SharpOptions = {
+  fit: any
+  position: any
+  width?: number
+  height?: number
+}
+
+const getCacheEntry = async (db: any, url: string, filePath: string | null, sharpOptions: SharpOptions) => {
   const cacheFilter = { url, ...sharpOptions }
   debug('get thumbnail', cacheFilter, filePath)
 
   const entry = await db.collection('thumbnails-cache').findOne(cacheFilter)
-  const newEntry = { ...cacheFilter, lastUpdated: new Date() }
+  const newEntry: typeof cacheFilter & {
+    lastUpdated: Date
+    lastModified?: string
+    etag?: string
+    data?: Binary
+    mimetype?: string
+    sharpError?: string
+  } = { ...cacheFilter, lastUpdated: new Date() }
   const tmpFile = await tmp.tmpName({ prefix: 'cache-entry-', tmpdir: tmpDir })
   if (filePath) {
     newEntry.lastModified = (await filesStorage.fileStats(filePath)).lastModified.toUTCString()
@@ -38,7 +55,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(tmpFile)
     try {
-      const headers = {}
+      const headers: Record<string, string> = {}
       if (entry) {
         if (entry.lastModified) headers['if-modified-since'] = entry.lastModified
         if (entry.etag) headers['if-none-match'] = entry.etag
@@ -50,7 +67,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
       debug('fetch of image is ok', response.headers)
       newEntry.lastModified = response.headers['last-modified']
       newEntry.etag = response.headers.etag
-    } catch (err) {
+    } catch (err: any) {
       debug('fetch is ko', err)
       // content did not change
       if (err.status === 304) {
@@ -92,7 +109,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
       newEntry.mimetype = 'image/png'
     }
     debug('resize ok')
-  } catch (/** @type any */ err) {
+  } catch (err: any) {
     console.warn('Sharp error while processing thumbnail for image ' + url, err)
     newEntry.sharpError = err.message
   }
@@ -101,10 +118,10 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   return { entry: newEntry, status: 'MISS' }
 }
 
-export const getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
-  if (url.startsWith('/')) url = req.publicBaseUrl + url
+export const getThumbnail = async (req: Request, res: Response, url: string, filePath: string | null = null, thumbnailsOpts: { resizeMode?: string } = {}) => {
+  if (url.startsWith('/')) url = reqPublicBaseUrl(req) + url
   const db = mongo.db
-  const sharpOptions = { fit: req.query.fit || 'cover', position: req.query.position || 'center' }
+  const sharpOptions: SharpOptions = { fit: req.query.fit || 'cover', position: req.query.position || 'center' }
   // resizeMode was mostly adapted from thumbor and comes from dataset schema
   // but it is fairly easy to match it to sharp options
   if (!req.query.fit && !req.query.position) {
@@ -137,7 +154,7 @@ export const getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {})
   }
   if (entry.lastModified) res.setHeader('Last-Modified', entry.lastModified)
   res.setHeader('X-Thumbnails-Cache-Status', status)
-  if (req.publicOperation) {
+  if (reqPublicOperation(req)) {
     // force buffering (necessary for caching) of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'yes')
     res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
@@ -153,12 +170,12 @@ export const getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {})
   }
 }
 
-export const prepareThumbnailUrl = (baseUrl, thumbnail = '300x200', draft) => {
+export const prepareThumbnailUrl = (baseUrl: string, thumbnail: string = '300x200', draft?: any) => {
   if (thumbnail === 'true' || thumbnail === '1') thumbnail = '300x200'
   const [width, height] = (thumbnail).split('x')
   const thumbnailUrl = new URL(baseUrl)
   if (width) thumbnailUrl.searchParams.set('width', width)
   if (height) thumbnailUrl.searchParams.set('height', height)
-  if (draft) thumbnailUrl.searchParams.set('draft', true)
+  if (draft) thumbnailUrl.searchParams.set('draft', 'true')
   return thumbnailUrl.href
 }

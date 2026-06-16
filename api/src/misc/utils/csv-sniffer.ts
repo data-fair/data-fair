@@ -15,7 +15,7 @@ const possibleFieldsDelimiters = [',', ';', '\t', '|']
 const possibleQuoteChars = ['"', "'"]
 // const possibleQuoteChars = ["'"]
 
-export const sniff = async (sample) => {
+export const sniff = async (sample: any) => {
   // the parameters combination with the most successfully extracted values is probably the best one
   const combinations = []
   for (const ld of possibleLinesDelimiters) {
@@ -31,7 +31,7 @@ export const sniff = async (sample) => {
           lineBreaksBoost: 0,
           fullSepCount: 0
         }
-        const labels = []
+        const labels: string[] = []
         const parserOpts = { separator: fd, quote: qc, escape: qc, newline: ld }
         debug('Evaluate parser opts', JSON.stringify(parserOpts))
         const parser = csv(parserOpts)
@@ -47,7 +47,7 @@ export const sniff = async (sample) => {
           }
         })
 
-        const checkChunk = (chunk) => {
+        const checkChunk = (chunk: Record<string, any>) => {
           for (const key of Object.keys(chunk)) {
             // none matching labels and object keys means a failure of csv-parse to parse a line
             if (!labels.includes(key) && !!chunk[key]?.trim()) {
@@ -83,7 +83,7 @@ export const sniff = async (sample) => {
           }
         }
 
-        let previousChunk
+        let previousChunk: Record<string, any> | undefined
         let i = 0
 
         // lots of separators surrounded by quotes is a good sign of a strictly formatted CSV
@@ -105,7 +105,7 @@ export const sniff = async (sample) => {
         }))
         // on larger files prevent checking last chunk as it might be broken by the sampling method
         if (i < 10 && previousChunk) checkChunk(previousChunk)
-        const score = Object.keys(scoreParts).reduce((score, key) => score + scoreParts[key], 0)
+        const score = Object.keys(scoreParts).reduce((score, key) => score + scoreParts[key as keyof typeof scoreParts], 0)
         debug('score', score, scoreParts)
         combinations.push({ props: { fieldsDelimiter: fd, quote: qc, escapeChar: qc, linesDelimiter: ld, labels }, score, scoreParts })
       }

@@ -9,6 +9,7 @@ import { type RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account, assertReqInternal } from '@data-fair/lib-express'
 import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../../settings/operations.ts'
+import { reqResourceOptional, setReqBypassPermissions } from './req-context.ts'
 import dayjs from 'dayjs'
 
 // this lookup runs on every request presenting an api key (M2M harvesters pay it per call);
@@ -25,8 +26,9 @@ const findApiKeySettings = memoize(async (hashedApiKey: string) => {
 export const clearApiKeysCache = () => { findApiKeySettings.clear() }
 
 export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
-  if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
-    req.bypassPermissions = { classes: ['read'] }
+  const resource = req && reqResourceOptional(req)
+  if (req && resource?._readApiKey && (resource._readApiKey.current === rawApiKey || resource._readApiKey.previous === rawApiKey)) {
+    setReqBypassPermissions(req, { classes: ['read'] })
     const user = {
       id: 'readApiKey',
       name: 'Read API key for specifc resource',

@@ -1,5 +1,5 @@
 import mongo from '#mongo'
-import axios from '../misc/utils/axios.js'
+import axios from '../misc/utils/axios.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 
 // module-private HTML response cache (keyed by cleanApplicationUrl)

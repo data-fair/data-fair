@@ -25,9 +25,9 @@ export const protectedFilter = {
   }
 }
 
-export const visibility = (resource) => {
+export const visibility = (resource: any) => {
   const permissions = resource.permissions || []
-  if (permissions.find(p => ((p.operations && p.operations.includes('list')) || (p.classes && p.classes.includes('list'))) && !p.type && !p.id)) {
+  if (permissions.find((p: any) => ((p.operations && p.operations.includes('list')) || (p.classes && p.classes.includes('list'))) && !p.type && !p.id)) {
     return 'public'
   }
   if (permissions.length === 0) {
@@ -36,7 +36,7 @@ export const visibility = (resource) => {
   return 'protected'
 }
 
-export const filters = (reqQuery) => {
+export const filters = (reqQuery: any) => {
   const showPublic = reqQuery.public === 'true' || (reqQuery.visibility && reqQuery.visibility.includes('public'))
   const showPrivate = reqQuery.private === 'true' || (reqQuery.visibility && reqQuery.visibility.includes('private'))
   const showProtected = reqQuery.protected === 'true' || (reqQuery.visibility && reqQuery.visibility.includes('protected'))

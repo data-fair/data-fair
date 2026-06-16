@@ -9,8 +9,8 @@ const distributionSchema = JSON.parse(readFileSync(path.resolve(import.meta.dirn
 const organizationSchema = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './schema/organization.json'), 'utf8'))
 const vcardSchema = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './schema/vcard.json'), 'utf8'))
 
-const ajv = new Ajv({ unicodeRegExp: false })
-addFormats(ajv)
+const ajv = new (Ajv as unknown as typeof import('ajv-draft-04').default)({ unicodeRegExp: false })
+;(addFormats as unknown as typeof import('ajv-formats').default)(ajv)
 
 ajv.addSchema(catalogSchema)
 ajv.addSchema(datasetSchema)
@@ -18,4 +18,4 @@ ajv.addSchema(distributionSchema)
 ajv.addSchema(organizationSchema)
 ajv.addSchema(vcardSchema)
 
-export default ajv.getSchema('https://project-open-data.cio.gov/v1.1/schema/catalog.json#')
+export default ajv.getSchema('https://project-open-data.cio.gov/v1.1/schema/catalog.json#')!
