@@ -1,13 +1,13 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.ts'
-import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResultContext } from './commons.js'
-import { timedEsCall } from './abort.js'
+import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResultContext } from './commons.ts'
+import { timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
 import { assertMetricAccepted } from './metric-agg.js'
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export default async (client, dataset, query, publicBaseUrl, flatten, abortContext) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
   const bbox = getQueryBBOX(query) || dataset.bbox

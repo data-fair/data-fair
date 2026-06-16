@@ -1,11 +1,11 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { prepareQuery, aliasName } from './commons.js'
-import { timedEsCall } from './abort.js'
+import { prepareQuery, aliasName } from './commons.ts'
+import { timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export default async (client, dataset, query, abortContext) => {
   if (!query.field) throw httpError(400, '"field" parameter is required')
   const prop = dataset.schema.find(f => f.key === query.field)
@@ -71,7 +71,7 @@ export default async (client, dataset, query, abortContext) => {
 // significant_text does not "unstem"
 // it is suggested that the highlight logic is the closest there is to satisfying this need
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 async function unstem (client, dataset, field, key, abortContext) {
   const res = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),

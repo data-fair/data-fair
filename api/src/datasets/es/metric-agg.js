@@ -1,8 +1,8 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import moment from 'moment-timezone'
 import config from '#config'
-import { prepareQuery, aliasName } from './commons.js'
-import { timedEsCall } from './abort.js'
+import { prepareQuery, aliasName } from './commons.ts'
+import { timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
 
@@ -58,7 +58,7 @@ export const assertMetricAccepted = (field, metric) => {
   }
 }
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export const agg = async (client, dataset, query, abortContext) => {
   if (!query.metric) throw httpError(400, '"metric" parameter is required')
   const metricField = query.field || query.metric_field
@@ -99,7 +99,7 @@ export const agg = async (client, dataset, query, abortContext) => {
   return response
 }
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export const simpleMetricsAgg = async (client, dataset, query, abortContext) => {
   let fields
   if (query.fields) {

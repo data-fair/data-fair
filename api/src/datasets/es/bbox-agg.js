@@ -1,10 +1,10 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { prepareQuery, aliasName } from './commons.js'
-import { timedEsCall } from './abort.js'
+import { prepareQuery, aliasName } from './commons.ts'
+import { timedEsCall } from './abort.ts'
 import es from '#es'
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export default async (dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout, abortContext) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
 

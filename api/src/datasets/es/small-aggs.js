@@ -1,10 +1,10 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { prepareQuery, aliasName } from './commons.js'
-import { timedEsCall } from './abort.js'
+import { prepareQuery, aliasName } from './commons.ts'
+import { timedEsCall } from './abort.ts'
 import es from '#es'
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export const max = async (dataset, fieldKey, query, abortContext) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
@@ -24,7 +24,7 @@ export const max = async (dataset, fieldKey, query, abortContext) => {
   return esResponse.aggregations.max.value
 }
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export const min = async (dataset, fieldKey, query, abortContext) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)

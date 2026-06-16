@@ -9,7 +9,7 @@ import * as datasetUtils from '../src/datasets/utils/index.js'
 import { acceptedMetricAggs } from '../src/datasets/es/metric-agg.js'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
-import { getColumnFilters } from '../src/datasets/es/commons.js'
+import { getColumnFilters } from '../src/datasets/es/commons.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 

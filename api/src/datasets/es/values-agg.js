@@ -1,10 +1,10 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { parseSort, prepareQuery, aliasName, prepareResultItem, prepareResultContext } from './commons.js'
+import { parseSort, prepareQuery, aliasName, prepareResultItem, prepareResultContext } from './commons.ts'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
 import { assertMetricAccepted } from './metric-agg.js'
-import { timedEsCall } from './abort.js'
+import { timedEsCall } from './abort.ts'
 import es from '#es'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 
@@ -27,7 +27,7 @@ const parseOrder = (sortStr, fields, dataset, valuesField, hasMetric) => {
   })
 }
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout, abortContext) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields

@@ -1,4 +1,4 @@
-export * from './commons.js'
+export * from './commons.ts'
 export { createEsRequestOptions, setReqEsAbortContext, reqEsAbortContext, reqEsAbortContextOptional, type EsAbortContext } from './abort.ts'
 export { default as search } from './search.ts'
 export { default as multiSearch } from './multi-search.js'

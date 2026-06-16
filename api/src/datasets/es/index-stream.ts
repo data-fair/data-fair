@@ -1,4 +1,4 @@
-import { Transform } from 'stream'
+import { Transform, type TransformCallback } from 'stream'
 import config from '#config'
 import truncateMiddle from 'truncate-middle'
 import * as extensionsUtils from '../utils/extensions.ts'
@@ -6,11 +6,20 @@ import { nanoid } from 'nanoid'
 import debugLib from 'debug'
 import es from '#es'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import type { Dataset } from '#types'
 
 const debug = debugLib('index-stream')
 
+interface IndexStreamOptions {
+  dataset: Dataset
+  indexName: string
+  refresh?: boolean | string
+  updateMode?: boolean
+  attachments?: boolean
+}
+
 // remove some properties that must not be indexed
-const cleanItem = (item) => {
+const cleanItem = (item: any) => {
   // these properties are only for internal management of rest dataset
   delete item._hash
   delete item._needsIndexing
@@ -21,7 +30,14 @@ const cleanItem = (item) => {
 const maxErroredItems = 3
 
 class IndexStream extends Transform {
-  constructor (options) {
+  options: IndexStreamOptions
+  body: any[]
+  bulkChars: number
+  i: number
+  nbErroredItems: number
+  erroredItems: any[]
+
+  constructor (options: IndexStreamOptions) {
     super({ objectMode: true })
     this.options = options
     this.options.refresh = this.options.refresh || false
@@ -32,7 +48,7 @@ class IndexStream extends Transform {
     this.erroredItems = []
   }
 
-  async transformPromise (item, encoding) {
+  async transformPromise (item: any, encoding?: BufferEncoding) {
     let warning
     if (this.options.updateMode) {
       warning = await extensionsUtils.applyCalculations(this.options.dataset, item.doc)
@@ -49,7 +65,7 @@ class IndexStream extends Transform {
       this.body.push(item)
     } else {
       cleanItem(item)
-      const params = { index: { _index: this.options.indexName } }
+      const params: any = { index: { _index: this.options.indexName } }
       // nanoid will prevent risks of collision even when assembling in virtual datasets
       params.index._id = item._id || nanoid()
       delete item._id
@@ -73,12 +89,12 @@ class IndexStream extends Transform {
     }
   }
 
-  _transform (item, encoding, cb) {
+  _transform (item: any, encoding: BufferEncoding, cb: TransformCallback) {
     // use then syntax cf https://github.com/nodejs/node/issues/39535
     this.transformPromise(item, encoding).then(() => cb(), cb)
   }
 
-  _final (cb) {
+  _final (cb: (error?: Error | null) => void) {
     // use then syntax cf https://github.com/nodejs/node/issues/39535
     this.sendBulk()
       .then(() => {
@@ -99,8 +115,8 @@ class IndexStream extends Transform {
   async sendBulk () {
     if (this.body.length === 0) return
     debug(`Send ${this.body.length} lines to bulk indexing`)
-    const bodyClone = [].concat(this.body)
-    const bulkOpts = {
+    const bodyClone: any[] = [].concat(this.body as any)
+    const bulkOpts: any = {
       // ES does not want the doc along with a delete instruction,
       // but we put it in body anyway for our outgoing/reporting logic
       body: this.body.filter(line => !line._deleted),
@@ -110,7 +126,7 @@ class IndexStream extends Transform {
     try {
       // Use the ingest plugin to parse attached files
       if (this.options.attachments) bulkOpts.pipeline = 'attachment'
-      const res = await es.client.bulk(bulkOpts)
+      const res: any = await es.client.bulk(bulkOpts)
       debug('Bulk sent OK')
       for (let i = 0; i < res.items.length; i++) {
         const item = res.items[i]
@@ -148,7 +164,7 @@ class IndexStream extends Transform {
     if (!this.nbErroredItems) return null
     const leftOutErrors = this.nbErroredItems - 3
     let msg = `${Math.round(100 * (this.nbErroredItems / this.i))}% des lignes sont en erreur.\n<br>`
-    msg += this.erroredItems.map(item => {
+    msg += this.erroredItems.map((item: any) => {
       let itemMsg = ' - '
       if (item._i !== undefined) itemMsg += `Ligne ${item._i}: `
       if (item.customMessage) itemMsg += item.customMessage
@@ -163,4 +179,4 @@ class IndexStream extends Transform {
   }
 }
 
-export default (options) => new IndexStream(options)
+export default (options: IndexStreamOptions) => new IndexStream(options)

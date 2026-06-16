@@ -1,9 +1,9 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { prepareQuery, aliasName } from './commons.js'
-import { timedEsCall } from './abort.js'
+import { prepareQuery, aliasName } from './commons.ts'
+import { timedEsCall } from './abort.ts'
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
+/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
 export default async (client, dataset, fieldKey, query, abortContext) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
