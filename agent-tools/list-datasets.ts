@@ -77,6 +77,8 @@ export function formatResult (data: any, page: number, size: number): { text: st
     const parts = [`- **${d.title || d.id}** (${idPart})`,
       `  Status: ${d.status || 'unknown'}, ${d.count ?? '?'} rows, updated ${d.updatedAt || '?'}`]
     if (d.topics?.length) parts.push(`  Topics: ${d.topics.map((t: any) => t.title).join(', ')}`)
+    // absolute page URL — use it verbatim when linking, and as the base for table/map views ({page}/table?<filterQuery>)
+    if (d.page) parts.push(`  Link: ${d.page}`)
     return parts.join('\n')
   })
 
