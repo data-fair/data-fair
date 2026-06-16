@@ -136,10 +136,14 @@ Homes for the cross-cutting contexts (names and `get`/`getOptional` contracts ar
 | `reqNoCache` / `setReqNoCache`, `reqNoModifiedCache` / `setReqNoModifiedCache` | `boolean \| undefined` | `misc/utils/cache-headers.ts` | `datasets/middlewares.js`, `api-compat/ods` |
 | `reqPublicBaseUrl` / `setReqPublicBaseUrl`, `reqPublicWsBaseUrl` / `setReqPublicWsBaseUrl` | `string` (throws) | `misc/utils/public-base-url.ts` (config-free) | `app.js` |
 | `reqPublicationSite` / `setReqPublicationSite`, `reqMainPublicationSite` / `setReqMainPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js`, `catalog/router.js` |
+| `reqEsAbortContext` / `setReqEsAbortContext` / `reqEsAbortContextOptional` | `EsAbortContext` (get throws / optional) | `datasets/es/abort.ts` | `datasets/es/abort.ts` (read by `rate-limiting.ts`, `datasets/router.js`) |
 
 Note: `cache-headers.ts` and `publication-sites.ts` are config-coupled but still host their own
 accessors — acceptable for now because **no config-free module imports them**. If that changes,
-move the accessor to `req-context.ts` and re-export (the facade pattern above).
+move the accessor to `req-context.ts` and re-export (the facade pattern above). `esAbortContext`
+is a near-module-local accessor whose config-coupled home (`datasets/es/abort.ts`) is likewise
+acceptable: its only non-router reader (`rate-limiting.ts`) is not pure / unit-tested, so a
+config-free home is not required.
 
 The same co-location applies to **context builders**: helpers that assemble a service write
 context from `req` live in `middlewares.ts` next to the accessors they compose — not in
@@ -173,7 +177,7 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 | `api/src/datasets/middlewares.js` | `dataset`, `resource`, `datasetFull`, `noCache`, `url` |
 | `api/src/datasets/router.js` | `resourceType`, `linesOwner`, `body`, `_draft` |
 | `api/src/datasets/utils/rest.ts` | `_fixedFormBody`, `body`, `_rawBody`, `_uploadedAttachmentPath` |
-| `api/src/datasets/es/abort.js` | `esAbortContext` |
+| `api/src/datasets/es/abort.ts` | `esAbortContext` (now an accessor — see note below) |
 | `api/src/applications/router.js` | `resourceType`, `resource`, `application`, `baseApp`, `isNewApplication` |
 | `api/src/applications/proxy.js` | `application`, `resource`, `resourceType`, `matchingApplicationKey` |
 | `api/src/misc/utils/permissions.ts` | `publicOperation` |
@@ -189,6 +193,11 @@ now live in their topical homes: `resource` / `resourceType` in `misc/utils/perm
 `publicationSite` / `mainPublicationSite` in `misc/utils/publication-sites.ts`,
 `remoteService` in `remote-services/middlewares.ts` — all keep `legacyProp` dual-write because
 datasets/applications routers still set `resource` / `resourceType` by raw mutation.
+`esAbortContext` (Phase 6a, 2026-06-16) is now set through the `setReqEsAbortContext` accessor in
+`datasets/es/abort.ts` (module-local, `legacyProp` dual-write); its only non-router reader,
+`misc/utils/rate-limiting.ts`, was migrated to `reqEsAbortContextOptional`. The `legacyProp` is
+**retained** because `datasets/router.js` still reads `req.esAbortContext` by raw access; drop it
+when `router.js` migrates (slice 6c/6d).
 
 ### Migration mechanics per property
 
@@ -256,6 +265,12 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
 
 - **js → ts in the same PR:** every `.js` file touched by a phase converts in that phase. Moving
   logic is the natural moment; JSDoc coverage is too thin to bridge.
+- **Rename = update every importer specifier + boot-check (Phase 6a lesson):** renaming `X.js`→`X.ts`
+  requires rewriting EVERY importer's `'…/X.js'` specifier to `.ts` **repo-wide** (siblings, barrel,
+  cross-module, `benchmark/`, `tests/`, `contract/`, `types/`, JSDoc `import()`) — Node's
+  `--experimental-strip-types` does NOT rewrite `.js`→`.ts` at runtime, so a stale specifier crashes
+  with `ERR_MODULE_NOT_FOUND` even though `tsc`/the ratchet resolve it fine. Always run at least one
+  api spec after a rename to confirm the app still boots — `tsc` alone won't catch this.
 - **No new suppressions:** no new `@ts-ignore` / `@ts-expect-error` / `as any` outside accessor
   modules. Each phase reduces its module's suppression count; target is 0.
 - **Types from schema:** domain types come from JSON schemas via `df-build-types` (`api/types/*`).

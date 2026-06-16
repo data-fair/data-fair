@@ -8,6 +8,7 @@ import { type Request, type Response } from 'express'
 import { reqUser, reqSession, type SessionState } from '@data-fair/lib-express'
 import { ComputeBucket } from './compute-budget.ts'
 import { queryAdvice } from './query-advice.ts'
+import { reqEsAbortContextOptional } from '../../datasets/es/abort.ts'
 
 const debugLimits = debug('limits')
 
@@ -215,7 +216,7 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
     // 'close' fires exactly once, after a normal finish or a client disconnect; an aborted request is
     // still billed for the partial ES work it kicked off (recorded by timedEsCall before the abort throws)
     res.on('close', () => {
-      const esElapsedMs = req.esAbortContext?.esElapsedMs
+      const esElapsedMs = reqEsAbortContextOptional(req)?.esElapsedMs
       if (esElapsedMs) debitComputeBudget(req, limitType, esElapsedMs)
     })
   }

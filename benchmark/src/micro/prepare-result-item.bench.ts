@@ -5,7 +5,7 @@
 //   NODE_CONFIG_DIR=api/config NODE_ENV=benchmark node --experimental-strip-types \
 //     --disable-warning=ExperimentalWarning benchmark/src/micro/prepare-result-item.bench.ts
 
-import { prepareResultItem, prepareResultContext } from '../../../api/src/datasets/es/commons.js'
+import { prepareResultItem, prepareResultContext } from '../../../api/src/datasets/es/commons.ts'
 
 const identityFlatten = (obj: any) => ({ ...obj })
 

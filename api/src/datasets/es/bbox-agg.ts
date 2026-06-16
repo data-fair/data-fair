@@ -1,27 +1,26 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { prepareQuery, aliasName } from './commons.js'
-import { timedEsCall } from './abort.js'
+import { prepareQuery, aliasName } from './commons.ts'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
 import es from '#es'
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
-export default async (dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout, abortContext) => {
+export default async (dataset: any, query: Record<string, any> = {}, allowPartialResults = false, timeout: string | number = config.elasticsearch.searchTimeout, abortContext?: EsAbortContext) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
 
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
   // if necessary use corners, not centroid in order to get truly surrounding box
   // and to function even with a single document
-  const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
+  const geoCornersProp = dataset.schema.find((p: any) => p.key === '_geocorners')
   const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
   esQuery.aggs = { bbox: { geo_bounds: { field: geoCorners ? '_geocorners' : '_geopoint' } } }
-  const esResponse = await timedEsCall(abortContext, () => es.client.search({
+  const esResponse: any = await timedEsCall(abortContext, () => es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout,
     allow_partial_search_results: allowPartialResults
   }, abortContext))
-  const response = { total: esResponse.hits.total?.value }
+  const response: any = { total: esResponse.hits.total?.value }
   // ES bounds to standard bounding box: left,bottom,right,top
   const bounds = esResponse.aggregations.bbox.bounds
   if (!bounds) response.bbox = []

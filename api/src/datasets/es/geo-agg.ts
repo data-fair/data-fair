@@ -1,14 +1,14 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.ts'
-import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResultContext } from './commons.js'
-import { timedEsCall } from './abort.js'
+import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResultContext } from './commons.ts'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
-import { assertMetricAccepted } from './metric-agg.js'
+import { assertMetricAccepted } from './metric-agg.ts'
+import { type Client } from '@elastic/elasticsearch'
 
-/** @param {import('./abort.js').EsAbortContext} [abortContext] */
-export default async (client, dataset, query, publicBaseUrl, flatten, abortContext) => {
+export default async (client: Client, dataset: any, query: Record<string, any>, publicBaseUrl: string, flatten: any, abortContext?: EsAbortContext) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
   const bbox = getQueryBBOX(query) || dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
@@ -45,7 +45,7 @@ export default async (client, dataset, query, publicBaseUrl, flatten, abortConte
       [query.metric]: { field: query.metric_field }
     }
   }
-  const esResponse = await timedEsCall(abortContext, () => client.search({
+  const esResponse: any = await timedEsCall(abortContext, () => client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
@@ -54,18 +54,18 @@ export default async (client, dataset, query, publicBaseUrl, flatten, abortConte
   return prepareGeoAggResponse(esResponse, dataset, query, publicBaseUrl, flatten)
 }
 
-const prepareGeoAggResponse = (esResponse, dataset, query, publicBaseUrl, flatten) => {
-  const response = { total: esResponse.hits.total.value }
+const prepareGeoAggResponse = (esResponse: any, dataset: any, query: Record<string, any>, publicBaseUrl: string, flatten: any) => {
+  const response: any = { total: esResponse.hits.total.value }
   const resultCtx = prepareResultContext(dataset, query)
-  response.aggs = esResponse.aggregations.geo.buckets.map(b => {
+  response.aggs = esResponse.aggregations.geo.buckets.map((b: any) => {
     const center = geohash.hash2coord(b.key)
-    const aggItem = {
+    const aggItem: any = {
       total: b.doc_count,
       value: b.key,
       centroid: b.centroid.location,
       center: { lat: center[1], lon: center[0] },
       bbox: geohash.hash2bbox(b.key),
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)) : []
+      results: b.topHits ? b.topHits.hits.hits.map((hit: any) => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value

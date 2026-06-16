@@ -46,3 +46,15 @@ declare module 'object-hash' {
   const objectHash: (value: any, options?: any) => string
   export default objectHash
 }
+
+declare module 'lucene-query-parser' {
+  const queryParser: {
+    parse: (query: string) => any
+  }
+  export default queryParser
+}
+
+declare module '@terraformer/wkt' {
+  export const geojsonToWKT: (geojson: any) => string
+  export const wktToGeoJSON: (wkt: string) => any
+}

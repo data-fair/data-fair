@@ -247,7 +247,7 @@ router.post('/api-keys-expiration/run', async (req, res, next) => {
 // Count ES indices matching a dataset prefix
 router.get('/dataset-es-indices-count/:datasetId', async (req, res, next) => {
   try {
-    const { indexPrefix } = await import('../../datasets/es/manage-indices.js')
+    const { indexPrefix } = await import('../../datasets/es/manage-indices.ts')
     const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
     if (!dataset) return res.status(404).json({ error: 'dataset not found' })
     const indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
@@ -260,7 +260,7 @@ router.get('/dataset-es-indices-count/:datasetId', async (req, res, next) => {
 // Get ES alias name for a dataset
 router.get('/dataset-es-alias-name/:datasetId', async (req, res, next) => {
   try {
-    const { aliasName } = await import('../../datasets/es/commons.js')
+    const { aliasName } = await import('../../datasets/es/commons.ts')
     const mergeDraft = (await import('../../datasets/utils/merge-draft.js')).default
     const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
     if (!dataset) return res.status(404).json({ error: 'dataset not found' })

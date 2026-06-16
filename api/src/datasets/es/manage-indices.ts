@@ -2,26 +2,26 @@ import crypto from 'crypto'
 import config from '#config'
 import es from '#es'
 import * as datasetUtils from '../utils/index.js'
-import { aliasName } from './commons.js'
+import { aliasName } from './commons.ts'
 import { buildIndexMappings } from './operations.ts'
-import { computeFinalizeWarnings, pickPrimaryCode } from './diagnose-warnings.ts'
+import { computeFinalizeWarnings, pickPrimaryCode, type WarningCode } from './diagnose-warnings.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
 const debug = debugModule('manage-indices')
 
-export const indexDefinition = async (dataset) => {
+export const indexDefinition = async (dataset: any) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const jsProps = await datasetUtils.extendedSchema(null, dataset, false)
   body.mappings.properties = buildIndexMappings(dataset, jsProps, config.elasticsearch.defaultAnalyzer).properties
   return body
 }
 
-export function indexPrefix (dataset) {
+export function indexPrefix (dataset: any) {
   return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
-export const initDatasetIndex = async (dataset) => {
+export const initDatasetIndex = async (dataset: any) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = await indexDefinition(dataset)
   const res = await es.client.indices.create({
@@ -36,7 +36,7 @@ export const initDatasetIndex = async (dataset) => {
 // this method will routinely throw errors
 // we just try in case elasticsearch considers the new mapping compatible
 // so that we might optimize and reindex only when necessary
-export const updateDatasetMapping = async (dataset, oldDataset) => {
+export const updateDatasetMapping = async (dataset: any, oldDataset?: any) => {
   const index = aliasName(dataset)
   const newMapping = (await indexDefinition(dataset)).mappings
   if (oldDataset) {
@@ -73,7 +73,7 @@ export const updateDatasetMapping = async (dataset, oldDataset) => {
   if (!res.acknowledged) throw new Error('failed to get cluster acknowledgement after updating index mapping ' + index)
 }
 
-const getAliases = async (dataset) => {
+const getAliases = async (dataset: any) => {
   let prodAlias
   try {
     prodAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }) })
@@ -91,7 +91,7 @@ const getAliases = async (dataset) => {
 
 // deletion failures can happen during ES snapshots
 // it is acceptable to tolerate these errors, log them and do some cleanup later
-const safeDeleteIndex = async (index) => {
+const safeDeleteIndex = async (index: any) => {
   try {
     await es.client.indices.delete({ index })
   } catch (err) {
@@ -100,7 +100,7 @@ const safeDeleteIndex = async (index) => {
 }
 
 // delete indices and aliases of a dataset
-export const deleteIndex = async (dataset) => {
+export const deleteIndex = async (dataset: any) => {
   const { prodAlias } = await getAliases(dataset)
 
   if (dataset.draftReason) {
@@ -116,7 +116,7 @@ export const deleteIndex = async (dataset) => {
 }
 
 // replace the index referenced by a dataset's alias
-export const switchAlias = async (dataset, tempId) => {
+export const switchAlias = async (dataset: any, tempId: any) => {
   const name = aliasName(dataset)
 
   let existingAlias
@@ -126,7 +126,7 @@ export const switchAlias = async (dataset, tempId) => {
     if (err.statusCode !== 404) throw err
   }
 
-  const actions = []
+  const actions: any[] = []
   // removing with index=* seems to create strange behaviors when other indices have some operations
   if (existingAlias) {
     for (const index of Object.keys(existingAlias)) {
@@ -157,7 +157,7 @@ export const switchAlias = async (dataset, tempId) => {
   }
 }
 
-const clearAliases = async (dataset) => {
+const clearAliases = async (dataset: any) => {
   // Delete indices of this dataset that are not referenced by either the draft or prod aliases
   const { prodAlias, draftAlias } = await getAliases(dataset)
   if (dataset.draftReason && !draftAlias) throw new Error('missing draft elasticsearch alias right after it should have been created')
@@ -175,7 +175,7 @@ const clearAliases = async (dataset) => {
 }
 
 // move an index from the draft alias to the production alias
-export const validateDraftAlias = async (dataset) => {
+export const validateDraftAlias = async (dataset: any) => {
   debug('validate draft alias of dataset', dataset.id)
   let aliases = await getAliases(dataset)
   if (!aliases.draftAlias || Object.keys(aliases.draftAlias).length !== 1) {
@@ -200,14 +200,13 @@ export const validateDraftAlias = async (dataset) => {
   await switchAlias({ ...dataset, draftReason: null }, Object.keys(aliases.draftAlias)[0])
 }
 
-const getNbShards = (dataset) => {
+const getNbShards = (dataset: any) => {
   return Math.max(1, Math.ceil((dataset.storage?.indexed?.size || 0) / config.elasticsearch.maxShardSize))
 }
 
-const indexBase = (dataset) => {
+const indexBase = (dataset: any) => {
   const nbShards = getNbShards(dataset)
-  /** @type {any} */
-  const indexSettings = {
+  const indexSettings: any = {
     'mapping.total_fields.limit': 3000,
     number_of_shards: nbShards,
     number_of_replicas: config.elasticsearch.nbReplicas
@@ -266,7 +265,7 @@ const indexBase = (dataset) => {
   }
 }
 
-export const datasetInfos = async (dataset) => {
+export const datasetInfos = async (dataset: any) => {
   if (dataset.isVirtual) return {}
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
   const indices = await es.client.cat.indices({
@@ -295,9 +294,8 @@ export const datasetInfos = async (dataset) => {
   }
 }
 
-/** @returns {Promise<'MissingIndex'|'IndexHealthRed'|'MissingIndexSettings'|'ShardingRecommended'|'MissingSearchOnWide'|'MappingNearLimit'|'ReplicaDrift'|null>} */
-export const datasetWarning = async (dataset) => {
+export const datasetWarning = async (dataset: any): Promise<WarningCode | null> => {
   if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') return null
   const esInfos = await datasetInfos(dataset)
-  return /** @type {any} */ (pickPrimaryCode(computeFinalizeWarnings(dataset, esInfos, config.elasticsearch)))
+  return pickPrimaryCode(computeFinalizeWarnings(dataset, esInfos, config.elasticsearch))
 }

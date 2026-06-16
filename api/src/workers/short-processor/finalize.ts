@@ -1,7 +1,7 @@
 // Finalize dataset for publication
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
-import { datasetWarning } from '../../datasets/es/manage-indices.js'
+import { datasetWarning } from '../../datasets/es/manage-indices.ts'
 import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
 import * as geoUtils from '../../datasets/utils/geo.js'
 import * as datasetUtils from '../../datasets/utils/index.js'

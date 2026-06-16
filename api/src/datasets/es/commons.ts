@@ -40,17 +40,17 @@ const filterSuffixes = Object.keys(FILTER_CAPABILITIES)
 
 // thin wrapper around the pure helper to keep the existing single-arg call sites working —
 // supplies the runtime analyzer from config so mapping creation behaves unchanged
-export const esProperty = prop => esPropertyPure(prop, config.elasticsearch.defaultAnalyzer)
+export const esProperty = (prop: any) => esPropertyPure(prop, config.elasticsearch.defaultAnalyzer)
 
 export { Q_SEARCH_FIELDS_THRESHOLD, isBoostEligible, hasManyQSearchFields, getFilterableFields }
 
-export const aliasName = dataset => {
-  if (dataset.isVirtual) return dataset.descendants.map(id => `${config.indicesPrefix}-${id}`).join(',')
+export const aliasName = (dataset: any) => {
+  if (dataset.isVirtual) return dataset.descendants.map((id: string) => `${config.indicesPrefix}-${id}`).join(',')
   if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
   return `${config.indicesPrefix}-${dataset.id}`
 }
 
-export const parseSort = (sortStr, fields, dataset) => {
+export const parseSort = (sortStr: string | undefined, fields: string[], dataset: any) => {
   if (!sortStr) return []
   const result = []
   for (const s of sortStr.split(',')) {
@@ -72,7 +72,7 @@ export const parseSort = (sortStr, fields, dataset) => {
     if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(key)) {
       throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     }
-    const field = dataset.schema.find(f => f.key === key)
+    const field = dataset.schema.find((f: any) => f.key === key)
     const capabilities = (field && field['x-capabilities']) || {}
     if (capabilities.values === false && capabilities.insensitive === false) {
       throw httpError(400, `Impossible de trier sur le champ ${key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
@@ -97,7 +97,7 @@ const capabilitiesSuffixes = [
   ['.keyword_insensitive', 'insensitive'],
   ['.wildcard', 'wildcard']
 ]
-function checkQuery (query, schema, esFields, currentField) {
+function checkQuery (query: any, schema: any[], esFields: string[], currentField?: string) {
   if (typeof query === 'string') {
     // lucene-query-parser as a bug where it doesn't accept escaped quotes inside quotes
     if (process.env.NODE_ENV === 'development' && query === '(siret:"test \\" failure")') {
@@ -109,7 +109,7 @@ function checkQuery (query, schema, esFields, currentField) {
     try {
       query = queryParser.parse(query)
     } catch (err) {
-      throw httpError(400, `Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée : requête = "${query}", erreur = "${err.message}"`)
+      throw httpError(400, `Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée : requête = "${query}", erreur = "${(err as Error).message}"`)
     }
   }
   query.field = query.field && query.field.replace(/\\/g, '')
@@ -128,7 +128,7 @@ function checkQuery (query, schema, esFields, currentField) {
       if (!schema.find(p => p.key + suffix[0] === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
       }
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
     } else {
       if (!schema.find(p => p.key === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
@@ -146,13 +146,12 @@ function checkQuery (query, schema, esFields, currentField) {
 
 export { hasCapability, requiredCapability, getColumnFilters }
 
-export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter, ignoreInvalidQS) => {
-  /** @type {any} */
-  const esQuery = {}
+export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?: string[], sqsOptions: any = {}, qsAsFilter?: boolean, ignoreInvalidQS?: boolean) => {
+  const esQuery: any = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
   if (qFields && (query.q || query._c_q || query.qs)) {
     for (const qField of qFields) {
-      const prop = dataset.schema.find(p => p.key === qField)
+      const prop = dataset.schema.find((p: any) => p.key === qField)
       if (!prop) throw httpError(400, `Impossible de rechercher sur le champ ${qField}, il n'existe pas dans le jeu de données.`)
       const caps = prop['x-capabilities'] || {}
       const searchable = caps.text !== false || caps.textStandard !== false || caps.index !== false || caps.wildcard === true
@@ -188,17 +187,17 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if ((esQuery.from + esQuery.size) > config.elasticsearch.maxPageSize) throw httpError(400, `"size * page" cannot be more than ${config.elasticsearch.maxPageSize}`)
 
   // Select fields to return
-  const fields = dataset.schema.map(f => f.key)
+  const fields = dataset.schema.map((f: any) => f.key)
   // do not include by default heavy calculated fields used for indexing geo data
   esQuery._source = (query.select && query.select !== '*')
     ? query.select.split(',')
-    : fields.filter(key => key !== '_geoshape' && key !== '_geocorners')
-  const unknownField = esQuery._source.find(s => !fields.includes(s))
+    : fields.filter((key: string) => key !== '_geoshape' && key !== '_geocorners')
+  const unknownField = esQuery._source.find((s: string) => !fields.includes(s))
   if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
 
   // Others are included depending on the context
   if (query.thumbnail) {
-    const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    const imageField = dataset.schema.find((f: any) => f['x-refersTo'] === 'http://schema.org/image')
     if (imageField && query.select && !esQuery._source.includes(imageField.key)) {
       esQuery._source.push(imageField.key)
     }
@@ -207,10 +206,10 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   // Sort by list of fields (prefixed by - for descending sort)
   esQuery.sort = query.sort ? parseSort(query.sort, fields, dataset) : []
   // implicitly sort by score after other criteria
-  if (!esQuery.sort.some(s => !!s._score) && query.q) esQuery.sort.push('_score')
+  if (!esQuery.sort.some((s: any) => !!s._score) && query.q) esQuery.sort.push('_score')
   // if there is a geo_distance filter, apply a default _geo_distance sort
   if ((query.geo_distance ?? query._c_geo_distance)) {
-    if (!esQuery.sort.some(s => !!s._geo_distance)) {
+    if (!esQuery.sort.some((s: any) => !!s._geo_distance)) {
       const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
       esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
     }
@@ -221,14 +220,14 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   // every other things equal, sort by original line order
   // this is very important as it provides a tie-breaker for search_after pagination
   if (fields.includes('_updatedAt')) {
-    if (!esQuery.sort.some(s => !!s._updatedAt)) esQuery.sort.push({ _updatedAt: 'desc' })
-    if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push({ _i: 'desc' })
+    if (!esQuery.sort.some((s: any) => !!s._updatedAt)) esQuery.sort.push({ _updatedAt: 'desc' })
+    if (!esQuery.sort.some((s: any) => !!s._i)) esQuery.sort.push({ _i: 'desc' })
   } else {
-    if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push('_i')
+    if (!esQuery.sort.some((s: any) => !!s._i)) esQuery.sort.push('_i')
   }
   if (dataset.isVirtual) {
     // _i is not a good enough tie-breaker in the case of virtual datasets
-    if (!esQuery.sort.some(s => !!s._rand)) esQuery.sort.push('_rand')
+    if (!esQuery.sort.some((s: any) => !!s._rand)) esQuery.sort.push('_rand')
   }
 
   // Simple highlight management
@@ -237,7 +236,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
     for (const key of query.highlight.split(',')) {
       if (!fields.includes(key)) throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-      const prop = dataset.schema.find(p => p.key === key)
+      const prop = dataset.schema.find((p: any) => p.key === key)
       const caps = (prop && prop['x-capabilities']) || {}
       if (caps.text === false && caps.textStandard === false) {
         throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}. La fonctionnalité de recherche plein texte n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
@@ -247,10 +246,10 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     }
   }
 
-  const filter = []
-  const must = []
-  const should = []
-  const mustNot = []
+  const filter: any[] = []
+  const must: any[] = []
+  const should: any[] = []
+  const mustNot: any[] = []
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
@@ -273,7 +272,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   }
 
   if (query.account) {
-    const accountField = dataset.schema.find(f => f['x-refersTo'] === 'https://github.com/data-fair/lib/account')
+    const accountField = dataset.schema.find((f: any) => f['x-refersTo'] === 'https://github.com/data-fair/lib/account')
     if (!accountField) throw httpError(400, 'Impossible de filtrer sur le concept compte, il n\'est pas défini sur le dataset.')
     filter.push({ terms: { [accountField.key]: query.account.split(',') } })
   }
@@ -317,7 +316,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     }
 
     // single source of truth: every suffix except the any-of _search requires exactly one capability
-    if (filterSuffix !== '_search') requiredCapability(prop, filterSuffix, FILTER_CAPABILITIES[filterSuffix])
+    if (filterSuffix !== '_search') requiredCapability(prop, filterSuffix, FILTER_CAPABILITIES[filterSuffix] as string)
 
     if (filterSuffix === '_in') {
       try {
@@ -388,9 +387,9 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
 
   if (query.date_match ?? query._c_date_match) {
     const dateMatch = query.date_match ?? query._c_date_match
-    const dateField = dataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/Date')
-    const startDateField = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate') ?? dateField
-    const endDateField = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate') ?? dateField
+    const dateField = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://schema.org/Date')
+    const startDateField = dataset.schema.find((p: any) => p['x-refersTo'] === 'https://schema.org/startDate') ?? dateField
+    const endDateField = dataset.schema.find((p: any) => p['x-refersTo'] === 'https://schema.org/endDate') ?? dateField
     if (!startDateField || !endDateField) {
       if (query.date_match) {
         throw httpError(400, '"date_match" ne peut pas être utilisé sur ce jeu de données.')
@@ -404,12 +403,12 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       const startDate = (dates[0].length === 10 && dayjs(dates[0], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
       const endDate = (dates[1].length === 10 && dayjs(dates[1], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
       if (startDateField.key === endDateField.key) {
-        const dateRange = {}
+        const dateRange: any = {}
         if (startDate) dateRange.gte = startDate
         if (endDate) dateRange.lte = endDate
         filter.push({ range: { [startDateField.key]: dateRange } })
       } else {
-        const outsideRange = []
+        const outsideRange: any[] = []
         if (startDate) outsideRange.push({ range: { [endDateField.key]: { lt: startDate } } })
         if (endDate) outsideRange.push({ range: { [startDateField.key]: { gt: endDate } } })
         mustNot.push({ bool: { should: outsideRange } })
@@ -418,15 +417,15 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   }
 
   // bounding box filter to restrict results on geo zone: left,bottom,right,top
-  const geoShapeProp = dataset.schema.find(p => p.key === '_geoshape')
+  const geoShapeProp = dataset.schema.find((p: any) => p.key === '_geoshape')
   const geoShape = geoShapeProp && (!geoShapeProp['x-capabilities'] || geoShapeProp['x-capabilities'].geoShape !== false)
-  const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
+  const geoCornersProp = dataset.schema.find((p: any) => p.key === '_geocorners')
   const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
   if ((query.bbox || query.xyz) && !dataset.bbox) {
     throw httpError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
   }
   if ((query.bbox || query._c_bbox || query.xyz) && dataset.bbox) {
-    const bbox = getQueryBBOX(query, dataset)
+    const bbox = getQueryBBOX(query, dataset)!
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
     // use geo_shape intersection instead geo_bounding_box in order to get even
     // partial geometries in tiles
@@ -489,12 +488,12 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   return esQuery
 }
 
-export const getQueryBBOX = (query) => {
-  let bbox
+export const getQueryBBOX = (query: Record<string, any>, _dataset?: any) => {
+  let bbox: number[] | undefined
   if (query.bbox ?? query._c_bbox) {
     bbox = (query.bbox ?? query._c_bbox).split(',').map(Number)
   } else if (query.xyz) {
-    bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number))
+    bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number) as [number, number, number])
   }
   if (bbox) {
     bbox[0] = geo.fixLon(bbox[0])
@@ -507,7 +506,7 @@ export const getQueryBBOX = (query) => {
  * Pre-compute schema lookups once per request instead of per result item.
  * This eliminates O(N*S) linear scans where N=items and S=schema length.
  */
-export const prepareResultContext = (dataset, query) => {
+export const prepareResultContext = (dataset: any, query: Record<string, any>) => {
   const schema = dataset.schema
   const schemaByKey = new Map()
   let hasIdField = false
@@ -565,7 +564,7 @@ export const prepareResultContext = (dataset, query) => {
   }
 }
 
-export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = config.publicUrl, ctx) => {
+export const prepareResultItem = (hit: any, dataset: any, query: Record<string, any>, flatten: (source: any) => any, publicBaseUrl: string = config.publicUrl, ctx: any) => {
   const res = flatten(hit._source)
   res._score = hit._score
 
@@ -602,14 +601,14 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
   if (query.html === 'true' || query.html === 'vuetify') {
     for (const field of ctx.markdownFields) {
       if (res[field.key]) {
-        if (query.html === 'vuetify') res[field.key] = vuetifyMarked.parse(res[field.key]).trim()
-        else res[field.key] = defaultMarked.parse(res[field.key]).trim()
+        if (query.html === 'vuetify') res[field.key] = (vuetifyMarked.parse(res[field.key]) as string).trim()
+        else res[field.key] = (defaultMarked.parse(res[field.key]) as string).trim()
         res[field.key] = sanitizeHtml(res[field.key])
       }
     }
-    if (ctx.descriptionFieldKey && !ctx.markdownFields.some(f => f.key === ctx.descriptionFieldKey) && res[ctx.descriptionFieldKey]) {
-      if (query.html === 'vuetify') res[ctx.descriptionFieldKey] = vuetifyMarked.parse(res[ctx.descriptionFieldKey]).trim()
-      else res[ctx.descriptionFieldKey] = defaultMarked.parse(res[ctx.descriptionFieldKey]).trim()
+    if (ctx.descriptionFieldKey && !ctx.markdownFields.some((f: any) => f.key === ctx.descriptionFieldKey) && res[ctx.descriptionFieldKey]) {
+      if (query.html === 'vuetify') res[ctx.descriptionFieldKey] = (vuetifyMarked.parse(res[ctx.descriptionFieldKey]) as string).trim()
+      else res[ctx.descriptionFieldKey] = (defaultMarked.parse(res[ctx.descriptionFieldKey]) as string).trim()
       res[ctx.descriptionFieldKey] = sanitizeHtml(res[ctx.descriptionFieldKey])
     }
   }
@@ -621,7 +620,7 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
       if (ctx.separatorKeys.has(key)) continue
       const field = ctx.schemaByKey.get(key)
       if (query.html === 'true' && field && (field['x-display'] === 'markdown' || field.key === ctx.descriptionFieldKey)) {
-        res[key] = truncateHTML(res[key], ctx.truncate)
+        res[key] = (truncateHTML as unknown as (html: string, length?: number) => string)(res[key], ctx.truncate)
       } else {
         res[key] = truncateMiddle(res[key], ctx.truncate, 0, '...')
       }

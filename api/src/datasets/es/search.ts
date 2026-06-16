@@ -1,9 +1,9 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { aliasName, prepareQuery } from './commons.js'
+import { aliasName, prepareQuery } from './commons.ts'
 import { tooLongError } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
-import { type EsAbortContext, timedEsCall } from './abort.js'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
 
 export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, abortContext?: EsAbortContext) => {
   const esQuery = prepareQuery(dataset, query)
