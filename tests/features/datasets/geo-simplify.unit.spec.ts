@@ -21,6 +21,10 @@ test.describe('countVertices', () => {
     // ring has 4 coordinate entries (the last closes the ring); all count toward size
     assert.equal(countVertices({ type: 'Polygon', coordinates: [[[0, 0], [0, 1], [1, 1], [0, 0]]] }), 4)
   })
+  test('counts linestring and multilinestring entries', () => {
+    assert.equal(countVertices({ type: 'LineString', coordinates: [[0, 0], [1, 1], [2, 2]] }), 3)
+    assert.equal(countVertices({ type: 'MultiLineString', coordinates: [[[0, 0], [1, 1]], [[2, 2], [3, 3], [4, 4]]] }), 5)
+  })
   test('sums multipolygon and geometrycollection', () => {
     const mp = { type: 'MultiPolygon', coordinates: [[[[0, 0], [0, 1], [1, 1], [0, 0]]], [[[5, 5], [5, 6], [6, 6], [5, 5]]]] }
     assert.equal(countVertices(mp as any), 8) // two rings of 4 coordinate entries each

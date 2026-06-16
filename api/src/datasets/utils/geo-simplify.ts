@@ -13,17 +13,33 @@ const BASE_TOLERANCE = 1e-7
 const MAX_TOLERANCE = 0.1
 const SIMPLIFIABLE = ['Polygon', 'MultiPolygon', 'LineString', 'MultiLineString']
 
-export const countVertices = (geometry: Geometry): number => {
-  if (geometry.type === 'GeometryCollection') {
-    return geometry.geometries.reduce((n, g) => n + countVertices(g), 0)
-  }
+// Sum the coordinate-entry counts of nested coordinate arrays. `depth` is how many
+// array levels sit above the leaf ring/line (the array of [lon, lat] entries), whose
+// count is just its `.length`. This keeps counting O(number of rings/parts) instead of
+// O(number of vertices) — ~2 array reads rather than ~100k recursive calls for a large
+// polygon — and avoids allocating a closure on every call.
+const sumLengths = (arr: any[], depth: number): number => {
+  if (depth === 0) return arr.length
   let n = 0
-  const walk = (coords: any): void => {
-    if (typeof coords[0] === 'number') { n++; return }
-    for (const c of coords) walk(c)
-  }
-  if ((geometry as any).coordinates) walk((geometry as any).coordinates)
+  for (const sub of arr) n += sumLengths(sub, depth - 1)
   return n
+}
+
+export const countVertices = (geometry: Geometry): number => {
+  switch (geometry.type) {
+    case 'Point': return 1
+    case 'MultiPoint':
+    case 'LineString': return geometry.coordinates.length
+    case 'MultiLineString':
+    case 'Polygon': return sumLengths(geometry.coordinates, 1)
+    case 'MultiPolygon': return sumLengths(geometry.coordinates, 2)
+    case 'GeometryCollection': {
+      let n = 0
+      for (const g of geometry.geometries) n += countVertices(g)
+      return n
+    }
+    default: return 0
+  }
 }
 
 export const simplifyToVertexBudget = (geometry: Geometry, maxVertices: number): Geometry => {
