@@ -4,37 +4,36 @@ import { parseSort, prepareQuery, aliasName, prepareResultItem, prepareResultCon
 import capabilities from '../../../contract/capabilities.js'
 import { columnOperationsHint } from './operations.ts'
 import { assertMetricAccepted } from './metric-agg.ts'
-import { timedEsCall } from './abort.ts'
+import { type EsAbortContext, timedEsCall } from './abort.ts'
 import es from '#es'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 
 // we used to split by ; but using , is more standard in open api
-const splitRetroCompat = (str) => {
+const splitRetroCompat = (str: any): any[] => {
   if (!str) return []
   const result = str.split(';')
   if (result.length === 1 && str.includes(',')) return str.split(',')
   return result
 }
 
-const parseOrder = (sortStr, fields, dataset, valuesField, hasMetric) => {
+const parseOrder = (sortStr: string, fields: string[], dataset: any, valuesField: string, hasMetric: any) => {
   const sort = parseSort(sortStr, fields, dataset)
   const knownKeys = ['_count', '_key', valuesField]
   if (hasMetric) knownKeys.push('metric')
-  return sort.map(s => {
+  return sort.map((s: any) => {
     const key = Object.keys(s)[0]
     if (!knownKeys.includes(key)) throw httpError(400, `Impossible de trier les groupes de la colonne ${valuesField} par ${key.split('.')[0]}`)
     return { [key]: s[key].order }
   })
 }
 
-/** @param {import('./abort.ts').EsAbortContext} [abortContext] */
-export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout, abortContext) => {
-  const fields = dataset.schema.map(f => f.key)
+export default async (dataset: any, query: Record<string, any>, addGeoData: any, publicBaseUrl: string, explain: any, flatten: any, allowPartialResults = false, timeout: string | number = config.elasticsearch.searchTimeout, abortContext?: EsAbortContext) => {
+  const fields = dataset.schema.map((f: any) => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw httpError(400, 'Le paramètre "field" est obligatoire')
   const valuesFields = splitRetroCompat(query.field)
   // matching properties from the schema
-  const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
+  const props = valuesFields.map((f: any) => dataset.schema.find((p: any) => p.key === f))
   // sorting for each level
   const sorts = splitRetroCompat(query.sort)
   // management of missing items
@@ -44,7 +43,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   // number of agg results for each level
   const aggSizes = splitRetroCompat(query.agg_size).map(s => Number(s))
   let combinedMaxSize = 1
-  const aggTypes = []
+  const aggTypes: any[] = []
   for (let i = 0; i < valuesFields.length; i++) {
     if (!props[i]) throw httpError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
     if (props[i]['x-capabilities'] && props[i]['x-capabilities'].values === false) {
@@ -92,9 +91,9 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   delete query.sort
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
-  let currentAggLevel = esQuery.aggs = {}
+  let currentAggLevel: any = esQuery.aggs = {}
   for (let i = 0; i < valuesFields.length; i++) {
-    const valuesField = dataset.schema.find(p => p.key === valuesFields[i])
+    const valuesField = dataset.schema.find((p: any) => p.key === valuesFields[i])
     const hasMetric = query.metric && query.metric_field
     if (aggSizes[i] !== 0) {
       currentAggLevel.values = {
@@ -157,7 +156,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
     if (currentAggLevel.values) {
       currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset, valuesField.key, hasMetric)
       if (hasMetric) {
-        const metricField = dataset.schema.find(p => p.key === query.metric_field)
+        const metricField = dataset.schema.find((p: any) => p.key === query.metric_field)
         if (!metricField) {
           throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
         }
@@ -174,7 +173,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
       if (query.extra_metrics) {
         for (const extraMetric of query.extra_metrics.split(',')) {
           const [field, metric] = extraMetric.split(':')
-          const metricField = dataset.schema.find(p => p.key === field)
+          const metricField = dataset.schema.find((p: any) => p.key === field)
           if (!metricField) {
             throw httpError(400, `Impossible de calculer une métrique sur le champ ${field}, il n'existe pas dans le jeu de données.`)
           }
@@ -212,7 +211,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   }
   // Bound complexity with a timeout
   if (explain) explain.esQuery = esQuery
-  const esResponse = await timedEsCall(abortContext, () => es.client.search({
+  const esResponse: any = await timedEsCall(abortContext, () => es.client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout,
@@ -220,7 +219,7 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   }, abortContext))
   if (explain) explain.esResponse = esResponse
 
-  const response = { total: esResponse.hits.total.value }
+  const response: any = { total: esResponse.hits.total.value }
   if (esResponse.timed_out) response.timed_out = true
   const resultCtx = prepareResultContext(dataset, query)
   recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl, flatten, 0, valuesFields, resultCtx)
@@ -236,15 +235,15 @@ export default async (dataset, query, addGeoData, publicBaseUrl, explain, flatte
   return response
 }
 
-const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, flatten, i, valuesFields, resultCtx) => {
+const recurseAggResponse = (response: any, aggRes: any, dataset: any, query: Record<string, any>, publicBaseUrl: string, flatten: any, i: number, valuesFields: any[], resultCtx: any) => {
   if (aggRes.card) response.total_values = aggRes.card.value
   if (!aggRes.values) return response
   response.total_other = aggRes.values.sum_other_doc_count
   if (aggRes.values.buckets.length > 10000) {
     throw httpError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
   }
-  const valuesField = dataset.schema.find(p => p.key === valuesFields[i])
-  response.aggs = aggRes.values.buckets.map(b => {
+  const valuesField = dataset.schema.find((p: any) => p.key === valuesFields[i])
+  response.aggs = aggRes.values.buckets.map((b: any) => {
     let value = b.key_as_string || b.key
     if (valuesField?.type === 'string' && valuesField.format === 'date') {
       value = value.slice(0, 10)
@@ -252,10 +251,10 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, fla
     if (b.rawValueTopHits) {
       value = b.rawValueTopHits.hits.hits[0]?._source[valuesFields[i]] ?? value
     }
-    const aggItem = {
+    const aggItem: any = {
       total: b.doc_count,
       value,
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)) : []
+      results: b.topHits ? b.topHits.hits.hits.map((hit: any) => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value

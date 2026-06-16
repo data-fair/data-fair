@@ -247,7 +247,7 @@ router.post('/api-keys-expiration/run', async (req, res, next) => {
 // Count ES indices matching a dataset prefix
 router.get('/dataset-es-indices-count/:datasetId', async (req, res, next) => {
   try {
-    const { indexPrefix } = await import('../../datasets/es/manage-indices.js')
+    const { indexPrefix } = await import('../../datasets/es/manage-indices.ts')
     const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
     if (!dataset) return res.status(404).json({ error: 'dataset not found' })
     const indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*` })
