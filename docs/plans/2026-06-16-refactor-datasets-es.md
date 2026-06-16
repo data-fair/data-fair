@@ -26,6 +26,15 @@ Playwright (unit + api). Ratchet: `npm run check-types-ratchet` (baseline curren
 `values-agg.js` 69, `geo-agg.js`, `metric-agg.js`, `manage-indices.js`, `index-stream.js`). One
 worktree (current branch `refactor-typescript5`), one PR, ~4 commits. Branch is even with master.
 
+**Actual (closed out 2026-06-16):** ratchet **1342 → 1106** (**−236**, vs the ≈−274 estimate — the
+gap is because some counted errors lived in not-fully-checked `.js` outside the strict tally and the
+`abort.ts` accessor change netted ~0). **5 commits** (`b93960aee`, `b4bfd1589`, `263e2451d`,
+`8b1063162`, `7ab839e2a`), 13 files converted, es/ now **100% TS**, **0 suppressions**. Consolidation
+review: **no moves** (every `commons.ts` export is `#config`-coupled or dataset-state-coupled; commons
+already delegates pure logic to `operations.ts`). All 6 es-related unit specs green (70 tests), lint
+clean repo-wide. One preserved bug recorded (master-plan §9 item 9: `words-agg.ts:44` `signifant_text`
+typo). See the Phase 6a execution record in the master plan for the full write-up.
+
 ---
 
 ## 0. Scope & inventory
@@ -254,7 +263,7 @@ annotations only.
 - Modify: `docs/plans/2026-06-10-code-quality-refactor.md` (execution record + parking lot)
 - Modify: this file (record actual size/effort)
 
-- [ ] **Step 1: Consolidation review.** The brief mentions "consolidate pure query-building into
+- [x] **Step 1: Consolidation review.** Decision: **no moves** (see §"Actual"). The brief mentions "consolidate pure query-building into
   `operations.ts`." Hold this to a **conservative** bar: move a helper from `commons.ts` to
   `operations.ts` **only if** it is genuinely pure (no `#config`, no ES client, no I/O), self-contained,
   and the move is verbatim. If any candidate is entangled with config or result-shaping, **leave it**
@@ -263,15 +272,14 @@ annotations only.
   exports and **do not** rename existing exports. Most likely outcome: **no moves** (commons already
   delegates capability/mapping logic to operations.ts). Record the decision either way.
 
-- [ ] **Step 2: Confirm unit specs green** — the 6 specs importing `es/operations.ts` /
+- [x] **Step 2: Confirm unit specs green** (70 tests pass) — the 6 specs importing `es/operations.ts` /
   `es/index-name.ts` / `es/diagnose-warnings.ts` have **unchanged import paths** (those files were
   already `.ts`); run them:
   `npx playwright test tests/features/datasets/query/index-definition.unit.spec.ts tests/features/datasets/query/q-fields.unit.spec.ts tests/features/datasets/es/column-operations.unit.spec.ts tests/features/admin/parse-index-name.unit.spec.ts tests/features/datasets/diagnose-warnings.unit.spec.ts tests/features/infra/es-error.unit.spec.ts` → PASS.
 
-- [ ] **Step 3: Full ratchet + lint sweep** — `npm run check-types-ratchet` (commit the updated
-  `dev/type-errors-baseline.txt`); `npm run lint`. Confirm `grep -rn "@ts-ignore\|@ts-expect-error\|as any" api/src/datasets/es` returns **0**.
+- [x] **Step 3: Full ratchet + lint sweep** — ratchet 1106 (baseline already committed at 1106); `npm run lint` clean repo-wide; `grep … api/src/datasets/es` returns **0** suppressions.
 
-- [ ] **Step 4: Update the master plan** — append a "Phase 6a execution record" to
+- [x] **Step 4: Update the master plan** — append a "Phase 6a execution record" to
   `docs/plans/2026-06-10-code-quality-refactor.md` (commits, baseline delta, LOC, files converted, the
   consolidation decision). Add to §9 parking lot any suspected bug found while moving (preserved
   bit-for-bit, never fixed inline) and the `esAbortContext` legacyProp note (dropped in 6d). Record
@@ -284,19 +292,20 @@ annotations only.
 
 ## Definition of done (per master plan §10)
 
-- [ ] All 13 `datasets/es/*.js` converted to `.ts`; directory is **100% TypeScript** (`ls es/*.js`
+- [x] All 13 `datasets/es/*.js` converted to `.ts`; directory is **100% TypeScript** (`ls es/*.js`
       empty).
-- [ ] API/e2e specs **untouched** and green; unit specs: **import paths unchanged** (the tested files
-      were already `.ts`), assertions unchanged.
-- [ ] `npm run check-types-ratchet` improved (target ≈ −274); `dev/type-errors-baseline.txt` committed.
-- [ ] **0 suppressions** in `datasets/es/` (was 1 — the `abort.js` `@ts-ignore`); no new
+- [x] API/e2e specs **untouched** and green; unit specs: **import paths unchanged** (the tested files
+      were already `.ts`), assertions unchanged. (api/e2e run by husky at push; 70 unit tests green.)
+- [x] `npm run check-types-ratchet` improved (1342 → **1106**, −236); `dev/type-errors-baseline.txt`
+      committed.
+- [x] **0 suppressions** in `datasets/es/` (was 1 — the `abort.js` `@ts-ignore`); no new
       `as any`/`@ts-ignore`/`@ts-expect-error`.
-- [ ] `esAbortContext` accessor (`setReqEsAbortContext`/`reqEsAbortContext`/`reqEsAbortContextOptional`)
+- [x] `esAbortContext` accessor (`setReqEsAbortContext`/`reqEsAbortContext`/`reqEsAbortContextOptional`)
       lives in `abort.ts` with `legacyProp` dual-write; the `rate-limiting.ts` reader migrated; the
       `router.js` readers left for 6d (legacyProp retained).
-- [ ] Barrel `es/index.ts` exports unchanged in **shape** (only `.js`→`.ts` specifiers + the new
+- [x] Barrel `es/index.ts` exports unchanged in **shape** (only `.js`→`.ts` specifiers + the new
       accessor exports); every external importer (`router.js`, `ods`, `storage`, `master-data`,
       `index-lines`, `rest`, `service.js`) still resolves.
-- [ ] Function bodies moved **verbatim** — no behavior change. Any suspected bug recorded in §9, not
-      fixed.
-- [ ] Master plan §8.5/§9 updated; this doc records actual size/effort.
+- [x] Function bodies moved **verbatim** — no behavior change. Suspected bug recorded in §9 (item 9:
+      `words-agg.ts:44` typo), not fixed.
+- [x] Master plan §8.5/§9 updated; this doc records actual size/effort.
