@@ -1,14 +1,20 @@
+import type { Request as ExpressRequest, Response as ExpressResponse } from 'express'
 import config from '#config'
+import { defineReqContext } from '../../misc/utils/req-context.ts'
 
-/**
- * @typedef {Object} EsAbortContext
- * @property {AbortSignal} signal - pass it (with requestTimeout) as the options arg of an ES client call
- * @property {string | number} requestTimeout - per-request client timeout; equals the ES search
- *   `timeout` parameter so the http request can't outlive the ES-side collection timeout
- * @property {number} esElapsedMs - cumulated wall-clock duration (ms) of the ES calls made for this
- *   request; fed to the time-weighted ("compute budget") rate limiter (see api/src/misc/utils/rate-limiting.ts).
- *   Each ES helper bumps it via `recordEsElapsed` around its client call.
- */
+export interface EsAbortContext {
+  /** pass it (with requestTimeout) as the options arg of an ES client call */
+  signal: AbortSignal
+  /** per-request client timeout; equals the ES search `timeout` parameter */
+  requestTimeout: string | number
+  /** cumulated wall-clock ms of the ES calls made for this request (compute-budget rate limiter) */
+  esElapsedMs: number
+}
+
+const esAbortContext = defineReqContext<EsAbortContext>('esAbortContext', 'esAbortContext')
+export const setReqEsAbortContext = esAbortContext.set
+export const reqEsAbortContext = esAbortContext.get
+export const reqEsAbortContextOptional = esAbortContext.getOptional
 
 /**
  * Build per-request options to pass to elasticsearch client calls on a read path so that:
@@ -32,15 +38,10 @@ import config from '#config'
  *
  * One context is meant to be created once per http request and reused across all the ES calls that
  * request makes (a single AbortController cancels them all at once on disconnect).
- *
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @returns {EsAbortContext}
  */
-export const createEsRequestOptions = (req, res) => {
+export const createEsRequestOptions = (req: ExpressRequest, res: ExpressResponse) => {
   const controller = new AbortController()
-  /** @type {EsAbortContext} */
-  const abortContext = {
+  const abortContext: EsAbortContext = {
     signal: controller.signal,
     requestTimeout: config.elasticsearch.searchTimeout,
     esElapsedMs: 0
@@ -53,8 +54,7 @@ export const createEsRequestOptions = (req, res) => {
   }
   res.on('close', onClose)
 
-  // @ts-ignore
-  req.esAbortContext = abortContext
+  setReqEsAbortContext(req, abortContext)
   return abortContext
 }
 
@@ -65,13 +65,8 @@ export const createEsRequestOptions = (req, res) => {
  *
  * Usage in an ES helper:
  *   const esResponse = await timedEsCall(abortContext, () => client.search({ ... }, abortContext))
- *
- * @template T
- * @param {EsAbortContext | undefined} abortContext
- * @param {() => Promise<T>} fn
- * @returns {Promise<T>}
  */
-export const timedEsCall = async (abortContext, fn) => {
+export const timedEsCall = async <T>(abortContext: EsAbortContext | undefined, fn: () => Promise<T>): Promise<T> => {
   // performance.now() (sub-millisecond float) rather than Date.now(): a fast localhost ES call can be
   // well under 1 ms and Date.now()'s integer-ms resolution would round it to 0
   const start = performance.now()
