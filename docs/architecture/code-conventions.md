@@ -102,35 +102,44 @@ call site. Its return type encodes the contract:
 
 **Choose based on the setter's runtime guarantee, not by analogy with another accessor.**
 
-### Placement: topical, defined at migration time
+### Placement: config-free home (revised 2026-06-16)
 
-Accessors live next to the code that owns the context — `misc/utils/req-context.ts` hosts only
-the `defineReqContext` factory and req-free context helpers (`reqEventLogContext`), never
-accessors. Module-specific accessors sit next to the middleware that sets them (e.g.
-`reqSettingsParams` in `settings/middlewares.ts`, `reqDataset` in `datasets/middlewares.*`).
-Cross-cutting contexts (set in one module, read in others) go with their **semantic owner** —
-the module that defines what the value means, usually its main reader. Define each accessor in
-the phase that migrates its setter or readers, never ahead of need.
+**Cross-cutting accessors must be importable by config-free code.** A unit-tested pure util
+(e.g. `query-advice.ts`) imports an accessor; if that accessor is defined in a module that
+imports `#config`/`#mongo`, the pure module transitively loads and *validates* config at import
+time — which has no config dir under the `unit` test project and throws. (This actually broke the
+`query-advice` unit spec: its `reqPublicOperation` accessor was defined in `permissions.ts`, which
+imports `#config`.)
 
-Planned homes for the cross-cutting contexts (names and `get`/`getOptional` contracts are fixed;
-create each accessor when its phase lands):
+Rules:
+- The `defineReqContext` factory and the **cross-cutting** accessors (`resource`, `resourceType`,
+  `bypassPermissions`, `publicOperation`) live in the **config-free** `misc/utils/req-context.ts`.
+  It imports only types + `@data-fair/lib-express` — never `#config`/`#mongo`.
+- A module may host its own cross-cutting accessor **only if that module is itself config-free**
+  (e.g. `public-base-url.ts`, which imports only `defineReqContext`).
+- When the natural **semantic owner** is config-coupled, define the accessor in `req-context.ts`
+  and **re-export it from the owner as a facade** (as `permissions.ts` now does), so both
+  `permissions.<accessor>` namespace consumers and config-free direct importers work.
+- Module-**local** accessors still sit next to the middleware that sets them (e.g.
+  `reqSettingsParams` in `settings/middlewares.ts`, `reqDataset` in `datasets/middlewares.*`) —
+  those modules aren't imported by config-free pure code.
+- Define each accessor in the phase that migrates its setter or readers, never ahead of need.
+
+Homes for the cross-cutting contexts (names and `get`/`getOptional` contracts are fixed):
 
 | Accessor | Type | Home | Set from |
 |---|---|---|---|
-| `reqResource` / `setReqResource` | `Resource` (throws) | `misc/utils/permissions.ts` | `applications/router.js`, `applications/proxy.js`, `datasets/middlewares.js`, `remote-services/router.js` |
-| `reqResourceOptional` | `Resource \| undefined` | same | same |
-| `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | `misc/utils/permissions.ts` | several routers |
-| `reqBypassPermissions` / `setReqBypassPermissions` | `BypassPermissions \| undefined` | `misc/utils/permissions.ts` | `api-key.ts`, `application-key.ts` |
-| `reqPublicOperation` / `setReqPublicOperation` | `boolean \| undefined` | `misc/utils/permissions.ts` | `permissions.ts` |
-| `reqNoCache` / `setReqNoCache` | `boolean \| undefined` | `misc/utils/cache-headers.*` (at its `.ts` conversion) | `datasets/middlewares.js` |
-| `reqPublicBaseUrl` / `setReqPublicBaseUrl` | `string` (throws) | small dedicated module created when `app.js` migrates (setter middleware + accessors co-located) | `app.js` |
-| `reqPublicWsBaseUrl` / `setReqPublicWsBaseUrl` | `string` (throws) | same | `app.js` |
-| `reqPublicationSite` / `setReqPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js`, `catalog/router.js` |
-| `reqMainPublicationSite` / `setReqMainPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js` |
+| `reqResource` / `setReqResource` / `reqResourceOptional` | `Resource` (throws / optional) | `req-context.ts` (re-exported by `permissions.ts`) | `applications/*`, `datasets/middlewares.js`, `remote-services/router.js` |
+| `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | `req-context.ts` (re-exported by `permissions.ts`) | several routers |
+| `reqBypassPermissions` / `setReqBypassPermissions` | `BypassPermissions \| undefined` | `req-context.ts` (re-exported by `permissions.ts`) | `api-key.ts`, `application-key.ts` |
+| `reqPublicOperation` / `setReqPublicOperation` | `boolean \| undefined` | `req-context.ts` (re-exported by `permissions.ts`) | `permissions.ts` |
+| `reqNoCache` / `setReqNoCache`, `reqNoModifiedCache` / `setReqNoModifiedCache` | `boolean \| undefined` | `misc/utils/cache-headers.ts` | `datasets/middlewares.js`, `api-compat/ods` |
+| `reqPublicBaseUrl` / `setReqPublicBaseUrl`, `reqPublicWsBaseUrl` / `setReqPublicWsBaseUrl` | `string` (throws) | `misc/utils/public-base-url.ts` (config-free) | `app.js` |
+| `reqPublicationSite` / `setReqPublicationSite`, `reqMainPublicationSite` / `setReqMainPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js`, `catalog/router.js` |
 
-`permissions.ts` and the rest of `misc/utils` may be relocated in Phase 5; accessors move with
-their host file. Accessors add no imports, so hosting them in `permissions.ts` is not expected to
-create import cycles — still worth a quick check when the first ones land.
+Note: `cache-headers.ts` and `publication-sites.ts` are config-coupled but still host their own
+accessors — acceptable for now because **no config-free module imports them**. If that changes,
+move the accessor to `req-context.ts` and re-export (the facade pattern above).
 
 The same co-location applies to **context builders**: helpers that assemble a service write
 context from `req` live in `middlewares.ts` next to the accessors they compose — not in

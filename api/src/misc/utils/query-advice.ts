@@ -2,7 +2,7 @@ import { type Request } from 'express'
 import i18n from 'i18n'
 import { hasManyQSearchFields, FILTER_CAPABILITIES } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
-import { reqPublicOperation } from './permissions.ts'
+import { reqPublicOperation } from './req-context.ts'
 
 // Builds a short, localized, advisory sentence appended to overload errors (429 compute-budget,
 // 504 "request too long", 429 ES circuit_breaking_exception). It only ever *advises* — it never

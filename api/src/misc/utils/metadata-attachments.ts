@@ -8,7 +8,7 @@ import { metadataAttachmentsDir as datasetAttachmentsDir } from '../../datasets/
 import { attachmentsDir as applicationAttachmentsDir } from '../../applications/utils.ts'
 import * as limits from '../../limits/service.ts'
 import filesStorage from '#files-storage'
-import { reqResource, reqResourceType } from './permissions.ts'
+import { reqResource, reqResourceType } from './req-context.ts'
 
 const debug = debugLib('attachments')
 const debugLimits = debugLib('limits')

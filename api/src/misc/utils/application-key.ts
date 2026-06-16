@@ -6,7 +6,7 @@ import * as rateLimiting from './rate-limiting.ts'
 import { type Request, type Response, type NextFunction } from 'express'
 import { type ApplicationKey, type RequestWithResource } from '#types'
 import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
-import { reqResource, setReqBypassPermissions } from './permissions.ts'
+import { reqResource, setReqBypassPermissions } from './req-context.ts'
 import { reqPublicBaseUrl } from './public-base-url.ts'
 import debugModule from 'debug'
 

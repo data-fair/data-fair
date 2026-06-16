@@ -2,8 +2,7 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { Request, RequestHandler, Response } from 'express'
 import debugLib from 'debug'
-import { defineReqContext } from './req-context.ts'
-import { reqResource, reqPublicOperation } from './permissions.ts'
+import { defineReqContext, reqResource, reqPublicOperation } from './req-context.ts'
 
 const debug = debugLib('cache-headers')
 

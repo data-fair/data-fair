@@ -19,7 +19,7 @@ import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqSession, reqAdminMode } from '@data-fair/lib-express'
-import { setReqResource, setReqResourceType } from '../misc/utils/permissions.ts'
+import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { setReqRemoteService, reqRemoteService } from './middlewares.ts'
 

@@ -10,27 +10,13 @@ import * as apiDocsUtil from './api-docs.ts'
 import * as visibilityUtils from './visibility.ts'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
-import { defineReqContext } from './req-context.ts'
-
-// permissions is the semantic owner of the resource / resourceType request context.
-// legacyProp dual-write keeps the legacy `req.resource` / `req.resourceType` reads in this file
-// (and the setters in other modules' routers) working while modules migrate to the accessors.
-const resourceCtx = defineReqContext<Resource>('resource', 'resource')
-export const setReqResource = resourceCtx.set
-export const reqResource = resourceCtx.get
-export const reqResourceOptional = resourceCtx.getOptional
-
-const resourceTypeCtx = defineReqContext<ResourceType>('resourceType', 'resourceType')
-export const setReqResourceType = resourceTypeCtx.set
-export const reqResourceType = resourceTypeCtx.get
-
-const bypassPermissionsCtx = defineReqContext<BypassPermissions>('bypassPermissions', 'bypassPermissions')
-export const setReqBypassPermissions = bypassPermissionsCtx.set
-export const reqBypassPermissions = bypassPermissionsCtx.getOptional
-
-const publicOperationCtx = defineReqContext<boolean>('publicOperation', 'publicOperation')
-export const setReqPublicOperation = publicOperationCtx.set
-export const reqPublicOperation = publicOperationCtx.getOptional
+// The cross-cutting resource / resourceType / bypassPermissions / publicOperation
+// request-context accessors live in the config-free req-context.ts (so config-free
+// consumers can import them without pulling in #config) — see code-conventions.md §2.
+// They are re-exported here so existing `permissions.<accessor>` namespace consumers
+// keep working; config-free consumers import them directly from req-context.ts.
+import { reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
+export { setReqResource, reqResource, reqResourceOptional, setReqResourceType, reqResourceType, setReqBypassPermissions, reqBypassPermissions, setReqPublicOperation, reqPublicOperation } from './req-context.ts'
 
 const resourceTypesLabels: Record<ResourceType, string> = {
   datasets: 'Le jeu de données',

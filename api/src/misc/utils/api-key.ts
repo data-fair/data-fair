@@ -8,7 +8,7 @@ import { type RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account, assertReqInternal } from '@data-fair/lib-express'
 import { type NextFunction, type Response, type Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../../settings/operations.ts'
-import { reqResourceOptional, setReqBypassPermissions } from './permissions.ts'
+import { reqResourceOptional, setReqBypassPermissions } from './req-context.ts'
 import dayjs from 'dayjs'
 
 export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {

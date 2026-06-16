@@ -12,7 +12,7 @@ import { tmpDir } from '../../datasets/utils/files.ts'
 import debugLib from 'debug'
 import filesStorage from '#files-storage'
 import { httpError } from '@data-fair/lib-express'
-import { reqPublicOperation } from './permissions.ts'
+import { reqPublicOperation } from './req-context.ts'
 import { reqPublicBaseUrl } from './public-base-url.ts'
 import type { Request, Response } from 'express'
 
