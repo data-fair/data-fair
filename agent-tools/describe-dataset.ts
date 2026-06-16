@@ -83,11 +83,11 @@ export const schema = {
 /**
  * Build structuredContent from raw API dataset + sample lines data.
  */
-export function buildStructuredContent (fetchedData: any, sampleLines?: any[]): Record<string, any> {
+export function buildStructuredContent (fetchedData: any, sampleLines?: any[], link?: string): Record<string, any> {
   const dataset: any = {
     id: fetchedData.id,
     title: fetchedData.title,
-    page: fetchedData.page,
+    page: link ?? fetchedData.page,
     count: fetchedData.count
   }
 
@@ -151,8 +151,15 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[]): 
  * Serialize full dataset metadata + schema into markdown.
  * Used by describe_dataset and read_dataset_info tools.
  */
-export function formatResult (fetchedData: any, options?: { includeOwner?: boolean, sampleLines?: any[] }): { text: string, structuredContent: Record<string, any> } {
-  const structuredContent = buildStructuredContent(fetchedData, options?.sampleLines)
+/**
+ * @param options.datasetLink overrides the link for the dataset. Defaults to the API
+ * `page` field (public/portal page — right for portal & MCP). The back-office integration
+ * passes a current-site builder so links don't point at the portal/primary site when the
+ * back-office is served on a secondary domain. See list-datasets.formatResult.
+ */
+export function formatResult (fetchedData: any, options?: { includeOwner?: boolean, sampleLines?: any[], datasetLink?: (d: any) => string }): { text: string, structuredContent: Record<string, any> } {
+  const link = options?.datasetLink ? options.datasetLink(fetchedData) : fetchedData.page
+  const structuredContent = buildStructuredContent(fetchedData, options?.sampleLines, link)
 
   const meta: string[] = [
     `# ${fetchedData.title}`,
@@ -177,7 +184,7 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
   if (fetchedData.timePeriod) {
     meta.push(`- **Temporal dataset:** yes (${fetchedData.timePeriod.startDate} to ${fetchedData.timePeriod.endDate}). The dateMatch filter is available in search_data, aggregate_data, and calculate_metric.`)
   }
-  if (fetchedData.page) meta.push(`- **Link:** ${fetchedData.page}`)
+  if (link) meta.push(`- **Link:** ${link}`)
 
   const schemaRows = formatSchemaColumns(fetchedData.schema)
   const sections = [...meta]
