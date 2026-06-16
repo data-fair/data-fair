@@ -159,6 +159,35 @@ test.describe('Applications', () => {
     assert.equal(dataset.extras.applications.length, 1)
   })
 
+  test('Filter applications by a child application they use', async () => {
+    const ax = testUser1
+
+    // a child application (a visualization used by others)
+    const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const childRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
+
+    // a parent application referencing the child in its configuration
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    let res = await ax.put('/api/v1/applications/' + parentApp.id + '/config', {
+      applications: [{ id: childApp.id, href: childRef.href }]
+    })
+    assert.equal(res.status, 200)
+
+    // querying applications using an unknown child returns nothing
+    res = await ax.get('/api/v1/applications', { params: { application: 'nope' } })
+    assert.equal(res.data.count, 0)
+
+    // querying applications using the child returns the parent
+    res = await ax.get('/api/v1/applications', { params: { application: childApp.id } })
+    assert.equal(res.data.count, 1)
+    assert.equal(res.data.results[0].id, parentApp.id)
+
+    // size=0 returns only the count (used by the "used by" link)
+    res = await ax.get('/api/v1/applications', { params: { application: childApp.id, size: 0 } })
+    assert.equal(res.data.count, 1)
+    assert.equal(res.data.results.length, 0)
+  })
+
   test('Use an application through the application proxy', async () => {
     const ax = testUser1
     const adminAx = alban
