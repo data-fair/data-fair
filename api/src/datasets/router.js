@@ -45,6 +45,7 @@ import { checkStorage, lockDataset, readDataset } from './middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin, isRest, readWritableDataset } from './routes/_common.ts'
 import { registerMasterDataRoutes } from './routes/master-data.ts'
 import { registerReadRoutes } from './routes/read.ts'
+import { registerLinesRoutes } from './routes/lines.ts'
 import config from '#config'
 import mongo from '#mongo'
 import debugModule from 'debug'
@@ -583,16 +584,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   return res.send(datasetFull)
 })
 
-router.get('/:datasetId/lines/:lineId', readDataset(), isRest, apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readLine)
-router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, restDatasetsUtils.fixFormBody, uploadUtils.fsyncFiles, clamav.middleware, restDatasetsUtils.createOrUpdateLine)
-router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, restDatasetsUtils.fixFormBody, uploadUtils.fsyncFiles, clamav.middleware, restDatasetsUtils.createOrUpdateLine)
-router.patch('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, restDatasetsUtils.fixFormBody, uploadUtils.fsyncFiles, clamav.middleware, restDatasetsUtils.patchLine)
-router.post('/:datasetId/_bulk_lines', readWritableDataset, isRest, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, restDatasetsUtils.bulkLines)
-router.delete('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('deleteLine', 'write'), restDatasetsUtils.deleteLine)
-router.get('/:datasetId/lines/:lineId/revisions', readWritableDataset, isRest, apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readRevisions)
-router.get('/:datasetId/revisions', readWritableDataset, isRest, apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readRevisions)
-router.delete('/:datasetId/lines', readWritableDataset, isRest, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('deleteAllLines', 'write'), restDatasetsUtils.deleteAllLines)
-router.post('/:datasetId/_sync_attachments_lines', readWritableDataset, isRest, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), restDatasetsUtils.syncAttachmentsLines)
+registerLinesRoutes(router)
 
 // specific routes with rest datasets with lineOwnership activated
 router.use('/:datasetId/own/:owner', readWritableDataset, isRest, apiKeyUtils.middleware(['datasets']), rateLimiting.middleware, (req, res, next) => {
