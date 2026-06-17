@@ -5,7 +5,7 @@ import { type Application } from 'express'
 import config from '#config'
 import mongo from '#mongo'
 import filesStorage from '#files-storage'
-import * as datasetsService from '../datasets/service.js'
+import * as datasetsService from '../datasets/service.ts'
 import { ownerDir } from '../datasets/utils/files.ts'
 
 export type Identity = { type: string, id: string, name?: string }

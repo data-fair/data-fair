@@ -23,6 +23,11 @@ import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
 import md5File from 'md5-file'
+import type { Db } from 'mongodb'
+import type { Client } from '@elastic/elasticsearch'
+import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { VirtualDataset } from '#types'
+import { type Locale } from '../../i18n/utils.ts'
 
 const debugMasterData = debugLib('master-data')
 
@@ -61,20 +66,11 @@ const fieldsMap = {
   ...filterFields
 }
 
-/**
- *
- * @param {import('mongodb').Db} db
- * @param {string} locale
- * @param {any} publicationSite
- * @param {string} publicBaseUrl
- * @param {Record<string, string>} reqQuery
- * @param {import('@data-fair/lib-express').SessionState} sessionState
- */
-export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState, options = {}) => {
-  const explain = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
+export const findDatasets = async (db: Db, locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState, options: { catalogMode?: boolean } = {}) => {
+  const explain: Record<string, number> | false | undefined = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
-  const extraFilters = []
+  const extraFilters: any[] = []
   if (reqQuery.bbox === 'true') {
     extraFilters.push({ bbox: { $ne: null } })
   }
@@ -119,7 +115,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   // Sort on `modified` is transparently rewritten to the indexed `_modified` field
   // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.ts).
   // Rebuild to preserve key ordering — Mongo applies sort keys in insertion order.
-  const sort = /** @type {any} */ ({})
+  const sort: Record<string, any> = {}
   for (const [k, v] of Object.entries(rawSort)) {
     sort[k === 'modified' ? '_modified' : k] = v
   }
@@ -150,8 +146,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
       return res
     })
   const [count, results, facets, sums] = await Promise.all([countPromise, resultsPromise, facetsPromise, sumsPromise])
-  /** @type {any} */
-  const response = {}
+  const response: Record<string, any> = {}
   if (countPromise) response.count = count
   if (resultsPromise) response.results = results
   else response.results = []
@@ -165,20 +160,10 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   return response
 }
 
-/**
- * @param {string} datasetId
- * @param {string} publicationSite
- * @param {string} mainPublicationSite
- * @param {boolean | undefined} useDraft
- * @param {boolean | undefined} fillDescendants
- * @param {boolean | undefined} acceptInitialDraft
- * @param {import('mongodb').Db} db
- * @param {string[] | ((body: any, dataset: any) => string[] | null)} [_acceptedStatuses]
- * @param {any} [reqBody]
- * @returns {Promise<{dataset?: any, datasetFull?: any}>}
- */
-export const getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody) => {
-  let dataset, datasetFull
+type AcceptedStatuses = string[] | ((body: any, dataset: any) => string[] | null)
+
+export const getDataset = async (datasetId: string, publicationSite: string, mainPublicationSite: string, useDraft: boolean | undefined, fillDescendants: boolean | undefined, acceptInitialDraft: boolean | undefined, db: Db, _acceptedStatuses?: AcceptedStatuses, reqBody?: any): Promise<{ dataset?: any, datasetFull?: any }> => {
+  let dataset: any, datasetFull: any
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     dataset = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, {}, 'dataset', datasetId)
     if (!dataset) return { }
@@ -231,7 +216,7 @@ export const memoizedGetDataset = memoize(getDataset, {
  * This avoids full MongoDB reads when the dataset hasn't changed, while still guaranteeing freshness.
  * Returns cached results directly when fresh (protected by assertImmutable in dev/test).
  */
-export const getDatasetFresh = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody) => {
+export const getDatasetFresh = async (datasetId: string, publicationSite: string, mainPublicationSite: string, useDraft: boolean | undefined, fillDescendants: boolean | undefined, acceptInitialDraft: boolean | undefined, db: Db, _acceptedStatuses?: AcceptedStatuses, reqBody?: any): Promise<{ dataset?: any, datasetFull?: any }> => {
   // first try the memoized cache
   const cached = await memoizedGetDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   if (!cached.dataset) {
@@ -243,7 +228,7 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
   }
 
   // cache has a result — check if it's still fresh via a lightweight query
-  const projection = { updatedAt: 1, finalizedAt: 1, status: 1, errorStatus: 1, errorRetry: 1, _id: 0 }
+  const projection: Record<string, number> = { updatedAt: 1, finalizedAt: 1, status: 1, errorStatus: 1, errorRetry: 1, _id: 0 }
   if (useDraft) projection['draft.updatedAt'] = 1
   const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection })
   if (!fresh) return {} // dataset was deleted
@@ -266,20 +251,7 @@ export const getDatasetFresh = async (datasetId, publicationSite, mainPublicatio
   return cached
 }
 
-/**
- *
- * @param {import('mongodb').Db} db
- * @param {import('@elastic/elasticsearch').Client} es
- * @param {string} locale
- * @param {import('@data-fair/lib-express').SessionStateAuthenticated} sessionState
- * @param {any} owner
- * @param {any} body
- * @param {undefined | any[]} files
- * @param {boolean} draft
- * @param {(callback: () => void) => void} onClose
- * @returns {Promise<any>}
- */
-export const createDataset = async (db, es, locale, sessionState, owner, body, files, draft, onClose) => {
+export const createDataset = async (db: Db, es: Client, locale: string, sessionState: SessionStateAuthenticated, owner: any, body: any, files: any[] | undefined, draft: boolean, onClose: (callback: () => void) => void): Promise<any> => {
   const datasetFile = files?.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
   const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
@@ -313,8 +285,7 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
   if (datasetFile) {
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
     const md5 = await md5File(datasetFile.path)
-    /** @type {any} */
-    const filePatch = {
+    const filePatch: any = {
       status: 'created',
       dataUpdatedBy: dataset.updatedBy,
       dataUpdatedAt: dataset.updatedAt,
@@ -399,7 +370,7 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
   return insertedDataset
 }
 
-export const deleteDataset = async (app, dataset) => {
+export const deleteDataset = async (app: any, dataset: any) => {
   const db = mongo.db
   try {
     await filesStorage.removeDir(dir(dataset))
@@ -432,14 +403,7 @@ export const deleteDataset = async (app, dataset) => {
   }
 }
 
-/**
- *
- * @param {any} dataset
- * @param {any} patch
- * @param {any[]} [removedRestProps]
- * @param {boolean} [attemptMappingUpdate]
- */
-export const applyPatch = async (dataset, patch, removedRestProps, attemptMappingUpdate) => {
+export const applyPatch = async (dataset: any, patch: any, removedRestProps?: any[], attemptMappingUpdate?: boolean) => {
   if (patch.extensions) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) extensions`, dataset.extensions, patch.extensions)
   if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
 
@@ -447,14 +411,14 @@ export const applyPatch = async (dataset, patch, removedRestProps, attemptMappin
 
   if (patch.extensions && dataset.isRest && dataset.extensions) {
     // TODO: check extension type (remoteService or exprEval)
-    const removedExtensions = dataset.extensions.filter(e => {
-      if (e.type === 'remoteService') return !patch.extensions.find(pe => pe.type === 'remoteService' && e.remoteService === pe.remoteService && e.action === pe.action)
-      if (e.type === 'exprEval') return !patch.extensions.find(pe => pe.type === 'exprEval' && e.property?.key === pe.property?.key)
+    const removedExtensions = dataset.extensions.filter((e: any) => {
+      if (e.type === 'remoteService') return !patch.extensions.find((pe: any) => pe.type === 'remoteService' && e.remoteService === pe.remoteService && e.action === pe.action)
+      if (e.type === 'exprEval') return !patch.extensions.find((pe: any) => pe.type === 'exprEval' && e.property?.key === pe.property?.key)
       return false
     })
     if (removedExtensions.length) {
       debugMasterData(`PATCH on dataset removed some extensions ${dataset.id} (${dataset.slug})`, removedExtensions)
-      const unset = {}
+      const unset: Record<string, ''> = {}
       for (const e of removedExtensions) {
         if (e.type === 'remoteService') unset[getExtensionKey(e)] = ''
         if (e.type === 'exprEval') unset[e.property?.key] = ''
@@ -468,7 +432,7 @@ export const applyPatch = async (dataset, patch, removedRestProps, attemptMappin
   if (removedRestProps && removedRestProps.length) {
     // some property was removed in rest dataset, trigger full re-indexing
     await restDatasetsUtils.collection(dataset).updateMany({},
-      { $unset: removedRestProps.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
+      { $unset: removedRestProps.reduce<Record<string, ''>>((a, df) => { a[df.key] = ''; return a }, {}) }
     )
   }
 
@@ -507,14 +471,14 @@ export const applyPatch = async (dataset, patch, removedRestProps, attemptMappin
 
   // if the dataset is in draft mode all patched values are stored in the draft state
   if (dataset.draftReason) {
-    const draftPatch = {}
+    const draftPatch: Record<string, any> = {}
     for (const key of Object.keys(patch)) {
       draftPatch['draft.' + key] = patch[key]
     }
     patch = draftPatch
   }
 
-  const mongoPatch = {}
+  const mongoPatch: { $set?: Record<string, any>, $unset?: Record<string, any> } = {}
   for (const key of Object.keys(patch)) {
     if (patch[key] === null) {
       mongoPatch.$unset = mongoPatch.$unset || {}
@@ -529,7 +493,7 @@ export const applyPatch = async (dataset, patch, removedRestProps, attemptMappin
   if (!dataset.draftReason && !patch.status && patch.schema) {
     // if the schema changed without triggering a worker we might need to actualize virtual datasets schemas too
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
-      const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(virtualDataset)
+      const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(virtualDataset as unknown as VirtualDataset)
       if (!equal(virtualDatasetSchema, virtualDataset.schema)) {
         await applyPatch(virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
       }
@@ -539,7 +503,7 @@ export const applyPatch = async (dataset, patch, removedRestProps, attemptMappin
 
 // synchronize the list of application references stored in dataset.extras.applications
 // used for quick access to capture, and default sorting in dataset pages
-export const syncApplications = async (datasetId) => {
+export const syncApplications = async (datasetId: string) => {
   const dataset = await mongo.datasets.findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
   if (!dataset) return
   const applications = await mongo.applications
@@ -552,9 +516,10 @@ export const syncApplications = async (datasetId) => {
     })
     .project({ id: 1, slug: 1, updatedAt: 1, _id: 0 })
     .toArray()
-  const applicationsExtras = ((dataset.extras && dataset.extras.applications) || [])
+  // extras is genuinely untyped extension content ({ [k]: unknown }); the applications ref list shape
+  const applicationsExtras = ((dataset.extras?.applications as { id: string }[] | undefined) || [])
     .map(appExtra => applications.find(app => app.id === appExtra.id))
-    .filter(appExtra => !!appExtra)
+    .filter((appExtra): appExtra is typeof applications[number] => !!appExtra)
   for (const app of applications) {
     if (!applicationsExtras.find(appExtra => appExtra.id === app.id)) {
       applicationsExtras.push(app)
@@ -564,7 +529,7 @@ export const syncApplications = async (datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-export const validateDraft = async (dataset, datasetFull, patch) => {
+export const validateDraft = async (dataset: any, datasetFull: any, patch: any) => {
   Object.assign(datasetFull.draft, patch)
   const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
@@ -588,7 +553,7 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
     await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
-      const breakingChangesDesc = i18n.getLocales().reduce((a, locale) => {
+      const breakingChangesDesc = i18n.getLocales().reduce<Record<string, Record<string, string>>>((a, locale) => {
         let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
         for (const breakingChange of breakingChanges) {
           msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
@@ -600,7 +565,7 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
         type: 'breaking-change',
         body: breakingChangesDesc
       })
-      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc })
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc as Record<Locale, Record<string, string>> })
     }
   }
 
@@ -664,7 +629,7 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
   await filesStorage.removeDir(dir(datasetDraft))
 }
 
-export const cancelDraft = async (dataset) => {
+export const cancelDraft = async (dataset: any) => {
   await filesStorage.removeDir(dir(dataset))
   await deleteIndex(dataset)
 }
