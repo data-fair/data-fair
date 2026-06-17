@@ -100,7 +100,7 @@ export const middleware = function (operationId: string, operationClass: string,
 
 /** Express middleware that checks the user can perform a given operation class on the resource's owner (used for cross-owner actions). */
 export const canDoForOwnerMiddleware = function (operationClass: string, ignoreDepartment = false) {
-  return function (req: RequestWithResource, res: Response, next: NextFunction) {
+  return function (req: Request, res: Response, next: NextFunction) {
     const owner: AccountKeys = ignoreDepartment ? { ...reqResource(req).owner, department: undefined } : reqResource(req).owner
     if (!canDoForOwner(owner, reqResourceType(req), operationClass, reqSession(req))) {
       return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')

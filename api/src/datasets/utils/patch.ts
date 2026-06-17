@@ -14,7 +14,7 @@ import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 
-export const preparePatch = async (app: any, patch: any, dataset: any, sessionState: SessionStateAuthenticated, locale: string, draftValidationMode: string, files?: any[]): Promise<{ removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean }> => {
+export const preparePatch = async (app: any, patch: any, dataset: any, sessionState: SessionStateAuthenticated, locale: string, draftValidationMode?: string, files?: any[]): Promise<{ removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean }> => {
   const db = mongo.db
 
   // Strip publicUrl from image URL for multi-domain compatibility
