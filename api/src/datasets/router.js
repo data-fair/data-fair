@@ -4,7 +4,6 @@ import * as ajv from '../misc/utils/ajv.ts'
 import fs from 'fs-extra'
 import path from 'path'
 import moment from 'moment'
-import { Counter } from 'prom-client'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import pump from '../misc/utils/pipe.ts'
 import mongodb from 'mongodb'
@@ -38,7 +37,6 @@ import { extend } from './utils/extensions.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import userNotificationSchema from '../../contract/user-notification.js'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
-import { bulkSearchStreams } from './utils/master-data.ts'
 import applicationKey from '../misc/utils/application-key.ts'
 import * as observe from '../misc/utils/observe.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
@@ -52,16 +50,17 @@ import { dir, dataFilesDir, attachmentsDir, validationDiagnosticFilePath, cancel
 import { preparePatch } from './utils/patch.ts'
 import { checkStorage, lockDataset, readDataset } from './middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin, isRest, readWritableDataset } from './routes/_common.ts'
+import { manageESError } from './routes/_es-error.ts'
+import { registerMasterDataRoutes } from './routes/master-data.ts'
 import config from '#config'
 import mongo from '#mongo'
 import debugModule from 'debug'
 import contentDisposition from 'content-disposition'
-import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqAdminMode, reqSession, reqSessionAuthenticated, session } from '@data-fair/lib-express'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
-import { queryAdvice, attachQueryHint } from '../misc/utils/query-advice.ts'
+import { attachQueryHint } from '../misc/utils/query-advice.ts'
 import { can } from '../misc/utils/permissions.ts'
 import { emit as workerPing } from '../workers/ping.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
@@ -633,88 +632,7 @@ router.delete('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRes
 router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnLineRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readRevisions)
 router.get('/:datasetId/own/:owner/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readRevisions)
 
-// Specific routes for datasets with masterData functionalities enabled
-router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset({ fillDescendants: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readLines', 'read', 'readDataAPI'), async (req, res) => {
-  const singleSearch = req.dataset.masterData && req.dataset.masterData.singleSearchs && req.dataset.masterData.singleSearchs.find(ss => ss.id === req.params.singleSearchId)
-  if (!singleSearch) return res.status(404).send(`Recherche unitaire "${req.params.singleSearchId}" inconnue`)
-
-  let esResponse
-  let select = singleSearch.output.key
-  if (singleSearch.label) select += ',' + singleSearch.label.key
-  // collapse on the output key so suggestions are deduplicated server-side
-  // (the underlying dataset may have multiple rows sharing the same output value)
-  const params = { q: req.query.q, size: req.query.size, q_mode: 'complete', select, collapse: singleSearch.output.key }
-  const qs = []
-
-  if (singleSearch.filters) {
-    for (const f of singleSearch.filters) {
-      if (f.property?.key && f.values?.length) {
-        qs.push(f.values.map(value => `(${esUtils.escapeFilter(f.property.key)}:"${esUtils.escapeFilter(value)}")`).join(' OR '))
-      }
-    }
-  }
-  if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')
-  const esAbortContext = esUtils.createEsRequestOptions(req, res)
-  try {
-    esResponse = await esUtils.search(req.app.get('es'), req.dataset, params, undefined, undefined, esAbortContext)
-  } catch (err) {
-    await manageESError(req, err)
-  }
-  const flatten = getFlatten(req.dataset)
-  const resultCtx = esUtils.prepareResultContext(req.dataset, req.query)
-  const result = {
-    total: esResponse.hits.total?.value,
-    results: esResponse.hits.hits.map(hit => {
-      const item = esUtils.prepareResultItem(hit, req.dataset, req.query, flatten, req.publicBaseUrl, resultCtx)
-      let label = item[singleSearch.output.key]
-      if (singleSearch.label && item[singleSearch.label.key]) label += ` (${item[singleSearch.label.key]})`
-      return { output: item[singleSearch.output.key], label, score: item._score || undefined }
-    })
-  }
-  res.send(result)
-})
-router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset({ fillDescendants: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('bulkSearch', 'read'), async (req, res) => {
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
-  const flatten = getFlatten(req.dataset)
-  await pump(
-    req,
-    ...await bulkSearchStreams(req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select, flatten),
-    res
-  )
-})
-
-const esQueryErrorCounter = new Counter({
-  name: 'df_es_query_error',
-  help: 'Errors in elasticearch queries'
-})
-
-// Error from ES backend should be stored in the journal
-async function manageESError (req, err) {
-  const { message, status } = esUtils.extractError(err)
-  if (status === 400) {
-    // console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
-    esQueryErrorCounter.inc()
-  } else if (status === 499 || status === 504) {
-    // 499 = client gave up (browser cancel, proxy timeout) -> the query was aborted, nothing to report
-    // 504 = the read timeout elapsed (ES "Time exceeded" guard or the per-request client timeout) -> a
-    // slow query, not an internal failure
-    // in both cases avoid internalError noise (a flood of these is exactly the overload symptom we want to handle)
-  } else {
-    internalError('es-query-' + status, err)
-  }
-
-  // We used to store an error on the data whenever a dataset encountered an elasticsearch error
-  // but this can end up storing too many errors when the cluster is in a bad state
-  // revert to simply logging
-  // if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
-  // await mongo.db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'error' } })
-  // await journals.log(req.dataset, { type: 'error', data: message })
-  // }
-  // on overload-symptom statuses, hint at how to make the query cheaper (no-op when no rule applies)
-  const finalMessage = (status === 504 || status === 429) ? message + queryAdvice(req) : message
-  throw httpError(status, finalMessage)
-}
+registerMasterDataRoutes(router)
 
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req, db, query) {

@@ -1,4 +1,4 @@
-import type { Response, NextFunction, RequestHandler } from 'express'
+import type { Request, Response, NextFunction, RequestHandler } from 'express'
 import type { AccountKeys, SessionState } from '@data-fair/lib-express'
 import type { RequestWithResource, ResourceType, Permission, Resource, BypassPermissions } from '#types'
 
@@ -31,7 +31,7 @@ export const middleware = function (operationId: string, operationClass: string,
   const operation = { class: operationClass, id: operationId, track: trackingCategory }
   const operationHeader = JSON.stringify(operation)
 
-  return function (req: RequestWithResource, res: Response, next: NextFunction) {
+  return function (req: Request, res: Response, next: NextFunction) {
     const sessionState = reqSession(req)
 
     if (acceptMissing && !reqResourceOptional(req)) {
