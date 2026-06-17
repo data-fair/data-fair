@@ -15,8 +15,14 @@ import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 // consumers can import them without pulling in #config) — see code-conventions.md §2.
 // They are re-exported here so existing `permissions.<accessor>` namespace consumers
 // keep working; config-free consumers import them directly from req-context.ts.
-import { reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
+import { defineReqContext, reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
 export { setReqResource, reqResource, reqResourceOptional, setReqResourceType, reqResourceType, setReqBypassPermissions, reqBypassPermissions, setReqPublicOperation, reqPublicOperation } from './req-context.ts'
+
+// the operation gating the current route (class/id/track), exposed downstream as the x-operation header
+export type ReqOperation = { class: string, id: string, track?: string }
+const operationCtx = defineReqContext<ReqOperation>('operation')
+export const setReqOperation = operationCtx.set
+export const reqOperation = operationCtx.get
 
 const resourceTypesLabels: Record<ResourceType, string> = {
   datasets: 'Le jeu de données',
@@ -86,7 +92,7 @@ export const middleware = function (operationId: string, operationClass: string,
         res.setHeader('x-owner', JSON.stringify(ownerKey))
       }
     }
-    ;(req as any).operation = operation
+    setReqOperation(req, operation)
     res.setHeader('x-operation', operationHeader)
     next()
   }

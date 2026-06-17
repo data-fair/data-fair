@@ -1,16 +1,12 @@
-import { text as stream2text } from 'node:stream/consumers'
 import express from 'express'
 import * as ajv from '../misc/utils/ajv.ts'
 import fs from 'fs-extra'
-import path from 'path'
 import moment from 'moment'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import pump from '../misc/utils/pipe.ts'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import equal from 'deep-equal'
 import slug from 'slugify'
 import * as journals from '../misc/utils/journals.ts'
-import axios from '../misc/utils/axios.ts'
 import * as esUtils from './es/index.ts'
 import { initDatasetIndex, switchAlias, datasetInfos } from '../datasets/es/manage-indices.ts'
 import { computeRealtimeWarnings } from './es/diagnose-warnings.ts'
@@ -23,9 +19,7 @@ import * as datasetUtils from './utils/index.ts'
 import { updateStorage, updateTotalStorage } from './utils/storage.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import clone from '@data-fair/lib-utils/clone.js'
-import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
-import * as outputs from './utils/outputs.ts'
 import * as limits from '../limits/service.ts'
 import { extend } from './utils/extensions.ts'
 import * as notifications from '../misc/utils/notifications.ts'
@@ -38,7 +32,7 @@ import * as rateLimiting from '../misc/utils/rate-limiting.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.ts'
-import { dir, dataFilesDir, attachmentsDir, validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
+import { dir } from './utils/files.ts'
 import { preparePatch } from './utils/patch.ts'
 import { checkStorage, lockDataset, readDataset } from './middlewares.ts'
 import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './routes/_common.ts'
@@ -46,6 +40,7 @@ import { registerMasterDataRoutes } from './routes/master-data.ts'
 import { registerReadRoutes } from './routes/read.ts'
 import { registerLinesRoutes } from './routes/lines.ts'
 import { registerOwnLinesRoutes } from './routes/own-lines.ts'
+import { registerFilesRoutes } from './routes/files.ts'
 import config from '#config'
 import mongo from '#mongo'
 import debugModule from 'debug'
@@ -56,8 +51,6 @@ import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
 import { can } from '../misc/utils/permissions.ts'
 import { emit as workerPing } from '../workers/ping.ts'
-import { downloadFileFromStorage } from '../files-storage/utils.ts'
-import resolvePath from 'resolve-path'
 import filesStorage from '#files-storage'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
@@ -592,172 +585,7 @@ registerMasterDataRoutes(router)
 
 registerReadRoutes(router)
 
-// For datasets with attached files
-router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  if (req.dataset.isVirtual) {
-    const childDatasetId = req.params.attachmentPath[0]
-    if (!req.dataset.descendants?.find(c => c === childDatasetId)) return res.status(404).send('Child dataset not found')
-    const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, req.publicationSite, req.mainPublicationSite, false, false, false, mongo.db, undefined, undefined)
-    const documentProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
-    const childDocumentProp = childDataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
-    if (!documentProp || documentProp.key !== childDocumentProp.key) return res.status(404).send('No attachment column found')
-
-    const relFilePath = path.join(...req.params.attachmentPath.slice(1))
-    await downloadFileFromStorage(
-      resolvePath(attachmentsDir(childDataset), relFilePath),
-      req, res, { dispositionType: 'inline' })
-  } else {
-    // the transform stream option was patched into "send" module using patch-package
-    const relFilePath = path.join(...req.params.attachmentPath)
-    await downloadFileFromStorage(
-      resolvePath(attachmentsDir(req.dataset), relFilePath),
-      req, res, { dispositionType: 'inline' })
-  }
-})
-
-// Direct access to data files
-router.get('/:datasetId/data-files', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('listDataFiles', 'read'), cacheHeaders.noCache, async (req, res, next) => {
-  res.send(await datasetUtils.dataFiles(req.dataset, req.publicBaseUrl))
-})
-router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  const relFilePath = path.join(...req.params.filePath)
-  await downloadFileFromStorage(
-    resolvePath(dataFilesDir(req.dataset), relFilePath), req, res)
-})
-
-// Special attachments referenced in dataset metadatas
-router.post('/:datasetId/metadata-attachments', readDataset({ noCache: true }), apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
-  req.body.size = req.file.size
-  req.body.updatedAt = moment().toISOString()
-  await updateStorage(req.dataset)
-  res.status(200).send(req.body)
-})
-router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadMetadataAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  // the transform stream option was patched into "send" module using patch-package
-  // res.set('content-disposition', `inline; filename="${req.params.attachmentPath}"`)
-  const relFilePath = path.join(...req.params.attachmentPath)
-  const attachmentsTargets = clone(req.dataset._attachmentsTargets || [])
-  const attachmentTarget = attachmentsTargets.find(a => a.name === relFilePath)
-  if (attachmentTarget) {
-    // special case for remote attachments, we monitor them as if they were API call and not static files
-    req.operation.track = 'readDataAPI'
-    res.setHeader('x-operation', JSON.stringify(req.operation))
-    if (attachmentTarget.fetchedAt && attachmentTarget.fetchedAt.getTime() + config.remoteAttachmentCacheDuration > Date.now()) {
-      res.set('x-remote-status', 'CACHE')
-    } else {
-      const headers = {}
-      if (attachmentTarget.etag) headers['If-None-Match'] = attachmentTarget.etag
-      if (attachmentTarget.lastModified) headers['If-Modified-Since'] = attachmentTarget.lastModified
-      try {
-        const response = await axios.get(attachmentTarget.targetUrl, {
-          responseType: 'stream',
-          headers,
-          validateStatus: function (status) {
-            return status === 200 || status === 304
-          }
-        })
-        if (response.status === 304) {
-          // nothing to do
-          res.set('x-remote-status', 'NOTMODIFIED')
-          await stream2text(response.data)
-        } else {
-          res.set('x-remote-status', 'DOWNLOAD')
-          const attachmentPath = datasetUtils.metadataAttachmentPath(req.dataset, relFilePath)
-          // creating empty file before streaming seems to fix some weird bugs with NFS
-          await filesStorage.writeStream(response.data, attachmentPath)
-          attachmentTarget.etag = response.headers.etag
-          attachmentTarget.lastModified = response.headers['last-modified']
-          attachmentTarget.fetchedAt = new Date()
-          await mongo.db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _attachmentsTargets: attachmentsTargets } })
-        }
-      } catch (err) {
-        let message = err.message ?? err
-        if (err.response && err.response.status !== 200 && err.response.status !== 304) {
-          message = `${err.response.status} - ${err.response.statusText}`
-          if (err.response.headers['content-type']?.startsWith('text/plain')) {
-            const data = await stream2text(err.response.data)
-            if (data) message = data
-          }
-        }
-        // we do not throw this error, we don't want to count it as an internal error
-        console.warn('failed to fetch linked attachment', attachmentTarget.targetUrl, err)
-        return res.status(502).send('Échec de téléchargement du fichier : ' + message)
-      }
-    }
-  }
-
-  await downloadFileFromStorage(
-    resolvePath(datasetUtils.metadataAttachmentsDir(req.dataset), relFilePath),
-    req, res, { dispositionType: 'inline' })
-})
-
-router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('deleteMetadataAttachment', 'write'), async (req, res, next) => {
-  await filesStorage.removeFile(datasetUtils.metadataAttachmentPath(req.dataset, path.join(...req.params.attachmentPath)))
-  await updateStorage(req.dataset)
-  res.status(204).send()
-})
-
-// Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  const sessionState = reqSession(req)
-  // a special case for superadmins.. handy but quite dangerous for the db load
-  if (req.dataset.isRest && sessionState.user?.adminMode) {
-    const query = { ...req.query }
-    query.select = query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
-    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.csv'))
-    // add BOM for excel, cf https://stackoverflow.com/a/17879474
-    await pump(
-      ...await restDatasetsUtils.readStreams(req.dataset),
-      ...outputs.csvStreams(req.dataset, query),
-      res
-    )
-    return
-  }
-  if (!req.dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-  await downloadFileFromStorage(datasetUtils.originalFilePath(req.dataset), req, res)
-})
-
-// Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-  await downloadFileFromStorage(datasetUtils.filePath(req.dataset), req, res)
-})
-
-// Download the full dataset with extensions
-// TODO use ES scroll functionality instead of file read + extensions
-router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
-  if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
-  if (await filesStorage.pathExists(datasetUtils.fullFilePath(req.dataset))) {
-    await downloadFileFromStorage(datasetUtils.fullFilePath(req.dataset), req, res)
-  } else {
-    await downloadFileFromStorage(datasetUtils.filePath(req.dataset), req, res)
-  }
-})
-
-// Download the validation diagnostic CSV. Same permission as the journal that
-// references it.
-router.get('/:datasetId/validation-diagnostic.csv', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res, next) => {
-  const filePath = validationDiagnosticFilePath(req.dataset)
-  if (!await filesStorage.pathExists(filePath)) {
-    return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
-  }
-  res.setHeader('content-disposition', contentDisposition(`${req.dataset.slug}-validation-diagnostic.csv`))
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-  await downloadFileFromStorage(filePath, req, res)
-})
-
-// Download the diagnostic of a contribution whose draft was auto-cancelled
-// (compatibleOrCancel). Stored in its own slot on the main dataset so it is not
-// confused with the live dataset's own validation diagnostic. Same permission gate.
-router.get('/:datasetId/cancelled-draft-diagnostic.csv', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res, next) => {
-  const filePath = cancelledDraftDiagnosticFilePath(req.dataset)
-  if (!await filesStorage.pathExists(filePath)) {
-    return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
-  }
-  res.setHeader('content-disposition', contentDisposition(`${req.dataset.slug}-cancelled-draft-diagnostic.csv`))
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-  await downloadFileFromStorage(filePath, req, res)
-})
+registerFilesRoutes(router)
 
 router.get('/:datasetId/metadata-settings', readDataset(), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readDescription', 'read'), async (req, res, next) => {
   // @ts-ignore
