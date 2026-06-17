@@ -1,4 +1,5 @@
 import express from 'express'
+import { setReqResourceType } from '../misc/utils/permissions.ts'
 import { registerMasterDataRoutes } from './routes/master-data.ts'
 import { registerReadRoutes } from './routes/read.ts'
 import { registerLinesRoutes } from './routes/lines.ts'
@@ -11,8 +12,7 @@ import { registerMiscRoutes } from './routes/misc.ts'
 const router = express.Router()
 
 router.use((req, res, next) => {
-  // @ts-ignore
-  req.resourceType = 'datasets'
+  setReqResourceType(req, 'datasets')
   next()
 })
 

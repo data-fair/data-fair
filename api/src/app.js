@@ -148,7 +148,7 @@ export const run = async () => {
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.ts')).default)
     // rate limiting is applied per-route inside the datasets router, after the api-key middleware, so that
     // requests authenticated with an api key are throttled at the `user` tier rather than as anonymous
-    app.use('/api/v1/datasets', (await import('./datasets/router.js')).default)
+    app.use('/api/v1/datasets', (await import('./datasets/router.ts')).default)
     app.use('/api/v1/stats', apiKey('stats'), (await import('./stats/router.ts')).default)
     app.use('/api/v1/settings', (await import('./settings/router.ts')).default)
     app.use('/api/v1/admin', (await import('./admin/router.ts')).default)

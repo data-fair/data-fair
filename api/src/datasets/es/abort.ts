@@ -11,7 +11,7 @@ export interface EsAbortContext {
   esElapsedMs: number
 }
 
-const esAbortContext = defineReqContext<EsAbortContext>('esAbortContext', 'esAbortContext')
+const esAbortContext = defineReqContext<EsAbortContext>('esAbortContext')
 export const setReqEsAbortContext = esAbortContext.set
 export const reqEsAbortContext = esAbortContext.get
 export const reqEsAbortContextOptional = esAbortContext.getOptional
