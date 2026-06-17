@@ -101,3 +101,54 @@ API/e2e specs untouched + green; ratchet improved + baseline committed each comm
 (12 dropped, target 0 in module); express only in `routes/*`/`router.ts`; no `req` mutation (accessors,
 except standard Express `req.url`); `router.js` gone (all `.ts`); mount/middleware order preserved;
 parking lot updated with any preserved-bit-for-bit suspected bugs.
+
+## Execution record (2026-06-18, branch `refactor-typescript9`, main-session execution)
+
+**Done.** Ratchet **891 → 541 (−350)**; `dev/type-errors-baseline.txt` committed at each commit. 11 commits
+(`029a8bf1d` plan + `5da87882f`,`6bed32670`,`0412c0b6b`,`b159dc977`,`ed9041958`,`f3b3aa23b`,`414e79d8a`,
+`48e88ece4`,`90073b4aa`,`f2029c8d6`). `api/src/datasets/` is now **100% TypeScript** (`router.js` gone);
+`router.ts` is a **33-line composition root**. The 1569-line router split into 9 `routes/*.ts` files plus
+2 shared helpers (`_common.ts`, `_es-error.ts`). All **12 `@ts-ignore`s** in the original router are gone;
+no new `@ts-ignore`/`@ts-expect-error`; the few `as any` introduced are documented preserved-bug or
+dynamic-payload boundary casts (see below). Each commit ran ≥1 api spec to confirm boot; the final sweep
+ran the whole `tests/features/datasets` tree.
+
+**Mount order preserved** exactly: `router.ts` registers metadata → write → lines → own-lines → master-data
+→ read → files → misc, after the global `setReqResourceType` `.use`. (The original interleaved write
+between metadata and lines; preserved.)
+
+**New accessors:** `reqDataset`/`reqDatasetFull` (6c, module-local); **6d added** `setReqLinesOwner`/
+`reqLinesOwnerOptional` and `setReqDraft`/`reqDraftOptional` (module-local in `middlewares.ts`, legacyProp —
+rest.ts/upload.ts still raw-read), and `setReqOperation`/`reqOperation` (`permissions.ts`, no legacyProp —
+atomic: permissions.middleware sets, files metadata-attachments GET reads). **Dropped now-dead legacyProps:**
+`resource`, `datasetFull`, `esAbortContext` (grep-verified no raw readers repo-wide). **Kept legacyProps:**
+`dataset` (query-advice/upload/rest/outputs raw-read), `resourceType` (ods raw-sets), `linesOwner`, `_draft`.
+
+**Systemic source-typing fixes** (the recurring `router.<verb>` overload friction came from middlewares typed
+with a custom `req`; all fixed at the source, each verified accessor-only in body): `permissions.middleware`
++ `permissions.canDoForOwnerMiddleware` + `application-key` default export → `req: Request`;
+`permissions.middleware` `trackingCategory` widened to `string | null` (writeData routes pass `null`);
+`clamav.middleware` now imports `Response` from express (was the global DOM `Response` — parking-lot item,
+now resolved); `res.throttle`/`throttleEnd`/`_originalEnd` declared on global `Express.Response` in
+`rate-limiting.ts`; `tiles.geojson2pbf` `vtPrepared` optional; `outputs.results2sheet` `bookType` defaults
+`'xlsx'`; `outputs.ReqWithDataset` exported; `preparePatch` `draftValidationMode` made optional;
+config `cache` schema gains optional `disabled`. The `RequestWithRestDataset` REST line handlers are aliased
+`as RequestHandler` at mount (contravariance; cf. `permissions.router`).
+
+**Suspected bugs found while moving (preserved bit-for-bit — parking lot, master plan §9):**
+- **6d-1** (`routes/write.ts` cancelDraft, ex `router.js` draft DELETE): the call passed a stray 5th arg
+  `sessionState` to the 4-param `journals.log` — silently ignored at runtime; dropped the arg as a
+  behavior-preserving no-op. Verify whether draft-cancelled journal should carry session context.
+- **6d-2** (`routes/write.ts` validateDraft): `localizedParams` is mis-shaped `{cause:{fr,en}}` instead of
+  the `{fr:{cause},en:{cause}}` used everywhere else (e.g. `workers/batch-processor/process-file.ts`) — the
+  localized cause is malformed. Preserved via cast.
+- **6d-3** (`routes/misc.ts` user-notification): `notifications.send(notif, true, sessionState)` against the
+  2-param `send(event, sessionState?)` — passes `true` in the `sessionState` position (the real sessionState
+  was always the ignored 3rd arg). Preserved as `send(notif, true as any)`.
+- **6d-4** (`routes/metadata.ts` PATCH, ex `router.js` patch): `preparePatch(...)` is called with 5 args,
+  omitting `draftValidationMode` (6th) — so metadata PATCH always uses the default/undefined draft validation
+  mode. Made the param optional to compile; verify intent.
+
+**Process note:** the import-specifier sweep + per-commit api-spec boot check (6a/6b lesson) held — no
+`ERR_MODULE_NOT_FOUND`. The `.js`-importing-`.ts` pattern worked throughout while `router.js` shrank, so the
+`app.js`/`ods` specifier flip to `.ts` was deferred to the final commit (C10).
