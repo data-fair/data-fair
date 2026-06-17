@@ -210,7 +210,7 @@ export default async function (dataset: DatasetInternal) {
               }
             }
           }),
-          ...(await import('../../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }, { select: csvSelect })
+          ...(await import('../../datasets/utils/outputs.ts')).csvStreams({ ...dataset, ...patch }, { select: csvSelect })
         )
         await filesStorage.writeStream(readStream, filePath)
         const loadedFileStats = await filesStorage.fileStats(filePath)

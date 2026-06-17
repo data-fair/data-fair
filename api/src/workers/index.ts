@@ -1,7 +1,7 @@
 import type { ResourceType } from '#types'
 import { workers, tasks, pendingTasks } from './tasks.ts'
 import type { Task, WorkerId } from './types.ts'
-import mergeDraft from '../datasets/utils/merge-draft.js'
+import mergeDraft from '../datasets/utils/merge-draft.ts'
 import locks from '@data-fair/lib-node/locks.js'
 import mongo from '#mongo'
 import config from '#config'

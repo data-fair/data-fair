@@ -10,14 +10,14 @@ import * as permissions from '../../misc/utils/permissions.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import * as filesUtils from './files.ts'
 import * as schemaUtils from './data-schema.ts'
-import * as readApiKeyUtils from './read-api-key.js'
-import mergeDraft from './merge-draft.js'
+import * as readApiKeyUtils from './read-api-key.ts'
+import mergeDraft from './merge-draft.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqSession } from '@data-fair/lib-express'
 import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
 
-export { default as mergeDraft } from './merge-draft.js'
-export * from './types.js'
+export { default as mergeDraft } from './merge-draft.ts'
+export * from './types.ts'
 
 export const filePath = filesUtils.filePath
 export const dataFiles = filesUtils.dataFiles

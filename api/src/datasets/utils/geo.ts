@@ -18,8 +18,9 @@ import { simplifyToVertexBudget } from './geo-simplify.ts'
 import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
 import _config from 'config'
+import type { Dataset, SchemaProperty } from '#types'
 
-const config = /** @type {any} */(_config)
+const config = _config as any
 const debug = debugLib('geo')
 
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
@@ -32,9 +33,9 @@ const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
 export const allGeoConcepts = [geomUri, projectGeomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
 
-export const schemaHasGeopoint = (schema) => {
-  const lat = schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1)
-  const lon = schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)
+export const schemaHasGeopoint = (schema: SchemaProperty[]): string | false => {
+  const lat = schema.find(p => latUri.indexOf(p['x-refersTo'] as string) !== -1)
+  const lon = schema.find(p => lonUri.indexOf(p['x-refersTo'] as string) !== -1)
   if (lat && lon) return `${lat.key}/${lon.key}`
   const x = schema.find(p => p['x-refersTo'] === coordXUri)
   const y = schema.find(p => p['x-refersTo'] === coordYUri)
@@ -44,7 +45,7 @@ export const schemaHasGeopoint = (schema) => {
   return false
 }
 
-export const schemaHasGeometry = (schema) => {
+export const schemaHasGeometry = (schema: SchemaProperty[]): string | false => {
   const geom = schema.find(p => p['x-refersTo'] === geomUri)
   if (geom) return geom.key
   const projectGeom = schema.find(p => p['x-refersTo'] === projectGeomUri)
@@ -52,30 +53,30 @@ export const schemaHasGeometry = (schema) => {
   return false
 }
 
-export const geoFieldsKey = (schema) => {
+export const geoFieldsKey = (schema: SchemaProperty[]): string => {
   const geomPropKey = schemaHasGeometry(schema)
   let key = geomPropKey + '/' + schemaHasGeopoint(schema)
   if (geomPropKey) {
     const geomProp = schema.find(p => p.key === geomPropKey)
-    if (geomProp['x-capabilities']?.vtPrepare) key += '/_vt_prepared'
+    if (geomProp?.['x-capabilities']?.vtPrepare) key += '/_vt_prepared'
   }
   return key
 }
 
-export const fixLon = (val) => {
+export const fixLon = (val: number): number => {
   while (val < -180) val += 360
   while (val > 180) val -= 360
   return val
 }
 
-export const latlon2fields = (dataset, doc) => {
-  const schema = dataset.schema
-  let lat, lon
+export const latlon2fields = (dataset: Dataset, doc: Record<string, any>): Record<string, string> => {
+  const schema = dataset.schema ?? []
+  let lat: any, lon: any
 
   const coordXProp = schema.find(p => p['x-refersTo'] === coordXUri)
   const coordYProp = schema.find(p => p['x-refersTo'] === coordYUri)
   if (coordXProp && coordYProp && doc[coordXProp.key] !== undefined && doc[coordYProp.key] !== undefined) {
-    const projection = dataset.projection && dataset.projection.code && projections.find(p => p.code === dataset.projection.code)
+    const projection = dataset.projection && dataset.projection.code && projections.find((p: any) => p.code === dataset.projection!.code)
     if (dataset.projection && !projection) throw new Error(`La projection ${dataset.projection.code} n'est pas supportée.`)
     if (!projection) {
       lon = doc[coordXProp.key]
@@ -88,8 +89,8 @@ export const latlon2fields = (dataset, doc) => {
   const latlonProp = schema.find(p => p['x-refersTo'] === latlonUri)
   if (latlonProp && doc[latlonProp.key]) [lat, lon] = doc[latlonProp.key].split(/[,;]/)
 
-  const latProp = schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1)
-  const lonProp = schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)
+  const latProp = schema.find(p => latUri.indexOf(p['x-refersTo'] as string) !== -1)
+  const lonProp = schema.find(p => lonUri.indexOf(p['x-refersTo'] as string) !== -1)
   if (latProp && lonProp && doc[latProp.key] !== undefined && doc[lonProp.key] !== undefined) {
     lat = doc[latProp.key]
     lon = doc[lonProp.key]
@@ -102,7 +103,7 @@ export const latlon2fields = (dataset, doc) => {
 }
 
 // Geometry can be passed as an object, as a geojson string or as a WKT string
-export const readGeometry = (value) => {
+export const readGeometry = (value: any): any => {
   if (!value || value === 'undefined') return null
   if (typeof value === 'object') {
     if (!value.coordinates) return null
@@ -120,7 +121,7 @@ export const readGeometry = (value) => {
   }
 }
 
-const projCoordinates = (projection, coordinates) => {
+const projCoordinates = (projection: { proj4: string }, coordinates: any[]): void => {
   if (Array.isArray(coordinates[0])) {
     for (const coords of coordinates) {
       projCoordinates(projection, coords)
@@ -132,9 +133,9 @@ const projCoordinates = (projection, coordinates) => {
   }
 }
 
-export const geometry2fields = async (dataset, doc) => {
-  const schema = dataset.schema
-  let geometry, capabilities
+export const geometry2fields = async (dataset: Dataset, doc: Record<string, any>): Promise<Record<string, any>> => {
+  const schema = dataset.schema ?? []
+  let geometry: any, capabilities: any
 
   const projectGeomProp = schema.find(p => p['x-refersTo'] === projectGeomUri)
   const geomProp = schema.find(p => p['x-refersTo'] === geomUri)
@@ -142,7 +143,7 @@ export const geometry2fields = async (dataset, doc) => {
   if (projectGeomProp) {
     geometry = readGeometry(doc[projectGeomProp.key])
     if (geometry) {
-      const projection = dataset.projection && dataset.projection.code && projections.find(p => p.code === dataset.projection.code)
+      const projection = dataset.projection && dataset.projection.code && projections.find((p: any) => p.code === dataset.projection!.code)
       if (dataset.projection && !projection) throw new Error(`La projection ${dataset.projection.code} n'est pas supportée.`)
       if (projection) {
         if (geometry.type === 'GeometryCollection') {
@@ -156,15 +157,15 @@ export const geometry2fields = async (dataset, doc) => {
     }
     capabilities = projectGeomProp['x-capabilities']
   } else {
-    geometry = readGeometry(doc[geomProp.key])
-    capabilities = geomProp['x-capabilities']
+    geometry = readGeometry(doc[geomProp!.key])
+    capabilities = geomProp!['x-capabilities']
   }
   if (!geometry || Object.keys(geometry).length === 0) return {}
 
   const feature = { type: 'Feature', geometry }
   // Do the best we can to fix invalid geojson
   try {
-    cleanCoords(feature, { mutate: true })
+    cleanCoords(feature as any, { mutate: true })
   } catch (err) {
     debug('Failure while applying cleanCoords to geojson', err)
   }
@@ -176,7 +177,7 @@ export const geometry2fields = async (dataset, doc) => {
   const geometries = feature.geometry.type === 'GeometryCollection' ? feature.geometry.geometries : [feature.geometry]
   for (const geometry of geometries) {
     try {
-      rewind(geometry, { mutate: true })
+      rewind(geometry as any, { mutate: true })
     } catch (err) {
       debug('Failure while applying rewind to geojson', err)
     }
@@ -192,13 +193,13 @@ export const geometry2fields = async (dataset, doc) => {
   }
 
   // check if simplify is a good idea ? too CPU intensive for our backend ?
-  const point = pointOnFeature(feature)
-  const fields = {
+  const point = pointOnFeature(feature as any)
+  const fields: Record<string, any> = {
     _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0]
   }
   if (!capabilities || capabilities.geoCorners !== false) {
-    const polygon = bboxPolygon(turfBbox(feature))
-    fields._geocorners = polygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
+    const polygon = bboxPolygon(turfBbox(feature as any))
+    fields._geocorners = polygon.geometry.coordinates[0].map((c: number[]) => c[1] + ',' + c[0])
   }
   fields._geoshape = feature.geometry
   if (capabilities?.vtPrepare) {
@@ -207,8 +208,8 @@ export const geometry2fields = async (dataset, doc) => {
       { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: feature.geometry }] },
       { indexMaxZoom: config.tiles.vtPrepareMaxZoom, tolerance: config.tiles.geojsonvtTolerance, maxZoom: config.tiles.vtPrepareMaxZoom, indexMaxPoints: 0 }
     )
-    for (const vtTileInfo of Object.values(vt.tiles).filter(f => f.features.length)) {
-      const { x, y, z } = vtTileInfo
+    for (const vtTileInfo of Object.values(vt.tiles).filter((f: any) => f.features.length)) {
+      const { x, y, z } = vtTileInfo as any
       const tile = vt.getTile(z, x, y)
       const pbf = Buffer.from(vtpbf.fromGeojsonVt({ f: tile }, { version: 2 }))
       // console.log(`prepared tile from geojson-vt ${vtTileInfo.z},${vtTileInfo.x},${vtTileInfo.y}\tgeojson=${JSON.stringify(feature.geometry).length.toLocaleString()}\tpbf=${pbf.length.toLocaleString()}\tbase64=${pbf.toString('base64').length.toLocaleString()}`)
@@ -218,11 +219,11 @@ export const geometry2fields = async (dataset, doc) => {
   return fields
 }
 
-export const result2geojson = (esResponse, flatten) => {
+export const result2geojson = (esResponse: any, flatten: (o: Record<string, any>) => Record<string, any>) => {
   return {
     type: 'FeatureCollection',
     total: esResponse.hits.total?.value,
-    features: esResponse.hits.hits.map(hit => {
+    features: esResponse.hits.hits.map((hit: any) => {
       const properties = hit._source
       let geometry = properties._geoshape
       delete properties._geoshape
@@ -242,7 +243,7 @@ export const result2geojson = (esResponse, flatten) => {
   }
 }
 
-export const aggs2geojson = aggsResult => {
+export const aggs2geojson = (aggsResult: { total: number, aggs: Array<{ centroid: { lon: number, lat: number }, bbox: number[], value: any, [key: string]: any }> }) => {
   return {
     type: 'FeatureCollection',
     total: aggsResult.total,
@@ -262,33 +263,33 @@ export const aggs2geojson = aggsResult => {
   }
 }
 
-export const result2wkt = esResponse => {
+export const result2wkt = (esResponse: any): string => {
   const geometryCollection = {
     type: 'GeometryCollection',
-    geometries: esResponse.hits.hits.map(hit => {
+    geometries: esResponse.hits.hits.map((hit: any) => {
       let geometry = hit._source._geoshape
       if (!geometry && hit._source._geopoint) {
         const [lat, lon] = hit._source._geopoint.split(',')
         geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
       }
       return geometry
-    }).filter(geometry => !!geometry)
+    }).filter((geometry: any) => !!geometry)
   }
   return geojsonToWKT(geometryCollection)
 }
 
 // Simple wrapping of the command line prepair https://github.com/tudelft3d/prepair
 // help fixing some polygons
-const customUnkink = async (geometry) => {
+const customUnkink = async (geometry: any): Promise<void> => {
   try {
     if (geometry.type === 'MultiPolygon') {
-      const newCoordinates = []
+      const newCoordinates: any[] = []
       for (const coordinates of geometry.coordinates) {
         const childPolygon = { type: 'Polygon', coordinates }
         await prepair(childPolygon)
         if (childPolygon.type === 'Polygon') newCoordinates.push(childPolygon.coordinates)
         else if (childPolygon.type === 'MultiPolygon') {
-          for (const c of childPolygon.geometry.coordinates) {
+          for (const c of (childPolygon as any).geometry.coordinates) {
             newCoordinates.push(c)
           }
         } else {
@@ -303,11 +304,11 @@ const customUnkink = async (geometry) => {
     debug('Failed to use the prepair command line tool', err)
     const unkinked = unkink(geometry)
     geometry.type = 'MultiPolygon'
-    geometry.coordinates = unkinked.features.map(f => f.geometry.coordinates)
+    geometry.coordinates = unkinked.features.map((f: any) => f.geometry.coordinates)
   }
 }
 
-const prepair = async (geometry) => {
+const prepair = async (geometry: any): Promise<any> => {
   const tmpGeojsonDir = await tmp.dir({ prefix: 'prepair-', tmpdir: tmpDir, unsafeCleanup: true })
   try {
     // const wkt = wktParser.convert(feature.geometry)

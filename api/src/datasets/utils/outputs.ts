@@ -3,6 +3,9 @@ import path from 'path'
 import { Piscina } from 'piscina'
 import mongo from '#mongo'
 import { getCsvSerializer } from './csv-jit.ts'
+import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
+import type { Request } from 'express'
+import type { Dataset } from '#types'
 
 export const results2sheetPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/results2sheet.js'),
@@ -23,10 +26,10 @@ export const geojson2shpPiscina = new Piscina({
 // (falls back to all non-calculated schema fields), x-originalName / title
 // for headers, custom delimiter via query.sep, header opt-out via
 // query.header === 'false'. \0 stripping is inlined by the serializer.
-const compileForRequest = (dataset, query = {}, useTitle = false) => {
+const compileForRequest = (dataset: Dataset, query: Record<string, string> = {}, useTitle = false) => {
   const selectKeys = (query.select && query.select !== '*')
     ? query.select.split(',')
-    : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
+    : (dataset.schema ?? []).filter(f => !f['x-calculated']).map(f => f.key)
   return getCsvSerializer({
     dataset,
     selectKeys,
@@ -38,7 +41,13 @@ const compileForRequest = (dataset, query = {}, useTitle = false) => {
 
 const yieldEvery = 200
 
-export const results2csv = async (req, results) => {
+type ReqWithDataset = Request & {
+  dataset: Dataset,
+  query: Record<string, string>,
+  __: (key: string) => any
+}
+
+export const results2csv = async (req: ReqWithDataset, results: Record<string, any>[]): Promise<string> => {
   const { prologue, row } = compileForRequest(req.dataset, req.query)
   const parts = new Array(results.length + 1)
   parts[0] = prologue
@@ -54,7 +63,7 @@ export const results2csv = async (req, results) => {
   return parts.join('')
 }
 
-export const csvStreams = (dataset, query = {}, useTitle = false) => {
+export const csvStreams = (dataset: Dataset, query: Record<string, string> = {}, useTitle = false): Transform[] => {
   const { prologue, row } = compileForRequest(dataset, query, useTitle)
   let emitted = false
   return [
@@ -81,8 +90,8 @@ export const csvStreams = (dataset, query = {}, useTitle = false) => {
   ]
 }
 
-export const results2sheet = async (req, results, bookType) => {
-  const dataset = req.dataset.__isProxy ? req.dataset.__proxyTarget : req.dataset
+export const results2sheet = async (req: ReqWithDataset, results: Record<string, any>[], bookType: string): Promise<Buffer> => {
+  const dataset = (req.dataset as any).__isProxy ? (req.dataset as any).__proxyTarget : req.dataset
   const settings = await mongo.db.collection('settings')
     .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { datasetsMetadata: 1 } })
   const buf = Buffer.from(await results2sheetPiscina.run({
@@ -90,13 +99,13 @@ export const results2sheet = async (req, results, bookType) => {
     bookType,
     query: req.query,
     dataset,
-    downloadUrl: req.publicBaseUrl + req.originalUrl,
+    downloadUrl: reqPublicBaseUrl(req) + req.originalUrl,
     labels: req.__('sheets'),
-    datasetsMetadata: settings?.datasetsMetadata ?? {}
+    datasetsMetadata: (settings as any)?.datasetsMetadata ?? {}
   }))
   return buf
 }
 
-export const geojson2shp = async (geojson, baseName) => {
+export const geojson2shp = async (geojson: any, baseName: string): Promise<any> => {
   return geojson2shpPiscina.run({ geojson: JSON.stringify(geojson), baseName })
 }
