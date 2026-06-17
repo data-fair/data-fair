@@ -5,25 +5,16 @@ import moment from 'moment'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import config from '#config'
-import * as geo from './geo.js'
-import * as datasetUtils from './index.js'
+import * as geo from './geo.ts'
+import * as datasetUtils from './index.ts'
 import * as extensions from './extensions.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
+import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 
-/**
- * @param {any} app
- * @param {any} patch
- * @param {any} dataset
- * @param {import('@data-fair/lib-express').SessionStateAuthenticated} sessionState
- * @param {string} locale
- * @param {string} draftValidationMode
- * @param {any[]} [files]
- * @returns {Promise<{removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean}>}
- */
-export const preparePatch = async (app, patch, dataset, sessionState, locale, draftValidationMode, files) => {
+export const preparePatch = async (app: any, patch: any, dataset: any, sessionState: SessionStateAuthenticated, locale: string, draftValidationMode: string, files?: any[]): Promise<{ removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean }> => {
   const db = mongo.db
 
   // Strip publicUrl from image URL for multi-domain compatibility
@@ -83,7 +74,7 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
           patch._attachmentsTargets.push({ ...attachment })
           delete attachment.targetUrl
         } else {
-          const existingAttachmentTarget = dataset._attachmentsTargets?.find(a => a.name === attachment.name)
+          const existingAttachmentTarget = dataset._attachmentsTargets?.find((a: any) => a.name === attachment.name)
           if (!existingAttachmentTarget) {
             throw httpError(400, `Impossible de créer la pièce jointe ${attachment.name} sans URL cible`)
           }
@@ -119,7 +110,7 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
     await schemaUtils.fixConcepts(dataset, patch.schema)
   }
 
-  const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !patch.schema.find(f => f.key === df.key))) ?? []
+  const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter((df: any) => !df['x-calculated'] && !patch.schema.find((f: any) => f.key === df.key))) ?? []
   if (dataset.isRest && dataset.rest?.storeUpdatedBy && patch.rest && !patch.rest.storeUpdatedBy) {
     removedRestProps.push({ key: '_updatedBy' })
     removedRestProps.push({ key: '_updatedByName' })
@@ -151,9 +142,9 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
     patch._readApiKey = null
   }
 
-  const coordXProp = dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
-  const coordYProp = dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
-  const projectGeomProp = dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')
+  const coordXProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
+  const coordYProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
+  const projectGeomProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')
 
   let attemptMappingUpdate = false
 
@@ -180,13 +171,13 @@ export const preparePatch = async (app, patch, dataset, sessionState, locale, dr
   } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
     patch.status = reindexerStatus
-  } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
+  } else if (patch.schema && patch.schema.find((f: any) => dataset.schema.find((df: any) => df.key === f.key && df.separator !== f.separator))) {
     // some separator has changed on a field, trigger full re-indexing
     patch.status = reindexerStatus
-  } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
+  } else if (patch.schema && patch.schema.find((f: any) => dataset.schema.find((df: any) => df.key === f.key && df.timeZone !== f.timeZone))) {
     // some timeZone has changed on a field, trigger full re-indexing
     patch.status = reindexerStatus
-  } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && !equal(df['x-capabilities'], f['x-capabilities'])))) {
+  } else if (patch.schema && patch.schema.find((f: any) => dataset.schema.find((df: any) => df.key === f.key && !equal(df['x-capabilities'], f['x-capabilities'])))) {
     // x-capabilities changes affect ES analyzers/normalizers and require full re-indexing
     patch.status = reindexerStatus
   } else if (removedRestProps.length) {

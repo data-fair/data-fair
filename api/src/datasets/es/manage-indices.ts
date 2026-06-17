@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import config from '#config'
 import es from '#es'
-import * as datasetUtils from '../utils/index.js'
+import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
 import { buildIndexMappings } from './operations.ts'
 import { computeFinalizeWarnings, pickPrimaryCode, type WarningCode } from './diagnose-warnings.ts'

@@ -8,7 +8,7 @@ import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.
 import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.ts'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
-import * as datasetUtils from '../src/datasets/utils/index.js'
+import * as datasetUtils from '../src/datasets/utils/index.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 

@@ -23,14 +23,14 @@ import duration from 'dayjs/plugin/duration.js'
 import * as storageUtils from './storage.ts'
 import * as extensionsUtils from './extensions.ts'
 import * as findUtils from '../../misc/utils/find.ts'
-import * as fieldsSniffer from './fields-sniffer.js'
-import { transformFileStreams, formatLine } from './data-streams.js'
+import * as fieldsSniffer from './fields-sniffer.ts'
+import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
 import indexStream from '../es/index-stream.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
-import { tabularTypes } from './types.js'
+import { tabularTypes } from './types.ts'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary } from '#types'
@@ -43,6 +43,7 @@ import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
 import { computeModified } from './compute-modified.ts'
+import { defineReqContext } from '../../misc/utils/req-context.ts'
 
 type Operation = {
   _id: string,
@@ -55,6 +56,13 @@ type Operation = {
 }
 
 dayjs.extend(duration)
+
+// module-local request context: set by the fixFormBody middleware, read by the
+// createOrUpdateLine/patchLine handlers when they assemble the manageAttachment context.
+// No legacyProp: nothing outside this module touches it.
+const restFixedFormBody = defineReqContext<boolean>('restFixedFormBody')
+const setReqFixedFormBody = restFixedFormBody.set
+const reqFixedFormBodyOptional = restFixedFormBody.getOptional
 
 export const sheet2csvPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../threads/sheet2csv.js'),
@@ -109,7 +117,7 @@ export const uploadAttachment = multer({
 export const fixFormBody: RequestHandler = (req, res, next) => {
   if (req.body?._body) {
     req.body = JSON.parse(req.body._body)
-    req._fixedFormBody = true
+    setReqFixedFormBody(req, true)
   }
   next()
 }
@@ -821,9 +829,9 @@ const compileSchema = memoize((dataset: RestDataset, adminMode: boolean) => {
   normalizer: ([dataset, adminMode]: [RestDataset, boolean]) => `${dataset.id}:${dataset.updatedAt}:${adminMode}`
 })
 
-async function checkMatchingAttachment (req: { body: any }, lineId: string, dir: string, pathField: { key: string }) {
-  if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {
-    const fileName = req.body[pathField.key].replace(lineId + '/', '')
+async function checkMatchingAttachment (body: Record<string, any>, lineId: string, dir: string, pathField: { key: string }) {
+  if (pathField && body[pathField.key] && body[pathField.key].startsWith(lineId + '/')) {
+    const fileName = body[pathField.key].replace(lineId + '/', '')
     try {
       const files = await filesStorage.lsr(dir)
       if (files.some(f => f === fileName)) return true
@@ -834,52 +842,66 @@ async function checkMatchingAttachment (req: { body: any }, lineId: string, dir:
   return false
 }
 
-async function manageAttachment (req: RequestWithRestDataset & { body: any }, keepExisting: boolean) {
-  if (req.is('multipart/form-data') && !req._fixedFormBody) {
-    req._rawBody = { ...req.body }
+// express-free attachment handling. The caller assembles the context from req and
+// gets back any rawBody / uploadedAttachmentPath it needs to keep for the rest of
+// the request (originally req._rawBody / req._uploadedAttachmentPath).
+type ManageAttachmentContext = {
+  dataset: RestDataset,
+  body: Record<string, any>,
+  file?: ReqFile,
+  isMultipart: boolean,
+  fixedFormBody: boolean,
+  lineId?: string | string[]
+}
+
+async function manageAttachment (ctx: ManageAttachmentContext, keepExisting: boolean): Promise<{ rawBody?: Record<string, any>, uploadedAttachmentPath?: string }> {
+  let rawBody: Record<string, any> | undefined
+  if (ctx.isMultipart && !ctx.fixedFormBody) {
+    rawBody = { ...ctx.body }
     // When taken from form-data everything is string.. convert to actual types
-    for (const f of req.dataset.schema) {
+    for (const f of ctx.dataset.schema) {
       if (!f['x-calculated']) {
-        if (req.body[f.key] !== undefined) {
-          const value = fieldsSniffer.format(req.body[f.key], f)
-          if (value === null) delete req.body[f.key]
-          else req.body[f.key] = value
+        if (ctx.body[f.key] !== undefined) {
+          const value = fieldsSniffer.format(ctx.body[f.key], f)
+          if (value === null) delete ctx.body[f.key]
+          else ctx.body[f.key] = value
         }
       }
     }
   }
-  const lineId = req.params.lineId || req.body._id
-  const dir = attachmentPath(req.dataset, lineId)
+  const lineId = ctx.lineId || ctx.body._id
+  const dir = attachmentPath(ctx.dataset, lineId)
 
-  const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  const pathField = ctx.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
-  if (req.file) {
+  let uploadedAttachmentPath: string | undefined
+  if (ctx.file) {
     // An attachment was uploaded
-    if (!req.dataset.rest?.history) await filesStorage.removeDir(dir)
-    const fileMd5 = await md5File(req.file.path)
-    const relativePath = path.join(lineId, fileMd5, req.file.originalname)
-    await filesStorage.moveFromFs(req.file.path, attachmentPath(req.dataset, relativePath))
+    if (!ctx.dataset.rest?.history) await filesStorage.removeDir(dir)
+    const fileMd5 = await md5File(ctx.file.path)
+    const relativePath = path.join(lineId, fileMd5, ctx.file.originalname)
+    await filesStorage.moveFromFs(ctx.file.path, attachmentPath(ctx.dataset, relativePath))
     if (!pathField) {
       throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
-    req.body[pathField.key] = relativePath
+    ctx.body[pathField.key] = relativePath
     // remember the new attachment path so the caller can roll it back if the
     // transaction is rejected (mandatory-extension fail, AJV fail, conflict…)
-    req._uploadedAttachmentPath = attachmentPath(req.dataset, relativePath)
+    uploadedAttachmentPath = attachmentPath(ctx.dataset, relativePath)
   } else if (!keepExisting && pathField) {
-    if (!checkMatchingAttachment(req, lineId, dir, pathField)) {
+    if (!checkMatchingAttachment(ctx.body, lineId, dir, pathField)) {
       await filesStorage.removeDir(dir)
     }
   }
+  return { rawBody, uploadedAttachmentPath }
 }
 
 // Remove an attachment that was just uploaded by manageAttachment when the
 // surrounding transaction is rejected — otherwise the file lingers on disk
 // without any database row referencing it.
-const rollbackUploadedAttachment = async (req: RequestWithRestDataset) => {
-  const p = req._uploadedAttachmentPath
+const rollbackUploadedAttachment = async (uploadedAttachmentPath?: string) => {
+  const p = uploadedAttachmentPath
   if (!p) return
-  delete req._uploadedAttachmentPath
   try {
     if (await filesStorage.pathExists(p)) await filesStorage.removeFile(p)
   } catch (err) {
@@ -943,14 +965,14 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   if (req.linesOwner) Object.assign(req.body, linesOwnerCols(req.linesOwner))
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset, true)
   req.body._id = definedId || nanoid()
-  await manageAttachment(req, false)
+  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset: req.dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, false)
 
   const fullLine = { _action: 'createOrUpdate', ...req.body }
   formatLine(fullLine, req.dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) {
-    await rollbackUploadedAttachment(req)
+    await rollbackUploadedAttachment(uploadedAttachmentPath)
     return res.status(operation._status ?? 200).send(operation._error)
   }
   await commitLines(req.dataset, [fullLine._id])
@@ -958,19 +980,19 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation, req._rawBody ?? req.body)
+  const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  await manageAttachment(req, true)
+  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset: req.dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, req.dataset.schema)
 
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) {
-    await rollbackUploadedAttachment(req)
+    await rollbackUploadedAttachment(uploadedAttachmentPath)
     return res.status(operation._status ?? 200).send(operation._error)
   }
   await commitLines(req.dataset, [fullLine._id])
@@ -978,7 +1000,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation, req._rawBody ?? req.body)
+  const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }

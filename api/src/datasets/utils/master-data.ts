@@ -7,9 +7,10 @@ import batchStream from '../../misc/utils/batch-stream.ts'
 import * as esUtils from '../es/index.ts'
 import pump from '../../misc/utils/pipe.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import type { Dataset, VirtualDataset } from '#types'
 
-export const bulkSearchPromise = async (streams, data) => {
-  const buffers = []
+export const bulkSearchPromise = async (streams: any[], data: string): Promise<string> => {
+  const buffers: Buffer[] = []
   await pump(
     Readable.from([data]),
     ...streams,
@@ -23,18 +24,19 @@ export const bulkSearchPromise = async (streams, data) => {
   return Buffer.concat(buffers).toString()
 }
 
-export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, select, flatten) => {
-  const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
+export const bulkSearchStreams = async (dataset: Dataset, contentType: string, bulkSearchId: string, select: string, flatten: (line: Record<string, any>) => Record<string, any>): Promise<any[]> => {
+  const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find((bs: any) => bs.id === bulkSearchId)
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
-  if (dataset.isVirtual) dataset.descendants = await virtualDatasetsUtils.descendants(dataset)
-  const _source = (select && select !== '*') ? select.split(',') : dataset.schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
-  const unknownField = _source.find(s => !dataset.schema.find(p => p.key === s))
+  if (dataset.isVirtual) (dataset as Dataset & { descendants?: any }).descendants = await virtualDatasetsUtils.descendants(dataset as VirtualDataset)
+  const schema = dataset.schema ?? []
+  const _source = (select && select !== '*') ? select.split(',') : schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
+  const unknownField = _source.find(s => !schema.find(p => p.key === s))
   if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
 
-  const finalizeResponseLine = (responseLine, lineKey, error) => {
+  const finalizeResponseLine = (responseLine: Record<string, any>, lineKey: string | number, error?: string): Record<string, any> => {
     responseLine = flatten(responseLine)
-    const fixedLine = {}
+    const fixedLine: Record<string, any> = {}
     for (const id of _source) {
       if (id in responseLine) {
         fixedLine[id] = responseLine[id]
@@ -49,13 +51,13 @@ export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, sele
   }
 
   // this function will be called for each input line of the bulk search stream
-  const paramsBuilder = (line) => {
-    const params = {}
-    const qs = []
+  const paramsBuilder = (line: Record<string, any>): Record<string, any> => {
+    const params: Record<string, any> = {}
+    const qs: string[] = []
     if (bulkSearch.filters) {
       for (const f of bulkSearch.filters) {
         if (f.property?.key && f.values?.length) {
-          qs.push(f.values.map(value => `(${esUtils.escapeFilter(f.property.key)}:"${esUtils.escapeFilter(value)}")`).join(' OR '))
+          qs.push(f.values.map((value: string) => `(${esUtils.escapeFilter(f.property.key)}:"${esUtils.escapeFilter(value)}")`).join(' OR '))
         }
       }
     }
@@ -66,8 +68,8 @@ export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, sele
       if (input.type === 'equals') {
         qs.push(`${esUtils.escapeFilter(input.property.key)}:"${esUtils.escapeFilter(line[input.property.key])}"`)
       } else if (input.type === 'date-in-interval') {
-        const startDate = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
-        const endDate = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
+        const startDate = schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
+        const endDate = schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
         if (!startDate || !endDate) throw new Error('cet enrichissement sur interval de date requiert les concepts "date de début" et "date de fin"')
         const date = line[input.property.key].replace(/:/g, '\\:')
         qs.push(`${endDate.key}:[${date} TO *]`)
@@ -91,7 +93,7 @@ export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, sele
     ioStream.parser(),
     batchStream(200),
     new Transform({
-      async transform (lines, encoding, callback) {
+      async transform (lines: Record<string, any>[], encoding, callback) {
         try {
           const queries = lines.map(line => ({
             select,
@@ -99,7 +101,7 @@ export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, sele
             ...paramsBuilder(line),
             size: 1
           }))
-          let esResponse
+          let esResponse: any
           try {
             esResponse = await esUtils.multiSearch(es.client, dataset, queries)
           } catch (err) {
@@ -108,7 +110,7 @@ export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, sele
             throw httpError(status, message)
           }
           for (const i in esResponse.responses) {
-            const line = lines[i]
+            const line = lines[Number(i)]
             const lineKey = line._key || lineIndex
             lineIndex += 1
             const response = esResponse.responses[i]
@@ -126,7 +128,7 @@ export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, sele
           }
           callback()
         } catch (err) {
-          callback(err)
+          callback(err as Error)
         }
       },
       objectMode: true

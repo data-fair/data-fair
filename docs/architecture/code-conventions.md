@@ -176,7 +176,7 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 | `api/src/app.js` | `publicBaseUrl`, `publicWsBaseUrl`, `publicationSite`, `mainPublicationSite` |
 | `api/src/datasets/middlewares.js` | `dataset`, `resource`, `datasetFull`, `noCache`, `url` |
 | `api/src/datasets/router.js` | `resourceType`, `linesOwner`, `body`, `_draft` |
-| `api/src/datasets/utils/rest.ts` | `_fixedFormBody`, `body`, `_rawBody`, `_uploadedAttachmentPath` |
+| `api/src/datasets/utils/rest.ts` | `body` (`_fixedFormBody` now a module-local accessor; `_rawBody` / `_uploadedAttachmentPath` eliminated — Phase 6b) |
 | `api/src/datasets/es/abort.ts` | `esAbortContext` (now an accessor — see note below) |
 | `api/src/applications/router.js` | `resourceType`, `resource`, `application`, `baseApp`, `isNewApplication` |
 | `api/src/applications/proxy.js` | `application`, `resource`, `resourceType`, `matchingApplicationKey` |
@@ -198,6 +198,11 @@ datasets/applications routers still set `resource` / `resourceType` by raw mutat
 `misc/utils/rate-limiting.ts`, was migrated to `reqEsAbortContextOptional`. The `legacyProp` is
 **retained** because `datasets/router.js` still reads `req.esAbortContext` by raw access; drop it
 when `router.js` migrates (slice 6c/6d).
+Phase 6b (2026-06-17) decoupled the `rest.ts` attachment helpers: `_rawBody` and
+`_uploadedAttachmentPath` were **eliminated** (now locals/return values of an express-free
+`manageAttachment` / `rollbackUploadedAttachment`), and `_fixedFormBody` became a **module-local
+accessor** (`defineReqContext`, no `legacyProp` — only `rest.ts` set/read it). The mounted line
+route handlers stay `(req, res, next)` adapters that assemble the helper context at the boundary.
 
 ### Migration mechanics per property
 

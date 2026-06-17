@@ -10,14 +10,19 @@ import * as permissions from '../../misc/utils/permissions.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import * as filesUtils from './files.ts'
 import * as schemaUtils from './data-schema.ts'
-import * as readApiKeyUtils from './read-api-key.js'
-import mergeDraft from './merge-draft.js'
+import * as readApiKeyUtils from './read-api-key.ts'
+import mergeDraft from './merge-draft.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqSession } from '@data-fair/lib-express'
+import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
+import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
+import { reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
+import type { Db } from 'mongodb'
+import type { Request, Dataset } from '#types'
 
-export { default as mergeDraft } from './merge-draft.js'
-export * from './types.js'
+export { default as mergeDraft } from './merge-draft.ts'
+export * from './types.ts'
 
 export const filePath = filesUtils.filePath
 export const dataFiles = filesUtils.dataFiles
@@ -46,8 +51,8 @@ export const schemasTransformChange = schemaUtils.schemasTransformChange
 export const jsonSchema = schemaUtils.jsonSchema
 export const createReadApiKey = readApiKeyUtils.create
 
-export const reindex = async (db, dataset) => {
-  let patch = { status: 'stored' }
+export const reindex = async (db: Db, dataset: Dataset) => {
+  let patch: Record<string, any> = { status: 'stored' }
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
@@ -55,15 +60,15 @@ export const reindex = async (db, dataset) => {
     .findOneAndUpdate({ id: dataset.id }, { $set: patch, $unset: { _partialRestStatus: 1 } }, { returnDocument: 'after' })
 }
 
-export const refinalize = async (db, dataset) => {
-  let patch = { status: 'indexed' }
+export const refinalize = async (db: Db, dataset: Dataset) => {
+  let patch: Record<string, any> = { status: 'indexed' }
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
   return await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch, $unset: { _partialRestStatus: 1 } }, { returnDocument: 'after' })
 }
 
 // Generate ids and try insertion until there is no conflict on id
-export const insertWithId = async (db, dataset, onClose) => {
+export const insertWithId = async (db: Db, dataset: Dataset, onClose?: (release: () => void) => void) => {
   const baseSlug = dataset.slug || (dataset?.analysis?.escapeKeyAlgorithm === 'compat-ods' ? compatOdsEscapeKey(dataset.title) : slug(dataset.title, { lower: true, strict: true }))
   const owner = dataset.owner
   dataset.id = dataset.id ?? nanoid()
@@ -102,7 +107,7 @@ export const insertWithId = async (db, dataset, onClose) => {
           await locks.release(slugLockKey)
         }
         break
-      } catch (err) {
+      } catch (err: any) {
         await locks.release(slugLockKey)
         if (err.code !== 11000) throw err
         if (err.keyValue) {
@@ -120,7 +125,7 @@ export const insertWithId = async (db, dataset, onClose) => {
   return dataset
 }
 
-export const previews = (dataset, publicUrl = config.publicUrl) => {
+export const previews = (dataset: Dataset, publicUrl = config.publicUrl) => {
   if (!dataset.schema) return []
   const datasetRef = publicUrl === config.publicUrl ? dataset.id : dataset.slug
   const previews = [{ id: 'table', title: 'Tableau', href: `${publicUrl}/embed/dataset/${datasetRef}/table` }]
@@ -142,21 +147,14 @@ export const previews = (dataset, publicUrl = config.publicUrl) => {
   return previews
 }
 
-/**
- * @param {import('express').Request} req
- * @param {any} dataset
- * @param {boolean} draft
- */
-export const clean = (req, dataset, draft = false) => {
+export const clean = (req: Request, dataset: any, draft = false) => {
   const query = req.query
-  // @ts-ignore
-  const publicationSite = req.publicationSite
-  // @ts-ignore
-  const publicUrl = req.publicBaseUrl
+  const publicationSite = reqPublicationSite(req)
+  const publicUrl = reqPublicBaseUrl(req)
 
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
-    dataset.userPermissions = permissions.list('datasets', dataset, reqSession(req), req.bypassPermissions)
+    dataset.userPermissions = permissions.list('datasets', dataset, reqSession(req), reqBypassPermissions(req))
     const thumbnail = query.thumbnail || '300x200'
     if (draft) mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
@@ -219,14 +217,14 @@ export const clean = (req, dataset, draft = false) => {
   return dataset
 }
 
-export const setUniqueRefs = (resource) => {
+export const setUniqueRefs = (resource: { id: string, slug?: string, _uniqueRefs?: string[] }) => {
   if (resource.slug) {
     resource._uniqueRefs = [resource.id]
     if (resource.slug !== resource.id) resource._uniqueRefs.push(resource.slug)
   }
 }
 
-export const curateDataset = (dataset, existingDataset) => {
+export const curateDataset = (dataset: any, existingDataset?: any) => {
   if (dataset.title) dataset.title = dataset.title.trim()
 
   if (dataset.masterData?.bulkSearchs?.length) {
@@ -241,7 +239,7 @@ export const curateDataset = (dataset, existingDataset) => {
   }
 }
 
-export const titleFromFileName = (name) => {
+export const titleFromFileName = (name: string) => {
   let baseFileName = path.parse(name).name
   if (baseFileName.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
   return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')

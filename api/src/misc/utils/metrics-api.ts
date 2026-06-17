@@ -2,7 +2,7 @@
 import memoizeeProfile from 'memoizee/profile.js'
 import { Gauge } from 'prom-client'
 import { piscinaGauge } from './metrics.ts'
-import { results2sheetPiscina } from '../../datasets/utils/outputs.js'
+import { results2sheetPiscina } from '../../datasets/utils/outputs.ts'
 import { sheet2csvPiscina } from '../../datasets/utils/rest.ts'
 import { geojson2pbfPiscina } from '../../datasets/utils/tiles.ts'
 
