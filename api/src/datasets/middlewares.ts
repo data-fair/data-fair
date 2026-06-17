@@ -34,6 +34,12 @@ const linesOwnerCtx = defineReqContext<Account>('linesOwner', 'linesOwner')
 export const setReqLinesOwner = linesOwnerCtx.set
 export const reqLinesOwnerOptional = linesOwnerCtx.getOptional
 
+// forces the upload middleware to write into the draft directory (set on update routes which always
+// go through draft mode). legacyProp dual-write: datasets/utils/upload.ts still raw-reads req._draft.
+const draftCtx = defineReqContext<boolean>('_draft', '_draft')
+export const setReqDraft = draftCtx.set
+export const reqDraftOptional = draftCtx.getOptional
+
 export const checkStorage = (overwrite: boolean, indexed = false): RequestHandler => async (req, res, next) => {
   reqUserAuthenticated(req)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()

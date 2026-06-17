@@ -32,7 +32,7 @@ const resourceTypesLabels: Record<ResourceType, string> = {
 }
 
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
-export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string, acceptMissing?: boolean) {
+export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string | null, acceptMissing?: boolean) {
   // pre-compute the x-operation header since it is constant per route
   const operation = { class: operationClass, id: operationId, track: trackingCategory }
   const operationHeader = JSON.stringify(operation)
