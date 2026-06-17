@@ -240,10 +240,10 @@ const classItems = computed(() => {
 
 // --- Computed: operations for expert mode v-select ---
 const operations = computed(() => {
-  const result: ({ header: string } | { id: string, title: string, class: string })[] = []
+  const result: ({ type: 'subheader', title: string } | { id: string, title: string, class: string })[] = []
   for (const c of Object.keys(restrictedPermissionClasses.value)) {
     if (!te('classNames.' + c)) continue
-    result.push({ header: t('classNames.' + c) })
+    result.push({ type: 'subheader', title: t('classNames.' + c) })
     result.push(...restrictedPermissionClasses.value[c])
   }
   return result
@@ -393,7 +393,6 @@ const valid = computed(() => {
   const p = permission.value
   if ((!p.operations || !p.operations.length) && (!p.classes || !p.classes.length)) return false
   if (p.type === 'organization' && !p.id) return false
-  if (p.type === 'organization' && props.owner.type === 'organization' && p.id === props.owner.id && !((p.roles && p.roles.length) || p.department)) return false
   if (p.type === 'user' && !(p.id || p.email)) return false
   return true
 })

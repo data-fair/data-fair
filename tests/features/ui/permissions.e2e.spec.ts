@@ -219,6 +219,40 @@ test.describe('permissions editor', () => {
       }, { timeout: 5000 }).toBeTruthy()
     })
 
+    // Regression guard for two bugs in the edit-permission dialog:
+    // 1. The detailed-actions select grouped its entries with `{ header }`
+    //    (Vuetify 2 syntax); on Vuetify 4 these rendered as "[object Object]".
+    // 2. Validation wrongly required a role/department for a permission on the
+    //    owner org, contradicting the "all if none selected" roles label.
+    test('owner-org permission validates with no role; detailed actions show labels', async ({ page, goToWithAuth }) => {
+      await goToPermissions(page, goToWithAuth)
+      await page.getByLabel(/Édition détaillée/i).click()
+      await expect(page.getByRole('button', { name: /Ajouter des permissions/ })).toBeVisible({ timeout: 10000 })
+
+      await page.getByRole('button', { name: /Ajouter des permissions/ }).click()
+      await expect(page.locator('.v-dialog')).toBeVisible({ timeout: 5000 })
+
+      // Default scope is the owner organization with no role checked.
+      // Expert mode reveals the detailed-actions select; its group subheaders
+      // must render their label, never "[object Object]".
+      await page.locator('.v-dialog').getByLabel(/Mode expert/i).click()
+      const detailedSelect = page.locator('.v-dialog .v-select').filter({ hasText: /Actions détaillées/ })
+      await detailedSelect.click()
+      const listbox = page.getByRole('listbox')
+      await expect(listbox).toContainText(/Lecture/)
+      await expect(listbox).not.toContainText('[object Object]')
+      await page.keyboard.press('Escape')
+
+      // "Rôles (tous si aucun coché)": with no role checked, Validate must be enabled.
+      const validateBtn = page.locator('.v-dialog').getByRole('button', { name: /Valider/ })
+      await expect(validateBtn).toBeEnabled()
+      await validateBtn.click()
+      await expect.poll(async () => {
+        const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
+        return perms.find((p: any) => p.type === 'organization' && p.id === 'test_org1' && (!p.roles || !p.roles.length))
+      }, { timeout: 5000 }).toBeTruthy()
+    })
+
     test('delete a permission', async ({ page, goToWithAuth }) => {
       // Add permission via API first
       await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [
