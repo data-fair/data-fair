@@ -6,7 +6,7 @@ import memoize from 'memoizee'
 import clone from '@data-fair/lib-utils/clone.js'
 import * as rateLimiting from './rate-limiting.ts'
 import { type Request, type Response, type NextFunction } from 'express'
-import { type ApplicationKey, type RequestWithResource } from '#types'
+import { type ApplicationKey } from '#types'
 import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
 import { reqResource, setReqBypassPermissions } from './req-context.ts'
 import { reqPublicBaseUrl } from './public-base-url.ts'
@@ -70,7 +70,7 @@ const matchingHost = (req: Request) => {
   return new URL(reqPublicBaseUrl(req)).origin === req.headers.origin
 }
 
-export default async (req: RequestWithResource, res: Response, next: NextFunction) => {
+export default async (req: Request, res: Response, next: NextFunction) => {
   const referer = (req.headers.referer || req.headers.referrer) as string | undefined
   if (!referer) return next()
   let refererUrl

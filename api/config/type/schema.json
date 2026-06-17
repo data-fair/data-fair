@@ -302,7 +302,8 @@
         "publicMaxAge": { "type": "number" },
         "timestampedPublicMaxAge": { "type": "number" },
         "mongoSize": { "type": "number" },
-        "reverseProxyCache": { "type": "boolean" }
+        "reverseProxyCache": { "type": "boolean" },
+        "disabled": { "type": "boolean" }
       }
     },
     "tiles": {
