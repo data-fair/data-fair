@@ -8,7 +8,7 @@ import { initDatasetIndex, switchAlias } from '../../datasets/es/manage-indices.
 import getIndexStream from '../../datasets/es/index-stream.ts'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import { readStreams as getReadStreams } from '../../datasets/utils/data-streams.js'
+import { readStreams as getReadStreams } from '../../datasets/utils/data-streams.ts'
 import * as datasetsService from '../../datasets/service.js'
 import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
 import * as heapUtils from '../../misc/utils/heap.ts'

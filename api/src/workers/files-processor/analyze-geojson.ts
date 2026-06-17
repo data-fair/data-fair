@@ -7,7 +7,7 @@ import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.js'
 import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.ts'
 import projections from '../../../contract/projections.js'
-import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.js'
+import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.ts'
 import type { DatasetInternal, FileDataset, SchemaProperty } from '#types'
 
 // Analyze geojson dataset data, check validity and detect schema

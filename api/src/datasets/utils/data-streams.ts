@@ -18,8 +18,9 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import { compileExpression } from './extensions.ts'
 import { getFlattenNoCache } from './flatten.ts'
 import filesStorage from '#files-storage'
+import type { Dataset, SchemaProperty } from '#types'
 
-export const formatLine = (item, schema) => {
+export const formatLine = (item: Record<string, any>, schema: SchemaProperty[]) => {
   for (const key of Object.keys(item)) {
     const prop = schema.find(p => p.key === key)
     if (prop && typeof item[key] === 'string') {
@@ -41,8 +42,8 @@ export const formatLine = (item, schema) => {
 }
 
 // used both by readStream and bulk transactions in rest datasets
-export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false, applyTransform = false, ignoreDraftLimit = false) => {
-  const streams = []
+export const transformFileStreams = (mimeType: string, schema: SchemaProperty[], fileSchema: SchemaProperty[] | null | undefined, fileProps: Record<string, any> = {}, raw = false, noExtra = false, encoding?: string | null, skipDecoding?: boolean, dataset?: Dataset, autoAdjustKeys = false, applyTransform = false, ignoreDraftLimit = false): any[] => {
+  const streams: any[] = []
 
   // manage interruption in case of draft mode
   let interrupted = false
@@ -79,7 +80,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     // reject empty lines (parsing failures from csv-parser)
     streams.push(new Transform({
       objectMode: true,
-      transform (item, encoding, callback) {
+      transform (this: Transform & { i?: number }, item, encoding, callback) {
         if (interrupted) return callback()
         const hasContent = Object.keys(item).reduce((a, b) => a || ![undefined, '\n', '\r', '\r\n', ''].includes(item[b]), false)
         this.i = (this.i || 0) + 1
@@ -90,14 +91,14 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     }))
 
     // small local cache for perf
-    const escapedKeys = {}
+    const escapedKeys: Record<string, string> = {}
     /** @type {Record<string, string>} */
-    const adjustedKeys = {}
+    const adjustedKeys: Record<string, string> = {}
 
     // Fix the objects based on schema
     streams.push(new Transform({
       objectMode: true,
-      transform (chunk, encoding, callback) {
+      transform (this: Transform & { __warning?: string }, chunk, encoding, callback) {
         if (raw) {
           if (fileSchema) {
             const unknownKey = Object.keys(chunk)
@@ -120,7 +121,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
           delete chunk._i
           return callback(null, chunk)
         }
-        const line = {}
+        const line: Record<string, any> = {}
         if (autoAdjustKeys) {
           for (const key of Object.keys(chunk)) {
             if (!adjustedKeys[key]) {
@@ -167,15 +168,15 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     // transform geojson features into raw data items
     streams.push(new Transform({
       objectMode: true,
-      transform (feature, encoding, callback) {
+      transform (this: Transform & { i?: number }, feature, encoding, callback) {
         if (interrupted) return callback()
-        const item = flatten({ ...feature.properties })
+        const item: Record<string, any> = flatten({ ...feature.properties })
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
         if (raw) {
           callback(null, item)
         } else {
-          const line = {}
+          const line: Record<string, any> = {}
           for (const prop of schema) {
             const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
             let originalName = prop['x-originalName']
@@ -192,11 +193,11 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     throw httpError(400, 'mime-type is not supported ' + mimeType)
   }
 
-  const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
+  const limit = (dataset?.draftReason && !ignoreDraftLimit) ? 100 : -1
   if (limit !== -1) {
     streams.push(new Transform({
       objectMode: true,
-      transform (item, encoding, callback) {
+      transform (this: Transform & { i?: number }, item, encoding, callback) {
         this.i = (this.i || 0) + 1
         if (this.i > limit) return callback()
         callback(null, item)
@@ -221,8 +222,8 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
   return streams
 }
 
-export const getTransformStream = (schema, fileSchema, applyTransform = false) => {
-  const compiledExpressions = {}
+export const getTransformStream = (schema: SchemaProperty[], fileSchema?: SchemaProperty[] | null, applyTransform = false) => {
+  const compiledExpressions: Record<string, any> = {}
   return new Transform({
     objectMode: true,
     transform (item, encoding, callback) {
@@ -236,7 +237,7 @@ export const getTransformStream = (schema, fileSchema, applyTransform = false) =
               const value = typeof item[prop.key] === 'string' ? item[prop.key].trim() : item[prop.key]
               item[prop.key] = compiledExpressions[prop.key]({ value })
             } catch (err) {
-              const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${err.message}`
+              const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${(err as Error).message}`
               return callback(new Error(message))
             }
           }
@@ -253,7 +254,7 @@ export const getTransformStream = (schema, fileSchema, applyTransform = false) =
 }
 
 // Read the dataset file and get a stream of line items
-export const readStreams = async (dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
+export const readStreams = async (dataset: Dataset, raw = false, full = false, ignoreDraftLimit = false, progress?: { inc: (i: number) => void }): Promise<any[]> => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(dataset)
   const p = full ? fullFilePath(dataset) : filePath(dataset)
 
@@ -266,7 +267,7 @@ export const readStreams = async (dataset, raw = false, full = false, ignoreDraf
   }
 
   const { body, size } = await filesStorage.readStream(p, undefined, undefined, true)
-  let streams = [body]
+  let streams: any[] = [body]
 
   if (progress) {
     streams.push(new Transform({
@@ -283,7 +284,7 @@ export const readStreams = async (dataset, raw = false, full = false, ignoreDraf
 }
 
 // Used by extender worker to produce the "full" version of the file
-export const writeExtendedStreams = async (dataset, extensions) => {
+export const writeExtendedStreams = async (dataset: Dataset, extensions: any[]): Promise<any[]> => {
   if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(dataset, extensions)
   const flatten = getFlattenNoCache(dataset)
   const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir, prefix: 'full-' })
@@ -293,8 +294,8 @@ export const writeExtendedStreams = async (dataset, extensions) => {
 
   const writeStream = fs.createWriteStream(tmpFullFile)
 
-  const relevantSchema = dataset.schema.filter(f => !f['x-calculated'])
-  const transforms = []
+  const relevantSchema = (dataset.schema ?? []).filter(f => !f['x-calculated'])
+  const transforms: any[] = []
 
   if (dataset.file.mimetype === 'text/csv') {
     transforms.push(new Transform({
@@ -321,7 +322,7 @@ export const writeExtendedStreams = async (dataset, extensions) => {
       transform (chunk, encoding, callback) {
         const { geometry } = chunk
         if (!geometry) return callback()
-        const properties = {}
+        const properties: Record<string, any> = {}
         for (const field of relevantSchema) {
           if (field.key in chunk) {
             properties[field['x-originalName'] || field.key] = chunk[field.key]
@@ -351,11 +352,11 @@ export const writeExtendedStreams = async (dataset, extensions) => {
   return [...transforms, writeStream]
 }
 
-export const sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
+export const sampleValues = async (dataset: Dataset, ignoreKeys?: string[], onDecodedData?: (chunk: any) => void): Promise<Record<string, Set<string>>> => {
   let currentLine = 0
   let stopped = false
   /** @type {Record<string, Set<string>>} */
-  const sampleValues = {}
+  const sampleValues: Record<string, Set<string>> = {}
   const streams = await readStreams(dataset, true, false, true)
   if (onDecodedData) {
     const decodeStreamIndex = streams.findIndex(s => s instanceof DecodeStream)
