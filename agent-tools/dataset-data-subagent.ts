@@ -27,7 +27,7 @@ ${filtersGuide}
 Format:
 - Present results concisely with clear labels
 - For numeric results, round to 2 decimal places when appropriate
-- When returning tabular data, summarize key findings rather than just dumping raw rows
+- When the result is tabular or aggregated, include the key values as a compact markdown table (the relevant rows or aggregation groups, typically up to ~20) so the parent assistant can render a table or small chart — add a short summary of the takeaways, but never paste large raw result dumps
 - Respond in the same language as the user's question
 
 Response structure:
