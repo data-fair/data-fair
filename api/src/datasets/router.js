@@ -51,6 +51,7 @@ import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from 
 import { dir, dataFilesDir, attachmentsDir, validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { preparePatch } from './utils/patch.ts'
 import { checkStorage, lockDataset, readDataset } from './middlewares.ts'
+import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin, isRest, readWritableDataset } from './routes/_common.ts'
 import config from '#config'
 import mongo from '#mongo'
 import debugModule from 'debug'
@@ -74,10 +75,6 @@ const router = express.Router()
 const clean = datasetUtils.clean
 
 const debugLimits = debugModule('limits')
-
-export const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
-const apiKeyMiddlewareWrite = apiKeyUtils.middleware(['datasets', 'datasets-write'])
-const apiKeyMiddlewareAdmin = apiKeyUtils.middleware(['datasets', 'datasets-admin'])
 
 router.use((req, res, next) => {
   // @ts-ignore
@@ -595,16 +592,6 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   return res.send(datasetFull)
 })
 
-// CRUD operations for REST datasets
-function isRest (req, res, next) {
-  if (!req.dataset.isRest) {
-    return res.status(501)
-      .send('Les opérations de modifications sur les lignes sont uniquement accessibles pour les jeux de données éditables.')
-  }
-  next()
-}
-
-const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'indexed', 'error'] })
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readLine)
 router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, restDatasetsUtils.fixFormBody, uploadUtils.fsyncFiles, clamav.middleware, restDatasetsUtils.createOrUpdateLine)
 router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, restDatasetsUtils.fixFormBody, uploadUtils.fsyncFiles, clamav.middleware, restDatasetsUtils.createOrUpdateLine)
