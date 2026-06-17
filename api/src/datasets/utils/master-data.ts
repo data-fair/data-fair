@@ -7,7 +7,7 @@ import batchStream from '../../misc/utils/batch-stream.ts'
 import * as esUtils from '../es/index.ts'
 import pump from '../../misc/utils/pipe.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { Dataset } from '#types'
+import type { Dataset, VirtualDataset } from '#types'
 
 export const bulkSearchPromise = async (streams: any[], data: string): Promise<string> => {
   const buffers: Buffer[] = []
@@ -28,7 +28,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find((bs: any) => bs.id === bulkSearchId)
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
-  if (dataset.isVirtual) (dataset as any).descendants = await virtualDatasetsUtils.descendants(dataset as any)
+  if (dataset.isVirtual) (dataset as Dataset & { descendants?: any }).descendants = await virtualDatasetsUtils.descendants(dataset as VirtualDataset)
   const schema = dataset.schema ?? []
   const _source = (select && select !== '*') ? select.split(',') : schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
   const unknownField = _source.find(s => !schema.find(p => p.key === s))

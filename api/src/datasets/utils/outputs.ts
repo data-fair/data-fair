@@ -91,7 +91,8 @@ export const csvStreams = (dataset: Dataset, query: Record<string, string> = {},
 }
 
 export const results2sheet = async (req: ReqWithDataset, results: Record<string, any>[], bookType: string): Promise<Buffer> => {
-  const dataset = (req.dataset as any).__isProxy ? (req.dataset as any).__proxyTarget : req.dataset
+  const reqDataset = req.dataset as Dataset & { __isProxy?: boolean, __proxyTarget?: Dataset }
+  const dataset = reqDataset.__isProxy ? reqDataset.__proxyTarget as Dataset : req.dataset
   const settings = await mongo.db.collection('settings')
     .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { datasetsMetadata: 1 } })
   const buf = Buffer.from(await results2sheetPiscina.run({
@@ -101,7 +102,7 @@ export const results2sheet = async (req: ReqWithDataset, results: Record<string,
     dataset,
     downloadUrl: reqPublicBaseUrl(req) + req.originalUrl,
     labels: req.__('sheets'),
-    datasetsMetadata: (settings as any)?.datasetsMetadata ?? {}
+    datasetsMetadata: (settings as { datasetsMetadata?: any } | null)?.datasetsMetadata ?? {}
   }))
   return buf
 }
