@@ -27,6 +27,13 @@ export const setReqDatasetFull = datasetFullCtx.set
 export const reqDatasetFull = datasetFullCtx.get
 export const reqDatasetFullOptional = datasetFullCtx.getOptional
 
+// the owner of the lines being managed on a lineOwnership-enabled REST dataset (own/:owner routes).
+// legacyProp dual-write: datasets/utils/rest.ts still reads req.linesOwner by raw access — drop the
+// legacyProp once those readers migrate (rest.ts can't import this without a require cycle today).
+const linesOwnerCtx = defineReqContext<Account>('linesOwner', 'linesOwner')
+export const setReqLinesOwner = linesOwnerCtx.set
+export const reqLinesOwnerOptional = linesOwnerCtx.getOptional
+
 export const checkStorage = (overwrite: boolean, indexed = false): RequestHandler => async (req, res, next) => {
   reqUserAuthenticated(req)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()

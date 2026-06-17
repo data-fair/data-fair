@@ -34,7 +34,6 @@ import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import applicationKey from '../misc/utils/application-key.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import * as clamav from '../misc/utils/clamav.ts'
-import * as apiKeyUtils from '../misc/utils/api-key.ts'
 import * as rateLimiting from '../misc/utils/rate-limiting.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.ts'
@@ -42,10 +41,11 @@ import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from 
 import { dir, dataFilesDir, attachmentsDir, validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { preparePatch } from './utils/patch.ts'
 import { checkStorage, lockDataset, readDataset } from './middlewares.ts'
-import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin, isRest, readWritableDataset } from './routes/_common.ts'
+import { apiKeyMiddlewareRead, apiKeyMiddlewareWrite, apiKeyMiddlewareAdmin } from './routes/_common.ts'
 import { registerMasterDataRoutes } from './routes/master-data.ts'
 import { registerReadRoutes } from './routes/read.ts'
 import { registerLinesRoutes } from './routes/lines.ts'
+import { registerOwnLinesRoutes } from './routes/own-lines.ts'
 import config from '#config'
 import mongo from '#mongo'
 import debugModule from 'debug'
@@ -586,35 +586,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
 
 registerLinesRoutes(router)
 
-// specific routes with rest datasets with lineOwnership activated
-router.use('/:datasetId/own/:owner', readWritableDataset, isRest, apiKeyUtils.middleware(['datasets']), rateLimiting.middleware, (req, res, next) => {
-  const sessionState = reqSessionAuthenticated(req)
-  if (!req.dataset.rest?.lineOwnership) {
-    return res.status(501)
-      .send('Les opérations de gestion des lignes par propriétaires ne sont pas supportées pour ce jeu de données.')
-  }
-  const [type, id, department] = req.params.owner.split(':')
-  req.linesOwner = { type, id, department }
-  if (!['organization', 'user'].includes(req.linesOwner.type)) return res.status(400).type('text/plain').send('ownerType must be user or organization')
-  if (req.linesOwner.type === 'organization' && sessionState.account.type === 'organization' && sessionState.account.id === req.linesOwner.id && (sessionState.account.department || null) === (req.linesOwner.department || null)) {
-    req.linesOwner.name = sessionState.account.name
-    return next()
-  }
-  if (req.linesOwner.type === 'user' && sessionState.user.id === req.linesOwner.id) {
-    req.linesOwner.name = sessionState.user.name
-    return next()
-  }
-  if (sessionState.user.adminMode) return next()
-  res.status(403).type('text/plain').send('only owner can manage his own lines')
-})
-router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readLine)
-router.post('/:datasetId/own/:owner/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, restDatasetsUtils.fixFormBody, restDatasetsUtils.createOrUpdateLine)
-router.put('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, restDatasetsUtils.fixFormBody, restDatasetsUtils.createOrUpdateLine)
-router.patch('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, restDatasetsUtils.fixFormBody, restDatasetsUtils.patchLine)
-router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readWritableDataset, isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadBulk, restDatasetsUtils.bulkLines)
-router.delete('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('deleteOwnLine', 'manageOwnLines'), restDatasetsUtils.deleteLine)
-router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnLineRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readRevisions)
-router.get('/:datasetId/own/:owner/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readRevisions)
+registerOwnLinesRoutes(router)
 
 registerMasterDataRoutes(router)
 
