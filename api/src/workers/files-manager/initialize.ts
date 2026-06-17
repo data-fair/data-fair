@@ -1,7 +1,7 @@
 import path from 'path'
 import { Readable, Transform, compose } from 'node:stream'
 import * as restUtils from '../../datasets/utils/rest.ts'
-import * as datasetUtils from '../../datasets/utils/index.js'
+import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.js'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'

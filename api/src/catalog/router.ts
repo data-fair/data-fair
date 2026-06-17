@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { reqSession } from '@data-fair/lib-express'
-import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetUtils from '../datasets/utils/index.ts'
 import mongo from '#mongo'
 import { findDatasets } from '../datasets/service.js'
 import * as apiKeyUtils from '../misc/utils/api-key.ts'

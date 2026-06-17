@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import * as datasetUtils from '../../datasets/utils/index.js'
+import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.js'
 import { replaceAllAttachments } from '../../datasets/utils/attachments.ts'

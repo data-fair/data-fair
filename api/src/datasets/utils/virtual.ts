@@ -1,5 +1,5 @@
 import mongo from '#mongo'
-import * as datasetUtils from '../../datasets/utils/index.js'
+import * as datasetUtils from '../../datasets/utils/index.ts'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { AccountKeys } from '@data-fair/lib-express'

@@ -7,7 +7,7 @@ import * as permissions from '../misc/utils/permissions.ts'
 import { prepareMarkdownContent } from '../misc/utils/markdown.ts'
 import * as findUtils from '../misc/utils/find.ts'
 import clone from '@data-fair/lib-utils/clone.js'
-import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetUtils from '../datasets/utils/index.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { getPseudoSessionState } from '../misc/utils/users.ts'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
