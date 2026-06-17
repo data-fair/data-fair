@@ -1,48 +1,52 @@
+import type { RequestHandler } from 'express'
+import type { Dataset } from '#types'
 import config from '#config'
 import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.ts'
 import { getOwnerRole } from '../misc/utils/permissions.ts'
+import { defineReqContext, setReqResource, reqResourceOptional } from '../misc/utils/req-context.ts'
+import { setReqNoCache } from '../misc/utils/cache-headers.ts'
+import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
 import { checkStorage as checkStorageFn } from './utils/storage.ts'
-import * as service from './service.js'
+import * as service from './service.ts'
 import { withQuery } from 'ufo'
-import { reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
+import { type Account, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import { emit as workerPing } from '../workers/ping.ts'
 
-/**
- *
- * @param {boolean} overwrite
- * @param {boolean} indexed
- * @returns
- */
-// @ts-ignore
-export const checkStorage = (overwrite, indexed = false) => async (req, res, next) => {
+// the loaded dataset (draft merged when in draft mode) and its full underlying document.
+// module-local accessors with legacyProp dual-write: datasets/router.js and datasets/utils/*
+// still read req.dataset / req.datasetFull by raw access — drop the legacyProp in slice 6d.
+const datasetCtx = defineReqContext<Dataset>('dataset', 'dataset')
+export const setReqDataset = datasetCtx.set
+export const reqDataset = datasetCtx.get
+export const reqDatasetOptional = datasetCtx.getOptional
+const datasetFullCtx = defineReqContext<Dataset>('datasetFull', 'datasetFull')
+export const setReqDatasetFull = datasetFullCtx.set
+export const reqDatasetFull = datasetFullCtx.get
+export const reqDatasetFullOptional = datasetFullCtx.getOptional
+
+export const checkStorage = (overwrite: boolean, indexed = false): RequestHandler => async (req, res, next) => {
   reqUserAuthenticated(req)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
   if (!req.get('Content-Length')) throw httpError(411, 'Content-Length is mandatory')
   const contentLength = Number(req.get('Content-Length'))
   if (Number.isNaN(contentLength)) throw httpError(400, 'Content-Length is not a number')
 
-  // @ts-ignore
-  const resource = req.resource
-  const owner = resource ? resource.owner : usersUtils.owner(req)
+  const resource = reqResourceOptional(req)
+  const owner = (resource ? resource.owner : usersUtils.owner(req)) as Account
   await checkStorageFn(req.getLocale(), owner, overwrite && resource, contentLength, indexed)
   next()
 }
 
 // Shared middleware to apply a lock on the modified resource
-/**
- *
- * @param {boolean | ((patch: any) => boolean)} _shouldLock
- * @returns
- */
-export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
-  // @ts-ignore
+export const lockDataset = (_shouldLock: boolean | ((body: any, query: any) => boolean) = true): RequestHandler => async (req, res, next) => {
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
   if (!shouldLock) return next()
-  // @ts-ignore
-  const datasetId = req.dataset ? req.dataset.id : req.params.datasetId
+  const dataset = reqDatasetOptional(req)
+  const datasetId = dataset ? dataset.id : req.params.datasetId
+  if (typeof datasetId !== 'string') throw httpError(400, 'invalid path parameters')
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     const lockKey = `datasets:${datasetId}`
     const ack = await locks.acquire(lockKey, `${req.method} ${req.originalUrl}`)
@@ -64,32 +68,37 @@ export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
   throw httpError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
 }
 
+interface ReadDatasetOptions {
+  acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null)
+  fillDescendants?: boolean
+  alwaysDraft?: boolean
+  acceptMissing?: boolean
+  acceptInitialDraft?: boolean
+  noCache?: boolean
+}
+
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
-/**
- * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean, noCache?: boolean}} fillDescendants
- * @returns
- */
-export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft, noCache } = {}) => async (req, res, next) => {
-  // @ts-ignore
-  const publicationSite = req.publicationSite
-  // @ts-ignore
-  const mainPublicationSite = req.mainPublicationSite
+export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft, noCache }: ReadDatasetOptions = {}): RequestHandler => async (req, res, next) => {
+  if (typeof req.params.datasetId !== 'string') throw httpError(400, 'invalid path parameters')
+  const datasetId = req.params.datasetId
+  const publicationSite = reqPublicationSite(req)
+  const mainPublicationSite = reqMainPublicationSite(req)
   // TODO: excluding tests from using memoize cache is not great for test coverage
   const tolerateStale = !acceptedStatuses && !noCache && process.env.NODE_ENV !== 'development'
   const useDraft = req.query.draft === 'true' || alwaysDraft
 
   let { dataset, datasetFull } = tolerateStale
-    ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
-    : await service.getDatasetFresh(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
+    ? await service.memoizedGetDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
+    : await service.getDatasetFresh(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
 
   // bypass the memory cache if it is contradicted by the finalizedAt or updatedAt parameter
   if (dataset && tolerateStale && (
     (req.query.finalizedAt && req.query.finalizedAt > dataset.finalizedAt) ||
     (req.query.updatedAt && req.query.updatedAt > dataset.updatedAt)
   )) {
-    const result = await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
+    const result = await service.getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, acceptedStatuses, req.body)
     dataset = result.dataset
     datasetFull = result.datasetFull
   }
@@ -107,20 +116,20 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
       for (const org of user.organizations) {
         accounts.push(`organization:${org.id}${org.department ? ':' + org.department : ''}`)
       }
-      if (req.query.account) {
-        const queryAccounts = req.query.account.split(',')
+      const accountParam = req.query.account as string | undefined
+      if (accountParam) {
+        const queryAccounts = accountParam.split(',')
         const rejectedAccount = queryAccounts.find(a => !accounts.includes(a))
         if (rejectedAccount) throw httpError(403, `You are not allowed to use the "${rejectedAccount}" account parameter`)
       }
-      req.url = withQuery(req.url, { account: req.query.account || accounts.join(',') })
+      req.url = withQuery(req.url, { account: accountParam || accounts.join(',') })
     }
-    req.noCache = true
+    setReqNoCache(req, true)
   }
 
-  // @ts-ignore
-  req.dataset = req.resource = dataset
-  // @ts-ignore
-  req.datasetFull = datasetFull
+  setReqDataset(req, dataset)
+  setReqResource(req, dataset)
+  setReqDatasetFull(req, datasetFull)
 
   next()
 }

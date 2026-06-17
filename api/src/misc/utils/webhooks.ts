@@ -3,12 +3,14 @@ import axios from './axios.ts'
 import config from '#config'
 import settingsSchema from '#types/settings/schema.js'
 import debugLib from 'debug'
-import type { Resource, Event, Dataset, ResourceType } from '#types'
+import type { Resource, Dataset, ResourceType } from '#types'
 import testEvents from './test-events.ts'
 
 const debug = debugLib('webhooks')
 
-export const trigger = async (resourceType: ResourceType, resource: Resource, event: Event, sender) => {
+// `event` here is a webhook-trigger event, not a journal Event: trigger only reads type/href/data
+// (and tolerates an unused `body` some callers pass). `sender` is currently unused.
+export const trigger = async (resourceType: ResourceType, resource: Resource, event: { type: string, href?: string, data?: string, body?: any }, sender?: any) => {
   const singularResourceType = resourceType.substring(0, resourceType.length - 1)
   const eventKey = (resource as Dataset).draftReason ? `${singularResourceType}-draft-${event.type}` : `${singularResourceType}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf

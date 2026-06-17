@@ -8,7 +8,7 @@ import type { Dataset, DatasetInternal, RestDataset } from '#types'
 
 export const renewApiKey = async function (dataset: DatasetInternal) {
   await mongo.connect(true)
-  const datasetsService = await import('../../datasets/service.js')
+  const datasetsService = await import('../../datasets/service.ts')
   const readApiKeyUtils = await import('../../datasets/utils/read-api-key.ts')
   const debug = debugLib(`worker:read-api-key-renewer:${dataset.id}`)
 

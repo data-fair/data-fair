@@ -1,7 +1,7 @@
 import express from 'express'
 import { Readable, Stream, Transform } from 'node:stream'
 import * as permissions from '../../misc/utils/permissions.ts'
-import { readDataset } from '../../datasets/middlewares.js'
+import { readDataset } from '../../datasets/middlewares.ts'
 import * as cacheHeaders from '../../misc/utils/cache-headers.ts'
 import * as esUtils from '../../datasets/es/index.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'

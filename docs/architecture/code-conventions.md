@@ -129,11 +129,12 @@ Homes for the cross-cutting contexts (names and `get`/`getOptional` contracts ar
 
 | Accessor | Type | Home | Set from |
 |---|---|---|---|
-| `reqResource` / `setReqResource` / `reqResourceOptional` | `Resource` (throws / optional) | `req-context.ts` (re-exported by `permissions.ts`) | `applications/*`, `datasets/middlewares.js`, `remote-services/router.js` |
+| `reqResource` / `setReqResource` / `reqResourceOptional` | `Resource` (throws / optional) | `req-context.ts` (re-exported by `permissions.ts`) | `applications/*`, `datasets/middlewares.ts`, `remote-services/router.js` |
 | `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | `req-context.ts` (re-exported by `permissions.ts`) | several routers |
 | `reqBypassPermissions` / `setReqBypassPermissions` | `BypassPermissions \| undefined` | `req-context.ts` (re-exported by `permissions.ts`) | `api-key.ts`, `application-key.ts` |
 | `reqPublicOperation` / `setReqPublicOperation` | `boolean \| undefined` | `req-context.ts` (re-exported by `permissions.ts`) | `permissions.ts` |
-| `reqNoCache` / `setReqNoCache`, `reqNoModifiedCache` / `setReqNoModifiedCache` | `boolean \| undefined` | `misc/utils/cache-headers.ts` | `datasets/middlewares.js`, `api-compat/ods` |
+| `reqNoCache` / `setReqNoCache`, `reqNoModifiedCache` / `setReqNoModifiedCache` | `boolean \| undefined` | `misc/utils/cache-headers.ts` | `datasets/middlewares.ts`, `api-compat/ods` |
+| `reqDataset` / `setReqDataset` / `reqDatasetOptional`, `reqDatasetFull` / `setReqDatasetFull` / `reqDatasetFullOptional` | `Dataset` (get throws / optional) | `datasets/middlewares.ts` (module-local) | `datasets/middlewares.ts` (read by `datasets/router.js` + `datasets/utils/*` via legacyProp until 6d) |
 | `reqPublicBaseUrl` / `setReqPublicBaseUrl`, `reqPublicWsBaseUrl` / `setReqPublicWsBaseUrl` | `string` (throws) | `misc/utils/public-base-url.ts` (config-free) | `app.js` |
 | `reqPublicationSite` / `setReqPublicationSite`, `reqMainPublicationSite` / `setReqMainPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js`, `catalog/router.js` |
 | `reqEsAbortContext` / `setReqEsAbortContext` / `reqEsAbortContextOptional` | `EsAbortContext` (get throws / optional) | `datasets/es/abort.ts` | `datasets/es/abort.ts` (read by `rate-limiting.ts`, `datasets/router.js`) |
@@ -174,7 +175,7 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 | File | Properties set |
 |---|---|
 | `api/src/app.js` | `publicBaseUrl`, `publicWsBaseUrl`, `publicationSite`, `mainPublicationSite` |
-| `api/src/datasets/middlewares.js` | `dataset`, `resource`, `datasetFull`, `noCache`, `url` |
+| `api/src/datasets/middlewares.ts` | `url` only (`dataset` / `resource` / `datasetFull` / `noCache` now set via accessors — Phase 6c) |
 | `api/src/datasets/router.js` | `resourceType`, `linesOwner`, `body`, `_draft` |
 | `api/src/datasets/utils/rest.ts` | `body` (`_fixedFormBody` now a module-local accessor; `_rawBody` / `_uploadedAttachmentPath` eliminated — Phase 6b) |
 | `api/src/datasets/es/abort.ts` | `esAbortContext` (now an accessor — see note below) |
@@ -203,6 +204,15 @@ Phase 6b (2026-06-17) decoupled the `rest.ts` attachment helpers: `_rawBody` and
 `manageAttachment` / `rollbackUploadedAttachment`), and `_fixedFormBody` became a **module-local
 accessor** (`defineReqContext`, no `legacyProp` — only `rest.ts` set/read it). The mounted line
 route handlers stay `(req, res, next)` adapters that assemble the helper context at the boundary.
+Phase 6c (2026-06-17) converted `datasets/service.js` → `.ts` (already express-free, types only) and
+`datasets/middlewares.js` → `.ts`. The middlewares now set `dataset` / `datasetFull` through new
+**module-local** accessors (`setReqDataset` / `setReqDatasetFull`, `legacyProp` dual-write) and set
+`resource` / `noCache` through the existing `setReqResource` / `setReqNoCache` accessors; reads of
+`publicationSite` / `mainPublicationSite` / `resource` use the existing optional getters. `req.url`
+(a genuine Express prop, not request context) is the only remaining raw mutation. The `dataset` /
+`datasetFull` `legacyProp` is **retained** because `datasets/router.js` (≈213 reads) and the typed
+`datasets/utils/*` files still read `req.dataset` / `req.datasetFull` by raw access — drop it (and the
+`esAbortContext` legacyProp) when `router.js` migrates in slice 6d.
 
 ### Migration mechanics per property
 

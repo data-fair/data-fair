@@ -33,7 +33,7 @@ test.describe('dataset conformsTo metadata', () => {
     await u1.patch('/api/v1/datasets/' + id, {
       conformsTo: { title: 'Schema A', version: '1.0', url: 'https://example.com/a.json' }
     })
-    // Patch with null triggers $unset in mongo (api/src/datasets/service.js:517).
+    // Patch with null triggers $unset in mongo (api/src/datasets/service.ts:517).
     // The PATCH response still echoes the null (in-memory Object.assign), but
     // the persisted dataset has the field unset — verify via a fresh GET.
     await u1.patch('/api/v1/datasets/' + id, { conformsTo: null })

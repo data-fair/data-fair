@@ -19,7 +19,7 @@ import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
 import { setUniqueRefs } from './operations.ts'
 import filesStorage from '#files-storage'
-import { syncApplications } from '../datasets/service.js'
+import { syncApplications } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 

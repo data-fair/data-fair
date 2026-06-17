@@ -1,7 +1,7 @@
 import debugLib from 'debug'
 import * as extensionsUtils from '../../datasets/utils/extensions.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
-import * as datasetService from '../../datasets/service.js'
+import * as datasetService from '../../datasets/service.ts'
 import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
 import type { DatasetInternal } from '#types'
 import { isRestDataset } from '@data-fair/data-fair-shared/types-utils.ts'
