@@ -26,9 +26,9 @@ export const schema = {
       fieldKey: { type: 'string' as const, description: 'The column key that was queried' },
       total: { type: 'number' as const, description: 'Total number of rows included in the calculation' },
       // polymorphic: a number for avg/sum/min/max/value_count/cardinality on numeric columns,
-      // a string for min/max on string columns, an object for stats/percentiles. Left untyped so
-      // the MCP output-schema validation accepts every shape the metric_agg endpoint returns.
-      metric: { description: 'The calculated metric value. For avg/sum/min/max/value_count/cardinality: a single number (or a string for min/max on string columns). For stats: an object {count, min, max, avg, sum}. For percentiles: an object mapping percentage strings to values, e.g. {"25": 30000, "50": 42000, "75": 55000}.' }
+      // a string for min/max on string columns, an object for stats/percentiles. Declared as a
+      // multi-type so the MCP output-schema validation accepts every shape the metric_agg endpoint returns.
+      metric: { type: ['number', 'string', 'object'] as const, description: 'The calculated metric value. For avg/sum/min/max/value_count/cardinality: a single number (or a string for min/max on string columns). For stats: an object {count, min, max, avg, sum}. For percentiles: an object mapping percentage strings to values, e.g. {"25": 30000, "50": 42000, "75": 55000}.' }
     },
     required: ['datasetId', 'fieldKey', 'total', 'metric'] as const
   }
