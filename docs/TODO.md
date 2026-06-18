@@ -20,25 +20,6 @@ Related docs: dormant correctness bugs from the perf scan in
 
 ## Suggested PR candidates (grouped)
 
-### PR 1 — Applications dormant bugs `P2 · M`
-All in `applications/service.ts` / `router.ts`, all surfaced in Phase 4. Four independent small fixes
-+ a test each; coherent as one PR.
-- `2e` **PUT readonly-key preservation is a no-op** — `if (!patchKeys.includes([key]))` compares against
-  an **array literal**, always true → every existing field is copied onto the new application. Fix:
-  `!patchKeys.includes(key)`. (`replaceApplication`)
-- `2f` **delete: capture-file removal always throws** — calls `capture.path(application)` but
-  `misc/utils/capture.ts` exports only `screenshot`/`print`; `TypeError` swallowed by try/catch →
-  capture artifacts never cleaned on delete. (`deleteApplication`)
-- `2g` **writeConfig syncs the raw, unvalidated body** — `syncDatasets({ configuration: rawBody })`
-  passes `req.body` not the validated `appConfig`, and omits `oldApp` → back-refs not reconciled
-  against the previous config. (`writeApplicationConfig`)
-- `2h` **POST `clean()` args swapped** — `applications/router.ts:69` (the POST 201 response):
-  `clean(created, reqPublicationSite(req), reqPublicBaseUrl(req) as unknown as PublicationSite)` —
-  `publicationSite` and `publicBaseUrl` are in each other's slots (the `as unknown as PublicationSite`
-  cast is the tell); the canonical order is `clean(app, publicBaseUrl, publicationSite)` as in the other
-  three call sites. On a secondary domain the 201-response links/image URLs are built wrong (invisible
-  on the main domain where publicationSite is undefined).
-
 ### PR 2 — Datasets draft / notification correctness `P2 · M`
 All in `datasets/routes/{write,metadata,misc}.ts`, surfaced in Phase 6d.
 - `12` **draft-validated notification `localizedParams` mis-shaped** — emits `{ cause: { fr, en } }`
@@ -122,6 +103,17 @@ enabler); (3) compact redundant API specs.
 ---
 
 ## Resolved during the series (for the record)
+- **PR 1 — Applications dormant bugs** (`2e`/`2f`/`2g`/`2h`) → fixed, each with a test:
+  - `2e` `replaceApplication`'s readonly-preservation no-op (`!patchKeys.includes([key])` → `!patchKeys.includes(key)`).
+    Reaching it required also fixing the PUT route: `attemptInsert` validated the *curated* application
+    (which carries the internal `_uniqueRefs` field + a generated, possibly mixed-case id) against the
+    `additionalProperties:false` application schema, so **every** PUT 400'd before `replaceApplication`
+    ran (pre-existing, untested). Now it validates `req.body` via the post-req schema, like POST/datasets.
+  - `2f` `deleteApplication` capture cleanup — restored a `captureFilePath` export on `misc/utils/capture.ts`
+    (modern captures are stored only as `.png`) and call it instead of the non-existent `capture.path`.
+  - `2g` `writeApplicationConfig` now `syncDatasets({ configuration: appConfig }, application)` — validated
+    config + previous app as `oldApp` so old dataset back-refs are reconciled (dropped the unused `rawBody`).
+  - `2h` POST 201 response now uses the canonical `clean(app, publicBaseUrl, publicationSite)` order.
 - clamav `middleware` DOM-`Response` cast → fixed in Phase 6d.
 - `/app-sw.js` reading raw `req.application` → migrated to `reqApplicationOptional` (still benign-undefined).
 - `esAbortContext` legacyProp, and the whole `legacyProp` dual-write mechanism → removed at series end.

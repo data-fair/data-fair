@@ -213,7 +213,7 @@ export const tryInsertApplication = async (ctx: ApplicationWriteContext, newAppl
 export const replaceApplication = async (ctx: ApplicationWriteContext, existingApplication: Application, newApplication: any, isNew: boolean) => {
   // preserve all readonly properties, the rest is overwritten
   for (const key of Object.keys(existingApplication)) {
-    if (!(patchKeys as unknown[]).includes([key])) {
+    if (!(patchKeys as string[]).includes(key)) {
       newApplication[key] = (existingApplication as any)[key]
     }
   }
@@ -357,7 +357,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
   await mongo.applicationsKeys.deleteOne({ _id: application.id })
   clearApplicationKeysCaches()
   try {
-    await filesStorage.removeFile(await (capture as any).path(application))
+    await filesStorage.removeFile(capture.captureFilePath(application))
   } catch (err) {
     console.warn('Failure to remove capture file')
   }
@@ -382,9 +382,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
   await syncDatasets(application)
 }
 
-// NOTE: preserved bug — router passes `req.body` (raw) as rawBody while `appConfig` is the validated value.
-// syncDatasets receives rawBody (the raw body) instead of the validated appConfig. Preserved verbatim.
-export const writeApplicationConfig = async (ctx: ApplicationWriteContext, application: Application, appConfig: any, rawBody: any) => {
+export const writeApplicationConfig = async (ctx: ApplicationWriteContext, application: Application, appConfig: any) => {
   const db = mongo.db
   await db.collection('applications').updateOne(
     { id: application.id },
@@ -407,7 +405,8 @@ export const writeApplicationConfig = async (ctx: ApplicationWriteContext, appli
   eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { ...ctx.logCtx, account: application.owner })
 
   await journals.log('applications', application, { type: 'config-updated' } as Event)
-  await syncDatasets({ configuration: rawBody })
+  // sync the validated config and reconcile back-references against the previous configuration
+  await syncDatasets({ configuration: appConfig }, application)
 }
 
 export const writeConfigDraft = async (ctx: ApplicationWriteContext, application: Application, appConfig: any) => {
