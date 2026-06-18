@@ -16,6 +16,7 @@
     "data",
     "parquet_writer",
     "ui",
-    "test-it"
+    "test-it",
+    "tmp"
   ]
 }

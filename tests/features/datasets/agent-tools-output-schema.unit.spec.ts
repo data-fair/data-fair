@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import Ajv from 'ajv'
+import { Ajv } from 'ajv'
 import * as calculateMetric from '../../../agent-tools/calculate-metric.ts'
 import * as describeDataset from '../../../agent-tools/describe-dataset.ts'
 import * as searchData from '../../../agent-tools/search-data.ts'
