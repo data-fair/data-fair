@@ -95,11 +95,13 @@ export const readBaseApp: RequestHandler = async (req, res, next) => {
 // in case of conflict go on with the update scenario
 export const attemptInsert: RequestHandler = async (req, res, next) => {
   if (typeof req.params.applicationId !== 'string') throw httpError(400, 'invalid path parameters')
-  const { returnValid } = await import('#types/application/index.ts')
+  // validate the request body (not the curated application), like the POST route: the curated object
+  // carries internal fields (_uniqueRefs) and a generated id that are absent from the input schema
+  const { body } = (await import('#doc/applications/post-req/index.js')).returnValid(req)
   // reqUserAuthenticated (below) throws 401 for an anonymous request — same as the legacy code,
   // where initNew() called reqUserAuthenticated() before the session/permission checks. So an
   // anonymous PUT 401s here, exactly as before; it does not fall through to readApplication.
-  const newApplication = returnValid(await service.initNewApplication(req.body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req), req.params.applicationId)) as Application
+  const newApplication = await service.initNewApplication(body, usersUtils.owner(req) as AccountKeys, reqUserAuthenticated(req), req.params.applicationId)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
 
   permissions.initResourcePermissions(newApplication)

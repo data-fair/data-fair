@@ -19,6 +19,9 @@ const captureUrl = config.privateCaptureUrl || config.captureUrl
 
 const capturesDir = path.resolve(config.dataDir, 'captures')
 
+// path of the capture artifact for an application, used to clean it up when the application is deleted
+export const captureFilePath = (application: { id: string }) => resolvePath(capturesDir, application.id + '.png')
+
 const screenshotRequestOpts = (req: RequestWithResource, isDefaultThumbnail = false): AxiosRequestConfig => {
   const resource = reqResource(req)
   const screenshotUrl = (captureUrl + '/api/v1/screenshot')

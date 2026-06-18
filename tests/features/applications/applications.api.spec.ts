@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import FormData from 'form-data'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl, mockAppId } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, fileExists, clearDatasetCache } from '../../support/workers.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -293,6 +293,31 @@ test.describe('Applications', () => {
     assert.equal(res.headers['content-type'], 'application/pdf')
   })
 
+  test('Delete an application removes its capture file', async () => {
+    const ax = testUser1
+    try {
+      await ax.get(captureUrl + '/api/v1/api-docs.json')
+    } catch (err: any) {
+      console.warn('capture is not available in this test environment')
+      assert.equal(err.status, 502)
+      return
+    }
+
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const { data: dataset } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }] })
+
+    // generate the capture file
+    const res = await ax.get('/api/v1/applications/' + app.id + '/capture')
+    assert.equal(res.status, 200)
+    const capturePath = `captures/${app.id}.png`
+    assert.ok(await fileExists(capturePath), 'capture file should exist after generation')
+
+    // deleting the application must remove its capture artifact (capture.captureFilePath must resolve it)
+    await ax.delete('/api/v1/applications/' + app.id)
+    assert.equal(await fileExists(capturePath), false)
+  })
+
   test('Sort applications by title', async () => {
     const ax = testUser1
 
@@ -316,6 +341,43 @@ test.describe('Applications', () => {
     })
     res = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'test slug 2', slug: 'test-slug' })
     assert.equal(res.data.slug, 'test-slug-2')
+  })
+
+  test('PUT updates writable fields instead of preserving them', async () => {
+    const ax = testUser1
+    const { data: created } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'original title' })
+    const { id, createdAt, slug } = created
+
+    const res = await ax.put('/api/v1/applications/' + id, { url: mockAppUrl('monapp1'), slug, title: 'updated title' })
+    assert.equal(res.status, 200)
+    // writable field must be overwritten by the PUT body (the readonly-preservation loop must not copy it back)
+    assert.equal(res.data.title, 'updated title')
+    // readonly field must be preserved across the replace
+    assert.equal(res.data.createdAt, createdAt)
+  })
+
+  test('Reconfiguring an application reconciles old dataset back-references', async () => {
+    const ax = testUser1
+    const datasetA = await sendDataset('datasets/split.csv', ax)
+    const datasetB = await sendDataset('datasets/split.csv', ax)
+    const refA = (await ax.get('/api/v1/datasets', { params: { id: datasetA.id, select: 'id' } })).data.results[0]
+    const refB = (await ax.get('/api/v1/datasets', { params: { id: datasetB.id, select: 'id' } })).data.results[0]
+
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    // first configure referencing dataset A, then reconfigure to reference only dataset B
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ id: datasetA.id, href: refA.href }] })
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ id: datasetB.id, href: refB.href }] })
+
+    // bust the 30s dataset memoize cache so the GETs below reflect the back-reference sync
+    await clearDatasetCache()
+
+    // dataset A must no longer reference the application: the old config has to be reconciled, which
+    // requires syncDatasets to receive the previous application as oldApp
+    const dsA = (await ax.get('/api/v1/datasets/' + datasetA.id)).data
+    assert.equal(dsA.extras?.applications?.length ?? 0, 0)
+    // dataset B is now referenced
+    const dsB = (await ax.get('/api/v1/datasets/' + datasetB.id)).data
+    assert.equal(dsB.extras.applications.length, 1)
   })
 
   test('Upload a simple attachment on an application', async () => {

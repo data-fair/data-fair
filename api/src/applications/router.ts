@@ -27,7 +27,7 @@ import { reqEventLogContext } from '../misc/utils/req-context.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
 import filesStorage from '#files-storage'
-import type { Application, PublicationSite, Request, RequestWithResource } from '#types'
+import type { Application, Request, RequestWithResource } from '#types'
 
 const validateKeys = ajv.compile(applicationKeys)
 
@@ -65,8 +65,7 @@ router.post('', async (req, res) => {
 
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
   const created = await service.createApplication(ctx, application)
-  // NOTE: preserved bug — old code passes publicationSite as publicUrl arg and publicBaseUrl as publicationSite arg (swapped vs clean's signature). Preserved verbatim; casts encode the deliberate mismatch.
-  res.status(201).json(clean(created, reqPublicationSite(req), reqPublicBaseUrl(req) as unknown as PublicationSite))
+  res.status(201).json(clean(created, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })
 
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
@@ -150,7 +149,7 @@ const writeConfig: express.RequestHandler = async (req, res) => {
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
-  await service.writeApplicationConfig(ctx, reqApplication(req), appConfig, req.body)
+  await service.writeApplicationConfig(ctx, reqApplication(req), appConfig)
   res.status(200).json(req.body)
 }
 router.put('/:applicationId/config', readApplication, permissionMiddleware('writeConfig', 'write'), writeConfig)
