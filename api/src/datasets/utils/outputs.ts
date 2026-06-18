@@ -4,6 +4,7 @@ import { Piscina } from 'piscina'
 import mongo from '#mongo'
 import { getCsvSerializer } from './csv-jit.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
+import { reqDataset } from '../../misc/utils/req-context.ts'
 import type { Request } from 'express'
 import type { Dataset } from '#types'
 
@@ -48,7 +49,7 @@ export type ReqWithDataset = Request & {
 }
 
 export const results2csv = async (req: ReqWithDataset, results: Record<string, any>[]): Promise<string> => {
-  const { prologue, row } = compileForRequest(req.dataset, req.query)
+  const { prologue, row } = compileForRequest(reqDataset(req), req.query)
   const parts = new Array(results.length + 1)
   parts[0] = prologue
   for (let i = 0; i < results.length; i++) {
@@ -91,8 +92,8 @@ export const csvStreams = (dataset: Dataset, query: Record<string, string> = {},
 }
 
 export const results2sheet = async (req: ReqWithDataset, results: Record<string, any>[], bookType: string = 'xlsx'): Promise<Buffer> => {
-  const reqDataset = req.dataset as Dataset & { __isProxy?: boolean, __proxyTarget?: Dataset }
-  const dataset = reqDataset.__isProxy ? reqDataset.__proxyTarget as Dataset : req.dataset
+  const rawDataset = reqDataset(req) as Dataset & { __isProxy?: boolean, __proxyTarget?: Dataset }
+  const dataset = rawDataset.__isProxy ? rawDataset.__proxyTarget as Dataset : rawDataset
   const settings = await mongo.db.collection('settings')
     .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { datasetsMetadata: 1 } })
   const buf = Buffer.from(await results2sheetPiscina.run({

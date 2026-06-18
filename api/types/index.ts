@@ -25,7 +25,6 @@ export type BypassPermissions = {
   classes?: string[]
 }
 export type RequestWithResource = Request & {
-  resourceType: ResourceType,
   resource: Resource,
   bypassPermissions?: BypassPermissions,
   publicOperation?: boolean

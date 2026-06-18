@@ -1,15 +1,16 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { queryAdvice, shouldEmitHint, attachQueryHint, ignoredParamsAdvice } from '../../../api/src/misc/utils/query-advice.ts'
+import { setReqDataset } from '../../../api/src/misc/utils/req-context.ts'
 
 // minimal fake of the bits of an express Request the helper reads.
 // `__` echoes the key so assertions can match on key names instead of translated text.
-const fakeReq = (path: string, query: Record<string, any> = {}, dataset?: any) => ({
-  path,
-  query,
-  dataset,
-  __: (key: string) => key
-} as any)
+// the dataset is set through the req-context accessor (symbol-backed), like readDataset does.
+const fakeReq = (path: string, query: Record<string, any> = {}, dataset?: any) => {
+  const req = { path, query, __: (key: string) => key } as any
+  if (dataset !== undefined) setReqDataset(req, dataset)
+  return req
+}
 
 test.describe('queryAdvice', () => {
   test('empty string when no rule applies', () => {

@@ -6,7 +6,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.ts'
 import { getOwnerRole } from '../misc/utils/permissions.ts'
-import { defineReqContext, setReqResource, reqResourceOptional } from '../misc/utils/req-context.ts'
+import { defineReqContext, setReqResource, reqResourceOptional, setReqDataset, reqDataset, reqDatasetOptional, reqRestDataset } from '../misc/utils/req-context.ts'
 import { setReqNoCache } from '../misc/utils/cache-headers.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
 import { checkStorage as checkStorageFn } from './utils/storage.ts'
@@ -15,13 +15,11 @@ import { withQuery } from 'ufo'
 import { type Account, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import { emit as workerPing } from '../workers/ping.ts'
 
-// the loaded dataset (draft merged when in draft mode) and its full underlying document.
-// module-local accessors with legacyProp dual-write: datasets/router.js and datasets/utils/*
-// still read req.dataset / req.datasetFull by raw access — drop the legacyProp in slice 6d.
-const datasetCtx = defineReqContext<Dataset>('dataset', 'dataset')
-export const setReqDataset = datasetCtx.set
-export const reqDataset = datasetCtx.get
-export const reqDatasetOptional = datasetCtx.getOptional
+// dataset accessor lives in the config-free req-context.ts (so query-advice.ts and datasets/utils/* can
+// import it without #config / a require cycle); re-exported here as a facade for the routes/* importers.
+export { setReqDataset, reqDataset, reqDatasetOptional, reqRestDataset }
+
+// the full underlying dataset document (draft NOT merged). Module-local (no config-free / cycle reader).
 const datasetFullCtx = defineReqContext<Dataset>('datasetFull')
 export const setReqDatasetFull = datasetFullCtx.set
 export const reqDatasetFull = datasetFullCtx.get

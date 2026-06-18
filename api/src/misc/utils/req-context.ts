@@ -14,7 +14,7 @@
 import type { IncomingMessage } from 'node:http'
 import type { Request } from 'express'
 import { reqSession, type User, type Account } from '@data-fair/lib-express'
-import type { Resource, ResourceType, BypassPermissions } from '#types'
+import type { Resource, ResourceType, BypassPermissions, Dataset, RestDataset } from '#types'
 
 export type ReqContext<T> = {
   set: (req: IncomingMessage, value: T) => void
@@ -53,9 +53,21 @@ export const setReqResource = resourceCtx.set
 export const reqResource = resourceCtx.get
 export const reqResourceOptional = resourceCtx.getOptional
 
-const resourceTypeCtx = defineReqContext<ResourceType>('resourceType', 'resourceType')
+const resourceTypeCtx = defineReqContext<ResourceType>('resourceType')
 export const setReqResourceType = resourceTypeCtx.set
 export const reqResourceType = resourceTypeCtx.get
+
+// the loaded dataset (draft merged when in draft mode). Defined here, in the config-free home, rather
+// than module-local in datasets/middlewares.ts, because config-free pure code (query-advice.ts) and
+// datasets/utils/* (which can't import middlewares.ts without a require cycle) read it. The owner module
+// datasets/middlewares.ts re-exports these as a facade. reqRestDataset is for REST line routes whose
+// dataset is guaranteed to be a RestDataset (single cast contained here, per §2). No legacyProp: every
+// reader migrated to the accessor in Phase 7.
+const datasetCtx = defineReqContext<Dataset>('dataset')
+export const setReqDataset = datasetCtx.set
+export const reqDataset = datasetCtx.get
+export const reqDatasetOptional = datasetCtx.getOptional
+export const reqRestDataset = (req: IncomingMessage) => datasetCtx.get(req) as RestDataset
 
 const bypassPermissionsCtx = defineReqContext<BypassPermissions>('bypassPermissions', 'bypassPermissions')
 export const setReqBypassPermissions = bypassPermissionsCtx.set

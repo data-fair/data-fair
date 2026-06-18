@@ -130,11 +130,12 @@ Homes for the cross-cutting contexts (names and `get`/`getOptional` contracts ar
 | Accessor | Type | Home | Set from |
 |---|---|---|---|
 | `reqResource` / `setReqResource` / `reqResourceOptional` | `Resource` (throws / optional) | `req-context.ts` (re-exported by `permissions.ts`) | `applications/*`, `datasets/middlewares.ts`, `remote-services/router.js` |
-| `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | `req-context.ts` (re-exported by `permissions.ts`) | several routers |
+| `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | `req-context.ts` (re-exported by `permissions.ts`) | several routers, `api-compat/ods` |
 | `reqBypassPermissions` / `setReqBypassPermissions` | `BypassPermissions \| undefined` | `req-context.ts` (re-exported by `permissions.ts`) | `api-key.ts`, `application-key.ts` |
 | `reqPublicOperation` / `setReqPublicOperation` | `boolean \| undefined` | `req-context.ts` (re-exported by `permissions.ts`) | `permissions.ts` |
 | `reqNoCache` / `setReqNoCache`, `reqNoModifiedCache` / `setReqNoModifiedCache` | `boolean \| undefined` | `misc/utils/cache-headers.ts` | `datasets/middlewares.ts`, `api-compat/ods` |
-| `reqDataset` / `setReqDataset` / `reqDatasetOptional`, `reqDatasetFull` / `setReqDatasetFull` / `reqDatasetFullOptional` | `Dataset` (get throws / optional) | `datasets/middlewares.ts` (module-local) | `datasets/middlewares.ts` (read by `datasets/router.js` + `datasets/utils/*` via legacyProp until 6d) |
+| `reqDataset` / `setReqDataset` / `reqDatasetOptional` / `reqRestDataset` | `Dataset` (get throws / optional); `reqRestDataset` narrows to `RestDataset` (contained cast) | `req-context.ts` (config-free; re-exported by `datasets/middlewares.ts` as a facade) | `datasets/middlewares.ts` (read by `datasets/routes/*`, `datasets/utils/*`, `query-advice.ts`, `api-compat/ods`) |
+| `reqDatasetFull` / `setReqDatasetFull` / `reqDatasetFullOptional` | `Dataset` (get throws / optional) | `datasets/middlewares.ts` (module-local) | `datasets/middlewares.ts` |
 | `reqPublicBaseUrl` / `setReqPublicBaseUrl`, `reqPublicWsBaseUrl` / `setReqPublicWsBaseUrl` | `string` (throws) | `misc/utils/public-base-url.ts` (config-free) | `app.js` |
 | `reqPublicationSite` / `setReqPublicationSite`, `reqMainPublicationSite` / `setReqMainPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js`, `catalog/router.js` |
 | `reqEsAbortContext` / `setReqEsAbortContext` / `reqEsAbortContextOptional` | `EsAbortContext` (get throws / optional) | `datasets/es/abort.ts` | `datasets/es/abort.ts` (read by `rate-limiting.ts`, `datasets/router.js`) |
@@ -184,7 +185,7 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 | `api/src/misc/utils/permissions.ts` | `publicOperation` |
 | `api/src/misc/utils/api-key.ts` | `bypassPermissions` |
 | `api/src/misc/utils/application-key.ts` | `bypassPermissions` |
-| `api/src/api-compat/ods/index.ts` | `resourceType`, `noModifiedCache` |
+| `api/src/api-compat/ods/index.ts` | *(none — fully migrated Phase 7; `resourceType` → `setReqResourceType`, `noModifiedCache` → `setReqNoModifiedCache`, `dataset` reads → `reqDataset`)* |
 
 Rows disappear as module phases land. `settings` (Phase 1) is fully migrated. `catalog` and
 `remote-services` (Phase 2 / partial Phase 3, 2026-06-12) now set `resourceType` / `resource` /
@@ -226,6 +227,18 @@ Phase 7). Several middlewares were re-typed `req: RequestWithResource` → `req:
 (`permissions.middleware` / `canDoForOwnerMiddleware`, `application-key`) since they only read context via
 accessors — this removes the `router.<verb>(…)` overload friction; do the same for any middleware that
 breaks a typed route chain. The `clamav.middleware` DOM-`Response` parking-lot item was resolved here.
+Phase 7 (2026-06-18, final phase) extracted the pure ODS→ES query translation + result shaping from
+`api-compat/ods/index.ts` into `api-compat/ods/operations.ts` (unit-tested; index.ts keeps routing /
+ES calls / streaming). `operations.ts` imports `getFilterableFields` from the **config-free**
+`datasets/es/operations.ts` (NOT the `es/index.ts` barrel, which loads `#config`) so it stays
+unit-testable. api-compat's last raw mutations were migrated (`resourceType` → `setReqResourceType`,
+`noModifiedCache` → `setReqNoModifiedCache`). **Both remaining `legacyProp`s were dropped**: `resourceType`
+(only api-compat raw-set it) and `dataset`. To drop `dataset`, its accessor moved from
+`datasets/middlewares.ts` to the **config-free** `req-context.ts` (re-exported as a facade) — this
+simultaneously let `query-advice.ts` (config-free) and `datasets/utils/*` (which can't import
+`middlewares.ts` without a require cycle) migrate their raw `req.dataset` reads to `reqDataset` /
+`reqDatasetOptional` / `reqRestDataset`. The `resourceType` member was removed from `RequestWithResource`.
+`linesOwner` / `_draft` `legacyProp`s remain (out of scope — `rest.ts` / `upload.ts` still raw-read them).
 
 ### Migration mechanics per property
 

@@ -1,57 +1,33 @@
 import express from 'express'
 import { Readable, Stream, Transform } from 'node:stream'
 import * as permissions from '../../misc/utils/permissions.ts'
-import { readDataset } from '../../datasets/middlewares.ts'
+import { readDataset, reqDataset } from '../../datasets/middlewares.ts'
 import * as cacheHeaders from '../../misc/utils/cache-headers.ts'
 import * as esUtils from '../../datasets/es/index.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { Counter } from 'prom-client'
 import { getFlatten } from '../../datasets/utils/flatten.ts'
 import config from '#config'
 import datasetsRouter from '../../datasets/router.ts'
 import { apiKeyMiddlewareRead } from '../../datasets/routes/_common.ts'
 import * as rateLimiting from '../../misc/utils/rate-limiting.ts'
-import { parse as parseWhere } from './where.peg.js'
-import { parse as parseSelect } from './select.peg.js'
-import { parse as parseOrderBy } from './order-by.peg.js'
-import { parse as parseGroupBy } from './group-by.peg.js'
-import { parse as parseAliases } from './aliases.peg.js'
-import { parse as parseRefine } from './refine.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
 import { stringify as csvStrStream, type Options as CsvOptions } from 'csv-stringify'
 import contentDisposition from 'content-disposition'
-import dayjs from 'dayjs'
-import timezone from 'dayjs/plugin/timezone.js'
-import utc from 'dayjs/plugin/utc.js'
 import JSONStream from 'JSONStream'
 import type { DatasetInternal } from '#types'
 import { queryAdvice } from '../../misc/utils/query-advice.ts'
-
-dayjs.extend(timezone)
-dayjs.extend(utc)
-
-type Aliases = Record<string, { name: string, numberInterval?: number, dateInterval?: { value: number, unit: string }, numberRanges?: boolean }[]>
-type TransformType = 'date_part' | 'date_transform'
-type Transforms = Record<string, { type: TransformType, param?: any, ignoreTimezone?: boolean }>
-
-const compatReqCounter = new Counter({
-  name: 'df_compat_ods_req',
-  help: 'A counter of the usage of the ods compatibility layer.',
-  labelNames: ['route', 'status']
-})
+import { compatReqCounter, logCompatODSError, prepareEsQuery, prepareResult, applyAliases, sortBuckets, prepareBucketResult } from './operations.ts'
 
 const router = express.Router()
 
 router.use('/v2.1/catalog/datasets', (req, res, next) => {
-  // @ts-ignore
-  req.resourceType = 'datasets'
+  permissions.setReqResourceType(req, 'datasets')
   next()
 })
 router.use('/v2.0/catalog/datasets', (req, res, next) => {
-  // @ts-ignore
-  req.resourceType = 'datasets'
+  permissions.setReqResourceType(req, 'datasets')
   next()
 })
 
@@ -67,269 +43,11 @@ const getCompatODS = memoize(async (type: string, id: string) => {
   maxAge: 1000 * 60, // 1 minute
 })
 
-const completeSort = (dataset, sort, query) => {
-  // implicitly sort by score after other criteria
-  if (!sort.some(s => !!s._score) && query.where) sort.push('_score')
-  // every other things equal, sort by original line order
-  // this is very important as it provides a tie-breaker for search_after pagination
-  if (dataset.schema.some(p => p.key === '_updatedAt')) {
-    if (!sort.some(s => !!s._updatedAt)) sort.push({ _updatedAt: 'desc' })
-    if (!sort.some(s => !!s._i)) sort.push({ _i: 'desc' })
-  } else {
-    if (!sort.some(s => !!s._i)) sort.push('_i')
-  }
-  if (dataset.isVirtual) {
-    // _i is not a good enough tie-breaker in the case of virtual datasets
-    if (!sort.some(s => !!s._rand)) sort.push('_rand')
-  }
-}
-
-const parseFilters = (dataset, query, route) => {
-  const filter: any[] = []
-  const must: any[] = []
-  const mustNot: any[] = []
-
-  // Enforced static filters from virtual datasets
-  if (dataset.virtual && dataset.virtual.filters) {
-    for (const f of dataset.virtual.filters) {
-      if (f.values && f.values.length) {
-        if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-        else filter.push({ terms: { [f.key]: f.values } })
-      }
-    }
-  }
-
-  // Envorced filter in case of rest datasets with line ownership
-  if (query.owner) {
-    filter.push({ term: { _owner: query.owner } })
-  }
-
-  if (query.where) {
-    const { searchFields, wildcardFields } = esUtils.getFilterableFields(dataset)
-    try {
-      must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset, timezone: query.timezone }))
-    } catch (err: any) {
-      logCompatODSError(err, query.where, route, 'invalid-where', dataset.id)
-      throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)
-    }
-  }
-
-  if (query.refine) {
-    try {
-      const refineArray = Array.isArray(query.refine) ? query.refine : [query.refine]
-      for (const refine of refineArray) {
-        const refineFilters = parseRefine(refine, { dataset, timezone: query.timezone })
-        for (const f of refineFilters) {
-          filter.push(f)
-        }
-      }
-    } catch (err: any) {
-      logCompatODSError(err, query.refine, route, 'invalid-refine', dataset.id)
-      throw httpError(400, 'le paramètre "refine" est invalide : ' + err.message)
-    }
-  }
-
-  return { bool: { filter, must, must_not: mustNot } }
-}
-
-const isoWithOffset = (dateValue, timezone, alwaysFormat = false) => {
-  const date = new Date(dateValue)
-  if (!alwaysFormat && (!timezone || timezone.toLowerCase() === 'utc')) return date.toISOString()
-  return dayjs.tz(date, timezone).format('YYYY-MM-DDTHH:mm:ssZ')
-}
-
-const prepareResult = (dataset, result, aggResults, timezone = 'UTC') => {
-  for (const prop of dataset.schema) {
-    if (prop.type === 'string' && prop.format === 'date-time') {
-      if (typeof result[prop.key] === 'string') {
-        result[prop.key] = isoWithOffset(result[prop.key], timezone, true)
-      }
-      if (Array.isArray(result[prop.key])) {
-        result[prop.key] = result[prop.key].map(d => isoWithOffset(d, timezone, true))
-      }
-    }
-  }
-  if (aggResults) {
-    for (const key of Object.keys(aggResults)) {
-      if (!key.startsWith('___order_by_')) result[key] = aggResults[key].value
-    }
-  }
-}
-
-const transforms: Record<TransformType, (value: any, timezone?: string, extra?: string) => any> = {
-  date_part: (dateStr, timezone, part) => {
-    const date = timezone && timezone?.toLocaleLowerCase() !== 'utc' ? dayjs(dateStr).tz(timezone) : dayjs(dateStr)
-    switch (part) {
-      case 'year':
-        return date.year()
-      case 'month':
-        return date.month() + 1
-      case 'day':
-        return date.date()
-      case 'hour':
-        return date.hour()
-      case 'minute':
-        return date.minute()
-      case 'second':
-        return date.second()
-    }
-    return dateStr
-  },
-  // dayjs format does not match odsql
-  // https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-functions/date_format()
-  // https://day.js.org/docs/en/display/format
-  date_transform: (dateStr, timezone, format) => {
-    const dayjsFormat = format
-      ?.replace(/yy/g, 'YY')
-      .replace(/d/g, 'D')
-    return dayjs(dateStr).tz(timezone ?? 'utc').format(dayjsFormat)
-  }
-}
-
-const applyAliases = (result: any, aliases: Aliases, selectTransforms: Transforms, timezone?: string) => {
-  for (const key of Object.keys(aliases)) {
-    let shouldDelete = true
-    for (const alias of aliases[key]) {
-      if (alias.name === key) shouldDelete = false
-      let value = result[key]
-      if (alias.numberInterval !== undefined) {
-        value = `[${value}, ${value + alias.numberInterval}[`
-      }
-      if (alias.numberRanges) {
-        const parts = value.split('-')
-        value = `[${parts[0]}, ${parts[1]}[`
-      }
-      if (alias.dateInterval !== undefined) {
-        const date = new Date(value)
-        value = `[${isoWithOffset(date, timezone)}, ${isoWithOffset(dayjs(date).add(alias.dateInterval.value, alias.dateInterval.unit as dayjs.ManipulateType), timezone)}[`
-      }
-      result[alias.name] = value
-    }
-    if (shouldDelete) delete result[key]
-  }
-  for (const [key, transform] of Object.entries(selectTransforms)) {
-    if (result[key] !== undefined && result[key] !== null) {
-      result[key] = transforms[transform.type](result[key], transform.ignoreTimezone ? undefined : timezone, transform.param)
-    }
-  }
-}
-
-const sortBuckets = (buckets: any[], sort: any[]) => {
-  if (!sort.length) return buckets
-  const sortTuples = sort.map(s => Object.entries(s)[0])
-  const comparator = (r1, r2) => {
-    for (const [key, direction] of sortTuples) {
-      const v1 = r1[key]?.value ?? r1[key] ?? r1.key[key]
-      const v2 = r2[key]?.value ?? r2[key] ?? r2.key[key]
-      if (v1 === v2) continue
-      if (v1 > v2) return direction === 'asc' ? 1 : -1
-      else return direction === 'asc' ? -1 : 1
-    }
-    return 0
-  }
-  return buckets.sort(comparator)
-}
-
-const prepareBucketResult = (dataset, bucket, selectAggs, composite) => {
-  const result = composite ? { ...bucket.key } : { key: bucket.key }
-  if (bucket.from_as_string || bucket.to_as_string) {
-    result.key = `[${bucket.from_as_string ? new Date(bucket.from_as_string).toISOString() : '*'}, ${bucket.to_as_string ? new Date(bucket.to_as_string).toISOString() : '*'}[`
-  }
-  for (const aggKey of Object.keys(selectAggs)) {
-    result[aggKey] = bucket[aggKey].value ?? bucket[aggKey].values?.[0]?.value
-  }
-  return result
-}
-
-const logCompatODSError = (err: any, value: string, route: string, status: string, datasetId: string) => {
-  console.warn(`[compat-ods][${status}][${datasetId}][${value}]`, err.message ?? err)
-  compatReqCounter.inc({ route, status })
-}
-
-const prepareEsQuery = (dataset: any, query: Record<string, string>, route: string) => {
-  const grouped = !!query.group_by
-
-  const esQuery: any = {}
-  esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 10
-  if (esQuery.size < 0) esQuery.size = 100 // -1 is interpreted as 100
-
-  const size = esQuery.size
-  const from = esQuery.from = query.offset ? Number(query.offset) : 0
-
-  const fields = dataset.schema.map(f => f.key)
-
-  const aliasesSources = [query.select, query.group_by].filter(Boolean).filter(p => p.trim() !== '*')
-  const simpleAliases: Aliases = aliasesSources.length ? parseAliases(aliasesSources.join(',')) : {}
-
-  let aliases: Aliases = {}
-  let selectAggs = {}
-  let selectSource = []
-  let selectFinalKeys = []
-  let selectTransforms: Record<string, string> = {}
-  let sort = []
-  let composite = false
-  if (query.select && query.select.trim() !== '*') {
-    let select
-    try {
-      select = parseSelect(query.select, { dataset, grouped })
-    } catch (err: any) {
-      logCompatODSError(err, query.select, route, 'invalid-select', dataset.id)
-      throw httpError(400, 'le paramètre "select" est invalide : ' + err.message)
-    }
-    selectSource = esQuery._source = select.sources
-    selectFinalKeys = select.finalKeys
-    selectTransforms = select.transforms
-    if (esQuery._source.length === 0) esQuery._source = ['_id']
-    aliases = select.aliases
-    esQuery.aggs = selectAggs = select.aggregations
-  } else {
-    selectSource = esQuery._source = fields.filter(key => !key.startsWith('_'))
-    selectFinalKeys = selectSource
-  }
-
-  if (query.order_by) {
-    let orderBy
-    try {
-      orderBy = parseOrderBy(query.order_by, { dataset, aliases, simpleAliases, grouped })
-    } catch (err: any) {
-      logCompatODSError(err, query.order_by, route, 'invalid-order-by', dataset.id)
-      throw httpError(400, 'le paramètre "order_by" est invalide : ' + err.message)
-    }
-    esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
-    esQuery.sort = sort = orderBy.sort
-  } else {
-    esQuery.sort = []
-  }
-
-  esQuery.query = parseFilters(dataset, query, route)
-
-  if (grouped) {
-    let groupBy
-    try {
-      groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, transforms: selectTransforms, timezone: query.timezone })
-    } catch (err: any) {
-      logCompatODSError(err, query.group_by, route, 'invalid-group-by', dataset.id)
-      throw httpError(400, 'le paramètre "group_by" est invalide : ' + err.message)
-    }
-    esQuery.aggs = { ___group_by: groupBy.agg }
-    esQuery.size = 0
-    delete esQuery.from
-    delete esQuery._source
-    delete esQuery.sort
-    composite = groupBy.composite
-  } else {
-    completeSort(dataset, esQuery.sort, query)
-    esQuery.track_total_hits = true
-  }
-
-  return { grouped, size, from, esQuery, selectAggs, selectSource, selectFinalKeys, selectTransforms, aliases, sort, composite }
-}
-
 const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
   (res as any).throttleEnd()
 
   const esClient = req.app.get('es') as any
-  const dataset = (req as any).dataset
+  const dataset = reqDataset(req)
   const query = req.query
 
   if (!config.compatODS) throw httpError(404, 'unknown API')
@@ -440,7 +158,7 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
 const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   res.setHeader('X-Accel-Buffering', 'no')
   const esClient = req.app.get('es') as any
-  const dataset: DatasetInternal = (req as any).dataset
+  const dataset = reqDataset(req) as DatasetInternal
   const query = req.query
 
   if (!config.compatODS) throw httpError(404, 'unknown API')
@@ -459,7 +177,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   const esAbortContext = esUtils.createEsRequestOptions(req, res)
 
   if (req.params.format === 'geojson') {
-    const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
+    const geoshapeProp = dataset.schema.find(p => p.key === '_geoshape')
     if (!esQuery._source.includes('_geoshape') && geoshapeProp) {
       esQuery._source.push('_geoshape')
     }
@@ -638,7 +356,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
 
 // mimic ods api pattern to capture all deprecated traffic
 const cacheNowMiddleware = (req, res, next) => {
-  if (req.url.includes('now(')) req.noModifiedCache = true
+  if (req.url.includes('now(')) cacheHeaders.setReqNoModifiedCache(req, true)
   next()
 }
 router.get(

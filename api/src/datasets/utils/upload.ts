@@ -7,6 +7,7 @@ import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as datasetUtils from './index.ts'
 import { tmpDir, fsyncFile } from './files.ts'
 import promisifyMiddleware from '../../misc/utils/promisify-middleware.ts'
+import { reqDatasetOptional } from '../../misc/utils/req-context.ts'
 import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes, jsonTypes } from './types.ts'
 import debugLib from 'debug'
 import filesStorage from '#files-storage'
@@ -29,8 +30,9 @@ const storage = {
   async _handleFile (req: any, file: any, cb: (err?: any, file?: any) => void) {
     try {
       const filename = file.fieldname === 'attachments' ? 'attachments.zip' : file.originalname
-      if (req.dataset) {
-        const destination = datasetUtils.loadingDir({ ...req.dataset, draftReason: req.query.draft === 'true' || req._draft })
+      const dataset = reqDatasetOptional(req)
+      if (dataset) {
+        const destination = datasetUtils.loadingDir({ ...dataset, draftReason: req.query.draft === 'true' || req._draft })
         const finalPath = path.join(destination, filename)
         await filesStorage.writeStream(file.stream, finalPath)
         const stats = await filesStorage.fileStats(finalPath)
@@ -65,7 +67,7 @@ const storage = {
       delete file.destination
       delete file.filename
       delete file.path
-      if (req.dataset) {
+      if (reqDatasetOptional(req)) {
         await filesStorage.removeFile(path)
       } else {
         await fs.remove(path)
