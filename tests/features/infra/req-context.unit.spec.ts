@@ -2,8 +2,8 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { defineReqContext } from '../../../api/src/misc/utils/req-context.ts'
 
-// symbol-keyed typed request context (lib-express session.ts pattern),
-// with transitional fallback to the legacy req-mutation property
+// symbol-keyed typed request context (lib-express session.ts pattern). The transitional `legacyProp`
+// dual-write was removed once every property migrated — the context is now Symbol-only.
 test.describe('defineReqContext', () => {
   test('set then get returns the value', () => {
     const ctx = defineReqContext<{ id: string }>('thing')
@@ -12,7 +12,7 @@ test.describe('defineReqContext', () => {
     assert.deepEqual(ctx.get(req), { id: 'a' })
   })
 
-  test('get throws when never set and no legacy prop', () => {
+  test('get throws when never set', () => {
     const ctx = defineReqContext<string>('thing')
     assert.throws(() => ctx.get({} as any), /was not set/)
   })
@@ -22,12 +22,12 @@ test.describe('defineReqContext', () => {
     assert.equal(ctx.getOptional({} as any), undefined)
   })
 
-  test('falls back to the legacy mutated property during transition', () => {
-    const ctx = defineReqContext<string>('thing', 'thing')
-    const req: any = { thing: 'legacy' }
-    assert.equal(ctx.get(req), 'legacy')
+  test('the Symbol key is private — no plain property leaks onto the request', () => {
+    const ctx = defineReqContext<string>('thing')
+    const req: any = {}
     ctx.set(req, 'modern')
-    assert.equal(ctx.get(req), 'modern') // symbol wins over legacy
+    assert.equal(req.thing, undefined) // not mutated as a plain property
+    assert.deepEqual(Object.keys(req), []) // Symbol keys don't enumerate
   })
 
   test('two contexts with the same name do not collide', () => {
@@ -38,12 +38,11 @@ test.describe('defineReqContext', () => {
     assert.equal(b.getOptional(req), undefined)
   })
 
-  test('a set value of false does not throw and does not fall back to legacy', () => {
-    const ctx = defineReqContext<boolean>('flag', 'flag')
-    const req: any = { flag: true }
+  test('a set value of false is honoured (not treated as unset)', () => {
+    const ctx = defineReqContext<boolean>('flag')
+    const req: any = {}
     ctx.set(req, false)
     assert.equal(ctx.get(req), false)
     assert.equal(ctx.getOptional(req), false)
-    assert.equal(req.flag, false) // dual-write keeps the legacy prop in sync
   })
 })
