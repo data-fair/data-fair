@@ -1,0 +1,128 @@
+# Follow-ups & known bugs
+
+Forward-looking work distilled from the express-decoupling refactor series (Phases 0–7, complete —
+the per-phase plans lived in `docs/plans/` and are now in git history; the conventions they produced
+live in [code-conventions.md](architecture/code-conventions.md)).
+
+These are **suspected bugs preserved bit-for-bit during the refactor** (each needs a failing test
+first, then a fix) plus a few cleanup/typing/perf candidates. Priority is `P1` (do soon) / `P2`
+(worthwhile) / `P3` (opportunistic). Cost is `S` (≤½ day) / `M` (~1 day) / `L` (multi-day).
+
+Related docs: dormant correctness bugs from the perf scan in
+[`plans/2026-06-12-bugs-found-during-perf-scan.md`](plans/2026-06-12-bugs-found-during-perf-scan.md)
+(folded into the grouping below as `B1`–`B5`); the separate `_geoshape` simplification effort in
+`plans/2026-06-15-geoshape-simplification-*.md`.
+
+> Convention (from code-conventions.md §5): each of these gets a **dedicated PR with a failing test
+> first** — they were never fixed inline during the refactor.
+
+---
+
+## Suggested PR candidates (grouped)
+
+### PR 1 — Applications dormant bugs `P2 · M`
+All in `applications/service.ts` / `router.ts`, all surfaced in Phase 4. Four independent small fixes
++ a test each; coherent as one PR.
+- `2e` **PUT readonly-key preservation is a no-op** — `if (!patchKeys.includes([key]))` compares against
+  an **array literal**, always true → every existing field is copied onto the new application. Fix:
+  `!patchKeys.includes(key)`. (`replaceApplication`)
+- `2f` **delete: capture-file removal always throws** — calls `capture.path(application)` but
+  `misc/utils/capture.ts` exports only `screenshot`/`print`; `TypeError` swallowed by try/catch →
+  capture artifacts never cleaned on delete. (`deleteApplication`)
+- `2g` **writeConfig syncs the raw, unvalidated body** — `syncDatasets({ configuration: rawBody })`
+  passes `req.body` not the validated `appConfig`, and omits `oldApp` → back-refs not reconciled
+  against the previous config. (`writeApplicationConfig`)
+- `2h` **POST `clean()` args swapped** — `applications/router.ts:69` (the POST 201 response):
+  `clean(created, reqPublicationSite(req), reqPublicBaseUrl(req) as unknown as PublicationSite)` —
+  `publicationSite` and `publicBaseUrl` are in each other's slots (the `as unknown as PublicationSite`
+  cast is the tell); the canonical order is `clean(app, publicBaseUrl, publicationSite)` as in the other
+  three call sites. On a secondary domain the 201-response links/image URLs are built wrong (invisible
+  on the main domain where publicationSite is undefined).
+
+### PR 2 — Datasets draft / notification correctness `P2 · M`
+All in `datasets/routes/{write,metadata,misc}.ts`, surfaced in Phase 6d.
+- `12` **draft-validated notification `localizedParams` mis-shaped** — emits `{ cause: { fr, en } }`
+  (param→locale) instead of `{ fr: { cause }, en: { cause } }` (locale→param, the
+  `Record<Locale, Record<string,string>>` shape used everywhere else) → malformed localized "cause".
+  Preserved via cast. (`validateDraft`)
+- `13` **user-notification passes `true` as the sessionState** — `notifications.send(notif, true, sessionState)`
+  against the 2-param `send(event, sessionState?)`; `true` lands in the sessionState slot, real
+  sessionState ignored. Preserved as `send(notif, true as any)`. Verify intended wiring. (user-notification POST)
+- `10` **PATCH never passes a draft validation mode** — `preparePatch(...)` called with 5 args, omitting
+  the 6th `draftValidationMode` that PUT passes → PATCH-created/updated drafts use the default mode.
+  (metadata PATCH handler)
+- `11` **cancelDraft stray arg to `journals.log`** — a 5th `sessionState` arg was passed to the 4-param
+  `journals.log`; dropped as a no-op. Decide whether the draft-cancelled event *should* carry session
+  context (then add a 5th param). `P3`. (draft DELETE)
+
+### PR 3 — Settings document-targeting & metadata bugs `P1 · S–M`
+- `1` **`updateDatasetsMetadata` `$unset` broken + condition inverted** — the `$unset` key interpolates
+  the object `oldMeta` (→ `customMetadata.[object Object]`) instead of `oldMeta.key`, and the guard
+  `if (newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key))` looks inverted (cleans up when
+  the key still exists). Custom-metadata cleanup never works correctly. (`settings/service.ts`)
+- `2b` **POST publication-sites replaces the wrong settings doc** — `mongo.settings.replaceOne(owner, …)`
+  filters on `owner` with no `department: { $exists: false }` clause (PUT/PATCH/DELETE use `ownerFilter`);
+  for an org with department settings docs the POST can replace the wrong document. Failing test:
+  org-root site sync while department settings exist. `P2`.
+
+### PR 4 — Standalone correctness fixes `P1/P2 · S each`
+Independent, different modules — can ship together or individually.
+- `2c` **activity GET 500s on every call** `P1` — `activity/router.ts` calls `findUtils.query(req, {status:'status'})`
+  with an obsolete 2-arg signature → `Object.keys(undefined)` throws. Untested documented stub; fix + add an
+  api spec. (a code comment in `activity/router.ts` points here)
+- `B2` **missing `await` on `checkMatchingAttachment`** `P2` — `rest.ts:~853` `if (!checkMatchingAttachment(...))`
+  never awaits an async fn → always truthy → the `removeDir` branch is dead → stale attachment dirs kept
+  forever (disk leak).
+- `2d` **catalog DCAT `modified` always undefined** `P3` — `buildDcatCatalog` reads `datasets.dataUpdatedAt`
+  off the **array** instead of the `dataset` loop var. Fix = `dataset.…`; `/catalog/dcat` spec doesn't assert it.
+
+### PR 5 — ES query / caching correctness `P1/P2 · S`
+- `B1` **`memoizedGetDataset` cache key collapses publicationSite objects** `P1` — `service.ts` `memoize(..., {primitive:true})`
+  string-coerces the object args to `"[object Object]"`, so two different publication sites sharing a
+  slug-based ref within the 30 s TTL collide → a dataset could be served (or 404'd) for the wrong site.
+  Multi-domain exposure. Fix: a stable primitive site key or a custom normalizer.
+- `9` **words-agg `significant_text` typo** `P2` — guard tests `aggType === 'signifant_text'` (missing `i`)
+  → `filter_duplicate_text` never set → the words aggregation never de-duplicates near-identical text.
+  (`datasets/es/words-agg.ts:44`)
+- `2` **memoize cache path has no test coverage** `P3` — `datasets/middlewares` memoize is bypassed under
+  test (`NODE_ENV !== 'development'`). Coverage gap, not a bug.
+
+### PR 6 — Upstream `@data-fair/lib-*` fixes `P2 · M`
+Cross-repo (lib-node / lib-express) + version bumps; group as one upstream pass.
+- `B3` **events-queue retry drops the notification** `P2` — `lib-node/events-queue.js:63` `unshift()` called
+  with **no argument** → failed notification silently dropped instead of requeued. Data loss on transient
+  events-service unavailability. Fix: `unshift(notification)` (+ bound retries).
+- `B4` **ws-server ping sweep aborts at first dead socket** `P3` — `lib-express/ws-server.js:83`
+  `return ws.terminate()` exits the whole 30 s sweep at the first dead socket. Fix: `terminate(); continue`.
+- `B5` **session `validate(sessionState)` result discarded** `P3` — `lib-express/session.js` ignores the
+  boolean + `validate.errors`. Decide intent: enforce (throw/log) or remove/gate to dev (per-request CPU).
+
+### PR 7 — Typing & simplification polish `P3 · S–L`
+Opportunistic; touch when already in the area.
+- `7a(i)` eventsLog `account` expects lib-express `Account` (with `name`) but call sites pass `AccountKeys`
+  (~12 occurrences in settings alone) — fix once (lib-express adapter or local type). `S–M`.
+- `7b` `settings/operations.ts` polish: `fillSettings(settings: any)`, the `@ts-ignore` on `delete settings._id`
+  (type `& { _id?: unknown }`), `fillSettings`'s plain `Error(...)` → `httpError` decision (guarded by a
+  pinning test), optional `cleanDatasetsMetadata` slugify test. `S`.
+- `3` `remote-services/operations.ts:22` `computeActions` "hard to understand, simplify?" (module is
+  deprecation-bound — low value). `S`.
+- `5` `applications/proxy.ts` config assembly — templating/CSP likely reusable via `lib-express` serve-spa
+  helpers. `M`.
+- `4` `datasets/es/commons.ts` query-building deserves a redesign pass (beyond the mechanical 6a split). `L`.
+- `7` remaining `.then()` chains → async/await sweep. `S`, repo-wide.
+- `6` sequential independent awaits in middleware chains — measured negligible; skip unless a latency
+  budget demands it. (no action)
+
+### PR 8 — Test-suite speed `P2 · L` (the planned next big step)
+Current: Playwright `workers: 1`, `fullyParallel: false`, full suite on every push. Levers in likely
+value order: (1) parallelize API specs with per-spec resource prefixes — mind the nanoid leading-`-`
+`$text` pitfall; (2) rebalance e2e→api→unit now that `operations.ts` surfaces exist (this refactor is the
+enabler); (3) compact redundant API specs.
+
+---
+
+## Resolved during the series (for the record)
+- clamav `middleware` DOM-`Response` cast → fixed in Phase 6d.
+- `/app-sw.js` reading raw `req.application` → migrated to `reqApplicationOptional` (still benign-undefined).
+- `esAbortContext` legacyProp, and the whole `legacyProp` dual-write mechanism → removed at series end.
+- Express-5 `req.params.x` narrowing idiom (`7a(ii)`) → documented in code-conventions.md §2.

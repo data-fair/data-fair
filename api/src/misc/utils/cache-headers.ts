@@ -6,13 +6,12 @@ import { defineReqContext, reqResource, reqPublicOperation } from './req-context
 
 const debug = debugLib('cache-headers')
 
-// noCache request context lives here (cache-headers' topical home). Its setter stays in
-// datasets/middlewares (Phase 6) and is read here via the legacyProp until that phase.
-const noCacheCtx = defineReqContext<boolean>('noCache', 'noCache')
+// noCache / noModifiedCache request context lives here (cache-headers' topical home).
+const noCacheCtx = defineReqContext<boolean>('noCache')
 export const setReqNoCache = noCacheCtx.set
 export const reqNoCache = noCacheCtx.getOptional
 
-const noModifiedCacheCtx = defineReqContext<boolean>('noModifiedCache', 'noModifiedCache')
+const noModifiedCacheCtx = defineReqContext<boolean>('noModifiedCache')
 export const setReqNoModifiedCache = noModifiedCacheCtx.set
 export const reqNoModifiedCache = noModifiedCacheCtx.getOptional
 

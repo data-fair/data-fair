@@ -15,7 +15,7 @@ export type { Permission } from './permissions/index.js'
 export type { RemoteService } from './remote-service/index.js'
 export type { PublicationSite } from './publication-site/index.js'
 
-export type Request = ExpressRequest & { query: Record<string, string> } & { publicBaseUrl: string }
+export type Request = ExpressRequest & { query: Record<string, string> }
 
 export type ResourceType = 'datasets' | 'applications' | 'remote-services' | 'catalogs'
 export type Resource = Pick<Dataset, 'id' | 'slug' | 'title' | 'owner' | 'permissions' | 'publicationSites' | 'requestedPublicationSites' | 'topics' | 'updatedAt' | 'finalizedAt'>
@@ -25,10 +25,7 @@ export type BypassPermissions = {
   classes?: string[]
 }
 export type RequestWithResource = Request & {
-  resourceType: ResourceType,
-  resource: Resource,
-  bypassPermissions?: BypassPermissions,
-  publicOperation?: boolean
+  resource: Resource
 }
 
 export type ApplicationKey = {

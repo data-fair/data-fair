@@ -6,7 +6,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.ts'
 import { getOwnerRole } from '../misc/utils/permissions.ts'
-import { defineReqContext, setReqResource, reqResourceOptional } from '../misc/utils/req-context.ts'
+import { defineReqContext, setReqResource, reqResourceOptional, setReqDataset, reqDataset, reqDatasetOptional, reqRestDataset, setReqLinesOwner, reqLinesOwnerOptional, setReqDraft, reqDraftOptional } from '../misc/utils/req-context.ts'
 import { setReqNoCache } from '../misc/utils/cache-headers.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../misc/utils/publication-sites.ts'
 import { checkStorage as checkStorageFn } from './utils/storage.ts'
@@ -15,30 +15,16 @@ import { withQuery } from 'ufo'
 import { type Account, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import { emit as workerPing } from '../workers/ping.ts'
 
-// the loaded dataset (draft merged when in draft mode) and its full underlying document.
-// module-local accessors with legacyProp dual-write: datasets/router.js and datasets/utils/*
-// still read req.dataset / req.datasetFull by raw access — drop the legacyProp in slice 6d.
-const datasetCtx = defineReqContext<Dataset>('dataset', 'dataset')
-export const setReqDataset = datasetCtx.set
-export const reqDataset = datasetCtx.get
-export const reqDatasetOptional = datasetCtx.getOptional
+// dataset / linesOwner / _draft accessors live in the config-free req-context.ts (so query-advice.ts and
+// datasets/utils/* can import them without #config / a require cycle); re-exported here as a facade for
+// the routes/* importers.
+export { setReqDataset, reqDataset, reqDatasetOptional, reqRestDataset, setReqLinesOwner, reqLinesOwnerOptional, setReqDraft, reqDraftOptional }
+
+// the full underlying dataset document (draft NOT merged). Module-local (no config-free / cycle reader).
 const datasetFullCtx = defineReqContext<Dataset>('datasetFull')
 export const setReqDatasetFull = datasetFullCtx.set
 export const reqDatasetFull = datasetFullCtx.get
 export const reqDatasetFullOptional = datasetFullCtx.getOptional
-
-// the owner of the lines being managed on a lineOwnership-enabled REST dataset (own/:owner routes).
-// legacyProp dual-write: datasets/utils/rest.ts still reads req.linesOwner by raw access — drop the
-// legacyProp once those readers migrate (rest.ts can't import this without a require cycle today).
-const linesOwnerCtx = defineReqContext<Account>('linesOwner', 'linesOwner')
-export const setReqLinesOwner = linesOwnerCtx.set
-export const reqLinesOwnerOptional = linesOwnerCtx.getOptional
-
-// forces the upload middleware to write into the draft directory (set on update routes which always
-// go through draft mode). legacyProp dual-write: datasets/utils/upload.ts still raw-reads req._draft.
-const draftCtx = defineReqContext<boolean>('_draft', '_draft')
-export const setReqDraft = draftCtx.set
-export const reqDraftOptional = draftCtx.getOptional
 
 export const checkStorage = (overwrite: boolean, indexed = false): RequestHandler => async (req, res, next) => {
   reqUserAuthenticated(req)

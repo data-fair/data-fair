@@ -2,7 +2,7 @@ import { type Request } from 'express'
 import i18n from 'i18n'
 import { hasManyQSearchFields, FILTER_CAPABILITIES } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
-import { reqPublicOperation } from './req-context.ts'
+import { reqPublicOperation, reqDatasetOptional, setReqDataset } from './req-context.ts'
 
 // Builds a short, localized, advisory sentence appended to overload errors (429 compute-budget,
 // 504 "request too long", 429 ES circuit_breaking_exception). It only ever *advises* — it never
@@ -24,8 +24,9 @@ const isLinesOrRecords = (path: string): boolean => /\/(lines|records)\/?$/.test
  * Returns either '' or ' <intro> : <item> ; <item>.' assembled from i18n keys (via `req.__`).
  * Safe to concatenate onto any error message — '' when nothing useful applies.
  */
-export const queryAdvice = (req: Request & { dataset?: { schema?: any[] } }): string => {
+export const queryAdvice = (req: Request): string => {
   const q: Record<string, any> = req.query || {}
+  const dataset = reqDatasetOptional(req)
   const keys: string[] = []
 
   // 1. exact total-hits count on a list endpoint
@@ -39,9 +40,9 @@ export const queryAdvice = (req: Request & { dataset?: { schema?: any[] } }): st
   // 4. large page size
   if (num(q.size) >= 1000) keys.push('errors.queryAdviceSize')
   // 5. wide dataset fetched without a select (only when the dataset is loaded on the request); select=* == all fields
-  if ((req.dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) keys.push('errors.queryAdviceSelect')
+  if ((dataset?.schema?.length ?? 0) > 20 && (!q.select || q.select === '*')) keys.push('errors.queryAdviceSelect')
   // 6. wide dataset full-text-searched without restricting the searched columns
-  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(req.dataset?.schema)) keys.push('errors.queryAdviceQFields')
+  if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema)) keys.push('errors.queryAdviceQFields')
 
   if (keys.length === 0) return ''
   return ' ' + req.__('errors.queryAdviceIntro') + ' : ' + keys.map(k => req.__(k)).join(' ; ') + '.'
@@ -73,14 +74,14 @@ const RECOGNIZED_PARAMS = new Set([
 /**
  * Advisory for parameters the API silently ignored: a `_c_` concept prefix misapplied to a
  * column filter, an inert `_c_` filter that matched no concept, or an unrecognized/misspelled
- * parameter. Returns '' when nothing applies. Pure — reads only req.query + req.dataset.schema.
+ * parameter. Returns '' when nothing applies. Pure — reads only req.query + the dataset context schema.
  *
  * Unlike queryAdvice (a *performance* advisory gated on slow queries), this is a *correctness*
  * signal: attachQueryHint emits it regardless of query duration, still suppressed by hint=false.
  */
-export const ignoredParamsAdvice = (req: Request & { dataset?: { schema?: any[] } }): string => {
+export const ignoredParamsAdvice = (req: Request): string => {
   const q: Record<string, any> = req.query || {}
-  const schema = req.dataset?.schema
+  const schema = reqDatasetOptional(req)?.schema
   const columnKeys = new Set((schema ?? []).map((p: any) => p.key))
   const conceptIds = new Set((schema ?? []).filter((p: any) => p['x-concept']?.primary).map((p: any) => p['x-concept'].id))
   const items: string[] = []
@@ -133,20 +134,25 @@ const parseHintMode = (raw: any): HintMode => (raw === 'true' || raw === 'false'
  * (or vice versa) from cache.
  */
 export const attachQueryHint = <T extends Record<string, any>> (
-  req: Request & { dataset?: { schema?: any[] }, publicOperation?: boolean },
+  req: Request,
   esStepDurationMs: number,
   result: T
 ): T => {
   const mode = parseHintMode(req.query?.hint)
   if (mode === 'false') return result
-  const adviceReq = reqPublicOperation(req)
-    ? {
-        path: req.path,
-        query: req.query,
-        dataset: req.dataset,
-        __: (key: string, ...args: any[]) => i18n.__({ phrase: key, locale: 'en' }, ...args)
-      } as any
-    : req
+  let adviceReq: Request = req
+  if (reqPublicOperation(req)) {
+    // public/cacheable responses don't vary by the i18n_lang cookie → force English so the
+    // reverse-proxy cache can't serve a French hint to an English client (or vice versa).
+    const englishReq = {
+      path: req.path,
+      query: req.query,
+      __: (key: string, ...args: any[]) => i18n.__({ phrase: key, locale: 'en' }, ...args)
+    } as any
+    const dataset = reqDatasetOptional(req)
+    if (dataset) setReqDataset(englishReq, dataset)
+    adviceReq = englishReq
+  }
   // correctness advice (misused/ignored params) is duration-independent — always on unless hint=false
   const ignored = ignoredParamsAdvice(adviceReq).trim()
   // performance advice keeps its slow-auto / explicit-true gate

@@ -168,9 +168,10 @@ export const run = async () => {
 
     // External applications proxy
     const serviceWorkers = await import('./misc/utils/service-workers.ts')
+    const { reqApplicationOptional } = await import('./applications/middlewares.ts')
     app.get('/app-sw.js', (req, res) => {
       res.setHeader('Content-Type', 'application/javascript')
-      res.send(serviceWorkers.sw(req.application))
+      res.send(serviceWorkers.sw(reqApplicationOptional(req)))
     })
     app.use('/app', (await import('./applications/proxy.ts')).default)
 

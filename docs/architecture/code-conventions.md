@@ -1,10 +1,8 @@
 # API code conventions
 
-This document is the **pattern book** for all new and refactored API code. It was introduced by the
-express-decoupling refactor series ([master plan](../plans/2026-06-10-code-quality-refactor.md)).
-The plan carries the phase sequencing, sub-plan briefs and the parking lot; this doc carries the conventions.
-Legacy code converges to these conventions module by module across that series; until a module's
-phase lands, old patterns coexist — that is expected.
+This document is the **pattern book** for all new and refactored API code. It was produced by the
+express-decoupling refactor series (Phases 0–7, complete; the per-phase plans are in git history).
+Forward-looking follow-ups and suspected bugs found during the series live in [../TODO.md](../TODO.md).
 
 **Read this before refactoring or adding API code.**
 
@@ -73,22 +71,27 @@ Accessors exist so middlewares can hand context to later handlers; they are neve
 
 ```ts
 // api/src/misc/utils/req-context.ts
-export const defineReqContext = <T>(name: string, legacyProp?: string): ReqContext<T> => {
+export const defineReqContext = <T>(name: string): ReqContext<T> => {
   const key = Symbol(name)
   return {
-    set: (req, value) => {
-      (req as any)[key] = value
-      if (legacyProp) (req as any)[legacyProp] = value   // dual-write during transition
-    },
+    set: (req, value) => { (req as any)[key] = value },
     get: (req) => {
-      const value = (req as any)[key] ?? (legacyProp ? (req as any)[legacyProp] : undefined)
+      const value = (req as any)[key]
       if (value === undefined) throw new Error(`req context "${name}" was not set (middleware missing?)`)
       return value
     },
-    getOptional: (req) => (req as any)[key] ?? (legacyProp ? (req as any)[legacyProp] : undefined)
+    getOptional: (req) => (req as any)[key]
   }
 }
 ```
+
+> **Historical note (the `legacyProp` mechanism, retired 2026-06-18).** The express-decoupling refactor
+> series migrated ~30 pre-existing raw `req.<prop>` mutations to this accessor. During that migration the
+> factory took an optional second `legacyProp` argument: `set()` dual-wrote both the Symbol key and the
+> legacy plain property, so setters and readers could migrate in any order across multiple PRs, and a
+> reader fell back to the plain property until its setter migrated. All properties are migrated now, so the
+> argument, the dual-write, and the legacy `req.<prop>` type members were all removed. New context never
+> needs it: define the accessor and use it on both ends in the same change.
 
 ### Naming convention
 
@@ -130,11 +133,12 @@ Homes for the cross-cutting contexts (names and `get`/`getOptional` contracts ar
 | Accessor | Type | Home | Set from |
 |---|---|---|---|
 | `reqResource` / `setReqResource` / `reqResourceOptional` | `Resource` (throws / optional) | `req-context.ts` (re-exported by `permissions.ts`) | `applications/*`, `datasets/middlewares.ts`, `remote-services/router.js` |
-| `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | `req-context.ts` (re-exported by `permissions.ts`) | several routers |
+| `reqResourceType` / `setReqResourceType` | `ResourceType` (throws) | `req-context.ts` (re-exported by `permissions.ts`) | several routers, `api-compat/ods` |
 | `reqBypassPermissions` / `setReqBypassPermissions` | `BypassPermissions \| undefined` | `req-context.ts` (re-exported by `permissions.ts`) | `api-key.ts`, `application-key.ts` |
 | `reqPublicOperation` / `setReqPublicOperation` | `boolean \| undefined` | `req-context.ts` (re-exported by `permissions.ts`) | `permissions.ts` |
 | `reqNoCache` / `setReqNoCache`, `reqNoModifiedCache` / `setReqNoModifiedCache` | `boolean \| undefined` | `misc/utils/cache-headers.ts` | `datasets/middlewares.ts`, `api-compat/ods` |
-| `reqDataset` / `setReqDataset` / `reqDatasetOptional`, `reqDatasetFull` / `setReqDatasetFull` / `reqDatasetFullOptional` | `Dataset` (get throws / optional) | `datasets/middlewares.ts` (module-local) | `datasets/middlewares.ts` (read by `datasets/router.js` + `datasets/utils/*` via legacyProp until 6d) |
+| `reqDataset` / `setReqDataset` / `reqDatasetOptional` / `reqRestDataset` | `Dataset` (get throws / optional); `reqRestDataset` narrows to `RestDataset` (contained cast) | `req-context.ts` (config-free; re-exported by `datasets/middlewares.ts` as a facade) | `datasets/middlewares.ts` (read by `datasets/routes/*`, `datasets/utils/*`, `query-advice.ts`, `api-compat/ods`) |
+| `reqDatasetFull` / `setReqDatasetFull` / `reqDatasetFullOptional` | `Dataset` (get throws / optional) | `datasets/middlewares.ts` (module-local) | `datasets/middlewares.ts` |
 | `reqPublicBaseUrl` / `setReqPublicBaseUrl`, `reqPublicWsBaseUrl` / `setReqPublicWsBaseUrl` | `string` (throws) | `misc/utils/public-base-url.ts` (config-free) | `app.js` |
 | `reqPublicationSite` / `setReqPublicationSite`, `reqMainPublicationSite` / `setReqMainPublicationSite` | `any \| undefined` | `misc/utils/publication-sites.ts` | `app.js`, `catalog/router.js` |
 | `reqEsAbortContext` / `setReqEsAbortContext` / `reqEsAbortContextOptional` | `EsAbortContext` (get throws / optional) | `datasets/es/abort.ts` | `datasets/es/abort.ts` (read by `rate-limiting.ts`, `datasets/router.js`) |
@@ -168,37 +172,28 @@ narrowed context instead of re-checking; params that appear in a single route (e
 `:siteType/:siteId` in the settings publication-sites delete) keep the same guard at the top of
 that handler.
 
-### Current legacy mutation sites (as of 2026-06-10 — regenerate with `grep -rnE "req\.[a-zA-Z_]+ *= [^=]" api/src --include='*.js' --include='*.ts'` plus the `(req as any)` sweep)
+### Legacy request-property mutations: fully migrated (2026-06-18)
 
-The following `req.<prop> = …` assignments remain while phases migrate them:
+**Every request-context property now flows through a Symbol accessor — no plain-property mutation
+remains, and the `legacyProp` dual-write mechanism has been removed** (see the factory note above). The
+only `req.<prop> = …` assignments left are genuine Express request props, not request context:
+`req.url` (`datasets/middlewares.ts`, rewritten with `withQuery`) and `req.body` (`datasets/utils/rest.ts`).
 
-| File | Properties set |
-|---|---|
-| `api/src/app.js` | `publicBaseUrl`, `publicWsBaseUrl`, `publicationSite`, `mainPublicationSite` |
-| `api/src/datasets/middlewares.ts` | `url` only (`dataset` / `resource` / `datasetFull` / `noCache` / `linesOwner` / `_draft` now set via accessors — Phase 6c/6d) |
-| `api/src/datasets/router.ts` | *(none — fully migrated Phase 6d; `resourceType` now `setReqResourceType`, body-mutating handlers moved to `routes/*.ts`)* |
-| `api/src/datasets/utils/rest.ts` | `body` (`_fixedFormBody` now a module-local accessor; `_rawBody` / `_uploadedAttachmentPath` eliminated — Phase 6b) |
-| `api/src/datasets/es/abort.ts` | `esAbortContext` (now an accessor — see note below) |
-| `api/src/applications/router.js` | `resourceType`, `resource`, `application`, `baseApp`, `isNewApplication` |
-| `api/src/applications/proxy.js` | `application`, `resource`, `resourceType`, `matchingApplicationKey` |
-| `api/src/misc/utils/permissions.ts` | `publicOperation` |
-| `api/src/misc/utils/api-key.ts` | `bypassPermissions` |
-| `api/src/misc/utils/application-key.ts` | `bypassPermissions` |
-| `api/src/api-compat/ods/index.ts` | `resourceType`, `noModifiedCache` |
+To confirm the contract holds, all three of these should stay empty for any context property `<prop>`:
 
-Rows disappear as module phases land. `settings` (Phase 1) is fully migrated. `catalog` and
-`remote-services` (Phase 2 / partial Phase 3, 2026-06-12) now set `resourceType` / `resource` /
-`publicationSite` / `remoteService` through accessors (`setReqResourceType`, `setReqResource`,
-`setReqPublicationSite`, `setReqRemoteService`) instead of raw mutation. The cross-cutting accessors
-now live in their topical homes: `resource` / `resourceType` in `misc/utils/permissions.ts`,
-`publicationSite` / `mainPublicationSite` in `misc/utils/publication-sites.ts`,
-`remoteService` in `remote-services/middlewares.ts` — all keep `legacyProp` dual-write because
-datasets/applications routers still set `resource` / `resourceType` by raw mutation.
-`esAbortContext` (Phase 6a, 2026-06-16) is now set through the `setReqEsAbortContext` accessor in
-`datasets/es/abort.ts` (module-local, `legacyProp` dual-write); its only non-router reader,
-`misc/utils/rate-limiting.ts`, was migrated to `reqEsAbortContextOptional`. The `legacyProp` is
-**retained** because `datasets/router.js` still reads `req.esAbortContext` by raw access; drop it
-when `router.js` migrates (slice 6c/6d).
+```bash
+grep -rnE "req\.<prop> *= [^=]" api/src               # setters
+grep -rnE "\breq\.<prop>\b" api/src                    # readers (comments aside)
+grep -rn "(req as any)" api/src | grep "<prop>"        # cast-escaped accesses
+```
+
+The cross-cutting accessors live in their topical homes (see the placement table above):
+`resource` / `resourceType` / `dataset` / `bypassPermissions` / `publicOperation` and the `linesOwner` /
+`_draft` datasets accessors in the config-free `misc/utils/req-context.ts`;
+`publicationSite` / `mainPublicationSite` in `misc/utils/publication-sites.ts`; `remoteService` in
+`remote-services/middlewares.ts`; `noCache` / `noModifiedCache` in `misc/utils/cache-headers.ts`;
+`publicBaseUrl` / `publicWsBaseUrl` in `misc/utils/public-base-url.ts`; `esAbortContext` in
+`datasets/es/abort.ts`. The historical per-phase migration narrative is kept below for reference.
 Phase 6b (2026-06-17) decoupled the `rest.ts` attachment helpers: `_rawBody` and
 `_uploadedAttachmentPath` were **eliminated** (now locals/return values of an express-free
 `manageAttachment` / `rollbackUploadedAttachment`), and `_fixedFormBody` became a **module-local
@@ -226,17 +221,41 @@ Phase 7). Several middlewares were re-typed `req: RequestWithResource` → `req:
 (`permissions.middleware` / `canDoForOwnerMiddleware`, `application-key`) since they only read context via
 accessors — this removes the `router.<verb>(…)` overload friction; do the same for any middleware that
 breaks a typed route chain. The `clamav.middleware` DOM-`Response` parking-lot item was resolved here.
+Phase 7 (2026-06-18, final phase) extracted the pure ODS→ES query translation + result shaping from
+`api-compat/ods/index.ts` into `api-compat/ods/operations.ts` (unit-tested; index.ts keeps routing /
+ES calls / streaming). `operations.ts` imports `getFilterableFields` from the **config-free**
+`datasets/es/operations.ts` (NOT the `es/index.ts` barrel, which loads `#config`) so it stays
+unit-testable. api-compat's last raw mutations were migrated (`resourceType` → `setReqResourceType`,
+`noModifiedCache` → `setReqNoModifiedCache`). **Both remaining `legacyProp`s were dropped**: `resourceType`
+(only api-compat raw-set it) and `dataset`. To drop `dataset`, its accessor moved from
+`datasets/middlewares.ts` to the **config-free** `req-context.ts` (re-exported as a facade) — this
+simultaneously let `query-advice.ts` (config-free) and `datasets/utils/*` (which can't import
+`middlewares.ts` without a require cycle) migrate their raw `req.dataset` reads to `reqDataset` /
+`reqDatasetOptional` / `reqRestDataset`. The `resourceType` member was removed from `RequestWithResource`.
 
-### Migration mechanics per property
+A follow-up (2026-06-18, same series tail) **removed the `legacyProp` mechanism entirely**: the last raw
+readers were migrated (`publicBaseUrl` in `remote-services/router.js` + `rest.ts`; `application` in the
+`/app-sw.js` route → `reqApplicationOptional`; `linesOwner` in `rest.ts`; `_draft` in `upload.ts`), the
+`linesOwner` / `_draft` accessors moved to the config-free `req-context.ts` (facade re-export, same
+require-cycle reason as `dataset`), the second `legacyProp` argument was dropped from all `defineReqContext`
+calls and **removed from the factory itself**, and the dead `publicBaseUrl` / `bypassPermissions` /
+`publicOperation` members were stripped from `Request` / `RequestWithResource`.
 
-Brand-new context properties never pass `legacyProp`; dual-write and the fallback read are migration-only mechanisms for properties that already exist as plain mutations.
+### Migration mechanics per property (historical — the `legacyProp` mechanism is gone)
 
-1. The migrating phase defines the accessor in its topical home (table above) with `legacyProp`
-   configured. `set()` dual-writes — both the symbol key and the legacy plain property — so
-   **setters and readers can migrate in any order**.
-2. Each module phase converts its readers and setters to use the accessors.
-3. Once all three greps are empty, drop the `legacyProp` argument (ends dual-write) and remove the
-   corresponding member from `RequestWithResource` / ad-hoc types in `api/types/index.ts`:
+> This section documents how the express-decoupling series migrated pre-existing raw mutations. The
+> `legacyProp` dual-write described here was **removed once every property was migrated** (2026-06-18). For
+> brand-new context, skip all of this: define the accessor in its topical home and use it on both ends in
+> the same change — there is no transition to stage.
+
+The migration worked property-by-property across phases:
+
+1. The migrating phase defined the accessor with a `legacyProp` argument. `set()` dual-wrote both the
+   Symbol key and the legacy plain property, so **setters and readers could migrate in any order** and
+   across PRs.
+2. Each module phase converted its readers and setters to the accessors.
+3. Once all three greps were empty, the `legacyProp` argument was dropped and the corresponding member
+   removed from `RequestWithResource` / ad-hoc types in `api/types/index.ts`:
 
 ```bash
 # When all three return nothing, the property is fully migrated:
@@ -325,10 +344,10 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
   PR** — additions only — at `tests/features/<module>/<module>-operations.unit.spec.ts`
   (e.g. `tests/features/settings/settings-operations.unit.spec.ts`).
 - **Mechanical moves only:** function bodies move verbatim. Signature changes are limited to
-  replacing `req` with explicit params. Resist drive-by cleanups — record in the master plan's parking
-  lot (`docs/plans/2026-06-10-code-quality-refactor.md §9`) instead.
-- **Suspected bugs found while moving:** preserved bit-for-bit in the move, recorded in the plan's
-  parking lot (`§9`), never fixed inline. They get a dedicated later PR with a test.
+  replacing `req` with explicit params. Resist drive-by cleanups — record them in
+  [`docs/TODO.md`](../TODO.md) instead.
+- **Suspected bugs found while moving:** preserved bit-for-bit in the move, recorded in
+  [`docs/TODO.md`](../TODO.md), never fixed inline. They get a dedicated later PR with a test.
 - **Mount and middleware chain order preserved exactly:** load-management depends on it (rate
   limiter runs after api-key resolution — see `docs/architecture/load-management.md §3`).
 - **One phase = one worktree = one PR.** Target ≤ ~800 changed LOC per PR where feasible. Datasets

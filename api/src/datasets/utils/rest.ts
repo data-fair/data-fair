@@ -43,7 +43,8 @@ import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
 import { computeModified } from './compute-modified.ts'
-import { defineReqContext } from '../../misc/utils/req-context.ts'
+import { defineReqContext, reqRestDataset, reqLinesOwnerOptional } from '../../misc/utils/req-context.ts'
+import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 
 type Operation = {
   _id: string,
@@ -694,7 +695,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 }
 
 const applyReqTransactions = async (req: RequestWithRestDataset, transacs: DatasetLineAction[], validate: ValidateFunction, tmpDataset?: RestDataset) => {
-  return applyTransactions(req.dataset, reqSessionAuthenticated(req), transacs, validate, req.linesOwner, tmpDataset)
+  return applyTransactions(reqRestDataset(req), reqSessionAuthenticated(req), transacs, validate, reqLinesOwnerOptional(req), tmpDataset)
 }
 
 // _ids tracks operation ids so that small bulks can be indexed in the same HTTP request (commitLines).
@@ -932,9 +933,11 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
 }
 
 export const readLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  const c = collection(req.dataset)
+  const dataset = reqRestDataset(req)
+  const c = collection(dataset)
   const filter: Filter<DatasetLine> = { _id: req.params.lineId }
-  if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
   const line = await c.findOne(filter)
   if (!line) return res.status(404).send('Identifiant de ligne inconnu')
   if (line._deleted) return res.status(404).send('Identifiant de ligne inconnu')
@@ -949,81 +952,87 @@ export const readLine = async (req: RequestWithRestDataset, res: Response, next:
 }
 
 export const deleteLine = async (req: RequestWithRestDataset & { params: { lineId: string } }, res: Response, next: NextFunction) => {
-  const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
+  const dataset = reqRestDataset(req)
+  const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
-  await commitLines(req.dataset, [req.params.lineId])
+  await commitLines(dataset, [req.params.lineId])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  if (req.linesOwner) Object.assign(req.body, linesOwnerCols(req.linesOwner))
-  const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset, true)
+  const dataset = reqRestDataset(req)
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(req.body, linesOwnerCols(linesOwner))
+  const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
   req.body._id = definedId || nanoid()
-  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset: req.dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, false)
+  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, false)
 
   const fullLine = { _action: 'createOrUpdate', ...req.body }
-  formatLine(fullLine, req.dataset.schema)
+  formatLine(fullLine, dataset.schema)
 
-  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) {
     await rollbackUploadedAttachment(uploadedAttachmentPath)
     return res.status(operation._status ?? 200).send(operation._error)
   }
-  await commitLines(req.dataset, [fullLine._id])
+  await commitLines(dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
   const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
-  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset: req.dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
+  const dataset = reqRestDataset(req)
+  const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
-  formatLine(fullLine, req.dataset.schema)
+  formatLine(fullLine, dataset.schema)
 
-  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) {
     await rollbackUploadedAttachment(uploadedAttachmentPath)
     return res.status(operation._status ?? 200).send(operation._error)
   }
-  await commitLines(req.dataset, [fullLine._id])
+  await commitLines(dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
   const line = getLineFromOperation(operation, rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
-  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  await initDataset(req.dataset)
-  const indexName = await initDatasetIndex(req.dataset)
-  await switchAlias(req.dataset, indexName)
+  const dataset = reqRestDataset(req)
+  await initDataset(dataset)
+  const indexName = await initDatasetIndex(dataset)
+  await switchAlias(dataset, indexName)
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner as Account }))
 
-  await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
 
   res.status(204).send()
-  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
+  storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
 }
 
 type ReqFile = { filename: string, originalname: string, mimetype: string, path: string }
 
 export const bulkLines = async (req: RequestWithRestDataset & { files?: { attachments?: ReqFile[], actions?: ReqFile[] } }, res: Response, next: NextFunction) => {
+  const dataset = reqRestDataset(req)
   try {
-    const validate = compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode)
+    const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
     const drop = req.query.drop === 'true'
 
     // no buffering of this response in the reverse proxy
@@ -1032,7 +1041,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // If attachments are sent, add them to the existing ones
     const attachmentsFile = req.files?.attachments?.[0]
     if (attachmentsFile) {
-      await mongo.datasets.updateOne({ id: req.dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + attachmentsFile.filename } })
+      await mongo.datasets.updateOne({ id: dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + attachmentsFile.filename } })
     }
 
     // The list of actions/operations/transactions is either in a "actions" file
@@ -1043,7 +1052,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // pipeline instead of crashing the process with an unhandled 'error' event.
     let getInputStream: () => Readable
     let mimeType, skipDecoding
-    const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
+    const transactionSchema = [...dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
     let fileProps = {
       fieldsDelimiter: req.query.sep || ',',
       escape: '"',
@@ -1095,7 +1104,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 
     let tmpDataset: RestDataset | undefined
     if (drop) {
-      tmpDataset = { ...req.dataset, id: req.dataset.id + '-' + nanoid() + '-tmp-bulk' }
+      tmpDataset = { ...dataset, id: dataset.id + '-' + nanoid() + '-tmp-bulk' }
       await initDataset(tmpDataset)
     }
 
@@ -1105,7 +1114,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 
     // mandatory extensions force in-memory processing — reject upfront when the
     // request would have been queued for async indexing (see commitLines below).
-    const hasMandatoryExtension = !!(req.dataset.extensions ?? []).find((e: any) => e.active && e.mandatory)
+    const hasMandatoryExtension = !!(dataset.extensions ?? []).find((e: any) => e.active && e.mandatory)
     const willGoAsync = req.query.async === 'true' || (!isNaN(contentLength) && contentLength > config.elasticsearch.maxBulkChars)
     if (hasMandatoryExtension && willGoAsync) {
       return res.status(400).type('text/plain').send(
@@ -1113,10 +1122,10 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
       )
     }
 
-    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
+    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, dataset, true, false)
 
     const summary = initSummary()
-    const transactionStream = new TransactionStream({ dataset: req.dataset, sessionState: reqSessionAuthenticated(req), linesOwner: req.linesOwner, validate, summary, tmpDataset })
+    const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, tmpDataset })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
     // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
@@ -1142,18 +1151,18 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
           summary.cancelled = true
           await collection(tmpDataset).drop()
         } else {
-          await createTmpMissingRevisions(tmpDataset, req.dataset, reqSessionAuthenticated(req))
-          await collection(req.dataset).drop()
-          await collection(tmpDataset).rename(collectionName(req.dataset))
+          await createTmpMissingRevisions(tmpDataset, dataset, reqSessionAuthenticated(req))
+          await collection(dataset).drop()
+          await collection(tmpDataset).rename(collectionName(dataset))
           summary.dropped = true
-          await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
+          await mongo.datasets.updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
         if (!attachmentsFile && req.query.async !== 'true' && summary._ids && !isNaN(contentLength) && contentLength <= config.elasticsearch.maxBulkChars) {
-          await commitLines(req.dataset, [...summary._ids])
+          await commitLines(dataset, [...summary._ids])
           summary.indexedAt = new Date().toISOString()
         } else {
-          await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+          await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
         }
       }
     } catch (err: any) {
@@ -1189,12 +1198,12 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     delete result._ids
 
     await import('@data-fair/lib-express/events-log.js')
-      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${req.dataset.slug} (${req.dataset.id}), ${JSON.stringify(result)}`, { req, account: req.dataset.owner as Account }))
+      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(result)}`, { req, account: dataset.owner as Account }))
 
     res.write(JSON.stringify(result, null, 2))
     res.end()
 
-    storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+    storageUtils.updateStorage(dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
   } finally {
     // best-effort cleanup: never let a temp-file removal error (e.g. the file
     // already gone) mask the response or escape as an unhandled rejection
@@ -1205,7 +1214,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 }
 
 export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  const dataset = req.dataset
+  const dataset = reqRestDataset(req)
   const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
 
   const pathField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
@@ -1231,22 +1240,24 @@ export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Res
   filesStream.push(null)
 
   const summary = initSummary()
-  const transactionStream = new TransactionStream({ dataset: req.dataset, sessionState: reqSessionAuthenticated(req), linesOwner: req.linesOwner, validate, summary })
+  const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary })
   await pump(filesStream, transactionStream)
 
-  await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
-  await storageUtils.updateStorage(req.dataset)
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+  await storageUtils.updateStorage(dataset)
 
   res.send(summary)
 }
 
 export const readRevisions = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  if (!req.dataset.rest.history) {
+  const dataset = reqRestDataset(req)
+  if (!dataset.rest.history) {
     return res.status(400).type('text/plain').send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
-  const rc = revisionsCollection(req.dataset)
+  const rc = revisionsCollection(dataset)
   const filter: Filter<DatasetLineRevision> = req.params.lineId ? { _lineId: req.params.lineId } : {}
-  if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
   const countFilter = { ...filter }
   if (req.query.before && typeof req.query.before === 'string') filter._i = { $lt: parseInt(req.query.before) }
 
@@ -1263,7 +1274,7 @@ export const readRevisions = async (req: RequestWithRestDataset, res: Response, 
   const response: { total: number, results: Partial<DatasetLineRevision>[], next?: string } = { total, results }
 
   if (size && results.length === size) {
-    const nextLinkURL = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
+    const nextLinkURL = new URL(`${reqPublicBaseUrl(req)}${req.originalUrl}`)
     for (const key of Object.keys(req.query)) {
       if (key !== 'page') nextLinkURL.searchParams.set(key, req.query[key])
     }

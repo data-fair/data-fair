@@ -9,13 +9,12 @@ import { defineReqContext } from './req-context.ts'
 
 // publication-sites is the semantic owner of the publicationSite / mainPublicationSite request
 // context (set in app.js, read by catalog/remote-services). Loosely typed until a
-// PublicationSite-with-owner type is extracted (Phase 5). legacyProp dual-write keeps app.js's
-// legacy mutation working while readers migrate to the accessors.
-const publicationSiteCtx = defineReqContext<any>('publicationSite', 'publicationSite')
+// PublicationSite-with-owner type is extracted.
+const publicationSiteCtx = defineReqContext<any>('publicationSite')
 export const setReqPublicationSite = publicationSiteCtx.set
 export const reqPublicationSite = publicationSiteCtx.getOptional
 
-const mainPublicationSiteCtx = defineReqContext<any>('mainPublicationSite', 'mainPublicationSite')
+const mainPublicationSiteCtx = defineReqContext<any>('mainPublicationSite')
 export const setReqMainPublicationSite = mainPublicationSiteCtx.set
 export const reqMainPublicationSite = mainPublicationSiteCtx.getOptional
 
