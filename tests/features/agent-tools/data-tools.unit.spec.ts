@@ -162,7 +162,7 @@ test.describe('search_data formatResult', () => {
   test('indicates next page when available', () => {
     const data = { total: 100, results: [{ name: 'Alice' }], next: 'http://example.com/next' }
     const { text, structuredContent } = searchData.formatResult(data, { datasetId: 'ds1' })
-    assert.ok(text.includes('Next page available.'))
+    assert.ok(text.includes('Next page available'))
     assert.equal(structuredContent.next, 'http://example.com/next')
   })
 
