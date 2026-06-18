@@ -14,7 +14,6 @@ import { matchApplicationKey } from './proxy-service.ts'
 import { clean } from './utils.ts'
 import type { Application, BaseApp } from '#types'
 
-// `application` keeps its legacyProp dual-write: a vestigial reader remains in app.js
 // The global `/app-sw.js` route reads the application optionally (no middleware sets it there → undefined,
 // service-worker served for the whole site); all other readers use reqApplication (throws).
 const application = defineReqContext<Application>('application')
