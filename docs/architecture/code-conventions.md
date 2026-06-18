@@ -1,10 +1,8 @@
 # API code conventions
 
-This document is the **pattern book** for all new and refactored API code. It was introduced by the
-express-decoupling refactor series ([master plan](../plans/2026-06-10-code-quality-refactor.md)).
-The plan carries the phase sequencing, sub-plan briefs and the parking lot; this doc carries the conventions.
-Legacy code converges to these conventions module by module across that series; until a module's
-phase lands, old patterns coexist — that is expected.
+This document is the **pattern book** for all new and refactored API code. It was produced by the
+express-decoupling refactor series (Phases 0–7, complete; the per-phase plans are in git history).
+Forward-looking follow-ups and suspected bugs found during the series live in [../TODO.md](../TODO.md).
 
 **Read this before refactoring or adding API code.**
 
@@ -346,10 +344,10 @@ eventsLog.info('df.event', 'message', { ...logCtx, account: owner })
   PR** — additions only — at `tests/features/<module>/<module>-operations.unit.spec.ts`
   (e.g. `tests/features/settings/settings-operations.unit.spec.ts`).
 - **Mechanical moves only:** function bodies move verbatim. Signature changes are limited to
-  replacing `req` with explicit params. Resist drive-by cleanups — record in the master plan's parking
-  lot (`docs/plans/2026-06-10-code-quality-refactor.md §9`) instead.
-- **Suspected bugs found while moving:** preserved bit-for-bit in the move, recorded in the plan's
-  parking lot (`§9`), never fixed inline. They get a dedicated later PR with a test.
+  replacing `req` with explicit params. Resist drive-by cleanups — record them in
+  [`docs/TODO.md`](../TODO.md) instead.
+- **Suspected bugs found while moving:** preserved bit-for-bit in the move, recorded in
+  [`docs/TODO.md`](../TODO.md), never fixed inline. They get a dedicated later PR with a test.
 - **Mount and middleware chain order preserved exactly:** load-management depends on it (rate
   limiter runs after api-key resolution — see `docs/architecture/load-management.md §3`).
 - **One phase = one worktree = one PR.** Target ≤ ~800 changed LOC per PR where feasible. Datasets

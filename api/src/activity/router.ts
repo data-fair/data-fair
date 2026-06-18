@@ -12,7 +12,7 @@ export default router
 router.get('', async (req, res) => {
   // NOTE: this query() call uses an obsolete 2-arg signature and currently throws at runtime
   // (find.js query() now requires a fieldsMap). Preserved bit-for-bit by the express-decoupling
-  // refactor — see the parking lot in docs/plans/2026-06-12-refactor-tiny-modules.md.
+  // refactor — see docs/TODO.md (item 2c).
   const query = findUtils.query(req, { status: 'status' })
   const size = findUtils.pagination(req.query)[1]
   const { datasets, applications } = await findActivityResources(query, size)
