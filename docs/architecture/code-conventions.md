@@ -175,8 +175,8 @@ The following `req.<prop> = …` assignments remain while phases migrate them:
 | File | Properties set |
 |---|---|
 | `api/src/app.js` | `publicBaseUrl`, `publicWsBaseUrl`, `publicationSite`, `mainPublicationSite` |
-| `api/src/datasets/middlewares.ts` | `url` only (`dataset` / `resource` / `datasetFull` / `noCache` now set via accessors — Phase 6c) |
-| `api/src/datasets/router.js` | `resourceType`, `linesOwner`, `body`, `_draft` |
+| `api/src/datasets/middlewares.ts` | `url` only (`dataset` / `resource` / `datasetFull` / `noCache` / `linesOwner` / `_draft` now set via accessors — Phase 6c/6d) |
+| `api/src/datasets/router.ts` | *(none — fully migrated Phase 6d; `resourceType` now `setReqResourceType`, body-mutating handlers moved to `routes/*.ts`)* |
 | `api/src/datasets/utils/rest.ts` | `body` (`_fixedFormBody` now a module-local accessor; `_rawBody` / `_uploadedAttachmentPath` eliminated — Phase 6b) |
 | `api/src/datasets/es/abort.ts` | `esAbortContext` (now an accessor — see note below) |
 | `api/src/applications/router.js` | `resourceType`, `resource`, `application`, `baseApp`, `isNewApplication` |
@@ -213,6 +213,19 @@ Phase 6c (2026-06-17) converted `datasets/service.js` → `.ts` (already express
 `datasetFull` `legacyProp` is **retained** because `datasets/router.js` (≈213 reads) and the typed
 `datasets/utils/*` files still read `req.dataset` / `req.datasetFull` by raw access — drop it (and the
 `esAbortContext` legacyProp) when `router.js` migrates in slice 6d.
+Phase 6d (2026-06-18) split `datasets/router.js` into `routes/*.ts` thin adapters composed by a 33-line
+`datasets/router.ts` (`datasets/` is now 100% TS). All remaining datasets `req.*` reads migrated to
+accessors. New accessors: `linesOwner` + `_draft` (module-local in `middlewares.ts`, `legacyProp` —
+`rest.ts` / `upload.ts` still raw-read) and `operation` (`setReqOperation` / `reqOperation` in
+`permissions.ts`, **no** `legacyProp` — atomic: `permissions.middleware` sets it, the files
+metadata-attachments GET is the only reader). The `resourceType` `.use` now calls `setReqResourceType`.
+**`legacyProp` dropped** for `resource` / `datasetFull` / `esAbortContext` (grep-verified no raw readers
+repo-wide). **`legacyProp` retained** for `dataset` (`query-advice.ts` / `upload.ts` / `rest.ts` /
+`outputs.ts` raw-read) and `resourceType` (`api-compat/ods/index.ts` still raw-sets it — drop both in
+Phase 7). Several middlewares were re-typed `req: RequestWithResource` → `req: Request` at the source
+(`permissions.middleware` / `canDoForOwnerMiddleware`, `application-key`) since they only read context via
+accessors — this removes the `router.<verb>(…)` overload friction; do the same for any middleware that
+breaks a typed route chain. The `clamav.middleware` DOM-`Response` parking-lot item was resolved here.
 
 ### Migration mechanics per property
 

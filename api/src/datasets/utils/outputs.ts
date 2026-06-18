@@ -41,7 +41,7 @@ const compileForRequest = (dataset: Dataset, query: Record<string, string> = {},
 
 const yieldEvery = 200
 
-type ReqWithDataset = Request & {
+export type ReqWithDataset = Request & {
   dataset: Dataset,
   query: Record<string, string>,
   __: (key: string) => any
@@ -90,7 +90,7 @@ export const csvStreams = (dataset: Dataset, query: Record<string, string> = {},
   ]
 }
 
-export const results2sheet = async (req: ReqWithDataset, results: Record<string, any>[], bookType: string): Promise<Buffer> => {
+export const results2sheet = async (req: ReqWithDataset, results: Record<string, any>[], bookType: string = 'xlsx'): Promise<Buffer> => {
   const reqDataset = req.dataset as Dataset & { __isProxy?: boolean, __proxyTarget?: Dataset }
   const dataset = reqDataset.__isProxy ? reqDataset.__proxyTarget as Dataset : req.dataset
   const settings = await mongo.db.collection('settings')

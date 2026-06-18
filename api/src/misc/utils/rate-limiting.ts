@@ -12,6 +12,18 @@ import { reqEsAbortContextOptional } from '../../datasets/es/abort.ts'
 
 const debugLimits = debug('limits')
 
+// the throttling helpers below are monkey-patched onto the Express response by this middleware;
+// declare them on the global Express.Response so downstream route handlers can call them typed.
+declare global {
+  namespace Express {
+    interface Response {
+      throttle: (bandwidthType?: string) => Transform
+      throttleEnd: (bandwidthType?: string) => void
+      _originalEnd?: Response['end']
+    }
+  }
+}
+
 // The user the rate limiter accounts a request to. Application keys are a loose, anonymous-style access
 // tier (the application-key middleware sets a pseudo-user for embed / public `?key=` access); we
 // deliberately rate-limit them as anonymous (keyed by IP), since they are exactly the kind of public

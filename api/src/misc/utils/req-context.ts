@@ -48,7 +48,7 @@ export const defineReqContext = <T>(name: string, legacyProp?: string): ReqConte
 // permissions middleware and read by cache-headers / query-advice / thumbnails.
 // legacyProp keeps the legacy `req.<prop>` reads/writes working while datasets
 // (Phase 6) and api-compat (Phase 7) still mutate them directly.
-const resourceCtx = defineReqContext<Resource>('resource', 'resource')
+const resourceCtx = defineReqContext<Resource>('resource')
 export const setReqResource = resourceCtx.set
 export const reqResource = resourceCtx.get
 export const reqResourceOptional = resourceCtx.getOptional

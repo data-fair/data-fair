@@ -1,4 +1,4 @@
-import type { Response, NextFunction, RequestHandler } from 'express'
+import type { Request, Response, NextFunction, RequestHandler } from 'express'
 import type { AccountKeys, SessionState } from '@data-fair/lib-express'
 import type { RequestWithResource, ResourceType, Permission, Resource, BypassPermissions } from '#types'
 
@@ -15,8 +15,14 @@ import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 // consumers can import them without pulling in #config) — see code-conventions.md §2.
 // They are re-exported here so existing `permissions.<accessor>` namespace consumers
 // keep working; config-free consumers import them directly from req-context.ts.
-import { reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
+import { defineReqContext, reqResource, reqResourceOptional, reqResourceType, reqBypassPermissions, setReqPublicOperation } from './req-context.ts'
 export { setReqResource, reqResource, reqResourceOptional, setReqResourceType, reqResourceType, setReqBypassPermissions, reqBypassPermissions, setReqPublicOperation, reqPublicOperation } from './req-context.ts'
+
+// the operation gating the current route (class/id/track), exposed downstream as the x-operation header
+export type ReqOperation = { class: string, id: string, track?: string }
+const operationCtx = defineReqContext<ReqOperation>('operation')
+export const setReqOperation = operationCtx.set
+export const reqOperation = operationCtx.get
 
 const resourceTypesLabels: Record<ResourceType, string> = {
   datasets: 'Le jeu de données',
@@ -26,12 +32,12 @@ const resourceTypesLabels: Record<ResourceType, string> = {
 }
 
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
-export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string, acceptMissing?: boolean) {
+export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string | null, acceptMissing?: boolean) {
   // pre-compute the x-operation header since it is constant per route
   const operation = { class: operationClass, id: operationId, track: trackingCategory }
   const operationHeader = JSON.stringify(operation)
 
-  return function (req: RequestWithResource, res: Response, next: NextFunction) {
+  return function (req: Request, res: Response, next: NextFunction) {
     const sessionState = reqSession(req)
 
     if (acceptMissing && !reqResourceOptional(req)) {
@@ -86,7 +92,7 @@ export const middleware = function (operationId: string, operationClass: string,
         res.setHeader('x-owner', JSON.stringify(ownerKey))
       }
     }
-    ;(req as any).operation = operation
+    setReqOperation(req, operation)
     res.setHeader('x-operation', operationHeader)
     next()
   }
@@ -94,7 +100,7 @@ export const middleware = function (operationId: string, operationClass: string,
 
 /** Express middleware that checks the user can perform a given operation class on the resource's owner (used for cross-owner actions). */
 export const canDoForOwnerMiddleware = function (operationClass: string, ignoreDepartment = false) {
-  return function (req: RequestWithResource, res: Response, next: NextFunction) {
+  return function (req: Request, res: Response, next: NextFunction) {
     const owner: AccountKeys = ignoreDepartment ? { ...reqResource(req).owner, department: undefined } : reqResource(req).owner
     if (!canDoForOwner(owner, reqResourceType(req), operationClass, reqSession(req))) {
       return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')

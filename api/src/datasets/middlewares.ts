@@ -22,10 +22,23 @@ const datasetCtx = defineReqContext<Dataset>('dataset', 'dataset')
 export const setReqDataset = datasetCtx.set
 export const reqDataset = datasetCtx.get
 export const reqDatasetOptional = datasetCtx.getOptional
-const datasetFullCtx = defineReqContext<Dataset>('datasetFull', 'datasetFull')
+const datasetFullCtx = defineReqContext<Dataset>('datasetFull')
 export const setReqDatasetFull = datasetFullCtx.set
 export const reqDatasetFull = datasetFullCtx.get
 export const reqDatasetFullOptional = datasetFullCtx.getOptional
+
+// the owner of the lines being managed on a lineOwnership-enabled REST dataset (own/:owner routes).
+// legacyProp dual-write: datasets/utils/rest.ts still reads req.linesOwner by raw access — drop the
+// legacyProp once those readers migrate (rest.ts can't import this without a require cycle today).
+const linesOwnerCtx = defineReqContext<Account>('linesOwner', 'linesOwner')
+export const setReqLinesOwner = linesOwnerCtx.set
+export const reqLinesOwnerOptional = linesOwnerCtx.getOptional
+
+// forces the upload middleware to write into the draft directory (set on update routes which always
+// go through draft mode). legacyProp dual-write: datasets/utils/upload.ts still raw-reads req._draft.
+const draftCtx = defineReqContext<boolean>('_draft', '_draft')
+export const setReqDraft = draftCtx.set
+export const reqDraftOptional = draftCtx.getOptional
 
 export const checkStorage = (overwrite: boolean, indexed = false): RequestHandler => async (req, res, next) => {
   reqUserAuthenticated(req)
