@@ -15,11 +15,12 @@ import { clean } from './utils.ts'
 import type { Application, BaseApp } from '#types'
 
 // `application` keeps its legacyProp dual-write: a vestigial reader remains in app.js
-// (the `/app-sw.js` route reads `req.application`, where it is never set → undefined).
-// Drop the second arg once app.js migrates in Phase 5.
-const application = defineReqContext<Application>('application', 'application')
+// The global `/app-sw.js` route reads the application optionally (no middleware sets it there → undefined,
+// service-worker served for the whole site); all other readers use reqApplication (throws).
+const application = defineReqContext<Application>('application')
 export const setReqApplication = application.set
 export const reqApplication = application.get
+export const reqApplicationOptional = application.getOptional
 
 // baseApp / isNewApplication / matchingApplicationKey are fully internal to the applications
 // module; all readers/setters use the accessors, so the legacyProp dual-write was dropped (Task 7).

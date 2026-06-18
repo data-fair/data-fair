@@ -21,6 +21,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqSession, reqAdminMode } from '@data-fair/lib-express'
 import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts'
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
+import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { setReqRemoteService, reqRemoteService } from './middlewares.ts'
 
 const debug = debugModule('remote-services')
@@ -39,8 +40,7 @@ router.use((req, res, next) => {
 // Accessible to anybody
 router.get('', cacheHeaders.noCache, async (req, res) => {
   const publicationSite = reqPublicationSite(req)
-  // @ts-ignore
-  const publicBaseUrl = req.publicBaseUrl
+  const publicBaseUrl = reqPublicBaseUrl(req)
 
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
@@ -53,8 +53,7 @@ export const actionsRouter = express.Router()
 // get the unpacked list of actions inside the remote services
 actionsRouter.get('', cacheHeaders.noCache, async (req, res) => {
   const publicationSite = reqPublicationSite(req)
-  // @ts-ignore
-  const publicBaseUrl = req.publicBaseUrl
+  const publicBaseUrl = reqPublicBaseUrl(req)
   // @ts-ignore
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
@@ -206,9 +205,10 @@ async function getAppOwner (req) {
   if (!referer) return console.warn('remote service proxy called without a referer header')
   debug('Referer URL', referer)
 
-  if (!referer.startsWith(req.publicBaseUrl + '/')) return console.warn('remote service proxy called from outside a data-fair page', referer)
+  const publicBaseUrl = reqPublicBaseUrl(req)
+  if (!referer.startsWith(publicBaseUrl + '/')) return console.warn('remote service proxy called from outside a data-fair page', referer)
 
-  const refererAppId = referer.startsWith(req.publicBaseUrl + '/app/') && referer.replace(req.publicBaseUrl + '/app/', '').split('?')[0].split('/')[0]
+  const refererAppId = referer.startsWith(publicBaseUrl + '/app/') && referer.replace(publicBaseUrl + '/app/', '').split('?')[0].split('/')[0]
   if (!refererAppId) return
   debug('Referer application id', refererAppId)
 
@@ -239,7 +239,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.remoteServiceMiddl
   if (!remoteService) return res.status(404).send('service distant inconnu')
 
   const headers = {
-    'x-forwarded-url': `${req.publicBaseUrl}/api/v1/remote-services/${remoteService.id}/proxy/`
+    'x-forwarded-url': `${reqPublicBaseUrl(req)}/api/v1/remote-services/${remoteService.id}/proxy/`
   }
   // auth header, TODO handle query & cookie header types
   if (remoteService.apiKey && remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {

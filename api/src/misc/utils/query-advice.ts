@@ -74,7 +74,7 @@ const RECOGNIZED_PARAMS = new Set([
 /**
  * Advisory for parameters the API silently ignored: a `_c_` concept prefix misapplied to a
  * column filter, an inert `_c_` filter that matched no concept, or an unrecognized/misspelled
- * parameter. Returns '' when nothing applies. Pure — reads only req.query + req.dataset.schema.
+ * parameter. Returns '' when nothing applies. Pure — reads only req.query + the dataset context schema.
  *
  * Unlike queryAdvice (a *performance* advisory gated on slow queries), this is a *correctness*
  * signal: attachQueryHint emits it regardless of query duration, still suppressed by hint=false.

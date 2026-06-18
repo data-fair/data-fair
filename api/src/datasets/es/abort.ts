@@ -33,8 +33,8 @@ export const reqEsAbortContextOptional = esAbortContext.getOptional
  *   client.search(params, abortContext)
  *   client.transport.request(params, { ...abortContext, meta: true })
  *
- * The context is also stored on `req.esAbortContext` so handlers that reach the ES layer indirectly
- * (e.g. countWithCache) can pick it up without it being threaded through every call.
+ * The context is also stored on the request (via the esAbortContext accessor) so handlers that reach the
+ * ES layer indirectly (e.g. countWithCache) can pick it up without it being threaded through every call.
  *
  * One context is meant to be created once per http request and reused across all the ES calls that
  * request makes (a single AbortController cancels them all at once on disconnect).

@@ -7,7 +7,7 @@ import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as datasetUtils from './index.ts'
 import { tmpDir, fsyncFile } from './files.ts'
 import promisifyMiddleware from '../../misc/utils/promisify-middleware.ts'
-import { reqDatasetOptional } from '../../misc/utils/req-context.ts'
+import { reqDatasetOptional, reqDraftOptional } from '../../misc/utils/req-context.ts'
 import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes, jsonTypes } from './types.ts'
 import debugLib from 'debug'
 import filesStorage from '#files-storage'
@@ -32,7 +32,7 @@ const storage = {
       const filename = file.fieldname === 'attachments' ? 'attachments.zip' : file.originalname
       const dataset = reqDatasetOptional(req)
       if (dataset) {
-        const destination = datasetUtils.loadingDir({ ...dataset, draftReason: req.query.draft === 'true' || req._draft })
+        const destination = datasetUtils.loadingDir({ ...dataset, draftReason: req.query.draft === 'true' || reqDraftOptional(req) })
         const finalPath = path.join(destination, filename)
         await filesStorage.writeStream(file.stream, finalPath)
         const stats = await filesStorage.fileStats(finalPath)

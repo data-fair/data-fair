@@ -43,7 +43,8 @@ import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
 import { computeModified } from './compute-modified.ts'
-import { defineReqContext, reqRestDataset } from '../../misc/utils/req-context.ts'
+import { defineReqContext, reqRestDataset, reqLinesOwnerOptional } from '../../misc/utils/req-context.ts'
+import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 
 type Operation = {
   _id: string,
@@ -694,7 +695,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 }
 
 const applyReqTransactions = async (req: RequestWithRestDataset, transacs: DatasetLineAction[], validate: ValidateFunction, tmpDataset?: RestDataset) => {
-  return applyTransactions(reqRestDataset(req), reqSessionAuthenticated(req), transacs, validate, req.linesOwner, tmpDataset)
+  return applyTransactions(reqRestDataset(req), reqSessionAuthenticated(req), transacs, validate, reqLinesOwnerOptional(req), tmpDataset)
 }
 
 // _ids tracks operation ids so that small bulks can be indexed in the same HTTP request (commitLines).
@@ -935,7 +936,8 @@ export const readLine = async (req: RequestWithRestDataset, res: Response, next:
   const dataset = reqRestDataset(req)
   const c = collection(dataset)
   const filter: Filter<DatasetLine> = { _id: req.params.lineId }
-  if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
   const line = await c.findOne(filter)
   if (!line) return res.status(404).send('Identifiant de ligne inconnu')
   if (line._deleted) return res.status(404).send('Identifiant de ligne inconnu')
@@ -965,7 +967,8 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
 
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
-  if (req.linesOwner) Object.assign(req.body, linesOwnerCols(req.linesOwner))
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(req.body, linesOwnerCols(linesOwner))
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, dataset, true)
   req.body._id = definedId || nanoid()
   const { rawBody, uploadedAttachmentPath } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, false)
@@ -1122,7 +1125,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, dataset, true, false)
 
     const summary = initSummary()
-    const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: req.linesOwner, validate, summary, tmpDataset })
+    const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, tmpDataset })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
     // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
@@ -1237,7 +1240,7 @@ export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Res
   filesStream.push(null)
 
   const summary = initSummary()
-  const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: req.linesOwner, validate, summary })
+  const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary })
   await pump(filesStream, transactionStream)
 
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
@@ -1253,7 +1256,8 @@ export const readRevisions = async (req: RequestWithRestDataset, res: Response, 
   }
   const rc = revisionsCollection(dataset)
   const filter: Filter<DatasetLineRevision> = req.params.lineId ? { _lineId: req.params.lineId } : {}
-  if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
+  const linesOwner = reqLinesOwnerOptional(req)
+  if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
   const countFilter = { ...filter }
   if (req.query.before && typeof req.query.before === 'string') filter._i = { $lt: parseInt(req.query.before) }
 
@@ -1270,7 +1274,7 @@ export const readRevisions = async (req: RequestWithRestDataset, res: Response, 
   const response: { total: number, results: Partial<DatasetLineRevision>[], next?: string } = { total, results }
 
   if (size && results.length === size) {
-    const nextLinkURL = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
+    const nextLinkURL = new URL(`${reqPublicBaseUrl(req)}${req.originalUrl}`)
     for (const key of Object.keys(req.query)) {
       if (key !== 'page') nextLinkURL.searchParams.set(key, req.query[key])
     }

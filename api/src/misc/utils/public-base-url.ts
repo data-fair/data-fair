@@ -2,8 +2,7 @@
 // (the per-domain public URL of data-fair, set once in app.js). See code-conventions.md §2.
 import { defineReqContext } from './req-context.ts'
 
-// publicBaseUrl keeps its legacyProp: datasets (Phase 6) still reads req.publicBaseUrl directly.
-const publicBaseUrlCtx = defineReqContext<string>('publicBaseUrl', 'publicBaseUrl')
+const publicBaseUrlCtx = defineReqContext<string>('publicBaseUrl')
 export const setReqPublicBaseUrl = publicBaseUrlCtx.set
 export const reqPublicBaseUrl = publicBaseUrlCtx.get
 
