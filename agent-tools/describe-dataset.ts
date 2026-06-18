@@ -51,7 +51,7 @@ export const schema = {
         description: 'Dataset license information (must be included in responses)'
       },
       topics: { type: 'array' as const, items: { type: 'string' as const }, description: 'Topics/categories the dataset belongs to' },
-      spatial: { type: 'object' as const, description: 'Spatial coverage information' },
+      spatial: { type: 'string' as const, description: 'Spatial coverage information (free-text description)' },
       temporal: { type: 'object' as const, description: 'Temporal coverage information' },
       frequency: { type: 'string' as const, description: 'Update frequency of the dataset' },
       geolocalized: { type: 'boolean' as const, description: 'Whether the dataset has geographic data' },
