@@ -167,6 +167,11 @@ async function main () {
   await agentsAx.put('/agents/api/settings/organization/dev_fixtures', agentSettings)
   console.log('agent settings written (mock provider) for organization/dev_fixtures')
 
+  // activate the AI assistant on the data-fair org settings (the agentChat flag
+  // gates the assistant UI). PATCH merges, so it preserves any other settings.
+  await dfAx.patch('/api/v1/settings/organization/dev_fixtures', { agentChat: true })
+  console.log('agent chat activated on organization/dev_fixtures settings')
+
   await seedSuiviDemandes()
   await seedProduits()
   await seedEquipements()
