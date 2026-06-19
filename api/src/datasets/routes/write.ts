@@ -2,7 +2,6 @@
 import type { Router, RequestHandler, Response } from 'express'
 import type { Request as DfRequest, Event } from '#types'
 import mongo from '#mongo'
-import { type Locale } from '../../../i18n/utils.ts'
 import fs from 'fs-extra'
 import equal from 'deep-equal'
 import slug from 'slugify'
@@ -234,9 +233,7 @@ export const registerWriteRoutes = (router: Router) => {
     const patch = { status: 'validated', validateDraft: true }
     await applyPatch(dataset, patch)
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' } as Event)
-    // NOTE: preserved bit-for-bit — this localizedParams is mis-shaped ({cause:{fr,en}} instead of
-    // {fr:{cause},en:{cause}} per the other call sites); recorded in the parking lot.
-    await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'draft-validated', { localizedParams: { cause: { fr: 'validation manuelle', en: 'manual validation' } } as unknown as Record<Locale, Record<string, string>> })
+    await notifications.sendResourceEvent('datasets', dataset, sessionState as SessionStateAuthenticated, 'draft-validated', { localizedParams: { fr: { cause: 'validation manuelle' }, en: { cause: 'manual validation' } } })
     eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
     return res.send(dataset)

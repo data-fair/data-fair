@@ -118,9 +118,9 @@ export const registerMiscRoutes = (router: Router) => {
         extra: { user: { id: sessionState.user.id, name: sessionState.user.name } },
         resource: { type: 'dataset', id: dataset.id }
       }
-      // NOTE: preserved bit-for-bit — notifications.send is (event, sessionState?); the original
-      // passed `true` in the sessionState position with a stray 3rd arg (parking lot)
-      await notifications.send(notif, true as any)
+      // notifications.send is (event, sessionState?); pass the real session so api-key originator
+      // attribution works. The legacy `true` was an obsolete `subscribedOnly` flag (feature removed).
+      await notifications.send(notif, sessionState)
       res.send(notif)
     }
   )

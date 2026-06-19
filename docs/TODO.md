@@ -20,22 +20,6 @@ Related docs: dormant correctness bugs from the perf scan in
 
 ## Suggested PR candidates (grouped)
 
-### PR 2 — Datasets draft / notification correctness `P2 · M`
-All in `datasets/routes/{write,metadata,misc}.ts`, surfaced in Phase 6d.
-- `12` **draft-validated notification `localizedParams` mis-shaped** — emits `{ cause: { fr, en } }`
-  (param→locale) instead of `{ fr: { cause }, en: { cause } }` (locale→param, the
-  `Record<Locale, Record<string,string>>` shape used everywhere else) → malformed localized "cause".
-  Preserved via cast. (`validateDraft`)
-- `13` **user-notification passes `true` as the sessionState** — `notifications.send(notif, true, sessionState)`
-  against the 2-param `send(event, sessionState?)`; `true` lands in the sessionState slot, real
-  sessionState ignored. Preserved as `send(notif, true as any)`. Verify intended wiring. (user-notification POST)
-- `10` **PATCH never passes a draft validation mode** — `preparePatch(...)` called with 5 args, omitting
-  the 6th `draftValidationMode` that PUT passes → PATCH-created/updated drafts use the default mode.
-  (metadata PATCH handler)
-- `11` **cancelDraft stray arg to `journals.log`** — a 5th `sessionState` arg was passed to the 4-param
-  `journals.log`; dropped as a no-op. Decide whether the draft-cancelled event *should* carry session
-  context (then add a 5th param). `P3`. (draft DELETE)
-
 ### PR 3 — Settings document-targeting & metadata bugs `P1 · S–M`
 - `1` **`updateDatasetsMetadata` `$unset` broken + condition inverted** — the `$unset` key interpolates
   the object `oldMeta` (→ `customMetadata.[object Object]`) instead of `oldMeta.key`, and the guard
@@ -103,6 +87,26 @@ enabler); (3) compact redundant API specs.
 ---
 
 ## Resolved during the series (for the record)
+- **PR 2 — Datasets draft / notification correctness** (`12`/`13`/`10`/`11`) → all four triaged:
+  - `12` **draft-validated notification `localizedParams` mis-shaped** → FIXED. Reshaped to
+    `{ fr: { cause }, en: { cause } }` and dropped the cast (`datasets/routes/write.ts`). Before the fix
+    the body rendered `… a été validé ()` — the `cause` param was never interpolated. Failing test added
+    in `datasets-drafts-lifecycle.api.spec.ts` ("create a draft when updating the data file") asserting
+    the notification body carries "validation manuelle" / "manual validation".
+  - `13` **user-notification passed `true` as the sessionState** → FIXED. `send(notif, true as any)` →
+    `send(notif, sessionState)` (`datasets/routes/misc.ts`). The legacy `true` was an obsolete
+    `subscribedOnly` flag (param removed when notifications moved to the events-queue); the fix restores
+    api-key originator attribution. Not observable in the dev test harness — `send` short-circuits to
+    `testEvents` under `NODE_ENV=development` before the originator logic. Existing "send user
+    notification" spec still green.
+  - `10` **PATCH never passes a draft validation mode** → NO FIX NEEDED (confirmed dormant). The PATCH
+    route has no file-upload path, and `draftValidationMode` is only consumed by `preparePatch` inside
+    `if (datasetFile || attachmentsFile)`. A metadata PATCH can never create a file-draft, so the omitted
+    6th arg has no observable effect. Left as-is rather than adding code for an unreachable branch.
+  - `11` **cancelDraft stray arg to `journals.log`** → NO ACTION (current code correct). `journals.log`
+    has no session-context parameter at all (draft-validated is logged session-less too), so the dropped
+    5th arg was always a no-op. Adding session context to journals would be a cross-cutting change beyond
+    this P3 item's scope.
 - **PR 1 — Applications dormant bugs** (`2e`/`2f`/`2g`/`2h`) → fixed, each with a test:
   - `2e` `replaceApplication`'s readonly-preservation no-op (`!patchKeys.includes([key])` → `!patchKeys.includes(key)`).
     Reaching it required also fixing the PUT route: `attemptInsert` validated the *curated* application
