@@ -13,6 +13,7 @@
  * adding it.
  */
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
+import FormData from 'form-data'
 
 const root = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
 const directoryUrl = `${root}/simple-directory`
@@ -60,19 +61,40 @@ const datasetExists = async (id: string): Promise<boolean> => {
   }
 }
 
-/** Poll a dataset until it is finalized (no WS dependency). When expectedCount
- * is given, also wait for dataset.count to reach it — a freshly created REST
- * dataset reports status 'finalized' with count 0 before its lines are indexed,
- * so a plain status check would return too early. */
-const pollFinalized = async (id: string, expectedCount?: number, timeout = 30000): Promise<any> => {
-  const deadline = Date.now() + timeout
-  while (Date.now() < deadline) {
-    const ds = (await dfAx.get(`/api/v1/datasets/${id}`)).data
-    if (ds.status === 'error') throw new Error(`dataset ${id} entered error status`)
-    if (ds.status === 'finalized' && (expectedCount === undefined || ds.count === expectedCount)) return ds
-    await new Promise(resolve => setTimeout(resolve, 500))
-  }
-  throw new Error(`dataset ${id} did not finalize within ${timeout}ms`)
+/** Create/replace a file dataset with a fixed id from an inline CSV string.
+ * Optimistic: returns once the upload is accepted; finalization (indexing) runs
+ * server-side and is done well before anyone browses the dev env. The `body`
+ * part fixes the title/description and may pre-tag columns (e.g. geo concepts)
+ * so no post-upload schema patch is needed. */
+async function uploadCsv (id: string, filename: string, body: Record<string, any>, csv: string) {
+  const form = new FormData()
+  form.append('file', Buffer.from(csv, 'utf8'), { filename, contentType: 'text/csv' })
+  form.append('body', JSON.stringify(body))
+  await dfAx.put(`/api/v1/datasets/${id}`, form, {
+    headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
+  })
+}
+
+/** CSV file dataset: tabular reference data (product catalog). */
+async function seedProduits () {
+  const id = 'fixtures-produits'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  const csv = [
+    'reference,libelle,categorie,prix,stock',
+    'REF-001,Chaise de bureau,Mobilier,79.90,120',
+    'REF-002,Bureau réglable,Mobilier,249.00,35',
+    'REF-003,Lampe LED,Éclairage,24.50,300',
+    'REF-004,Clavier sans fil,Informatique,39.99,210',
+    'REF-005,Souris ergonomique,Informatique,29.99,180',
+    'REF-006,Écran 27 pouces,Informatique,189.00,60',
+    'REF-007,Casque audio,Informatique,59.90,95',
+    'REF-008,Tapis de sol,Mobilier,15.00,400'
+  ].join('\n') + '\n'
+  await uploadCsv(id, 'produits.csv', {
+    title: 'Catalogue de produits',
+    description: 'Données de référence tabulaires importées depuis un fichier CSV (exemple).'
+  }, csv)
+  console.log(`${id}: seeded (CSV file)`)
 }
 
 /** REST editable dataset: a back-office worklist (request tracking). */
@@ -100,7 +122,6 @@ async function seedSuiviDemandes () {
   // bulk insert in one request so a single finalize recomputes count (posting
   // lines one by one leaves dataset.count stale due to debounced finalizes)
   await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
-  await pollFinalized(id, lines.length)
   console.log(`${id}: seeded (${lines.length} lines)`)
 }
 
@@ -121,6 +142,7 @@ async function main () {
   console.log('agent settings written (mock provider) for organization/dev_fixtures')
 
   await seedSuiviDemandes()
+  await seedProduits()
 
   console.log('\nDone.')
 }
