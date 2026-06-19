@@ -890,7 +890,7 @@ async function manageAttachment (ctx: ManageAttachmentContext, keepExisting: boo
     // transaction is rejected (mandatory-extension fail, AJV fail, conflict…)
     uploadedAttachmentPath = attachmentPath(ctx.dataset, relativePath)
   } else if (!keepExisting && pathField) {
-    if (!checkMatchingAttachment(ctx.body, lineId, dir, pathField)) {
+    if (!await checkMatchingAttachment(ctx.body, lineId, dir, pathField)) {
       await filesStorage.removeDir(dir)
     }
   }

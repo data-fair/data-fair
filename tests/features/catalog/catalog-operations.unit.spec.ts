@@ -41,6 +41,19 @@ test.describe('buildDcatCatalog', () => {
     assert.equal(distribution[1].downloadURL, 'https://df.test/api/v1/datasets/d1/convert')
   })
 
+  test('sets modified from each dataset own dataUpdatedAt (falling back to its updatedAt)', () => {
+    const result = buildDcatCatalog(
+      [
+        { id: 'd1', title: 'A', dataUpdatedAt: '2026-01-01', updatedAt: '2026-02-01' },
+        { id: 'd2', title: 'B', updatedAt: '2026-03-01' }
+      ],
+      publicationSite,
+      'https://df.test'
+    )
+    assert.equal(result.dataset[0].modified, '2026-01-01')
+    assert.equal(result.dataset[1].modified, '2026-03-01')
+  })
+
   test('emits a single distribution when file and original share the same mimetype', () => {
     const result = buildDcatCatalog(
       [{

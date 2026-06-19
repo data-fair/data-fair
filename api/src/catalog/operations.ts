@@ -19,7 +19,7 @@ export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBa
       title: dataset.title,
       description: dataset.summary || dataset.description,
       issued: dataset.createdAt,
-      modified: datasets.dataUpdatedAt || datasets.updatedAt
+      modified: dataset.dataUpdatedAt || dataset.updatedAt
     }
     if (dataset.keywords?.length) datasetDCAT.keyword = dataset.keywords
     if (dataset.license?.href) datasetDCAT.license = dataset.license.href
