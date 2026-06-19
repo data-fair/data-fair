@@ -16,6 +16,7 @@
     "stop-dev-deps": "docker compose --profile dev stop",
     "dev-api": "MODE=server_worker npm -w api run dev",
     "dev-mock": "mkdir -p dev/logs && node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts 2>&1 | tee dev/logs/dev-mock.log",
+    "dev-fixtures": "dotenv -- node --experimental-strip-types --disable-warning=ExperimentalWarning dev/fixtures.ts",
     "dev-ui": "mkdir -p dev/logs && npm --prefix ui run dev 2>&1 | tee dev/logs/dev-ui.log",
     "dev-benchmark": "MODE=server_worker npm -w api run dev-benchmark",
     "dev-benchmark-prof": "MODE=server_worker npm -w api run dev-benchmark-prof",
