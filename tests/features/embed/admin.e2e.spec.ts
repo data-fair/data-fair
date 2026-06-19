@@ -65,9 +65,13 @@ test.describe('admin pages', () => {
     await expect(page.getByRole('heading', { name: "Modèles d'application" })).toBeVisible({ timeout: 10000 })
   })
 
-  test('displays agents page with title and organization selector', async ({ page, goToAsAdmin }) => {
+  // The agents page is now a pure d-frame embedding the /agents/admin/ service, which owns
+  // the title and the account/organization selector. Assert the embed, not the iframe's content.
+  test('displays agents page as a d-frame embedding the agents admin service', async ({ page, goToAsAdmin }) => {
     await goToAsAdmin('/data-fair/admin/agents')
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible({ timeout: 10000 })
-    await expect(page.getByLabel('Organisation')).toBeVisible({ timeout: 10000 })
+    const dFrame = page.locator('d-frame#agents')
+    await expect(dFrame).toBeAttached({ timeout: 10000 })
+    const src = await dFrame.getAttribute('src')
+    expect(src).toContain('/agents/admin/')
   })
 })

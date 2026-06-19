@@ -1,12 +1,12 @@
 ---
 name: pr-ready
-description: Pre-PR flight check on the current branch. Reviews the diff against stated intent, flags scope creep, regression risks, and commit hygiene problems, and drafts a compact PR title (conventional-commit style) and description. Requires a clean working tree. Does not run tests, lint, or type-check.
+description: Pre-PR flight check on the current branch. Re-anchors on the intended change and reviews the diff against it at a macro level — scope, completeness, drift — flags risky or sensitive changes for the reviewer, and drafts a compact PR title (conventional-commit style) and description. Requires a clean working tree. Does not run tests, lint, or type-check, and is not a substitute for line-level code review.
 disable-model-invocation: true
 ---
 
 # PR Pre-Flight Reviewer
 
-A focused review pass before opening a pull request. The goal is a PR that is easy on the reviewer: tight scope, no bloat, surprises called out up front.
+A focused macro pass before opening a pull request, run *after* ordinary code review. It assumes the lines are already reviewed; its job is to re-anchor on what the change was *meant* to do and check the diff against that — catching a session that drifted, even when the code it produced looks fine. Three outputs: a faithful **summary** (the PR title and description are the source of truth for release notes), a **scope check** (is the intent fully and proportionately delivered, no drift?), and a **look-forward** pass (what should the reviewer focus on; what could bite users or maintainers?).
 
 ## When to use
 
@@ -59,39 +59,35 @@ git diff --stat "$base..HEAD"                  # file-level overview
 git diff "$base..HEAD"                          # full content diff
 ```
 
-`--no-merges` drops commits like `Merge branch 'main'` that only pulled the default branch back into this one — they aren't this branch's own work and shouldn't be analyzed under commit hygiene or intent. The diff itself is already scoped via the merge-base, so changes brought in by those merges don't appear in `git diff "$base..HEAD"` either; only edits actually made on this branch (including any conflict resolutions in the merge commit) show up.
+`--no-merges` drops `Merge branch 'main'`-style commits that only pulled the default branch back in — not this branch's own work. The merge-base already scopes the diff to this branch's edits (including conflict resolutions). Since merges are squashed here, don't review commits for hygiene — the commit list only helps infer intent and scope.
 
 Read the full diff. For larger changes, use `--stat` first to plan where to look closest.
 
-## Phase 4 — Analyze against five vectors
+## Phase 4 — Analyze
 
-For each vector, note specific findings with `file:line` references when applicable.
+Re-read the locked intent, then judge the diff against it at a **macro level** — not a second line-level review (that's already done), but a check on whether this is still the right change, whole and no more. Note `file:line` for concrete, locatable items.
 
-1. **Intent alignment** — Does every hunk serve the stated intent? Flag scope creep, accidental edits, refactors that snuck in, drive-by formatting.
-2. **Code smells / bloat** — `console.log`, `print`, leftover `TODO`/`FIXME` from this change, commented-out code, debug branches, unused imports, over-verbose logic, unnecessary new abstractions.
-3. **Artifacts** — Files that shouldn't be in a PR: editor configs, local env files, build outputs, generated files that should be gitignored, lockfile changes unrelated to dependency edits.
-4. **Regression risks** — Behavior changes in shared code, removed or renamed exports, signature changes on public APIs, changes to defaults, error-handling changes, anything subtle that could break callers. Each item must be specific enough that the reviewer and the developer can decide whether it's intentional.
-5. **Commit hygiene** — Fix-up / "wip" / vague-message commits, commits that should be squashed, messages that don't match what the commit actually changes. If the chain is messy, suggest a concrete squash/rewrite plan.
+1. **Scope** — Does every hunk serve the intent? Flag scope creep, accidental edits, refactors that snuck in, drive-by formatting. A diff that doesn't fit a single intent is a signal the PR is doing too much.
+2. **Completeness & proportion** — Measured against the intent, not as standalone code quality:
+   - *Under-delivered* — is the intent actually finished, or left half-built or stubbed?
+   - *Over-delivered / drifted* — did it grow past the intent (gold-plating, speculative generality, unrelated refactors)?
+   - *Companions* — does the change carry what makes it complete for this intent: tests for the new behavior, and docs/types/comments that describe it?
+3. **Loose ends & artifacts** — Diff-local things that shouldn't ship: leftover `console.log`/debug branches/commented-out code/stray `TODO` from this change, unused imports; and files that don't belong (editor configs, local env files, build outputs, unrelated lockfile churn).
+4. **Risks / heads-up** — What should the reviewer look at hardest, and what could bite users or maintainers later? Behavior changes in shared code, removed or renamed exports, signature or default changes on public APIs, error-handling changes, data migrations — anything subtle that could break callers or surprise users.
 
 ## Phase 5 — Report
 
-Output a single compact report in this order. If a section has nothing to say, write "No issues" rather than omitting it.
+Output a single compact report in this order.
 
 ```
 ## Summary
-<two sentences max: what this branch does>
+<what this branch does — the basis for the PR description>
 
-## Intent check
-<aligned, or list deviations>
+## Scope & completeness
+<intent in a phrase; aligned or deviations; under/over-delivery; missing tests or docs; loose ends — with file:line>
 
-## Cleanup
-- <bullets with file:line where useful>
-
-## Regression flags
-- <each one specific and actionable>
-
-## Commit hygiene
-- <bullets; include a squash plan if needed>
+## Risks / heads-up
+- <what to review hardest, or a one-line "low risk" note>
 
 ## Suggested PR title
 <one line, ready to paste>
@@ -99,6 +95,8 @@ Output a single compact report in this order. If a section has nothing to say, w
 ## Suggested PR description
 <markdown block, ready to paste>
 ```
+
+Be honest about emptiness: "Scope: aligned and complete" or "Low risk — isolated change" is a complete section. A short, true section beats a padded one; never invent findings to make a section look substantial.
 
 ### Suggested PR title: format
 
@@ -119,21 +117,22 @@ Optional scope in parentheses when the repo already uses it (look at recent `git
 Style:
 - Imperative mood, lowercase after the colon, no trailing period.
 - Aim for ≤ 72 characters so it doesn't truncate in GitHub.
-- If the branch already has a single, well-formed conventional commit, reuse its subject as the title rather than inventing a new one.
-- If the changes don't fit a single prefix, that's a signal the PR is doing too much — flag it under "Intent check" rather than papering over it with `chore:`.
+- If the changes don't fit a single prefix, that's a signal the PR is doing too much — flag it under "Scope & completeness" rather than papering over it with `chore:`.
 
 ### Suggested PR description: format
 
-The PR description is the most important output. Reviewers read it first; if it's good, the rest of the review goes faster.
+The most important output: reviewers read it first, and it becomes the release note.
 
 Required content:
 - **What changed**, in plain terms (one sentence to a few bullets, scaled to the change).
 - **Why** — the intent, in the user's own words from Phase 2.
-- **Regression risks** — the items from Phase 4 vector 4, restated for the reviewer. This is the most critical section; it lets the reviewer focus their attention where it matters.
+
+Optional:
+- **Risks / heads-up** — include only when there's something the reviewer or a future maintainer should know (the items from Phase 4 vector 4). Omit the section entirely for low-risk changes rather than writing "none".
 
 Length guidance: as compact as the change allows. A typo fix is one sentence. A multi-part feature is a short summary plus a tight bullet list. **No filler, no test-plan boilerplate, no marketing tone.** If you find yourself padding, stop.
 
-Line breaks: **no superfluous line breaks.** Only insert a blank line where it marks a genuine section delimitation (e.g. between the summary and a `**Why:**` block, or before a bullet list). Do not separate every sentence with a blank line, do not pad between bullets, and do not add leading or trailing blank lines.
+Line breaks: **no superfluous blank lines.** Insert one only at a genuine section break (before a `**Why:**` block or a bullet list) — not between every sentence, not as padding, not leading or trailing.
 
 Example, for a small feature:
 
@@ -144,8 +143,7 @@ Add `--dry-run` flag to the import command so users can preview changes without 
 
 **Why:** requested by ops to validate large imports before committing.
 
-**Regression risks:**
-- Default behavior unchanged, but the new flag short-circuits before the DB transaction — double-check no downstream code assumed the transaction always runs.
+**Heads-up:** the new flag short-circuits before the DB transaction — double-check no downstream code assumed the transaction always runs.
 ```
 
 ### Persist to files
@@ -174,4 +172,5 @@ Then tell the user, in one short message, the **resolved** file paths and the pl
 - Tree not clean → stop, do not review.
 - Intent unclear after inference → ask, do not guess silently.
 - Long list of "nice to have" cleanup → keep it tight; only call out things that actually matter for this PR.
-- Regression section empty on a non-trivial diff → re-check. Most non-trivial diffs have at least one risk worth flagging.
+- Manufacturing findings to make a section look substantial → stop. "Scope: aligned" and "Low risk" are valid results.
+- Sliding into line-level code review → stop. That pass is already done; stay at the scope-and-intent altitude.
