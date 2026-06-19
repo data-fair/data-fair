@@ -286,6 +286,40 @@ test.describe('REST datasets - Attachments', () => {
     assert.equal(res.data.total, 1)
   })
 
+  test('Replacing a line without its attachment removes the stale attachment dir', async () => {
+    const ax = testUser1
+    let res = await ax.post('/api/v1/datasets/rest-stale-att', {
+      isRest: true,
+      title: 'rest stale att',
+      schema: [
+        { key: 'attr1', type: 'integer' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    assert.equal(res.status, 201)
+
+    // create a line (fixed _id) with an attached file
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf')
+    form.append('attachment', attachmentContent, 'dir1/test.pdf')
+    form.append('_id', 'line1')
+    form.append('attr1', 10)
+    res = await ax.post('/api/v1/datasets/rest-stale-att/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.ok([200, 201].includes(res.status))
+    await waitForFinalize(ax, 'rest-stale-att')
+    let attachments = await lsAttachments('rest-stale-att')
+    assert.equal(attachments.length, 1)
+
+    // replace (PUT) the same line without an attachment and without referencing the old one
+    res = await ax.put('/api/v1/datasets/rest-stale-att/lines/line1', { attr1: 20 })
+    assert.equal(res.status, 200)
+    await waitForFinalize(ax, 'rest-stale-att')
+
+    // the now-orphaned attachment directory must have been removed (no disk leak)
+    attachments = await lsAttachments('rest-stale-att')
+    assert.equal(attachments.length, 0)
+  })
+
   test('Send attachment with special chars', async () => {
     const ax = testUser1
     let res = await ax.post('/api/v1/datasets', {

@@ -2,6 +2,7 @@
 // for now we create something similar based on recently updated datasets and applications
 
 import { Router } from 'express'
+import { reqSession } from '@data-fair/lib-express'
 import * as findUtils from '../misc/utils/find.ts'
 import { findActivityResources } from './service.ts'
 import { mergeActivity } from './operations.ts'
@@ -10,11 +11,8 @@ const router = Router()
 export default router
 
 router.get('', async (req, res) => {
-  // NOTE: this query() call uses an obsolete 2-arg signature and currently throws at runtime
-  // (find.js query() now requires a fieldsMap). Preserved bit-for-bit by the express-decoupling
-  // refactor — see docs/TODO.md (item 2c).
-  const query = findUtils.query(req, { status: 'status' })
-  const size = findUtils.pagination(req.query)[1]
-  const { datasets, applications } = await findActivityResources(query, size)
+  const reqQuery = req.query as Record<string, string>
+  const size = findUtils.pagination(reqQuery)[1]
+  const { datasets, applications } = await findActivityResources(req.getLocale(), reqQuery, reqSession(req), size)
   res.send({ results: mergeActivity(datasets, applications, size) })
 })
