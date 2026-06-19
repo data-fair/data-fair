@@ -171,7 +171,12 @@ async function main () {
   await seedProduits()
   await seedEquipements()
 
-  console.log('\nDone.')
+  console.log('\nDone. Browse the seeded data at:')
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements']) {
+    console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
+  }
+  console.log(`  agents config:   ${dfBaseURL}/admin/agents`)
+  console.log(`  agents activity: ${dfBaseURL}/agents-activity`)
 }
 
 main().then(() => {
