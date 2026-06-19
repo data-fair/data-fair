@@ -38,7 +38,7 @@
     "debug": "^4.4.0",
     "deep-object-diff": "^1.1.9",
     "diff": "^4.0.2",
-    "dompurify": "^3.2.4",
+    "dompurify": "^3.4.11",
     "dot-prop": "^9.0.0",
     "eslint-plugin-vue": "^10.8.0",
     "eslint-plugin-vuetify": "^2.7.2",
