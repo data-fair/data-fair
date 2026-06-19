@@ -3,7 +3,7 @@
     v-if="account"
     id="agents-activity"
     :adapter.prop="stateChangeAdapter"
-    :src="`/agents/${account.type}/${account.id}/activity`"
+    :src="`/agents/${account.type}/${account.id}/`"
     sync-path="/data-fair/agents-activity/"
     class="fill-height"
     resize="no"
