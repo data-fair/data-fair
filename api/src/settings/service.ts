@@ -189,13 +189,14 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees, newDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
   if (equal(oldDatasetsMetadata, newDatasetsMetadata)) return
   for (const oldMeta of oldDatasetsMetadata.custom ?? []) {
-    if (newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key)) {
+    // clean up the metadata off datasets when its definition was removed from the settings
+    if (!newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key)) {
       await mongo.datasets.updateMany(
         { 'owner.type': owner.type, 'owner.id': owner.id, [`customMetadata.${oldMeta.key}`]: { $exists: true } },
-        { $unset: { [`customMetadata.${oldMeta}`]: 1 } })
+        { $unset: { [`customMetadata.${oldMeta.key}`]: 1 } })
       await mongo.datasets.updateMany(
         { 'owner.type': owner.type, 'owner.id': owner.id, [`draft.customMetadata.${oldMeta.key}`]: { $exists: true } },
-        { $unset: { [`draft.customMetadata.${oldMeta}`]: 1 } })
+        { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
     }
   }
 }
@@ -293,7 +294,7 @@ export const upsertPublicationSite = async (ctx: SettingsWriteContext, body: any
     settings.publicationSites[index] = { ...body, settings: { ...(settings.publicationSites[index].settings || {}), ...(body.settings || {}) } }
   }
   validateSettings(settings)
-  await mongo.settings.replaceOne(owner, settings, { upsert: true })
+  await mongo.settings.replaceOne(ownerFilter, settings, { upsert: true })
   return { created: index === -1 }
 }
 

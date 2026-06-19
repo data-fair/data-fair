@@ -233,6 +233,23 @@ test.describe('publication sites', () => {
     }
   })
 
+  test('POST org-root publication site must not clobber a department settings doc', async () => {
+    // a department settings doc with its own publication site
+    await testUser1Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', { type: 'data-fair-portals', id: 'dep-portal', url: 'http://portal.com' })
+
+    // create an org-root publication site (no org-root settings doc exists yet, only the department one)
+    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'org-portal', url: 'http://portal.com' })
+
+    // the department site must survive — a replaceOne filtering on owner without the
+    // department:{$exists:false} clause would replace the department doc instead
+    const depSites = (await testUser1Org.get('/api/v1/settings/organization/test_org1:dep1/publication-sites')).data
+    assert.ok(depSites.some((s: any) => s.id === 'dep-portal' && s.department === 'dep1'), 'department publication site should survive')
+
+    // and the org-root site exists too
+    const orgSites = (await testUser1Org.get('/api/v1/settings/organization/test_org1/publication-sites')).data
+    assert.ok(orgSites.some((s: any) => s.id === 'org-portal'), 'org-root publication site should exist')
+  })
+
   test('contrib can publish on a "staging" publication site', async () => {
     const portalProd = { type: 'data-fair-portals', id: 'portal-staging', url: 'http://portal.com', settings: { staging: true } }
     await testUser1Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', portalProd)

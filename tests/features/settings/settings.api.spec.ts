@@ -100,6 +100,33 @@ test.describe('settings API', () => {
     assert.equal(res.data.apiKeys[0].notifiedJAt, undefined, 'notifiedJAt not exposed')
   })
 
+  test('removing a custom dataset-metadata definition unsets it on datasets', async () => {
+    const ax = testUser1Org
+
+    // define two custom metadata
+    await ax.put('/api/v1/settings/organization/test_org1', {
+      datasetsMetadata: { custom: [{ title: 'Foo metadata' }, { title: 'Bar metadata' }] }
+    })
+    const settings = (await ax.get('/api/v1/settings/organization/test_org1')).data
+    const fooKey = settings.datasetsMetadata.custom.find((c: any) => c.title === 'Foo metadata').key
+    const barKey = settings.datasetsMetadata.custom.find((c: any) => c.title === 'Bar metadata').key
+    assert.ok(fooKey && barKey)
+
+    // a dataset carrying both custom metadata values
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'with custom meta', schema: [] })).data
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { customMetadata: { [fooKey]: 'foo value', [barKey]: 'bar value' } })
+
+    // remove the Foo definition, keep Bar
+    await ax.put('/api/v1/settings/organization/test_org1', {
+      datasetsMetadata: { custom: [{ title: 'Bar metadata', key: barKey }] }
+    })
+
+    // the removed custom metadata must be unset on the dataset, the kept one preserved
+    const updated = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
+    assert.equal(updated.customMetadata?.[fooKey], undefined, 'removed custom metadata should be unset')
+    assert.equal(updated.customMetadata?.[barKey], 'bar value', 'kept custom metadata should remain')
+  })
+
   test('can still re-save settings after the worker set an expiration flag on a key', async () => {
     // create a key
     const created = (await testUser1.put('/api/v1/settings/user/test_user1', {
