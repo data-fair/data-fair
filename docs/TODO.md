@@ -20,17 +20,6 @@ Related docs: dormant correctness bugs from the perf scan in
 
 ## Suggested PR candidates (grouped)
 
-### PR 4 — Standalone correctness fixes `P1/P2 · S each`
-Independent, different modules — can ship together or individually.
-- `2c` **activity GET 500s on every call** `P1` — `activity/router.ts` calls `findUtils.query(req, {status:'status'})`
-  with an obsolete 2-arg signature → `Object.keys(undefined)` throws. Untested documented stub; fix + add an
-  api spec. (a code comment in `activity/router.ts` points here)
-- `B2` **missing `await` on `checkMatchingAttachment`** `P2` — `rest.ts:~853` `if (!checkMatchingAttachment(...))`
-  never awaits an async fn → always truthy → the `removeDir` branch is dead → stale attachment dirs kept
-  forever (disk leak).
-- `2d` **catalog DCAT `modified` always undefined** `P3` — `buildDcatCatalog` reads `datasets.dataUpdatedAt`
-  off the **array** instead of the `dataset` loop var. Fix = `dataset.…`; `/catalog/dcat` spec doesn't assert it.
-
 ### PR 5 — ES query / caching correctness `P1/P2 · S`
 - `B1` **`memoizedGetDataset` cache key collapses publicationSite objects** `P1` — `service.ts` `memoize(..., {primitive:true})`
   string-coerces the object args to `"[object Object]"`, so two different publication sites sharing a
@@ -77,6 +66,22 @@ enabler); (3) compact redundant API specs.
 ---
 
 ## Resolved during the series (for the record)
+- **PR 4 — Standalone correctness fixes** (`2c`/`B2`/`2d`) → all three fixed, each with a failing test first:
+  - `2c` **activity GET 500s on every call** → FIXED (`activity/router.ts` + `activity/service.ts`). The
+    `findUtils.query(req, { status: 'status' })` call used an obsolete 2-arg signature, so `Object.keys(undefined)`
+    (the missing `fieldsMap`) threw on every request. The router now passes `(reqQuery, locale, sessionState, …)`
+    and query-building moved into the service, which builds a permission-filtered query per collection
+    (`datasets` and `applications`). Failing tests in `activity.api.spec.ts` ("returns the recently updated
+    datasets and applications the session can read" — was 500 — and an anonymous-leak guard).
+  - `B2` **missing `await` on `checkMatchingAttachment`** → FIXED (`datasets/utils/rest.ts`). The
+    `if (!checkMatchingAttachment(...))` guard never awaited the async fn, so the returned promise was always
+    truthy → the `removeDir` branch was dead → orphaned attachment dirs were kept forever (disk leak). Now
+    `if (!await checkMatchingAttachment(...))`. Failing test in `rest-datasets-attachments.api.spec.ts`
+    ("Replacing a line without its attachment removes the stale attachment dir").
+  - `2d` **catalog DCAT `modified` always undefined** → FIXED (`catalog/operations.ts`). `buildDcatCatalog`
+    read `datasets.dataUpdatedAt` off the **array** instead of the `dataset` loop var, so every entry's
+    `modified` was undefined. Fixed to `dataset.dataUpdatedAt || dataset.updatedAt`. Failing unit test in
+    `catalog-operations.unit.spec.ts` ("sets modified from each dataset own dataUpdatedAt …").
 - **PR 3 — Settings document-targeting & metadata bugs** (`1`/`2b`) → both fixed, each with a failing
   test first:
   - `1` **`updateDatasetsMetadata` `$unset` broken + condition inverted** → FIXED (`settings/service.ts`).
