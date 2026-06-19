@@ -459,3 +459,29 @@ export const escapeFilter = (val: any): any => {
     else return char
   }).join('')
 }
+
+/**
+ * Builds the aggregations object for the words aggregation.
+ * significant_text is costly, and we look for approximative statistics in words-agg
+ * not for exhaustivity, so we run it on a sample.
+ */
+export const buildWordsAggs = (aggType: 'terms' | 'significant_text', field: string, size: number) => {
+  const aggs: Record<string, any> = {
+    sample: {
+      sampler: {
+        shard_size: 1000
+      },
+      aggregations: {
+        words: {
+          [aggType]: { field, size }
+        }
+      }
+    }
+  }
+
+  if (aggType === 'significant_text') {
+    aggs.sample.aggregations.words.significant_text.filter_duplicate_text = true
+  }
+
+  return aggs
+}

@@ -3,7 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
-import { columnOperationsHint } from './operations.ts'
+import { columnOperationsHint, buildWordsAggs } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 
 export default async (client: Client, dataset: any, query: Record<string, any>, abortContext?: EsAbortContext) => {
@@ -26,24 +26,7 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
 
   const aggType = (query.q || query._c_q || query.qs) ? 'significant_text' : 'terms'
 
-  esQuery.aggs = {
-    // signifant_text is costly, and we look for approximative statistics in words-add
-    // not for exhaustivity. So using a sample is alright
-    sample: {
-      sampler: {
-        shard_size: 1000
-      },
-      aggregations: {
-        words: {
-          [aggType]: { field, size }
-        }
-      }
-    }
-  }
-
-  if (aggType === 'signifant_text') {
-    esQuery.aggs.sample.aggregations.words.significant_text.filter_duplicate_text = true
-  }
+  esQuery.aggs = buildWordsAggs(aggType, field, size)
 
   // console.log(esQuery)
   const esResponse: any = await timedEsCall(abortContext, () => client.search({
