@@ -20,16 +20,6 @@ Related docs: dormant correctness bugs from the perf scan in
 
 ## Suggested PR candidates (grouped)
 
-### PR 3 — Settings document-targeting & metadata bugs `P1 · S–M`
-- `1` **`updateDatasetsMetadata` `$unset` broken + condition inverted** — the `$unset` key interpolates
-  the object `oldMeta` (→ `customMetadata.[object Object]`) instead of `oldMeta.key`, and the guard
-  `if (newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key))` looks inverted (cleans up when
-  the key still exists). Custom-metadata cleanup never works correctly. (`settings/service.ts`)
-- `2b` **POST publication-sites replaces the wrong settings doc** — `mongo.settings.replaceOne(owner, …)`
-  filters on `owner` with no `department: { $exists: false }` clause (PUT/PATCH/DELETE use `ownerFilter`);
-  for an org with department settings docs the POST can replace the wrong document. Failing test:
-  org-root site sync while department settings exist. `P2`.
-
 ### PR 4 — Standalone correctness fixes `P1/P2 · S each`
 Independent, different modules — can ship together or individually.
 - `2c` **activity GET 500s on every call** `P1` — `activity/router.ts` calls `findUtils.query(req, {status:'status'})`
@@ -87,6 +77,19 @@ enabler); (3) compact redundant API specs.
 ---
 
 ## Resolved during the series (for the record)
+- **PR 3 — Settings document-targeting & metadata bugs** (`1`/`2b`) → both fixed, each with a failing
+  test first:
+  - `1` **`updateDatasetsMetadata` `$unset` broken + condition inverted** → FIXED (`settings/service.ts`).
+    The guard was inverted (`if (newDatasetsMetadata.custom?.some(…))` → `if (!… .some(…))`) so cleanup
+    now runs when a custom-metadata definition is *removed*, and the `$unset` keys interpolated the whole
+    `oldMeta` object (`customMetadata.[object Object]`) → fixed to `oldMeta.key` for both the live and
+    `draft.` paths. Failing test in `settings.api.spec.ts` ("removing a custom dataset-metadata definition
+    unsets it on datasets") asserts the removed key is `$unset` off the dataset while a kept key survives.
+  - `2b` **POST publication-sites replaces the wrong settings doc** → FIXED (`settings/service.ts`).
+    `upsertPublicationSite` filtered `replaceOne(owner, …)` with no `department: { $exists: false }` clause,
+    so an org-root POST could replace a department settings doc (`replaceOne` hits the first `{type,id}`
+    match). Now uses `ownerFilter`, matching PUT/PATCH/DELETE. Failing test in `publication-sites.api.spec.ts`
+    ("POST org-root publication site must not clobber a department settings doc").
 - **PR 2 — Datasets draft / notification correctness** (`12`/`13`/`10`/`11`) → all four triaged:
   - `12` **draft-validated notification `localizedParams` mis-shaped** → FIXED. Reshaped to
     `{ fr: { cause }, en: { cause } }` and dropped the cast (`datasets/routes/write.ts`). Before the fix
