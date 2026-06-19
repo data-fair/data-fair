@@ -116,7 +116,8 @@
     "email": "alban.mouton@koumoul.com",
     "password": {
       "clear": "passwd"
-    }
+    },
+    "defaultOrg": "dev_fixtures"
   },
   {
     "id": "test_superadmin",
