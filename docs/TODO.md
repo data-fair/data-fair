@@ -31,17 +31,6 @@ Independent, different modules — can ship together or individually.
 - `2d` **catalog DCAT `modified` always undefined** `P3` — `buildDcatCatalog` reads `datasets.dataUpdatedAt`
   off the **array** instead of the `dataset` loop var. Fix = `dataset.…`; `/catalog/dcat` spec doesn't assert it.
 
-### PR 5 — ES query / caching correctness `P1/P2 · S`
-- `B1` **`memoizedGetDataset` cache key collapses publicationSite objects** `P1` — `service.ts` `memoize(..., {primitive:true})`
-  string-coerces the object args to `"[object Object]"`, so two different publication sites sharing a
-  slug-based ref within the 30 s TTL collide → a dataset could be served (or 404'd) for the wrong site.
-  Multi-domain exposure. Fix: a stable primitive site key or a custom normalizer.
-- `9` **words-agg `significant_text` typo** `P2` — guard tests `aggType === 'signifant_text'` (missing `i`)
-  → `filter_duplicate_text` never set → the words aggregation never de-duplicates near-identical text.
-  (`datasets/es/words-agg.ts:44`)
-- `2` **memoize cache path has no test coverage** `P3` — `datasets/middlewares` memoize is bypassed under
-  test (`NODE_ENV !== 'development'`). Coverage gap, not a bug.
-
 ### PR 6 — Upstream `@data-fair/lib-*` fixes `P2 · M`
 Cross-repo (lib-node / lib-express) + version bumps; group as one upstream pass.
 - `B3` **events-queue retry drops the notification** `P2` — `lib-node/events-queue.js:63` `unshift()` called
@@ -77,6 +66,27 @@ enabler); (3) compact redundant API specs.
 ---
 
 ## Resolved during the series (for the record)
+- **PR 5 — ES query / caching correctness** (`B1`/`9`/`2`) → both bugs fixed, each with a failing
+  unit test first; the coverage-gap item left as-is:
+  - `B1` **`memoizedGetDataset` cache key collapses publicationSite objects** → FIXED. The memoize used
+    `{ primitive: true, length: 6 }`, so the object `publicationSite` / `mainPublicationSite` args
+    string-coerced to `"[object Object]"` and every site collapsed to one cache key → a dataset could be
+    served (or 404'd) for the wrong site within the 30 s TTL (multi-domain exposure). Replaced with a
+    custom `normalizer` (`getDatasetCacheKey` in the new pure `datasets/operations.ts`) that builds a
+    stable per-site key from `owner.type:owner.id:type:id` and the three boolean flags, ignoring the
+    non-cacheable args (db, acceptedStatuses, reqBody) like the old `length: 6`. Failing test in
+    `tests/features/datasets/dataset-cache-key.unit.spec.ts` ("different publication sites must not
+    collide") asserts distinct keys for distinct sites.
+  - `9` **words-agg `significant_text` typo** → FIXED. The guard tested `aggType === 'signifant_text'`
+    (missing `i`) so `filter_duplicate_text` was never set and the aggregation never de-duplicated
+    near-identical text. Extracted the agg builder into the pure `buildWordsAggs` in `datasets/es/operations.ts`
+    (config-free, so unit-testable) and corrected the comparison. Failing test in
+    `tests/features/datasets/es/words-agg.unit.spec.ts` asserts `filter_duplicate_text === true` for a
+    `significant_text` aggregation.
+  - `2` **memoize cache path has no test coverage** → NO ACTION (coverage gap, not a bug). `readDataset`
+    only uses `memoizedGetDataset` when `NODE_ENV !== 'development'`, so the memoize/normalizer path stays
+    bypassed under test; the normalizer itself is now unit-covered via `getDatasetCacheKey`. Closing the
+    end-to-end gap belongs with the PR 8 test-suite work.
 - **PR 3 — Settings document-targeting & metadata bugs** (`1`/`2b`) → both fixed, each with a failing
   test first:
   - `1` **`updateDatasetsMetadata` `$unset` broken + condition inverted** → FIXED (`settings/service.ts`).

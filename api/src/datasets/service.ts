@@ -19,6 +19,7 @@ import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExten
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
 import { computeModified } from './utils/compute-modified.ts'
+import { getDatasetCacheKey } from './operations.ts'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
 import i18n from 'i18n'
 import filesStorage from '#files-storage'
@@ -205,10 +206,12 @@ export const getDataset = async (datasetId: string, publicationSite: string, mai
 export const memoizedGetDataset = memoize(getDataset, {
   profileName: 'getDataset',
   promise: true,
-  primitive: true,
+  // custom normalizer: publicationSite/mainPublicationSite are objects that the default
+  // primitive normalizer would collapse to "[object Object]" — see getDatasetCacheKey.
+  // It also restricts the key to the first 6 args (ignoring db, acceptedStatuses, reqBody).
+  normalizer: getDatasetCacheKey,
   max: 10000,
-  maxAge: 1000 * 30, // 30s
-  length: 6 // in memoized mode ignore db, acceptedStatuses and reqBody
+  maxAge: 1000 * 30 // 30s
 })
 
 /**
