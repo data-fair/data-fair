@@ -97,6 +97,32 @@ async function seedProduits () {
   console.log(`${id}: seeded (CSV file)`)
 }
 
+/** Geo dataset: points on a map (public facilities). The lat/lon columns are
+ * tagged with geo concepts in the upload body, so the map view works as soon as
+ * indexing completes — no post-upload schema patch needed. */
+async function seedEquipements () {
+  const id = 'fixtures-equipements'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  const csv = [
+    'nom,type,commune,lat,lon',
+    'Mairie de Rennes,Administration,Rennes,48.1113,-1.6800',
+    'Bibliothèque Champs Libres,Culture,Rennes,48.1045,-1.6759',
+    'Hôtel de Ville de Nantes,Administration,Nantes,47.2173,-1.5534',
+    'Gare de Brest,Transport,Brest,48.3876,-4.4783',
+    'Université de Vannes,Éducation,Vannes,47.6587,-2.7603',
+    'Port de Lorient,Transport,Lorient,47.7270,-3.3700'
+  ].join('\n') + '\n'
+  await uploadCsv(id, 'equipements.csv', {
+    title: 'Équipements publics',
+    description: 'Points géolocalisés affichables sur une carte (exemple géographique).',
+    schema: [
+      { key: 'lat', type: 'number', 'x-refersTo': 'http://schema.org/latitude' },
+      { key: 'lon', type: 'number', 'x-refersTo': 'http://schema.org/longitude' }
+    ]
+  }, csv)
+  console.log(`${id}: seeded (geo)`)
+}
+
 /** REST editable dataset: a back-office worklist (request tracking). */
 async function seedSuiviDemandes () {
   const id = 'fixtures-suivi-demandes'
@@ -143,6 +169,7 @@ async function main () {
 
   await seedSuiviDemandes()
   await seedProduits()
+  await seedEquipements()
 
   console.log('\nDone.')
 }
