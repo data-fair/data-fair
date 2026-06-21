@@ -80,3 +80,21 @@ test.describe('subagent prompt is the single home for the rich guide', () => {
     assert.ok(datasetDataSubagent.prompt.includes(filtersGuide))
   })
 })
+
+// Ownership boundary: only the data tools author filter strings. The orchestrator must not
+// dictate filter/URL syntax to the subagent (it lacks the suffix rule and gets it wrong), and
+// the subagent must build links from its verbatim filterQuery, not from the task's wording.
+test.describe('filter-authorship ownership is stated where the leak happens', () => {
+  test('delegation description tells the caller to describe the need, not the filter syntax', () => {
+    for (const desc of [datasetDataSubagent.annotations.fr.description, datasetDataSubagent.annotations.en.description]) {
+      assert.match(desc, /langage naturel|plain language/)
+      assert.match(desc, /filterQuery/)
+      assert.match(desc, /syntaxe de filtre|filter or URL syntax/)
+    }
+  })
+
+  test('subagent prompt forbids hand-assembling links and makes filterQuery the only source', () => {
+    assert.match(datasetDataSubagent.prompt, /never hand-assemble/)
+    assert.match(datasetDataSubagent.prompt, /only correct filter syntax/)
+  })
+})

@@ -3,11 +3,11 @@ import { filtersGuide } from './_utils.js'
 export const annotations = {
   fr: {
     title: 'Interroger les données d\'un jeu de données',
-    description: 'Interroger les lignes d\'un jeu de données, calculer des agrégations et explorer les valeurs des colonnes. Fournissez l\'identifiant du jeu de données et décrivez les données dont vous avez besoin ; si vous connaissez déjà les colonnes (clés et types), transmettez-les pour qu\'il interroge directement sans refaire un appel au schéma.'
+    description: 'Interroger les lignes d\'un jeu de données, calculer des agrégations et explorer les valeurs des colonnes. Décris les données voulues en langage naturel — n\'écris pas toi-même la syntaxe de filtre ou d\'URL : le sous-agent interroge et renvoie un filterQuery prêt à coller dans un lien table/map. Fournis l\'identifiant du jeu de données ; si tu connais déjà les colonnes (clés et types), transmets-les pour qu\'il interroge directement sans refaire un appel au schéma.'
   },
   en: {
     title: 'Query dataset data',
-    description: 'Query dataset rows, compute aggregations, and explore field values. Provide the dataset ID and describe what data you need; if you already know the columns (keys and types), pass them too so it can query directly without re-fetching the schema.'
+    description: 'Query dataset rows, compute aggregations, and explore field values. Describe the data you want in plain language — do not write filter or URL syntax yourself: the sub-agent queries and returns a ready-to-paste filterQuery for a table/map link. Provide the dataset ID; if you already know the columns (keys and types), pass them too so it can query directly without re-fetching the schema.'
   }
 } as const
 
@@ -28,6 +28,7 @@ Format:
 - Present results concisely with clear labels
 - For numeric results, round to 2 decimal places when appropriate
 - When the result is tabular or aggregated, include the key values as a compact markdown table (the relevant rows or aggregation groups, typically up to ~20) so the parent assistant can render a table or small chart — add a short summary of the takeaways, but never paste large raw result dumps
+- Any table/map link you write must be datasetUrl + /table?<filterQuery> (or /map), reusing the verbatim filterQuery below — never hand-assemble \`column=value\` filter params, even if your task phrased the filter differently
 - Respond in the same language as the user's question
 
 Response structure:
@@ -41,7 +42,7 @@ Your response will be read by a parent assistant that may need to ask you follow
    - **datasetTitle**: the dataset title(s) from the schema
    - **columns**: the column keys and titles that were relevant to the query
    - **filters**: the exact filters, q, bbox, geoDistance, dateMatch, and sort parameters you used (as key-value pairs), so the parent assistant can refine or extend them in follow-up queries
-   - **filterQuery**: copy the "Filter query:" line from the tool output verbatim (URL query string format). The parent assistant uses this to link to a filtered table view.
+   - **filterQuery**: copy the "Filter query:" line from the tool output verbatim (URL query string format) — this is the only correct filter syntax; never reconstruct it from how the task worded the filter. Both you and the parent assistant use it to link to a filtered table view.
    - **totalResults**: the total number of matching rows
    - **relatedColumns**: other columns from the schema that were not directly used but could be useful for follow-up exploration (e.g. if the user asked about cities, mention that a region or department column also exists)
    - **suggestions**: 1-3 brief ideas for follow-up analyses the data could support
