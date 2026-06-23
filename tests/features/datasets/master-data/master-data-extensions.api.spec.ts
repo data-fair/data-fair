@@ -166,6 +166,15 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     assert.deepEqual(extraMultiProp.enum, ['multi1', 'multi2'])
     assert.ok(slave.schema.find((p: any) => p.key === '_siret._error'))
     assert.ok(!slave.schema.find((p: any) => p.key === '_siret.siret'))
+
+    const formSchema = (await ax.get('/api/v1/datasets/slave/schema', {
+      params: { mimeType: 'application/schema+json', extension: 'true', arrays: true }
+    })).data
+    const extraMultiFormProp = formSchema.properties['_siret.extraMulti']
+    assert.equal(extraMultiFormProp.type, 'array')
+    assert.ok(extraMultiFormProp['x-extension'], 'multi-valued extension field must keep x-extension at the array level')
+    assert.ok(formSchema.properties['_siret.extra']['x-extension'])
+
     let results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results.length, 4)
     assert.equal(results[0]['_siret.extra'], 'Extra information')
