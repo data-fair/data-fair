@@ -1,20 +1,18 @@
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { Dataset, Settings } from '#types'
 
-import _config from 'config'
+import config from '#config'
 import datasetAPIDocs, { mergedSampleDataset } from './dataset-api-docs.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.ts'
+import { datasetOperationGrantedBy } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import * as datasetUtils from '../src/datasets/utils/index.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
-
-type DatasetApiDocsOptions = { merged?: boolean }
-
-const config = _config as any
+type DatasetApiDocsOptions = { merged?: boolean, filterOperations?: string[] }
 
 /**
  * Tag remapping for the merged root doc:
@@ -134,9 +132,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       description: 'Mettre à jour les informations du jeu de données.',
       operationId: 'writeDescription',
       'x-permissionClass': 'write',
-      'x-altPermissions': [
-        { id: 'writeDescriptionBreaking', class: 'write', title: 'Mettre à jour les informations du jeu de données qui peuvent déclencher une rupture de compatibilité' }
-      ],
       tags: ['Métadonnées'],
       requestBody: {
         description: 'Les informations à modifier sur le jeu de données.',
@@ -348,7 +343,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       description: 'Envoyer une notification relative au jeu de données à la visibilité interne au compte.',
       operationId: 'sendUserNotification',
       'x-permissionClass': 'write',
-      'x-altPermissions': [{ id: 'sendUserNotificationPublic', class: 'write', title: 'Envoyer une notification relative au jeu de données à la visibilité externe au compte' }],
       tags: ['Métadonnées'],
       requestBody: {
         description: 'Le contenu de la notification.',
@@ -366,6 +360,44 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           }
         },
         ...errorResponses
+      }
+    }
+  }
+
+  if (ds.extensions?.length) {
+    api.paths['/_simulate-extension'] = {
+      post: {
+        summary: 'Simuler les extensions',
+        description: 'Appliquer les extensions configurées du jeu de données à une ligne fournie, sans l\'enregistrer, et retourner la ligne enrichie. Utile pour prévisualiser le résultat des extensions.',
+        operationId: 'simulateExtension',
+        'x-permissionClass': 'write',
+        tags: ['Données'],
+        parameters: [
+          {
+            in: 'query',
+            name: 'arrays',
+            description: 'Si "true", les valeurs multivaluées sont retournées sous forme de tableaux plutôt que concaténées en chaînes de caractères.',
+            schema: { type: 'boolean', default: false }
+          }
+        ],
+        requestBody: {
+          description: 'La ligne à enrichir avec les extensions.',
+          required: true,
+          content: {
+            'application/json': {
+              schema: { type: 'object' }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'La ligne enrichie par les extensions.',
+            content: {
+              'application/json': { schema: { type: 'object' } }
+            }
+          },
+          ...writeErrorResponses
+        }
       }
     }
   }
@@ -610,7 +642,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           type: 'string'
         }
       }
-      /** Clones a /lines path under /own/{owner} and rewrites permissions, summaries and tags to the line-ownership variant. */
+      /** Clones a /lines path under /own/{owner} and rewrites operationIds, permissions, summaries and tags to the line-ownership variant. */
       const convertOwnLineApiPath = (apiPath: string) => {
         if (!api.paths[apiPath]) return
         const targetPath = '/own/{owner}' + apiPath
@@ -787,6 +819,24 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           ...readErrorResponses
         }
       }
+    }
+  }
+
+  // Contextual filtering: keep only operations the caller can actually perform.
+  // Applied before the tag computation so removed operations don't leave dangling tags.
+  const filterOperations = options?.filterOperations
+  if (filterOperations) {
+    const httpMethods = new Set(['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'])
+    const allowed = new Set(filterOperations)
+    for (const [path, methods] of Object.entries(api.paths) as [string, any][]) {
+      for (const [m, op] of Object.entries(methods) as [string, any][]) {
+        if (!httpMethods.has(m) || !op?.operationId) continue
+        // keep the route if the caller holds any operation that grants it (the op itself or one of
+        // its grant-alternatives), resolved from the shared source of truth.
+        if (!datasetOperationGrantedBy(op.operationId).some((id) => allowed.has(id))) delete methods[m]
+      }
+      // drop the path once it has no operation left (ignore path-level keys like parameters/summary).
+      if (!Object.keys(methods).some(k => httpMethods.has(k))) delete api.paths[path]
     }
   }
 
