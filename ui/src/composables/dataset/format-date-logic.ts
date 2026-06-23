@@ -1,9 +1,11 @@
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc.js'
-import localizedFormat from 'dayjs/plugin/localizedFormat.js'
 
+// only the utc plugin is needed here (for utcOffset()/utc()); the localizedFormat plugin behind the
+// 'lll'/'L' tokens is already extended on the shared dayjs singleton by @data-fair/lib-vue's
+// useLocaleDayjs, so we must not re-import it from app source (Vite serves that CJS plugin without a
+// usable default export). The node unit test extends localizedFormat itself if it ever needs it.
 dayjs.extend(utc)
-dayjs.extend(localizedFormat)
 
 // Data-Fair stores date-time values with their original UTC offset preserved (e.g.
 // "2024-06-15T10:00:00+02:00"), never normalized to "Z". When displaying such a value

@@ -162,6 +162,7 @@
               :fixed="fixed === header.key"
               :header="header as TableHeaderWithProperty"
               :no-fix="selectable || edit"
+              :time-zone-label="dateTimeColumnZone(header)"
               :sort="header.key === sort?.key ? sort.direction : undefined"
               @filter="addFilter"
               @hide="hideHeader(header)"
@@ -453,6 +454,7 @@
 import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
+import { dateTimeZoneLabel } from '../../../composables/dataset/format-date-logic'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
@@ -570,6 +572,20 @@ const extraParams = computed(() => ({
 }))
 const indexedAt = ref<string>()
 const { baseFetchUrl, total, next, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
+
+// caption under a date-time column header stating the timezone its values are displayed in
+// (the offset comes from a real cell so it is DST-correct); empty when values are shown in the
+// viewer's own timezone (UTC-stored / offset-less) — the per-cell tooltip covers that case
+const dateTimeColumnZone = (header: TableHeader): string | undefined => {
+  if (header.property?.format !== 'date-time') return undefined
+  // timeZone is part of the runtime schema but absent from the generated SchemaProperty type
+  const fieldTimeZone = (header.property as { timeZone?: string | null }).timeZone
+  const sample = results.value.find(r => r.raw?.[header.key] != null)?.raw[header.key]
+  const label = dateTimeZoneLabel(sample, { timeZone: fieldTimeZone })
+  if (label) return label
+  if (sample === undefined && fieldTimeZone) return fieldTimeZone
+  return undefined
+}
 
 // Pagination mode: slice results into pages, fetch more via next when needed
 const paginationPage = ref(0)

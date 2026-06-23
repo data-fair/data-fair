@@ -52,6 +52,8 @@
     <span
       v-else
       class="pr-2"
+      :class="{ 'item-value-date-time': !!dateTimeTitle }"
+      :title="dateTimeTitle || undefined"
     >
       {{ extendedValue.formatted }}
     </span>
@@ -87,15 +89,22 @@ fr:
   filterValue: Filtrer les lignes qui ont la même valeur dans cette colonne
   showFullValue: Afficher la valeur entière
   download: "Télécharger {name} (nouvelle fenêtre)"
+  dtSource: Source
+  dtUtc: UTC
+  dtLocal: Votre fuseau
 en:
   filterValue: Filter the lines that have the same value in this column
   showFullValue: Show full value
   download: "Download {name} (new window)"
+  dtSource: Source
+  dtUtc: UTC
+  dtLocal: Your timezone
 </i18n>
 
 <script setup lang="ts">
 import { type SchemaProperty } from '#api/types'
 import type { ExtendedResultValue } from '../../../composables/dataset/lines'
+import { dateTimeBreakdown } from '../../../composables/dataset/format-date-logic'
 import { mdiFilterVariant, mdiLoupe, mdiMagnifyPlus } from '@mdi/js'
 
 const { value: extendedValue, property } = defineProps({
@@ -113,6 +122,21 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const localeDayjs = useLocaleDayjs()
+const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+// native-title tooltip for a date-time cell: its value in the source timezone, in UTC and in the
+// viewer's own timezone — only set when those equivalents actually differ (see format-date-logic)
+const dtLabelKeys = { source: 'dtSource', utc: 'dtUtc', local: 'dtLocal' } as const
+const dateTimeTitle = computed(() => {
+  if (property.format !== 'date-time') return ''
+  const lines = dateTimeBreakdown(localeDayjs.dayjs, extendedValue.raw, viewerZone)
+  if (lines.length <= 1) return ''
+  return lines.map(line => {
+    const zoneSuffix = (line.zone && line.kind !== 'utc') ? ` (${line.zone})` : ''
+    return `${t(dtLabelKeys[line.kind])} : ${line.time}${zoneSuffix}`
+  }).join('\n')
+})
 </script>
 
 <style>
@@ -125,6 +149,11 @@ const { t } = useI18n()
   top: 8px;
   left: 2px;
   border: 2px solid #ccc;
+}
+.item-value-date-time {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: help;
 }
 .item-value-hover-actions {
   position: absolute;

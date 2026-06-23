@@ -140,23 +140,26 @@ UTC carries no *source* timezone to honour, so the viewer's timezone is the leas
 Locale (FR/EN) for month names and `L`/`lll` patterns comes from `useLocaleDayjs`
 (`@data-fair/lib-vue`), driven by the session language.
 
-### 6. Making the timezone visible — header label + cell tooltip
+### 6. Making the timezone visible — column "Description" + cell title
 
 Showing a date-time in its source timezone is faithful but, on its own, ambiguous: `10:00` gives no
 hint of *which* zone it is, nor what it would be in UTC or in the reader's own time. Two affordances
-(both built on `format-date-logic.ts`, both unit-tested) close that gap:
+(both built on `format-date-logic.ts`, the helpers unit-tested) close that gap without cluttering the
+grid:
 
-- **Column header caption** (`dataset-table.vue`, `dateTimeColumnZone`): under a date-time column's
-  title we render *"Heures en {zone}" / "Times in {zone}"*, e.g. `Europe/Paris (UTC+1)`. The zone
-  **name** comes from `field.timeZone` (when declared) and the **offset** from a real cell of that
-  column (`dateTimeZoneLabel`), so it is DST-correct for the data actually shown. When the column's
-  values are displayed in the viewer's own timezone (UTC-stored / offset-less), no fixed-zone caption
-  is shown — the per-cell tooltip clarifies instead.
-- **Cell tooltip** (`dataset-table-value.vue`, `dateTimeBreakdown`): hovering a date-time cell lists
-  the value in its **source** zone, in **UTC**, and in the **viewer's** timezone — skipping any line
-  that would merely repeat the source. The tooltip only appears when there is more than one distinct
-  line (i.e. when the equivalents actually differ for this viewer), so a reader already in the source
-  zone sees no redundant decoration beyond a discreet dotted underline.
+- **Column "Description"** (`dataset-table.vue` computes `dateTimeColumnZone(header)` and passes it as
+  `timeZoneLabel` to `dataset-table-header-menu.vue`): the column header menu's *Description* section
+  states *"Les horodatages sont affichés dans le fuseau horaire de la donnée : {zone}"* / *"Times are
+  shown in the data's own timezone: {zone}"*, e.g. `Europe/Paris (UTC+1)`. The zone **name** comes
+  from `field.timeZone` (when declared) and the **offset** from a real cell of that column
+  (`dateTimeZoneLabel`), so it is DST-correct for the data actually shown. When the column's values
+  are displayed in the viewer's own timezone (UTC-stored / offset-less) the label is omitted — the
+  per-cell title clarifies instead.
+- **Cell `title`** (`dataset-table-value.vue`, `dateTimeBreakdown`): each date-time cell carries a
+  native `title` (a plain multi-line tooltip) giving the value in its **source** zone, in **UTC**, and
+  in the **viewer's** timezone — skipping any line that would merely repeat the source. The title is
+  set only when there is more than one distinct line (i.e. the equivalents actually differ for this
+  viewer); such cells get a discreet dotted underline / `cursor: help` as the only decoration.
 
 `formatUtcOffset` renders the compact `UTC` / `UTC+1` / `UTC+5:30` labels; the viewer's zone name comes
 from `Intl.DateTimeFormat().resolvedOptions().timeZone`.
@@ -181,7 +184,7 @@ from `Intl.DateTimeFormat().resolvedOptions().timeZone`.
   shown in *its own* offset; the column can look inconsistent, but every cell is individually
   faithful. Declaring a field `timeZone` and re-ingesting normalizes the column.
 - **UTC (`Z`) data.** Shown in the viewer's timezone by design (no source tz to preserve); the cell
-  tooltip still exposes the UTC value so nothing is hidden. If a dataset wants a *fixed* display
+  `title` still exposes the UTC value so nothing is hidden. If a dataset wants a *fixed* display
   timezone for UTC data, that is a future enhancement (a per-field "display timezone"), not a bug in
   the current model.
 - **Naive timestamps (`2024-01-15 10:00:00`).** Interpreted on ingest in the field/default timezone
@@ -219,8 +222,9 @@ from `Intl.DateTimeFormat().resolvedOptions().timeZone`.
 | Aggregations | `api/src/datasets/es/values-agg.ts`, `api/src/datasets/es/metric-agg.ts` |
 | UI formatter | `ui/src/composables/dataset/lines.ts` (`formatValue`) |
 | UI date logic (own-tz, offset/zone labels, breakdown — unit-tested) | `ui/src/composables/dataset/format-date-logic.ts` |
-| Table: header zone caption | `ui/src/components/dataset/table/dataset-table.vue` (`dateTimeColumnZone`) |
-| Table/card: cell zone tooltip | `ui/src/components/dataset/table/dataset-table-value.vue` |
+| Table: derive column zone label | `ui/src/components/dataset/table/dataset-table.vue` (`dateTimeColumnZone`) |
+| Column menu "Description" zone note | `ui/src/components/dataset/table/dataset-table-header-menu.vue` (`timeZoneLabel` prop) |
+| Table/card: cell zone `title` | `ui/src/components/dataset/table/dataset-table-value.vue` |
 | Map popups | `ui/src/components/dataset/map/use-map.ts` |
 | Unit test | `tests/features/datasets/format-date.unit.spec.ts` |
 
