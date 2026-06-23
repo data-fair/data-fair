@@ -175,6 +175,9 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     assert.ok(extraMultiFormProp['x-extension'], 'multi-valued extension field must keep x-extension at the array level')
     assert.ok(formSchema.properties['_siret.extra']['x-extension'])
 
+    const simulated = (await ax.post('/api/v1/datasets/slave/_simulate-extension?arrays=true', { siret: '82898347800011' })).data
+    assert.deepEqual(simulated['_siret.extraMulti'], ['multi1', 'multi2'])
+
     let results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results.length, 4)
     assert.equal(results[0]['_siret.extra'], 'Extra information')
