@@ -320,6 +320,7 @@
     :model-value="!!showMapPreview"
     :scrim="false"
     max-width="800"
+    @update:model-value="showMapPreview = undefined"
   >
     <v-card v-if="showMapPreview">
       <v-btn
@@ -352,6 +353,7 @@
     v-if="edit"
     :model-value="!!showDeleteDialog"
     max-width="500"
+    persistent
   >
     <v-card :title="t('deleteLine')">
       <v-card-text>
@@ -382,6 +384,7 @@
     v-if="edit"
     :model-value="!!showEditDialog"
     max-width="800"
+    persistent
   >
     <v-card
       :loading="!editedLine"
