@@ -4,6 +4,7 @@ import _config from 'config'
 import prettyBytes from 'pretty-bytes'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as masterData from './master-data.js'
+import { datasetContext, isDatasetOperationApplicable } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import capabilities from './capabilities.js'
 import * as datasetUtils from '../src/datasets/utils/index.ts'
 import { acceptedMetricAggs } from '../src/datasets/es/metric-agg.ts'
@@ -1225,23 +1226,16 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
 
   // Variant-specific pruning is skipped in merged mode so the root doc keeps every route.
   if (!merged) {
-    if ((ds as any).isVirtual || (ds as any).isRest || (ds as any).isMetaOnly) {
-      delete api.paths['/raw']
-      delete api.paths['/convert']
-      delete api.paths['/full']
-      delete api.paths['/data-files']
-      delete api.paths['/data-files/{filePath}']
-    }
-
-    if ((ds as any).isMetaOnly) {
-      delete api.paths['/lines']
-      delete api.paths['/schema']
-      delete api.paths['/safe-schema']
-      delete api.paths['/words_agg']
-      delete api.paths['/metric_agg']
-      delete api.paths['/values/{field}']
-      delete api.paths['/values-labels/{field}']
-      delete api.paths['/values_agg']
+    // Dataset-type route gating uses the shared appliesTo predicates (the same list that drives the
+    // permission picker). Field-dependent schema pruning is handled below.
+    const datasetCtx = datasetContext(ds)
+    for (const [path, methods] of Object.entries(api.paths) as [string, any][]) {
+      for (const op of Object.values(methods) as any[]) {
+        if (op?.operationId && !isDatasetOperationApplicable(op.operationId, datasetCtx)) {
+          delete api.paths[path]
+          break
+        }
+      }
     }
 
     if (textAggProperties.length === 0) {

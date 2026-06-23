@@ -52,7 +52,13 @@ export const registerMiscRoutes = (router: Router) => {
     const dataset = reqDataset(req)
     const settings = await mongo.db.collection('settings')
       .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
-    res.send(privateDatasetAPIDocs(dataset, reqPublicBaseUrl(req), reqSessionAuthenticated(req), settings))
+    const sessionState = reqSessionAuthenticated(req)
+    const bypass = permissions.reqBypassPermissions(req)
+    // admin mode returns the unfiltered doc; otherwise the doc is restricted to the caller's permissions
+    const filterOperations = sessionState.user?.adminMode
+      ? undefined
+      : permissions.list('datasets', dataset, sessionState, bypass)
+    res.send(privateDatasetAPIDocs(dataset, reqPublicBaseUrl(req), sessionState, settings, { filterOperations }))
   })
 
   router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {

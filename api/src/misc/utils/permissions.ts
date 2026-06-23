@@ -6,7 +6,7 @@ import config from '#config'
 import mongo from '#mongo'
 import { Router } from 'express'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
-import * as apiDocsUtil from './api-docs.ts'
+import * as permissionsClasses from '@data-fair/data-fair-shared/permissions/operations.ts'
 import * as visibilityUtils from './visibility.ts'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
@@ -27,7 +27,6 @@ export const reqOperation = operationCtx.get
 const resourceTypesLabels: Record<ResourceType, string> = {
   datasets: 'Le jeu de données',
   applications: 'L\'application',
-  catalogs: 'Le connecteur',
   'remote-services': 'Le service distant'
 }
 
@@ -117,17 +116,17 @@ export const getOwnerRole = (owner: AccountKeys, sessionState: SessionState | un
 
 /** Returns the operation classes the session can perform by virtue of being a member of the resource owner (admin/contrib/null). */
 const getOwnerClasses = (owner: AccountKeys, sessionState: SessionState, resourceType: ResourceType) => {
-  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
+  const operationsClasses = permissionsClasses.operationsClasses[resourceType]
   const ownerRole = getOwnerRole(owner, sessionState)
   if (!ownerRole) return null
   // classes of operations the user can do based on him being member of the resource's owner
   if (ownerRole === config.adminRole || (sessionState.user?.adminMode)) {
     return Object.keys(operationsClasses)
-      .concat(apiDocsUtil.contribOperationsClasses[resourceType] || [])
-      .concat(apiDocsUtil.adminOperationsClasses[resourceType] || [])
+      .concat(permissionsClasses.contribOperationsClasses[resourceType] || [])
+      .concat(permissionsClasses.adminOperationsClasses[resourceType] || [])
   }
   if (ownerRole === config.contribRole) {
-    return apiDocsUtil.contribOperationsClasses[resourceType] || []
+    return permissionsClasses.contribOperationsClasses[resourceType] || []
   }
   return null
 }
@@ -167,7 +166,7 @@ export const can = function (resourceType: ResourceType, resource: Resource, ope
 
 /** Lists every operationId the session can perform on the given resource (combining owner role, explicit permissions and bypasses). */
 export const list = function (resourceType: ResourceType, resource: Resource, sessionState: SessionState, bypassPermissions?: BypassPermissions) {
-  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
+  const operationsClasses = permissionsClasses.operationsClasses[resourceType]
   const operations = new Set<string>([])
 
   // apply specific permissions from application key
@@ -205,7 +204,7 @@ const permissionOperations = (resourceType: ResourceType, permission: Permission
     operations.add(op)
   }
   for (const opClass of permission.classes ?? []) {
-    const classOps = apiDocsUtil.operationsClasses[resourceType][opClass]
+    const classOps = permissionsClasses.operationsClasses[resourceType][opClass]
     if (!classOps) {
       continue
     }
@@ -221,7 +220,7 @@ const permissionOperations = (resourceType: ResourceType, permission: Permission
  * `list` is excluded on purpose: one can mark a resource publicly usable without making it appear in listings.
  */
 export const isPublic = function (resourceType: ResourceType, resource: Resource) {
-  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
+  const operationsClasses = permissionsClasses.operationsClasses[resourceType]
   const publicOperations = new Set<string>()
   if (operationsClasses.read) {
     for (const operationClass of operationsClasses.read) {
@@ -248,15 +247,13 @@ export const filter = function (sessionState: SessionState, resourceType: Resour
 
 /** Builds the Mongo `$or` clauses matching resources on which the session can perform the given operation(s). */
 export const filterCan = function (sessionState: SessionState, resourceType: ResourceType, operation = 'list'): any[] {
-  const ignoreDepartment = resourceType === 'catalogs'
-
   const operationFilter = []
   for (const op of operation.split(',')) {
-    const operationClass = apiDocsUtil.classByOperation[resourceType][op]
+    const operationClass = permissionsClasses.classByOperation[resourceType][op]
     if (operationClass) {
       operationFilter.push({ operations: op })
       operationFilter.push({ classes: operationClass })
-    } else if (apiDocsUtil.operationsClasses[resourceType][operation]) {
+    } else if (permissionsClasses.operationsClasses[resourceType][operation]) {
       operationFilter.push({ classes: op })
     }
   }
@@ -279,12 +276,12 @@ export const filterCan = function (sessionState: SessionState, resourceType: Res
 
       if (sessionState.organization) {
         const listRoles = ['admin']
-        if (resourceType && apiDocsUtil.contribOperationsClasses[resourceType] && apiDocsUtil.contribOperationsClasses[resourceType].includes('list')) {
+        if (resourceType && permissionsClasses.contribOperationsClasses[resourceType] && permissionsClasses.contribOperationsClasses[resourceType].includes('list')) {
           listRoles.push('contrib')
         }
         // user is privileged admin or owner of organization with or without department
         if (listRoles.includes(sessionState.organization.role)) {
-          if (sessionState.organization.department && !ignoreDepartment) or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id, 'owner.department': sessionState.organization.department })
+          if (sessionState.organization.department) or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id, 'owner.department': sessionState.organization.department })
           else or.push({ 'owner.type': 'organization', 'owner.id': sessionState.organization.id })
         }
 
