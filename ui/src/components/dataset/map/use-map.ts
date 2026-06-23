@@ -1,6 +1,7 @@
 import maplibregl, { Map, ControlPosition, LegacyFilterSpecification, LngLatBoundsLike } from 'maplibre-gl'
 import { useMapStyle } from './use-map-style'
 import debounce from 'debounce'
+import { formatValue } from '../../../composables/dataset/lines'
 
 // @ts-ignore
 maplibregl.config.CSP_NONCE = $cspNonce
@@ -20,6 +21,7 @@ export const useMap = (
   const { t } = useI18n()
   const { style, dataLayers } = useMapStyle()
   const { id, dataset } = useDatasetStore()
+  const localeDayjs = useLocaleDayjs()
 
   let _map: Map
   const getMap = () => {
@@ -101,7 +103,7 @@ export const useMap = (
           .filter(field => !cols.length || cols.includes(field.key))
           .filter(field => item[field.key] !== undefined)
           .map(field => {
-            return `<li style="list-style-type: none;">${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
+            return `<li style="list-style-type: none;">${field.title || field['x-originalName'] || field.key}: ${formatValue(item[field.key], field, null, localeDayjs)}</li>`
           })
           .join('\n')
         const html = `<ul style="padding-left: 0;">${htmlList}</ul>`
