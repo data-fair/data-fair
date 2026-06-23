@@ -385,6 +385,5 @@ here: `req-context`, `public-base-url`, and the accessor homes `permissions` / `
 | `metrics.ts`, `metrics-api.ts` | metrics | |
 | `clamav.ts` | files-storage / security | borderline generic |
 | `rate-limiting.ts` | load-management | borderline generic infra |
-| `api-docs.ts` | api-docs | borderline generic |
 
 `test-events.ts` / `test-notif-buffer.ts` are test infrastructure and stay.
