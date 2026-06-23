@@ -114,8 +114,9 @@ import { mdiPaperclip, mdiZipBox } from '@mdi/js'
 import axios, { type AxiosRequestConfig, type CancelTokenSource } from 'axios'
 import useDatasetStore from '~/composables/dataset/dataset-store'
 import { accepted } from '~/utils/dataset'
+import { useUploadLeaveGuard } from '~/composables/use-upload-leave-guard'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { sendUiNotif } = useUiNotif()
 const { id: datasetId, datasetFetch, digitalDocumentField } = useDatasetStore()
 
@@ -201,4 +202,7 @@ const upload = useAsyncAction(async () => {
     }
   }
 })
+
+// Warn before leaving while a file upload is running, and cancel it on confirm.
+useUploadLeaveGuard(() => upload.loading.value, { locale, onConfirmLeave: () => cancelSource?.cancel(t('cancelled')) })
 </script>

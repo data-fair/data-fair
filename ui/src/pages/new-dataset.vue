@@ -400,6 +400,7 @@ import { $apiPath } from '~/context'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useAgentDatasetCreationTools } from '~/composables/dataset/agent-creation-tools'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
+import { useUploadLeaveGuard } from '~/composables/use-upload-leave-guard'
 import { type AccountKeys } from '@data-fair/lib-vue/session'
 import { type ListedDataset } from '~/components/dataset/select/utils'
 
@@ -682,6 +683,9 @@ const createAction = useAsyncAction(async () => {
     throw error
   }
 }, { catch: 'all' })
+
+// Warn before leaving while a file upload is running, and cancel it on confirm.
+useUploadLeaveGuard(() => datasetType.value === 'file' && createAction.loading.value, { locale, onConfirmLeave: cancelUpload })
 
 async function createFileDataset () {
   cancelSource = axios.CancelToken.source()
