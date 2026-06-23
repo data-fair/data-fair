@@ -658,6 +658,7 @@ const createDatasetContext = computed(() => {
 })
 
 // ---- Upload progress ----
+const uploading = ref(false)
 const uploadProgress = ref<{ loaded: number, total?: number }>({ loaded: 0 })
 const uploadPercent = computed(() => {
   if (!uploadProgress.value.total) return 0
@@ -685,7 +686,7 @@ const createAction = useAsyncAction(async () => {
 }, { catch: 'all' })
 
 // Warn before leaving while a file upload is running, and cancel it on confirm.
-useUploadLeaveGuard(() => datasetType.value === 'file' && createAction.loading.value, { locale, onConfirmLeave: cancelUpload })
+useUploadLeaveGuard(() => uploading.value, { locale, onConfirmLeave: cancelUpload })
 
 async function createFileDataset () {
   cancelSource = axios.CancelToken.source()
@@ -728,19 +729,25 @@ async function createFileDataset () {
     params.draft = 'true'
   }
 
-  const res = await axios.post(
-    `${$apiPath}/datasets`,
-    formData,
-    {
-      params,
-      cancelToken: cancelSource.token,
-      onUploadProgress: (e) => {
-        if (e.lengthComputable) {
-          uploadProgress.value = { loaded: e.loaded, total: e.total }
+  uploading.value = true
+  let res
+  try {
+    res = await axios.post(
+      `${$apiPath}/datasets`,
+      formData,
+      {
+        params,
+        cancelToken: cancelSource.token,
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            uploadProgress.value = { loaded: e.loaded, total: e.total }
+          }
         }
       }
-    }
-  )
+    )
+  } finally {
+    uploading.value = false
+  }
 
   const dataset = res.data
   if (dataset.error) throw new Error(dataset.error)
