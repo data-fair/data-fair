@@ -66,6 +66,21 @@ services:
     volumes:
       - s3mock-data:/s3root
 
+  # object-lock-capable S3 for the data-integrity revision store (compliance WORM)
+  integrity-s3:
+    profiles:
+      - dev
+      - test
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    ports:
+      - ${INTEGRITY_S3_PORT}:9000
+    volumes:
+      - integrity-s3-data:/data
+
   sd:
     profiles:
       - dev
@@ -231,3 +246,4 @@ volumes:
   clamav-data:
   clamav-tmp:
   s3mock-data:
+  integrity-s3-data:
