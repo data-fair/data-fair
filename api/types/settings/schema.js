@@ -264,6 +264,7 @@ export default {
       layout: {
         title: '',
         listEditMode: 'inline',
+        listActions: ['sort', 'delete'],
         messages: {
           addItem: 'Add a topic',
           'x-i18n-addItem': {

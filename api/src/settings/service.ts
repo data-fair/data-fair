@@ -162,8 +162,12 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   }
 
   if (isMainSettings(settings) && settings.topics) {
+    const seenIds = new Map<string, string>()
     for (const topic of settings.topics) {
       if (!topic.id) topic.id = nanoid()
+      const existing = seenIds.get(topic.id)
+      if (existing) throw httpError(400, `Les thématiques "${existing}" et "${topic.title}" ont le même identifiant`)
+      seenIds.set(topic.id, topic.title)
     }
   }
 
