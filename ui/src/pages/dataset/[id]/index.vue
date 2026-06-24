@@ -687,7 +687,7 @@ import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
-import { hasInvalidExprEvalExtension } from '~/composables/dataset/expr-eval-validation'
+import { hasInvalidExprEvalExtension, hasInvalidRemoteServiceExtension } from '~/composables/dataset/expr-eval-validation'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -756,7 +756,10 @@ function normalizeStructureData (d: any) {
 }
 
 const masterDataFormValid = ref(true)
-const hasInvalidExtension = computed(() => hasInvalidExprEvalExtension(structureEditFetch.data.value))
+const hasInvalidExtension = computed(() =>
+  hasInvalidExprEvalExtension(structureEditFetch.data.value) ||
+  hasInvalidRemoteServiceExtension(structureEditFetch.data.value)
+)
 
 // Sync store.dataset with both editFetch instances
 watch(structureEditFetch.serverData, (d) => {
