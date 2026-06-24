@@ -528,7 +528,7 @@ watch(detailedMode, async (newVal) => {
   if (newVal) {
     if (!ownerDetails.value) await fetchOwnerDetails()
   }
-})
+}, { immediate: true })
 
 // --- Fetch owner details from simple-directory ---
 
