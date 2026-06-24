@@ -97,6 +97,18 @@ test.describe('isoWithOffset', () => {
   test('a non-utc timezone formats with the offset', () => {
     assert.equal(isoWithOffset('2020-01-02T03:04:05Z', 'Europe/Paris'), '2020-01-02T04:04:05+01:00')
   })
+
+  test('honors DST (summer offset), negative, half-hour and 45-minute offsets', () => {
+    assert.equal(isoWithOffset('2020-07-02T03:04:05Z', 'Europe/Paris'), '2020-07-02T05:04:05+02:00')
+    assert.equal(isoWithOffset('2020-01-02T03:04:05Z', 'America/New_York'), '2020-01-01T22:04:05-05:00')
+    assert.equal(isoWithOffset('2020-01-02T03:04:05Z', 'Asia/Kolkata'), '2020-01-02T08:34:05+05:30')
+    assert.equal(isoWithOffset('2020-01-02T03:04:05Z', 'Pacific/Chatham'), '2020-01-02T16:49:05+13:45')
+  })
+
+  test('alwaysFormat=true emits an explicit +00:00 offset for UTC', () => {
+    assert.equal(isoWithOffset('2020-01-02T03:04:05Z', 'UTC', true), '2020-01-02T03:04:05+00:00')
+    assert.equal(isoWithOffset('2020-01-02T03:04:05Z', undefined, true), '2020-01-02T03:04:05+00:00')
+  })
 })
 
 test.describe('transforms.date_part', () => {
@@ -104,6 +116,13 @@ test.describe('transforms.date_part', () => {
     assert.equal(transforms.date_part('2021-03-15T10:20:30Z', 'UTC', 'year'), 2021)
     assert.equal(transforms.date_part('2021-03-15T10:20:30Z', 'UTC', 'month'), 3)
     assert.equal(transforms.date_part('2021-03-15T10:20:30Z', 'UTC', 'day'), 15)
+  })
+
+  test('respects a non-utc timezone (and crosses day boundaries)', () => {
+    assert.equal(transforms.date_part('2021-03-15T10:20:30Z', 'Asia/Kolkata', 'hour'), 15)
+    assert.equal(transforms.date_part('2021-03-15T10:20:30Z', 'Asia/Kolkata', 'minute'), 50)
+    assert.equal(transforms.date_part('2020-07-02T23:34:05Z', 'Australia/Sydney', 'day'), 3)
+    assert.equal(transforms.date_part('2020-07-02T23:34:05Z', 'Australia/Sydney', 'hour'), 9)
   })
 })
 
