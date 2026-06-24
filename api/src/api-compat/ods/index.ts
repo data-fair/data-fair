@@ -96,8 +96,9 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
     const flatten = getFlatten(dataset, true, selectSource)
     for (let i = 0; i < esResponse.hits.hits.length; i++) {
-      // avoid blocking the event loop
-      if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
+      // voluntarily yield the event loop every 500 rows, like the /lines endpoint (read.ts).
+      // setImmediate, not setTimeout(0): timers are clamped to ~1ms and run in a later loop phase
+      if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
       const line = flatten(esResponse.hits.hits[i]._source)
       prepareResult(dataset, line, esResponse.aggregations, req.query.timezone)
       applyAliases(line, aliases, selectTransforms, query.timezone)
@@ -138,8 +139,11 @@ async function * iterHits (es, dataset, esQuery, aliases, selectSource, selectAg
       esQuery.aggs.___group_by.composite.after = esResponse.aggregations.___group_by.after_key
     } else {
       const hits = esResponse.hits.hits
-      for (const hit of hits) {
-        const line = flatten(hit._source)
+      for (let i = 0; i < hits.length; i++) {
+        // voluntarily yield the event loop every 500 rows, like the /lines endpoint (read.ts).
+        // setImmediate, not setTimeout(0): timers are clamped to ~1ms and run in a later loop phase
+        if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+        const line = flatten(hits[i]._source)
         prepareResult(dataset, line, esResponse.aggregations, timezone)
         applyAliases(line, aliases, selectTransforms, timezone)
         lines.push(line)
