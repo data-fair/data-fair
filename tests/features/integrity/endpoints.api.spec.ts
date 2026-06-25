@@ -74,6 +74,7 @@ test('revisions endpoint lists revisions newest-first and is superadmin-only', a
   expect(res.results[0]).toHaveProperty('md5')
   expect(res.results[0]).toHaveProperty('operation')
   expect(res.results[0]).toHaveProperty('date')
+  expect(res.results[0]).toHaveProperty('originator')
 
   // pagination
   const page1 = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`, { params: { size: 1, page: 1 } })).data
@@ -83,4 +84,28 @@ test('revisions endpoint lists revisions newest-first and is superadmin-only', a
 
   // superadmin-only
   await expect(user.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).rejects.toMatchObject({ status: 403 })
+})
+
+test('breached dataset appears under the status=error listing without changing its status', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 1)
+
+  // not in error before the breach
+  let list = (await admin.get('/api/v1/datasets', { params: { status: 'error', select: 'id,status,integrity' } })).data
+  expect(list.results.find((d: any) => d.id === dataset.id)).toBeUndefined()
+
+  // tamper + check → breach
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('breach')
+
+  // now it appears under status=error, but its real status is unchanged (finalized)
+  list = (await admin.get('/api/v1/datasets', { params: { status: 'error', select: 'id,status,integrity' } })).data
+  const row = list.results.find((d: any) => d.id === dataset.id)
+  expect(row).toBeTruthy()
+  expect(row.status).toBe('finalized')
+  expect(row.integrity.lastCheck.status).toBe('breach')
 })
