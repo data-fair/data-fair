@@ -1,7 +1,7 @@
 import { S3Client, CreateBucketCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { IntegrityStore } from '../../api/src/integrity/store.ts'
 
-const endpoint = `http://localhost:${process.env.INTEGRITY_S3_PORT}`
+const endpoint = `http://localhost:${process.env.S3_PORT}`
 const bucket = 'data-fair-integrity'
 const credentials = { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' }
 

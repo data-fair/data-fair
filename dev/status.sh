@@ -77,9 +77,8 @@ check_http "openapi-viewer" "http://localhost:${OAV_PORT}"
 check_tcp  "capture" "localhost" "${CAPTURE_PORT}"
 check_tcp  "mongo" "localhost" "${MONGO_PORT}"
 check_tcp  "elasticsearch" "localhost" "${ES_PORT}"
-check_tcp  "s3mock" "localhost" "${S3_PORT}"
+check_tcp  "minio (s3)" "localhost" "${S3_PORT}"
 check_tcp  "clamav" "localhost" "${CLAMAV_PORT}"
-[ -n "${INTEGRITY_S3_PORT:-}" ] && check_tcp "integrity-s3 (minio)" "localhost" "${INTEGRITY_S3_PORT}"
 echo ""
 
 # --- Docker compose status (if docker/podman available) ---

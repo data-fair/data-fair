@@ -53,21 +53,9 @@ services:
         soft: 64000
         hard: 64000
 
-  s3mock:
-    profiles:
-      - dev
-      - test
-    image: adobe/s3mock:latest
-    environment:
-      - COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=buckettest,buckerdev
-      - COM_ADOBE_TESTING_S3MOCK_STORE_ROOT=s3root
-    ports:
-      - ${S3_PORT}:9090
-    volumes:
-      - s3mock-data:/s3root
-
-  # object-lock-capable S3 for the data-integrity revision store (compliance WORM)
-  integrity-s3:
+  # single S3 backend for dev/test: serves both the files storage (bucketdev)
+  # and the object-lock-capable data-integrity revision store (compliance WORM)
+  minio:
     profiles:
       - dev
       - test
@@ -77,9 +65,25 @@ services:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
     ports:
-      - ${INTEGRITY_S3_PORT}:9000
+      - ${S3_PORT}:9000
     volumes:
-      - integrity-s3-data:/data
+      - minio-data:/data
+
+  # MinIO does not auto-create buckets: this one-shot init creates them.
+  # Only the integrity bucket gets object lock; the files buckets must stay mutable.
+  minio-init:
+    profiles:
+      - dev
+      - test
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
+      mc mb --ignore-existing local/bucketdev;
+      mc mb --ignore-existing --with-lock local/data-fair-integrity;
+      "
 
   sd:
     profiles:
@@ -245,5 +249,4 @@ volumes:
   mongodb-data:
   clamav-data:
   clamav-tmp:
-  s3mock-data:
-  integrity-s3-data:
+  minio-data:

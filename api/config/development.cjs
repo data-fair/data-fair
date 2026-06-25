@@ -22,8 +22,8 @@ module.exports = {
     endpoint: `http://localhost:${process.env.S3_PORT}`,
     bucket: 'bucketdev',
     credentials: {
-      accessKeyId: '',
-      secretAccessKey: '',
+      accessKeyId: 'minioadmin',
+      secretAccessKey: 'minioadmin',
     },
     forcePathStyle: true
   },
@@ -31,7 +31,7 @@ module.exports = {
     active: true,
     s3: {
       region: 'us-east-1',
-      endpoint: `http://localhost:${process.env.INTEGRITY_S3_PORT}`,
+      endpoint: `http://localhost:${process.env.S3_PORT}`,
       bucket: 'data-fair-integrity',
       credentials: { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' },
       forcePathStyle: true,
