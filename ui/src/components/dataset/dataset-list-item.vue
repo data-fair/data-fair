@@ -29,6 +29,20 @@
           />
         </template>
       </v-tooltip>
+      <v-tooltip
+        v-if="dataset.integrity?.lastCheck?.status === 'breach'"
+        :text="t('integrityBreach')"
+      >
+        <template #activator="{ props: tooltipProps }">
+          <v-icon
+            v-bind="tooltipProps"
+            :icon="mdiShieldAlert"
+            color="error"
+            size="small"
+            class="ml-1"
+          />
+        </template>
+      </v-tooltip>
     </v-list-item-title>
     <v-list-item-subtitle v-if="subtitleParts.length">
       <template
@@ -72,7 +86,8 @@ import {
   mdiFile,
   mdiInformationVariant,
   mdiPictureInPictureBottomRightOutline,
-  mdiProgressWrench
+  mdiProgressWrench,
+  mdiShieldAlert
 } from '@mdi/js'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 
@@ -129,6 +144,7 @@ fr:
   metaOnly: Métadonnées
   draft: Brouillon
   error: En erreur
+  integrityBreach: Intégrité compromise
   lines: lignes
 en:
   virtual: Virtual
@@ -136,5 +152,6 @@ en:
   metaOnly: Metadata only
   draft: Draft
   error: Error status
+  integrityBreach: Integrity breach
   lines: lines
 </i18n>
