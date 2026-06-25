@@ -236,10 +236,15 @@ This gives every resource the same guarantee as a single file: current state alw
 | Editable (REST) dataset — **Mongo lines** (source of truth) | feasible (see below) | size/cardinality-gated | exact fold over the precomputed per-line `_hash`, sorted by `_i` |
 | Editable dataset — **ES index** (derived) | n/a — rebuildable projection | n/a — repair = reindex | not historized (rebuildable projection) |
 
-- **Files** default to level 1 (md5 already lives in the dataset metadata); level 2 copies
-  the file into the historized bucket and is **gated by a size threshold**. The historized
-  bucket stays fully separate from the main storage bucket (which is unchanged), keeping
-  the model homogeneous with the Mongo case at the cost of some duplication.
+- **Files** default to level 1. The hash is an md5 of the file, but the **write and verify
+  paths both recompute it from the *stored file*** (not from `dataset.originalFile.md5`): that
+  metadata field is computed on create and, even with the maintain-on-update fix, an *out-of-band*
+  edit (exactly what `fixIntegrity` reconciles) never updates it — so anchoring the metadata would
+  dedupe and never re-anchor. Relay and checker therefore call the same `md5OfStorageFile(...)`,
+  keeping them symmetric. Level 2 copies the file into the historized bucket and is **gated by a
+  size threshold**. The historized bucket stays fully separate from the main storage bucket
+  (which is unchanged), keeping the model homogeneous with the Mongo case at the cost of some
+  duplication.
 - **ES is not a historization target — it is a rebuildable projection.** For REST datasets
   Mongo is the source of truth; the ES index is derived (the indexer strips `_hash`/`_deleted`,
   the ES `_id` is a throwaway `nanoid`, and a full reindex rebuilds the index from Mongo). So ES
