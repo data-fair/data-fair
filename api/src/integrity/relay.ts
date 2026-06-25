@@ -47,6 +47,11 @@ export const historize = async (dataset: DatasetInternal): Promise<void> => {
     dataset: { id: dataset.id, slug: dataset.slug }
   }, retainUntil)
 
+  // Known narrow window (accepted for this slice): a superadmin _fix/enable that re-sets
+  // _needsHistorizing while this relay run is in-flight (the endpoints write outside the worker's
+  // per-resource lock) can be cleared by this unconditional $unset and thus dropped. This never
+  // weakens the guarantee — the next sliding check re-detects the still-mismatched file and re-alerts,
+  // and a follow-up _fix recovers. A generation token on _historizeContext would close it; deferred.
   await mongo.datasets.updateOne(
     { id: dataset.id },
     { $set: { 'integrity.lastRevision': { i, md5: currentMd5, date } }, $unset: { _needsHistorizing: '', _historizeContext: '' } }
