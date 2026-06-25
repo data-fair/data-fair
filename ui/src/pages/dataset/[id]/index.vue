@@ -326,6 +326,12 @@
               resource-type="dataset"
             />
           </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="adminMode"
+            value="integrity"
+          >
+            <dataset-integrity />
+          </v-tabs-window-item>
         </v-tabs-window>
       </template>
     </df-section-tabs>
@@ -578,6 +584,7 @@ fr:
   traceability: Traçabilité
   notifications: Notifications
   webhooks: Webhooks
+  integrity: Intégrité
   diagnose: Diagnostic
   diagnoseSubtitle: Informations techniques pour les administrateurs.
   diagnoseTabEs: Elasticsearch
@@ -637,6 +644,7 @@ en:
   traceability: Traceability
   notifications: Notifications
   webhooks: Webhooks
+  integrity: Integrity
   diagnose: Diagnose
   diagnoseSubtitle: Technical information for superadmins.
   diagnoseTabEs: Elasticsearch
@@ -671,7 +679,7 @@ import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -1091,6 +1099,11 @@ const sections = computedDeepDiff(() => {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure outbound HTTP webhooks fired on dataset events.' })
     }
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
+  }
+  // Integrity tab (superadmin only) — appended to the activity section, creating it if eventsIntegration is off
+  if (adminMode.value) {
+    activityTabs.push({ key: 'integrity', title: t('integrity'), icon: mdiShieldKey, agentDesc: 'Superadmin-only data-integrity panel: tamper-detection status, last check, revision history, enable/disable and reconcile (fix) actions for this dataset.' })
+    result.activity = result.activity || { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
   }
 
   // Diagnose section (superadmin only)
