@@ -160,6 +160,10 @@
 			"draft-draft-cancelled": {
 				"title": "Draft cancelled {{label}}",
 				"body": "The draft of the dataset {{label}} was cancelled, it is back to its previous validated state."
+			},
+			"integrity-breach": {
+				"title": "Integrity breach on dataset {{label}}",
+				"body": "The data file of dataset {{label}} was modified outside the legitimate write path (divergence detected by the integrity check)."
 			}
 		},
 		"applications": {

@@ -45,4 +45,12 @@ export const registerIntegrityRoutes = (router: Router) => {
     })
     res.status(204).send()
   })
+
+  router.post('/:datasetId/_integrity/_check', readDataset({ noCache: true }), async (req, res) => {
+    reqAdminMode(req)
+    const dataset: any = reqDataset(req)
+    if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
+    const checker = await import('../../integrity/checker.ts')
+    res.json(await checker.checkDataset(dataset))
+  })
 }

@@ -243,6 +243,16 @@ router.post('/settings-update-one', async (req, res, next) => {
   }
 })
 
+// Tamper a dataset's stored original file out-of-band (test-only, for integrity breach tests)
+router.post('/tamper-dataset-file/:datasetId', async (req, res) => {
+  const dataset = await mongo.datasets.findOne({ id: req.params.datasetId })
+  if (!dataset) return res.status(404).send()
+  const datasetUtils = await import('../../datasets/utils/index.ts')
+  const { filesStorage } = await import('../../files-storage/index.ts')
+  await filesStorage.writeString(datasetUtils.originalFilePath(dataset), req.body?.content ?? 'tampered-out-of-band')
+  res.status(204).send()
+})
+
 // Trigger the api-keys expiration cron task on demand (test-only)
 router.post('/api-keys-expiration/run', async (req, res, next) => {
   try {
