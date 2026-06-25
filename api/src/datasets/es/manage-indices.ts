@@ -319,3 +319,20 @@ export const datasetFinalizeDiagnostics = async (dataset: any): Promise<{ esWarn
 
 // kept for any caller that only needs the primary code
 export const datasetWarning = async (dataset: any): Promise<WarningCode | null> => (await datasetFinalizeDiagnostics(dataset)).esWarning
+
+// Lightweight standalone helper for backfill: runs only the _ignored terms agg, no heavier index-metadata fetches.
+// Returns [] on error (no index / closed index) so callers can safely set _esIgnoredKeywordFields = [].
+export const getIgnoredKeywordFields = async (dataset: any): Promise<string[]> => {
+  if (dataset.isVirtual) return []
+  try {
+    const res: any = await es.client.search({
+      index: aliasName(dataset),
+      size: 0,
+      aggs: { ignored: { terms: { field: '_ignored', size: 200 } } }
+    })
+    const ignoredFields = (res.aggregations?.ignored?.buckets ?? []).map((b: any) => b.key)
+    return computeIgnoredKeywordFields(dataset, { ignoredFields })
+  } catch {
+    return [] // no index / closed index — treat as none
+  }
+}
