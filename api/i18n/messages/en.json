@@ -24,6 +24,7 @@
 		"queryAdviceConceptUseColumn": "%s → use %s instead (the _c_ prefix is reserved for concept filters, not columns)",
 		"queryAdviceConceptUnknown": "%s was ignored — the _c_ prefix is for concept filters and matched no concept in this dataset",
 		"queryAdviceUnknownParam": "%s is not a recognized query parameter and was ignored",
+		"queryAdviceUncertainFilter": "results for the filter on column \"%s\" may be incomplete: values longer than %s characters are not exactly indexed — enable the \"wildcard\" capability on this column and reprocess the dataset to fix it",
 		"exceedAnonymousRateLimiting": "Trop many messages in a short interval. Please wait and try again.",
 		"looksLikeSpam": "Message rejected, activity looks like a spam robot.",
 		"requireAnonymousToken": "An anonymous token is required.",

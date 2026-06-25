@@ -1,6 +1,6 @@
 import { type Request } from 'express'
 import i18n from 'i18n'
-import { hasManyQSearchFields, FILTER_CAPABILITIES } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
 import { reqPublicOperation, reqDatasetOptional, setReqDataset } from './req-context.ts'
 
@@ -109,6 +109,37 @@ export const ignoredParamsAdvice = (req: Request): string => {
   return ' ' + req.__('errors.queryAdviceIgnoredIntro') + ' : ' + items.join(' ; ') + '.'
 }
 
+// Correctness advisory (duration-independent): a filter on a column that ACTUALLY dropped values
+// (dataset._esIgnoredKeywordFields, from finalize detection) and has no length-safe alternative. Only
+// the ops Task 5 cannot otherwise fix are flagged: _starts/range always; _exists/_nexists only when
+// no analyzed sub-field exists. _eq/_in are operand-driven (already 400 on impossible) → never here.
+const UNCERTAIN_SUFFIXES = ['_starts', '_gt', '_gte', '_lt', '_lte', '_exists', '_nexists']
+export const uncertainFilterAdvice = (req: Request): string => {
+  const q: Record<string, any> = req.query || {}
+  const dataset = reqDatasetOptional(req)
+  const flaggedSet = new Set<string>((dataset as any)?._esIgnoredKeywordFields ?? [])
+  if (!flaggedSet.size) return ''
+  const byKey = new Map((dataset?.schema ?? []).map((p: any) => [p.key, p]))
+  const flagged = new Set<string>()
+
+  for (const key of Object.keys(q)) {
+    const suffix = UNCERTAIN_SUFFIXES.find(s => key.endsWith(s))
+    if (!suffix) continue
+    const colKey = key.slice(0, key.length - suffix.length)
+    if (!flaggedSet.has(colKey)) continue
+    const prop: any = byKey.get(colKey)
+    if (!prop || !isLengthLimitedKeyword(prop)) continue
+    if (hasCapability(prop, 'wildcard')) continue // Task 5 routes these to .wildcard
+    if ((suffix === '_exists' || suffix === '_nexists') &&
+        (hasCapability(prop, 'textStandard') || hasCapability(prop, 'text'))) continue // union covers it
+    flagged.add(colKey)
+  }
+
+  if (!flagged.size) return ''
+  const items = [...flagged].map(k => req.__('errors.queryAdviceUncertainFilter', k, String(KEYWORD_IGNORE_ABOVE)))
+  return ' ' + req.__('errors.queryAdviceIgnoredIntro') + ' : ' + items.join(' ; ') + '.'
+}
+
 export type HintMode = 'auto' | 'true' | 'false'
 
 /**
@@ -154,7 +185,7 @@ export const attachQueryHint = <T extends Record<string, any>> (
     adviceReq = englishReq
   }
   // correctness advice (misused/ignored params) is duration-independent — always on unless hint=false
-  const ignored = ignoredParamsAdvice(adviceReq).trim()
+  const ignored = [ignoredParamsAdvice(adviceReq).trim(), uncertainFilterAdvice(adviceReq).trim()].filter(Boolean).join(' ')
   // performance advice keeps its slow-auto / explicit-true gate
   const perf = shouldEmitHint(mode, esStepDurationMs) ? queryAdvice(adviceReq).trim() : ''
   const advice = [ignored, perf].filter(Boolean).join(' ')
