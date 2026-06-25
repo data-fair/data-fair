@@ -250,6 +250,29 @@ the ODS `records` catch skips its error log for `499`.
 For status `504` and `429`, `manageESError` (and the equivalent ODS-compat catch blocks) append the
 same `queryAdvice(req)` query-shape hint (see §4) to the message before it is returned.
 
+### `keyword ignore_above:200` truncation and per-request filter routing
+
+String columns (plain string or `uri-reference` format) are mapped as `{type:keyword, ignore_above:200}` (constant `KEYWORD_IGNORE_ABOVE = 200`, `api/src/datasets/es/operations.ts`). Elasticsearch silently **drops values longer than 200 characters from the keyword index and its `doc_values`** — the value is kept in `_source` but invisible to term/exists/range/sort and terms-aggregations on the main keyword field. Full-text sub-fields (`.text`, `.text_standard`) and the `q=` catch-all (`_search`) are unaffected. Fields mapped as ES `wildcard` type (e.g. `_attachment_url`, which carries `x-capabilities.nativeWildcard: true`) have no such limit and are excluded from the detection and routing logic by `isLengthLimitedKeyword`.
+
+**Detection at finalize time.** During finalization, `datasetInfos` (`manage-indices.ts`) runs a `_ignored` metadata-field terms aggregation (size 200) against the live index. `computeIgnoredKeywordFields` (`diagnose-warnings.ts`) maps the raw ignored field names (`key` and `key.keyword_insensitive`) back to schema columns that satisfy `isLengthLimitedKeyword`. The result is persisted as `dataset._esIgnoredKeywordFields: string[]` (an internal field stripped from public API output alongside `_esCopyToSearch`, in `api/src/datasets/utils/index.ts`). The flag refreshes on every finalize; for REST datasets a long value written between two finalizes is not flagged until the next finalize run.
+
+**Per-request filter routing** (`commons.ts`, pure resolvers in `operations.ts`).
+
+- `_eq` / `_in` / `_neq` / `_nin` — **operand-driven**, independent of the flag. A value longer than 200 characters can never be a keyword term: it routes to `.wildcard` when the column has the `wildcard` capability, and returns **400** otherwise. Short values (≤ 200 chars) keep the fast keyword main field unconditionally.
+- `_exists` / `_nexists` — **flag-gated**. Un-flagged columns use the fast keyword `exists` query. Flagged columns route to `.wildcard` (if configured) or, lacking that, union the keyword field with `.text_standard` (or `.text`) so that long values — which always produce at least one analyzed token — are also found.
+- `_starts` / `_gt` / `_gte` / `_lt` / `_lte` — **flag-gated**. Un-flagged columns keep the keyword path. Flagged columns route to `.wildcard` (if configured), or stay on the keyword path and set `uncertain: true` (a short prefix or range bound can still miss long dropped values; this feeds the `queryAdviceUncertainFilter` hint below).
+- The ODS-compat `where … =` equality path (`api-compat/ods/where.pegjs`) calls `resolveExactKeywordTarget` and throws **400** on `impossible`.
+
+**Visibility surfaces.**
+
+1. **Superadmin `esWarning` triage list.** `IgnoredKeywordValues` is ranked above `ShardingRecommended` in `WARNING_PRIORITY` (`diagnose-warnings.ts`), so it wins `pickPrimaryCode` when both apply. The warning is emitted only for actionable columns (flagged AND lacking the `wildcard` capability), with a message listing the column keys and advising enabling `wildcard` then reprocessing.
+2. **Owner journal event.** At finalize, if any actionable column is newly flagged (not previously in `_esIgnoredKeywordFields`), a de-duped `ignored-keyword-values` journal event is written (type registered in `shared/events.json` with `warning` color; journal-only, no user notification). The event data lists the affected columns and the remediation step.
+3. **Per-request 400 / correctness hint.** Impossible `_eq`/`_in`/`_neq`/`_nin` operands return `400`. For flagged columns where routing cannot fully compensate (uncertain `_starts`/range, or `_exists`/`_nexists` with no analyzed sub-field), `uncertainFilterAdvice` (`query-advice.ts`) appends a `queryAdviceUncertainFilter` localized sentence to the `hint` field via `attachQueryHint`. This hint fires regardless of query duration (correctness advisory, not a performance advisory).
+
+**Backfill upgrade script.** `api/upgrade/6.12.0/ignored-keyword-fields.ts` backfills `_esIgnoredKeywordFields` for pre-existing finalized datasets by running the `_ignored` terms aggregation directly. It calls `es.connect()` itself because the upgrade runner executes before `es.init()`. Empty-array writes (`[]`) mark a dataset processed (idempotent: already-backfilled datasets are skipped). Datasets that cannot be reached (missing index, etc.) are skipped with a debug log.
+
+**Non-goals.** Case-insensitive sort/aggregation on values longer than 200 characters (`.keyword_insensitive` is also capped at `ignore_above:200` but is left untouched — long values were already invisible there). Rewriting `qs=`/Lucene field references or ODS `where … in (…)` multi-value clauses (covered by the admin warning, not fixed in the query layer).
+
 ### ES cluster configuration (deployment repos — reference only)
 
 The cluster runs with dedicated roles (master / coordination / data nodes) but **no custom tuning**
