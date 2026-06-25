@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
-import { $fetch, $sitePath } from '~/context'
+import { $agentFetch, $sitePath } from '~/context'
 import { toAbsoluteUrl } from '~/composables/agent/url-utils'
 import * as listDatasets from '@data-fair/agent-tools-data-fair/list-datasets'
 import * as describeDataset from '@data-fair/agent-tools-data-fair/describe-dataset'
@@ -21,7 +21,7 @@ export function useAgentDatasetTools (locale: Ref<string>) {
     annotations: { title: (listDatasets.annotations as any)[locale.value]?.title ?? listDatasets.annotations.en.title, readOnlyHint: true },
     execute: async (params) => {
       const { path, query } = listDatasets.buildQuery(params)
-      const data = await $fetch<any>(path, { query })
+      const data = await $agentFetch<any>(path, { query })
       const page = Math.max(params.page || 1, 1)
       const size = Math.min(Math.max(params.size || 10, 1), 50)
       const result = listDatasets.formatResult(data, page, size, { datasetLink: datasetBackOfficeLink })
@@ -33,7 +33,7 @@ export function useAgentDatasetTools (locale: Ref<string>) {
     ...describeDataset.schema,
     annotations: { title: (describeDataset.annotations as any)[locale.value]?.title ?? describeDataset.annotations.en.title, readOnlyHint: true },
     execute: async (params) => {
-      const dataset = await $fetch<any>(`datasets/${encodeURIComponent(params.datasetId)}`)
+      const dataset = await $agentFetch<any>(`datasets/${encodeURIComponent(params.datasetId)}`)
       const result = describeDataset.formatResult(dataset, { includeOwner: true, datasetLink: datasetBackOfficeLink })
       return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
     }

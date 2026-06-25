@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
-import { $fetch } from '~/context'
+import { $agentFetch } from '~/context'
 import { createAgentTranslator, buildPaginatedQuery } from '~/composables/agent/utils'
 import { formatApplicationConfig } from './agent-tools-logic'
 
@@ -68,7 +68,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
     execute: async (params) => {
       const { query, page, size } = buildPaginatedQuery(params, { select: 'title,status,topics,updatedAt,url,baseApp' })
 
-      const data = await $fetch<any>('applications', { query })
+      const data = await $agentFetch<any>('applications', { query })
 
       const lines = data.results.map((a: any) => {
         const parts = [`- **${a.title || a.id}** (id: \`${a.id}\`)`,
@@ -98,7 +98,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
       required: ['applicationId'] as const
     },
     execute: async (params) => {
-      const app = await $fetch<any>(`applications/${encodeURIComponent(params.applicationId)}`)
+      const app = await $agentFetch<any>(`applications/${encodeURIComponent(params.applicationId)}`)
       return serializeApplicationInfo(app)
     }
   })
@@ -117,7 +117,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
     execute: async (params) => {
       let config: any
       try {
-        config = await $fetch<any>(`applications/${encodeURIComponent(params.applicationId)}/configuration`)
+        config = await $agentFetch<any>(`applications/${encodeURIComponent(params.applicationId)}/configuration`)
       } catch {
         return 'This application is not configured yet.'
       }
@@ -140,7 +140,7 @@ export function useAgentApplicationTools (locale: Ref<string>) {
     execute: async (params) => {
       const { query, page, size } = buildPaginatedQuery(params)
 
-      const data = await $fetch<any>('base-applications', { query })
+      const data = await $agentFetch<any>('base-applications', { query })
 
       const lines = data.results.map((ba: any) => {
         const parts = [`- **${ba.title || ba.id}** (id: \`${ba.id}\`)`]

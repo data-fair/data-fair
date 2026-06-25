@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
-import { $fetch } from '~/context'
+import { $agentFetch } from '~/context'
 import { createAgentTranslator, agentToolError, csvEscape, toCsv, fetchSampleRows } from '~/composables/agent/utils'
 import { getAvailableSchema, executeGetExpressionContext } from './agent-expression-tools-logic'
 // @ts-ignore -- shared module, no types
@@ -118,7 +118,7 @@ export function useAgentExpressionTools (
       // Step 3: fetch sample data and evaluate
       try {
         const select = availableSchema.map((col: any) => col.key).join(',')
-        const data = await $fetch<any>(`datasets/${encodeURIComponent(dataset.id)}/lines`, {
+        const data = await $agentFetch<any>(`datasets/${encodeURIComponent(dataset.id)}/lines`, {
           query: { size: '5', select }
         })
 

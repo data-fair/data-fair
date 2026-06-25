@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool, useAgentSubAgent } from '@data-fair/lib-vue-agents'
-import { $fetch } from '~/context'
+import { $agentFetch } from '~/context'
 import * as searchData from '@data-fair/agent-tools-data-fair/search-data'
 import * as aggregateData from '@data-fair/agent-tools-data-fair/aggregate-data'
 import * as calculateMetric from '@data-fair/agent-tools-data-fair/calculate-metric'
@@ -19,8 +19,8 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     execute: async (params) => {
       const { schemaReq, samplesReq } = getDatasetSchema.buildQuery(params)
       const [dataset, linesData] = await Promise.all([
-        $fetch<any>(schemaReq.path, { query: schemaReq.query }),
-        $fetch<any>(samplesReq.path, { query: samplesReq.query })
+        $agentFetch<any>(schemaReq.path, { query: schemaReq.query }),
+        $agentFetch<any>(samplesReq.path, { query: samplesReq.query })
       ])
       return getDatasetSchema.formatResult(dataset, linesData)
     }
@@ -32,10 +32,10 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     execute: async (params) => {
       let data: any
       if (params.next) {
-        data = await $fetch<any>(params.next)
+        data = await $agentFetch<any>(params.next)
       } else {
         const { path, query } = searchData.buildQuery(params)
-        data = await $fetch<any>(path, { query })
+        data = await $agentFetch<any>(path, { query })
       }
       const result = searchData.formatResult(data, params)
       return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
@@ -47,7 +47,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     annotations: { title: title(aggregateData.annotations, locale.value), readOnlyHint: true },
     execute: async (params) => {
       const { path, query } = aggregateData.buildQuery(params)
-      const data = await $fetch<any>(path, { query })
+      const data = await $agentFetch<any>(path, { query })
       const result = aggregateData.formatResult(data, params)
       return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
     }
@@ -58,7 +58,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     annotations: { title: title(calculateMetric.annotations, locale.value), readOnlyHint: true },
     execute: async (params) => {
       const { path, query } = calculateMetric.buildQuery(params)
-      const data = await $fetch<any>(path, { query })
+      const data = await $agentFetch<any>(path, { query })
       const result = calculateMetric.formatResult(data, params)
       return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
     }
@@ -69,7 +69,7 @@ export function useAgentDatasetDataTools (locale: Ref<string>) {
     annotations: { title: title(getFieldValues.annotations, locale.value), readOnlyHint: true },
     execute: async (params) => {
       const { path, query } = getFieldValues.buildQuery(params)
-      const values = await $fetch<any>(path, { query })
+      const values = await $agentFetch<any>(path, { query })
       const result = getFieldValues.formatResult(values, params)
       return { content: [{ type: 'text' as const, text: result.text }], structuredContent: result.structuredContent }
     }

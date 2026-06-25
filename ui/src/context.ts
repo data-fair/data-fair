@@ -8,3 +8,4 @@ export const $siteUrl = window.location.origin + $sitePath
 export const $sdUrl = $sitePath + '/simple-directory'
 export const $apiPath = $sitePath + '/data-fair/api/v1'
 export const $fetch = ofetch.create({ baseURL: $apiPath })
+export const $agentFetch = ofetch.create({ baseURL: $apiPath, headers: { 'x-client': 'agents' } })

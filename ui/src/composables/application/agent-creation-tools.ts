@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
-import { $fetch } from '~/context'
+import { $agentFetch } from '~/context'
 import { createAgentTranslator, agentToolError } from '~/composables/agent/utils'
 
 const messages: Record<string, Record<string, string>> = {
@@ -108,7 +108,7 @@ export function useAgentApplicationCreationTools (locale: Ref<string>, state: Ap
       }
 
       try {
-        const app = await $fetch<any>(`applications/${encodeURIComponent(params.id)}`, {
+        const app = await $agentFetch<any>(`applications/${encodeURIComponent(params.id)}`, {
           query: { select: 'id,title,url' }
         })
         state.copyApp.value = app
