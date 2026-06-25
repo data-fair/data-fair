@@ -227,6 +227,36 @@ This gives every resource the same guarantee as a single file: current state alw
   per-owner prefix makes an owner's *total* historized storage a one-query prefix size,
   feeding the storage-quota accounting of §9.
 
+### 4.1 Local dev / test environment
+
+In dev and test a **single MinIO** container (`minio` in `docker-compose.yaml`, profiles
+`dev`/`test`) backs *both* the files storage and the integrity revision store — it is a
+faithful enough S3 implementation to exercise object-lock locally, which `adobe/s3mock`
+is not. Because MinIO does not auto-create buckets, a one-shot `minio-init` sidecar
+(`minio/mc`) provisions them on startup:
+
+- `bucketdev` — files storage, mutable
+- `data-fair-integrity` — created with `--with-lock` (compliance WORM), the integrity store
+
+`api/config/development.cjs` points `s3` and `integrity.s3` at the same MinIO (`S3_PORT`,
+`minioadmin`/`minioadmin`; MinIO enforces credentials, unlike s3mock). `integrity.active`
+is `true` with a 1-day retention, so the capability is on by default — but it is still
+opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
+
+`npm run dev-fixtures` seeds two datasets in the `dev_fixtures` org that demonstrate the
+feature end-to-end:
+
+- `fixtures-integrite-ok` — integrity enabled, a compatible published update historizes a
+  second revision, on-demand check returns `ok`
+- `fixtures-integrite-breach` — integrity enabled, then the stored file is tampered
+  out-of-band (dev-only `test-env/tamper-dataset-file` endpoint) so the check reports a
+  `breach`
+
+Note the WORM retention interacts with re-runs: a revision written today cannot be deleted
+for a day (compliance lock), so re-creating a dataset with the same id and identical content
+dedupes against the still-locked revision. The fixtures are `skip-if-exists` and thus run
+once per environment; on a fresh environment both datasets seed automatically.
+
 ## 5. Resource taxonomy & per-class feasibility
 
 | Resource class | Level 1 (detect) | Level 2 (repair) | Hashing |
