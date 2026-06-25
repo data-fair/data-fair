@@ -25,8 +25,10 @@ export const KEYWORD_IGNORE_ABOVE = 200
 
 // A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a plain or uri-reference
 // string. Only these are exposed to the ignore_above truncation problem.
+// Fields with `x-capabilities.nativeWildcard: true` are mapped as ES `wildcard` type and have no
+// ignore_above limit, so they are excluded.
 export const isLengthLimitedKeyword = (prop: any): boolean =>
-  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
+  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format) && prop?.['x-capabilities']?.nativeWildcard !== true
 
 // Exact (term/terms) filter target — OPERAND-DRIVEN, independent of whether the column currently
 // holds long values: a value longer than the limit can never be a keyword term, so
