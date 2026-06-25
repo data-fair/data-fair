@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { axiosAuth } from '../../support/axios.ts'
+import { axiosAuth, apiUrl } from '../../support/axios.ts'
 import { sendDataset, getRawDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions } from '../../support/integrity.ts'
 
@@ -51,4 +51,36 @@ test('_fix on an unchanged file dedupes (no spurious revision)', async () => {
   await waitForFlagCleared(dataset.id)
   // unchanged file → dedupe → still exactly one revision
   expect((await listIntegrityKeys(prefix)).length).toBe(1)
+})
+
+test('revisions endpoint lists revisions newest-first and is superadmin-only', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const user = await axiosAuth('test_superadmin@test.com', undefined, false) // same user, no adminMode
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 1)
+  // a _fix on the unchanged file dedupes, so tamper then _fix to get a 2nd revision
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)
+  await waitForIntegrityRevisions(prefix, 2)
+
+  const res = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
+  expect(res.count).toBe(2)
+  expect(res.results.length).toBe(2)
+  // newest first: index strictly decreasing
+  expect(res.results[0].i).toBeGreaterThan(res.results[1].i)
+  expect(res.results[0]).toHaveProperty('md5')
+  expect(res.results[0]).toHaveProperty('operation')
+  expect(res.results[0]).toHaveProperty('date')
+
+  // pagination
+  const page1 = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`, { params: { size: 1, page: 1 } })).data
+  expect(page1.count).toBe(2)
+  expect(page1.results.length).toBe(1)
+  expect(page1.results[0].i).toBe(res.results[0].i)
+
+  // superadmin-only
+  await expect(user.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).rejects.toMatchObject({ status: 403 })
 })
