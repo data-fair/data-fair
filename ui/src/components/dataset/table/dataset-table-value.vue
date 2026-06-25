@@ -19,21 +19,25 @@
   </template>
 
   <div v-else>
-    <v-avatar
-      v-if="property.key === '_updatedByName' && extendedValue.formatted.startsWith($sdUrl)"
-      :size="28"
-      :title="extendedValue.raw"
-    >
-      <img :src="extendedValue.formatted">
-    </v-avatar>
+    <!-- color pin is an extra decoration displayed alongside the value -->
     <div
       v-if="property['x-refersTo'] === 'https://schema.org/color' && extendedValue.raw"
       class="item-value-color-pin"
       :style="`background-color:${extendedValue.raw}`"
     />
 
+    <!-- updatedByName / ownerName: show the user/owner avatar followed by their name (not the avatar URL) -->
+    <template v-if="(property.key === '_updatedByName' || property.key === '_ownerName') && extendedValue.formatted.startsWith($sdUrl)">
+      <v-avatar
+        :size="28"
+        :image="extendedValue.formatted"
+        class="me-2"
+      />
+      <span class="pr-2">{{ extendedValue.raw }}</span>
+    </template>
+
     <v-tooltip
-      v-if="property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && extendedValue.raw"
+      v-else-if="property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && extendedValue.raw"
       location="top"
     >
       <template #activator="{props}">
@@ -41,9 +45,10 @@
           class="text-body-medium"
           v-bind="props"
         >
-          <v-avatar :size="28">
-            <img :src="extendedValue.formatted">
-          </v-avatar>
+          <v-avatar
+            :size="28"
+            :image="extendedValue.formatted"
+          />
         </span>
       </template>
       <!-- TODO: fetch account name ? -->
