@@ -1,7 +1,10 @@
 import mongo from '#mongo'
 import config from '#config'
 import type { DatasetInternal } from '#types'
+import { isFileDataset } from '#types/dataset/index.ts'
+import * as datasetUtils from '../datasets/utils/index.ts'
 import { integrityStore } from './store-factory.ts'
+import { md5OfStorageFile } from './hash.ts'
 import * as ops from './operations.ts'
 
 export const historize = async (dataset: DatasetInternal): Promise<void> => {
@@ -14,8 +17,13 @@ export const historize = async (dataset: DatasetInternal): Promise<void> => {
   // throw on every worker poll (retry storm). A later finalize re-sets the flag if re-enabled.
   if (!config.integrity?.active) { await clearFlag(); return }
 
-  const currentMd5 = dataset.originalFile?.md5
-  if (!currentMd5) { await clearFlag(); return } // nothing stable to anchor
+  // Hash the actual stored file, NOT dataset.originalFile.md5: an out-of-band edit (exactly what
+  // fixIntegrity reconciles) never updates that metadata field, so anchoring it would dedupe and
+  // never re-anchor. Hashing the stored file keeps the relay symmetric with the checker (§3.3).
+  const currentMd5 = isFileDataset(dataset)
+    ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch(() => undefined)
+    : undefined
+  if (!currentMd5) { await clearFlag(); return } // not a file dataset / unreadable file → nothing to anchor
 
   const store = integrityStore()
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
