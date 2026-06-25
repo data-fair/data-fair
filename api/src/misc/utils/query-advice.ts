@@ -137,7 +137,7 @@ export const uncertainFilterAdvice = (req: Request): string => {
 
   if (!flagged.size) return ''
   const items = [...flagged].map(k => req.__('errors.queryAdviceUncertainFilter', k, String(KEYWORD_IGNORE_ABOVE)))
-  return ' ' + req.__('errors.queryAdviceIgnoredIntro') + ' : ' + items.join(' ; ') + '.'
+  return ' ' + req.__('errors.queryAdviceUncertainIntro') + ' : ' + items.join(' ; ') + '.'
 }
 
 export type HintMode = 'auto' | 'true' | 'false'

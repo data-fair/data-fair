@@ -21,6 +21,7 @@
 		"queryAdviceSelect": "use the select parameter to return only the columns you need",
 		"queryAdviceQFields": "restrict full-text search to the relevant columns with q_fields=col1,col2 instead of searching every column",
 		"queryAdviceIgnoredIntro": "Some parameters were ignored",
+		"queryAdviceUncertainIntro": "some filters may return incomplete results",
 		"queryAdviceConceptUseColumn": "%s → use %s instead (the _c_ prefix is reserved for concept filters, not columns)",
 		"queryAdviceConceptUnknown": "%s was ignored — the _c_ prefix is for concept filters and matched no concept in this dataset",
 		"queryAdviceUnknownParam": "%s is not a recognized query parameter and was ignored",

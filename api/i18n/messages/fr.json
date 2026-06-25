@@ -21,6 +21,7 @@
 		"queryAdviceSelect": "utilisez le paramètre select pour ne récupérer que les colonnes nécessaires",
 		"queryAdviceQFields": "restreignez la recherche plein texte aux colonnes pertinentes avec q_fields=col1,col2 plutôt que de rechercher dans toutes les colonnes",
 		"queryAdviceIgnoredIntro": "Certains paramètres ont été ignorés",
+		"queryAdviceUncertainIntro": "certains filtres peuvent renvoyer des résultats incomplets",
 		"queryAdviceConceptUseColumn": "%s → utilisez plutôt %s (le préfixe _c_ est réservé aux filtres par concept, pas aux colonnes)",
 		"queryAdviceConceptUnknown": "%s a été ignoré — le préfixe _c_ concerne les filtres par concept et ne correspond à aucun concept de ce jeu de données",
 		"queryAdviceUnknownParam": "%s n'est pas un paramètre de requête reconnu et a été ignoré",

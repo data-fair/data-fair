@@ -27,8 +27,14 @@ export const KEYWORD_IGNORE_ABOVE = 200
 // string. Only these are exposed to the ignore_above truncation problem.
 // Fields with `x-capabilities.nativeWildcard: true` are mapped as ES `wildcard` type and have no
 // ignore_above limit, so they are excluded.
+// Geometry-refersTo string fields are mapped as `{type:keyword, index:false}` (no ignore_above), so
+// they are also excluded — a term filter with a long operand on such a field should silently match
+// nothing rather than 400.
+const GEOMETRY_REFERS_TO = 'https://purl.org/geojson/vocab#geometry'
 export const isLengthLimitedKeyword = (prop: any): boolean =>
-  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format) && prop?.['x-capabilities']?.nativeWildcard !== true
+  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format) &&
+  prop?.['x-capabilities']?.nativeWildcard !== true &&
+  prop?.['x-refersTo'] !== GEOMETRY_REFERS_TO
 
 // Exact (term/terms) filter target — OPERAND-DRIVEN, independent of whether the column currently
 // holds long values: a value longer than the limit can never be a keyword term, so

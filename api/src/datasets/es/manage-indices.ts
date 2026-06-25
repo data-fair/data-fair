@@ -321,7 +321,10 @@ export const datasetFinalizeDiagnostics = async (dataset: any): Promise<{ esWarn
 export const datasetWarning = async (dataset: any): Promise<WarningCode | null> => (await datasetFinalizeDiagnostics(dataset)).esWarning
 
 // Lightweight standalone helper for backfill: runs only the _ignored terms agg, no heavier index-metadata fetches.
-// Returns [] on error (no index / closed index) so callers can safely set _esIgnoredKeywordFields = [].
+// Returns [] only for genuine missing-index errors (404 / index_not_found_exception) so the backfill
+// can safely mark the dataset as processed. Any other error (transient ES failure, etc.) is re-thrown
+// so the upgrade script's per-dataset handler logs+skips it, leaving _esIgnoredKeywordFields unset
+// for a retry on the next deploy.
 export const getIgnoredKeywordFields = async (dataset: any): Promise<string[]> => {
   if (dataset.isVirtual) return []
   try {
@@ -332,7 +335,9 @@ export const getIgnoredKeywordFields = async (dataset: any): Promise<string[]> =
     })
     const ignoredFields = (res.aggregations?.ignored?.buckets ?? []).map((b: any) => b.key)
     return computeIgnoredKeywordFields(dataset, { ignoredFields })
-  } catch {
-    return [] // no index / closed index — treat as none
+  } catch (err: any) {
+    // 404 / index_not_found_exception: the index doesn't exist yet — treat as no ignored fields
+    if (err?.meta?.statusCode === 404 || err?.statusCode === 404) return []
+    throw err
   }
 }

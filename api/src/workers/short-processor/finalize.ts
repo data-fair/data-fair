@@ -17,7 +17,7 @@ import * as journals from '../../misc/utils/journals.ts'
 
 import debugLib from 'debug'
 import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
-import type { DatasetInternal, Nullable } from '#types'
+import type { DatasetInternal, Nullable, Event } from '#types'
 import { isVirtualDataset } from '#types/dataset/index.ts'
 import { isRestDataset } from '@data-fair/data-fair-shared/types-utils.ts'
 
@@ -151,7 +151,7 @@ export default async function (_dataset: DatasetInternal) {
     await journals.log('datasets', dataset, {
       type: 'ignored-keyword-values',
       data: `Colonnes concernées : ${actionable.join(', ')}. Activez la fonctionnalité « wildcard » sur ces colonnes et retraitez le jeu de données.`
-    } as any).catch(() => {})
+    } as Event).catch(() => {})
   }
 
   if (isRestDataset(dataset)) {

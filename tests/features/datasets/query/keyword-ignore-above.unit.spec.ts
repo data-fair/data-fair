@@ -23,6 +23,13 @@ test.describe('keyword ignore_above resolvers', () => {
     assert.equal(isLengthLimitedKeyword(numberProp), false)
   })
 
+  test('isLengthLimitedKeyword: nativeWildcard and geometry-refersTo fields are excluded', () => {
+    // nativeWildcard fields (e.g. _attachment_url) map to ES `wildcard` type — no ignore_above limit
+    assert.equal(isLengthLimitedKeyword({ key: 'u', type: 'string', 'x-capabilities': { nativeWildcard: true } }), false)
+    // geometry-refersTo string fields map to {type:keyword, index:false} — no ignore_above
+    assert.equal(isLengthLimitedKeyword({ key: 'g', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' }), false)
+  })
+
   test('exact target is operand-driven (no flag): short→keyword, long→wildcard|impossible', () => {
     assert.deepEqual(resolveExactKeywordTarget(plainStr, [shortVal]), { field: 'c' })
     assert.deepEqual(resolveExactKeywordTarget(plainStr, [longVal]), { impossible: true })
