@@ -285,12 +285,24 @@ export const datasetInfos = async (dataset: any) => {
   }
   const aliasedIndexName = Object.keys(alias ?? {})[0]
   const index = indices.find(index => index.index === aliasedIndexName)
+  let ignoredFields: string[] = []
+  if (index) {
+    try {
+      const ignoredRes: any = await es.client.search({
+        index: aliasName(dataset),
+        size: 0,
+        aggs: { ignored: { terms: { field: '_ignored', size: 200 } } }
+      })
+      ignoredFields = (ignoredRes.aggregations?.ignored?.buckets ?? []).map((b: any) => b.key)
+    } catch { /* best-effort diagnostic — never fail datasetInfos over it */ }
+  }
   return {
     aliasName: aliasName(dataset),
     indexPrefix: indexPrefix(dataset),
     indices,
     alias,
-    index
+    index,
+    ignoredFields
   }
 }
 
