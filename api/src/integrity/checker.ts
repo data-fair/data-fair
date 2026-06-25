@@ -25,8 +25,9 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<{ status: 
   const actualMd5 = await md5OfStorageFile(datasetUtils.originalFilePath(dataset))
   const status: 'ok' | 'breach' = actualMd5 === expectedMd5 ? 'ok' : 'breach'
   const date = new Date().toISOString()
+  const wasBreach = dataset.integrity?.lastCheck?.status === 'breach'
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.lastCheck': { date, status } } })
-  if (status === 'breach') {
+  if (status === 'breach' && !wasBreach) {
     await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-breach')
   }
   return { status, date }
