@@ -3,7 +3,7 @@
 // index.ts keeps routing, the ES search calls, streaming and response sending.
 // import getFilterableFields from the config-free es/operations.ts (NOT the es/index.ts barrel, which
 // loads #config) so this module stays config-free and unit-testable. See code-conventions.md §2.
-import { getFilterableFields } from '../../datasets/es/operations.ts'
+import { getFilterableFields, resolveExactKeywordTarget } from '../../datasets/es/operations.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Counter } from 'prom-client'
 import { parse as parseWhere } from './where.peg.js'
@@ -74,7 +74,7 @@ export const parseFilters = (dataset, query, route) => {
   if (query.where) {
     const { searchFields, wildcardFields } = getFilterableFields(dataset)
     try {
-      must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset, timezone: query.timezone }))
+      must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset, timezone: query.timezone, resolveExactKeywordTarget }))
     } catch (err: any) {
       logCompatODSError(err, query.where, route, 'invalid-where', dataset.id)
       throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)

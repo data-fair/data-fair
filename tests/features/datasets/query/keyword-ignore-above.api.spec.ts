@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
+const adminAx = await axiosAuth('test_superadmin@test.com', undefined, true)
+const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+
 const ax = await axiosAuth('test_user1@test.com')
 const long = 'L'.repeat(260)
 
@@ -82,5 +85,35 @@ test.describe('keyword ignore_above — per-request hint', () => {
     await waitForFinalize(ax, 'ia-clean')
     const res = await ax.get('/api/v1/datasets/ia-clean/lines', { params: { plain_starts: 'sh', hint: 'true', count: 'false' } })
     assert.equal(res.data.hint, undefined)
+  })
+})
+
+test.describe('keyword ignore_above — diagnose + ODS where equality', () => {
+  test.beforeEach(async () => { await clean() })
+
+  test('diagnose surfaces IgnoredKeywordValues for a long-valued plain column', async () => {
+    await setup('ia-diag')
+    const diagnose = (await adminAx.get('/api/v1/datasets/ia-diag/_diagnose')).data
+    assert.ok(diagnose.warnings.find((w: any) => w.code === 'IgnoredKeywordValues'))
+  })
+
+  test('ODS where equality with a > 200-char value and no wildcard → 400', async () => {
+    await axOrg.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await axOrg.post('/api/v1/datasets/ia-ods', {
+      isRest: true,
+      title: 'ia-ods',
+      schema: [
+        { key: 'plain', type: 'string' },
+        { key: 'wild', type: 'string', 'x-capabilities': { wildcard: true } }
+      ]
+    })
+    await axOrg.post('/api/v1/datasets/ia-ods/_bulk_lines', [
+      { plain: 'short', wild: 'short' },
+      { plain: long, wild: long }
+    ])
+    await waitForFinalize(axOrg, 'ia-ods')
+    await assert.rejects(
+      axOrg.get('/api/v1/datasets/ia-ods/compat-ods/records', { params: { where: `plain = "${long}"` } }),
+      (e: any) => e.status === 400)
   })
 })
