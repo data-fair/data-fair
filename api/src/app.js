@@ -1,6 +1,6 @@
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
-import { trackEmbed } from './embed.js'
+import { trackEmbed } from './embed.ts'
 import express from 'express'
 import { parsePath as parseUrlPath } from 'ufo'
 import pathToRegexp from 'path-to-regexp'

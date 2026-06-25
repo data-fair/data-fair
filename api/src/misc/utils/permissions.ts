@@ -8,6 +8,9 @@ import { Router } from 'express'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as permissionsClasses from '@data-fair/data-fair-shared/permissions/operations.ts'
 import * as visibilityUtils from './visibility.ts'
+import { clientSurface } from './client-surface.ts'
+import { reqPublicationSite } from './publication-sites.ts'
+import { reqPublicBaseUrl } from './public-base-url.ts'
 import { getAccountRole, reqSession } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 // The cross-cutting resource / resourceType / bypassPermissions / publicOperation
@@ -92,6 +95,13 @@ export const middleware = function (operationId: string, operationClass: string,
       }
     }
     setReqOperation(req, operation)
+    const client = clientSurface({
+      explicit: req.get('x-client') ?? undefined,
+      referer: (req.headers.referer || req.headers.referrer) as string | undefined,
+      portalUrl: reqPublicationSite(req)?.url,
+      publicBaseUrl: reqPublicBaseUrl(req)
+    })
+    if (client) res.setHeader('x-client', client)
     res.setHeader('x-operation', operationHeader)
     next()
   }

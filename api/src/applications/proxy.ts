@@ -142,6 +142,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   }
   res.setHeader('x-resource', JSON.stringify({ type: permissions.reqResourceType(req), id: permissions.reqResource(req).id, title: encodeURIComponent(permissions.reqResource(req).title) }))
   res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openApplication', track: 'openApplication' }))
+  res.setHeader('x-client', req.get('x-client') || 'application')
   const ownerHeader: { type: string, id: string, department?: string } = { type: permissions.reqResource(req).owner.type, id: permissions.reqResource(req).owner.id }
   if (permissions.reqResource(req).owner.department) ownerHeader.department = permissions.reqResource(req).owner.department
   res.setHeader('x-owner', JSON.stringify(ownerHeader))
