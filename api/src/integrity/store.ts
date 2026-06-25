@@ -1,0 +1,58 @@
+import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import type { RevisionContext } from './operations.ts'
+
+export type RevisionBody = {
+  hash: { md5: string }
+  context: RevisionContext
+  dataset: { id: string, slug?: string }
+}
+
+export type IntegrityS3Options = {
+  region?: string
+  endpoint: string
+  bucket: string
+  credentials: { accessKeyId: string, secretAccessKey: string }
+  forcePathStyle?: boolean
+}
+
+export class IntegrityStore {
+  client: S3Client
+  bucket: string
+  constructor (opts: IntegrityS3Options) {
+    this.client = new S3Client({
+      region: opts.region || 'us-east-1',
+      endpoint: opts.endpoint,
+      credentials: opts.credentials,
+      forcePathStyle: opts.forcePathStyle ?? true
+    })
+    this.bucket = opts.bucket
+  }
+
+  async writeRevision (key: string, body: RevisionBody, retainUntil: Date): Promise<void> {
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: JSON.stringify(body),
+      ContentType: 'application/json',
+      ObjectLockMode: 'COMPLIANCE',
+      ObjectLockRetainUntilDate: retainUntil
+    }))
+  }
+
+  async listRevisionKeys (prefix: string): Promise<string[]> {
+    const keys: string[] = []
+    let ContinuationToken: string | undefined
+    do {
+      const res = await this.client.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken }))
+      for (const o of res.Contents ?? []) if (o.Key) keys.push(o.Key)
+      ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined
+    } while (ContinuationToken)
+    return keys
+  }
+
+  async getRevision (key: string): Promise<RevisionBody> {
+    const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }))
+    const text = await res.Body!.transformToString()
+    return JSON.parse(text)
+  }
+}

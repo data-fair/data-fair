@@ -27,6 +27,17 @@ module.exports = {
     },
     forcePathStyle: true
   },
+  integrity: {
+    active: true,
+    s3: {
+      region: 'us-east-1',
+      endpoint: `http://localhost:${process.env.INTEGRITY_S3_PORT}`,
+      bucket: 'data-fair-integrity',
+      credentials: { accessKeyId: 'minioadmin', secretAccessKey: 'minioadmin' },
+      forcePathStyle: true,
+    },
+    retention: { days: 1 },
+  },
   directoryUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/simple-directory`,
   privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
   captureUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}/capture`,

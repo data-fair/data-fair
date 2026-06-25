@@ -20,6 +20,21 @@ module.exports = {
     maxSingleCopySize: 5 * 1024 * 1024 * 1024, // 5GB - threshold for using multipart copy
     multipartChunkSize: 100 * 1024 * 1024, // 100MB - chunk size for multipart copy
   },
+  integrity: {
+    active: false,
+    s3: {
+      region: '',
+      endpoint: '',
+      bucket: '',
+      credentials: {
+        accessKeyId: '',
+        secretAccessKey: '',
+      },
+      forcePathStyle: true,
+    },
+    retention: { days: 365 },
+  },
+  integrityCheckCron: '0 4 * * *', // daily at 4 AM, sliding integrity sweep
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: null,
