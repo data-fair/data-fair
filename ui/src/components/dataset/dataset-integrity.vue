@@ -66,6 +66,33 @@
         hide-details
         @update:model-value="(v) => toggle.execute(!!v)"
       />
+
+      <template v-if="state.active">
+        <v-divider class="my-4" />
+        <h4 class="text-subtitle-1 mb-2">
+          {{ t('historyTitle') }}
+        </h4>
+        <v-data-table-server
+          :headers="headers"
+          :items="revisions"
+          :items-length="revisionsCount"
+          :loading="loadRevisions.loading.value"
+          :items-per-page="size"
+          :page="page"
+          density="compact"
+          @update:page="(p) => { page = p; loadRevisions.execute() }"
+        >
+          <template #item.date="{ item }">
+            {{ formatDate(item.date) }}
+          </template>
+          <template #item.md5="{ item }">
+            <code class="text-caption">{{ item.md5.slice(0, 12) }}…</code>
+          </template>
+          <template #item.operation="{ item }">
+            {{ t('op_' + item.operation) }}
+          </template>
+        </v-data-table-server>
+      </template>
     </template>
     <v-skeleton-loader
       v-else
@@ -89,6 +116,16 @@ fr:
   checkOk: Contrôle effectué
   fixOk: Réconciliation effectuée
   toggleOk: Configuration enregistrée
+  historyTitle: Historique des révisions
+  colIndex: "#"
+  colOperation: Opération
+  colDate: Date
+  colOriginator: Auteur
+  colHash: Empreinte
+  op_create: Création
+  op_update: Mise à jour
+  op_enable: Activation
+  op_fixIntegrity: Réconciliation
 en:
   disabledInfo: Integrity checking is not enabled for this dataset.
   breachTitle: Integrity breach
@@ -103,6 +140,16 @@ en:
   checkOk: Check completed
   fixOk: Reconciliation completed
   toggleOk: Configuration saved
+  historyTitle: Revision history
+  colIndex: "#"
+  colOperation: Operation
+  colDate: Date
+  colOriginator: Author
+  colHash: Hash
+  op_create: Create
+  op_update: Update
+  op_enable: Enable
+  op_fixIntegrity: Reconcile
 </i18n>
 
 <script setup lang="ts">
@@ -119,9 +166,30 @@ type IntegrityState = {
 
 const state = ref<IntegrityState | null>(null)
 
+const size = 10
+const page = ref(1)
+const revisions = ref<any[]>([])
+const revisionsCount = ref(0)
+
+const headers = computed(() => [
+  { title: t('colIndex'), key: 'i', width: 60 },
+  { title: t('colOperation'), key: 'operation', sortable: false },
+  { title: t('colDate'), key: 'date', sortable: false },
+  { title: t('colOriginator'), key: 'originator', sortable: false },
+  { title: t('colHash'), key: 'md5', sortable: false }
+])
+
+const loadRevisions = useAsyncAction(async () => {
+  if (!dataset.value) return
+  const res = await $fetch(`datasets/${dataset.value.id}/_integrity/revisions`, { params: { size, page: page.value } })
+  revisions.value = res.results
+  revisionsCount.value = res.count
+})
+
 const load = async () => {
   if (!dataset.value) return
   state.value = await $fetch(`datasets/${dataset.value.id}/_integrity`)
+  if (state.value?.active) await loadRevisions.execute()
 }
 load()
 
