@@ -95,8 +95,14 @@
       </template>
     </template>
     <v-skeleton-loader
-      v-else
+      v-else-if="load.loading.value"
       type="paragraph"
+    />
+    <v-alert
+      v-else
+      type="error"
+      variant="tonal"
+      :text="t('loadError')"
     />
   </div>
 </template>
@@ -116,6 +122,7 @@ fr:
   checkOk: Contrôle effectué
   fixOk: Réconciliation effectuée
   toggleOk: Configuration enregistrée
+  loadError: Impossible de charger l'état d'intégrité.
   historyTitle: Historique des révisions
   colIndex: "#"
   colOperation: Opération
@@ -140,6 +147,7 @@ en:
   checkOk: Check completed
   fixOk: Reconciliation completed
   toggleOk: Configuration saved
+  loadError: Could not load the integrity status.
   historyTitle: Revision history
   colIndex: "#"
   colOperation: Operation
@@ -188,29 +196,31 @@ const loadRevisions = useAsyncAction(async () => {
   revisionsCount.value = res.count
 })
 
-const load = async () => {
+// wrapped in useAsyncAction so a first-load failure surfaces an error (and load.loading drives the
+// skeleton vs. error states in the template) instead of leaving a perpetual skeleton.
+const load = useAsyncAction(async () => {
   if (!dataset.value) return
   state.value = await $fetch<IntegrityState>(`datasets/${dataset.value.id}/_integrity`)
   if (state.value?.active) {
     page.value = 1 // a post-action refetch may shrink the history; avoid landing on a now-empty page
     await loadRevisions.execute()
   }
-}
-load()
+})
+load.execute()
 
 const check = useAsyncAction(async () => {
   await $fetch(`datasets/${dataset.value!.id}/_integrity/_check`, { method: 'POST' })
-  await load()
+  await load.execute()
 }, { success: t('checkOk') })
 
 const fix = useAsyncAction(async () => {
   await $fetch(`datasets/${dataset.value!.id}/_integrity/_fix`, { method: 'POST' })
-  await load()
+  await load.execute()
 }, { success: t('fixOk') })
 
 const toggle = useAsyncAction(async (active: boolean) => {
   await $fetch(`datasets/${dataset.value!.id}/_integrity`, { method: 'PUT', body: { active } })
-  await load()
+  await load.execute()
 }, { success: t('toggleOk') })
 
 const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString(locale.value)
