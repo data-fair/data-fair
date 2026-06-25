@@ -205,6 +205,7 @@ export const clean = (req: Request, dataset: any, draft = false) => {
   delete dataset._partialRestStatus
   delete dataset._newRestAttachments
   delete dataset._esCopyToSearch
+  delete dataset._esIgnoredKeywordFields
 
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner

@@ -4,7 +4,7 @@ import es from '#es'
 import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
 import { buildIndexMappings } from './operations.ts'
-import { computeFinalizeWarnings, pickPrimaryCode, type WarningCode } from './diagnose-warnings.ts'
+import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, type WarningCode } from './diagnose-warnings.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
@@ -306,8 +306,16 @@ export const datasetInfos = async (dataset: any) => {
   }
 }
 
-export const datasetWarning = async (dataset: any): Promise<WarningCode | null> => {
-  if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') return null
+export const datasetFinalizeDiagnostics = async (dataset: any): Promise<{ esWarning: WarningCode | null, ignoredKeywordFields: string[] }> => {
+  if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') {
+    return { esWarning: null, ignoredKeywordFields: [] }
+  }
   const esInfos = await datasetInfos(dataset)
-  return pickPrimaryCode(computeFinalizeWarnings(dataset, esInfos, config.elasticsearch))
+  return {
+    esWarning: pickPrimaryCode(computeFinalizeWarnings(dataset, esInfos, config.elasticsearch)),
+    ignoredKeywordFields: computeIgnoredKeywordFields(dataset, esInfos)
+  }
 }
+
+// kept for any caller that only needs the primary code
+export const datasetWarning = async (dataset: any): Promise<WarningCode | null> => (await datasetFinalizeDiagnostics(dataset)).esWarning

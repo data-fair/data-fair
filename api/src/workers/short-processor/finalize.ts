@@ -1,7 +1,7 @@
 // Finalize dataset for publication
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
-import { datasetWarning } from '../../datasets/es/manage-indices.ts'
+import { datasetFinalizeDiagnostics } from '../../datasets/es/manage-indices.ts'
 import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
 import * as geoUtils from '../../datasets/utils/geo.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
@@ -136,7 +136,9 @@ export default async function (_dataset: DatasetInternal) {
     await progress.inc()
   }
 
-  result.esWarning = await datasetWarning(dataset)
+  const finalizeDiag = await datasetFinalizeDiagnostics(dataset)
+  result.esWarning = finalizeDiag.esWarning
+  result._esIgnoredKeywordFields = finalizeDiag.ignoredKeywordFields
 
   if (isRestDataset(dataset)) {
     await restDatasetsUtils.configureHistory(dataset)
