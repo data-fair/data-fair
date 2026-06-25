@@ -164,11 +164,13 @@ type IntegrityState = {
   lastRevision?: { i: number, md5: string, date: string }
 }
 
+type RevisionEntry = { i: number, md5: string, date: string, operation: string, originator: string, reason?: string }
+
 const state = ref<IntegrityState | null>(null)
 
 const size = 10
 const page = ref(1)
-const revisions = ref<any[]>([])
+const revisions = ref<RevisionEntry[]>([])
 const revisionsCount = ref(0)
 
 const headers = computed(() => [
@@ -181,15 +183,18 @@ const headers = computed(() => [
 
 const loadRevisions = useAsyncAction(async () => {
   if (!dataset.value) return
-  const res = await $fetch(`datasets/${dataset.value.id}/_integrity/revisions`, { params: { size, page: page.value } })
+  const res = await $fetch<{ count: number, results: RevisionEntry[] }>(`datasets/${dataset.value.id}/_integrity/revisions`, { params: { size, page: page.value } })
   revisions.value = res.results
   revisionsCount.value = res.count
 })
 
 const load = async () => {
   if (!dataset.value) return
-  state.value = await $fetch(`datasets/${dataset.value.id}/_integrity`)
-  if (state.value?.active) await loadRevisions.execute()
+  state.value = await $fetch<IntegrityState>(`datasets/${dataset.value.id}/_integrity`)
+  if (state.value?.active) {
+    page.value = 1 // a post-action refetch may shrink the history; avoid landing on a now-empty page
+    await loadRevisions.execute()
+  }
 }
 load()
 
