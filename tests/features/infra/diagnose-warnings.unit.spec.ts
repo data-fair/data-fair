@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { computeFinalizeWarnings, computeIgnoredKeywordFields } from '../../../api/src/datasets/es/diagnose-warnings.ts'
+import { computeFinalizeWarnings, computeIgnoredKeywordFields, isIgnoredColumnActionable } from '../../../api/src/datasets/es/diagnose-warnings.ts'
 
 const cfg = { nbReplicas: 1, maxShardSize: 5e10, diagnose: { segmentsPerShardWarn: 99, deletedRatioWarn: 0.9, mappingFieldsLimitWarn: 0.9, minShardSize: 0 } }
 const baseIndex = { health: 'green', definition: { settings: { index: { number_of_shards: '1', number_of_replicas: '1' } }, mappings: { properties: {} } } }
@@ -20,8 +20,15 @@ test.describe('ignored keyword fields', () => {
     assert.ok(w.find(x => x.code === 'IgnoredKeywordValues'))
   })
 
-  test('IgnoredKeywordValues does NOT fire when the flagged column has wildcard', () => {
+  test('IgnoredKeywordValues still fires for a wildcard column that keeps sort/group enabled', () => {
+    // wildcard repairs filtering, but NOT sorting/grouping (still on by default) — so it is actionable
     const dataset = { id: 'd', schema: [{ key: 'plain', type: 'string', 'x-capabilities': { wildcard: true } }], storage }
+    const w = computeFinalizeWarnings(dataset, { index: baseIndex, ignoredFields: ['plain'] }, cfg as any)
+    assert.ok(w.find(x => x.code === 'IgnoredKeywordValues'))
+  })
+
+  test('IgnoredKeywordValues does NOT fire when the column is fully mitigated (wildcard + no sort/group)', () => {
+    const dataset = { id: 'd', schema: [{ key: 'plain', type: 'string', 'x-capabilities': { wildcard: true, values: false, insensitive: false } }], storage }
     const w = computeFinalizeWarnings(dataset, { index: baseIndex, ignoredFields: ['plain'] }, cfg as any)
     assert.equal(w.find(x => x.code === 'IgnoredKeywordValues'), undefined)
   })
@@ -30,5 +37,12 @@ test.describe('ignored keyword fields', () => {
     const dataset = { id: 'd', schema: [{ key: 'plain', type: 'string' }], storage }
     const w = computeFinalizeWarnings(dataset, { index: baseIndex, ignoredFields: [] }, cfg as any)
     assert.equal(w.find(x => x.code === 'IgnoredKeywordValues'), undefined)
+  })
+
+  test('isIgnoredColumnActionable: actionable unless wildcard AND no sort/group capabilities', () => {
+    assert.equal(isIgnoredColumnActionable({ key: 'a', type: 'string' }), true) // no wildcard
+    assert.equal(isIgnoredColumnActionable({ key: 'a', type: 'string', 'x-capabilities': { wildcard: true } }), true) // sort/group still on
+    assert.equal(isIgnoredColumnActionable({ key: 'a', type: 'string', 'x-capabilities': { wildcard: true, insensitive: false } }), true) // values still on
+    assert.equal(isIgnoredColumnActionable({ key: 'a', type: 'string', 'x-capabilities': { wildcard: true, values: false, insensitive: false } }), false) // fully mitigated
   })
 })

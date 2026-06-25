@@ -2,7 +2,8 @@
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
 import { datasetFinalizeDiagnostics } from '../../datasets/es/manage-indices.ts'
-import { hasManyQSearchFields, hasCapability } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
+import { isIgnoredColumnActionable } from '../../datasets/es/diagnose-warnings.ts'
 import * as geoUtils from '../../datasets/utils/geo.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -144,13 +145,13 @@ export default async function (_dataset: DatasetInternal) {
   const prevIgnored = new Set<string>((dataset as any)._esIgnoredKeywordFields ?? [])
   const actionable = finalizeDiag.ignoredKeywordFields.filter((key: string) => {
     const p = (result.schema ?? dataset.schema ?? []).find((f: any) => f.key === key)
-    return p && !hasCapability(p, 'wildcard')
+    return p && isIgnoredColumnActionable(p)
   })
   const isNew = actionable.some((k: string) => !prevIgnored.has(k))
   if (actionable.length && isNew) {
     await journals.log('datasets', dataset, {
       type: 'ignored-keyword-values',
-      data: `Colonnes concernées : ${actionable.join(', ')}. Activez la fonctionnalité « wildcard » sur ces colonnes et retraitez le jeu de données.`
+      data: `Colonnes concernées : ${actionable.join(', ')}. Elles contiennent des valeurs de plus de 200 caractères, silencieusement exclues du filtrage exact, du tri et du regroupement. Vérifiez la configuration technique (capacités) de ces colonnes.`
     } as Event).catch(() => {})
   }
 

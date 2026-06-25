@@ -161,14 +161,18 @@ async function seedSuiviDemandes () {
  *                        case → it raises the `IgnoredKeywordValues` diagnose
  *                        warning, a `ignored-keyword-values` journal event at
  *                        finalize, and per-request advisories.
- *   - `chemin_fichier` : the SAME long values, but the column opts into the
- *                        `wildcard` capability → filters are transparently routed
- *                        to the no-limit `.wildcard` sub-field and stay correct.
+ *   - `chemin_fichier` : the SAME long values, configured the way a long-valued
+ *                        column should be — `wildcard` enabled (exact/existence
+ *                        filters route to the no-limit `.wildcard` sub-field) AND
+ *                        sortable/groupable disabled (sort & group can NOT be made
+ *                        reliable past 200 chars, so the capability is removed
+ *                        rather than left silently broken). It is therefore fully
+ *                        mitigated → not flagged.
  *
  * Things to try once it is finalized (browse / call the API):
  *   - GET .../datasets/fixtures-ignore-above/_diagnose
  *       → warnings[] contains IgnoredKeywordValues naming `note_libre` only
- *         (chemin_fichier has a wildcard alternative, so it is not flagged).
+ *         (chemin_fichier is fully mitigated, so it is not flagged).
  *   - GET .../datasets/fixtures-ignore-above/journal
  *       → an `ignored-keyword-values` warning event (journal-only, no notification).
  *   - lines?note_libre_eq=<a >200-char value>      → 400 (impossible on keyword).
@@ -187,13 +191,15 @@ async function seedIgnoreAbove () {
   await dfAx.post(`/api/v1/datasets/${id}`, {
     isRest: true,
     title: 'Démonstration ignore_above (valeurs longues)',
-    description: 'Illustre la gestion des valeurs de plus de 200 caractères sur les colonnes "keyword" Elasticsearch : la colonne "note_libre" (sans wildcard) pose problème, la colonne "chemin_fichier" (avec wildcard) reste filtrable. Voir docs/architecture/load-management.md.',
+    description: 'Illustre la gestion des valeurs de plus de 200 caractères sur les colonnes "keyword" Elasticsearch : la colonne "note_libre" (non configurée) pose problème, la colonne "chemin_fichier" est correctement configurée (wildcard activé, tri/regroupement désactivés). Voir docs/architecture/load-management.md.',
     schema: [
       { key: 'ref', type: 'string', title: 'Référence' },
       // plain keyword column: long values are dropped from the index (the problem case)
-      { key: 'note_libre', type: 'string', title: 'Note libre (sans wildcard)' },
-      // same long values, but opted into the wildcard capability (the fixed case)
-      { key: 'chemin_fichier', type: 'string', title: 'Chemin de fichier (avec wildcard)', 'x-capabilities': { wildcard: true } }
+      { key: 'note_libre', type: 'string', title: 'Note libre (non configurée)' },
+      // correctly configured for long values: wildcard for exact/existence filtering,
+      // and sort/group (values) + case-insensitive sort (insensitive) disabled, since
+      // those cannot be reliable past 200 chars (wildcard does not repair them).
+      { key: 'chemin_fichier', type: 'string', title: 'Chemin de fichier (configuré)', 'x-capabilities': { wildcard: true, values: false, insensitive: false } }
     ]
   })
   const lines = [

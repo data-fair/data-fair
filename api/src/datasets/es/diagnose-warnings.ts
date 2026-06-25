@@ -69,6 +69,14 @@ export const computeIgnoredKeywordFields = (dataset: any, esInfos: any): string[
     .map((p: any) => p.key)
 }
 
+// A flagged column is worth warning about when truncation actually breaks an operation it still
+// offers. The `.wildcard` routing repairs exact/existence/prefix/range filtering, but it does NOT
+// repair sorting or grouping — those read the truncated keyword / keyword_insensitive fields. So a
+// column is "actionable" when it lacks a wildcard alternative (filtering still degraded) OR still
+// advertises the sort/group capabilities (`values`) or case-insensitive sort (`insensitive`).
+export const isIgnoredColumnActionable = (prop: any): boolean =>
+  !hasCapability(prop, 'wildcard') || hasCapability(prop, 'values') || hasCapability(prop, 'insensitive')
+
 const skipDataset = (dataset: any): boolean => {
   if (!dataset) return true
   if (dataset.isVirtual || dataset.isMetaOnly) return true
@@ -138,13 +146,13 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   const flagged = computeIgnoredKeywordFields(dataset, esInfos)
   const actionable = flagged.filter((key: string) => {
     const p = (dataset.schema ?? []).find((f: any) => f.key === key)
-    return p && !hasCapability(p, 'wildcard')
+    return p && isIgnoredColumnActionable(p)
   })
   if (actionable.length) {
     warnings.push({
       code: 'IgnoredKeywordValues',
       severity: 'warning',
-      message: `column(s) ${actionable.join(', ')} contain values longer than 200 characters that are excluded from exact/exists/range filtering and sorting; enable the "wildcard" capability on these columns and reprocess to fix it`,
+      message: `column(s) ${actionable.join(', ')} contain values longer than 200 characters; such values are silently excluded from exact-match filtering, sorting and grouping. Review the technical capabilities configured on these columns.`,
       details: { columns: actionable }
     })
   }
