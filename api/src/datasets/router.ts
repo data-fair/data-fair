@@ -8,6 +8,7 @@ import { registerFilesRoutes } from './routes/files.ts'
 import { registerMetadataRoutes } from './routes/metadata.ts'
 import { registerWriteRoutes } from './routes/write.ts'
 import { registerMiscRoutes } from './routes/misc.ts'
+import { registerIntegrityRoutes } from './routes/integrity.ts'
 
 const router = express.Router()
 
@@ -31,5 +32,7 @@ registerReadRoutes(router)
 registerFilesRoutes(router)
 
 registerMiscRoutes(router)
+
+registerIntegrityRoutes(router)
 
 export default router
