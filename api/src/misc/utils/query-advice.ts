@@ -136,8 +136,10 @@ export const uncertainFilterAdvice = (req: Request): string => {
   }
 
   if (!flagged.size) return ''
-  const items = [...flagged].map(k => req.__('errors.queryAdviceUncertainFilter', k, String(KEYWORD_IGNORE_ABOVE)))
-  return ' ' + req.__('errors.queryAdviceUncertainIntro') + ' : ' + items.join(' ; ') + '.'
+  // consumer-facing: state the limitation and the affected columns only — the "enable wildcard /
+  // reprocess" fix is an owner/admin action surfaced via the diagnose warning and journal event.
+  const items = [...flagged].map(k => req.__('errors.queryAdviceUncertainFilter', k))
+  return ' ' + req.__('errors.queryAdviceUncertainIntro', String(KEYWORD_IGNORE_ABOVE)) + ' : ' + items.join(', ') + '.'
 }
 
 export type HintMode = 'auto' | 'true' | 'false'
