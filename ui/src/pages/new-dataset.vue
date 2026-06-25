@@ -513,8 +513,8 @@ function onInitFromNext () {
 // ---- File params ----
 const fileInputValue = ref<File[]>([])
 const file = ref<File | null>(null)
-const attachmentsInputValue = ref<File[]>([])
-const attachments = computed(() => attachmentsInputValue.value?.[0] ?? null)
+const attachmentsInputValue = ref<File | null>(null)
+const attachments = computed(() => attachmentsInputValue.value ?? null)
 const fileTitle = ref('')
 const lastAutoFilledTitle = ref('')
 const attachmentsAsImage = ref(false)
