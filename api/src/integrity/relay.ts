@@ -10,6 +10,10 @@ export const historize = async (dataset: DatasetInternal): Promise<void> => {
     { $unset: { _needsHistorizing: '', _historizeContext: '' } }
   )
 
+  // capability disabled at the deployment level: drop the flag instead of letting integrityStore()
+  // throw on every worker poll (retry storm). A later finalize re-sets the flag if re-enabled.
+  if (!config.integrity?.active) { await clearFlag(); return }
+
   const currentMd5 = dataset.originalFile?.md5
   if (!currentMd5) { await clearFlag(); return } // nothing stable to anchor
 

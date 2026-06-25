@@ -14,6 +14,7 @@ const waitForFlagCleared = async (datasetId: string, timeoutMs = 20000) => {
     await new Promise((resolve) => setTimeout(resolve, 250))
     raw = await getRawDataset(datasetId)
   }
+  if (raw._needsHistorizing !== undefined) throw new Error('relay did not clear _needsHistorizing within timeout')
   return raw
 }
 
