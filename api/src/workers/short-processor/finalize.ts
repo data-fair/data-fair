@@ -2,7 +2,7 @@
 import config from '#config'
 import * as esUtils from '../../datasets/es/index.ts'
 import { datasetFinalizeDiagnostics } from '../../datasets/es/manage-indices.ts'
-import { hasManyQSearchFields } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields, hasCapability } from '../../datasets/es/operations.ts'
 import * as geoUtils from '../../datasets/utils/geo.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -13,6 +13,7 @@ import taskProgress from '../../datasets/utils/task-progress.ts'
 import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
 import dayjs from 'dayjs'
 import mongo from '#mongo'
+import * as journals from '../../misc/utils/journals.ts'
 
 import debugLib from 'debug'
 import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
@@ -139,6 +140,19 @@ export default async function (_dataset: DatasetInternal) {
   const finalizeDiag = await datasetFinalizeDiagnostics(dataset)
   result.esWarning = finalizeDiag.esWarning
   result._esIgnoredKeywordFields = finalizeDiag.ignoredKeywordFields
+
+  const prevIgnored = new Set<string>((dataset as any)._esIgnoredKeywordFields ?? [])
+  const actionable = finalizeDiag.ignoredKeywordFields.filter((key: string) => {
+    const p = (result.schema ?? dataset.schema ?? []).find((f: any) => f.key === key)
+    return p && !hasCapability(p, 'wildcard')
+  })
+  const isNew = actionable.some((k: string) => !prevIgnored.has(k))
+  if (actionable.length && isNew) {
+    await journals.log('datasets', dataset, {
+      type: 'ignored-keyword-values',
+      data: `Colonnes concernées : ${actionable.join(', ')}. Activez la fonctionnalité « wildcard » sur ces colonnes et retraitez le jeu de données.`
+    } as any).catch(() => {})
+  }
 
   if (isRestDataset(dataset)) {
     await restDatasetsUtils.configureHistory(dataset)

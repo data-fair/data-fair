@@ -97,6 +97,15 @@ test.describe('keyword ignore_above — diagnose + ODS where equality', () => {
     assert.ok(diagnose.warnings.find((w: any) => w.code === 'IgnoredKeywordValues'))
   })
 
+  test('a newly long-valued plain column logs a journal warning at finalize', async () => {
+    await setup('ia-journal')
+    // the dataset journal must contain a non-error event mentioning the truncated column
+    const journal = (await ax.get('/api/v1/datasets/ia-journal/journal')).data
+    const ev = journal.find((e: any) => e.type === 'ignored-keyword-values')
+    assert.ok(ev, 'expected an ignored-keyword-values journal event')
+    assert.ok(typeof ev.data === 'string' && ev.data.includes('plain'), 'event should name the truncated column')
+  })
+
   test('ODS where equality with a > 200-char value and no wildcard → 400', async () => {
     await axOrg.put('/api/v1/settings/organization/test_org1', { compatODS: true })
     await axOrg.post('/api/v1/datasets/ia-ods', {
