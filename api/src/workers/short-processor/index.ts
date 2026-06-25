@@ -75,6 +75,12 @@ export const finalize = async function (dataset: Dataset) {
   await finalize.default(dataset)
 }
 
+export const historize = async function (dataset: Dataset) {
+  await mongo.connect(true)
+  const relay = await import('../../integrity/relay.ts')
+  await relay.historize(dataset as any)
+}
+
 if (process.env.NODE_ENV === 'development') {
   const nock = (await import('nock')).default
   // fake catalog

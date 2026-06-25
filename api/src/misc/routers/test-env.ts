@@ -97,6 +97,16 @@ router.get('/pending-tasks', (req, res) => {
   res.json(pendingTasks)
 })
 
+// Patch a dataset document directly in MongoDB (test-only)
+router.post('/patch-dataset/:datasetId', async (req, res, next) => {
+  try {
+    await mongo.datasets.updateOne({ id: req.params.datasetId }, { $set: req.body })
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Return the raw MongoDB document for a dataset (including draft field)
 router.get('/raw-dataset/:id', async (req, res, next) => {
   try {

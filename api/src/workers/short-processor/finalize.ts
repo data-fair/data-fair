@@ -31,6 +31,7 @@ export default async function (_dataset: DatasetInternal) {
   const queryableDataset = { ...dataset }
 
   const result: Partial<Nullable<DatasetInternal>> = { status: 'finalized', schema: dataset.schema }
+  if (dataset.integrity?.active) result._needsHistorizing = true
 
   if (isVirtualDataset(dataset)) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset)

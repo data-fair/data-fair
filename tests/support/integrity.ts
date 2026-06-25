@@ -22,3 +22,16 @@ export const listIntegrityKeys = async (prefix: string): Promise<string[]> => {
   const res = await integrityTestClient.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix }))
   return (res.Contents ?? []).map((o) => o.Key!).filter(Boolean)
 }
+
+// The historize relay is triggered by the `_needsHistorizing` flag, which the worker discovers
+// on its periodic poll — so waitForWorkerIdle() can return before the task is even picked up.
+// Poll the store until at least `expected` revisions exist (or timeout).
+export const waitForIntegrityRevisions = async (prefix: string, expected: number, timeoutMs = 20000): Promise<string[]> => {
+  const start = Date.now()
+  let keys = await listIntegrityKeys(prefix)
+  while (keys.length < expected && Date.now() - start < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    keys = await listIntegrityKeys(prefix)
+  }
+  return keys
+}
