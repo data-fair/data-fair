@@ -38,6 +38,9 @@ export default async function (dataset: FileDataset) {
   const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData: any) => crsParser.write(decodedData))
   crsParser.end()
 
+  // keep track of the original name behind each key to detect collisions
+  // (e.g. a feature top-level "id" and a property "_id" both escape to "id")
+  const originalNamesByKey = new Map<string, string>([['geometry', 'geometry']])
   for (const property in sampleValues) {
     const key = fieldsSniffer.escapeKey(property, dataset?.analysis?.escapeKeyAlgorithm)
     const existingField = dataset.schema?.find(f => f.key === key)
@@ -46,7 +49,13 @@ export default async function (dataset: FileDataset) {
       'x-originalName': property,
       ...fieldsSniffer.sniff([...sampleValues[property]], attachments, existingField)
     }
-    if (field.type !== 'empty') schema.push(field)
+    if (field.type === 'empty') continue
+    const collidingName = originalNamesByKey.get(key)
+    if (collidingName !== undefined) {
+      throw httpError(400, `[noretry] Échec de l'analyse du fichier, les colonnes "${collidingName}" et "${property}" correspondent à la même clé "${key}".`)
+    }
+    originalNamesByKey.set(key, property)
+    schema.push(field)
   }
 
   dataset.status = 'analyzed'
