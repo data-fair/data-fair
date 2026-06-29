@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { queryAdvice, shouldEmitHint, attachQueryHint, ignoredParamsAdvice } from '../../../api/src/misc/utils/query-advice.ts'
+import { queryAdvice, shouldEmitHint, attachQueryHint, ignoredParamsAdvice, uncertainFilterAdvice } from '../../../api/src/misc/utils/query-advice.ts'
 import { setReqDataset } from '../../../api/src/misc/utils/req-context.ts'
 
 // minimal fake of the bits of an express Request the helper reads.
@@ -162,6 +162,35 @@ test.describe('attachQueryHint', () => {
     assert.match(hint, /errors\.queryAdviceConceptUseColumn/)
     assert.match(hint, /errors\.queryAdviceSelect/)
     assert.ok(hint.indexOf('errors.queryAdviceIgnoredIntro') < hint.indexOf('errors.queryAdviceIntro'))
+  })
+})
+
+test.describe('uncertainFilterAdvice', () => {
+  const schema = [
+    { key: 'plain', type: 'string' },
+    { key: 'wild', type: 'string', 'x-capabilities': { wildcard: true } },
+    { key: 'bare', type: 'string', 'x-capabilities': { text: false, textStandard: false } }
+  ]
+  const flagged = { schema, _esIgnoredKeywordFields: ['plain', 'wild', 'bare'] }
+  const clean = { schema, _esIgnoredKeywordFields: [] }
+
+  test('no advice when the column is not flagged (clean data)', () => {
+    assert.equal(uncertainFilterAdvice(fakeReq('/d/lines', { plain_starts: 'x' }, clean)), '')
+  })
+  test('no advice for _starts on a flagged column that has a wildcard alternative', () => {
+    assert.equal(uncertainFilterAdvice(fakeReq('/d/lines', { wild_starts: 'x' }, flagged)), '')
+  })
+  test('fires for _starts on a flagged plain column without wildcard', () => {
+    assert.match(uncertainFilterAdvice(fakeReq('/d/lines', { plain_starts: 'x' }, flagged)), /errors\.queryAdviceUncertainFilter/)
+  })
+  test('fires for _exists on a flagged pure-keyword column (no analyzed fallback)', () => {
+    assert.match(uncertainFilterAdvice(fakeReq('/d/lines', { bare_exists: 'true' }, flagged)), /errors\.queryAdviceUncertainFilter/)
+  })
+  test('does NOT fire for _exists on a flagged plain column (union covers it)', () => {
+    assert.equal(uncertainFilterAdvice(fakeReq('/d/lines', { plain_exists: 'true' }, flagged)), '')
+  })
+  test('does NOT fire for _eq (operand-driven, never uncertain)', () => {
+    assert.equal(uncertainFilterAdvice(fakeReq('/d/lines', { plain_eq: 'x' }, flagged)), '')
   })
 })
 

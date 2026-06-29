@@ -4,7 +4,7 @@ import es from '#es'
 import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
 import { buildIndexMappings } from './operations.ts'
-import { computeFinalizeWarnings, pickPrimaryCode, type WarningCode } from './diagnose-warnings.ts'
+import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, type WarningCode } from './diagnose-warnings.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import debugModule from 'debug'
 
@@ -285,17 +285,59 @@ export const datasetInfos = async (dataset: any) => {
   }
   const aliasedIndexName = Object.keys(alias ?? {})[0]
   const index = indices.find(index => index.index === aliasedIndexName)
+  let ignoredFields: string[] = []
+  if (index) {
+    try {
+      const ignoredRes: any = await es.client.search({
+        index: aliasName(dataset),
+        size: 0,
+        aggs: { ignored: { terms: { field: '_ignored', size: 200 } } }
+      })
+      ignoredFields = (ignoredRes.aggregations?.ignored?.buckets ?? []).map((b: any) => b.key)
+    } catch { /* best-effort diagnostic — never fail datasetInfos over it */ }
+  }
   return {
     aliasName: aliasName(dataset),
     indexPrefix: indexPrefix(dataset),
     indices,
     alias,
-    index
+    index,
+    ignoredFields
   }
 }
 
-export const datasetWarning = async (dataset: any): Promise<WarningCode | null> => {
-  if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') return null
+export const datasetFinalizeDiagnostics = async (dataset: any): Promise<{ esWarning: WarningCode | null, ignoredKeywordFields: string[] }> => {
+  if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') {
+    return { esWarning: null, ignoredKeywordFields: [] }
+  }
   const esInfos = await datasetInfos(dataset)
-  return pickPrimaryCode(computeFinalizeWarnings(dataset, esInfos, config.elasticsearch))
+  return {
+    esWarning: pickPrimaryCode(computeFinalizeWarnings(dataset, esInfos, config.elasticsearch)),
+    ignoredKeywordFields: computeIgnoredKeywordFields(dataset, esInfos)
+  }
+}
+
+// kept for any caller that only needs the primary code
+export const datasetWarning = async (dataset: any): Promise<WarningCode | null> => (await datasetFinalizeDiagnostics(dataset)).esWarning
+
+// Lightweight standalone helper for backfill: runs only the _ignored terms agg, no heavier index-metadata fetches.
+// Returns [] only for genuine missing-index errors (404 / index_not_found_exception) so the backfill
+// can safely mark the dataset as processed. Any other error (transient ES failure, etc.) is re-thrown
+// so the upgrade script's per-dataset handler logs+skips it, leaving _esIgnoredKeywordFields unset
+// for a retry on the next deploy.
+export const getIgnoredKeywordFields = async (dataset: any): Promise<string[]> => {
+  if (dataset.isVirtual) return []
+  try {
+    const res: any = await es.client.search({
+      index: aliasName(dataset),
+      size: 0,
+      aggs: { ignored: { terms: { field: '_ignored', size: 200 } } }
+    })
+    const ignoredFields = (res.aggregations?.ignored?.buckets ?? []).map((b: any) => b.key)
+    return computeIgnoredKeywordFields(dataset, { ignoredFields })
+  } catch (err: any) {
+    // 404 / index_not_found_exception: the index doesn't exist yet — treat as no ignored fields
+    if (err?.meta?.statusCode === 404 || err?.statusCode === 404) return []
+    throw err
+  }
 }

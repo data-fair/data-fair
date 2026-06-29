@@ -38,6 +38,8 @@ export type DatasetInternal = Dataset & {
   // true when this dataset's current index carries the `_search` / `_search_boosted` catch-all
   // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
   _esCopyToSearch?: boolean
+  // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
+  _esIgnoredKeywordFields?: string[]
 }
 
 export type DatasetLine = {

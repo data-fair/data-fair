@@ -440,7 +440,12 @@ function peg$parse(input, options) {
     const prop = options.dataset.schema.find(p => p.key === key)
     if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, 'equal')
-    return { term: { [key]: formatValue(prop, value.value, options.timezone) } }
+    const formatted = formatValue(prop, value.value, options.timezone)
+    // resolveExactKeywordTarget is injected by parseWhere (operations.ts); fall back to the plain
+    // keyword field when it is absent (e.g. parser unit tests), like the other optional options.
+    const target = options.resolveExactKeywordTarget ? options.resolveExactKeywordTarget(prop, [String(formatted)]) : { field: key }
+    if (target.impossible) throw httpError(400, `Impossible de filtrer exactement sur le champ ${key} : la valeur dépasse 200 caractères.`)
+    return { term: { [target.field]: formatted } }
   };
   var peg$f2 = function(key, value) {
     const prop = options.dataset.schema.find(p => p.key === key)

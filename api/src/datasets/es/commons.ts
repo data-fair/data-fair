@@ -27,7 +27,11 @@ import {
   buildQClauses,
   FILTER_CAPABILITIES,
   getColumnFilters,
-  columnOperationsHint
+  columnOperationsHint,
+  resolveExactKeywordTarget,
+  resolveExistsFields,
+  resolveRangeOrPrefixField,
+  KEYWORD_IGNORE_ABOVE
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -300,6 +304,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     if (p['x-concept']?.primary) schemaByConcept.set(p['x-concept'].id, p)
   }
 
+  const ignoredKeywordFields = new Set<string>((dataset as any)._esIgnoredKeywordFields ?? [])
+
   for (const queryKey of Object.keys(query)) {
     const filterSuffix = filterSuffixes.find(suffix => queryKey.endsWith(suffix))
     if (!filterSuffix) continue
@@ -322,54 +328,65 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
         if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-        filter.push({ terms: { [prop.key]: values } })
+        const target = resolveExactKeywordTarget(prop, values)
+        if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : une valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+        filter.push({ terms: { [target.field]: values } })
       } catch (err) {
+        if ((err as any).status === 400) throw err
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     } else if (filterSuffix === '_nin') {
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
         if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-        filter.push({ bool: { must_not: { terms: { [prop.key]: values } } } })
+        const target = resolveExactKeywordTarget(prop, values)
+        if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : une valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+        filter.push({ bool: { must_not: { terms: { [target.field]: values } } } })
       } catch (err) {
+        if ((err as any).status === 400) throw err
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     } else if (filterSuffix === '_eq') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-      filter.push({ term: { [prop.key]: query[queryKey] } })
+      const target = resolveExactKeywordTarget(prop, [query[queryKey]])
+      if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : la valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+      filter.push({ term: { [target.field]: query[queryKey] } })
     } else if (filterSuffix === '_neq') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-      filter.push({ bool: { must_not: { term: { [prop.key]: query[queryKey] } } } })
+      const target = resolveExactKeywordTarget(prop, [query[queryKey]])
+      if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : la valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+      filter.push({ bool: { must_not: { term: { [target.field]: query[queryKey] } } } })
     } else if (filterSuffix === '_gt') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { gt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
       } else {
-        filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
+        filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { gt: query[queryKey] } } })
       }
     } else if (filterSuffix === '_gte') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { gte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
       } else {
-        filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
+        filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { gte: query[queryKey] } } })
       }
     } else if (filterSuffix === '_lt') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { lt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
       } else {
-        filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
+        filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { lt: query[queryKey] } } })
       }
     } else if (filterSuffix === '_lte') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { lte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
       } else {
-        filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
+        filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { lte: query[queryKey] } } })
       }
     } else if (filterSuffix === '_starts') {
-      filter.push({ prefix: { [prop.key]: query[queryKey] } })
+      const { field } = resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key))
+      filter.push({ prefix: { [field]: query[queryKey] } })
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
@@ -379,9 +396,13 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
       must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
     } else if (filterSuffix === '_exists') {
-      filter.push({ exists: { field: prop.key } })
+      const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
+      if (fields.length === 1) filter.push({ exists: { field: fields[0] } })
+      else filter.push({ bool: { should: fields.map(f => ({ exists: { field: f } })), minimum_should_match: 1 } })
     } else if (filterSuffix === '_nexists') {
-      mustNot.push({ exists: { field: prop.key } })
+      const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
+      if (fields.length === 1) mustNot.push({ exists: { field: fields[0] } })
+      else mustNot.push({ bool: { should: fields.map(f => ({ exists: { field: f } })), minimum_should_match: 1 } })
     }
   }
 
