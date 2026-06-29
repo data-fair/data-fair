@@ -36,7 +36,19 @@ const checkInteger = (val: string): boolean => {
   return Number.isInteger(number)
 }
 
-const isOneOf = (value: string, values: string[]): boolean => values.includes(value)
+// detect an attachment-path column as soon as a majority of non-empty sample
+// values point to an uploaded attachment file. Per-value mismatches are not
+// blocking: the column is still recognized, and the user can fix the data or
+// designate the column manually.
+const matchesMostAttachments = (values: string[], attachmentsPaths: string[]): boolean => {
+  const definedValues = values
+    .filter(v => !!v)
+    .map(v => v.trim())
+    .filter(v => !!v)
+  if (!definedValues.length) return false
+  const validCount = definedValues.filter(v => attachmentsPaths.includes(v)).length
+  return validCount > definedValues.length / 2
+}
 const booleanRegexp = new RegExp(`^${trimablePrefix}(0|1|-1|true|false|vrai|faux|oui|non|yes|no)${trimablePrefix}$`, 'i')
 const dateTimeSchema = ajv.compile({ type: 'string', format: 'date-time' })
 const dateSchema = ajv.compile({ type: 'string', format: 'date' })
@@ -53,33 +65,14 @@ const hasDateFormat = (format: string) => {
   return (value: string): boolean => moment(value, formats, true).isValid()
 }
 
-function checkAll (values: string[], check: (val: string, param?: any) => boolean, param?: any, throwIfAlmost?: string): boolean {
+function checkAll (values: string[], check: (val: string) => boolean): boolean {
   const definedValues = values
     .filter(v => !!v)
     .map(v => v.trim())
     .filter(v => !!v)
 
   if (!definedValues.length) return false
-  const invalidValues: string[] = []
-  const validValues: string[] = []
-  for (const value of definedValues) {
-    if (check(value, param)) {
-      validValues.push(value)
-    } else {
-      invalidValues.push(value)
-    }
-  }
-  if (throwIfAlmost) {
-    if (invalidValues.length && invalidValues.length <= (definedValues.length / 2)) {
-      const invalidValuesMsg = invalidValues.slice(0, 3).join(', ') + (invalidValues.length > 3 ? '...' : '.')
-      const validValuesMsg = validValues.slice(0, 3).join(', ') + (validValues.length > 3 ? '...' : '.')
-      throw new Error(`${throwIfAlmost}
-Valeurs invalides : ${invalidValuesMsg}
-Valeurs valides : ${validValuesMsg}
-`)
-    }
-  }
-  return !invalidValues.length
+  return definedValues.every(value => check(value))
 }
 
 const defaultSniffDateConfig: SniffDateConfig = {
@@ -107,7 +100,7 @@ export const sniff = (values: string[], attachmentsPaths: string[] = [], existin
 
   const { dateTimeFormats, dateFormats } = dateConfig ?? defaultSniffDateConfig
 
-  if (attachmentsPaths && attachmentsPaths.length && checkAll(values, isOneOf, attachmentsPaths, '[noretry] Vous avez chargé des pièces jointes, et une colonne semble contenir des chemins vers ces pièces jointes. Mais certaines valeurs sont erronées.')) {
+  if (attachmentsPaths && attachmentsPaths.length && matchesMostAttachments(values, attachmentsPaths)) {
     return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
   }
   if (checkAll(values, val => booleanRegexp.test(val))) return { type: 'boolean' }
