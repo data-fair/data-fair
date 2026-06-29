@@ -122,9 +122,9 @@ const { id: datasetId, datasetFetch, digitalDocumentField } = useDatasetStore()
 
 const showDialog = ref(false)
 const fileInputValue = ref<File[]>([])
-const attachmentsInputValue = ref<File[]>([])
+const attachmentsInputValue = ref<File | null>(null)
 const file = ref<File | null>(null)
-const attachments = computed(() => attachmentsInputValue.value?.[0] ?? null)
+const attachments = computed(() => attachmentsInputValue.value ?? null)
 const encoding = ref('')
 
 const encodingOptions = [
@@ -151,7 +151,7 @@ function onFileChange (val: File | File[]) {
 watch(showDialog, (val) => {
   if (val) {
     fileInputValue.value = []
-    attachmentsInputValue.value = []
+    attachmentsInputValue.value = null
     file.value = null
     encoding.value = ''
     uploadProgress.value = { loaded: 0 }

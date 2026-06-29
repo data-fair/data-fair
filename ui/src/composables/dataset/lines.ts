@@ -99,6 +99,9 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
           if (property.key === '_updatedByName' && raw._updatedBy && !raw._updatedBy.startsWith('apiKey:')) {
             extendedValue.formatted = `${$sdUrl}/api/avatars/user/${raw._updatedBy}/avatar.png`
           }
+          if (property.key === '_ownerName' && raw._owner) {
+            extendedValue.formatted = `${$sdUrl}/api/avatars/${raw._owner.split(':').join('/')}/avatar.png`
+          }
           if (property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && raw[property.key]) {
             extendedValue.formatted = `${$sdUrl}/api/avatars/${raw[property.key].split(':').join('/')}/avatar.png`
           }
