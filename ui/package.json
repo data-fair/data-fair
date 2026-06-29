@@ -59,7 +59,7 @@
     "vue-router": "^5.0.0",
     "vue-tsc": "^3.2.6",
     "vuedraggable": "^4.1.0",
-    "vuetify": "^4.0.0"
+    "vuetify": "^4.1.0"
   },
   "dependencies": {
     "@data-fair/agent-tools-data-fair": "*",
