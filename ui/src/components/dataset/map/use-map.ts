@@ -14,10 +14,10 @@ export const useMap = (
   noInteraction: boolean,
   cols: string[],
   navigationPosition: ControlPosition,
-  bbox: Ref<LngLatBoundsLike | undefined>
+  bbox: Ref<LngLatBoundsLike | undefined>,
+  t: (key: string) => string
 ) => {
   const { sendUiNotif } = useUiNotif()
-  const { t } = useI18n()
   const { style, dataLayers } = useMapStyle()
   const { id, dataset } = useDatasetStore()
 
@@ -62,14 +62,36 @@ export const useMap = (
     // Create a popup, but don't add it to the map yet.
     const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
 
+    const emptyFilter: LegacyFilterSpecification = ['==', '_id', '']
+    const pointFilter: LegacyFilterSpecification = ['==', '$type', 'Point']
+
+    const clearHoverFilter = () => {
+      map.setFilter('results_hover', emptyFilter)
+      map.setFilter('results_point_hover', ['all', pointFilter, emptyFilter])
+    }
+
+    popup.on('close', () => {
+      // Guard against the brief window during which the tileUrl watcher has
+      // removed every data layer and not yet re-added them.
+      if (map.getLayer('results_selected')) {
+        map.setFilter('results_selected', emptyFilter)
+      }
+      if (map.getLayer('results_point_selected')) {
+        map.setFilter('results_point_selected', ['all', pointFilter, emptyFilter])
+      }
+    })
+
+    let hoveredId: string | undefined
     const moveCallback = (e: any) => {
       const feature = map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
       if (!feature) return
 
-      if (feature.properties._id !== undefined) {
-        const itemFilter: LegacyFilterSpecification = ['==', '_id', feature.properties._id]
+      const id = feature.properties._id
+      if (id !== undefined && id !== hoveredId) {
+        hoveredId = id
+        const itemFilter: LegacyFilterSpecification = ['==', '_id', id]
         map.setFilter('results_hover', itemFilter)
-        map.setFilter('results_point_hover', ['all', ['==', '$type', 'Point'], itemFilter])
+        map.setFilter('results_point_hover', ['all', pointFilter, itemFilter])
       }
       // Change the cursor style as a UI indicator.
       map.getCanvas().style.cursor = 'pointer'
@@ -101,7 +123,7 @@ export const useMap = (
           .filter(field => !cols.length || cols.includes(field.key))
           .filter(field => item[field.key] !== undefined)
           .map(field => {
-            return `<li style="list-style-type: none;">${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
+            return `<li style="list-style-type: none;"><strong>${field.title || field['x-originalName'] || field.key}:</strong> ${item[field.key]}</li>`
           })
           .join('\n')
         const html = `<ul style="padding-left: 0;">${htmlList}</ul>`
@@ -111,18 +133,33 @@ export const useMap = (
         popup.setLngLat(e.lngLat)
           .setHTML(html)
           .addTo(map)
+
+        const itemFilter: LegacyFilterSpecification = ['==', '_id', feature.properties._id]
+        map.setFilter('results_selected', itemFilter)
+        map.setFilter('results_point_selected', ['all', pointFilter, itemFilter])
       }
     }
 
+    const debouncedMoveCallback = debounce(moveCallback, 30)
+
     const leaveCallback = () => {
+      debouncedMoveCallback.clear()
       map.getCanvas().style.cursor = ''
+      hoveredId = undefined
+      clearHoverFilter()
     }
 
-    dataLayers.forEach(layer => {
-      map.on('mousemove', layer.id, debounce(moveCallback, 30))
-      map.on('mouseleave', layer.id, leaveCallback)
+    const interactiveLayers: Array<{ id: string, move: typeof moveCallback }> = [
+      { id: 'results_polygon', move: debouncedMoveCallback },
+      { id: 'results_line', move: debouncedMoveCallback },
+      { id: 'results_point', move: moveCallback },
+    ]
+    interactiveLayers.forEach(({ id, move }) => {
+      if (!dataLayers.some(layer => layer.id === id)) return
+      map.on('mousemove', id, move)
+      map.on('mouseleave', id, leaveCallback)
       if (!noInteraction) {
-        map.on('click', layer.id, clickCallback)
+        map.on('click', id, clickCallback)
       }
     })
 
