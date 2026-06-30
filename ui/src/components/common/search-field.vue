@@ -22,7 +22,8 @@
         <v-btn
           :icon="mdiMagnify"
           :title="t('searchSubmit')"
-          density="compact"
+          density="comfortable"
+          size="small"
           variant="text"
           @click="q = pendingQ"
         />
