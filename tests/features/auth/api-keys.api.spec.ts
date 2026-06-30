@@ -364,6 +364,40 @@ test.describe('API keys', () => {
     assert.equal(res.status, 200)
   })
 
+  // realtime-* operations gate websocket subscriptions (see canSubscribe in api/src/app.js) and
+  // live in the readAdvanced class, so a default key (classes: ['read']) must NOT grant them: an
+  // application has to opt in through applicationKeyPermissions to follow a dataset live
+  test('Grant realtime permissions through an application key only when configured', async () => {
+    const ax = testUser1
+
+    // a default key does not grant the realtime-* operations
+    const datasetDefault = await sendDataset('datasets/dataset1.csv', ax)
+    const appDefault = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data.id
+    await ax.put('/api/v1/applications/' + appDefault + '/config', {
+      datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${datasetDefault.id}` }]
+    })
+    const keyDefault = (await ax.post(`/api/v1/applications/${appDefault}/keys`, [{ title: 'Access key' }])).data[0].id
+    let res = await anonymous.get(`/api/v1/datasets/${datasetDefault.id}`, { headers: { referrer: config.publicUrl + `/app/${appDefault}/?key=${keyDefault}` } })
+    assert.equal(res.status, 200)
+    assert.ok(res.data.userPermissions.includes('readLines'))
+    assert.ok(!res.data.userPermissions.includes('realtime-journal'))
+    assert.ok(!res.data.userPermissions.includes('realtime-task-progress'))
+
+    // opting in through applicationKeyPermissions makes the realtime channels subscribable
+    const datasetRealtime = await sendDataset('datasets/dataset1.csv', ax)
+    const appRealtime = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data.id
+    await ax.put('/api/v1/applications/' + appRealtime + '/config', {
+      datasets: [{
+        href: `${config.publicUrl}/api/v1/datasets/${datasetRealtime.id}`,
+        applicationKeyPermissions: { operations: ['readDescription', 'realtime-journal', 'realtime-task-progress'] }
+      }]
+    })
+    const keyRealtime = (await ax.post(`/api/v1/applications/${appRealtime}/keys`, [{ title: 'Access key' }])).data[0].id
+    res = await anonymous.get(`/api/v1/datasets/${datasetRealtime.id}`, { headers: { referrer: config.publicUrl + `/app/${appRealtime}/?key=${keyRealtime}` } })
+    assert.equal(res.status, 200)
+    assert.deepEqual([...res.data.userPermissions].sort(), ['readDescription', 'realtime-journal', 'realtime-task-progress'].sort())
+  })
+
   test('Use an application key to access child applications and previews (used for dashboards)', async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
