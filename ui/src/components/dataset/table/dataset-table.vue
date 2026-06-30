@@ -91,14 +91,26 @@
     />
     <search-field v-model="q" />
   </v-toolbar>
+  <div
+    class="d-sr-only"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  >
+    {{ liveMessage }}
+  </div>
   <v-sheet class="pa-0">
     <v-table
       v-if="displayMode === 'table' || displayMode === 'table-dense'"
+      ref="tableRoot"
       :height="pagination ? undefined : height - ((noInteraction && !searchOnly) ? 0 : 48)"
       :loading="fetchResults.loading.value"
       class="dataset-table"
       :fixed-header="!pagination"
     >
+      <caption class="d-sr-only">
+        {{ tableLabel }}
+      </caption>
       <thead ref="thead">
         <tr>
           <template
@@ -106,7 +118,11 @@
             :key="header.key"
           >
             <th
-              :id="`header-${header.cssKey ?? header.key}`"
+              :id="`${instanceId}-header-${header.cssKey ?? header.key}`"
+              scope="col"
+              :aria-sort="header.property && !noInteraction
+                ? (header.key === sort?.key ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none')
+                : undefined"
               :title="header.title"
               class="text-left"
               :class="{
@@ -141,22 +157,33 @@
                   :selected-cols="selectedCols"
                 />
               </div>
+              <button
+                v-else-if="header.property && !noInteraction"
+                :id="`${instanceId}-header-button-${header.cssKey ?? header.key}`"
+                type="button"
+                class="pr-2 header-wrapper dataset-table-th-button"
+                aria-haspopup="true"
+                :aria-label="t('headerMenuLabel', { column: header.title })"
+              >
+                <span class="two-lines">{{ header.title }}</span>
+                <v-icon
+                  v-if="hoveredHeader?.key === header.key || header.key === sort?.key"
+                  :color="header.key === sort?.key ? 'primary' : 'default'"
+                  :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
+                  class="action-icon"
+                />
+              </button>
               <div
                 v-else
                 class="pr-2 header-wrapper"
               >
                 <span class="two-lines">{{ header.title }}</span>
-                <v-icon
-                  v-if="header.property && (hoveredHeader?.key === header.key || header.key === sort?.key)"
-                  :color="header.key === sort?.key ? 'primary' : 'default'"
-                  :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
-                  class="action-icon"
-                />
               </div>
             </th>
             <dataset-table-header-menu
               v-if="header.property && !noInteraction"
-              :activator="`#header-${header.cssKey ?? header.key}`"
+              :activator="`#${instanceId}-header-${header.cssKey ?? header.key}`"
+              :trigger-selector="`#${instanceId}-header-button-${header.cssKey ?? header.key}`"
               :filter-height="height - 20"
               :filters="filters"
               :fixed="fixed === header.key"
@@ -440,6 +467,32 @@
     helpFilterPrompt: Aide-moi à filtrer ces données
     checkDataQualityPrompt: Vérifier la qualité de ces données
     helpEditDataPrompt: Aide-moi à saisir des données
+    tableCaption: "Tableau de données : {title}"
+    tableCaptionFallback: Tableau de données
+    announce:
+      results: "Aucun résultat | 1 résultat | {count} résultats"
+      searchResults: "Aucun résultat pour « {query} » | 1 résultat pour « {query} » | {count} résultats pour « {query} »"
+      loading: Chargement des résultats
+      sort: "Tri appliqué : colonne {column}, {direction}"
+      sortRemoved: Tri retiré
+      display: "Affichage : {mode}"
+      column:
+        hidden: "Colonne {column} masquée"
+        shown: "Colonne {column} affichée"
+        changed: "Affichage mis à jour : 1 colonne visible | Affichage mis à jour : {count} colonnes visibles"
+        fixed: "Colonne {column} épinglée à gauche"
+        unfixed: "Colonne {column} dépinglée"
+      filter:
+        added: "Filtre appliqué sur la colonne {column} : {value}"
+        removed: "Filtre retiré sur la colonne {column}"
+    sortDirection:
+      ascending: ordre croissant
+      descending: ordre décroissant
+    headerMenuLabel: "Colonne {column}, ouvrir les options de tri et de filtre"
+    displayMode:
+      table: Tableau
+      tableDense: Tableau dense
+      list: Liste de vignettes
   en:
     cancel: Cancel
     delete: Delete
@@ -450,6 +503,32 @@
     deleteLine: Delete a line
     deleteLineWarning: Warning, the data from this line will be lost permanently
     helpEditDataPrompt: Help me enter data
+    tableCaption: "Data table: {title}"
+    tableCaptionFallback: Data table
+    announce:
+      results: "No result | 1 result | {count} results"
+      searchResults: "No result for \"{query}\" | 1 result for \"{query}\" | {count} results for \"{query}\""
+      loading: Loading results
+      sort: "Sort applied: column {column}, {direction}"
+      sortRemoved: Sort removed
+      display: "Display: {mode}"
+      column:
+        hidden: "Column {column} hidden"
+        shown: "Column {column} shown"
+        changed: "Display updated: 1 column visible | Display updated: {count} columns visible"
+        fixed: "Column {column} pinned to the left"
+        unfixed: "Column {column} unpinned"
+      filter:
+        added: "Filter applied on column {column}: {value}"
+        removed: "Filter removed on column {column}"
+    sortDirection:
+      ascending: ascending order
+      descending: descending order
+    headerMenuLabel: "Column {column}, open sort and filter options"
+    displayMode:
+      table: Table
+      tableDense: Dense table
+      list: Card list
 </i18n>
 
 <script setup lang="ts">
@@ -457,6 +536,7 @@ import type { VVirtualScroll, VForm } from 'vuetify/components'
 import { mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset/lines'
 import useHeaders, { TableHeaderWithProperty, type TableHeader, type SyntheticColumn } from './use-headers'
+import { useTableAnnouncer } from './use-table-announcer'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { DatasetLine, type SchemaProperty } from '#api/types'
@@ -520,6 +600,14 @@ const display = useDisplay()
 
 const { dataset, id: datasetId, imageField } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
+
+// Scope per-table DOM IDs so two coexisting tables (e.g. back-office + preview
+// drawer) don't collide on `#header-…` selectors used by the header v-menu.
+const instanceId = useId()
+
+const tableLabel = computed(() => dataset.value?.title
+  ? t('tableCaption', { title: dataset.value.title })
+  : t('tableCaptionFallback'))
 
 const allCols = computed(() => dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName').map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
@@ -589,6 +677,36 @@ const nextPage = async () => {
 const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, selectable, fixed, () => syntheticColumns, () => headerKeys)
 const { selectedResults, saveLine, removeLine, addLineTrigger } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
+const { message: liveMessage } = useTableAnnouncer({
+  q,
+  total,
+  loading: fetchResults.loading,
+  sort,
+  displayMode,
+  cols,
+  allCols,
+  fixed,
+  filters,
+  headerTitleFor: (key) => {
+    // Visible headers carry the resolved title for the current display.
+    // Hidden columns (e.g. after a `hide` action) are no longer there, so
+    // fall back to the dataset schema so announcements still use a human-
+    // readable label instead of the raw key.
+    const fromHeaders = headers.value?.find(h => h.key === key)?.title
+    if (fromHeaders) return fromHeaders
+    const p = dataset.value?.schema?.find(p => p.key === key)
+    return p?.title || p?.['x-originalName'] || p?.key || key
+  },
+  displayModeLabelFor: (mode) => t(
+    mode === 'table-dense'
+      ? 'displayMode.tableDense'
+      : mode === 'list'
+        ? 'displayMode.list'
+        : 'displayMode.table'
+  ),
+  t
+})
+
 if (edit) {
   useAgentTool({
     name: 'open_add_line_dialog',
@@ -625,6 +743,18 @@ if (edit) {
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
 const thead = ref<HTMLElement>()
+const tableRoot = ref<{ $el?: HTMLElement } | null>(null)
+
+// The scrollable wrapper is rendered by Vuetify inside v-table and doesn't expose a prop.
+// Make it focusable so keyboard users can reach the grid with Tab and scroll via arrow keys (RGAA 7.3).
+const applyWrapperA11y = () => {
+  const wrapper = tableRoot.value?.$el?.querySelector?.<HTMLElement>('.v-table__wrapper')
+  if (!wrapper) return
+  wrapper.setAttribute('tabindex', '0')
+  wrapper.setAttribute('role', 'region')
+  wrapper.setAttribute('aria-label', tableLabel.value)
+}
+watch([tableRoot, displayMode, tableLabel], () => nextTick(applyWrapperA11y))
 const minColWidth = computed(() => {
   return displayMode.value === 'table-dense' ? 80 : 120
 })
@@ -646,9 +776,10 @@ const onScrollItem = async (index: number) => {
   // ignore scroll on deprecated items that will soon be replaced
   if (fetchResults.loading.value) return
   incColsWidth()
-  if (index === results.value.length - 1) {
-    // scrolled until the current end of the table
-    if (!fetchResults.loading.value) fetchResults.execute()
+  if (index === results.value.length - 1 && next.value) {
+    // scrolled until the current end of the table; only re-fetch if there is a next page,
+    // otherwise execute() would flip loading true→false on every intersect re-bind for nothing
+    fetchResults.execute()
   }
 }
 
@@ -714,6 +845,28 @@ const deleteLine = useAsyncAction(async () => {
 <style>
 .dataset-table th {
   z-index: 2;
+}
+.dataset-table .dataset-table-th-button {
+  background: transparent;
+  border: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+}
+.dataset-table .dataset-table-th-button:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
+}
+.dataset-table .v-table__wrapper:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
 }
 .dataset-table .header-wrapper {
   position: relative;
