@@ -29,7 +29,7 @@
       </template>
     </v-text-field>
     <div
-      id="map"
+      ref="mapEl"
       :style="'height:' + height + 'px'"
     />
   </div>
@@ -72,6 +72,7 @@ const { id, dataset } = useDatasetStore()
 const { queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: ['_id_eq'] })
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 
+const mapEl = ref<HTMLElement | null>(null)
 const q = defineModel<string>('q', { default: '' })
 const selectedItem = defineModel<string>('selectedItem', { default: '' })
 const editQ = ref('')
@@ -103,7 +104,7 @@ const fetchBBOX = useFetch<{ bbox: [number, number, number, number] }>(`${$apiPa
   })
 })
 
-useMap(tileUrl, selectable, selectedItem, noInteraction, cols, navigationPosition, computed(() => fetchBBOX.data.value?.bbox), t)
+useMap(mapEl, tileUrl, selectable, selectedItem, noInteraction, cols, navigationPosition, computed(() => fetchBBOX.data.value?.bbox), t)
 
 </script>
 

@@ -8,6 +8,7 @@ maplibregl.config.CSP_NONCE = $cspNonce
 const fitBoundsOpts = { maxZoom: 15, padding: 40 }
 
 export const useMap = (
+  mapEl: Ref<HTMLElement | null>,
   tileUrl: Ref<string | undefined>,
   selectable: boolean,
   selectedItem: Ref<string>,
@@ -23,10 +24,10 @@ export const useMap = (
 
   let _map: Map
   const getMap = () => {
-    if (!tileUrl.value || !bbox.value) return
+    if (!tileUrl.value || !bbox.value || !mapEl.value) return
     if (_map) return _map
     const map = _map = new maplibregl.Map({
-      container: 'map',
+      container: mapEl.value,
       style,
       transformRequest: (url) => {
         if (url.startsWith($siteUrl)) {

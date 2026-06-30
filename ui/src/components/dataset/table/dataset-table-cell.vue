@@ -30,9 +30,10 @@
         v-if="result._geopoint"
         :icon="mdiMap"
         :title="t('showMapPreview')"
+        :density="dense ? 'comfortable' : 'default'"
         position="absolute"
         size="x-small"
-        variant="flat"
+        variant="text"
         style="right: 4px; top: 50%; transform: translateY(-50%); z-index: 100;"
         @click="emit('showMapPreview')"
       />

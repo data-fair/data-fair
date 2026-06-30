@@ -67,6 +67,7 @@
       <v-btn
         v-if="extendedValue.displayDetail"
         :icon="dense ? mdiLoupe : mdiMagnifyPlus"
+        :density="dense ? 'comfortable' : 'default'"
         size="x-small"
         color="primary"
         variant="flat"
@@ -77,6 +78,7 @@
         v-if="!filtered && extendedValue.filterable"
         :icon="mdiFilterVariant"
         :loading="filterLoading"
+        :density="dense ? 'comfortable' : 'default'"
         size="x-small"
         color="primary"
         variant="flat"
