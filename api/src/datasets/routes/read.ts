@@ -309,11 +309,18 @@ const readLines: RequestHandler = async (req, res) => {
   }
 
   // xlsx/ods cannot be produced incrementally: materialize the rows through the same per-hit transform
-  // the buffered path used, then hand them to results2sheet unchanged.
+  // the buffered path used, then hand them to results2sheet unchanged. Yield to the event loop every
+  // 500 items (setImmediate) so a very large xlsx/ods export does not block the event loop more than
+  // the pre-refactor path did (pre-refactor code yielded every 500 hits during the per-hit build).
   if (query.format === 'xlsx' || query.format === 'ods') {
     const flatten = getFlatten(dataset, req.query.arrays === 'true')
     const resultCtx = esUtils.prepareResultContext(dataset, query)
-    const rows = (await collect(source)).map(hit => esUtils.prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx))
+    const hits = await collect(source)
+    const rows: any[] = []
+    for (let i = 0; i < hits.length; i++) {
+      if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+      rows.push(esUtils.prepareResultItem(hits[i], dataset, query, flatten, publicBaseUrl, resultCtx))
+    }
     observe.reqStep(req, 'prepareResultItems')
     if (query.format === 'xlsx') {
       const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, rows)
