@@ -69,7 +69,9 @@ Both modes route through the same pipeline functions in `lines-pipeline.ts`. The
 - Buffered mode (`ctx.buffered = true`): collects all rows into an object and calls `res.send()`. Express computes a strong ETag and can answer `304 Not Modified` for conditional requests. Key order: `{ hint?, total, next?, results, totalCollapse?, …}`.
 - Streamed mode: writes the envelope head (`{"total":…,"results":[`) immediately, then each row's JSON fragment with `,` separators, then `]`, then optional `next` and `totalCollapse` from the tail, then `}`. Uses `res.throttle('dynamic')` for bandwidth throttling, honors `res.write()` drain for backpressure.
 
-**CSV (`streamCsv`):** feeds each prepared row into the same compiled `csvStreams` Transform used by the buffered path (same header, same per-cell encoding). The Transform is piped through `res.throttle('dynamic')` into `res`.
+**CSV (`streamCsv`):**
+- Buffered mode (`ctx.buffered = true`): collects all hits via `collect(source)`, applies `prepareResultItem` to each, and calls `outputs.results2csv(req, rows)` (same compiled serializer as `csvStreams`). The result is passed to `res.send()` — byte-identical to the pre-refactor path. Express computes a strong ETag and can answer `304 Not Modified` for conditional requests.
+- Streamed mode: feeds each prepared row into the `csvStreams` Transform (same compiled serializer, same header emission, same empty-set header-only behavior). The Transform is piped through `res.throttle('dynamic')` into `res`.
 
 **`collect(source)`:** materializes the whole `hits` iterable into an array for hard formats (xlsx/ods/geojson/shp/wkt/vector tiles). The xlsx/ods branch then iterates the collected hits with an event-loop yield every 500 items (`setImmediate`) to avoid blocking the event loop during large exports.
 
@@ -79,7 +81,7 @@ Two behavioral asymmetries vs buffered mode are intentional and documented:
 
 1. **No `Link: next` header in streamed mode.** The `Link` header must be set before any body bytes are written, but the last hit's `sort` value (needed to build the `after` cursor) is only known once the stream ends — by which time headers are already flushed. The body `next` field is preserved: it is appended to the JSON tail once the last hit is known, built identically to the buffered path.
 
-2. **No ETag / `304 Not Modified` in streamed mode.** Incremental writes via `res.write()` preclude `res.send()`, so Express cannot compute a strong ETag from the body. Cache-control headers for `cacheHeaders.resourceBased` are still set, but conditional-request caching (`If-None-Match`) does not apply to streamed responses.
+2. **No ETag / `304 Not Modified` in streamed mode (json and csv).** Incremental writes via `res.write()` preclude `res.send()`, so Express cannot compute a strong ETag from the body. Cache-control headers for `cacheHeaders.resourceBased` are still set, but conditional-request caching (`If-None-Match`) does not apply to streamed responses. Buffered mode (the default for both json and csv) retains ETag/304 via `res.send()`.
 
 Buffered mode retains both behaviors and remains the default.
 

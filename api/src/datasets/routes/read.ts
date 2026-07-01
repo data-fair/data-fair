@@ -304,7 +304,7 @@ const readLines: RequestHandler = async (req, res) => {
   if (query.format === 'csv') {
     observe.reqStep(req, 'streamCsv')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
-    await streamCsv(req, res, source)
+    await streamCsv(req, res, source, { buffered: !wantStream })
     return
   }
 

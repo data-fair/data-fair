@@ -151,13 +151,35 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   res.end()
 }
 
-export async function streamCsv (req: any, res: any, source: LinesSource): Promise<void> {
+export interface StreamCsvContext {
+  // Buffered mode (flag off / not streamed): materialize the whole CSV and res.send it.
+  // This restores Express ETag + Content-Length, byte-identical to the pre-refactor path.
+  buffered?: boolean
+}
+
+export async function streamCsv (req: any, res: any, source: LinesSource, ctx: StreamCsvContext = {}): Promise<void> {
   const dataset = reqDataset(req)
   const query = req.query
   const flatten = getFlatten(dataset, query.arrays === 'true')
   const resultCtx = esUtils.prepareResultContext(dataset, query)
   const publicBaseUrl = reqPublicBaseUrl(req)
 
+  // Buffered mode (flag off): fully materialize rows through the same per-hit transform, produce
+  // CSV via results2csv (same compileForRequest serializer as csvStreams → byte-identical output),
+  // and res.send so Express can compute a strong ETag and answer 304 for conditional requests.
+  if (ctx.buffered) {
+    const hits = await collect(source)
+    const rows: any[] = []
+    for (let i = 0; i < hits.length; i++) {
+      if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+      rows.push(esUtils.prepareResultItem(hits[i], dataset, query, flatten, publicBaseUrl, resultCtx))
+    }
+    const csv = await outputs.results2csv(req as outputs.ReqWithDataset, rows)
+    res.type('csv').status(200).send(csv)
+    return
+  }
+
+  // Streamed mode: keep the existing incremental csvStreams + throttle path unchanged.
   // Reuse the exact per-row Transform used by the buffered export so csv formatting stays identical
   // (same compiled serializer, same header emission, same empty-set header-only behavior).
   const [transform] = outputs.csvStreams(dataset, query)
