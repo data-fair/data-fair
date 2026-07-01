@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "benchmark": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/index.ts",
-    "benchmark-csv": "node --expose-gc --experimental-strip-types --disable-warning=ExperimentalWarning src/csv-serialize/bench.ts"
+    "benchmark-csv": "node --expose-gc --experimental-strip-types --disable-warning=ExperimentalWarning src/csv-serialize/bench.ts",
+    "benchmark-streaming": "node --expose-gc --max-semi-space-size=8 --experimental-strip-types --disable-warning=ExperimentalWarning src/streaming-parse/bench.ts"
   },
   "dependencies": {
     "@fast-csv/format": "^4.3.5",

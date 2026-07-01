@@ -4,7 +4,11 @@ import { csvCell, csvHeader } from '../csv-format.ts'
 
 // Attempt to load the native simdjson addon; if unavailable, export an inert stub.
 // The lazyParse API keeps the document on the C++ tape and pulls only requested key
-// paths into JS, avoiding full DOM materialisation. This version uses lazyParse.
+// paths into JS, avoiding full DOM materialisation for most paths.
+// Strategy: use one valueForKeyPath('hits.hits') call to materialise the hits array
+// in a single forward tape pass (O(N)), then access _source fields via JS property
+// access. Calling valueForKeyPath per (row, column) is O(N²) due to repeated tape
+// traversal from root, which is impractical for wide buffers.
 let lib: any = null; let available = true
 try { const m = await import('simdjson'); lib = m.default ?? m } catch { available = false }
 
@@ -14,14 +18,16 @@ function applyJoin (v: unknown, separator: string | null): unknown {
   return v
 }
 
-// Pull one field from the tape for hit[i]. sourceKey may be dotted (e.g. "a.b") which
-// maps naturally to the valueForKeyPath dot notation.
-function tapePull (tape: any, i: number, sourceKey: string, separator: string | null): unknown {
-  const v = tape.valueForKeyPath(`hits.hits.${i}._source.${sourceKey}`)
+// Pull one field from an already-materialised _source object.
+// Dotted sourceKey (e.g. "a.b") falls back to nested property traversal.
+function extractSource (source: any, sourceKey: string, separator: string | null): unknown {
+  let v = source[sourceKey]
+  if (v === undefined && sourceKey.includes('.')) { v = sourceKey.split('.').reduce((o: any, k: string) => (o == null ? o : o[k]), source) }
   return applyJoin(v, separator)
 }
 
-function hitsCount (tape: any): number { return tape.valueForKeyPath('hits.total.value') as number }
+// One valueForKeyPath call traverses the tape once to materialise hits as a JS array.
+function allHits (tape: any): any[] { return tape.valueForKeyPath('hits.hits') as any[] }
 
 export const simdjson: Substrate = {
   name: 'simdjson',
@@ -29,23 +35,21 @@ export const simdjson: Substrate = {
   async t1 (buf, d: Descriptor) {
     if (!available) return 0
     const tape = (lib as any).lazyParse(buf.toString())
-    const n = hitsCount(tape)
     let sum = 0
-    for (let i = 0; i < n; i++) {
-      if (d.selectIncludesId) { const id = tape.valueForKeyPath(`hits.hits.${i}._id`) as string; sum += id.length }
-      for (const c of d.columns) { const v = tapePull(tape, i, c.sourceKey, c.separator); sum += v == null ? 0 : String(v).length }
+    for (const hit of allHits(tape)) {
+      if (d.selectIncludesId) sum += (hit._id as string).length
+      for (const c of d.columns) { const v = extractSource(hit._source, c.sourceKey, c.separator); sum += v == null ? 0 : String(v).length }
     }
     return sum
   },
   async t2json (buf, d) {
     if (!available) return Buffer.alloc(0)
     const tape = (lib as any).lazyParse(buf.toString())
-    const n = hitsCount(tape)
     const out: any[] = []
-    for (let i = 0; i < n; i++) {
+    for (const hit of allHits(tape)) {
       const o: Record<string, unknown> = {}
-      if (d.selectIncludesId) o._id = tape.valueForKeyPath(`hits.hits.${i}._id`)
-      for (const c of d.columns) o[c.outKey] = tapePull(tape, i, c.sourceKey, c.separator) ?? null
+      if (d.selectIncludesId) o._id = hit._id
+      for (const c of d.columns) o[c.outKey] = extractSource(hit._source, c.sourceKey, c.separator) ?? null
       out.push(o)
     }
     return Buffer.from(JSON.stringify(out))
@@ -53,10 +57,9 @@ export const simdjson: Substrate = {
   async t2csv (buf, d) {
     if (!available) return Buffer.alloc(0)
     const tape = (lib as any).lazyParse(buf.toString())
-    const n = hitsCount(tape)
     let s = csvHeader(d.columns)
-    for (let i = 0; i < n; i++) {
-      s += d.columns.map(c => csvCell(tapePull(tape, i, c.sourceKey, c.separator), c.type)).join(',') + '\n'
+    for (const hit of allHits(tape)) {
+      s += d.columns.map(c => csvCell(extractSource(hit._source, c.sourceKey, c.separator), c.type)).join(',') + '\n'
     }
     return Buffer.from(s)
   }
