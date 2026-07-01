@@ -4,7 +4,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { generateRows } from '../../seed.ts'
 
-const HEAP = process.env.HEAP || '128'
+// calibrated so buffered-v8/whole OOM and small-K streaming survives
+const HEAP = process.env.HEAP || '96'
 const ROWS = process.env.ROWS || '200000'
 
 // Build ONLY the string-heavy buffer in this uncapped parent process.
