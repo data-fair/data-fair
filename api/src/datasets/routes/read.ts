@@ -186,6 +186,11 @@ const readLines: RequestHandler = async (req, res) => {
     (process.env.NODE_ENV !== 'production' && query._stream === 'true')
   const wantStream = streamOn && streamEligible(query) &&
     Number(query.size || 0) >= ((config as any).experimental?.streamReadLinesMinRows ?? 2000)
+  // `_stream` is an internal, non-prod opt-in — never a public API param. Drop it from the `query` copy
+  // once consumed so it does not leak into the `next` pagination link (built from `query`), keeping the
+  // streamed link byte-identical to the buffered one. (The hint is kept identical separately: `_stream`
+  // is a RECOGNIZED_PARAM so ignoredParamsAdvice never flags it — see misc/utils/query-advice.ts.)
+  delete query._stream
 
   let esResponse: any
   let streamedSource: LinesSource | undefined
