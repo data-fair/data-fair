@@ -45,3 +45,20 @@ export const v8: Substrate = {
 export async function referenceOutput (buf: Buffer, d: Descriptor) {
   return { json: await v8.t2json(buf, d), csv: await v8.t2csv(buf, d) }
 }
+
+// sync version for streaming pipeline (no actual i/o — avoids promise overhead in benchmarks)
+export function referenceOutputSync (buf: Buffer, d: Descriptor): { json: Buffer, csv: Buffer } {
+  const hitsArr = rows(buf)
+  const out: any[] = []
+  for (const hit of hitsArr) {
+    const o: Record<string, unknown> = {}
+    if (d.selectIncludesId) o._id = hit._id
+    for (const c of d.columns) o[c.outKey] = extract(hit._source, c.sourceKey, c.separator) ?? null
+    out.push(o)
+  }
+  let s = csvHeader(d.columns)
+  for (const hit of hitsArr) {
+    s += d.columns.map(c => csvCell(extract(hit._source, c.sourceKey, c.separator), c.type)).join(',') + '\n'
+  }
+  return { json: Buffer.from(JSON.stringify(out)), csv: Buffer.from(s) }
+}
