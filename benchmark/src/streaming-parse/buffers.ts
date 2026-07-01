@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { generateRows, generateWideRows, benchSchema, wideSchema } from '../seed.ts'
 import { schemaToDescriptor, type Descriptor } from './descriptor.ts'
 
@@ -35,10 +37,19 @@ function generateNumberRows (count: number): Record<string, any>[] {
 }
 
 export function makeBuffers (rowCount = 10000): NamedBuffer[] {
-  return [
+  const synthetic: NamedBuffer[] = [
     { name: 'string-heavy', buf: wrap(generateRows(rowCount)), descriptor: schemaToDescriptor(benchSchema, true) },
     { name: 'number-heavy', buf: wrap(generateNumberRows(rowCount)), descriptor: schemaToDescriptor(numberSchema, true) },
     { name: 'wide', buf: wrap(generateWideRows(rowCount)), descriptor: schemaToDescriptor(wideSchema, true) },
     { name: 'nested-multivalue', buf: wrap(generateNestedRows(rowCount)), descriptor: schemaToDescriptor(nestedSchema, true) }
   ]
+  const realPath = path.resolve(import.meta.dirname, 'fixtures', 'real-capture.json')
+  const extra: NamedBuffer[] = []
+  if (fs.existsSync(realPath)) {
+    const buf = fs.readFileSync(realPath)
+    const first = JSON.parse(buf.toString()).hits.hits[0]?._source ?? {}
+    const schema = Object.keys(first).map(k => ({ key: k, type: typeof first[k] === 'number' ? 'number' : typeof first[k] === 'boolean' ? 'boolean' : 'string' }))
+    extra.push({ name: 'real', buf, descriptor: schemaToDescriptor(schema, false) })
+  }
+  return [...synthetic, ...extra]
 }
