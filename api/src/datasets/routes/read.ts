@@ -314,7 +314,7 @@ const readLines: RequestHandler = async (req, res) => {
   if (query.format === 'csv') {
     observe.reqStep(req, 'streamCsv')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
-    await streamCsv(req, res, source, { buffered: !wantStream })
+    await streamCsv(req, res, source, { buffered: !wantStream, rewriteAttachmentUrl: eligible })
     return
   }
 
@@ -353,7 +353,10 @@ const readLines: RequestHandler = async (req, res) => {
     nextParams: wantStream ? { size, query, publicBaseUrl, datasetId: dataset.id as string } : undefined,
     esSearchDurationMs,
     // buffered mode fully materializes + res.send (preserves ETag/304); streamed mode writes incrementally
-    buffered: !wantStream
+    buffered: !wantStream,
+    // eligible ⇒ source came from searchStream (raw _attachment_url) ⇒ rewrite in prepareResultItem;
+    // otherwise it came from search() which already rewrote it
+    rewriteAttachmentUrl: eligible
   })
 }
 

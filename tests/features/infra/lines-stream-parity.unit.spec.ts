@@ -129,6 +129,46 @@ test.describe('lines-stream parity: buffered source vs streamed source through t
     }
   })
 
+  test('_attachment_url: streamed pipeline-side rewrite equals buffered search-side rewrite', async () => {
+    // The streamed/collect-small sources hold the RAW stored `_attachment_url` (searchStream does not
+    // rewrite), so the pipeline must rewrite it via ctx.rewriteAttachmentUrl to match the buffered path,
+    // where search() already rewrote it on the source before the pipeline (ctx.rewriteAttachmentUrl false).
+    const { bufferedSource, streamJson, streamToSource, setReqDataset, setReqPublicBaseUrl } = await load() as any
+    const { rewriteAttachmentUrl } = await import('../../../api/src/datasets/es/commons.ts') as any
+    const config = (await import('../../../api/src/config.ts')).default as any
+
+    for (const isVirtual of [false, true]) {
+      const ds = { id: 'att-ds', slug: 'att-ds', isVirtual, schema: [{ key: '_id', type: 'string' }, { key: 'label', type: 'string' }, { key: '_attachment_url', type: 'string' }] }
+      // Stored URL as ES holds it: absolute, based on config.publicUrl. For a virtual dataset the path
+      // points at the CHILD dataset's attachments, which the rewrite reroutes through the virtual dataset.
+      const childId = isVirtual ? 'child-ds' : 'att-ds'
+      const stored = (i: number) => `${config.publicUrl}/api/v1/datasets/${childId}/attachments/file-${i}.pdf`
+      const hits = Array.from({ length: 5 }, (_, i) => ({ _id: `id-${i}`, _score: null, sort: [i], _source: { label: `l${i}`, _attachment_url: stored(i) } }))
+
+      const req = { path: '/att-ds/lines', query: {}, __: (k: string) => k } as any
+      setReqDataset(req, ds)
+      setReqPublicBaseUrl(req, publicBaseUrl)
+      const ctxBase = { publicBaseUrl, esSearchDurationMs: 0 }
+
+      // BUFFERED reference: search() rewrites the source up front → pipeline does NOT rewrite.
+      const searchHits = hits.map(h => ({ ...h, _source: { ...h._source, _attachment_url: rewriteAttachmentUrl(h._source._attachment_url, ds, publicBaseUrl) } }))
+      const resBuf = fakeRes()
+      await streamJson(req, resBuf, bufferedSource(envelope(searchHits)), { ...ctxBase, rewriteAttachmentUrl: false })
+      const bufferedOut = JSON.parse((await resBuf._done).toString())
+
+      // STREAMED: raw stored URLs → pipeline rewrites (ctx.rewriteAttachmentUrl true).
+      const buf = Buffer.from(JSON.stringify(envelope(hits)))
+      const resStr = fakeRes()
+      await streamJson(req, resStr, await streamToSource(chunked(buf, 7)), { ...ctxBase, rewriteAttachmentUrl: true })
+      const streamedOut = JSON.parse((await resStr._done).toString())
+
+      assert.deepEqual(streamedOut, bufferedOut, `isVirtual=${isVirtual}`)
+      // prove the rewrite actually fired (regression guard: a missing ctx flag would leave the raw URL)
+      assert.ok(streamedOut.results[0]._attachment_url.startsWith(publicBaseUrl), `rewritten to publicBaseUrl (isVirtual=${isVirtual})`)
+      assert.ok(!streamedOut.results[0]._attachment_url.startsWith(config.publicUrl + '/api/'), `raw stored origin replaced (isVirtual=${isVirtual})`)
+    }
+  })
+
   test('streamCsv is byte-equal across 120 randomized shapes', async () => {
     const { bufferedSource, streamCsv, streamToSource, setReqDataset, setReqPublicBaseUrl } = await load() as any
 

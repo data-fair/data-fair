@@ -585,6 +585,32 @@ export const prepareResultContext = (dataset: any, query: Record<string, any>) =
   }
 }
 
+// Rewrite an `_attachment_url` from the stored absolute URL to the one the requester should see:
+// oldPublicUrl → publicUrl → the request's publicBaseUrl, plus a virtual-dataset path fixup that reroutes
+// a child dataset's attachment path through the virtual dataset. Shared by the buffered `search()` (which
+// applies it on `hit._source` up front) and `prepareResultItem` (streamed/collected sources, applied on the
+// flattened row via `ctx.rewriteAttachmentUrl`), so both modes produce identical URLs.
+export const rewriteAttachmentUrl = (url: string, dataset: any, publicBaseUrl?: string): string => {
+  if (config.oldPublicUrl) url = url.replace(config.oldPublicUrl, config.publicUrl)
+  if (publicBaseUrl) url = url.replace(config.publicUrl, publicBaseUrl)
+  if (dataset.isVirtual) {
+    // use string manipulation instead of new URL() for performance
+    const attachIdx = url.indexOf('/data-fair/api/v1/datasets/')
+    if (attachIdx !== -1) {
+      const afterPrefix = url.substring(attachIdx + '/data-fair/api/v1/datasets/'.length)
+      const slashIdx = afterPrefix.indexOf('/')
+      if (slashIdx !== -1) {
+        const childDatasetId = afterPrefix.substring(0, slashIdx)
+        url = url.replace(
+          `/data-fair/api/v1/datasets/${childDatasetId}/attachments/`,
+          `/data-fair/api/v1/datasets/${dataset.id}/attachments/${childDatasetId}/`
+        )
+      }
+    }
+  }
+  return url
+}
+
 export const prepareResultItem = (hit: any, dataset: any, query: Record<string, any>, flatten: (source: any) => any, publicBaseUrl: string = config.publicUrl, ctx: any) => {
   const res = flatten(hit._source)
   res._score = hit._score
@@ -617,6 +643,11 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
     }
   }
 
+  // Sources that did NOT go through the buffered search() (streamed + collect-small, flagged by
+  // ctx.rewriteAttachmentUrl) still hold the raw stored URL — rewrite it here so their output matches the
+  // buffered path. The buffered/xlsx/geo paths come from search() which already rewrote it, so they leave
+  // ctx.rewriteAttachmentUrl falsy to avoid a double rewrite (which would corrupt virtual-dataset URLs).
+  if (ctx.rewriteAttachmentUrl && res._attachment_url) res._attachment_url = rewriteAttachmentUrl(res._attachment_url, dataset, publicBaseUrl)
   if (query.draft === 'true' && res._attachment_url) res._attachment_url += '?draft=true'
 
   if (query.html === 'true' || query.html === 'vuetify') {

@@ -49,6 +49,10 @@ export interface StreamJsonContext {
   esSearchDurationMs: number
   // Buffered mode (flag off / not streamed): materialize the whole body and res.send it (see streamJson).
   buffered?: boolean
+  // Source came from searchStream (streamed or collect-small), whose hits still hold the raw stored
+  // `_attachment_url` — so prepareResultItem must rewrite it. False when the source is search()'s
+  // esResponse (already rewritten). See commons.ts rewriteAttachmentUrl.
+  rewriteAttachmentUrl?: boolean
 }
 
 // Await drain when the socket buffer is full, otherwise continue synchronously — honors backpressure
@@ -69,6 +73,7 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   const query = req.query
   const flatten = getFlatten(dataset, query.arrays === 'true')
   const resultCtx = esUtils.prepareResultContext(dataset, query)
+  resultCtx.rewriteAttachmentUrl = ctx.rewriteAttachmentUrl
 
   // Buffered mode (flag off / not streamed): fully materialize the body and res.send it, byte-for-byte
   // like the pre-refactor path. res.send lets Express compute a strong ETag from the body and answer
@@ -178,6 +183,8 @@ export interface StreamCsvContext {
   // Buffered mode (flag off / not streamed): materialize the whole CSV and res.send it.
   // This restores Express ETag + Content-Length, byte-identical to the pre-refactor path.
   buffered?: boolean
+  // See StreamJsonContext.rewriteAttachmentUrl.
+  rewriteAttachmentUrl?: boolean
 }
 
 export async function streamCsv (req: any, res: any, source: LinesSource, ctx: StreamCsvContext = {}): Promise<void> {
@@ -185,6 +192,7 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
   const query = req.query
   const flatten = getFlatten(dataset, query.arrays === 'true')
   const resultCtx = esUtils.prepareResultContext(dataset, query)
+  resultCtx.rewriteAttachmentUrl = ctx.rewriteAttachmentUrl
   const publicBaseUrl = reqPublicBaseUrl(req)
 
   // Buffered mode (flag off): fully materialize rows through the same per-hit transform, produce
