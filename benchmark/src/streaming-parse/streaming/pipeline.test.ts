@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { makeBuffers } from '../buffers.ts'
 import { referenceOutputSync as referenceOutput } from '../substrates/v8.ts'
-import { chunked, streaming, collectSink } from './pipeline.ts'
+import { chunked, streaming, bufferedV8, collectSink } from './pipeline.ts'
 
 const noop = () => {}
 for (const nb of makeBuffers(50)) {
@@ -12,5 +12,10 @@ for (const nb of makeBuffers(50)) {
     const csv = collectSink(); streaming(chunked(nb.buf, 17), nb.descriptor, 'csv', K, csv.sink, noop)
     assert.ok(csv.get().equals(ref.csv), `${nb.name} csv K=${K}`)
   }
+  // verify bufferedV8 single-format output matches oracle
+  const bjs = collectSink(); bufferedV8(nb.buf, nb.descriptor, 'json', bjs.sink, noop)
+  assert.deepEqual(JSON.parse(bjs.get().toString()), JSON.parse(ref.json.toString()), `${nb.name} bufferedV8 json`)
+  const bcsv = collectSink(); bufferedV8(nb.buf, nb.descriptor, 'csv', bcsv.sink, noop)
+  assert.ok(bcsv.get().equals(ref.csv), `${nb.name} bufferedV8 csv`)
 }
 console.log('pipeline.test OK')
