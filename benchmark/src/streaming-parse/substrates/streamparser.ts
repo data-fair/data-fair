@@ -35,14 +35,16 @@ export const streamparser: Substrate = {
     return sum
   },
   async t2json (buf, d) {
-    const out: any[] = []
+    let s = '['
+    let first = true
     eachHit(buf, hit => {
       const o: Record<string, unknown> = {}
       if (d.selectIncludesId) o._id = hit._id
       for (const c of d.columns) o[c.outKey] = extract(hit._source, c.sourceKey, c.separator) ?? null
-      out.push(o)
+      s += (first ? '' : ',') + JSON.stringify(o)
+      first = false
     })
-    return Buffer.from(JSON.stringify(out))
+    return Buffer.from(s + ']')
   },
   async t2csv (buf, d) {
     let s = csvHeader(d.columns)
