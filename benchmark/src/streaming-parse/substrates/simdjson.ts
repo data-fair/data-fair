@@ -3,12 +3,15 @@ import type { Descriptor } from '../descriptor.ts'
 import { csvCell, csvHeader } from '../csv-format.ts'
 
 // Attempt to load the native simdjson addon; if unavailable, export an inert stub.
-// The lazyParse API keeps the document on the C++ tape and pulls only requested key
-// paths into JS, avoiding full DOM materialisation for most paths.
-// Strategy: use one valueForKeyPath('hits.hits') call to materialise the hits array
-// in a single forward tape pass (O(N)), then access _source fields via JS property
-// access. Calling valueForKeyPath per (row, column) is O(N²) due to repeated tape
-// traversal from root, which is impractical for wide buffers.
+//
+// HONEST CHARACTERISATION: this substrate measures SIMD-parse-to-JS-objects, NOT a
+// lazy field pull. The "schema-driven lazy pull off the tape" vision is impractical
+// with this binding: valueForKeyPath re-scans the tape from root on every call, so a
+// per-(row, column) lazy pull is O(N²×cols) and unusably slow on wide buffers (see
+// `simdjsonLazyT1` below and the report's characterisation row `simdjson-lazy@300`).
+// Strategy used here instead: one valueForKeyPath('hits.hits') call materialises the
+// hits array in a single forward tape pass (O(N)), then _source fields are read via
+// plain JS property access — i.e. SIMD parse into JS objects, then materialise.
 let lib: any = null; let available = true
 try { const m = await import('simdjson'); lib = m.default ?? m } catch { available = false }
 
@@ -28,6 +31,25 @@ function extractSource (source: any, sourceKey: string, separator: string | null
 
 // One valueForKeyPath call traverses the tape once to materialise hits as a JS array.
 function allHits (tape: any): any[] { return tape.valueForKeyPath('hits.hits') as any[] }
+
+// Characterisation only — NOT the shipped substrate. This is the ORIGINAL lazy
+// per-field approach: one valueForKeyPath call per (row, column). Each call re-scans
+// the tape from the root, so this is O(N²×cols) and impractical. Exported purely to
+// quantify the per-field boundary cost at a small row count for the report.
+export function simdjsonLazyT1 (buf: Buffer, d: Descriptor): number {
+  if (!available) return 0
+  const tape = (lib as any).lazyParse(buf.toString())
+  const total = tape.valueForKeyPath('hits.total.value') as number
+  let sum = 0
+  for (let i = 0; i < total; i++) {
+    if (d.selectIncludesId) sum += String(tape.valueForKeyPath(`hits.hits.${i}._id`)).length
+    for (const c of d.columns) {
+      const v = applyJoin(tape.valueForKeyPath(`hits.hits.${i}._source.${c.sourceKey}`), c.separator)
+      sum += v == null ? 0 : String(v).length
+    }
+  }
+  return sum
+}
 
 export const simdjson: Substrate = {
   name: 'simdjson',
