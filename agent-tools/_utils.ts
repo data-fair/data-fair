@@ -3,6 +3,19 @@ export function cleanRow (row: any): any {
   return clean
 }
 
+/**
+ * Copy only the listed keys (that are defined) from an object. Used to keep
+ * structuredContent in sync with output schemas declared with additionalProperties:false:
+ * raw API sub-objects (e.g. license, timePeriod) may carry extra keys that MCP hosts reject.
+ */
+export function pick<T extends Record<string, any>> (obj: T, keys: (keyof T)[]): Partial<T> {
+  const result: Partial<T> = {}
+  for (const key of keys) {
+    if (obj[key] !== undefined) result[key] = obj[key]
+  }
+  return result
+}
+
 export function csvEscape (value: any): string {
   if (value == null) return ''
   const s = String(value)
