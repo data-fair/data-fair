@@ -34,6 +34,8 @@ export interface StreamJsonContext {
   nextHref?: string
   nextParams?: NextParams
   esSearchDurationMs: number
+  // Buffered mode (flag off / not streamed): materialize the whole body and res.send it (see streamJson).
+  buffered?: boolean
 }
 
 // Await drain when the socket buffer is full, otherwise continue synchronously — honors backpressure
@@ -55,9 +57,37 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   const flatten = getFlatten(dataset, query.arrays === 'true')
   const resultCtx = esUtils.prepareResultContext(dataset, query)
 
+  // Buffered mode (flag off / not streamed): fully materialize the body and res.send it, byte-for-byte
+  // like the pre-refactor path. res.send lets Express compute a strong ETag from the body and answer
+  // conditional If-None-Match requests with 304 (the whole point of cacheHeaders.resourceBased). The
+  // streamed mode below writes incrementally and so legitimately cannot ETag (accepted limitation).
+  // Key order matches the buffered path exactly: { hint, total, next?, totalCollapse?, results }.
+  if (ctx.buffered) {
+    let result: any = { total: source.total }
+    if (ctx.nextHref) result.next = ctx.nextHref
+    const tail = await source.tail()
+    if (query.collapse) result.totalCollapse = tail.aggregations.totalCollapse.value
+    result.results = []
+    let i = 0
+    for await (const hit of source.hits) {
+      // avoid blocking the event loop on large pages (setImmediate, not setTimeout(0))
+      if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+      result.results.push(esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx))
+      i++
+    }
+    result = attachQueryHint(req, ctx.esSearchDurationMs, result)
+    res.status(200).send(result)
+    return
+  }
+
+  // hint depends only on req.query + duration (not the results), so it is computable up front. Emit it
+  // FIRST in the head to match the buffered key order above (attachQueryHint returns { hint, ...result }).
+  const hint = attachQueryHint(req, ctx.esSearchDurationMs, {}).hint
+
   // Envelope head: everything that precedes `results`. Serialized as an object then spliced so the
   // number/string encoding is identical to JSON.stringify of the buffered result.
   const head: Record<string, any> = {}
+  if (hint) head.hint = hint
   if (source.total != null) head.total = source.total
   if (ctx.nextHref) head.next = ctx.nextHref
 
@@ -98,15 +128,12 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
     await write(throttled, ',"next":' + JSON.stringify(nextLinkURL.href))
   }
 
-  // Tail fields come after the streamed results but are order-irrelevant to consumers (the buffered
-  // path emits total/next/totalCollapse before results and prepends hint; both parse to the same
-  // object). `totalCollapse` only exists when `collapse` is requested; `attachQueryHint` adds `hint`.
+  // Tail field: `totalCollapse` isn't known until the aggregations arrive with the stream tail, so it
+  // trails the streamed results (order-irrelevant to consumers — both parse to the same object). The
+  // hint was already emitted first in the head, so it is NOT re-added here.
   const tail = await source.tail()
-  let extra: Record<string, any> = {}
-  if (query.collapse && tail?.aggregations?.totalCollapse) extra.totalCollapse = tail.aggregations.totalCollapse.value
-  extra = attachQueryHint(req, ctx.esSearchDurationMs, extra)
-  for (const k of Object.keys(extra)) {
-    await write(throttled, ',' + JSON.stringify(k) + ':' + JSON.stringify(extra[k]))
+  if (query.collapse && tail?.aggregations?.totalCollapse) {
+    await write(throttled, ',"totalCollapse":' + JSON.stringify(tail.aggregations.totalCollapse.value))
   }
   await write(throttled, '}')
 

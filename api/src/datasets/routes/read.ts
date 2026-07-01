@@ -329,7 +329,9 @@ const readLines: RequestHandler = async (req, res) => {
     publicBaseUrl,
     nextHref: nextLinkURL?.href,
     nextParams: wantStream ? { size, query, publicBaseUrl, datasetId: dataset.id as string } : undefined,
-    esSearchDurationMs
+    esSearchDurationMs,
+    // buffered mode fully materializes + res.send (preserves ETag/304); streamed mode writes incrementally
+    buffered: !wantStream
   })
 }
 
