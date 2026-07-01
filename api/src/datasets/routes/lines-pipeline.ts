@@ -82,7 +82,7 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
 
   // hint depends only on req.query + duration (not the results), so it is computable up front. Emit it
   // FIRST in the head to match the buffered key order above (attachQueryHint returns { hint, ...result }).
-  const hint = attachQueryHint(req, ctx.esSearchDurationMs, {}).hint
+  const hint = (attachQueryHint(req, ctx.esSearchDurationMs, {}) as Record<string, any>).hint
 
   // Envelope head: everything that precedes `results`. Serialized as an object then spliced so the
   // number/string encoding is identical to JSON.stringify of the buffered result.
