@@ -346,7 +346,6 @@ en:
 import { withQuery } from 'ufo'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
-import { VDateInput } from 'vuetify/labs/VDateInput'
 import equal from 'fast-deep-equal'
 const dataset = defineModel<any>({ required: true })
 

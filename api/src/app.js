@@ -291,6 +291,7 @@ export const run = async () => {
 
     const permissions = await import('./misc/utils/permissions.ts')
     const { readApiKey } = await import('./misc/utils/api-key.ts')
+    const { resolveApplicationKeyBypass } = await import('./misc/utils/application-key.ts')
     await Promise.all([
       (await import('./misc/utils/cache.ts')).init(),
       (await import('./remote-services/service.ts')).init(),
@@ -304,7 +305,18 @@ export const run = async () => {
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
         if (message.apiKey) sessionState = await readApiKey(message.apiKey, type, message.account)
-        return permissions.can(type, resource, `realtime-${subject}`, sessionState)
+        // browsers send no Referer on a websocket handshake, so the HTTP application-key path
+        // cannot apply here; resolve the same bypass from the key passed in the subscribe message
+        let bypassPermissions
+        if (type === 'datasets' && message.applicationKey) {
+          // re-read through the typed collection (db.collection(type) above yields an untyped doc)
+          const dataset = await mongo.datasets.findOne({ id })
+          if (dataset) {
+            const match = await resolveApplicationKeyBypass(message.applicationKey, dataset, message.appId)
+            bypassPermissions = match?.bypassPermissions
+          }
+        }
+        return permissions.can(type, resource, `realtime-${subject}`, sessionState, bypassPermissions)
       })
     ])
     // At this stage the server is ready to respond to API requests

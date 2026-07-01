@@ -153,6 +153,7 @@ fr:
     manageOwnLines: Gestion de ses propres lignes
     readAdvanced: Lecture informations avancées
     write: Écriture
+    admin: Administration
     use: Utiliser le service
 en:
   editPermission: Edit permissions
@@ -182,6 +183,7 @@ en:
     manageOwnLines: Manage own lines
     readAdvanced: Read advanced metadata
     write: Write
+    admin: Administration
     use: Use the service
 </i18n>
 
@@ -204,7 +206,7 @@ type EditablePermission = {
 
 const props = defineProps<{
   modelValue?: Permission
-  permissionClasses: Record<string, { id: string, title: string, class: string }[]>
+  permissionClasses: Record<string, { id: string, title: string }[]>
   owner: { type: string, id: string, name?: string, departments?: { id: string, name: string }[], roles?: string[], partners?: { id: string, name: string }[] }
 }>()
 
@@ -222,7 +224,7 @@ const expertMode = ref(false)
 const restrictedPermissionClasses = computed(() => {
   if (permission.value && !permission.value.type) {
     return ['read', 'list', 'use']
-      .reduce((classes: Record<string, { id: string, title: string, class: string }[]>, c) => {
+      .reduce((classes: Record<string, { id: string, title: string }[]>, c) => {
         if (props.permissionClasses[c]) classes[c] = props.permissionClasses[c]
         return classes
       }, {})
@@ -240,7 +242,7 @@ const classItems = computed(() => {
 
 // --- Computed: operations for expert mode v-select ---
 const operations = computed(() => {
-  const result: ({ type: 'subheader', title: string } | { id: string, title: string, class: string })[] = []
+  const result: ({ type: 'subheader', title: string } | { id: string, title: string })[] = []
   for (const c of Object.keys(restrictedPermissionClasses.value)) {
     if (!te('classNames.' + c)) continue
     result.push({ type: 'subheader', title: t('classNames.' + c) })

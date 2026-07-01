@@ -77,6 +77,7 @@
   <v-dialog
     v-model="editSelectedResultsDialog"
     max-width="500"
+    persistent
   >
     <v-card :title="t('editAllLines', {nbLines: editingLines?.length})">
       <template v-if="bulkActionResult">
@@ -132,6 +133,7 @@
   <v-dialog
     v-model="deleteSelectedResultsDialog"
     max-width="500"
+    persistent
   >
     <v-card :title="t('deleteAllLines', {nbLines: deletingResults?.length})">
       <template v-if="bulkActionResult">
@@ -181,6 +183,7 @@
   <v-dialog
     v-model="addLineDialog"
     max-width="800"
+    persistent
   >
     <v-card :title="t('addLine')">
       <v-form

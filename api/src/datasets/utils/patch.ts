@@ -151,6 +151,8 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   const coordYProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
   const projectGeomProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')
 
+  const digitalDocumentKey = (schema: any[]): string | undefined => schema?.find((f: any) => f['x-refersTo'] === 'http://schema.org/DigitalDocument')?.key
+
   let attemptMappingUpdate = false
 
   const reindexerStatus = dataset.file ? 'validated' : 'analyzed'
@@ -175,6 +177,9 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     patch.status = reindexerStatus
   } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
+    patch.status = reindexerStatus
+  } else if (patch.schema && digitalDocumentKey(patch.schema) !== digitalDocumentKey(dataset.schema)) {
+    // digitalDocument concept changed: full re-indexing to (re)compute _attachment_url per row (a mapping update would leave it empty)
     patch.status = reindexerStatus
   } else if (patch.schema && patch.schema.find((f: any) => dataset.schema.find((df: any) => df.key === f.key && df.separator !== f.separator))) {
     // some separator has changed on a field, trigger full re-indexing

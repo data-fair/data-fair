@@ -271,6 +271,70 @@ async function seedIntegriteBreach () {
   console.log(`${id}: seeded (integrity active, file tampered, check=${status})`)
 }
 
+/** REST dataset illustrating the keyword `ignore_above:200` truncation handling
+ * (see docs/architecture/load-management.md). It carries TWO long-valued string
+ * columns so a single dataset shows both sides of the fix:
+ *
+ *   - `note_libre`     : a plain string column (keyword, ignore_above:200, NO
+ *                        wildcard). Rows whose value exceeds 200 chars are dropped
+ *                        from the keyword index, so this column is the "problem"
+ *                        case → it raises the `IgnoredKeywordValues` diagnose
+ *                        warning, a `ignored-keyword-values` journal event at
+ *                        finalize, and per-request advisories.
+ *   - `chemin_fichier` : the SAME long values, configured the way a long-valued
+ *                        column should be — `wildcard` enabled (exact/existence
+ *                        filters route to the no-limit `.wildcard` sub-field) AND
+ *                        sortable/groupable disabled (sort & group can NOT be made
+ *                        reliable past 200 chars, so the capability is removed
+ *                        rather than left silently broken). It is therefore fully
+ *                        mitigated → not flagged.
+ *
+ * Things to try once it is finalized (browse / call the API):
+ *   - GET .../datasets/fixtures-ignore-above/_diagnose
+ *       → warnings[] contains IgnoredKeywordValues naming `note_libre` only
+ *         (chemin_fichier is fully mitigated, so it is not flagged).
+ *   - GET .../datasets/fixtures-ignore-above/journal
+ *       → an `ignored-keyword-values` warning event (journal-only, no notification).
+ *   - lines?note_libre_eq=<a >200-char value>      → 400 (impossible on keyword).
+ *   - lines?chemin_fichier_eq=<the same value>     → 1 hit (routed to .wildcard).
+ *   - lines?note_libre_exists=true                 → finds the long-valued rows too
+ *                                                    (union with .text_standard).
+ *   - lines?note_libre_starts=Note&hint=true       → may be incomplete; response
+ *                                                    carries a `hint` advisory.
+ *   - lines?chemin_fichier_starts=/var/exports&hint=true → correct, no hint.
+ */
+async function seedIgnoreAbove () {
+  const id = 'fixtures-ignore-above'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  // pad well past the 200-char ignore_above limit (27 chars * 10 = 270, + prefix)
+  const longText = (prefix: string) => `${prefix} ${'lorem ipsum dolor sit amet '.repeat(10)}`.trim()
+  await dfAx.post(`/api/v1/datasets/${id}`, {
+    isRest: true,
+    title: 'Démonstration ignore_above (valeurs longues)',
+    description: 'Illustre la gestion des valeurs de plus de 200 caractères sur les colonnes "keyword" Elasticsearch : la colonne "note_libre" (non configurée) pose problème, la colonne "chemin_fichier" est correctement configurée (wildcard activé, tri/regroupement désactivés). Voir docs/architecture/load-management.md.',
+    schema: [
+      { key: 'ref', type: 'string', title: 'Référence' },
+      // plain keyword column: long values are dropped from the index (the problem case)
+      { key: 'note_libre', type: 'string', title: 'Note libre (non configurée)' },
+      // correctly configured for long values: wildcard for exact/existence filtering,
+      // and sort/group (values) + case-insensitive sort (insensitive) disabled, since
+      // those cannot be reliable past 200 chars (wildcard does not repair them).
+      { key: 'chemin_fichier', type: 'string', title: 'Chemin de fichier (configuré)', 'x-capabilities': { wildcard: true, values: false, insensitive: false } }
+    ]
+  })
+  const lines = [
+    // short values: behave normally on both columns
+    { ref: 'COURT-1', note_libre: 'Note courte A', chemin_fichier: '/var/exports/court-a.csv' },
+    { ref: 'COURT-2', note_libre: 'Note courte B', chemin_fichier: '/var/exports/court-b.csv' },
+    // long values (> 200 chars): dropped from `note_libre`'s keyword index,
+    // but indexed in `chemin_fichier`'s wildcard sub-field
+    { ref: 'LONG-1', note_libre: longText('Note détaillée concernant le dossier 1'), chemin_fichier: longText('/var/exports/2026/dossier-1') },
+    { ref: 'LONG-2', note_libre: longText('Note détaillée concernant le dossier 2'), chemin_fichier: longText('/var/exports/2026/dossier-2') }
+  ]
+  await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
+  console.log(`${id}: seeded (${lines.length} lines, incl. 2 with >200-char values)`)
+}
+
 async function main () {
   try {
     dfAx = await axiosAuth({ ...creds, org: 'dev_fixtures', axiosOpts: { baseURL: dfBaseURL } })
@@ -301,9 +365,10 @@ async function main () {
   await seedEquipements()
   await seedIntegriteOk()
   await seedIntegriteBreach()
+  await seedIgnoreAbove()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-ignore-above']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log('  (the integrity panel on the two "intégrité" datasets requires admin mode)')

@@ -180,6 +180,17 @@ cancelled contribution and removed by `validateDraft` once a contribution succee
 - **Streaming-level merge of validation + extension** into a single Transform — explicitly rejected on cost-vs-benefit grounds. Could be revisited if the double-read of the source file becomes a measurable hot-path issue.
 - **Configurable diagnostic cap** — `DIAGNOSTIC_FILE_CAP` is hard-coded at 10 000.
 
+## ES `ignore_above:200` keyword truncation
+
+This is a correctness concern that surfaces at finalize time alongside schema validation. It is described in detail in [`load-management.md` — `keyword ignore_above:200` truncation section](./load-management.md#keyword-ignore_above200-truncation-and-per-request-filter-routing). Short summary for this document:
+
+- String columns are indexed as `{type:keyword, ignore_above:200}`. Values longer than 200 characters are silently dropped from the keyword index (kept only in `_source`), making exact/exists/range/sort/agg filters miss them.
+- At finalize, `datasetFinalizeDiagnostics` (`manage-indices.ts`) queries the ES `_ignored` metadata field and persists the affected column keys as `dataset._esIgnoredKeywordFields` (internal, stripped from public output).
+- If any column is newly affected, a `ignored-keyword-values` journal event (warning, no notification) is written for the dataset owner, listing the columns and advising enabling the `wildcard` capability followed by reprocessing.
+- The `esWarning` field on the dataset is set to `IgnoredKeywordValues` (ranked above `ShardingRecommended`) so superadmins see it in the triage list.
+- Per-request: exact-match filters with a >200-char operand return `400`; existence/range/prefix filters on flagged columns are routed to length-safe alternatives (`.wildcard` sub-field or union with an analyzed sub-field) where available; where no safe alternative exists, a `queryAdviceUncertainFilter` correctness hint is attached to the response.
+- A one-time backfill upgrade script (`api/upgrade/6.12.0/ignored-keyword-fields.ts`) populates `_esIgnoredKeywordFields` for pre-existing finalized datasets; it calls `es.connect()` itself because upgrade scripts run before `es.init()`.
+
 ## Related design specs
 
 - `docs/superpowers/specs/2026-04-29-extension-validation-design.md` — original mandatory-extension + diagnostic-file design (partly superseded).

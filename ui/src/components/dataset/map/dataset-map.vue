@@ -3,23 +3,33 @@
     <v-text-field
       v-if="search && !noInteraction"
       v-model="editQ"
-      :append-inner-icon="mdiMagnify"
-      :placeholder="t('search')"
+      :label="t('search')"
       style="position:absolute;z-index:2;"
-      variant="solo"
+      variant="outlined"
       color="primary"
-      bg-color="white"
+      bg-color="surface"
       density="compact"
       width="250"
       class="ma-2"
       hide-details
+      single-line
       clearable
       @keyup.enter="q = editQ"
-      @click:append-inner="q = editQ"
       @click:clear="q = ''"
-    />
+    >
+      <template #append-inner>
+        <v-btn
+          :icon="mdiMagnify"
+          :title="t('searchSubmit')"
+          density="comfortable"
+          size="small"
+          variant="text"
+          @click="q = editQ"
+        />
+      </template>
+    </v-text-field>
     <div
-      id="map"
+      ref="mapEl"
       :style="'height:' + height + 'px'"
     />
   </div>
@@ -28,11 +38,13 @@
 <i18n lang="yaml">
 fr:
   search: Rechercher
+  searchSubmit: Lancer la recherche
   noGeoData: Aucune donnée géographique valide.
   noData: Aucune donnée à afficher
   mapError: "Erreur pendant le rendu de la carte :"
 en:
   search: Search
+  searchSubmit: Submit search
   noGeoData: No valid geo data
   noData: No data to display
   mapError: "Error while rendering the map:"
@@ -60,6 +72,7 @@ const { id, dataset } = useDatasetStore()
 const { queryParams: filtersQueryParams } = useFilters(dataset, { excludeKeys: ['_id_eq'] })
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 
+const mapEl = ref<HTMLElement | null>(null)
 const q = defineModel<string>('q', { default: '' })
 const selectedItem = defineModel<string>('selectedItem', { default: '' })
 const editQ = ref('')
@@ -91,7 +104,7 @@ const fetchBBOX = useFetch<{ bbox: [number, number, number, number] }>(`${$apiPa
   })
 })
 
-useMap(tileUrl, selectable, selectedItem, noInteraction, cols, navigationPosition, computed(() => fetchBBOX.data.value?.bbox))
+useMap(mapEl, tileUrl, selectable, selectedItem, noInteraction, cols, navigationPosition, computed(() => fetchBBOX.data.value?.bbox), t)
 
 </script>
 

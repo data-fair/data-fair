@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@data-fair/frame": "^0.18.0",
-    "@data-fair/lib-vue": "^1.29.0",
+    "@data-fair/lib-vue": "^1.30.0",
     "@data-fair/lib-vue-agents": "^0.4.0",
     "@data-fair/lib-vuetify": "^2.4.0",
     "@data-fair/lib-vuetify-agents": "^0.6.0",
@@ -59,7 +59,7 @@
     "vue-router": "^5.0.0",
     "vue-tsc": "^3.2.6",
     "vuedraggable": "^4.1.0",
-    "vuetify": "^4.0.0"
+    "vuetify": "^4.1.0"
   },
   "dependencies": {
     "@data-fair/agent-tools-data-fair": "*",

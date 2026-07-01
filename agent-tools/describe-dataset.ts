@@ -1,4 +1,4 @@
-import { formatSchemaColumns, cleanRow, toCsv, datasetIdProperty } from './_utils.js'
+import { formatSchemaColumns, cleanRow, toCsv, datasetIdProperty, pick } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Décrire un jeu de données' },
@@ -100,7 +100,11 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[], l
   }
   if (fetchedData.keywords) dataset.keywords = fetchedData.keywords
   if (fetchedData.origin) dataset.origin = fetchedData.origin
-  if (fetchedData.license) dataset.license = fetchedData.license
+  // Pick only the declared fields — the raw API license/timePeriod may carry extra keys
+  // (and structuredContent is validated by MCP hosts under additionalProperties:false).
+  if (fetchedData.license) {
+    dataset.license = pick(fetchedData.license, ['href', 'title'])
+  }
   if (fetchedData.topics) dataset.topics = fetchedData.topics.map((topic: any) => topic.title)
   if (fetchedData.spatial) dataset.spatial = fetchedData.spatial
   if (fetchedData.temporal) dataset.temporal = fetchedData.temporal
@@ -113,7 +117,7 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[], l
 
   if (fetchedData.timePeriod) {
     dataset.temporalDataset = true
-    dataset.timePeriod = fetchedData.timePeriod
+    dataset.timePeriod = pick(fetchedData.timePeriod, ['startDate', 'endDate'])
   }
 
   if (fetchedData.schema) {

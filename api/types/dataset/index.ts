@@ -45,6 +45,8 @@ export type DatasetInternal = Dataset & {
   }
   _needsHistorizing?: boolean
   _historizeContext?: { operation: 'create' | 'update' | 'enable' | 'fixIntegrity', originator: string, reason?: string }
+  // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
+  _esIgnoredKeywordFields?: string[]
 }
 
 export type DatasetLine = {

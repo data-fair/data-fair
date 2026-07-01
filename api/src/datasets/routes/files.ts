@@ -7,6 +7,7 @@ import moment from 'moment'
 import resolvePath from 'resolve-path'
 import contentDisposition from 'content-disposition'
 import clone from '@data-fair/lib-utils/clone.js'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { reqSession } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
@@ -71,7 +72,8 @@ export const registerFilesRoutes = (router: Router) => {
 
   // Special attachments referenced in dataset metadatas
   router.post('/:datasetId/metadata-attachments', readDataset({ noCache: true }), apiKeyMiddlewareWrite, rateLimiting.middleware, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
-    req.body.size = req.file!.size
+    if (!req.file) throw httpError(400, 'no file was uploaded')
+    req.body.size = req.file.size
     req.body.updatedAt = moment().toISOString()
     await updateStorage(reqDataset(req))
     res.status(200).send(req.body)

@@ -249,7 +249,6 @@ en:
 <script setup lang="ts">
 import type { Settings } from '#api/types'
 import { mdiPlus } from '@mdi/js'
-import { VDateInput } from 'vuetify/labs/VDateInput'
 
 const { restrictedScopes } = defineProps<{
   restrictedScopes?: string[]

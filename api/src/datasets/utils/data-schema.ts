@@ -154,7 +154,7 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
     // and only needs existence/exact filtering, not analyzed full-text or case-insensitive sub-fields.
     // Disabling those capabilities keeps the list of queryable fields consistent with the wildcard mapping
     // (which has no .text / .text_standard / .keyword_insensitive inner fields).
-    const attachmentUrlCapabilities = { text: false, textStandard: false, insensitive: false }
+    const attachmentUrlCapabilities = { text: false, textStandard: false, insensitive: false, nativeWildcard: true }
     if (dataset.attachmentsAsImage) {
       schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: 'URL de téléchargement unitaire de l\'image jointe', 'x-refersTo': 'http://schema.org/image', 'x-capabilities': attachmentUrlCapabilities })
     } else {
