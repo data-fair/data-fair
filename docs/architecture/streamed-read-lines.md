@@ -47,17 +47,21 @@ Two implementations:
 
 ```
 readLines
-  ├─ geo/tile/sheet formats (geojson/shp/wkt/mvt/vt/pbf/xlsx/ods) → buffered + collect
-  ├─ experimental.streamReadLines ON  AND  format json/csv  AND  size ≥ streamReadLinesMinRows
-  │    → STREAMED source (asStream → optional gunzip → splitter → streamToSource)
-  └─ (default) → BUFFERED source (JSON.parse whole response)
+  ├─ geo/tile/sheet formats (geojson/shp/wkt/mvt/vt/pbf/xlsx/ods) → buffered search() + collect
+  ├─ experimental.streamReadLines ON  AND  format json/csv  (eligible)
+  │    → searchStream: asStream, then decide by ES response content-length:
+  │        ├─ content-length ≥ streamReadLinesMinBytes (or unknown) → STREAMED source (splitter → streamToSource)
+  │        └─ content-length < streamReadLinesMinBytes           → BUFFERED (collectResponse → esResponse)
+  └─ (flag off / ineligible) → BUFFERED source (search() → JSON.parse whole response)
           ↓
   shared pipeline: streamJson / streamCsv
 ```
 
-**Flag:** `config.experimental.streamReadLines` (default `false`). Non-production per-request opt-in: `?_stream=true` (gated `NODE_ENV !== 'production'`) — used by api tests to compare streamed vs buffered output on the same request without enabling the flag globally. The `_stream` param is consumed and dropped before building the `next` pagination link so it never leaks into the link URL.
+**Flag:** `config.experimental.streamReadLines` (default `false`). Non-production per-request opt-in: `?_stream=true` (gated `NODE_ENV !== 'production'`) — **forces** the streamed path (bypassing the content-length threshold) so api tests exercise it deterministically regardless of payload size. The `_stream` param is consumed and dropped before building the `next` pagination link so it never leaks into the link URL.
 
-**Size heuristic (`streamReadLinesMinRows`):** streaming carries a small CPU overhead (per-hit JSON.parse on the splitter output); for small pages buffered is both simpler and fast enough. Default threshold: `size >= 2000` rows. Configurable via `config.experimental.streamReadLinesMinRows`.
+**Content-length threshold (`streamReadLinesMinBytes`, default 500000):** streaming carries a real CPU overhead (a byte-splitter scan + per-hit reparse + incremental serialization) that never reaches parity with the buffered path — it ranges from ~1.0–1.3× for heavy/fat rows to ~2.2× for moderate rows and higher for tiny rows (see `benchmark/results/streaming-threshold-sweep.md`). So streaming is a **memory-for-CPU trade**, worth it only once the response is large enough that the peak-memory saving matters. `searchStream` issues the search with `asStream` and reads the response `content-length` (the ES client requests identity encoding by default, so it is the real decompressed size = the memory-relevant quantity): below the threshold it collects the body into a buffered `esResponse` (preserving ETag/`next`); at/above it — or when the size is unknown (chunked transfer, or a gzip-compressed length we can't trust) — it streams (the safe default: an unexpectedly large buffered response is exactly the memory blow-up this feature prevents). Configurable via `config.experimental.streamReadLinesMinBytes`.
+
+**Byte-adaptive parse batching:** the streamed source (`streamToSource`) accumulates complete hit slices until ~20 KB, then parses them with a single `JSON.parse('[…]')`. This amortizes per-parse-call overhead (CPU is flat from ~4 KB to ~100 KB and degrades beyond ~256 KB per the sweep) while keeping peak bounded — fat rows collapse to one hit per batch, skinny rows pack many. The 20 KB batch size is not configurable.
 
 **`streamEligible`:** only `json` and `csv` formats can be produced incrementally. geo/tile/sheet formats need the full hits array (bbox computation, vector tile rendering, spreadsheet building), so they always use `collect()` even when `?_stream=true` is passed.
 

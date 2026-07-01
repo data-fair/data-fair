@@ -3,9 +3,11 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
-// Api equivalence for the streamed `/lines` path (Task 8 §B/§C/§D). The streamed source is gated by
-// `?_stream=true` (non-prod opt-in) AND json/csv AND size >= streamReadLinesMinRows (2000). Its output
-// MUST be deep-equal (json) / byte-equal (csv) to the default buffered path for the same request.
+// Api equivalence for the streamed `/lines` path. The streamed source is gated by `?_stream=true` (a
+// non-prod opt-in that FORCES streaming, bypassing the content-length threshold) AND json/csv format — so
+// these 2500-row requests deterministically exercise the streamed path regardless of their byte size. Under
+// the production flag the same request would only stream once its ES response reaches streamReadLinesMinBytes
+// (500KB). The streamed output MUST be deep-equal (json) / byte-equal (csv) to the default buffered path.
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 

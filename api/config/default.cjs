@@ -320,6 +320,6 @@ module.exports = {
   apiKeysExpirationCron: '0 3 * * *', // daily at 3 AM, scan apiKeys expireAt and notify J-3 / J
   experimental: {
     streamReadLines: false,                  // stream /lines hits to collapse peak memory (see docs/plans/2026-07-01-streaming-read-lines-*.md)
-    streamReadLinesMinRows: 2000             // stay buffered below this size (streaming's overhead isn't worth it)
+    streamReadLinesMinBytes: 500000          // stream only when the ES response content-length reaches this (below it, buffered — streaming's CPU overhead isn't worth the small memory saving)
   },
 }

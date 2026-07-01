@@ -178,14 +178,15 @@ const readLines: RequestHandler = async (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, size] = findUtils.pagination(query)
 
-  // Mode selection: stream eligible json/csv responses under the experimental flag (or the non-prod
-  // ?_stream opt-in) when the page is large enough that streaming's overhead pays off. Everything else —
-  // and every geo/tile/sheet request (ineligible) — stays on the buffered search that yields a concrete
-  // esResponse consumed directly by the geo/wkt/tile branches below.
-  const streamOn = (config as any).experimental?.streamReadLines === true ||
-    (process.env.NODE_ENV !== 'production' && query._stream === 'true')
-  const wantStream = streamOn && streamEligible(query) &&
-    Number(query.size || 0) >= ((config as any).experimental?.streamReadLinesMinRows ?? 2000)
+  // Mode selection: eligible json/csv responses go through the streamed search under the experimental flag
+  // (or the non-prod ?_stream opt-in). That search issues the request with `asStream` and then decides,
+  // from the ES response content-length, whether to stream (large — collapse peak memory) or collect into a
+  // buffered esResponse (small — streaming's CPU overhead isn't worth the tiny memory saving). Everything
+  // else — and every geo/tile/sheet request (ineligible) — stays on the buffered search that yields a
+  // concrete esResponse consumed directly by the geo/wkt/tile branches below.
+  const forceStream = process.env.NODE_ENV !== 'production' && query._stream === 'true'
+  const streamOn = (config as any).experimental?.streamReadLines === true || forceStream
+  const eligible = streamOn && streamEligible(query)
   // `_stream` is an internal, non-prod opt-in — never a public API param. Drop it from the `query` copy
   // once consumed so it does not leak into the `next` pagination link (built from `query`), keeping the
   // streamed link byte-identical to the buffered one. (The hint is kept identical separately: `_stream`
@@ -195,9 +196,14 @@ const readLines: RequestHandler = async (req, res) => {
   let esResponse: any
   let streamedSource: LinesSource | undefined
   const esSearchStart = Date.now()
-  if (wantStream) {
+  if (eligible) {
     try {
-      streamedSource = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext)
+      const result = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext, {
+        minBytes: (config as any).experimental?.streamReadLinesMinBytes ?? 500000,
+        forceStream
+      })
+      if (result.mode === 'streamed') streamedSource = result.source
+      else esResponse = result.esResponse
     } catch (err) {
       await manageESError(req, err)
     }
@@ -238,6 +244,10 @@ const readLines: RequestHandler = async (req, res) => {
   // while json/csv/xlsx/ods route through the shared pipeline (streamJson/streamCsv/collect). In streamed
   // mode the source is the incremental one and esResponse stays undefined (never reached by geo/tile).
   const source: LinesSource = streamedSource ?? bufferedSource(esResponse)
+  // `wantStream` is now the OUTCOME of mode selection (searchStream may have chosen buffered for a small
+  // response even when eligible), not a pre-search prediction. Everything below keys off it: buffered mode
+  // materializes + res.send (ETag/Link/304), streamed mode writes incrementally.
+  const wantStream = !!streamedSource
 
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
   // Buffered mode only: the last hit's sort is known upfront, so we can set both the Link header and the

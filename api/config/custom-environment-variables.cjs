@@ -356,6 +356,6 @@ module.exports = {
   },
   experimental: {
     streamReadLines: { __name: 'EXPERIMENTAL_STREAM_READ_LINES', __format: 'json' },
-    streamReadLinesMinRows: { __name: 'EXPERIMENTAL_STREAM_READ_LINES_MIN_ROWS', __format: 'json' }
+    streamReadLinesMinBytes: { __name: 'EXPERIMENTAL_STREAM_READ_LINES_MIN_BYTES', __format: 'json' }
   }
 }
