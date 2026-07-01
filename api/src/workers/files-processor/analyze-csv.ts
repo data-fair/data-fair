@@ -74,11 +74,17 @@ export default async function (dataset: FileDataset) {
       }
     }
   }
-  if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    // non-blocking: keep the attachments and let the user designate the column manually
+  // the concept counts whether auto-detected on this analysis (file.schema) or manually
+  // designated on a previous cycle (schema, kept across re-analysis) — otherwise the
+  // warning would re-appear on every re-upload of an already-designated dataset.
+  const hasDocumentConcept = dataset.file.schema.some(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') ||
+    !!dataset.schema?.some(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  if (attachments.length && !hasDocumentConcept) {
+    // non-blocking: attachments are dropped at finalize; the message tells the user to
+    // designate the column before re-uploading (re-uploading first would just drop them again).
     await journals.log('datasets', dataset, {
       type: 'error',
-      data: `Des pièces jointes ont été chargées mais aucune colonne n'a pu être associée automatiquement aux fichiers. Vous pouvez désigner la colonne contenant les chemins vers les pièces jointes en y attribuant le concept « Document Numérique Attaché ». Exemples de fichiers attendus : ${attachments.slice(0, 3).join(', ')}.`
+      data: `Des pièces jointes ont été chargées mais aucune colonne n'a pu être associée automatiquement aux fichiers ; elles n'ont donc pas été conservées. Attribuez le concept « Document Numérique Attaché » à la colonne contenant les chemins vers les pièces jointes, puis rechargez les pièces jointes. Exemples de fichiers attendus : ${attachments.slice(0, 3).join(', ')}.`
     } as Event)
   }
   const emptyCols = dataset.file.schema.filter(p => p.type === 'empty')

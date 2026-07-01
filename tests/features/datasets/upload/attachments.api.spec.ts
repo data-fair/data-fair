@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize } from '../../../support/workers.ts'
+import { waitForFinalize, lsAttachments } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser3 = await axiosAuth('test_user3@test.com')
@@ -148,6 +148,41 @@ test.describe('Attachments', () => {
     assert.ok(errorEvent.data.includes('aucune colonne n\'a pu être associée automatiquement'))
     assert.ok(errorEvent.data.includes('Document Numérique Attaché'))
     assert.ok(errorEvent.data.includes('test.odt'))
+    // the warning must guide recovery: designate the column, then reload the attachments
+    assert.ok(errorEvent.data.includes('rechargez les pièces jointes'))
+    // unmatched attachments are not kept (they are dropped at finalize)
+    const attachments = await lsAttachments(dataset.id)
+    assert.equal(attachments.length, 0)
+  })
+
+  test('Do not warn again once the attachment column is designated manually', async () => {
+    const ax = testUser3
+    const warnCount = (journal: any[]) => journal.filter((e: any) => e.type === 'error' && typeof e.data === 'string' && e.data.includes('aucune colonne n\'a pu être associée')).length
+
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
+    dataset = await waitForFinalize(ax, dataset.id)
+    // auto-detection failed: exactly one warning was emitted
+    assert.equal(warnCount((await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data), 1)
+
+    // recovery step 1: designate the attachment-path column manually
+    const schema = dataset.schema.map((f: any) => f.key === 'comment' ? { ...f, 'x-refersTo': 'http://schema.org/DigitalDocument' } : f)
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })
+    dataset = await waitForFinalize(ax, dataset.id)
+
+    // recovery step 2: reload the attachments now that the concept is present
+    const form2 = new FormData()
+    form2.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
+    form2.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
+    dataset = await waitForFinalize(ax, dataset.id)
+
+    // the concept is already present, so no new warning must be emitted...
+    assert.equal(warnCount((await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data), 1)
+    // ...and this time the reloaded attachments are kept
+    assert.ok((await lsAttachments(dataset.id)).length > 0)
   })
 
   // sendMetadataAttachment helper

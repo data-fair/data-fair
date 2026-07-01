@@ -36,10 +36,8 @@ const checkInteger = (val: string): boolean => {
   return Number.isInteger(number)
 }
 
-// detect an attachment-path column as soon as a majority of non-empty sample
-// values point to an uploaded attachment file. Per-value mismatches are not
-// blocking: the column is still recognized, and the user can fix the data or
-// designate the column manually.
+// recognize an attachment-path column when a majority of non-empty values match an
+// uploaded file; per-value mismatches don't block detection.
 const matchesMostAttachments = (values: string[], attachmentsPaths: string[]): boolean => {
   const definedValues = values
     .filter(v => !!v)
