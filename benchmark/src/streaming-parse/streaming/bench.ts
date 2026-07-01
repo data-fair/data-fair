@@ -1,0 +1,45 @@
+import { PerformanceObserver } from 'node:perf_hooks'
+import { makeBuffers } from '../buffers.ts'
+import { referenceOutputSync as referenceOutput } from '../substrates/v8.ts'
+import { chunked, streaming, bufferedV8, collectSink, nullSink } from './pipeline.ts'
+import assert from 'node:assert/strict'
+
+const ROWS = Number(process.env.ROWS || 10000)
+const CHUNK = Number(process.env.CHUNK || 65536)
+const mem = () => { const m = process.memoryUsage(); return m.heapUsed + m.external + m.arrayBuffers }
+
+// run one variant once, sampling peak at its high-water points; return { peakMb, ms, gcMs }
+function measureRun (run: (sample: () => void) => void) {
+  global.gc?.()
+  const base = mem(); let peak = base
+  const sample = () => { const v = mem(); if (v > peak) peak = v }
+  let gcMs = 0
+  const obs = new PerformanceObserver(l => { for (const e of l.getEntries()) gcMs += e.duration })
+  obs.observe({ entryTypes: ['gc'] })
+  const t0 = performance.now(); run(sample); const ms = performance.now() - t0
+  obs.disconnect()
+  sample()
+  return { peakMb: (peak - base) / 1048576, ms, gcMs }
+}
+const median = (xs: number[]) => xs.slice().sort((a, b) => a - b)[Math.floor(xs.length / 2)]
+
+const variants: Array<{ name: string, run: (buf: Buffer, chunks: Buffer[], d: any, sample: () => void) => void }> = [
+  { name: 'buffered-v8', run: (buf, _c, d, s) => bufferedV8(buf, d, 'json', nullSink(), s) },
+  ...[1, 100, 1000, Infinity].map(K => ({ name: `stream-K${K === Infinity ? 'whole' : K}`, run: (_b: Buffer, c: Buffer[], d: any, s: () => void) => streaming(c, d, 'json', K, nullSink(), s) }))
+]
+
+for (const nb of makeBuffers(ROWS)) {
+  console.log(`\n=== ${nb.name} (${nb.descriptor.columns.length} cols, ${ROWS} rows) ===`)
+  const ref = referenceOutput(nb.buf, nb.descriptor)
+  const chunks = chunked(nb.buf, CHUNK)
+  console.log('variant'.padEnd(16) + 'peakMB'.padStart(9) + 'ms/iter'.padStart(10) + 'gcMs'.padStart(9))
+  for (const v of variants) {
+    // gate (skip buffered-v8 vs itself): streaming output must equal buffered-V8
+    if (v.name !== 'buffered-v8') {
+      const js = collectSink(); streaming(chunks, nb.descriptor, 'json', v.name.endsWith('whole') ? Infinity : Number(v.name.slice(8)), js.sink, () => {})
+      try { assert.deepEqual(JSON.parse(js.get().toString()), JSON.parse(ref.json.toString())) } catch { console.log(`${v.name}: DISQUALIFIED`); continue }
+    }
+    const runs = Array.from({ length: 5 }, () => measureRun(s => v.run(nb.buf, chunks, nb.descriptor, s)))
+    console.log(v.name.padEnd(16) + median(runs.map(r => r.peakMb)).toFixed(1).padStart(9) + median(runs.map(r => r.ms)).toFixed(1).padStart(10) + median(runs.map(r => r.gcMs)).toFixed(1).padStart(9))
+  }
+}
