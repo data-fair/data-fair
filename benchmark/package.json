@@ -13,6 +13,7 @@
     "csv-stringify": "^6.5.2"
   },
   "devDependencies": {
+    "@streamparser/json": "^0.0.22",
     "@types/autocannon": "^7.12.0"
   }
 }
