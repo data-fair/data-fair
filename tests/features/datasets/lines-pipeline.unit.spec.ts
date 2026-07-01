@@ -2,6 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { PassThrough } from 'node:stream'
 import path from 'node:path'
+import { register } from 'prom-client'
 
 // The api result/csv modules import `#config` at module load (config.ts validates on import). The unit
 // harness doesn't set NODE_CONFIG_DIR, so point node-config at the real api/config dir — same pattern
@@ -108,5 +109,81 @@ test.describe('lines-pipeline parity', () => {
     const refCsv = await outputs.results2csv(req, referenceRows)
 
     assert.equal(bytes.toString(), refCsv)
+  })
+})
+
+// Helper: read the df_internal_error prom-client counter for a given errorCode label.
+// The observer.js module uses the global prom-client `register`, so we can inspect it here
+// without needing to mock anything.
+const getInternalErrorCount = async (code: string): Promise<number> => {
+  const metrics = await register.getMetricsAsJSON()
+  const m = (metrics as any[]).find(m => m.name === 'df_internal_error')
+  return m?.values?.find((v: any) => v.labels?.errorCode === code)?.value ?? 0
+}
+
+test.describe('lines-pipeline mid-stream error handling', () => {
+  test('streamJson catches mid-stream error, destroys res, and counts via internalError', async () => {
+    const { streamJson, setReqDataset, setReqPublicBaseUrl } = await load()
+
+    const req = { path: '/ds1/lines', query: {}, __: (k: string) => k } as any
+    setReqDataset(req, dataset)
+    setReqPublicBaseUrl(req, publicBaseUrl)
+
+    const res = fakeRes()
+    // Suppress the 'error' event emitted by res.destroy(err) — without a listener Node would crash.
+    res.on('error', () => {})
+
+    const midStreamError = new Error('simulated mid-stream anomaly')
+    const throwingSource = {
+      total: 3 as number | undefined,
+      hits: (async function * () {
+        yield esResponse().hits.hits[0]
+        yield esResponse().hits.hits[1]
+        throw midStreamError
+      })(),
+      tail: async () => esResponse()
+    }
+
+    const before = await getInternalErrorCount('stream-read-lines')
+
+    // streamJson must not reject — error is caught internally.
+    await streamJson(req, res, throwingSource, { publicBaseUrl, esSearchDurationMs: 0 })
+
+    assert.ok(res.destroyed, 'res must be destroyed after a mid-stream error')
+
+    const after = await getInternalErrorCount('stream-read-lines')
+    assert.equal(after, before + 1, 'internalError counter must increment by 1 for a genuine anomaly')
+  })
+
+  test('streamJson does NOT increment internalError on client abort (AbortError)', async () => {
+    const { streamJson, setReqDataset, setReqPublicBaseUrl } = await load()
+
+    const req = { path: '/ds1/lines', query: {}, __: (k: string) => k } as any
+    setReqDataset(req, dataset)
+    setReqPublicBaseUrl(req, publicBaseUrl)
+
+    const res = fakeRes()
+    // Suppress the 'error' event emitted by res.destroy(err).
+    res.on('error', () => {})
+
+    const abortError = Object.assign(new Error('client disconnected'), { name: 'AbortError' })
+    const throwingSource = {
+      total: 3 as number | undefined,
+      hits: (async function * () {
+        yield esResponse().hits.hits[0]
+        throw abortError
+      })(),
+      tail: async () => esResponse()
+    }
+
+    const before = await getInternalErrorCount('stream-read-lines')
+
+    await streamJson(req, res, throwingSource, { publicBaseUrl, esSearchDurationMs: 0 })
+
+    // Connection is still torn down, but no alert should fire.
+    assert.ok(res.destroyed, 'res must be destroyed even on client abort')
+
+    const after = await getInternalErrorCount('stream-read-lines')
+    assert.equal(after, before, 'internalError counter must NOT increment for a client abort')
   })
 })

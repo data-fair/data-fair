@@ -16,7 +16,20 @@ import * as outputs from '../utils/outputs.ts'
 import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqDataset } from '../../misc/utils/req-context.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
+import { internalError } from '@data-fair/lib-node/observer.js'
 import type { LinesSource } from './lines-source.ts'
+
+// Detect client-initiated teardown: request aborted, response destroyed, premature-close from the
+// network layer, or an explicit AbortError. These are NOT anomalies and must NOT be counted.
+const isClientAbort = (req: any, res: any, err: any): boolean => {
+  if (req.aborted) return true
+  if (res.destroyed) return true
+  if (res.writableEnded) return true
+  if (err?.code === 'ERR_STREAM_PREMATURE_CLOSE') return true
+  if (err?.name === 'AbortError') return true
+  if (req.signal?.aborted) return true
+  return false
+}
 
 // Streamed-mode next-link params: the last hit's `sort` isn't known until the stream ends and the
 // response headers are already flushed, so we cannot set the `Link:next` header. Instead streamJson
@@ -101,54 +114,64 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   const throttled = typeof res.throttle === 'function' ? res.throttle('dynamic') : res
   if (throttled !== res) throttled.pipe(res, { end: false })
 
-  const headStr = JSON.stringify(head)
-  await write(throttled, (headStr === '{}' ? '{' : headStr.slice(0, -1) + ',') + '"results":[')
+  try {
+    const headStr = JSON.stringify(head)
+    await write(throttled, (headStr === '{}' ? '{' : headStr.slice(0, -1) + ',') + '"results":[')
 
-  let first = true
-  let count = 0
-  let lastHit: any
-  for await (const hit of source.hits) {
-    const row = esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)
-    await write(throttled, (first ? '' : ',') + JSON.stringify(row))
-    first = false
-    count++
-    lastHit = hit
-  }
-  await write(throttled, ']')
-
-  // Streamed-mode next link: the head was already flushed without it (and without the Link header), so
-  // append it to the body tail now that the last hit is known. Built exactly like the buffered path.
-  if (ctx.nextParams && ctx.nextParams.size && count === ctx.nextParams.size && lastHit) {
-    const { publicBaseUrl, datasetId, query: nextQuery } = ctx.nextParams
-    const nextLinkURL = new URL(`${publicBaseUrl}/api/v1/datasets/${datasetId}/lines`)
-    for (const key of Object.keys(nextQuery)) {
-      if (key !== 'page') nextLinkURL.searchParams.set(key, nextQuery[key])
+    let first = true
+    let count = 0
+    let lastHit: any
+    for await (const hit of source.hits) {
+      const row = esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)
+      await write(throttled, (first ? '' : ',') + JSON.stringify(row))
+      first = false
+      count++
+      lastHit = hit
     }
-    nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
-    await write(throttled, ',"next":' + JSON.stringify(nextLinkURL.href))
-  }
+    await write(throttled, ']')
 
-  // Tail field: `totalCollapse` isn't known until the aggregations arrive with the stream tail, so it
-  // trails the streamed results (order-irrelevant to consumers — both parse to the same object). The
-  // hint was already emitted first in the head, so it is NOT re-added here.
-  const tail = await source.tail()
-  if (query.collapse && tail?.aggregations?.totalCollapse) {
-    await write(throttled, ',"totalCollapse":' + JSON.stringify(tail.aggregations.totalCollapse.value))
-  }
-  await write(throttled, '}')
+    // Streamed-mode next link: the head was already flushed without it (and without the Link header), so
+    // append it to the body tail now that the last hit is known. Built exactly like the buffered path.
+    if (ctx.nextParams && ctx.nextParams.size && count === ctx.nextParams.size && lastHit) {
+      const { publicBaseUrl, datasetId, query: nextQuery } = ctx.nextParams
+      const nextLinkURL = new URL(`${publicBaseUrl}/api/v1/datasets/${datasetId}/lines`)
+      for (const key of Object.keys(nextQuery)) {
+        if (key !== 'page') nextLinkURL.searchParams.set(key, nextQuery[key])
+      }
+      nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
+      await write(throttled, ',"next":' + JSON.stringify(nextLinkURL.href))
+    }
 
-  // When throttling, flush the Throttle transform (its readable side drains into res) and wait until
-  // every chunk has reached res before ending the response.
-  if (throttled !== res) {
-    await new Promise<void>((resolve, reject) => {
-      throttled.on('end', resolve)
-      throttled.on('error', reject)
-      throttled.end()
-    })
+    // Tail field: `totalCollapse` isn't known until the aggregations arrive with the stream tail, so it
+    // trails the streamed results (order-irrelevant to consumers — both parse to the same object). The
+    // hint was already emitted first in the head, so it is NOT re-added here.
+    const tail = await source.tail()
+    if (query.collapse && tail?.aggregations?.totalCollapse) {
+      await write(throttled, ',"totalCollapse":' + JSON.stringify(tail.aggregations.totalCollapse.value))
+    }
+    await write(throttled, '}')
+
+    // When throttling, flush the Throttle transform (its readable side drains into res) and wait until
+    // every chunk has reached res before ending the response.
+    if (throttled !== res) {
+      await new Promise<void>((resolve, reject) => {
+        throttled.on('end', resolve)
+        throttled.on('error', reject)
+        throttled.end()
+      })
+    }
+    // arg-less end goes straight to the original res.end (the throttleEnd wrapper only throttles a Buffer
+    // body, which never reaches here since the data already went through the throttle transform).
+    res.end()
+  } catch (err: any) {
+    // Mid-stream error: headers are already flushed so we cannot send a clean HTTP error status.
+    // Count genuine anomalies (not client disconnects) via internalError, then tear down the connection
+    // so the client receives a truncated/broken body and can detect the failure.
+    if (!isClientAbort(req, res, err)) {
+      internalError('stream-read-lines', err)
+    }
+    if (!res.destroyed) res.destroy(err)
   }
-  // arg-less end goes straight to the original res.end (the throttleEnd wrapper only throttles a Buffer
-  // body, which never reaches here since the data already went through the throttle transform).
-  res.end()
 }
 
 export interface StreamCsvContext {
@@ -197,19 +220,28 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
     transform.pipe(res, { end: false })
   }
 
-  for await (const hit of source.hits) {
-    const row = esUtils.prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)
-    if (!transform.write(row)) await new Promise<void>(resolve => transform.once('drain', resolve))
-  }
+  try {
+    for await (const hit of source.hits) {
+      const row = esUtils.prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)
+      if (!transform.write(row)) await new Promise<void>(resolve => transform.once('drain', resolve))
+    }
 
-  // Flush the transform (also emits the header row for an empty result set), wait until every chunk has
-  // been forwarded through the throttle to `res`, then close the response. The terminal stream whose
-  // 'end' means all data reached res is the throttle when present, otherwise the transform itself.
-  const terminal = throttled !== res ? throttled : transform
-  await new Promise<void>((resolve, reject) => {
-    terminal.on('end', resolve)
-    terminal.on('error', reject)
-    transform.end()
-  })
-  res.end()
+    // Flush the transform (also emits the header row for an empty result set), wait until every chunk has
+    // been forwarded through the throttle to `res`, then close the response. The terminal stream whose
+    // 'end' means all data reached res is the throttle when present, otherwise the transform itself.
+    const terminal = throttled !== res ? throttled : transform
+    await new Promise<void>((resolve, reject) => {
+      terminal.on('end', resolve)
+      terminal.on('error', reject)
+      transform.end()
+    })
+    res.end()
+  } catch (err: any) {
+    // Mid-stream error: headers are already flushed so we cannot send a clean HTTP error status.
+    // Count genuine anomalies (not client disconnects) via internalError, then tear down the connection.
+    if (!isClientAbort(req, res, err)) {
+      internalError('stream-read-lines', err)
+    }
+    if (!res.destroyed) res.destroy(err)
+  }
 }
