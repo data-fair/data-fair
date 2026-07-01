@@ -6,7 +6,7 @@
 >
 > All three criteria are met:
 >
-> 1. **Peak-live collapse:** stream-K1/K100/K1000 → 0.0 MB on all narrow datasets; 0.3–0.7 MB on wide (300 cols) vs buffered-V8's 287 MB — from 10× to >400× lower depending on dataset.
+> 1. **Peak-live collapse:** stream-K1/K100/K1000 → 0.0 MB on all narrow datasets; 0.3–0.7 MB on wide (300 cols) vs buffered-V8's 287 MB — from >4× (real, 12-col) to >410× (wide, 300-col) lower depending on dataset.
 > 2. **Capped-heap survival:** at 96 MB heap / 200k rows, buffered-V8 and stream-Kwhole OOM; K1/K100/K1000 SURVIVE — a physical allocator signal, not a profiler artifact.
 > 3. **CPU cost on wide (the high-memory case):** K1–K1000 run at 0.96–1.23× ms/iter — essentially tied with buffered-V8.
 >
@@ -118,9 +118,11 @@ in CPU.
 | K1000 | 35.3 ms | 34.8 ms | 34.9 ms | 1.56× / 1.91× / 1.54× |
 
 K100/K1000 on string-heavy: 1.46–1.78×. Number-heavy and nested-multivalue show better ratios at K100
-(1.14–1.50×; 1.16–1.40×). The "real" 12-col dataset shows ~2.3× at K100 (25.5 ms vs 10.8–11.3 ms baseline)
-— proportionally high because the baseline is very short (11 ms). On narrow datasets, the absolute memory
-is already trivial (0.0 MB vs 4.5–17.4 MB), so the CPU trade is less critical.
+(1.14–1.50×; 1.16–1.40×). The "real" 12-col dataset shows ~2.3× at K100 and ~2.5–2.7× at K1000 (25.5–28.6 ms vs 10.8–11.3 ms baseline)
+— proportionally high because the baseline is very short (11 ms). Both K100 and K1000 on this small
+12-col dataset are the worst-case CPU ratios; however, the absolute memory there is trivial (4.5 MB),
+so the CPU cost matters least where it is highest. On narrow datasets broadly, the absolute memory is
+already trivial (0.0 MB vs 4.5–17.4 MB), so the CPU trade is less critical.
 
 GC pause (`gcMs`) was 0.0 ms in every run and every variant — V8's GC was not triggered during the 5
 measured iterations (working sets fit within young-gen; the benchmark forces a GC only in the peak-live
@@ -282,15 +284,17 @@ joining overhead. Peak-live is unbounded and OOMs at 200k rows. Excluded.
 - Wide-dataset peak: 0.0 MB at K=100/K1000, vs 0.3–0.7 MB at K=1 (all within <1 MB, so the
   practical difference is negligible — both are hundreds of times lower than 287 MB).
 - CPU: within 0.96–1.23× on wide; within 1.1–1.9× on most narrow datasets. Stays near or within
-  the 1.5× budget except on the "real" 12-col dataset at K100 (~2.3×, driven by the short baseline).
+  the 1.5× budget except on the "real" 12-col dataset (K100 ~2.3×, K1000 ~2.5–2.7×, driven by the short baseline).
 
 ### CPU trade (honest)
 
 - **Wide (300 cols, the high-memory case):** CPU is essentially tied (0.96–1.23×). The 287 MB → <1 MB
   peak collapse is free in CPU terms.
-- **Narrow (4–20 cols):** K100/K1000 adds ~1.1–2.3× CPU depending on dataset; absolute peak is already
-  trivial (0.0 MB vs 4.5–17.4 MB). The overhead is real but the memory win matters less at these
-  absolute sizes.
+- **Narrow (4–20 cols):** K100/K1000 adds ~1.1–2.7× CPU depending on dataset and K (worst cases:
+  K100 ~2.3× and K1000 ~2.5–2.7× on the small "real" 12-col dataset, where the baseline is very short
+  at ~11 ms); absolute peak is already trivial (0.0 MB vs 4.5–17.4 MB). The CPU cost is highest
+  exactly where the absolute memory matters least. The overhead is real but the memory win is less
+  critical at these absolute sizes.
 
 In production, the problematic responses are large-payload wide-column exports — exactly where the
 CPU cost is lowest and the memory win is largest.
