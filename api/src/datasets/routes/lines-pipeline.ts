@@ -51,16 +51,24 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
 
   res.type('json').status(200)
 
+  // Bandwidth throttling: write the body through res.throttle('dynamic') (a Throttle Transform) piped
+  // into res, so the streamed json is rate-limited exactly like the buffered path was via res.throttleEnd.
+  // The unit-test fake `res` (a plain PassThrough) has no `throttle`, so fall back to writing to `res`
+  // directly. Pipe with { end: false } and end `res` explicitly so we never collide with the
+  // throttleEnd-wrapped res.end (arg-less end goes straight to the original end).
+  const throttled = typeof res.throttle === 'function' ? res.throttle('dynamic') : res
+  if (throttled !== res) throttled.pipe(res, { end: false })
+
   const headStr = JSON.stringify(head)
-  await write(res, (headStr === '{}' ? '{' : headStr.slice(0, -1) + ',') + '"results":[')
+  await write(throttled, (headStr === '{}' ? '{' : headStr.slice(0, -1) + ',') + '"results":[')
 
   let first = true
   for await (const hit of source.hits) {
     const row = esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)
-    await write(res, (first ? '' : ',') + JSON.stringify(row))
+    await write(throttled, (first ? '' : ',') + JSON.stringify(row))
     first = false
   }
-  await write(res, ']')
+  await write(throttled, ']')
 
   // Tail fields come after the streamed results but are order-irrelevant to consumers (the buffered
   // path emits total/next/totalCollapse before results and prepends hint; both parse to the same
@@ -70,12 +78,21 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   if (query.collapse && tail?.aggregations?.totalCollapse) extra.totalCollapse = tail.aggregations.totalCollapse.value
   extra = attachQueryHint(req, ctx.esSearchDurationMs, extra)
   for (const k of Object.keys(extra)) {
-    await write(res, ',' + JSON.stringify(k) + ':' + JSON.stringify(extra[k]))
+    await write(throttled, ',' + JSON.stringify(k) + ':' + JSON.stringify(extra[k]))
   }
-  // close via write + arg-less end: this route wraps res.end (res.throttleEnd) to throttle a *Buffer*
-  // body, so passing the '}' string there would crash (buffer.subarray). Arg-less end goes straight to
-  // the original end, and the '}' rides the same unthrottled res.write path as every other chunk.
-  await write(res, '}')
+  await write(throttled, '}')
+
+  // When throttling, flush the Throttle transform (its readable side drains into res) and wait until
+  // every chunk has reached res before ending the response.
+  if (throttled !== res) {
+    await new Promise<void>((resolve, reject) => {
+      throttled.on('end', resolve)
+      throttled.on('error', reject)
+      throttled.end()
+    })
+  }
+  // arg-less end goes straight to the original res.end (the throttleEnd wrapper only throttles a Buffer
+  // body, which never reaches here since the data already went through the throttle transform).
   res.end()
 }
 
@@ -91,18 +108,30 @@ export async function streamCsv (req: any, res: any, source: LinesSource): Promi
   const [transform] = outputs.csvStreams(dataset, query)
 
   res.type('csv').status(200)
-  transform.pipe(res, { end: false })
+
+  // Bandwidth throttling: chain the csv Transform through res.throttle('dynamic') into res, so the csv
+  // export is rate-limited exactly like the buffered path was via res.throttleEnd. The unit-test fake
+  // `res` (a plain PassThrough) has no `throttle`, so fall back to piping the transform straight to res.
+  const throttled = typeof res.throttle === 'function' ? res.throttle('dynamic') : res
+  if (throttled !== res) {
+    transform.pipe(throttled) // transform 'end' → throttled.end()
+    throttled.pipe(res, { end: false })
+  } else {
+    transform.pipe(res, { end: false })
+  }
 
   for await (const hit of source.hits) {
     const row = esUtils.prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)
     if (!transform.write(row)) await new Promise<void>(resolve => transform.once('drain', resolve))
   }
 
-  // Flush the transform (also emits the header row for an empty result set), wait until every chunk
-  // has been forwarded to `res`, then close the response.
+  // Flush the transform (also emits the header row for an empty result set), wait until every chunk has
+  // been forwarded through the throttle to `res`, then close the response. The terminal stream whose
+  // 'end' means all data reached res is the throttle when present, otherwise the transform itself.
+  const terminal = throttled !== res ? throttled : transform
   await new Promise<void>((resolve, reject) => {
-    transform.on('end', resolve)
-    transform.on('error', reject)
+    terminal.on('end', resolve)
+    terminal.on('error', reject)
     transform.end()
   })
   res.end()

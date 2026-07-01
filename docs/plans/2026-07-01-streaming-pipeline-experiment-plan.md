@@ -269,11 +269,25 @@ function emitRowCsv (sink: Sink, hit: any, d: Descriptor) {
   sink.write(d.columns.map(c => csvCell(extract(hit._source, c.sourceKey, c.separator), c.type)).join(',') + '\n')
 }
 
-// current path: parse whole -> build all -> stringify whole
+// current path: parse whole -> build all -> serialize the ONE served format (fair single-format peak)
 export function bufferedV8 (buf: Buffer, d: Descriptor, format: 'json' | 'csv', sink: Sink, sample: () => void): void {
-  const out = referenceOutput(buf, d)      // parses whole + builds all + serializes whole
-  sample()                                 // high-water: everything materialized at once
-  sink.write((format === 'csv' ? out.csv : out.json).toString())
+  const hits = JSON.parse(buf.toString()).hits.hits
+  let out: string
+  if (format === 'json') {
+    const rows = hits.map((hit: any) => {
+      const o: Record<string, unknown> = {}
+      if (d.selectIncludesId) o._id = hit._id
+      for (const c of d.columns) o[c.outKey] = extract(hit._source, c.sourceKey, c.separator) ?? null
+      return o
+    })
+    out = JSON.stringify(rows)
+  } else {
+    let s = csvHeader(d.columns)
+    for (const hit of hits) s += d.columns.map(c => csvCell(extract(hit._source, c.sourceKey, c.separator), c.type)).join(',') + '\n'
+    out = s
+  }
+  sample()                                 // high-water: parsed objects + ONE materialized output
+  sink.write(out)
 }
 
 // streaming: split -> batch K hits -> JSON.parse batch -> transform -> serialize -> drop
