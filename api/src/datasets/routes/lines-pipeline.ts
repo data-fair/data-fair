@@ -18,9 +18,21 @@ import { reqDataset } from '../../misc/utils/req-context.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import type { LinesSource } from './lines-source.ts'
 
+// Streamed-mode next-link params: the last hit's `sort` isn't known until the stream ends and the
+// response headers are already flushed, so we cannot set the `Link:next` header. Instead streamJson
+// tracks the last emitted hit and, when `size && count === size`, appends a body `next` built exactly
+// like read.ts (buffered path). Streamed mode omits the `Link` header — a documented limitation.
+export interface NextParams {
+  size: number
+  query: Record<string, any>
+  publicBaseUrl: string
+  datasetId: string
+}
+
 export interface StreamJsonContext {
   publicBaseUrl: string
   nextHref?: string
+  nextParams?: NextParams
   esSearchDurationMs: number
 }
 
@@ -63,12 +75,28 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   await write(throttled, (headStr === '{}' ? '{' : headStr.slice(0, -1) + ',') + '"results":[')
 
   let first = true
+  let count = 0
+  let lastHit: any
   for await (const hit of source.hits) {
     const row = esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)
     await write(throttled, (first ? '' : ',') + JSON.stringify(row))
     first = false
+    count++
+    lastHit = hit
   }
   await write(throttled, ']')
+
+  // Streamed-mode next link: the head was already flushed without it (and without the Link header), so
+  // append it to the body tail now that the last hit is known. Built exactly like the buffered path.
+  if (ctx.nextParams && ctx.nextParams.size && count === ctx.nextParams.size && lastHit) {
+    const { publicBaseUrl, datasetId, query: nextQuery } = ctx.nextParams
+    const nextLinkURL = new URL(`${publicBaseUrl}/api/v1/datasets/${datasetId}/lines`)
+    for (const key of Object.keys(nextQuery)) {
+      if (key !== 'page') nextLinkURL.searchParams.set(key, nextQuery[key])
+    }
+    nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
+    await write(throttled, ',"next":' + JSON.stringify(nextLinkURL.href))
+  }
 
   // Tail fields come after the streamed results but are order-irrelevant to consumers (the buffered
   // path emits total/next/totalCollapse before results and prepends hint; both parse to the same

@@ -26,8 +26,14 @@ import * as observe from '../../misc/utils/observe.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
-import { bufferedSource } from './lines-source.ts'
+import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, collect } from './lines-pipeline.ts'
+
+// Only json/csv responses can be produced incrementally from a streamed source. Every other format —
+// geojson/shp/wkt, vector tiles (mvt/vt/pbf), xlsx/ods — needs the whole hits array materialized (geo
+// shaping, tile rendering, sheet building), so those stay on the buffered search. When unsure → buffered.
+const streamEligible = (query: any): boolean =>
+  !query.format || query.format === 'json' || query.format === 'csv'
 
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req: Request, db: any, query: any) {
@@ -172,9 +178,25 @@ const readLines: RequestHandler = async (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, size] = findUtils.pagination(query)
 
+  // Mode selection: stream eligible json/csv responses under the experimental flag (or the non-prod
+  // ?_stream opt-in) when the page is large enough that streaming's overhead pays off. Everything else —
+  // and every geo/tile/sheet request (ineligible) — stays on the buffered search that yields a concrete
+  // esResponse consumed directly by the geo/wkt/tile branches below.
+  const streamOn = (config as any).experimental?.streamReadLines === true ||
+    (process.env.NODE_ENV !== 'production' && query._stream === 'true')
+  const wantStream = streamOn && streamEligible(query) &&
+    Number(query.size || 0) >= ((config as any).experimental?.streamReadLinesMinRows ?? 2000)
+
   let esResponse: any
+  let streamedSource: LinesSource | undefined
   const esSearchStart = Date.now()
-  if (vectorTileRequested && sampling === 'max' && !query.collapse) {
+  if (wantStream) {
+    try {
+      streamedSource = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext)
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (vectorTileRequested && sampling === 'max' && !query.collapse) {
     let previousEsResponse
     let totalLength = 0
     for (let i = 0; i < 4; i++) {
@@ -208,13 +230,16 @@ const readLines: RequestHandler = async (req, res) => {
   observe.reqStep(req, 'search')
 
   // buffered source over the ES response: geo/wkt/tile branches keep consuming esResponse directly,
-  // while json/csv/xlsx/ods route through the shared pipeline (streamJson/streamCsv/collect).
-  const source = bufferedSource(esResponse)
+  // while json/csv/xlsx/ods route through the shared pipeline (streamJson/streamCsv/collect). In streamed
+  // mode the source is the incremental one and esResponse stays undefined (never reached by geo/tile).
+  const source: LinesSource = streamedSource ?? bufferedSource(esResponse)
 
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-
+  // Buffered mode only: the last hit's sort is known upfront, so we can set both the Link header and the
+  // body `next`. In streamed mode the last hit is unknown until the stream ends (headers already flushed),
+  // so the Link header is omitted and streamJson builds the body `next` from the last emitted hit instead.
   let nextLinkURL
-  if (size && esResponse.hits.hits.length === size) {
+  if (!wantStream && size && esResponse.hits.hits.length === size) {
     nextLinkURL = new URL(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/lines`)
     for (const key of Object.keys(query)) {
       if (key !== 'page') nextLinkURL.searchParams.set(key, query[key])
@@ -300,7 +325,12 @@ const readLines: RequestHandler = async (req, res) => {
   }
 
   observe.reqStep(req, 'streamJson')
-  await streamJson(req, res, source, { publicBaseUrl, nextHref: nextLinkURL?.href, esSearchDurationMs })
+  await streamJson(req, res, source, {
+    publicBaseUrl,
+    nextHref: nextLinkURL?.href,
+    nextParams: wantStream ? { size, query, publicBaseUrl, datasetId: dataset.id as string } : undefined,
+    esSearchDurationMs
+  })
 }
 
 export const registerReadRoutes = (router: Router) => {
