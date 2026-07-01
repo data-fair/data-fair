@@ -26,6 +26,8 @@ import * as observe from '../../misc/utils/observe.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
+import { bufferedSource } from './lines-source.ts'
+import { streamJson, streamCsv, collect } from './lines-pipeline.ts'
 
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req: Request, db: any, query: any) {
@@ -205,6 +207,10 @@ const readLines: RequestHandler = async (req, res) => {
   const esSearchDurationMs = Date.now() - esSearchStart
   observe.reqStep(req, 'search')
 
+  // buffered source over the ES response: geo/wkt/tile branches keep consuming esResponse directly,
+  // while json/csv/xlsx/ods route through the shared pipeline (streamJson/streamCsv/collect).
+  const source = bufferedSource(esResponse)
+
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
 
   let nextLinkURL
@@ -265,46 +271,36 @@ const readLines: RequestHandler = async (req, res) => {
     return res.status(200).send(tile)
   }
 
-  let result: any = { total: esResponse.hits.total?.value }
-  if (nextLinkURL) result.next = nextLinkURL.href
-  if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
-  result.results = []
-  const flatten = getFlatten(dataset, req.query.arrays === 'true')
-  const resultCtx = esUtils.prepareResultContext(dataset, query)
-  for (let i = 0; i < esResponse.hits.hits.length; i++) {
-    // avoid blocking the event loop
-    // setImmediate, not setTimeout(0): timers are clamped to ~1ms and run in a later loop phase
-    if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
-    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], dataset, query, flatten, publicBaseUrl, resultCtx))
-  }
-
-  observe.reqStep(req, 'prepareResultItems')
-
   if (query.format === 'csv') {
-    const csv = await outputs.results2csv(req as outputs.ReqWithDataset, result.results)
-    observe.reqStep(req, 'results2csv')
+    observe.reqStep(req, 'streamCsv')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
-    res.type('csv')
-    return res.status(200).send(csv)
+    await streamCsv(req, res, source)
+    return
   }
 
-  if (query.format === 'xlsx') {
-    const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, result.results)
-    observe.reqStep(req, 'results2xlsx')
-    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
-    res.type('xlsx')
-    return res.status(200).send(sheet)
-  }
-  if (query.format === 'ods') {
-    const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, result.results, 'ods')
+  // xlsx/ods cannot be produced incrementally: materialize the rows through the same per-hit transform
+  // the buffered path used, then hand them to results2sheet unchanged.
+  if (query.format === 'xlsx' || query.format === 'ods') {
+    const flatten = getFlatten(dataset, req.query.arrays === 'true')
+    const resultCtx = esUtils.prepareResultContext(dataset, query)
+    const rows = (await collect(source)).map(hit => esUtils.prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx))
+    observe.reqStep(req, 'prepareResultItems')
+    if (query.format === 'xlsx') {
+      const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, rows)
+      observe.reqStep(req, 'results2xlsx')
+      res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
+      res.type('xlsx')
+      return res.status(200).send(sheet)
+    }
+    const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, rows, 'ods')
     observe.reqStep(req, 'results2ods')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.ods'))
     res.type('ods')
     return res.status(200).send(sheet)
   }
 
-  result = attachQueryHint(req, esSearchDurationMs, result)
-  res.status(200).send(result)
+  observe.reqStep(req, 'streamJson')
+  await streamJson(req, res, source, { publicBaseUrl, nextHref: nextLinkURL?.href, esSearchDurationMs })
 }
 
 export const registerReadRoutes = (router: Router) => {

@@ -72,7 +72,11 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   for (const k of Object.keys(extra)) {
     await write(res, ',' + JSON.stringify(k) + ':' + JSON.stringify(extra[k]))
   }
-  res.end('}')
+  // close via write + arg-less end: this route wraps res.end (res.throttleEnd) to throttle a *Buffer*
+  // body, so passing the '}' string there would crash (buffer.subarray). Arg-less end goes straight to
+  // the original end, and the '}' rides the same unthrottled res.write path as every other chunk.
+  await write(res, '}')
+  res.end()
 }
 
 export async function streamCsv (req: any, res: any, source: LinesSource): Promise<void> {
