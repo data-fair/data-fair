@@ -170,8 +170,14 @@ cancelled contribution and removed by `validateDraft` once a contribution succee
 | `api/src/datasets/router.js` | `GET /:datasetId/validation-diagnostic.csv` endpoint |
 | `api/src/workers/batch-processor/process-file.ts` | Combined file-dataset validation + extension worker |
 | `api/src/workers/batch-processor/extend-rest.ts` | REST-only extension worker |
-| `api/types/dataset/schema.js` | `mandatory` field on the `remoteService` extension oneOf branch |
+| `api/types/dataset/schema.js` | `mandatory` field on the `remoteService` extension oneOf branch; `constraints` field (`unique` type) |
 | `shared/ajv.js` | `ajv-errors` integration + Proxy-wrapped localizer (preserves user `errorMessage` text); `valueAtPointer` JSON-pointer resolver and value-aware `errorsText` (optional `data` arg appends ` (valeur : …)`) shared by the REST hot path and the diagnostic CSV |
+| `api/src/datasets/utils/constraints.ts` | `checkConstraints` config validation + `CONSTRAINT_INDEX_PREFIX` |
+| `api/src/datasets/es/unicity-agg.ts` | `findUnicityDuplicates` composite aggregation over the constraint columns |
+| `api/src/datasets/es/operations.ts` | `unicityAggField` — picks the aggregation field (`.wildcard` sub-field when applicable) |
+| `api/src/workers/batch-processor/index-lines.ts` | file-dataset unicity gate before `switchAlias` |
+| `api/src/datasets/utils/rest.ts` | `configureConstraintIndexes` (partial unique index per constraint) + 11000 → 409 mapping |
+| `ui/src/components/dataset/dataset-constraints.vue` | schema-driven `<vjsf>` editor for `dataset.constraints` |
 
 ## Out of scope (follow-ups)
 
@@ -179,6 +185,65 @@ cancelled contribution and removed by `validateDraft` once a contribution succee
 - **Mid-run diagnostic visibility** — currently the CSV is published only after the worker exits. Live append is feasible but requires atomic-move-vs-tail trade-offs.
 - **Streaming-level merge of validation + extension** into a single Transform — explicitly rejected on cost-vs-benefit grounds. Could be revisited if the double-read of the source file becomes a measurable hot-path issue.
 - **Configurable diagnostic cap** — `DIAGNOSTIC_FILE_CAP` is hard-coded at 10 000.
+
+## Dataset-wide constraints
+
+Beyond per-column schema validation, a dataset can declare constraints that span the whole row. The only constraint type implemented so far is `unique`.
+
+### Data model
+
+`dataset.constraints[]`, each entry `{ type: 'unique', properties: string[] }` — the combination of values of `properties` must be unique across every row of the dataset. Defined in `api/types/dataset/schema.js` (`datasetProperties.constraints`); accepted on `PATCH /api/v1/datasets/:id` via `patchKeys` in `api/doc/datasets/patch-req/schema.js`. Additive, no DB migration.
+
+### Config-time validation
+
+`checkConstraints(schema, constraints)` (`api/src/datasets/utils/constraints.ts`) validates every `unique` constraint against the **extended** schema (concept/calculated columns resolved) and throws `httpError(400, …)` (French messages) on the first violation:
+
+- empty `properties`;
+- a referenced column that doesn't exist in the schema;
+- a column that is `x-calculated` or `x-extension` (constraints can't target derived data);
+- a column whose `x-capabilities.values` is `false` (the aggregation used to detect duplicates needs doc-values);
+- a geometry column (`x-refersTo === 'https://purl.org/geojson/vocab#geometry'`);
+- a `type: 'object'` column.
+
+The module also exports `CONSTRAINT_INDEX_PREFIX = 'constraint_unique_'`, shared with the REST index-naming and 409-mapping logic below.
+
+`checkConstraints` is wired into the shared patch pipeline, `api/src/datasets/utils/patch.ts`: whenever a `PATCH` body includes `constraints`, the schema is re-extended (`schemaUtils.extendedSchema`) and validated before the patch is persisted — this runs for both file and REST datasets.
+
+### File-dataset flow — post-index composite gate
+
+File datasets can't enforce uniqueness incrementally (the whole file is rebuilt into a temp index each run), so the check runs once, on the fully-built temp index, in `api/src/workers/batch-processor/index-lines.ts` — in the non-partial-update branch, **after** the index stream completes and **before** `switchAlias` promotes the temp index:
+
+1. If the dataset has any `unique` constraint, the temp index is refreshed (`indices.refresh`) so the aggregation sees every row.
+2. For each constraint, `findUnicityDuplicates(indexName, constraint, schema, maxGroups)` (`api/src/datasets/es/unicity-agg.ts`) runs a paginated ES `composite` aggregation over the constraint's columns — memory-flat, walking pages via `after_key` rather than loading all groups at once — and keeps only buckets with `doc_count >= 2`. A `top_hits` sub-aggregation on `_i` (size 10) recovers source line numbers for each duplicate group without a second query.
+3. Each duplicate row is written to the same `DiagnosticWriter` used by schema/extension errors (`api/src/datasets/utils/diagnostic-file.ts`), with `type: 'unicity'`, `field` set to the joined constraint columns, and `line` = the 1-based data-row index (`_i`).
+4. If any duplicates were found: the diagnostic file is finalized, a `validation-error` journal event is emitted carrying a new `unicityErrorCount` field (alongside the usual `diagnosticErrorCount`/`diagnosticCapped`), the standard notification is sent, the **temp index is deleted** (never promoted — `switchAlias` is not called), and the worker throws `[validation-error] …`, which the batch processor recognizes as terminal (no retry) like any other validation error.
+5. If no duplicates were found, the writer is discarded and processing proceeds to `switchAlias` as normal.
+
+The field actually aggregated on is chosen by `unicityAggField(prop)` (`api/src/datasets/es/operations.ts`): it reuses `isLengthLimitedKeyword` / `hasCapability` from the `ignore_above:200` mitigation (see below) — a length-limited string column routes to its `.wildcard` sub-field when the `wildcard` capability is enabled, otherwise it aggregates on the plain keyword field.
+
+### REST-dataset flow — MongoDB partial unique index
+
+REST datasets enforce uniqueness synchronously through a MongoDB index rather than a batch pass. `configureConstraintIndexes(dataset)` (`api/src/datasets/utils/rest.ts`) creates one **partial compound unique index** per `unique` constraint on the dataset's collection:
+
+- Index name: `constraint_unique_<hex crc32 of JSON.stringify(constraint.properties)>` — content-hashed, **not** based on the constraint's position in the array, so reordering/removing constraints never makes a surviving constraint collide with a stale index of a different key spec (MongoDB `IndexKeySpecsConflict`, code 86).
+- Key spec: one ascending field per constraint column.
+- Partial filter: `{ _deleted: false, <col1>: { $exists: true }, <col2>: { $exists: true }, … }` — selects only live rows that actually carry a value for every column, so a row missing one of the columns doesn't trip the index.
+- Stale constraint indexes (prefixed `constraint_unique_` but no longer wanted) are dropped first; `createIndex` is idempotent for indexes that already match.
+
+`configureConstraintIndexes` is called from `initDataset` (new REST datasets) and from `applyPatch` (`api/src/datasets/service.ts`) whenever the patch touches `constraints`. If existing data already violates a newly-added constraint, `createIndex` fails with a duplicate-key error which is mapped to `httpError(400, …)` and the whole `PATCH` is rejected — the constraint is never applied against violating data.
+
+At write time, `applyTransactions` (same file) catches MongoDB bulk-write `11000` (duplicate key) errors: when the failing index name carries the `constraint_unique_` prefix, the offending line gets `_status = 409` and `_error = "valeur en double sur une contrainte d'unicité"`, distinguished from the pre-existing `_i` and `_id`-conflict 11000 branches by matching on the index name in `errmsg`.
+
+### UI
+
+`ui/src/components/dataset/dataset-constraints.vue` is a schema-driven `<vjsf>` editor for `dataset.constraints`, mounted in the dataset Structure → Schema tab (`ui/src/pages/dataset/[id]/index.vue`) and persisted through the existing `structureEditFetch` patch buffer alongside other schema-tab edits. The list of eligible columns offered to the user mirrors the `checkConstraints` rules (no calculated/extension/geometry/object columns, no columns with `values` disabled).
+
+### v1 scoping / follow-ups
+
+- **Draft `compatibleOrCancel` parity not implemented.** A file-dataset unicity violation always emits a plain `validation-error` and leaves the dataset in `error` status, even when the run is a `compatibleOrCancel` draft contribution — unlike schema/extension errors, it does not auto-cancel the draft and replicate a `draft-cancelled` event. Revisit if unicity constraints become common on datasets that also use draft validation.
+- **`ignore_above:200` degrade-and-document, not eliminate.** `unicityAggField` only avoids under-reporting when the `wildcard` capability is explicitly enabled on a long unique string column; without it, values beyond 200 characters can still collide silently in the keyword aggregation (or be missed) the same way filters do — see the dedicated section below. Operators declaring a `unique` constraint on a free-text/long-string column should enable `wildcard` on that column.
+- **Calculated/extension columns are out of scope.** `checkConstraints` rejects them outright rather than attempting to validate derived values.
+- **Orphaned constraints on schema-only patches.** A `PATCH` that removes a column referenced by an existing constraint, without also patching `constraints`, is not re-validated — the constraint can end up referencing a column that no longer exists in the schema. `checkConstraints` only runs when the patch body itself includes `constraints`.
 
 ## ES `ignore_above:200` keyword truncation
 
