@@ -102,3 +102,23 @@ so keeping it at 20KB is the safe low-peak choice.
 - The ~2.2x includes an avoidable sliver: `emitRowJson` re-`JSON.stringify`s the constant column keys per
   row. Precomputing key JSON once per column would shave a few % off the streamed side but does not change
   the conclusion (still well above 1.10). Left as-is to measure the *current* pipeline faithfully.
+
+## Re-run after the "cheap optims" (bulk yield + per-batch write + cheap Buffer assembly)
+
+`streamingBytes` was updated to mirror the production hot loop after the bulk-iteration change:
+assemble each batch as one `Buffer.concat` (no per-hit `toString`+join) and serialize a whole batch into
+one string with a single `sink.write` per batch (was per hit). Two fresh runs:
+
+| size | buf ms | str ms | ratio | buf peakMB | str peakMB |
+|---|---|---|---|---|---|
+| 500KB | 3.64 | 8.77–8.88 | 2.41–2.44 | 1.51 | ~0 |
+| 1MB | 6.81–6.93 | 16.14–16.27 | 2.35–2.37 | 3.29 | ~0 |
+| 2MB | 13.3 | 28.7–31.5 | 2.16–2.35 | 6.57 | ~0 |
+| 5MB | 31.2–32.2 | 65.8–66.9 | 2.08–2.11 | 16.61 | ~0 |
+
+**Verdict:** the streamed/buffered CPU ratio is unchanged within noise (~2.1–2.4× at ≥500KB) — the cheap
+optims are CPU-neutral in this micro; their value is fewer allocations (peak) and, in production, one write
+per batch instead of per row. **Crucially, this micro is synchronous** — it does NOT model the
+async-generator step per hit nor the per-hit `await res.write` that the production bulk change removed. So
+the real production hot loop is now leaner than this ~2.2× lower bound indicates; this benchmark cannot see
+that gain. Peak-memory story is unchanged (buffered grows linearly to 16.6MB@5MB, streamed stays flat).

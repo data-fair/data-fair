@@ -54,19 +54,23 @@ function extract (source: any, sourceKey: string, separator: string | null): unk
   if (separator != null && Array.isArray(v)) return v.map(x => (x == null ? '' : typeof x === 'string' ? x : String(x))).join(separator)
   return v
 }
-function emitRowJson (sink: Sink, first: boolean, hit: any, d: Descriptor) {
+function rowJson (first: boolean, hit: any, d: Descriptor): string {
   let o = first ? '{' : ',{'; let f = true
   if (d.selectIncludesId) { o += '"_id":' + JSON.stringify(hit._id); f = false }
   for (const c of d.columns) { if (!f) o += ','; f = false; o += JSON.stringify(c.outKey) + ':' + JSON.stringify(extract(hit._source, c.sourceKey, c.separator) ?? null) }
-  sink.write(o + '}')
+  return o + '}'
 }
-function emitRowCsv (sink: Sink, hit: any, d: Descriptor) {
-  sink.write(d.columns.map(c => csvCell(extract(hit._source, c.sourceKey, c.separator), c.type)).join(',') + '\n')
+function rowCsv (hit: any, d: Descriptor): string {
+  return d.columns.map(c => csvCell(extract(hit._source, c.sourceKey, c.separator), c.type)).join(',') + '\n'
 }
 
 // ------------------------------------------------------------------ byte-adaptive streaming variant
-// splitter → accumulate hit slices until combined bytes ≥ batchBytes → JSON.parse batch → transform →
-// serialize incrementally → drop → repeat. Running byte counter reset per flush; fresh array per flush.
+// Mirrors the production hot loop (hits-stream.ts + lines-pipeline.ts): splitter → accumulate hit slices
+// until combined bytes ≥ batchBytes → assemble as ONE Buffer + parse once → serialize the whole batch into
+// one string → ONE sink.write per batch → drop → repeat. (The cheap Buffer assembly and per-batch write are
+// the two "cheap optims"; the async-generator step per hit that production also removed is not modeled here
+// — this variant is synchronous — so this micro is a lower bound on the real production gain.)
+const OPEN = Buffer.from('['); const CLOSE = Buffer.from(']'); const COMMA = Buffer.from(',')
 export function streamingBytes (chunks: Buffer[], d: Descriptor, format: 'json' | 'csv', batchBytes: number, sink: Sink, sample: () => void): void {
   if (format === 'csv') sink.write(csvHeader(d.columns))
   else sink.write('[')
@@ -75,11 +79,16 @@ export function streamingBytes (chunks: Buffer[], d: Descriptor, format: 'json' 
   let batchLen = 0
   const flush = () => {
     if (!batch.length) return
-    const arr = JSON.parse('[' + batch.map(b => b.toString()).join(',') + ']')  // only this batch materialized
+    const parts: Buffer[] = [OPEN]
+    for (let i = 0; i < batch.length; i++) { if (i) parts.push(COMMA); parts.push(batch[i]) }
+    parts.push(CLOSE)
+    const arr = JSON.parse(Buffer.concat(parts).toString())  // only this batch materialized
+    let out = ''
     for (const hit of arr) {
-      if (format === 'csv') emitRowCsv(sink, hit, d)
-      else { emitRowJson(sink, firstRow, hit, d); firstRow = false }
+      if (format === 'csv') out += rowCsv(hit, d)
+      else { out += rowJson(firstRow, hit, d); firstRow = false }
     }
+    sink.write(out)     // one write per batch (mirrors lines-pipeline)
     batch = []          // drop batch (fresh array, no shift loop)
     batchLen = 0
     sample()            // high-water: only one batch worth of hits live here

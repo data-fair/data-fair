@@ -21,6 +21,7 @@ import type { LinesSource } from '../routes/lines-source.ts'
 // ~100KB and degrades beyond ~256KB per the threshold sweep) while keeping peak bounded — fat rows
 // collapse to one hit per batch, skinny rows pack many. See benchmark/results/streaming-threshold-sweep.md.
 const BATCH_BYTES = 20 * 1024
+const OPEN = Buffer.from('['); const CLOSE = Buffer.from(']'); const COMMA = Buffer.from(',')
 
 // Mode decision, kept config-free so it is unit-testable in isolation. `content-length` reflects the real
 // decompressed size only when the body is NOT gzip-compressed (the ES client requests identity by default);
@@ -69,15 +70,19 @@ export async function streamToSource (stream: Readable): Promise<LinesSource> {
     let cursor = 0
     for (;;) {
       while (cursor < pending.length) {
+        // Assemble the batch as a single Buffer (`[h0,h1,…]`) then decode + parse once. Each slice is a
+        // complete hit object (`{…}`); interleaving COMMA buffers makes a valid JSON array. This avoids the
+        // N intermediate substrings + join that `batch.map(b => b.toString()).join(',')` allocated.
+        const parts: Buffer[] = [OPEN]
         let bytes = 0
-        const batch: Buffer[] = []
         while (cursor < pending.length && bytes < BATCH_BYTES) {
           const b = pending[cursor++]
           bytes += b.length
-          batch.push(b)
+          if (parts.length > 1) parts.push(COMMA)
+          parts.push(b)
         }
-        // each slice is a complete hit object (`{…}`), so joining with commas yields a valid JSON array.
-        yield JSON.parse('[' + batch.map(b => b.toString()).join(',') + ']')
+        parts.push(CLOSE)
+        yield JSON.parse(Buffer.concat(parts).toString())
       }
       pending.length = 0
       cursor = 0
