@@ -77,9 +77,10 @@ envelope parser. **`total()` early availability:** the splitter closes the prefi
 
 ```
 readLines
-  ├─ neighbors/non-vtPrepared pbf tiles → searchRaw (raw ES bytes) → transferred zero-copy to the
-  │                                        geojson2pbf worker (parses + result2geojson + renders in-thread)
-  ├─ other hard formats (shp/wkt/mvt+vt+pbf-max/vtPrepared/xlsx/ods) → buffered search() (+ collect for sheets)
+  ├─ neighbors/non-vtPrepared pbf tiles, and shp → searchRaw (raw ES bytes) → transferred zero-copy to the
+  │       geojson2pbf/geojson2shp worker (parses + result2geojson + renders/ogr2ogr in-thread). Gated off
+  │       `_attachment_url`-selecting requests (the worker can't rewrite that URL) → those fall to search().
+  ├─ other hard formats (wkt/mvt+vt+pbf-max/vtPrepared/xlsx/ods) → buffered search() (+ collect for sheets)
   ├─ experimental.streamReadLines ON  AND  format json/csv/geojson  (eligible) → searchStream: asStream +
   │                                                                        splitter → streamed LinesSource
   └─ (flag off / ineligible) → search() → bufferedSource(esResponse)
