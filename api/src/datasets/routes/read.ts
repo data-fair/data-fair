@@ -202,11 +202,21 @@ const readLines: RequestHandler = async (req, res) => {
   delete query._stream
 
   let esResponse: any
+  let rawTileBuffer: Buffer | undefined
   let streamedSource: LinesSource | undefined
   const esSearchStart = Date.now()
   if (eligible) {
     try {
       streamedSource = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext)
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (vectorTileRequested && !vtPrepared && sampling !== 'max' && !query.collapse) {
+    // Zero-copy vector-tile path: fetch the RAW ES response bytes and hand them (transferred) to the render
+    // worker, which parses + builds geojson + renders. Only the neighbors/non-vtPrepared case — max and
+    // vtPrepared stay on the buffered esResponse path below (multi-search concat / `_vt` script_fields).
+    try {
+      rawTileBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
     } catch (err) {
       await manageESError(req, err)
     }
@@ -246,7 +256,9 @@ const readLines: RequestHandler = async (req, res) => {
   // buffered source over the ES response: geo/wkt/tile branches keep consuming esResponse directly,
   // while json/csv/xlsx/ods route through the shared pipeline (streamJson/streamCsv/collect). In streamed
   // mode the source is the incremental one and esResponse stays undefined (never reached by geo/tile).
-  const source: LinesSource = streamedSource ?? bufferedSource(esResponse)
+  // In the zero-copy tile path esResponse stays undefined (the raw bytes go straight to the worker) and the
+  // vector-tile branch below returns before `source` is consumed, so skip building a buffered source then.
+  const source: LinesSource = streamedSource ?? (esResponse ? bufferedSource(esResponse) : undefined as any)
 
   // Pagination (search_after) Link header for the HARD formats only: geojson/shp/wkt/tiles read esResponse
   // directly and res.send, so their last hit is known here. json/csv build their own Link header (and, for
@@ -298,6 +310,21 @@ const readLines: RequestHandler = async (req, res) => {
   }
 
   if (vectorTileRequested) {
+    // Zero-copy path: the raw ES bytes were transferred to the worker, which parsed + built geojson +
+    // rendered and returned count/total so we can reproduce the exact same 204/headers/cache behavior the
+    // esResponse path had.
+    if (rawTileBuffer) {
+      const { tile, count, total } = await tiles.geojson2pbfFromBuffer(rawTileBuffer, xyz, dataset)
+      observe.reqStep(req, 'geojson2pbf')
+      // 204 = no-content, better than 404
+      if (!count) return res.status(204).send()
+      res.type('application/x-protobuf')
+      // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
+      if (useVTCache) cache.set(cacheHash, { tile: new mongodb.Binary(tile), count, total })
+      res.setHeader('x-tilesmode', tilesMode)
+      if (total != null) res.setHeader('x-tilesampling', count + '/' + total)
+      return res.status(200).send(tile)
+    }
     if (!esResponse.hits.hits.length) return res.status(204).send()
     const flatten = getFlatten(dataset, true)
     const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz, vtPrepared)
