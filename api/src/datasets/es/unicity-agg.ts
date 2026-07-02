@@ -18,6 +18,10 @@ export const findUnicityDuplicates = async (
   maxGroups: number
 ): Promise<DuplicateGroup[]> => {
   const byKey = new Map(schema.map(p => [p.key, p]))
+  // defensive: a dangling constraint (referencing a column removed by a schema-only patch
+  // that slipped past checkConstraints) must never crash the indexer — skip it instead of
+  // calling unicityAggField(undefined), which would throw a TypeError.
+  if (!constraint.properties.every(key => byKey.has(key))) return []
   const sources = constraint.properties.map(key => {
     const prop = byKey.get(key)
     return { [key]: { terms: { field: unicityAggField(prop) } } }

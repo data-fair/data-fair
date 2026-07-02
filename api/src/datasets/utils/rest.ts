@@ -199,20 +199,12 @@ const constraintIndexName = (constraint: any) =>
 export const configureConstraintIndexes = async (dataset: RestDataset) => {
   const c = collection(dataset)
   const constraints = (dataset.constraints ?? []).filter((ct: any) => ct.type === 'unique')
-
-  // drop constraint indexes that no longer correspond to a current constraint
-  let existing: any[] = []
-  try { existing = await c.indexes() } catch { existing = [] }
   const wantedNames = new Set(constraints.map((ct: any) => constraintIndexName(ct)))
-  for (const idx of existing) {
-    if (idx.name?.startsWith(CONSTRAINT_INDEX_PREFIX) && !wantedNames.has(idx.name)) {
-      await c.dropIndex(idx.name).catch((err: any) => {
-        if (err.codeName !== 'IndexNotFound' && err.code !== 27) console.warn('failed to drop stale constraint index', idx.name, err.message)
-      })
-    }
-  }
 
-  // create the wanted indexes (idempotent: createIndex is a no-op if identical)
+  // create the wanted indexes first (idempotent: createIndex is a no-op if identical).
+  // Doing this before dropping stale indexes means that if a createIndex throws 11000
+  // (existing data violates a new/changed constraint) and the PATCH aborts, no surviving
+  // constraint's index has been dropped yet — it stays enforced.
   for (const constraint of constraints) {
     const keySpec: Record<string, 1> = {}
     const partial: Record<string, any> = { _deleted: false }
@@ -231,6 +223,17 @@ export const configureConstraintIndexes = async (dataset: RestDataset) => {
         throw httpError(400, `Les données existantes du jeu de données violent la contrainte d'unicité sur (${constraint.properties.join(', ')}).`)
       }
       throw err
+    }
+  }
+
+  // drop constraint indexes that no longer correspond to a current constraint
+  let existing: any[] = []
+  try { existing = await c.indexes() } catch { existing = [] }
+  for (const idx of existing) {
+    if (idx.name?.startsWith(CONSTRAINT_INDEX_PREFIX) && !wantedNames.has(idx.name)) {
+      await c.dropIndex(idx.name).catch((err: any) => {
+        if (err.codeName !== 'IndexNotFound' && err.code !== 27) console.warn('failed to drop stale constraint index', idx.name, err.message)
+      })
     }
   }
 }

@@ -70,4 +70,15 @@ test.describe('REST dataset unique constraint', () => {
     const dupA2 = await testUser1.post('/api/v1/datasets/rest-uniq4/lines', { a: 'z', b: 3 }, { validateStatus: () => true })
     assert.ok(dupA2.status === 200 || dupA2.status === 201, `dupA2 status ${dupA2.status}`)
   })
+
+  test('rejects a schema-only patch that removes a column referenced by an existing constraint', async () => {
+    await makeRest('rest-uniq5', [{ type: 'unique', properties: ['a', 'b'] }])
+
+    // schema patch that drops column 'b', without touching `constraints` — must be rejected
+    // because the surviving constraint would then reference a nonexistent column
+    const patchRes = await testUser1.patch('/api/v1/datasets/rest-uniq5', {
+      schema: [{ key: 'a', type: 'string' }]
+    }, { validateStatus: () => true })
+    assert.equal(patchRes.status, 400)
+  })
 })

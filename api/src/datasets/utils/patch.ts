@@ -107,9 +107,9 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   } else if (patch.schema || ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage)) {
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
   }
-  if (patch.constraints) {
+  if (patch.constraints || (patch.schema && dataset.constraints?.length)) {
     const extendedSchemaForConstraints = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
-    checkConstraints(extendedSchemaForConstraints, patch.constraints)
+    checkConstraints(extendedSchemaForConstraints, patch.constraints ?? dataset.constraints)
   }
   if (patch.schema) {
     await schemaUtils.fixConcepts(dataset, patch.schema)

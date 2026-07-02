@@ -8,7 +8,8 @@ const schema = [
   { key: 'calc', type: 'string', 'x-calculated': true },
   { key: 'noval', type: 'string', 'x-capabilities': { values: false } },
   { key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' },
-  { key: 'obj', type: 'object' }
+  { key: 'obj', type: 'object' },
+  { key: 'm', type: 'string', separator: ',' }
 ]
 
 test('accepts a valid multi-column unique constraint', () => {
@@ -33,6 +34,10 @@ test('rejects a geometry column', () => {
 
 test('rejects an object column', () => {
   assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['obj'] }]), /objet/i)
+})
+
+test('rejects a multi-valued (separator) column', () => {
+  assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['m'] }]), /multivalu/i)
 })
 
 test('rejects an empty properties list', () => {

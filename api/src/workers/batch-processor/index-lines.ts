@@ -173,7 +173,7 @@ export default async function (dataset: DatasetInternal) {
           }
         })
         // do not promote the temp index; drop it so it does not leak
-        await esClient.client.indices.delete({ index: indexName }).catch(() => {})
+        await esClient.client.indices.delete({ index: indexName }).catch(err => internalError('es-delete-unicity-temp-index', err))
         throw new Error(`[validation-error] ${summary}`)
       } else {
         await writer.discard()

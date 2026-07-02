@@ -203,11 +203,12 @@ Beyond per-column schema validation, a dataset can declare constraints that span
 - a column that is `x-calculated` or `x-extension` (constraints can't target derived data);
 - a column whose `x-capabilities.values` is `false` (the aggregation used to detect duplicates needs doc-values);
 - a geometry column (`x-refersTo === 'https://purl.org/geojson/vocab#geometry'`);
-- a `type: 'object'` column.
+- a `type: 'object'` column;
+- a multi-valued column (`prop.separator` truthy) — an ES composite `terms` source over a multi-valued field emits one bucket per value, producing spurious "duplicates", so the constraint is ill-defined and rejected at config time.
 
 The module also exports `CONSTRAINT_INDEX_PREFIX = 'constraint_unique_'`, shared with the REST index-naming and 409-mapping logic below.
 
-`checkConstraints` is wired into the shared patch pipeline, `api/src/datasets/utils/patch.ts`: whenever a `PATCH` body includes `constraints`, the schema is re-extended (`schemaUtils.extendedSchema`) and validated before the patch is persisted — this runs for both file and REST datasets.
+`checkConstraints` is wired into the shared patch pipeline, `api/src/datasets/utils/patch.ts`: whenever a `PATCH` body includes `constraints`, the schema is re-extended (`schemaUtils.extendedSchema`) and validated before the patch is persisted — this runs for both file and REST datasets. A schema-only `PATCH` (no `constraints` in the body) also re-validates the dataset's *existing* constraints if there are any, so a patch that removes/invalidates a column referenced by a constraint is rejected with `httpError(400, …)` instead of silently leaving a dangling reference.
 
 ### File-dataset flow — post-index composite gate
 
@@ -228,7 +229,7 @@ REST datasets enforce uniqueness synchronously through a MongoDB index rather th
 - Index name: `constraint_unique_<hex crc32 of JSON.stringify(constraint.properties)>` — content-hashed, **not** based on the constraint's position in the array, so reordering/removing constraints never makes a surviving constraint collide with a stale index of a different key spec (MongoDB `IndexKeySpecsConflict`, code 86).
 - Key spec: one ascending field per constraint column.
 - Partial filter: `{ _deleted: false, <col1>: { $exists: true }, <col2>: { $exists: true }, … }` — selects only live rows that actually carry a value for every column, so a row missing one of the columns doesn't trip the index.
-- Stale constraint indexes (prefixed `constraint_unique_` but no longer wanted) are dropped first; `createIndex` is idempotent for indexes that already match.
+- Wanted indexes are created first (idempotent for indexes that already match); stale indexes (prefixed `constraint_unique_` but no longer wanted) are dropped only afterwards. This create-before-drop order means that if a `createIndex` call fails (see below) and the `PATCH` aborts, no surviving constraint's index has been dropped yet — it stays enforced instead of being left claimed-but-unenforced.
 
 `configureConstraintIndexes` is called from `initDataset` (new REST datasets) and from `applyPatch` (`api/src/datasets/service.ts`) whenever the patch touches `constraints`. If existing data already violates a newly-added constraint, `createIndex` fails with a duplicate-key error which is mapped to `httpError(400, …)` and the whole `PATCH` is rejected — the constraint is never applied against violating data.
 
@@ -243,7 +244,8 @@ At write time, `applyTransactions` (same file) catches MongoDB bulk-write `11000
 - **Draft `compatibleOrCancel` parity not implemented.** A file-dataset unicity violation always emits a plain `validation-error` and leaves the dataset in `error` status, even when the run is a `compatibleOrCancel` draft contribution — unlike schema/extension errors, it does not auto-cancel the draft and replicate a `draft-cancelled` event. Revisit if unicity constraints become common on datasets that also use draft validation.
 - **`ignore_above:200` degrade-and-document, not eliminate.** `unicityAggField` only avoids under-reporting when the `wildcard` capability is explicitly enabled on a long unique string column; without it, values beyond 200 characters can still collide silently in the keyword aggregation (or be missed) the same way filters do — see the dedicated section below. Operators declaring a `unique` constraint on a free-text/long-string column should enable `wildcard` on that column.
 - **Calculated/extension columns are out of scope.** `checkConstraints` rejects them outright rather than attempting to validate derived values.
-- **Orphaned constraints on schema-only patches.** A `PATCH` that removes a column referenced by an existing constraint, without also patching `constraints`, is not re-validated — the constraint can end up referencing a column that no longer exists in the schema. `checkConstraints` only runs when the patch body itself includes `constraints`.
+- **Multi-valued (`separator`) columns are out of scope.** `checkConstraints` rejects them outright — a composite aggregation over a multi-valued field would emit one bucket per value, so uniqueness would never mean what the user expects.
+- **Defense in depth against dangling constraints.** Even though schema-only patches now re-validate existing constraints (see above), `findUnicityDuplicates` (`api/src/datasets/es/unicity-agg.ts`) also skips (returns no duplicates for) any constraint whose `properties` reference a column missing from the schema, so the file indexer can never crash even if a dangling constraint slips through some other path.
 
 ## ES `ignore_above:200` keyword truncation
 

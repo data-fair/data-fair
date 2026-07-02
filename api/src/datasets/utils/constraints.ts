@@ -32,6 +32,9 @@ export const checkConstraints = (schema: any[], constraints: any[] | undefined):
       if (prop.type === 'object') {
         throw httpError(400, `La colonne "${key}" est un objet et ne peut pas porter une contrainte d'unicité.`)
       }
+      if (prop.separator) {
+        throw httpError(400, `La colonne "${key}" est multivaluée et ne peut pas porter une contrainte d'unicité.`)
+      }
     }
   }
 }
