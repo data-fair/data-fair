@@ -111,3 +111,22 @@ export const results2sheet = async (req: ReqWithDataset, results: Record<string,
 export const geojson2shp = async (geojson: any, baseName: string): Promise<any> => {
   return geojson2shpPiscina.run({ geojson: JSON.stringify(geojson), baseName })
 }
+
+// Zero-copy variant for the shp export hot path (mirror of tiles.geojson2pbfFromBuffer): transfer the RAW ES
+// response buffer to the worker (which parses + builds geojson + JSON.stringifies + feeds ogr2ogr), rather
+// than parsing/structured-cloning a geojson object graph on the main thread. bbox is a separate agg computed
+// by the caller and appended to the geojson LAST (matching the old read.ts key order type/total/features/bbox).
+export const geojson2shpFromBuffer = async (rawBuffer: Buffer, bbox: any, baseName: string, dataset: any): Promise<any> => {
+  // A Node Buffer often shares a pooled ArrayBuffer with unrelated buffers, so transferring rawBuffer.buffer
+  // could detach memory we don't own. Copy into a standalone ArrayBuffer and transfer THAT — after transfer
+  // the main thread's view is detached, which is fine (we never reuse it).
+  const standalone = new ArrayBuffer(rawBuffer.length)
+  const view = new Uint8Array(standalone)
+  view.set(rawBuffer)
+  if (view.byteLength !== rawBuffer.length) throw new Error(`geojson2shpFromBuffer: transfer buffer length mismatch (${view.byteLength} !== ${rawBuffer.length})`)
+  // Pass only what getFlatten needs: id/finalizedAt (memoize key) + a minimal schema. compileFlatten reads
+  // ONLY prop.key and prop.separator, so this keeps the compiled flatten (and thus the geojson string fed to
+  // ogr2ogr) identical while avoiding a DataCloneError — the full dataset/schema carries non-cloneable values.
+  const slimDataset = { id: dataset.id, finalizedAt: dataset.finalizedAt, schema: (dataset.schema ?? []).map((p: any) => ({ key: p.key, separator: p.separator })) }
+  return geojson2shpPiscina.run({ rawBuffer: view, bbox, baseName, dataset: slimDataset }, { transferList: [standalone] })
+}

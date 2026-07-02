@@ -203,11 +203,24 @@ const readLines: RequestHandler = async (req, res) => {
 
   let esResponse: any
   let rawTileBuffer: Buffer | undefined
+  let rawShpBuffer: Buffer | undefined
   let streamedSource: LinesSource | undefined
   const esSearchStart = Date.now()
   if (eligible) {
     try {
       streamedSource = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext)
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (query.format === 'shp' && !(query.select && query.select.split(',').includes('_attachment_url'))) {
+    // Zero-copy shp export path (mirror of the vector-tile zero-copy path): fetch the RAW ES response bytes
+    // and hand them (transferred) to the geojson2shp worker, which parses + builds geojson + JSON.stringifies
+    // + feeds ogr2ogr — avoiding a main-thread ES parse + structured-clone of the whole geojson object graph.
+    // A request that explicitly selects `_attachment_url` stays buffered: search() rewrites that URL
+    // (publicUrl→publicBaseUrl + virtual fixup) but the raw worker path has no config/publicBaseUrl to do so,
+    // so routing it here would leak the raw stored URL. It falls through to search() below, which rewrites.
+    try {
+      rawShpBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
     } catch (err) {
       await manageESError(req, err)
     }
@@ -291,9 +304,22 @@ const readLines: RequestHandler = async (req, res) => {
     return
   }
 
-  // shp still materializes the whole geojson for the zip (geojson2shp needs every feature), so it stays on
-  // the buffered esResponse path.
   if (query.format === 'shp') {
+    // Zero-copy path: the raw ES bytes were transferred to the worker, which parses + builds geojson +
+    // appends bbox + JSON.stringifies + feeds ogr2ogr. bbox is a separate agg (independent of the hits) so
+    // it's computed here and passed through; the worker appends it LAST, matching the old key order below.
+    if (rawShpBuffer) {
+      const bbox = (await esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext)).bbox
+      observe.reqStep(req, 'bboxAgg')
+      const shpZip = await outputs.geojson2shpFromBuffer(rawShpBuffer, bbox, dataset.slug as string, dataset)
+      observe.reqStep(req, 'geojson2shp')
+      res.setHeader('content-disposition', contentDisposition(dataset.slug + '.zip'))
+      res.type('zip')
+      return res.status(200).send(shpZip)
+    }
+    // Buffered fallback (the `_attachment_url`-selected case, which the raw worker path can't rewrite — see
+    // the mode-selection gate above): search() already rewrote the URL, so materialize the whole geojson here.
+    if (!esResponse) return res.status(204).send()
     const flatten = getFlatten(dataset, true)
     const geojson: any = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
