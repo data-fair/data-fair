@@ -131,6 +131,27 @@ test.describe('streamed /lines: api equivalence with the buffered path', () => {
     for (let i = 0; i < streamed.data.results.length; i++) assert.equal(streamed.data.results[i]._id, pad(i))
   })
 
+  test('count=false and a followed after= page: streamed equals buffered (no hits.total in the ES response)', async () => {
+    // count=false → track_total_hits:false → the ES envelope has NO hits.total; the streamed source must
+    // stay incremental (no total in the body either way) and byte-equivalent to the buffered path
+    const streamedP1 = await testUser1.get(`${base}?format=json&size=100&sort=_id&count=false&_stream=true`)
+    const bufferedP1 = await testUser1.get(`${base}?format=json&size=100&sort=_id&count=false`)
+    assert.equal(streamedP1.data.total, undefined)
+    assert.deepEqual(streamedP1.data, bufferedP1.data)
+    assert.equal(streamedP1.headers.link, bufferedP1.headers.link)
+
+    // follow the next link — an `after=` page is ALSO track_total_hits:false server-side (the hot case:
+    // every page ≥2 of the UI's large-download loop). The href is absolute (publicUrl-based), axios uses
+    // it as-is, bypassing baseURL.
+    assert.ok(bufferedP1.data.next, 'count=false full page still carries a next link')
+    const streamedP2 = await testUser1.get(bufferedP1.data.next + '&_stream=true')
+    const bufferedP2 = await testUser1.get(bufferedP1.data.next)
+    assert.equal(streamedP2.data.results.length, 100)
+    assert.equal(streamedP2.data.results[0]._id, pad(100))
+    assert.deepEqual(streamedP2.data, bufferedP2.data)
+    assert.equal(streamedP2.headers.link, bufferedP2.headers.link)
+  })
+
   // §C — the Task 6 ⚠️: a streamed request whose ES `_search` ERRORS must surface as a clean HTTP error
   // BEFORE any partial body (never a 200 with a truncated/broken stream, never a hang). We delete the
   // underlying ES index so the streamed `asStream` request gets a non-200 from ES; search-stream.ts must
