@@ -4,6 +4,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Writable } from 'stream'
 import pump from '../../misc/utils/pipe.ts'
 import * as es from '../../datasets/es/index.ts'
+import esClient from '#es'
 import { initDatasetIndex, switchAlias } from '../../datasets/es/manage-indices.ts'
 import getIndexStream from '../../datasets/es/index-stream.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
@@ -21,6 +22,10 @@ import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
+import config from '#config'
+import { DiagnosticWriter, DIAGNOSTIC_FILE_CAP } from '../../datasets/utils/diagnostic-file.ts'
+import { findUnicityDuplicates } from '../../datasets/es/unicity-agg.ts'
+import { sendResourceEvent } from '../../misc/utils/notifications.ts'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 
@@ -123,6 +128,57 @@ export default async function (dataset: DatasetInternal) {
     result._partialRestStatus = 'indexed'
     result.count = await restDatasetsUtils.count(dataset)
   } else {
+    // Dataset-wide unique constraints: detect duplicates in the freshly-built
+    // temp index before promoting it. File datasets only (REST enforce via a
+    // MongoDB unique index). Real stored columns are guaranteed by config-time
+    // checkConstraints.
+    const uniqueConstraints = (dataset.constraints ?? []).filter((c: any) => c.type === 'unique')
+    if (!isRestDataset(dataset) && uniqueConstraints.length) {
+      await esClient.client.indices.refresh({ index: indexName })
+      const writer = new DiagnosticWriter(dataset)
+      let unicityErrorCount = 0
+      for (const constraint of uniqueConstraints) {
+        const remaining = DIAGNOSTIC_FILE_CAP - unicityErrorCount
+        if (remaining <= 0) break
+        const groups = await findUnicityDuplicates(indexName, constraint, dataset.schema ?? [], remaining)
+        const field = constraint.properties.join(', ')
+        for (const group of groups) {
+          for (const line of group.lines) {
+            await writer.addError({
+              line,
+              type: 'unicity',
+              field,
+              message: `valeur en double${group.count > group.lines.length ? ` (${group.count} occurrences)` : ''}`,
+              rawValue: group.keyLabel
+            })
+            unicityErrorCount++
+          }
+        }
+      }
+      if (unicityErrorCount > 0) {
+        const fileResult = await writer.finalize()
+        const summary = `${unicityErrorCount} ligne(s) en double sur une contrainte d'unicité`
+        await journals.log('datasets', dataset, {
+          type: 'validation-error',
+          data: summary,
+          hasDiagnosticFile: true,
+          diagnosticErrorCount: fileResult.count,
+          diagnosticCapped: fileResult.capped,
+          unicityErrorCount
+        } as any)
+        await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
+          params: {
+            nbErrors: String(fileResult.count),
+            diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
+          }
+        })
+        // do not promote the temp index; drop it so it does not leak
+        await esClient.client.indices.delete({ index: indexName }).catch(() => {})
+        throw new Error(`[validation-error] ${summary}`)
+      } else {
+        await writer.discard()
+      }
+    }
     result.status = 'indexed'
     debug('Switch alias to point to new datasets index')
     await switchAlias(dataset, indexName)
