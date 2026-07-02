@@ -8,6 +8,7 @@ import config from '#config'
 import * as geo from './geo.ts'
 import * as datasetUtils from './index.ts'
 import * as extensions from './extensions.ts'
+import { checkConstraints } from './constraints.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
@@ -105,6 +106,10 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     patch.schema = await extensions.prepareExtensionsSchema(patch.schema || dataset.schema, patch.extensions || dataset.extensions)
   } else if (patch.schema || ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage)) {
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
+  }
+  if (patch.constraints) {
+    const extendedSchemaForConstraints = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
+    checkConstraints(extendedSchemaForConstraints, patch.constraints)
   }
   if (patch.schema) {
     await schemaUtils.fixConcepts(dataset, patch.schema)
