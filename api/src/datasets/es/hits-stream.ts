@@ -23,26 +23,6 @@ import type { LinesSource } from '../routes/lines-source.ts'
 const BATCH_BYTES = 20 * 1024
 const OPEN = Buffer.from('['); const CLOSE = Buffer.from(']'); const COMMA = Buffer.from(',')
 
-// Mode decision, kept config-free so it is unit-testable in isolation. `content-length` reflects the real
-// decompressed size only when the body is NOT gzip-compressed (the ES client requests identity by default);
-// when gzip-encoded or absent (chunked transfer) the decompressed size is unknown, so we stream — the safe
-// default, since an unexpectedly large buffered response is exactly the memory blow-up streaming prevents.
-export function chooseStreamMode (headers: any, gzip: boolean, opts: { minBytes: number, forceStream?: boolean }): 'streamed' | 'buffered' {
-  if (opts.forceStream) return 'streamed'
-  const contentLength = Number(headers?.['content-length'])
-  const knownSize = !gzip && Number.isFinite(contentLength)
-  return (knownSize && contentLength < opts.minBytes) ? 'buffered' : 'streamed'
-}
-
-// Collect a (small) identity-encoded ES `_search` body and parse it into the same object shape the buffered
-// `search()` returns. JSON.parse matches the streamed hits path (which parses the same user-field hits with
-// JSON.parse); the flag-off buffered path keeps the ES client's secure-json-parse via `search()`.
-export async function collectResponse (decoded: Readable): Promise<any> {
-  const chunks: Buffer[] = []
-  for await (const c of decoded) chunks.push(c as Buffer)
-  return JSON.parse(Buffer.concat(chunks).toString())
-}
-
 export async function streamToSource (stream: Readable): Promise<LinesSource> {
   const pending: Buffer[] = []
   const splitter = createHitSplitter(b => pending.push(b))

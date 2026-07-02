@@ -6,29 +6,21 @@ import { type Client } from '@elastic/elasticsearch'
 import { aliasName, prepareQuery } from './commons.ts'
 import { tooLongError } from './operations.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
-import { streamToSource, chooseStreamMode, collectResponse } from './hits-stream.ts'
+import { streamToSource } from './hits-stream.ts'
 import type { LinesSource } from '../routes/lines-source.ts'
 
 export { streamToSource }
 
-// Result of a mode-selecting streamed search: either a live streamed source (large response) or a fully
-// materialized `esResponse` identical to the buffered `search()` shape (small response, collected here).
-export type SearchStreamResult =
-  | { mode: 'streamed', source: LinesSource }
-  | { mode: 'buffered', esResponse: any }
-
-// Mirror the buffered `search` request but with `asStream: true`, then decide the mode from the ES response
-// `content-length`: below `minBytes` the payload is small enough that streaming's CPU overhead isn't worth
-// the tiny memory saving, so we collect it here and return a buffered `esResponse` (preserving ETag/next);
-// at or above `minBytes` — or when the size is unknown (chunked / gzip-compressed length) — we stream.
-// `forceStream` (the non-prod `?_stream` opt-in) always streams so tests exercise the streamed path
-// deterministically. Same `prepareQuery`, same querystring (`allow_partial_search_results:'false'` +
-// `timeout`), same abort/timeout accounting. Under `asStream` the client hands back the response body as a
-// Node stream and does NOT auto-decompress, so we gunzip when the response is gzip-encoded (we let the
-// client negotiate encoding exactly like the buffered path — by default it requests identity, so
-// `content-length` is the real decompressed size). Vector-tile (`vtXYZ`) requests are a hard/collect format
-// and never use this streamed path, so their script_fields shaping is intentionally omitted here.
-export async function searchStream (client: Client, dataset: any, query: any, abortContext: EsAbortContext | undefined, opts: { minBytes: number, forceStream?: boolean }): Promise<SearchStreamResult> {
+// Mirror the buffered `search` request but with `asStream: true`, returning a streamed `LinesSource` — the
+// hits are parsed incrementally by the splitter so the raw ES response is never held whole. The pipeline
+// then serializes rows on the fly and `res.send`s the assembled body, so streaming the source costs no
+// observable behavior (same Link/ETag/next). Same `prepareQuery`, same querystring
+// (`allow_partial_search_results:'false'` + `timeout`), same abort/timeout accounting. Under `asStream` the
+// client hands back the response body as a Node stream and does NOT auto-decompress, so we gunzip when the
+// response is gzip-encoded (we let the client negotiate encoding exactly like the buffered path).
+// Vector-tile (`vtXYZ`) requests are a hard/collect format and never use this path, so their script_fields
+// shaping is intentionally omitted here.
+export async function searchStream (client: Client, dataset: any, query: any, abortContext?: EsAbortContext): Promise<LinesSource> {
   const esQuery = prepareQuery(dataset, query)
 
   if (query.collapse) {
@@ -78,17 +70,5 @@ export async function searchStream (client: Client, dataset: any, query: any, ab
     else abortContext.signal.addEventListener('abort', onAbort, { once: true })
   }
 
-  // Mode selection on the real (decompressed) size — see chooseStreamMode.
-  if (chooseStreamMode(res.headers, gzip, opts) === 'buffered') {
-    // Small payload: collect and parse here, returning the same shape as the buffered `search()`. ES is
-    // identity-encoded (see above) so `decoded === body`.
-    const esResponse: any = await collectResponse(decoded)
-    // belt-and-suspenders, mirroring search(): with allow_partial_search_results=false ES errors on
-    // timeout, but surface a stray timed_out response as the same 504 rather than a silent partial.
-    if (esResponse.timed_out) throw httpError(tooLongError.status, tooLongError.message)
-    esResponse.contentLength = Number(res.headers?.['content-length'])
-    return { mode: 'buffered', esResponse }
-  }
-
-  return { mode: 'streamed', source: await streamToSource(decoded) }
+  return streamToSource(decoded)
 }

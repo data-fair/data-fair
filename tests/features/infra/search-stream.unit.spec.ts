@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { Readable } from 'node:stream'
-import { streamToSource, chooseStreamMode, collectResponse } from '../../../api/src/datasets/es/hits-stream.ts'
+import { streamToSource } from '../../../api/src/datasets/es/hits-stream.ts'
 
 // Same envelope shape as the hits-splitter fuzz test (Task 1): a realistic ES `_search` response body.
 const envelope = (hits: any[], aggs?: any) => Buffer.from(JSON.stringify({ took: 3, timed_out: false, _shards: { total: 1, successful: 1 }, hits: { total: { value: hits.length, relation: 'eq' }, max_score: null, hits }, ...(aggs ? { aggregations: aggs } : {}) }))
@@ -51,33 +51,5 @@ test.describe('search-stream: streamToSource', () => {
     const env = await src.tail()
     assert.deepEqual(env.aggregations, { g: { value: 5 } })
     assert.equal(env.hits.total.value, 5)
-  })
-})
-
-test.describe('search-stream: content-length mode decision', () => {
-  test('below minBytes → buffered; at/above → streamed', () => {
-    assert.equal(chooseStreamMode({ 'content-length': '499999' }, false, { minBytes: 500000 }), 'buffered')
-    assert.equal(chooseStreamMode({ 'content-length': '500000' }, false, { minBytes: 500000 }), 'streamed')
-    assert.equal(chooseStreamMode({ 'content-length': '900000' }, false, { minBytes: 500000 }), 'streamed')
-  })
-
-  test('forceStream always streams, even below the threshold', () => {
-    assert.equal(chooseStreamMode({ 'content-length': '10' }, false, { minBytes: 500000, forceStream: true }), 'streamed')
-  })
-
-  test('unknown size streams (safe default): absent content-length, or gzip-compressed length', () => {
-    assert.equal(chooseStreamMode({}, false, { minBytes: 500000 }), 'streamed')
-    assert.equal(chooseStreamMode({ 'content-length': 'nope' }, false, { minBytes: 500000 }), 'streamed')
-    // gzip-encoded: content-length is the COMPRESSED size, untrustworthy for the decompressed threshold → stream
-    assert.equal(chooseStreamMode({ 'content-length': '10' }, true, { minBytes: 500000 }), 'streamed')
-  })
-
-  test('collectResponse parses a chunked identity body into the buffered esResponse shape', async () => {
-    const hits = genHits(4)
-    const buf = envelope(hits, { totalCollapse: { value: 4 } })
-    const esResponse = await collectResponse(chunked(buf, 5))
-    assert.deepEqual(esResponse.hits.hits, hits)
-    assert.equal(esResponse.hits.total.value, 4)
-    assert.deepEqual(esResponse.aggregations, { totalCollapse: { value: 4 } })
   })
 })

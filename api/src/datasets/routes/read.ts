@@ -178,12 +178,19 @@ const readLines: RequestHandler = async (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, size] = findUtils.pagination(query)
 
-  // Mode selection: eligible json/csv responses go through the streamed search under the experimental flag
-  // (or the non-prod ?_stream opt-in). That search issues the request with `asStream` and then decides,
-  // from the ES response content-length, whether to stream (large — collapse peak memory) or collect into a
-  // buffered esResponse (small — streaming's CPU overhead isn't worth the tiny memory saving). Everything
-  // else — and every geo/tile/sheet request (ineligible) — stays on the buffered search that yields a
-  // concrete esResponse consumed directly by the geo/wkt/tile branches below.
+  // Mode selection: eligible json/csv responses read ES with `asStream` (the splitter parses hits
+  // incrementally so the raw response is never held whole), under the experimental flag or the non-prod
+  // ?_stream opt-in. The json/csv pipeline serializes rows on the fly and `res.send`s the assembled body, so
+  // the source choice (streamed vs the buffered esResponse from search()) is purely internal — it changes
+  // peak memory, never the observable response (same Link/ETag/next/Content-Length). Every geo/tile/sheet
+  // request (ineligible) stays on the buffered search that yields a concrete esResponse consumed directly by
+  // the geo/wkt/tile branches below.
+  //
+  // TODO (shelved optimization): `res.send` already gives every /lines response a strong ETag + `304`. To
+  // also skip the ES query on a cache hit, compute a synthetic validator from what fully determines the body
+  // (dataset.finalizedAt + normalized query + shaping params: select/html/thumbnail/truncate/arrays/format),
+  // set it as the ETag, and short-circuit `If-None-Match` at the top of readLines — a 304 *before* the query,
+  // on top of the existing `finalizedAt`/`Last-Modified` pre-query 304 in the resourceBased middleware.
   const forceStream = process.env.NODE_ENV !== 'production' && query._stream === 'true'
   const streamOn = (config as any).experimental?.streamReadLines === true || forceStream
   const eligible = streamOn && streamEligible(query)
@@ -198,12 +205,7 @@ const readLines: RequestHandler = async (req, res) => {
   const esSearchStart = Date.now()
   if (eligible) {
     try {
-      const result = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext, {
-        minBytes: (config as any).experimental?.streamReadLinesMinBytes ?? 500000,
-        forceStream
-      })
-      if (result.mode === 'streamed') streamedSource = result.source
-      else esResponse = result.esResponse
+      streamedSource = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext)
     } catch (err) {
       await manageESError(req, err)
     }
@@ -244,18 +246,13 @@ const readLines: RequestHandler = async (req, res) => {
   // while json/csv/xlsx/ods route through the shared pipeline (streamJson/streamCsv/collect). In streamed
   // mode the source is the incremental one and esResponse stays undefined (never reached by geo/tile).
   const source: LinesSource = streamedSource ?? bufferedSource(esResponse)
-  // `wantStream` is now the OUTCOME of mode selection (searchStream may have chosen buffered for a small
-  // response even when eligible), not a pre-search prediction. Everything below keys off it: buffered mode
-  // materializes + res.send (ETag/Link/304), streamed mode writes incrementally.
-  const wantStream = !!streamedSource
 
-  // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-  // Buffered mode only: the last hit's sort is known upfront, so we can set both the Link header and the
-  // body `next`. In streamed mode the last hit is unknown until the stream ends (headers already flushed),
-  // so the Link header is omitted and streamJson builds the body `next` from the last emitted hit instead.
-  let nextLinkURL
-  if (!wantStream && size && esResponse.hits.hits.length === size) {
-    nextLinkURL = new URL(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/lines`)
+  // Pagination (search_after) Link header for the HARD formats only: geojson/shp/wkt/tiles read esResponse
+  // directly and res.send, so their last hit is known here. json/csv build their own Link header (and, for
+  // json, the body `next`) inside the pipeline from the source's last hit — see streamJson/streamCsv — so
+  // they are excluded here. https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
+  if (!streamEligible(query) && esResponse && size && esResponse.hits.hits.length === size) {
+    const nextLinkURL = new URL(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/lines`)
     for (const key of Object.keys(query)) {
       if (key !== 'page') nextLinkURL.searchParams.set(key, query[key])
     }
@@ -314,7 +311,7 @@ const readLines: RequestHandler = async (req, res) => {
   if (query.format === 'csv') {
     observe.reqStep(req, 'streamCsv')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
-    await streamCsv(req, res, source, { buffered: !wantStream, rewriteAttachmentUrl: eligible })
+    await streamCsv(req, res, source, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible })
     return
   }
 
@@ -349,11 +346,10 @@ const readLines: RequestHandler = async (req, res) => {
   observe.reqStep(req, 'streamJson')
   await streamJson(req, res, source, {
     publicBaseUrl,
-    nextHref: nextLinkURL?.href,
-    nextParams: wantStream ? { size, query, publicBaseUrl, datasetId: dataset.id as string } : undefined,
+    datasetId: dataset.id as string,
+    size,
+    query,
     esSearchDurationMs,
-    // buffered mode fully materializes + res.send (preserves ETag/304); streamed mode writes incrementally
-    buffered: !wantStream,
     // eligible ⇒ source came from searchStream (raw _attachment_url) ⇒ rewrite in prepareResultItem;
     // otherwise it came from search() which already rewrote it
     rewriteAttachmentUrl: eligible

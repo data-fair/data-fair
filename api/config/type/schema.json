@@ -465,10 +465,6 @@
         "streamReadLines": {
           "type": "boolean",
           "default": false
-        },
-        "streamReadLinesMinBytes": {
-          "type": "integer",
-          "default": 500000
         }
       }
     }

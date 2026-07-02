@@ -88,6 +88,8 @@ const fakeRes = () => {
   res.type = function () { return this }
   res.status = function () { return this }
   res.setHeader = function () { return this }
+  res.set = function () { return this }
+  res.send = function (body: any) { this.end(body); return this }
   const chunks: Buffer[] = []
   res.on('data', (c: Buffer) => chunks.push(Buffer.from(c)))
   res._done = new Promise<Buffer>(resolve => res.on('end', () => resolve(Buffer.concat(chunks))))

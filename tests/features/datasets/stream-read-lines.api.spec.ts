@@ -3,11 +3,11 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
-// Api equivalence for the streamed `/lines` path. The streamed source is gated by `?_stream=true` (a
-// non-prod opt-in that FORCES streaming, bypassing the content-length threshold) AND json/csv format — so
-// these 2500-row requests deterministically exercise the streamed path regardless of their byte size. Under
-// the production flag the same request would only stream once its ES response reaches streamReadLinesMinBytes
-// (500KB). The streamed output MUST be deep-equal (json) / byte-equal (csv) to the default buffered path.
+// Api equivalence for the streamed `/lines` path. `?_stream=true` (a non-prod opt-in, equivalent to the
+// production `experimental.streamReadLines` flag) reads ES with asStream + the splitter for json/csv; the
+// pipeline then serializes rows on the fly and res.sends the assembled body. The source (streamed vs the
+// buffered esResponse from search()) is INTERNAL only — the response MUST be identical either way: same
+// results/total, same body `next`, same Link header, same bytes (json deep-equal / csv byte-equal).
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -57,7 +57,7 @@ test.describe('streamed /lines: api equivalence with the buffered path', () => {
 
   const base = `/api/v1/datasets/${id}/lines`
 
-  test('json: streamed deep-equals buffered (results + total + body next), Link header only on buffered', async () => {
+  test('json: streamed is identical to buffered (results + total + body next + Link header)', async () => {
     const streamed = await testUser1.get(`${base}?format=json&size=2500&sort=_id&_stream=true`)
     const buffered = await testUser1.get(`${base}?format=json&size=2500&sort=_id`)
 
@@ -68,14 +68,15 @@ test.describe('streamed /lines: api equivalence with the buffered path', () => {
     assert.deepEqual(streamed.data.results, buffered.data.results)
 
     // full page (total === size) → both carry a body `next`. With `_stream` dropped once consumed, the
-    // streamed `next` is byte-identical to the buffered one (design §6 / read.ts parity fix).
+    // streamed `next` is byte-identical to the buffered one.
     assert.ok(buffered.data.next, 'buffered should carry a body next on a full page')
     assert.equal(streamed.data.next, buffered.data.next)
 
-    // The streamed path cannot set the Link header (last-hit sort unknown at header-flush time); the
-    // buffered path does. This asymmetry is the documented streamed-mode limitation.
+    // The source (streamed vs buffered) is internal only — since the body is assembled then res.send, the
+    // streamed response keeps the SAME Link:next header as the buffered one (no observable difference).
     assert.ok(buffered.headers.link, 'buffered sets a Link:next header')
-    assert.ok(!streamed.headers.link, 'streamed omits the Link header (documented)')
+    assert.equal(streamed.headers.link, buffered.headers.link, 'streamed sets the same Link header')
+    assert.equal(streamed.headers.link, `<${streamed.data.next}>; rel=next`)
   })
 
   test('csv: streamed is byte-equal to buffered', async () => {
