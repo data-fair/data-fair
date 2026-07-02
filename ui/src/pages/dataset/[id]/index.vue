@@ -64,6 +64,13 @@
             @update:projection="p => { if (structureEditFetch.data.value) structureEditFetch.data.value.projection = p }"
             @update:conforms-to="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.conformsTo = c }"
           />
+          <dataset-constraints
+            v-if="structureEditFetch.data.value"
+            :model-value="structureEditFetch.data.value.constraints"
+            :dataset-schema="structureEditFetch.data.value.schema"
+            :editable="true"
+            @update:model-value="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.constraints = c }"
+          />
         </v-tabs-window-item>
 
         <v-tabs-window-item value="extensions">
@@ -906,7 +913,8 @@ const schemaHasDiff = computed(() => {
   return !equal(d.schema, s.schema) ||
     !equal(d.primaryKey, s.primaryKey) ||
     !equal(d.projection, s.projection) ||
-    !equal(d.conformsTo, s.conformsTo)
+    !equal(d.conformsTo, s.conformsTo) ||
+    !equal(d.constraints, s.constraints)
 })
 
 const extensionsHasDiff = computed(() => {
