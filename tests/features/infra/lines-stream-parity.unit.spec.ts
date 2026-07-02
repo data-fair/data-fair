@@ -171,6 +171,45 @@ test.describe('lines-stream parity: buffered source vs streamed source through t
     }
   })
 
+  test('streamGeojson byte-equals result2geojson(+bbox) — streamed and buffered sources', async () => {
+    const { streamGeojson, streamToSource, bufferedSource, setReqDataset, setReqPublicBaseUrl } = await load() as any
+    const { result2geojson } = await import('../../../api/src/datasets/utils/geo.ts') as any
+    const { getFlatten } = await import('../../../api/src/datasets/utils/flatten.ts') as any
+
+    const geoDataset = {
+      id: 'geo-ds',
+      slug: 'geo-ds',
+      finalizedAt: '2024-01-01T00:00:00.000Z',
+      schema: [{ key: '_id', type: 'string' }, { key: 'label', type: 'string' }, { key: 'n', type: 'integer' }]
+    }
+    const hits = Array.from({ length: 12 }, (_, i) => ({
+      _id: `id-${i}`,
+      _score: null,
+      sort: [i],
+      _source: { label: i % 3 === 0 ? `l "${i}", }{` : `plain ${i}`, n: i, _geopoint: `${(47 + i * 0.01).toFixed(2)},${(-2 + i * 0.01).toFixed(2)}` }
+    }))
+    const esResp = envelope(hits)
+    const bbox = [-2, 47, -1.89, 47.11]
+    const clone = () => JSON.parse(JSON.stringify(esResp))
+
+    const req = { path: '/geo-ds/lines', query: {}, __: (k: string) => k } as any
+    setReqDataset(req, geoDataset)
+    setReqPublicBaseUrl(req, publicBaseUrl)
+
+    // reference = res.send(result2geojson(esResponse) with bbox appended) — the pre-refactor buffered output
+    const flatten = getFlatten(geoDataset, true)
+    const ref = JSON.stringify({ ...result2geojson(clone(), flatten), bbox })
+
+    const buf = Buffer.from(JSON.stringify(esResp))
+    const resStreamed = fakeRes()
+    await streamGeojson(req, resStreamed, await streamToSource(chunked(buf, 9)), { bbox, rewriteAttachmentUrl: false })
+    assert.equal((await resStreamed._done).toString(), ref, 'streamed source')
+
+    const resBuffered = fakeRes()
+    await streamGeojson(req, resBuffered, bufferedSource(clone()), { bbox, rewriteAttachmentUrl: false })
+    assert.equal((await resBuffered._done).toString(), ref, 'buffered source')
+  })
+
   test('streamCsv is byte-equal across 120 randomized shapes', async () => {
     const { bufferedSource, streamCsv, streamToSource, setReqDataset, setReqPublicBaseUrl } = await load() as any
 

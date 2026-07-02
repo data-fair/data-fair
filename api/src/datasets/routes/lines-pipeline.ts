@@ -21,6 +21,8 @@
 import LinkHeader from 'http-link-header'
 import { getFlatten } from '../utils/flatten.ts'
 import * as esUtils from '../es/index.ts'
+import { rewriteAttachmentUrl } from '../es/commons.ts'
+import { hit2feature } from '../utils/geo.ts'
 import * as outputs from '../utils/outputs.ts'
 import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqDataset } from '../../misc/utils/req-context.ts'
@@ -146,4 +148,46 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
 
   setNextLink(res, ctx, count, lastHit)
   res.type('csv').status(200).send(Buffer.concat(csvChunks))
+}
+
+export interface StreamGeojsonContext extends NextContext {
+  rewriteAttachmentUrl?: boolean
+  bbox?: any
+}
+
+// GeoJSON is not a "hard" format: each hit maps to one Feature (geo.hit2feature) and the bbox comes from a
+// separate bboxAgg call — so it streams the source exactly like json, serializing each Feature and dropping
+// the object. Assembled body is byte-identical to `res.send(result2geojson(esResponse) + bbox)`: key order
+// FeatureCollection → { type, total?, features, bbox? }. Content-type/disposition are set by read.ts.
+export async function streamGeojson (req: any, res: any, source: LinesSource, ctx: StreamGeojsonContext): Promise<void> {
+  const dataset = reqDataset(req)
+  const flatten = getFlatten(dataset, true) // geojson preserves arrays (matches read.ts getFlatten(dataset, true))
+  const publicBaseUrl = reqPublicBaseUrl(req)
+
+  const features: string[] = []
+  let lastHit: any
+  let count = 0
+  for await (const bulk of source.hits) {
+    for (let k = 0; k < bulk.length; k++) {
+      if (count % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+      const feature = hit2feature(bulk[k], flatten)
+      // like json/csv: a searchStream source holds the raw stored _attachment_url → rewrite here (buffered
+      // esResponse from search() already rewrote it, so ctx.rewriteAttachmentUrl is false there).
+      if (ctx.rewriteAttachmentUrl && feature.properties._attachment_url) {
+        feature.properties._attachment_url = rewriteAttachmentUrl(feature.properties._attachment_url, dataset, publicBaseUrl)
+      }
+      features.push(JSON.stringify(feature))
+      count++
+    }
+    if (bulk.length) lastHit = bulk[bulk.length - 1]
+  }
+  await source.tail() // drain the stream to completion (geojson has no tail fields to read)
+
+  setNextLink(res, ctx, count, lastHit)
+  let body = '{"type":"FeatureCollection"'
+  if (source.total != null) body += ',"total":' + source.total
+  body += ',"features":[' + features.join(',') + ']'
+  if (ctx.bbox !== undefined) body += ',"bbox":' + JSON.stringify(ctx.bbox)
+  body += '}'
+  res.status(200).send(body)
 }

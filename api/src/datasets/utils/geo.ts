@@ -219,27 +219,31 @@ export const geometry2fields = async (dataset: Dataset, doc: Record<string, any>
   return fields
 }
 
+// Per-hit GeoJSON Feature builder — shared by result2geojson (buffered: geojson2shp, vector tiles) and the
+// streamed geojson pipeline (lines-pipeline.ts streamGeojson), so both produce identical features.
+export const hit2feature = (hit: any, flatten: (o: Record<string, any>) => Record<string, any>) => {
+  const properties = hit._source
+  let geometry = properties._geoshape
+  delete properties._geoshape
+  if (!geometry && properties._geopoint) {
+    const [lat, lon] = properties._geopoint.split(',')
+    delete properties._geopoint
+    geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
+  }
+  properties._id = hit._id
+  return {
+    type: 'Feature',
+    id: hit._id,
+    geometry,
+    properties: flatten(properties)
+  }
+}
+
 export const result2geojson = (esResponse: any, flatten: (o: Record<string, any>) => Record<string, any>) => {
   return {
     type: 'FeatureCollection',
     total: esResponse.hits.total?.value,
-    features: esResponse.hits.hits.map((hit: any) => {
-      const properties = hit._source
-      let geometry = properties._geoshape
-      delete properties._geoshape
-      if (!geometry && properties._geopoint) {
-        const [lat, lon] = properties._geopoint.split(',')
-        delete properties._geopoint
-        geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
-      }
-      properties._id = hit._id
-      return {
-        type: 'Feature',
-        id: hit._id,
-        geometry,
-        properties: flatten(properties)
-      }
-    })
+    features: esResponse.hits.hits.map((hit: any) => hit2feature(hit, flatten))
   }
 }
 

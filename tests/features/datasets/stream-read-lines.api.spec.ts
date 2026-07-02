@@ -104,14 +104,18 @@ test.describe('streamed /lines: api equivalence with the buffered path', () => {
     assert.deepEqual(streamed.data.results, buffered.data.results)
   })
 
-  test('hard format geojson with _stream=true falls back to buffered and stays correct', async () => {
+  test('geojson: streamed source is identical to buffered, incl the Link header', async () => {
     const streamed = await testUser1.get(`${base}?format=geojson&size=100&sort=_id&_stream=true`)
     const buffered = await testUser1.get(`${base}?format=geojson&size=100&sort=_id`)
     assert.equal(streamed.status, 200)
     assert.equal(streamed.data.type, 'FeatureCollection')
     assert.equal(streamed.data.features.length, 100)
-    // geojson is ineligible for streaming → both go buffered → identical output.
+    // geojson now consumes the streamed source (per-hit Feature → res.send), so it gets the same memory
+    // treatment as json/csv while staying byte-for-byte identical to the buffered path.
     assert.deepEqual(streamed.data, buffered.data)
+    // full page (100 of 2500) → Link:next header, set from the last hit by streamGeojson, same either way
+    assert.ok(buffered.headers.link, 'buffered geojson sets a Link:next header')
+    assert.equal(streamed.headers.link, buffered.headers.link)
   })
 
   test('backpressure/abort: a large streamed response completes without truncation or hang', async () => {

@@ -77,12 +77,12 @@ envelope parser. **`total()` early availability:** the splitter closes the prefi
 
 ```
 readLines
-  ├─ geo/tile/sheet formats (geojson/shp/wkt/mvt/vt/pbf/xlsx/ods) → buffered search() (+ collect for sheets)
-  ├─ experimental.streamReadLines ON  AND  format json/csv  (eligible) → searchStream: asStream + splitter
-  │                                                                        → streamed LinesSource
-  └─ (flag off / ineligible json/csv) → search() → bufferedSource(esResponse)
+  ├─ hard formats (shp/wkt/mvt/vt/pbf/xlsx/ods) → buffered search() (+ collect for sheets)
+  ├─ experimental.streamReadLines ON  AND  format json/csv/geojson  (eligible) → searchStream: asStream +
+  │                                                                        splitter → streamed LinesSource
+  └─ (flag off / ineligible) → search() → bufferedSource(esResponse)
           ↓
-  shared pipeline: streamJson / streamCsv  →  assemble body  →  res.send
+  shared pipeline: streamJson / streamCsv / streamGeojson  →  assemble body  →  res.send
 ```
 
 **Flag:** `config.experimental.streamReadLines` (default `false`). Non-production per-request opt-in
@@ -90,7 +90,9 @@ readLines
 streamed source deterministically. `_stream` is dropped from the query copy so it never leaks into the
 `next` link. There is **no size threshold** — eligible json/csv always use the streamed source (the splitter
 overhead is negligible in absolute terms for small responses, and the output is `res.send` either way, so
-there is no reason to choose based on size). `streamEligible`: only `json`/`csv` (default = json). Hard
+there is no reason to choose based on size). `streamEligible`: `json`/`csv`/`geojson` (default = json) —
+geojson qualifies because each hit maps independently to one Feature (`geo.hit2feature`) and its `bbox` is a
+separate `bboxAgg` call, so `streamGeojson` serializes Features on the fly exactly like json. Hard
 formats need the whole array (bbox, tile rendering, sheets) and stay on `search()`.
 
 ## 5. Shared per-hit pipeline (`lines-pipeline.ts`)
@@ -117,8 +119,9 @@ body `next` work for both formats and both sources. `res.send` gives ETag / Cont
 Bandwidth throttling is handled by the `res.throttleEnd()` wrapper set at the top of `readLines` (it
 throttles the Buffer body), exactly as the pre-refactor buffered path did.
 
-The read.ts pagination block still sets the `Link` header for the **hard formats** (geojson/shp/wkt/tiles,
-which read `esResponse` directly and `res.send`); json/csv build their own inside the pipeline.
+The read.ts pagination block still sets the `Link` header for the **hard formats** (shp/wkt/tiles, which read
+`esResponse` directly and `res.send`); json/csv/geojson build their own inside the pipeline (from the
+source's last hit, before `res.send`).
 
 ## 6. No observable difference — this is the whole point
 

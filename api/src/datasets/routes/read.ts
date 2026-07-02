@@ -27,13 +27,14 @@ import * as findUtils from '../../misc/utils/find.ts'
 import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
-import { streamJson, streamCsv, collect } from './lines-pipeline.ts'
+import { streamJson, streamCsv, streamGeojson, collect } from './lines-pipeline.ts'
 
-// Only json/csv responses can be produced incrementally from a streamed source. Every other format —
-// geojson/shp/wkt, vector tiles (mvt/vt/pbf), xlsx/ods — needs the whole hits array materialized (geo
-// shaping, tile rendering, sheet building), so those stay on the buffered search. When unsure → buffered.
+// Formats that can consume a streamed source (serialize row-by-row + res.send). json/csv and geojson
+// qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still needs the
+// whole geojson materialized for the zip, vector tiles need all features spatially indexed, and xlsx/ods
+// build a sheet from all rows — those stay on the buffered search. When unsure → buffered.
 const streamEligible = (query: any): boolean =>
-  !query.format || query.format === 'json' || query.format === 'csv'
+  !query.format || query.format === 'json' || query.format === 'csv' || query.format === 'geojson'
 
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req: Request, db: any, query: any) {
@@ -263,25 +264,29 @@ const readLines: RequestHandler = async (req, res) => {
     res.set('Link', link.toString())
   }
 
-  if (query.format === 'geojson' || query.format === 'shp') {
+  if (query.format === 'geojson') {
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.geojson'))
+    res.type('geojson')
+    // geojson benefits from bbox info — a separate aggregation, independent of the streamed hits
+    const bbox = (await esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext)).bbox
+    observe.reqStep(req, 'bboxAgg')
+    await streamGeojson(req, res, source, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox })
+    return
+  }
+
+  // shp still materializes the whole geojson for the zip (geojson2shp needs every feature), so it stays on
+  // the buffered esResponse path.
+  if (query.format === 'shp') {
     const flatten = getFlatten(dataset, true)
     const geojson: any = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
-    // geojson format benefits from bbox info
     geojson.bbox = (await esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext)).bbox
     observe.reqStep(req, 'bboxAgg')
-    if (query.format === 'geojson') {
-      res.setHeader('content-disposition', contentDisposition(dataset.slug + '.geojson'))
-      res.type('geojson')
-      return res.status(200).send(geojson)
-    }
-    if (query.format === 'shp') {
-      const shpZip = await outputs.geojson2shp(geojson, dataset.slug as string)
-      observe.reqStep(req, 'geojson2shp')
-      res.setHeader('content-disposition', contentDisposition(dataset.slug + '.zip'))
-      res.type('zip')
-      return res.status(200).send(shpZip)
-    }
+    const shpZip = await outputs.geojson2shp(geojson, dataset.slug as string)
+    observe.reqStep(req, 'geojson2shp')
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.zip'))
+    res.type('zip')
+    return res.status(200).send(shpZip)
   }
 
   if (query.format === 'wkt') {
