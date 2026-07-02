@@ -62,6 +62,40 @@ export interface StreamJsonContext extends NextContext {
   rewriteAttachmentUrl?: boolean
 }
 
+// Shared consumption loop for the three formats: bulks → a SYNCHRONOUS per-row serializer (a per-row await
+// would reintroduce the microtask-per-hit overhead the bulk design removed), an event-loop yield every 500
+// rows, count/lastHit tracking. On ANY error — a per-row transform throw or a mid-stream ES read error —
+// destroy the source (releases the ES asStream connection) before rethrowing; without this the handler
+// unwinds with the ES response stream still open.
+export const consumeHits = async (source: LinesSource, perRow: (hit: any) => void): Promise<{ count: number, lastHit: any }> => {
+  let count = 0
+  let lastHit: any
+  try {
+    for await (const bulk of source.hits) {
+      for (let k = 0; k < bulk.length; k++) {
+        if (count % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+        perRow(bulk[k])
+        count++
+      }
+      if (bulk.length) lastHit = bulk[bulk.length - 1]
+    }
+  } catch (err) {
+    source.destroy?.()
+    throw err
+  }
+  return { count, lastHit }
+}
+
+// Drain the rest of the stream and return the envelope, destroying the source if the drain itself fails.
+const safeTail = async (source: LinesSource): Promise<any> => {
+  try {
+    return await source.tail()
+  } catch (err) {
+    source.destroy?.()
+    throw err
+  }
+}
+
 // Materialize the whole source for the "hard" formats (xlsx / ods / geojson / shp / wkt / vector tiles)
 // that genuinely need the full array (bbox, tile rendering, sheet building). Flattens the bulks.
 export async function collect (source: LinesSource): Promise<any[]> {
@@ -79,18 +113,10 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
 
   // Serialize each row on the fly; keep only the row strings (no transformed-object graph retained).
   const rows: string[] = []
-  let lastHit: any
-  let count = 0
-  for await (const bulk of source.hits) {
-    for (let k = 0; k < bulk.length; k++) {
-      // yield to the event loop on large (synchronous) buffered sources so we don't starve other requests
-      if (count % 500 === 499) await new Promise(resolve => setImmediate(resolve))
-      rows.push(JSON.stringify(esUtils.prepareResultItem(bulk[k], dataset, query, flatten, ctx.publicBaseUrl, resultCtx)))
-      count++
-    }
-    if (bulk.length) lastHit = bulk[bulk.length - 1]
-  }
-  const tail = await source.tail()
+  const { count, lastHit } = await consumeHits(source, hit => {
+    rows.push(JSON.stringify(esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)))
+  })
+  const tail = await safeTail(source)
 
   // Head object in the exact key order the buffered result had: { hint, total, next?, totalCollapse? }.
   // Serialize it, strip the closing brace, and splice `,"results":[…]}` so the bytes equal JSON.stringify
@@ -132,16 +158,9 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
   // + ETag / Content-Length. An empty result set still yields the header row (the prologue).
   const { prologue, row } = outputs.compileForRequest(dataset, query)
   const parts: string[] = [prologue]
-  let lastHit: any
-  let count = 0
-  for await (const bulk of source.hits) {
-    for (let k = 0; k < bulk.length; k++) {
-      if (count % 500 === 499) await new Promise(resolve => setImmediate(resolve))
-      parts.push(row(esUtils.prepareResultItem(bulk[k], dataset, query, flatten, publicBaseUrl, resultCtx)))
-      count++
-    }
-    if (bulk.length) lastHit = bulk[bulk.length - 1]
-  }
+  const { count, lastHit } = await consumeHits(source, hit => {
+    parts.push(row(esUtils.prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)))
+  })
 
   setNextLink(res, ctx, count, lastHit)
   res.type('csv').status(200).send(parts.join(''))
@@ -162,23 +181,16 @@ export async function streamGeojson (req: any, res: any, source: LinesSource, ct
   const publicBaseUrl = reqPublicBaseUrl(req)
 
   const features: string[] = []
-  let lastHit: any
-  let count = 0
-  for await (const bulk of source.hits) {
-    for (let k = 0; k < bulk.length; k++) {
-      if (count % 500 === 499) await new Promise(resolve => setImmediate(resolve))
-      const feature = hit2feature(bulk[k], flatten)
-      // like json/csv: a searchStream source holds the raw stored _attachment_url → rewrite here (buffered
-      // esResponse from search() already rewrote it, so ctx.rewriteAttachmentUrl is false there).
-      if (ctx.rewriteAttachmentUrl && feature.properties._attachment_url) {
-        feature.properties._attachment_url = rewriteAttachmentUrl(feature.properties._attachment_url, dataset, publicBaseUrl)
-      }
-      features.push(JSON.stringify(feature))
-      count++
+  const { count, lastHit } = await consumeHits(source, hit => {
+    const feature = hit2feature(hit, flatten)
+    // like json/csv: a searchStream source holds the raw stored _attachment_url → rewrite here (buffered
+    // esResponse from search() already rewrote it, so ctx.rewriteAttachmentUrl is false there).
+    if (ctx.rewriteAttachmentUrl && feature.properties._attachment_url) {
+      feature.properties._attachment_url = rewriteAttachmentUrl(feature.properties._attachment_url, dataset, publicBaseUrl)
     }
-    if (bulk.length) lastHit = bulk[bulk.length - 1]
-  }
-  const tail = await source.tail() // drain the stream to completion; total lives in the envelope
+    features.push(JSON.stringify(feature))
+  })
+  const tail = await safeTail(source) // drain the stream to completion; total lives in the envelope
 
   setNextLink(res, ctx, count, lastHit)
   const total = tail?.hits?.total?.value

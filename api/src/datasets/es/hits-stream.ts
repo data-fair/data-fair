@@ -74,6 +74,10 @@ export function streamToSource (stream: Readable): LinesSource {
       // feedNext() is a no-op once ended (iterator stays done, splitter.end() is idempotent).
       for (;;) { pending.length = 0; if (!await feedNext()) break }
       return splitter.envelope()
-    }
+    },
+    // Destroy the underlying ES response stream — called by the pipeline when an error unwinds before the
+    // hits are drained, so the ES transport connection is released instead of staying pinned until the
+    // server times it out.
+    destroy () { stream.destroy() }
   }
 }

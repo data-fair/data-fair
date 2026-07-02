@@ -141,4 +141,17 @@ test.describe('lines-pipeline error handling', () => {
     await assert.rejects(streamJson(req, res, throwingSource, { publicBaseUrl, esSearchDurationMs: 0 }), /source failure/)
     assert.ok(!ended, 'nothing should have been sent to the client')
   })
+
+  test('consumeHits destroys the source and rethrows when a row transform throws', async () => {
+    const { consumeHits } = await load() as any
+
+    let destroyed = false
+    const source = {
+      hits: (async function * () { yield [{ _id: 'a' }, { _id: 'b' }] })(),
+      tail: async () => ({}),
+      destroy: () => { destroyed = true }
+    }
+    await assert.rejects(consumeHits(source, () => { throw new Error('boom') }), /boom/)
+    assert.ok(destroyed, 'the ES stream must be destroyed so the transport connection is released')
+  })
 })

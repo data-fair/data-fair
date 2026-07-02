@@ -49,6 +49,14 @@ test.describe('search-stream: streamToSource', () => {
     assert.equal(env.hits.total.value, 5)
   })
 
+  test('destroy() destroys the underlying ES stream (releases the transport connection)', async () => {
+    const buf = envelope(genHits(2))
+    const stream = chunked(buf, 16)
+    const src = streamToSource(stream)
+    src.destroy!()
+    assert.ok(stream.destroyed)
+  })
+
   test('no hits.total (track_total_hits:false, i.e. after= pages / count=false): no pre-pump, hits stay incremental', async () => {
     const hits = Array.from({ length: 500 }, (_, i) => ({ _id: 'h' + i, _source: { n: i, pad: 'x'.repeat(100) } }))
     // same envelope as ES emits with track_total_hits:false — NO hits.total at all

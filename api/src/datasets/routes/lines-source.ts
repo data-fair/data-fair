@@ -5,7 +5,9 @@
 // front: the body is assembled before res.send, so consumers read it from the tail envelope
 // (`tail().hits.total?.value`) once the hits are drained — this is what lets the streamed source stay
 // fully incremental even when ES omits hits.total (track_total_hits:false on after= pages / count=false).
-export interface LinesSource { hits: AsyncIterable<any[]>, tail(): Promise<any> }
+// `destroy` (streamed source only) releases the underlying ES response stream — called by the pipeline
+// when an error unwinds before the hits are drained, so the transport connection isn't left pinned.
+export interface LinesSource { hits: AsyncIterable<any[]>, tail(): Promise<any>, destroy?: () => void }
 
 export function bufferedSource (esResponse: any): LinesSource {
   return {
