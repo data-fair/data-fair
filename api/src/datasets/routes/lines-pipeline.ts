@@ -18,7 +18,6 @@
 // Both the buffered and streamed sources flow through the SAME single path here, so parity holds by
 // construction — the source is the only thing that differs, never the observable response.
 
-import LinkHeader from 'http-link-header'
 import { getFlatten } from '../utils/flatten.ts'
 import * as esUtils from '../es/index.ts'
 import { rewriteAttachmentUrl } from '../es/commons.ts'
@@ -28,31 +27,17 @@ import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqDataset } from '../../misc/utils/req-context.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import type { LinesSource } from './lines-source.ts'
+import { type NextContext, nextLinkHref, linkHeaderValue, buildJsonBody, buildGeojsonBody } from './lines-body.ts'
 
-// Inputs needed to build the `next` pagination link (all optional — omitted in unit tests that don't
-// exercise pagination; read.ts always passes them together). `query` is read.ts's query copy (owner added,
-// `_stream` dropped) so the link is byte-identical to the pre-refactor one.
-export interface NextContext {
-  size?: number
-  query?: Record<string, any>
-  publicBaseUrl?: string
-  datasetId?: string
-}
+export type { NextContext }
 
-// A full page (count === size) has a next page: build its search_after link exactly like the pre-refactor
-// read.ts did. Also sets the `Link: <…>; rel=next` header on `res` (both json and csv rely on it — json
-// additionally echoes it in the body). Returns the href (for the json body) or undefined.
+// Sets the `Link: <…>; rel=next` header on `res` when the page is full (both json and csv rely on it —
+// json additionally echoes the href in the body). Pure construction lives in lines-body.ts. Returns the
+// href (for the json body) or undefined.
 const setNextLink = (res: any, ctx: NextContext, count: number, lastHit: any): string | undefined => {
-  if (!(ctx.size && count === ctx.size && lastHit)) return undefined
-  const url = new URL(`${ctx.publicBaseUrl}/api/v1/datasets/${ctx.datasetId}/lines`)
-  for (const key of Object.keys(ctx.query!)) {
-    if (key !== 'page') url.searchParams.set(key, ctx.query![key])
-  }
-  url.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
-  const link = new LinkHeader()
-  link.set({ rel: 'next', uri: url.href })
-  res.set('Link', link.toString())
-  return url.href
+  const href = nextLinkHref(ctx, count, lastHit)
+  if (href) res.set('Link', linkHeaderValue(href))
+  return href
 }
 
 export interface StreamJsonContext extends NextContext {
@@ -132,9 +117,7 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   if (nextHref) head.next = nextHref
   if (query.collapse && tail?.aggregations?.totalCollapse) head.totalCollapse = tail.aggregations.totalCollapse.value
 
-  const headStr = JSON.stringify(head)
-  const body = (headStr === '{}' ? '{' : headStr.slice(0, -1) + ',') + '"results":[' + rows.join(',') + ']}'
-  res.type('json').status(200).send(body)
+  res.type('json').status(200).send(buildJsonBody(head, rows))
 }
 
 export interface StreamCsvContext extends NextContext {
@@ -194,10 +177,5 @@ export async function streamGeojson (req: any, res: any, source: LinesSource, ct
 
   setNextLink(res, ctx, count, lastHit)
   const total = tail?.hits?.total?.value
-  let body = '{"type":"FeatureCollection"'
-  if (total != null) body += ',"total":' + total
-  body += ',"features":[' + features.join(',') + ']'
-  if (ctx.bbox !== undefined) body += ',"bbox":' + JSON.stringify(ctx.bbox)
-  body += '}'
-  res.status(200).send(body)
+  res.status(200).send(buildGeojsonBody(total, features, ctx.bbox))
 }

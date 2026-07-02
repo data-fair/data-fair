@@ -28,6 +28,7 @@ import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { bufferedSource, type LinesSource } from './lines-source.ts'
 import { streamJson, streamCsv, streamGeojson, collect } from './lines-pipeline.ts'
+import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
 
 // Formats that can consume a streamed source (serialize row-by-row + res.send). json/csv and geojson
 // qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still needs the
@@ -282,16 +283,10 @@ const readLines: RequestHandler = async (req, res) => {
   // directly and res.send, so their last hit is known here. json/csv build their own Link header (and, for
   // json, the body `next`) inside the pipeline from the source's last hit — see streamJson/streamCsv — so
   // they are excluded here. https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-  if (!streamEligible(query) && esResponse && size && esResponse.hits.hits.length === size) {
-    const nextLinkURL = new URL(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/lines`)
-    for (const key of Object.keys(query)) {
-      if (key !== 'page') nextLinkURL.searchParams.set(key, query[key])
-    }
+  if (!streamEligible(query) && esResponse && size) {
     const lastHit = esResponse.hits.hits[esResponse.hits.hits.length - 1]
-    nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
-    const link = new LinkHeader()
-    link.set({ rel: 'next', uri: nextLinkURL.href })
-    res.set('Link', link.toString())
+    const href = nextLinkHref({ size, query, publicBaseUrl, datasetId: dataset.id as string }, esResponse.hits.hits.length, lastHit)
+    if (href) res.set('Link', linkHeaderValue(href))
   }
 
   if (query.format === 'geojson') {
