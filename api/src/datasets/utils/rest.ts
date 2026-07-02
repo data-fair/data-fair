@@ -190,23 +190,30 @@ export const initDataset = async (dataset: RestDataset) => {
   await configureConstraintIndexes(dataset)
 }
 
-export const configureConstraintIndexes = async (dataset: RestDataset, oldDataset?: RestDataset) => {
+// index names are derived from the constraint's content (declared property order), not its
+// position in the array, so that removing/reordering a constraint never makes a survivor's
+// name collide with a stale index of a different keySpec (MongoDB IndexKeySpecsConflict, code 86)
+const constraintIndexName = (constraint: any) =>
+  `${CONSTRAINT_INDEX_PREFIX}${crc.crc32(JSON.stringify(constraint.properties)).toString(16)}`
+
+export const configureConstraintIndexes = async (dataset: RestDataset) => {
   const c = collection(dataset)
   const constraints = (dataset.constraints ?? []).filter((ct: any) => ct.type === 'unique')
 
   // drop constraint indexes that no longer correspond to a current constraint
   let existing: any[] = []
   try { existing = await c.indexes() } catch { existing = [] }
-  const wantedNames = new Set(constraints.map((_ct, i) => `${CONSTRAINT_INDEX_PREFIX}${i}`))
+  const wantedNames = new Set(constraints.map((ct: any) => constraintIndexName(ct)))
   for (const idx of existing) {
     if (idx.name?.startsWith(CONSTRAINT_INDEX_PREFIX) && !wantedNames.has(idx.name)) {
-      await c.dropIndex(idx.name).catch(() => {})
+      await c.dropIndex(idx.name).catch((err: any) => {
+        if (err.codeName !== 'IndexNotFound' && err.code !== 27) console.warn('failed to drop stale constraint index', idx.name, err.message)
+      })
     }
   }
 
   // create the wanted indexes (idempotent: createIndex is a no-op if identical)
-  for (let i = 0; i < constraints.length; i++) {
-    const constraint = constraints[i]
+  for (const constraint of constraints) {
     const keySpec: Record<string, 1> = {}
     const partial: Record<string, any> = { _deleted: false }
     for (const key of constraint.properties) {
@@ -216,7 +223,7 @@ export const configureConstraintIndexes = async (dataset: RestDataset, oldDatase
     try {
       await c.createIndex(keySpec, {
         unique: true,
-        name: `${CONSTRAINT_INDEX_PREFIX}${i}`,
+        name: constraintIndexName(constraint),
         partialFilterExpression: partial
       })
     } catch (err: any) {

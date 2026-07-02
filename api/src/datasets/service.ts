@@ -433,7 +433,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   }
 
   if (dataset.isRest && 'constraints' in patch) {
-    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch } as any, dataset as any)
+    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch } as any)
   }
 
   if (removedRestProps && removedRestProps.length) {

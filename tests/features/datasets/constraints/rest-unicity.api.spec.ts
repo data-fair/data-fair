@@ -46,4 +46,28 @@ test.describe('REST dataset unique constraint', () => {
     }, { validateStatus: () => true })
     assert.equal(res.status, 400)
   })
+
+  test('removing a non-last constraint among several does not crash and keeps the survivor enforced', async () => {
+    await makeRest('rest-uniq4', [{ type: 'unique', properties: ['a'] }, { type: 'unique', properties: ['b'] }])
+
+    // PATCH removing the FIRST constraint used to trigger an unhandled 500 (MongoDB
+    // IndexKeySpecsConflict) because the survivor was renamed by array position and
+    // collided with the stale index left behind by the drop loop.
+    const patchRes = await testUser1.patch('/api/v1/datasets/rest-uniq4', {
+      constraints: [{ type: 'unique', properties: ['b'] }]
+    }, { validateStatus: () => true })
+    assert.equal(patchRes.status, 200)
+
+    // the surviving constraint on 'b' is still enforced
+    const first = await testUser1.post('/api/v1/datasets/rest-uniq4/lines', { a: 'x', b: 1 }, { validateStatus: () => true })
+    assert.ok(first.status === 200 || first.status === 201, `first insert status ${first.status}`)
+    const dupB = await testUser1.post('/api/v1/datasets/rest-uniq4/lines', { a: 'y', b: 1 }, { validateStatus: () => true })
+    assert.equal(dupB.status, 409)
+
+    // the removed constraint on 'a' is no longer enforced
+    const dupA1 = await testUser1.post('/api/v1/datasets/rest-uniq4/lines', { a: 'z', b: 2 }, { validateStatus: () => true })
+    assert.ok(dupA1.status === 200 || dupA1.status === 201, `dupA1 status ${dupA1.status}`)
+    const dupA2 = await testUser1.post('/api/v1/datasets/rest-uniq4/lines', { a: 'z', b: 3 }, { validateStatus: () => true })
+    assert.ok(dupA2.status === 200 || dupA2.status === 201, `dupA2 status ${dupA2.status}`)
+  })
 })
