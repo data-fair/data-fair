@@ -1,18 +1,7 @@
 import es from '#es'
+import { unicityAggField } from './operations.ts'
 
 export type DuplicateGroup = { keyLabel: string, lines: number[], count: number }
-
-/**
- * ES field to aggregate on for a schema property in a unique constraint.
- * String columns use the base keyword field, or the length-safe `.wildcard`
- * sub-field when the wildcard capability is enabled (avoids ignore_above:200
- * silently dropping long values from the aggregation).
- */
-export const unicityAggField = (prop: any): string => {
-  const isPlainString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
-  if (isPlainString && prop['x-capabilities']?.wildcard) return `${prop.key}.wildcard`
-  return prop.key
-}
 
 const PAGE_SIZE = 1000
 const HITS_PER_GROUP = 10

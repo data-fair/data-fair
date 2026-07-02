@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { unicityAggField } from '../src/datasets/es/unicity-agg.ts'
+import { unicityAggField } from '../src/datasets/es/operations.ts'
 
 test('plain string column aggregates on the keyword base field', () => {
   assert.equal(unicityAggField({ key: 'a', type: 'string' }), 'a')

@@ -513,6 +513,17 @@ export const escapeFilter = (val: any): any => {
 }
 
 /**
+ * ES field to aggregate on for a schema property in a unique constraint.
+ * String columns use the base keyword field, or the length-safe `.wildcard`
+ * sub-field when the wildcard capability is enabled (avoids ignore_above:200
+ * silently dropping long values from the aggregation).
+ */
+export const unicityAggField = (prop: any): string => {
+  if (isLengthLimitedKeyword(prop) && hasCapability(prop, 'wildcard')) return `${prop.key}.wildcard`
+  return prop.key
+}
+
+/**
  * Builds the aggregations object for the words aggregation.
  * significant_text is costly, and we look for approximative statistics in words-agg
  * not for exhaustivity, so we run it on a sample.

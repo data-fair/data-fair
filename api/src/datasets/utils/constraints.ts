@@ -26,6 +26,12 @@ export const checkConstraints = (schema: any[], constraints: any[] | undefined):
       if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
         throw httpError(400, `La colonne "${key}" doit avoir la capacité "Triable et groupable" activée pour porter une contrainte d'unicité.`)
       }
+      if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
+        throw httpError(400, `La colonne "${key}" est une géométrie et ne peut pas porter une contrainte d'unicité.`)
+      }
+      if (prop.type === 'object') {
+        throw httpError(400, `La colonne "${key}" est un objet et ne peut pas porter une contrainte d'unicité.`)
+      }
     }
   }
 }
