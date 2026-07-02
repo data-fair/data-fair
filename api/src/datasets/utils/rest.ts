@@ -28,6 +28,7 @@ import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
+import { CONSTRAINT_INDEX_PREFIX } from './constraints.ts'
 import indexStream from '../es/index-stream.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { tabularTypes } from './types.ts'
@@ -186,6 +187,45 @@ export const initDataset = async (dataset: RestDataset) => {
     c.createIndex({ _needsExtending: 1 }, { sparse: true }),
     c.createIndex({ _i: -1 }, { unique: true })
   ])
+  await configureConstraintIndexes(dataset)
+}
+
+export const configureConstraintIndexes = async (dataset: RestDataset, oldDataset?: RestDataset) => {
+  const c = collection(dataset)
+  const constraints = (dataset.constraints ?? []).filter((ct: any) => ct.type === 'unique')
+
+  // drop constraint indexes that no longer correspond to a current constraint
+  let existing: any[] = []
+  try { existing = await c.indexes() } catch { existing = [] }
+  const wantedNames = new Set(constraints.map((_ct, i) => `${CONSTRAINT_INDEX_PREFIX}${i}`))
+  for (const idx of existing) {
+    if (idx.name?.startsWith(CONSTRAINT_INDEX_PREFIX) && !wantedNames.has(idx.name)) {
+      await c.dropIndex(idx.name).catch(() => {})
+    }
+  }
+
+  // create the wanted indexes (idempotent: createIndex is a no-op if identical)
+  for (let i = 0; i < constraints.length; i++) {
+    const constraint = constraints[i]
+    const keySpec: Record<string, 1> = {}
+    const partial: Record<string, any> = { _deleted: false }
+    for (const key of constraint.properties) {
+      keySpec[key] = 1
+      partial[key] = { $exists: true }
+    }
+    try {
+      await c.createIndex(keySpec, {
+        unique: true,
+        name: `${CONSTRAINT_INDEX_PREFIX}${i}`,
+        partialFilterExpression: partial
+      })
+    } catch (err: any) {
+      if (err.code === 11000) {
+        throw httpError(400, `Les données existantes du jeu de données violent la contrainte d'unicité sur (${constraint.properties.join(', ')}).`)
+      }
+      throw err
+    }
+  }
 }
 
 export const configureHistory = async (dataset: RestDataset) => {
