@@ -64,7 +64,7 @@ const write = (res: any, s: string | Buffer): Promise<void> =>
 // tiles) that cannot be produced incrementally. Equivalent to `Array.fromAsync(source.hits)`.
 export async function collect (source: LinesSource): Promise<any[]> {
   const items: any[] = []
-  for await (const h of source.hits) items.push(h)
+  for await (const bulk of source.hits) for (let k = 0; k < bulk.length; k++) items.push(bulk[k])
   return items
 }
 
@@ -87,11 +87,13 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
     if (query.collapse) result.totalCollapse = tail.aggregations.totalCollapse.value
     result.results = []
     let i = 0
-    for await (const hit of source.hits) {
-      // avoid blocking the event loop on large pages (setImmediate, not setTimeout(0))
-      if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
-      result.results.push(esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx))
-      i++
+    for await (const bulk of source.hits) {
+      for (let k = 0; k < bulk.length; k++) {
+        // avoid blocking the event loop on large pages (setImmediate, not setTimeout(0))
+        if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+        result.results.push(esUtils.prepareResultItem(bulk[k], dataset, query, flatten, ctx.publicBaseUrl, resultCtx))
+        i++
+      }
     }
     result = attachQueryHint(req, ctx.esSearchDurationMs, result)
     res.status(200).send(result)
@@ -126,12 +128,17 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
     let first = true
     let count = 0
     let lastHit: any
-    for await (const hit of source.hits) {
-      const row = esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)
-      await write(throttled, (first ? '' : ',') + JSON.stringify(row))
-      first = false
-      count++
-      lastHit = hit
+    // One serialized string + one write per BULK (not per hit): fewer res.write calls and drain awaits.
+    for await (const bulk of source.hits) {
+      let chunk = ''
+      for (let k = 0; k < bulk.length; k++) {
+        const row = esUtils.prepareResultItem(bulk[k], dataset, query, flatten, ctx.publicBaseUrl, resultCtx)
+        chunk += (first ? '' : ',') + JSON.stringify(row)
+        first = false
+        count++
+      }
+      if (bulk.length) lastHit = bulk[bulk.length - 1]
+      if (chunk) await write(throttled, chunk)
     }
     await write(throttled, ']')
 
@@ -229,9 +236,11 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
   }
 
   try {
-    for await (const hit of source.hits) {
-      const row = esUtils.prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)
-      if (!transform.write(row)) await new Promise<void>(resolve => transform.once('drain', resolve))
+    for await (const bulk of source.hits) {
+      for (let k = 0; k < bulk.length; k++) {
+        const row = esUtils.prepareResultItem(bulk[k], dataset, query, flatten, publicBaseUrl, resultCtx)
+        if (!transform.write(row)) await new Promise<void>(resolve => transform.once('drain', resolve))
+      }
     }
 
     // Flush the transform (also emits the header row for an empty result set), wait until every chunk has

@@ -22,7 +22,7 @@ test.describe('search-stream: streamToSource', () => {
       // total MUST be known before any hit is pulled (streamJson writes it in the head)
       assert.equal(src.total, 9, `total before hits (chunk ${size})`)
       const got: any[] = []
-      for await (const h of src.hits) got.push(h)
+      for await (const bulk of src.hits) got.push(...bulk)
       assert.deepEqual(got, hits, `hits in order (chunk ${size})`)
       const env = await src.tail()
       assert.deepEqual(env.aggregations, aggs, `tail aggregations (chunk ${size})`)
@@ -36,7 +36,7 @@ test.describe('search-stream: streamToSource', () => {
     const src = await streamToSource(chunked(buf, 4))
     assert.equal(src.total, 0)
     const got: any[] = []
-    for await (const h of src.hits) got.push(h)
+    for await (const bulk of src.hits) got.push(...bulk)
     assert.deepEqual(got, [])
     const env = await src.tail()
     assert.equal(env.hits.total.value, 0)

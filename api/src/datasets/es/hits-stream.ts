@@ -63,8 +63,9 @@ export async function streamToSource (stream: Readable): Promise<LinesSource> {
   const total = splitter.total()
 
   async function * hits () {
-    // `cursor` walks the buffered slices without Array.shift (which is O(n²) over a chunk's hits). Once a
-    // chunk is fully drained we reset `pending` and `cursor` together, then pull the next chunk.
+    // Yields BULKS (each ~BATCH_BYTES of hits parsed with a single JSON.parse): fewer async-generator
+    // steps than per-hit, and the consumer serializes a whole bulk per write. `cursor` walks the buffered
+    // slices without Array.shift (O(n²) over a chunk's hits); once a chunk is drained we reset and pull next.
     let cursor = 0
     for (;;) {
       while (cursor < pending.length) {
@@ -76,8 +77,7 @@ export async function streamToSource (stream: Readable): Promise<LinesSource> {
           batch.push(b)
         }
         // each slice is a complete hit object (`{…}`), so joining with commas yields a valid JSON array.
-        const arr = JSON.parse('[' + batch.map(b => b.toString()).join(',') + ']')
-        for (const h of arr) yield h
+        yield JSON.parse('[' + batch.map(b => b.toString()).join(',') + ']')
       }
       pending.length = 0
       cursor = 0
