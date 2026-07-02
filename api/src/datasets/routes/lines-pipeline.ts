@@ -1,6 +1,6 @@
 // Shared json/csv pipeline for the /lines endpoint.
 //
-// It consumes a `LinesSource` (see lines-source.ts: `{ total, hits: AsyncIterable<bulk>, tail() }`) and
+// It consumes a `LinesSource` (see lines-source.ts: `{ hits: AsyncIterable<bulk>, tail() }`) and
 // produces the response body by running the exact same per-hit `prepareResultItem` transform and (for csv)
 // the exact same `csvStreams` per-row serializer that the pre-refactor buffered path used.
 //
@@ -98,7 +98,10 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   const head: Record<string, any> = {}
   const hint = (attachQueryHint(req, ctx.esSearchDurationMs, {}) as Record<string, any>).hint
   if (hint) head.hint = hint
-  if (source.total != null) head.total = source.total
+  // total lives in the tail envelope (absent when track_total_hits:false — after= pages, count=false);
+  // the buffered source's tail() is the esResponse itself, so both sources share this exact read.
+  const total = tail?.hits?.total?.value
+  if (total != null) head.total = total
   const nextHref = setNextLink(res, ctx, count, lastHit)
   if (nextHref) head.next = nextHref
   if (query.collapse && tail?.aggregations?.totalCollapse) head.totalCollapse = tail.aggregations.totalCollapse.value
@@ -181,11 +184,12 @@ export async function streamGeojson (req: any, res: any, source: LinesSource, ct
     }
     if (bulk.length) lastHit = bulk[bulk.length - 1]
   }
-  await source.tail() // drain the stream to completion (geojson has no tail fields to read)
+  const tail = await source.tail() // drain the stream to completion; total lives in the envelope
 
   setNextLink(res, ctx, count, lastHit)
+  const total = tail?.hits?.total?.value
   let body = '{"type":"FeatureCollection"'
-  if (source.total != null) body += ',"total":' + source.total
+  if (total != null) body += ',"total":' + total
   body += ',"features":[' + features.join(',') + ']'
   if (ctx.bbox !== undefined) body += ',"bbox":' + JSON.stringify(ctx.bbox)
   body += '}'

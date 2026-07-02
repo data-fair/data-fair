@@ -40,18 +40,24 @@ to avoid an async-generator step per hit (mirrors the codebase's `iterHits`):
 
 ```ts
 interface LinesSource {
-  total: number | undefined    // total hit count, known before any hit is iterated
   hits: AsyncIterable<any[]>   // each yielded array is a bulk of hits
   tail(): Promise<any>         // the full envelope (once hits are exhausted)
 }
 ```
 
+There is deliberately **no `total` property**: the body is assembled before `res.send`, so nothing needs the
+total before the hits are drained — consumers read it from the tail envelope (`tail().hits.total?.value`,
+absent when `track_total_hits:false`: `after=` pages, `count=false`). This is what keeps the streamed source
+fully incremental for those responses (an earlier design pre-pumped the stream until the total was known,
+which silently buffered whole no-total responses).
+
 - **`bufferedSource(esResponse)`** — wraps a fully-parsed response; yields its whole `hits.hits` array as a
-  single bulk. Used for flag-off requests and every hard format (their esResponse comes from `search()`).
+  single bulk; `tail()` is the esResponse itself, so the envelope reads are shared with the streamed source.
+  Used for flag-off requests and every hard format (their esResponse comes from `search()`).
 - **streamed source (`streamToSource(stream)`)** — built from an ES `asStream` body via the splitter.
-  `total` resolves as soon as the hits-array prefix is captured (before any hit). `hits` is a pull-based
-  generator yielding one ~20 KB **parse batch** per step (see §3); at most one chunk of hit bytes is held.
-  `tail()` drains the rest and returns the envelope skeleton.
+  Creation consumes nothing; `hits` is a pull-based generator yielding one ~20 KB **parse batch** per step
+  (see §3); at most one chunk of hit bytes is held. `tail()` drains the rest and returns the envelope
+  skeleton.
 
 ## 3. The hits splitter, batching, and envelope skeleton
 
@@ -69,9 +75,9 @@ configurable. The drain uses an index cursor (no O(n²) `Array.shift`).
 
 **Envelope skeleton** (`splitter.envelope()`): `JSON.parse(Buffer.concat([prefix, ...tail]))`. prefix ends
 with `[`, tail starts with `]`, so their concatenation is `…"hits":[…]…` with an empty array — valid JSON
-that V8 parses in full, recovering `total`, `_shards`, `aggregations`, `totalCollapse`, etc. with no custom
-envelope parser. **`total()` early availability:** the splitter closes the prefix's open braces to read
-`hits.total.value` before any hit is yielded.
+that V8 parses in full, recovering `hits.total` (when ES computed it), `_shards`, `aggregations`,
+`totalCollapse`, etc. with no custom envelope parser. The splitter's whole interface is
+`{ write, end, envelope }` — everything envelope-related is read once, at the end of consumption.
 
 ## 4. Mode selection
 
