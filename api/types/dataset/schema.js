@@ -531,7 +531,6 @@ const datasetProperties = {
     description: "Contraintes de validation à l'échelle du jeu de données, au delà des validations par colonne.",
     items: {
       type: 'object',
-      additionalProperties: false,
       title: 'Contrainte',
       oneOf: [{
         required: ['type', 'properties'],
