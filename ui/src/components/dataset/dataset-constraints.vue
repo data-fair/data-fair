@@ -48,7 +48,7 @@ watch(() => props.modelValue, (v) => {
 // eligible columns: real stored columns with the values capability
 const eligibleKeys = computed(() =>
   (props.datasetSchema || [])
-    .filter(p => !p['x-calculated'] && !p['x-extension'] && p['x-capabilities']?.values !== false)
+    .filter(p => !p['x-calculated'] && !p['x-extension'] && p['x-capabilities']?.values !== false && p['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry' && p.type !== 'object')
     .map(p => p.key)
 )
 
