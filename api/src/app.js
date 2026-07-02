@@ -240,7 +240,8 @@ export const run = async () => {
 
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')
-    httpTerminator = createHttpTerminator({ server })
+    // wait up for in-flight requests to finish on shutdown before forcibly closing sockets
+    httpTerminator = createHttpTerminator({ server, gracefulTerminationTimeout: 5000 })
     // cf https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
     // timeout is often 60s on the reverse proxy, better to a have a longer one here
     // so that interruption is managed downstream instead of here
