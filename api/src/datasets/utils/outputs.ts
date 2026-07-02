@@ -27,7 +27,7 @@ export const geojson2shpPiscina = new Piscina({
 // (falls back to all non-calculated schema fields), x-originalName / title
 // for headers, custom delimiter via query.sep, header opt-out via
 // query.header === 'false'. \0 stripping is inlined by the serializer.
-const compileForRequest = (dataset: Dataset, query: Record<string, string> = {}, useTitle = false) => {
+export const compileForRequest = (dataset: Dataset, query: Record<string, string> = {}, useTitle = false) => {
   const selectKeys = (query.select && query.select !== '*')
     ? query.select.split(',')
     : (dataset.schema ?? []).filter(f => !f['x-calculated']).map(f => f.key)

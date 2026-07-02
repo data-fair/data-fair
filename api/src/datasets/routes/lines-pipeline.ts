@@ -2,7 +2,7 @@
 //
 // It consumes a `LinesSource` (see lines-source.ts: `{ hits: AsyncIterable<bulk>, tail() }`) and
 // produces the response body by running the exact same per-hit `prepareResultItem` transform and (for csv)
-// the exact same `csvStreams` per-row serializer that the pre-refactor buffered path used.
+// the exact same compiled per-row serializer (`outputs.compileForRequest`) that the buffered export uses.
 //
 // Memory strategy: stream the SOURCE (bounded raw input via the splitter) and serialize each row
 // immediately, discarding the transformed objects — only the serialized bytes accumulate (flat
@@ -14,7 +14,7 @@
 // The output MUST be byte-identical to the pre-refactor buffered `readLines`:
 //   - JSON envelope: `{ hint?, total, next?, totalCollapse?, results:[…] }` (the exact key order Express's
 //     JSON.stringify produced for the buffered result object), assembled by splicing pre-serialized rows.
-//   - CSV: byte-equal to `outputs.results2csv` (csvStreams uses the same compileForRequest serializer).
+//   - CSV: byte-equal to `outputs.results2csv` (same compileForRequest serializer, same prologue+rows).
 // Both the buffered and streamed sources flow through the SAME single path here, so parity holds by
 // construction — the source is the only thing that differs, never the observable response.
 
@@ -124,33 +124,27 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
   resultCtx.rewriteAttachmentUrl = ctx.rewriteAttachmentUrl
   const publicBaseUrl = reqPublicBaseUrl(req)
 
-  // Feed rows through the same compiled csv Transform the buffered export uses (byte-identical to
-  // results2csv), collecting its output without retaining the transformed row objects. Assemble + res.send
-  // at the end so csv keeps its Link-header pagination (its only pagination signal) + ETag / Content-Length.
-  const [transform] = outputs.csvStreams(dataset, query)
-  const csvChunks: Buffer[] = []
-  transform.on('data', (c: Buffer) => csvChunks.push(Buffer.from(c)))
-
+  // Same compiled per-row serializer as the buffered export (results2csv / the old csvStreams Transform,
+  // whose first push was `prologue + row(item)`): byte-identical output with no stream machinery — a
+  // serializer throw propagates synchronously, before anything is sent, and there is no drain/error
+  // plumbing to get wrong. Only the row strings accumulate (no transformed-object graph retained).
+  // Assemble + res.send at the end so csv keeps its Link-header pagination (its only pagination signal)
+  // + ETag / Content-Length. An empty result set still yields the header row (the prologue).
+  const { prologue, row } = outputs.compileForRequest(dataset, query)
+  const parts: string[] = [prologue]
   let lastHit: any
   let count = 0
-  const drained = new Promise<void>((resolve, reject) => {
-    transform.on('end', resolve)
-    transform.on('error', reject)
-  })
   for await (const bulk of source.hits) {
     for (let k = 0; k < bulk.length; k++) {
       if (count % 500 === 499) await new Promise(resolve => setImmediate(resolve))
-      const row = esUtils.prepareResultItem(bulk[k], dataset, query, flatten, publicBaseUrl, resultCtx)
-      if (!transform.write(row)) await new Promise<void>(resolve => transform.once('drain', resolve))
+      parts.push(row(esUtils.prepareResultItem(bulk[k], dataset, query, flatten, publicBaseUrl, resultCtx)))
       count++
     }
     if (bulk.length) lastHit = bulk[bulk.length - 1]
   }
-  transform.end()
-  await drained
 
   setNextLink(res, ctx, count, lastHit)
-  res.type('csv').status(200).send(Buffer.concat(csvChunks))
+  res.type('csv').status(200).send(parts.join(''))
 }
 
 export interface StreamGeojsonContext extends NextContext {
