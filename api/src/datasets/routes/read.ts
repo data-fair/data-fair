@@ -211,10 +211,15 @@ const readLines: RequestHandler = async (req, res) => {
     } catch (err) {
       await manageESError(req, err)
     }
-  } else if (vectorTileRequested && !vtPrepared && sampling !== 'max' && !query.collapse) {
+  } else if (vectorTileRequested && !vtPrepared && sampling !== 'max' && !query.collapse &&
+    !(query.select && query.select.split(',').includes('_attachment_url'))) {
     // Zero-copy vector-tile path: fetch the RAW ES response bytes and hand them (transferred) to the render
     // worker, which parses + builds geojson + renders. Only the neighbors/non-vtPrepared case — max and
     // vtPrepared stay on the buffered esResponse path below (multi-search concat / `_vt` script_fields).
+    // A tile that explicitly selects `_attachment_url` also stays buffered: search() rewrites that URL
+    // (publicUrl→publicBaseUrl + virtual fixup) but the raw worker path has no config/publicBaseUrl to do so,
+    // so routing it here would leak the raw stored URL. The default tile select excludes `_`-prefixed keys,
+    // so this only matters when a caller opts in — rare, and kept correct by falling through to search().
     try {
       rawTileBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
     } catch (err) {
