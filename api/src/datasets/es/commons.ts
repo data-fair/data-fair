@@ -617,6 +617,13 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
 
   if (ctx.selectIncludesId) res._id = hit._id
 
+  // Rewrite the stored `_attachment_url` to the requester's URL (oldPublicUrl→publicUrl→publicBaseUrl +
+  // virtual-dataset fixup) BEFORE any derived field consumes it — the thumbnail block below hashes
+  // `_attachment_url` when `attachmentsAsImage`, so it must see the rewritten URL. This mirrors the buffered
+  // `search()`, which rewrites `hit._source._attachment_url` up front. Only sources from searchStream carry
+  // the raw URL (ctx.rewriteAttachmentUrl); search()'s esResponse already rewrote it (flag false → no-op).
+  if (ctx.rewriteAttachmentUrl && res._attachment_url) res._attachment_url = rewriteAttachmentUrl(res._attachment_url, dataset, publicBaseUrl)
+
   if (ctx.highlightKeys) {
     res._highlight = {}
     for (const key of ctx.highlightKeys) {
@@ -643,11 +650,6 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
     }
   }
 
-  // Sources that did NOT go through the buffered search() (streamed + collect-small, flagged by
-  // ctx.rewriteAttachmentUrl) still hold the raw stored URL — rewrite it here so their output matches the
-  // buffered path. The buffered/xlsx/geo paths come from search() which already rewrote it, so they leave
-  // ctx.rewriteAttachmentUrl falsy to avoid a double rewrite (which would corrupt virtual-dataset URLs).
-  if (ctx.rewriteAttachmentUrl && res._attachment_url) res._attachment_url = rewriteAttachmentUrl(res._attachment_url, dataset, publicBaseUrl)
   if (query.draft === 'true' && res._attachment_url) res._attachment_url += '?draft=true'
 
   if (query.html === 'true' || query.html === 'vuetify') {
