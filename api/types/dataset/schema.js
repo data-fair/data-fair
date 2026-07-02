@@ -525,6 +525,32 @@ const datasetProperties = {
     type: 'string',
     description: 'The URL where the original data can be found'
   },
+  constraints: {
+    type: 'array',
+    title: "Contraintes d'unicité",
+    description: "Contraintes de validation à l'échelle du jeu de données, au delà des validations par colonne.",
+    items: {
+      type: 'object',
+      additionalProperties: false,
+      title: 'Contrainte',
+      oneOf: [{
+        required: ['type', 'properties'],
+        title: 'Unicité',
+        properties: {
+          type: {
+            type: 'string',
+            const: 'unique'
+          },
+          properties: {
+            type: 'array',
+            title: 'Colonnes',
+            description: 'La combinaison des valeurs de ces colonnes doit être unique sur chaque ligne du jeu de données.',
+            items: { type: 'string' }
+          }
+        }
+      }]
+    }
+  },
   extensions: {
     type: 'array',
     description: 'Définition des enrichissements appliqués à ce jeu de données',
