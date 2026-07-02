@@ -1,6 +1,6 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { aliasName, prepareQuery, rewriteAttachmentUrl } from './commons.ts'
+import { aliasName, applyCollapse, prepareQuery, rewriteAttachmentUrl } from './commons.ts'
 import { tooLongError } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
@@ -8,20 +8,7 @@ import { type EsAbortContext, timedEsCall } from './abort.ts'
 export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, abortContext?: EsAbortContext) => {
   const esQuery = prepareQuery(dataset, query)
 
-  if (query.collapse) {
-    // Select fields to return
-    const collapseField = dataset.schema.find(f => f.key === query.collapse)
-    if (!collapseField) {
-      throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il n'existe pas dans le jeu de données.`)
-    }
-    if (collapseField.separator) {
-      throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
-    }
-    esQuery.collapse = { field: query.collapse }
-    // number after which we accept that cardinality is approximative
-    const precisionThreshold = Number(query.precision_threshold ?? '40000')
-    esQuery.aggs = { totalCollapse: { cardinality: { field: query.collapse, precision_threshold: precisionThreshold } } }
-  }
+  applyCollapse(esQuery, dataset, query)
 
   if (vtXYZ) {
     esQuery.script_fields = {

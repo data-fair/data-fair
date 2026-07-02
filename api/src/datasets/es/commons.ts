@@ -150,6 +150,23 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
 
 export { hasCapability, requiredCapability, getColumnFilters }
 
+// Collapse validation + query shaping shared by the buffered search(), searchStream and searchRaw — the
+// three /lines entry points must never drift (same 400s, same cardinality agg / precision default).
+export const applyCollapse = (esQuery: any, dataset: any, query: Record<string, any>): void => {
+  if (!query.collapse) return
+  const collapseField = dataset.schema.find((f: any) => f.key === query.collapse)
+  if (!collapseField) {
+    throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il n'existe pas dans le jeu de données.`)
+  }
+  if (collapseField.separator) {
+    throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
+  }
+  esQuery.collapse = { field: query.collapse }
+  // number after which we accept that cardinality is approximative
+  const precisionThreshold = Number(query.precision_threshold ?? '40000')
+  esQuery.aggs = { totalCollapse: { cardinality: { field: query.collapse, precision_threshold: precisionThreshold } } }
+}
+
 export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?: string[], sqsOptions: any = {}, qsAsFilter?: boolean, ignoreInvalidQS?: boolean) => {
   const esQuery: any = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
