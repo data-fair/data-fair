@@ -667,7 +667,10 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       for (const writeError of err.writeErrors) {
         const operation = bulkOpMatchingOperations[writeError.err.index]
         if (writeError.err.code === 11000) {
-          if (writeError.err.errmsg?.includes('_i_')) {
+          if (writeError.err.errmsg?.includes(CONSTRAINT_INDEX_PREFIX)) {
+            operation._status = 409
+            operation._error = "valeur en double sur une contrainte d'unicité"
+          } else if (writeError.err.errmsg?.includes('_i_')) {
             console.error(writeError)
             operation._status = 500
             operation._error = 'erreur dans la gestion des conflits de données insérées'

@@ -432,6 +432,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     }
   }
 
+  if (dataset.isRest && 'constraints' in patch) {
+    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch } as any, dataset as any)
+  }
+
   if (removedRestProps && removedRestProps.length) {
     // some property was removed in rest dataset, trigger full re-indexing
     await restDatasetsUtils.collection(dataset).updateMany({},
