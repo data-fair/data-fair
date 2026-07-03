@@ -78,6 +78,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Caching & cache headers](docs/architecture/caching.md) — the five caching layers (reverse-proxy cache, HTTP cache headers, `memoizee` in-process caches, MongoDB-backed caches, ad-hoc object caches), how they coordinate freshness, and the config reference
 - [Application Keys](docs/architecture/application-keys.md) — intermediate-security tier for un-connected access to applications and the datasets they embed: data model, URL shapes, the two enforcement points (proxy + dataset middleware), permission scoping, owner boundary, and the anti-spam stack for anonymous writes
 - [Code conventions](docs/architecture/code-conventions.md) — module file roles (router/middlewares/service/operations), request-context accessors, typing ratchet. **Read before refactoring or adding API code.**
+- [/lines read efficiency](docs/architecture/read-lines-efficiency.md) — the design choices behind the `/lines` hot path: stream the source not the response (ETag/Link preserved, zero observable change), the streamed `LinesSource` + splitter, per-format routing (incl. the pbf/shp zero-copy worker paths and why xlsx stays buffered), the parity/verification harness, and the measured rejected alternatives. **Read before touching the `/lines` read path.**
 
 ## Common Development Tasks
 

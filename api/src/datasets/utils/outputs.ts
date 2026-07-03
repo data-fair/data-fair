@@ -3,6 +3,7 @@ import path from 'path'
 import { Piscina } from 'piscina'
 import mongo from '#mongo'
 import { getCsvSerializer } from './csv-jit.ts'
+import { transferableRawBuffer, slimDatasetForFlatten } from './worker-transfer.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqDataset } from '../../misc/utils/req-context.ts'
 import type { Request } from 'express'
@@ -27,7 +28,7 @@ export const geojson2shpPiscina = new Piscina({
 // (falls back to all non-calculated schema fields), x-originalName / title
 // for headers, custom delimiter via query.sep, header opt-out via
 // query.header === 'false'. \0 stripping is inlined by the serializer.
-const compileForRequest = (dataset: Dataset, query: Record<string, string> = {}, useTitle = false) => {
+export const compileForRequest = (dataset: Dataset, query: Record<string, string> = {}, useTitle = false) => {
   const selectKeys = (query.select && query.select !== '*')
     ? query.select.split(',')
     : (dataset.schema ?? []).filter(f => !f['x-calculated']).map(f => f.key)
@@ -110,4 +111,13 @@ export const results2sheet = async (req: ReqWithDataset, results: Record<string,
 
 export const geojson2shp = async (geojson: any, baseName: string): Promise<any> => {
   return geojson2shpPiscina.run({ geojson: JSON.stringify(geojson), baseName })
+}
+
+// Zero-copy variant for the shp export hot path (mirror of tiles.geojson2pbfFromBuffer): transfer the RAW ES
+// response buffer to the worker (which parses + builds geojson + JSON.stringifies + feeds ogr2ogr), rather
+// than parsing/structured-cloning a geojson object graph on the main thread. bbox is a separate agg computed
+// by the caller and appended to the geojson LAST (matching the old read.ts key order type/total/features/bbox).
+export const geojson2shpFromBuffer = async (rawBuffer: Buffer, bbox: any, baseName: string, dataset: any): Promise<any> => {
+  const { payload, transferList } = transferableRawBuffer(rawBuffer)
+  return geojson2shpPiscina.run({ rawBuffer: payload, bbox, baseName, dataset: slimDatasetForFlatten(dataset) }, { transferList })
 }
