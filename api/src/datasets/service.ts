@@ -80,6 +80,19 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     extraFilters.push({ finalizedAt: { $ne: null } })
   }
 
+  // datasets that only exist to serve a parent resource are hidden by default: ?partOf=true reveals
+  // only the children, ?partOf=<parentId> reveals the children of that specific parent. A lookup by
+  // known id(s), or the "children" reverse-lookup (e.g. nbVirtualDatasets: which virtual datasets
+  // reference me as a member) is never filtered — those are targeted fetches, not browsing, and must
+  // keep working even when the referencing virtual dataset happens to itself be someone's child.
+  if (reqQuery.partOf === 'true') {
+    extraFilters.push({ 'partOf.id': { $exists: true } })
+  } else if (reqQuery.partOf) {
+    extraFilters.push({ 'partOf.id': reqQuery.partOf })
+  } else if (!reqQuery.id && !reqQuery.ids && !reqQuery.children) {
+    extraFilters.push({ 'partOf.id': { $exists: false } })
+  }
+
   if (reqQuery.file === 'true') extraFilters.push({ file: { $exists: true } })
   if (reqQuery.type) {
     const typeFilters = []
@@ -371,6 +384,24 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${sessionState.user.name} (${sessionState.user.id})`, insertedDataset.masterData)
 
   return insertedDataset
+}
+
+// datasets with `partOf` defined and pointing at this virtual dataset or application (i.e. its children)
+export const countPartOfChildren = async (parentType: 'dataset' | 'application', parentId: string) => {
+  return mongo.datasets.countDocuments({ 'partOf.type': parentType, 'partOf.id': parentId })
+}
+
+// called when deleting a resource that has partOf children: either cascade the deletion, or unflag
+// them so they survive on their own, no longer restricted to their now-deleted parent
+export const handlePartOfChildren = async (app: any, parentType: 'dataset' | 'application', parentId: string, action: 'delete' | 'unflag') => {
+  if (action === 'unflag') {
+    await mongo.datasets.updateMany({ 'partOf.type': parentType, 'partOf.id': parentId }, { $unset: { partOf: 1 } })
+    return
+  }
+  const children = await mongo.datasets.find({ 'partOf.type': parentType, 'partOf.id': parentId }).toArray()
+  for (const child of children) {
+    await deleteDataset(app, child)
+  }
 }
 
 export const deleteDataset = async (app: any, dataset: any) => {

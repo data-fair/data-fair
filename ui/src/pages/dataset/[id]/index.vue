@@ -395,7 +395,45 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="can('changeOwner').value && (canDeleteAllLines || can('delete').value)" />
+          <v-divider v-if="can('changeOwner').value && (can('writePartOf').value || canDeleteAllLines || can('delete').value)" />
+
+          <v-list-item
+            v-if="can('writePartOf').value"
+            :prepend-icon="mdiFamilyTree"
+            class="py-4"
+          >
+            <div class="text-body-1 font-weight-bold">
+              {{ t('partOf') }}
+            </div>
+            <div class="text-body-medium text-medium-emphasis">
+              {{ dataset?.partOf ? t('partOfCurrentDesc', { title: dataset.partOf.title }) : t('partOfDesc') }}
+            </div>
+            <template #append>
+              <part-of-dialog
+                v-if="dataset"
+                v-model="showPartOfDialog"
+                resource-type="datasets"
+                :resource="dataset"
+                :candidates="partOfCandidates"
+                :candidates-loading="partOfCandidatesLoading"
+                @changed="store.datasetFetch.refresh()"
+              >
+                <template #activator="{ props: activatorProps }">
+                  <v-btn
+                    v-bind="activatorProps"
+                    variant="outlined"
+                    color="error"
+                    class="ml-4 align-self-center"
+                    @click="openPartOfDialog"
+                  >
+                    {{ t('partOf') }}
+                  </v-btn>
+                </template>
+              </part-of-dialog>
+            </template>
+          </v-list-item>
+
+          <v-divider v-if="can('writePartOf').value && (canDeleteAllLines || can('delete').value)" />
 
           <v-list-item
             v-if="canDeleteAllLines"
@@ -440,7 +478,7 @@
                 variant="outlined"
                 color="error"
                 class="ml-4 align-self-center"
-                @click="showDeleteDialog = true"
+                @click="openDeleteDialog"
               >
                 {{ t('deleteDataset') }}
               </v-btn>
@@ -468,6 +506,30 @@
       >
         <v-card-text class="pb-0">
           {{ t('deleteMsg', { title: dataset?.title }) }}
+          <template v-if="childrenCount > 0">
+            <v-alert
+              type="warning"
+              variant="outlined"
+              density="compact"
+              class="mt-4"
+            >
+              {{ t('childrenWarning', childrenCount) }}
+            </v-alert>
+            <v-radio-group
+              v-model="childrenAction"
+              class="mt-2"
+              hide-details
+            >
+              <v-radio
+                :label="t('childrenActionUnflag')"
+                value="unflag"
+              />
+              <v-radio
+                :label="t('childrenActionDelete')"
+                value="delete"
+              />
+            </v-radio-group>
+          </template>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -587,6 +649,9 @@ fr:
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer ce jeu de données à un autre propriétaire.
+  partOf: Ressource parente
+  partOfDesc: Indiquer que ce jeu de données n'existe que pour servir une ressource parente (jeu de données virtuel ou application).
+  partOfCurrentDesc: "Ce jeu de données est actuellement défini comme enfant de : {title}"
   deleteAllLines: Supprimer toutes les lignes
   deleteAllLinesDesc: Supprime toutes les lignes du jeu de données. Cette action est irréversible.
   deleteAllLinesTitle: Suppression des lignes du jeu de données
@@ -594,6 +659,9 @@ fr:
   deleteDataset: Supprimer le jeu de données
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  childrenWarning: aucun jeu de données enfant | Ce jeu de données a un jeu de données enfant qui n'existe que dans ce cadre. | Ce jeu de données a {count} jeux de données enfants qui n'existent que dans ce cadre.
+  childrenActionUnflag: Conserver les jeux enfants en leur retirant l'attribut enfant
+  childrenActionDelete: Supprimer aussi les jeux enfants
   deleteDatasetSuccess: Le jeu de données a bien été supprimé.
   deleteAllLinesSuccess: Toutes les lignes ont bien été supprimées.
   yes: Oui
@@ -646,6 +714,9 @@ en:
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this dataset to another owner.
+  partOf: Parent resource
+  partOfDesc: Indicate that this dataset only exists to serve a parent resource (virtual dataset or application).
+  partOfCurrentDesc: "This dataset is currently defined as a child of: {title}"
   deleteAllLines: Delete all lines
   deleteAllLinesDesc: Delete all the lines of the dataset. This action is irreversible.
   deleteAllLinesTitle: Delete all the lines of the dataset
@@ -653,6 +724,9 @@ en:
   deleteDataset: Delete dataset
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
+  childrenWarning: no child dataset | This dataset has a child dataset that only exists within this context. | This dataset has {count} child datasets that only exist within this context.
+  childrenActionUnflag: Keep the child datasets and remove their child attribute
+  childrenActionDelete: Also delete the child datasets
   deleteDatasetSuccess: Dataset was deleted successfully.
   deleteAllLinesSuccess: All lines were deleted successfully.
   yes: Yes
@@ -671,7 +745,7 @@ import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFamilyTree, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -712,7 +786,7 @@ watch(shareTab, (tab) => {
 })
 
 const store = useDatasetStore()
-const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
+const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, virtualDatasetsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot } = store
 
 const datasetsMetadata = datasetsMetadataFetch.data
 
@@ -856,8 +930,28 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
+const showPartOfDialog = ref(false)
+const partOfCandidates = computed(() => [
+  ...(virtualDatasetsFetch.data.value?.results ?? []).map(d => ({ type: 'dataset' as const, id: d.id, title: d.title })),
+  ...(applicationsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title }))
+])
+const partOfCandidatesLoading = computed(() => virtualDatasetsFetch.loading.value || applicationsFetch.loading.value)
+const openPartOfDialog = () => {
+  virtualDatasetsFetch.refresh()
+  if (!applicationsFetch.initialized.value) applicationsFetch.refresh()
+}
+
+const childrenCount = ref(0)
+const childrenAction = ref<'delete' | 'unflag'>('unflag')
+const openDeleteDialog = async () => {
+  showDeleteDialog.value = true
+  childrenAction.value = 'unflag'
+  const res = await $fetch<{ count: number }>('datasets', { query: { partOf: id, size: 0 } })
+  childrenCount.value = res.count
+}
+
 const confirmRemove = useAsyncAction(async () => {
-  await remove()
+  await remove(childrenCount.value > 0 ? childrenAction.value : undefined)
   await router.push('/datasets')
 }, { success: t('deleteDatasetSuccess') })
 
@@ -1111,8 +1205,8 @@ const sections = computedDeepDiff(() => {
   }
 
   // Danger zone section
-  if (can('changeOwner').value || canDeleteAllLines.value || can('delete').value) {
-    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Irreversible operations: change owner, delete all lines (REST), delete the entire dataset. Always let the user perform these themselves — never trigger them programmatically.' }
+  if (can('changeOwner').value || can('writePartOf').value || canDeleteAllLines.value || can('delete').value) {
+    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Irreversible or sensitive operations: change owner, define/remove this dataset as a child of a parent resource (partOf), delete all lines (REST), delete the entire dataset. Always let the user perform these themselves — never trigger them programmatically.' }
   }
 
   return result

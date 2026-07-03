@@ -182,6 +182,23 @@ export default {
         }
       }
     },
+    partOf: {
+      type: 'object',
+      title: 'Application enfant',
+      description: 'Si renseigné, cette application n\'existe que pour être embarquée dans une application parente (par exemple un tableau de bord). Elle est alors masquée des listes par défaut.',
+      additionalProperties: false,
+      required: ['id'],
+      properties: {
+        id: {
+          type: 'string',
+          title: 'Identifiant de l\'application parente'
+        },
+        title: {
+          type: 'string',
+          title: 'Titre de l\'application parente'
+        }
+      }
+    },
     permissions: { $ref: 'https://github.com/data-fair/data-fair/permissions' }
   }
 }

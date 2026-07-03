@@ -783,6 +783,28 @@ const datasetProperties = {
       }
     }
   },
+  partOf: {
+    type: 'object',
+    title: 'Jeu de données enfant',
+    description: 'Si renseigné, ce jeu de données n\'existe que pour servir une ressource parente (un jeu de données virtuel dont il est membre, une application qui l\'alimente,...). Il est alors masqué des listes par défaut.',
+    additionalProperties: false,
+    required: ['type', 'id'],
+    properties: {
+      type: {
+        type: 'string',
+        title: 'Type de la ressource parente',
+        enum: ['dataset', 'application']
+      },
+      id: {
+        type: 'string',
+        title: 'Identifiant de la ressource parente'
+      },
+      title: {
+        type: 'string',
+        title: 'Titre de la ressource parente'
+      }
+    }
+  },
   thumbnails: {
     type: 'object',
     properties: {
@@ -900,6 +922,7 @@ const dataset = {
         publications: datasetProperties.publications,
         publicationSites: datasetProperties.publicationSites,
         virtual: datasetProperties.virtual,
+        partOf: datasetProperties.partOf,
         rest: datasetProperties.rest,
         extras: datasetProperties.extras,
         attachmentsAsImage: datasetProperties.attachmentsAsImage,

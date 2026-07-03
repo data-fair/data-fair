@@ -142,6 +142,25 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     patch._readApiKey = null
   }
 
+  if (patch.partOf) {
+    if (patch.partOf.id === dataset.id) throw httpError(400, 'Un jeu de données ne peut pas être défini comme son propre enfant')
+    // a dataset can only be defined as a child if it is used by exactly one parent resource — 0 or
+    // 2+ parents (virtual datasets and/or applications combined) makes the relationship ambiguous
+    const [virtualParents, appParents] = await Promise.all([
+      db.collection('datasets').find({ 'virtual.children': dataset.id }, { projection: { id: 1, title: 1 } }).toArray(),
+      db.collection('applications').find({ 'configuration.datasets.id': dataset.id }, { projection: { id: 1, title: 1 } }).toArray()
+    ])
+    const parents = [
+      ...virtualParents.map((d: any) => ({ type: 'dataset', id: d.id, title: d.title })),
+      ...appParents.map((a: any) => ({ type: 'application', id: a.id, title: a.title }))
+    ]
+    if (parents.length !== 1) throw httpError(400, `Ce jeu de données ne peut être défini comme enfant que s'il est utilisé par une seule ressource parente (jeu de données virtuel ou application) ; il en compte actuellement ${parents.length}.`)
+    const [parent] = parents
+    if (parent.type !== patch.partOf.type || parent.id !== patch.partOf.id) throw httpError(400, 'La ressource parente indiquée ne correspond pas à l\'unique ressource qui utilise ce jeu de données.')
+    // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
+    patch.partOf.title = parent.title
+  }
+
   const coordXProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
   const coordYProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
   const projectGeomProp = dataset.schema.find((p: any) => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')

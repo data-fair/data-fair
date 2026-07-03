@@ -172,6 +172,7 @@ const datasetOverrides: Record<string, OpOverride> = {
   writePublicationSites: { title: L('Gérer les sites de publication', 'Manage publication sites') },
   writeExports: { title: L('Gérer les exports', 'Manage exports') },
   setReadApiKey: { title: L("Gérer la clé d'API de lecture", 'Manage the read API key') },
+  writePartOf: { title: L('Gérer la ressource parente', 'Manage the parent resource') },
 
   manageMasterData: { title: L('Utiliser comme données de référence', 'Use as master-data'), routeless: true },
   post: { title: L('Créer un jeu de données', 'Create a dataset') },
@@ -197,7 +198,7 @@ const datasetOperations: OperationDescriptor[] = [
     readAdvanced: ['readJournal', 'realtime-journal', 'realtime-task-progress', 'readPrivateApiDoc'],
     write: ['writeDescription', 'writeDescriptionBreaking', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines', 'validateDraft', 'cancelDraft', 'postMetadataAttachment', 'deleteMetadataAttachment', 'sendUserNotification', 'sendUserNotificationPublic', 'simulateExtension'],
     manageOwnLines: ['readOwnLines', 'readOwnLine', 'createOwnLine', 'updateOwnLine', 'patchOwnLine', 'bulkOwnLines', 'deleteOwnLine', 'readOwnLineRevisions', 'readOwnRevisions'],
-    admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey']
+    admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner', 'writePublications', 'writePublicationSites', 'writeExports', 'setReadApiKey', 'writePartOf']
   }, datasetOverrides),
   ...expand('datasets', { manageMasterData: ['manageMasterData'] }, datasetOverrides, 'ownerAdmin'),
   ...expand('datasets', { post: ['post'] }, datasetOverrides, 'contrib'),
@@ -227,6 +228,7 @@ const applicationOverrides: Record<string, OpOverride> = {
   setKeys: { title: L('Modifier les clés', 'Update the keys') },
   writePublications: { title: L('Gérer les publications', 'Manage publications') },
   writePublicationSites: { title: L('Gérer les sites de publication', 'Manage publication sites') },
+  writePartOf: { title: L("Gérer l'application parente", 'Manage the parent application') },
   post: { title: L('Créer une application', 'Create an application') }
 }
 
@@ -236,7 +238,7 @@ const applicationOperations: OperationDescriptor[] = [
     read: ['readDescription', 'readConfig', 'readApiDoc', 'readBaseApp', 'readCapture', 'readPrint', 'downloadAttachment'],
     readAdvanced: ['readJournal', 'realtime-draft-error'],
     write: ['writeDescription', 'writeConfig', 'postAttachment', 'deleteAttachment'],
-    admin: ['delete', 'getPermissions', 'setPermissions', 'getKeys', 'setKeys', 'writePublications', 'writePublicationSites']
+    admin: ['delete', 'getPermissions', 'setPermissions', 'getKeys', 'setKeys', 'writePublications', 'writePublicationSites', 'writePartOf']
   }, applicationOverrides),
   ...expand('applications', { post: ['post'] }, applicationOverrides, 'contrib')
 ]

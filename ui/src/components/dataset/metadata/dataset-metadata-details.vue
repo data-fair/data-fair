@@ -139,6 +139,24 @@
           </div>
         </v-list-item>
       </v-col>
+
+      <v-col
+        v-if="dataset.partOf"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-list-item :prepend-icon="mdiFamilyTree">
+          <div class="text-body-small text-medium-emphasis">
+            {{ t('partOfLabel') }}
+          </div>
+          <div>
+            <router-link :to="`/${dataset.partOf.type === 'dataset' ? 'dataset' : 'application'}/${dataset.partOf.id}`">
+              {{ dataset.partOf.title }}
+            </router-link>
+          </div>
+        </v-list-item>
+      </v-col>
     </v-row>
   </template>
 </template>
@@ -159,6 +177,7 @@ fr:
   noHistory: Désactivée (ne conserve pas les révisions des lignes)
   virtualDatasetsLabel: Jeux de données virtuels
   nbVirtualDatasets: aucun jeu virtuel | 1 jeu de données virtuel | {count} jeux de données virtuels
+  partOfLabel: Ressource parente
 en:
   owner: Owner
   size: Size
@@ -174,12 +193,14 @@ en:
   noHistory: Disabled (does not store revisions of lines)
   virtualDatasetsLabel: Virtual datasets
   nbVirtualDatasets: no virtual dataset | 1 virtual dataset | {count} virtual datasets
+  partOfLabel: Parent resource
 </i18n>
 
 <script setup lang="ts">
 import {
   mdiAllInclusive,
   mdiCounter,
+  mdiFamilyTree,
   mdiFile,
   mdiHistory,
   mdiPencil,

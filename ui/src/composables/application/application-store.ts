@@ -154,6 +154,16 @@ const createApplicationStore = (id: string) => {
   })
   const nbParentApps = computed(() => nbParentAppsFetch.data.value?.count ?? 0)
 
+  // full list (id/title) of the parent applications using this one — used to pick a partOf parent
+  const parentAppsFetch = useFetch<{ results: Pick<Application, 'id' | 'title'>[] }>(() => {
+    if (!application.value) return null
+    return `${$apiPath}/applications`
+  }, {
+    query: computed(() => ({ application: id, size: 100, select: 'id,title' })),
+    immediate: false,
+    watch: false
+  })
+
   const permissionsFetch = useFetch<Permission[]>($apiPath + `/applications/${id}/permissions`, { immediate: false, watch: false })
   const permissions = ref<Permission[] | null>(null)
   watch(permissionsFetch.data, () => {
@@ -176,8 +186,8 @@ const createApplicationStore = (id: string) => {
     permissions.value = newPermissions
   }
 
-  const remove = async () => {
-    await $fetch('/applications/' + id, { method: 'DELETE' })
+  const remove = async (childrenAction?: 'delete' | 'unflag') => {
+    await $fetch('/applications/' + id, { method: 'DELETE', query: childrenAction ? { childrenAction } : undefined })
   }
 
   const changeOwner = async (owner: { type: string, id: string, department?: string }) => {
@@ -211,6 +221,7 @@ const createApplicationStore = (id: string) => {
     datasetsFetch,
     childrenAppsFetch,
     nbParentApps,
+    parentAppsFetch,
     remove,
     changeOwner,
   }

@@ -12,6 +12,7 @@ import * as usersUtils from '../misc/utils/users.ts'
 import * as capture from '../misc/utils/capture.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
 import * as service from './service.ts'
+import { countPartOfChildren, handlePartOfChildren } from '../datasets/service.ts'
 import { readApplication, readBaseApp, attemptInsert, reqApplication, reqBaseApp, reqIsNewApplication } from './middlewares.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
@@ -89,12 +90,14 @@ router.put('/:applicationId', attemptInsert, readApplication, permissionMiddlewa
 })
 
 const permissionsWritePublications = permissionMiddleware('writePublications', 'admin')
+const permissionsWritePartOf = permissionMiddleware('writePartOf', 'admin')
 
 // Update an application configuration
 router.patch('/:applicationId',
   readApplication,
   permissionMiddleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
+  (req, res, next) => ('partOf' in req.body) ? permissionsWritePartOf(req, res, next) : next(),
   async (req, res) => {
     const application = reqApplication(req)
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
@@ -130,8 +133,27 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
 
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
+  const application = reqApplication(req)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
-  await service.deleteApplication(ctx, reqApplication(req))
+
+  const [childDatasetsCount, childAppsCount] = await Promise.all([
+    countPartOfChildren('application', application.id),
+    service.countChildApplications(application.id)
+  ])
+  const childrenCount = childDatasetsCount + childAppsCount
+  if (childrenCount > 0) {
+    const childrenAction = req.query.childrenAction as string | undefined
+    if (childrenAction !== 'delete' && childrenAction !== 'unflag') {
+      throw httpError(409, `Cette application a ${childrenCount} ressource(s) enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
+    }
+    // the children were explicitly opted into this relationship by their own owner (via the
+    // admin-only writePartOf permission on the child itself), so no extra per-child permission check
+    // is required here — the cascading action was already authorized when partOf was set
+    await handlePartOfChildren(req.app, 'application', application.id, childrenAction)
+    await service.handleChildApplications(ctx, application.id, childrenAction)
+  }
+
+  await service.deleteApplication(ctx, application)
   res.sendStatus(204)
 })
 

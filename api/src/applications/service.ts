@@ -73,6 +73,19 @@ export const findApplications = async (locale: string, publicationSite: any, pub
     extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
   }
 
+  // applications/datasets that only exist to serve a parent application are hidden by default:
+  // ?partOf=true reveals only the children, ?partOf=<parentId> reveals the children of that specific
+  // parent. A lookup by known id(s), or the "dataset"/"application" reverse-lookups (e.g. nbParentApps:
+  // which applications reference me) is never filtered — those are targeted fetches, not browsing, and
+  // must keep working even when the referencing application happens to itself be someone's child.
+  if (reqQuery.partOf === 'true') {
+    extraFilters.push({ 'partOf.id': { $exists: true } })
+  } else if (reqQuery.partOf) {
+    extraFilters.push({ 'partOf.id': reqQuery.partOf })
+  } else if (!reqQuery.id && !reqQuery.ids && !reqQuery.dataset && !reqQuery.application) {
+    extraFilters.push({ 'partOf.id': { $exists: false } })
+  }
+
   const query = findUtils.query(reqQuery, locale, sessionState, 'applications', fieldsMap, false, extraFilters)
 
   const sort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
@@ -241,6 +254,18 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
 }
 
 export const patchApplication = async (ctx: ApplicationWriteContext, application: Application, patch: any) => {
+  if (patch.partOf) {
+    if (patch.partOf.id === application.id) throw httpError(400, 'Une application ne peut pas être définie comme son propre enfant')
+    // an application can only be defined as a child if it is embedded by exactly one parent
+    // application — 0 or 2+ parents makes the relationship ambiguous
+    const parents = await mongo.applications.find({ 'configuration.applications.id': application.id }, { projection: { id: 1, title: 1 } }).toArray()
+    if (parents.length !== 1) throw httpError(400, `Cette application ne peut être définie comme enfant que si elle est utilisée par une seule application parente ; elle en compte actuellement ${parents.length}.`)
+    const [parent] = parents
+    if (parent.id !== patch.partOf.id) throw httpError(400, 'La ressource parente indiquée ne correspond pas à l\'unique application qui utilise celle-ci.')
+    // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
+    patch.partOf.title = parent.title
+  }
+
   // Retry previously failed publications
   if (!patch.publications) {
     const failedPublications = (application.publications || []).filter((p: any) => p.status === 'error')
@@ -261,10 +286,14 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
   // Application is not structurally assignable to Resource (Pick<Dataset>); cast until Resource is widened (Phase 5)
   await publicationSites.applyPatch(application as any, { ...application, ...patch }, ctx.sessionState, 'applications')
 
+  // null is used to unset the property, $set would instead store a literal null (invalid against the resource schema)
+  const unsetPartOf = patch.partOf === null
+  if (unsetPartOf) delete patch.partOf
+
   let patchedApplication
   try {
     patchedApplication = await mongo.applications
-      .findOneAndUpdate({ id: application.id }, { $set: patch }, { returnDocument: 'after' })
+      .findOneAndUpdate({ id: application.id }, { $set: patch, ...(unsetPartOf ? { $unset: { partOf: '' } } : {}) }, { returnDocument: 'after' })
   } catch (err: any) {
     if (err.code !== 11000) throw err
     throw httpError(400, 'errors.dupSlug')
@@ -349,6 +378,24 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
 
   await syncDatasets(patchedApp)
   return patchedApp! as Application
+}
+
+// applications with `partOf` defined and pointing at this application (e.g. dashboard sub-visualizations)
+export const countChildApplications = async (parentId: string) => {
+  return mongo.applications.countDocuments({ 'partOf.id': parentId })
+}
+
+// called when deleting an application that has child applications: either cascade the deletion, or
+// unflag them so they survive on their own, no longer restricted to their now-deleted parent
+export const handleChildApplications = async (ctx: ApplicationWriteContext, parentId: string, action: 'delete' | 'unflag') => {
+  if (action === 'unflag') {
+    await mongo.applications.updateMany({ 'partOf.id': parentId }, { $unset: { partOf: 1 } })
+    return
+  }
+  const children = await mongo.applications.find({ 'partOf.id': parentId }).toArray()
+  for (const child of children) {
+    await deleteApplication(ctx, child as Application)
+  }
 }
 
 export const deleteApplication = async (ctx: ApplicationWriteContext, application: Application) => {

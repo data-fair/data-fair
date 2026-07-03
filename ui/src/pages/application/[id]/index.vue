@@ -322,7 +322,45 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="can('delete')" />
+          <v-divider v-if="can('delete') || can('writePartOf')" />
+
+          <v-list-item
+            v-if="can('writePartOf')"
+            :prepend-icon="mdiFamilyTree"
+            class="py-4"
+          >
+            <div class="text-body-1 font-weight-bold">
+              {{ t('partOf') }}
+            </div>
+            <div class="text-body-medium text-medium-emphasis">
+              {{ application?.partOf ? t('partOfCurrentDesc', { title: application.partOf.title }) : t('partOfDesc') }}
+            </div>
+            <template #append>
+              <part-of-dialog
+                v-if="application"
+                v-model="showPartOfDialog"
+                resource-type="applications"
+                :resource="application"
+                :candidates="partOfCandidates"
+                :candidates-loading="partOfCandidatesLoading"
+                @changed="store.applicationFetch.refresh()"
+              >
+                <template #activator="{ props: activatorProps }">
+                  <v-btn
+                    v-bind="activatorProps"
+                    variant="outlined"
+                    color="error"
+                    class="ml-4 align-self-center"
+                    @click="openPartOfDialog"
+                  >
+                    {{ t('partOf') }}
+                  </v-btn>
+                </template>
+              </part-of-dialog>
+            </template>
+          </v-list-item>
+
+          <v-divider v-if="can('writePartOf') && can('delete')" />
 
           <v-list-item
             v-if="can('delete')"
@@ -340,7 +378,7 @@
                 variant="outlined"
                 color="error"
                 class="ml-4 align-self-center"
-                @click="showDeleteDialog = true"
+                @click="openDeleteDialog"
               >
                 {{ t('deleteApp') }}
               </v-btn>
@@ -366,7 +404,33 @@
         :title="t('deleteApp')"
         :loading="confirmRemove.loading.value ? 'warning' : undefined"
       >
-        <v-card-text>{{ t('deleteMsg', { title: application?.title }) }}</v-card-text>
+        <v-card-text>
+          {{ t('deleteMsg', { title: application?.title }) }}
+          <template v-if="childrenCount > 0">
+            <v-alert
+              type="warning"
+              variant="outlined"
+              density="compact"
+              class="mt-4"
+            >
+              {{ t('childrenWarning', childrenCount) }}
+            </v-alert>
+            <v-radio-group
+              v-model="childrenAction"
+              class="mt-2"
+              hide-details
+            >
+              <v-radio
+                :label="t('childrenActionUnflag')"
+                value="unflag"
+              />
+              <v-radio
+                :label="t('childrenActionDelete')"
+                value="delete"
+              />
+            </v-radio-group>
+          </template>
+        </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn
@@ -431,10 +495,16 @@ fr:
   dangerZone: Zone de danger
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer cette application à un autre propriétaire.
+  partOf: Ressource parente
+  partOfDesc: Indiquer que cette application n'existe que pour servir une application parente (par exemple un tableau de bord).
+  partOfCurrentDesc: "Cette application est actuellement définie comme enfant de : {title}"
   deleteApp: Supprimer l'application
   deleteAppSuccess: L'application a bien été supprimée.
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
   deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
+  childrenWarning: aucune ressource enfant | Cette application a une ressource enfant qui n'existe que dans ce cadre. | Cette application a {count} ressources enfants qui n'existent que dans ce cadre.
+  childrenActionUnflag: Conserver les ressources enfants en leur retirant l'attribut enfant
+  childrenActionDelete: Supprimer aussi les ressources enfants
   yes: Oui
   no: Non
 en:
@@ -473,10 +543,16 @@ en:
   dangerZone: Danger Zone
   changeOwner: Change owner
   changeOwnerDesc: Transfer this application to another owner.
+  partOf: Parent resource
+  partOfDesc: Indicate that this application only exists to serve a parent application (e.g. a dashboard).
+  partOfCurrentDesc: "This application is currently defined as a child of: {title}"
   deleteApp: Delete application
   deleteAppSuccess: Application was deleted successfully.
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
   deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
+  childrenWarning: no child resource | This application has a child resource that only exists within this context. | This application has {count} child resources that only exist within this context.
+  childrenActionUnflag: Keep the child resources and remove their child attribute
+  childrenActionDelete: Also delete the child resources
   yes: Yes
   no: No
 </i18n>
@@ -486,7 +562,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiFamilyTree, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
 import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
@@ -511,7 +587,7 @@ const renderTab = ref('config')
 const activityTab = ref('traceability')
 
 const store = useApplicationStore()
-const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions } = store
+const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, parentAppsFetch, permissions, permissionsFetch, savePermissions } = store
 
 const { sendUiNotif } = useUiNotif()
 
@@ -564,6 +640,13 @@ const showOwnerDialog = ref(false)
 const showDeleteDialog = ref(false)
 const upgrading = ref(false)
 
+const showPartOfDialog = ref(false)
+const partOfCandidates = computed(() => (parentAppsFetch.data.value?.results ?? []).map(a => ({ type: 'application' as const, id: a.id, title: a.title })))
+const partOfCandidatesLoading = computed(() => parentAppsFetch.loading.value)
+const openPartOfDialog = () => {
+  parentAppsFetch.refresh()
+}
+
 // Fetch additional data once application is loaded
 watch(application, (app) => {
   if (!app) return
@@ -613,8 +696,20 @@ const confirmUpgrade = async () => {
   }
 }
 
+const childrenCount = ref(0)
+const childrenAction = ref<'delete' | 'unflag'>('unflag')
+const openDeleteDialog = async () => {
+  showDeleteDialog.value = true
+  childrenAction.value = 'unflag'
+  const [childDatasets, childApps] = await Promise.all([
+    $fetch<{ count: number }>('datasets', { query: { partOf: route.params.id, size: 0 } }),
+    $fetch<{ count: number }>('applications', { query: { partOf: route.params.id, size: 0 } })
+  ])
+  childrenCount.value = childDatasets.count + childApps.count
+}
+
 const confirmRemove = useAsyncAction(async () => {
-  await remove()
+  await remove(childrenCount.value > 0 ? childrenAction.value : undefined)
   await router.push('/applications')
 }, { success: t('deleteAppSuccess') })
 
@@ -677,8 +772,8 @@ const sections = computedDeepDiff(() => {
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Activity tracking for this application.' }
   }
 
-  if (can('delete')) {
-    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Destructive operations: change owner, delete the application.' }
+  if (can('delete') || can('writePartOf')) {
+    result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Destructive or sensitive operations: change owner, define/remove this application as a child of a parent application (partOf), delete the application.' }
   }
 
   return result

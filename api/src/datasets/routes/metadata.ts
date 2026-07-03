@@ -26,7 +26,7 @@ import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
-import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
+import { findDatasets, applyPatch, deleteDataset, countPartOfChildren, handlePartOfChildren } from '../service.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -57,6 +57,7 @@ const sendSchema = (req: Request, res: Response, schema: any) => {
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
 const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
 const permissionsSetReadApiKey = permissions.middleware('setReadApiKey', 'admin')
+const permissionsWritePartOf = permissions.middleware('writePartOf', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
 
 const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone', 'slug'] // a change in these properties is considered a breaking change
@@ -143,6 +144,7 @@ export const registerMetadataRoutes = (router: Router) => {
     (req: Request, res: Response, next: NextFunction) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
     (req: Request, res: Response, next: NextFunction) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
+    (req: Request, res: Response, next: NextFunction) => ('partOf' in req.body) ? permissionsWritePartOf(req, res, next) : next(),
     async (req, res) => {
       // deep clone to allow mutation by applyPatch (req.dataset may be an immutable proxy from cache)
       const dataset: any = clone(reqDataset(req))
@@ -290,6 +292,18 @@ export const registerMetadataRoutes = (router: Router) => {
   router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('delete', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
+
+    const childrenCount = await countPartOfChildren('dataset', dataset.id)
+    if (childrenCount > 0) {
+      const childrenAction = req.query.childrenAction as string | undefined
+      if (childrenAction !== 'delete' && childrenAction !== 'unflag') {
+        throw httpError(409, `Ce jeu de données virtuel a ${childrenCount} jeu(x) de données enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
+      }
+      // the child datasets were explicitly opted into this relationship by their own owner (via the
+      // admin-only writePartOf permission on the child itself), so no extra per-child permission check
+      // is required here — the cascading action was already authorized when partOf was set
+      await handlePartOfChildren(req.app, 'dataset', dataset.id, childrenAction)
+    }
 
     await deleteDataset(req.app, dataset)
     if (dataset.draftReason && datasetFull.status !== 'draft') {
