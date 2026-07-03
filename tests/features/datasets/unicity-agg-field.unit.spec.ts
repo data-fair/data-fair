@@ -49,4 +49,13 @@ test.describe('unicityKeyPartLabel', () => {
     // malformed value must never crash the indexer with an "Invalid Date" / NaN result
     assert.equal(unicityKeyPartLabel({ key: 'd', type: 'string', format: 'date' }, 'not-a-number'), 'not-a-number')
   })
+
+  test('NaN on a date column is guarded (not passed to Date(), which would throw RangeError)', () => {
+    assert.equal(unicityKeyPartLabel({ key: 'd', type: 'string', format: 'date' }, NaN), 'NaN')
+  })
+
+  test('Infinity on a date-time column is guarded (not passed to Date(), which would throw RangeError)', () => {
+    assert.equal(unicityKeyPartLabel({ key: 'd', type: 'string', format: 'date-time' }, Infinity), 'Infinity')
+    assert.equal(unicityKeyPartLabel({ key: 'd', type: 'string', format: 'date-time' }, -Infinity), '-Infinity')
+  })
 })

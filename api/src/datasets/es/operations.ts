@@ -532,14 +532,15 @@ export const unicityAggField = (prop: any): string => {
  * date buckets in `es/values.ts`), full ISO 8601 for `format: 'date-time'`. Every other column
  * type (string, number, boolean, …) is passed through as its string form, unchanged.
  * Defensive: composite `terms` sources never enable `missing_bucket`, and ES always emits a
- * numeric key for a `date`-mapped field, so a null/undefined/non-numeric key should never reach
- * here — but a stray one must never crash the indexer, so it degrades to '' / the raw string
- * instead of throwing (a bad `Date` would otherwise silently produce "Invalid Date").
+ * finite numeric key for a `date`-mapped field, so a null/undefined/non-finite/non-numeric key
+ * should never reach here — but a stray one must never crash the indexer, so it degrades to ''
+ * / the raw string instead of throwing (a bad `Date` would otherwise throw a RangeError on
+ * NaN/±Infinity, or silently produce "Invalid Date").
  */
 export const unicityKeyPartLabel = (prop: any, value: any): string => {
   if (value === null || value === undefined) return ''
   const isDateColumn = prop?.type === 'string' && (prop.format === 'date' || prop.format === 'date-time')
-  if (isDateColumn && typeof value === 'number') {
+  if (isDateColumn && Number.isFinite(value)) {
     const iso = new Date(value).toISOString()
     return prop.format === 'date' ? iso.slice(0, 10) : iso
   }
