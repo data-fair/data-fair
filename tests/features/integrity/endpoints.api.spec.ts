@@ -86,6 +86,23 @@ test('revisions endpoint lists revisions newest-first and is superadmin-only', a
   await expect(user.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).rejects.toMatchObject({ status: 403 })
 })
 
+test('internal historize fields are stripped from API responses', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  // set only _historizeContext (NOT _needsHistorizing, so the relay never picks it up and the doc stays stable)
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, {
+    _historizeContext: { operation: 'enable', originator: 'user:secret' }
+  })
+  // patch-dataset does not bump updatedAt, so drop the read-cache to force a fresh mongo read
+  await admin.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
+  const body = (await admin.get(`/api/v1/datasets/${dataset.id}`)).data
+  expect(body._historizeContext).toBeUndefined()
+  expect(body._needsHistorizing).toBeUndefined()
+  // the raw doc still has it (proves the response filter did the stripping)
+  const raw = await getRawDataset(dataset.id)
+  expect(raw._historizeContext).toBeTruthy()
+})
+
 test('breached dataset appears under the status=error listing without changing its status', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
