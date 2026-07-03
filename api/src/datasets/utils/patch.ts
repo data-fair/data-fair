@@ -241,8 +241,11 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     // constraint change) doesn't lose the other status trigger to first-match-wins ordering.
     //
     // Statuses that already reach batch-processor/index-lines.ts (the unicity gate) on their
-    // own, directly or via the validateFile task: 'loaded' (full file reprocessing),
-    // 'analyzed' and 'validated' (reindexerStatus for file datasets). Those are left as-is.
+    // own, directly or via the file pipeline (storeFile -> normalizeFile -> analyzeCsv/Geojson
+    // -> validateFile -> indexLines, see tasks.ts): 'loaded' (full file reprocessing), 'stored'
+    // and 'normalized' (set by the error-retry branch above when the previous run failed at the
+    // store/normalize step, see tasks.ts:102-103,144-145), and 'analyzed'/'validated'
+    // (reindexerStatus for file datasets). Those are left as-is.
     //
     // 'validation-updated' is the one exception: process-file.ts finalizes it directly
     // (dataset.status === 'validation-updated' ? 'finalized' : 'validated', see
@@ -252,7 +255,7 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     // Anything else (including no status change at all, e.g. a constraints-only patch that
     // matched no earlier branch) doesn't reach the gate either and gets the reindexerStatus
     // floor ('validated' for file datasets).
-    const reachesUnicityGate = ['loaded', 'analyzed', 'validated']
+    const reachesUnicityGate = ['loaded', 'stored', 'normalized', 'analyzed', 'validated']
     if (patch.status === 'validation-updated') {
       patch.status = 'analyzed'
     } else if (!patch.status || !reachesUnicityGate.includes(patch.status)) {

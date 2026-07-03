@@ -166,13 +166,22 @@ test.describe('file dataset unique constraint', () => {
     // patch.ts must escalate this to 'analyzed' so BOTH the validation rule and the new
     // constraint actually get (re-)checked.
     const csv = 'id,val\nabc,1\ndef,1\n'
-    const ds = await upload(csv, [], [{ key: 'id', type: 'string' }, { key: 'val', type: 'string' }])
+    const schemaBase = [{ key: 'id', type: 'string' }, { key: 'val', type: 'string' }]
+    const ds = await upload(csv, [], schemaBase)
     const finalized = await waitForFinalize(testUser1, ds.id)
     assert.equal(finalized.status, 'finalized')
 
-    // sanity check: the validation-rule-only patch alone (no constraints) would land on
-    // 'validation-updated' and finalize without reprocessing - this is the state the fix must
-    // NOT leave the combined patch at.
+    // Precondition check (pinned, not just assumed): a validation-rule-only patch (no
+    // constraints) on a comparable finalized dataset must land on 'validation-updated' - the
+    // status the escalation branch below exists to route around. Asserted here on a throwaway
+    // dataset so a regression upstream (e.g. schemasValidationCompatible) can't silently stop
+    // this test from exercising the escalation branch it claims to cover.
+    const dsPrecondition = await upload(csv, [], schemaBase)
+    await waitForFinalize(testUser1, dsPrecondition.id)
+    const patternOnlySchema = schemaBase.map(p => p.key === 'id' ? { ...p, pattern: '^[a-z]+$' } : p)
+    const patternOnlyPatched = (await testUser1.patch(`/api/v1/datasets/${dsPrecondition.id}`, { schema: patternOnlySchema })).data
+    assert.equal(patternOnlyPatched.status, 'validation-updated')
+
     const schema = finalized.schema.map((p: any) => p.key === 'id' ? { ...p, pattern: '^[a-z]+$' } : p)
 
     const patched = (await testUser1.patch(`/api/v1/datasets/${ds.id}`, {
