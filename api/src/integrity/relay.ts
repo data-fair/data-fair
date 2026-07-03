@@ -45,7 +45,8 @@ export const historize = async (dataset: DatasetInternal): Promise<void> => {
   const hint = dataset._historizeContext
   const operation: ops.RevisionOperation = hint?.operation ?? (i === 0 ? 'create' : 'update')
   const originator = hint?.originator ?? 'worker:historize'
-  const retainUntil = new Date(Date.now() + config.integrity.retention.days * 24 * 3600 * 1000)
+  // config.integrity is guaranteed defined here (active guard above); retention.days defaults to 365
+  const retainUntil = new Date(Date.now() + (config.integrity!.retention?.days ?? 365) * 24 * 3600 * 1000)
 
   await store.writeRevision(ops.revisionKey(dataset.owner, dataset.id, i), {
     hash: { md5: currentMd5 },

@@ -68,7 +68,7 @@ export const task = async () => {
 }
 
 export const start = () => {
-  scheduledTask = cron.schedule(config.integrityCheckCron, () => {
+  scheduledTask = cron.schedule(config.integrityCheckCron ?? '0 4 * * *', () => {
     if (taskPromise) return
     taskPromise = task()
     taskPromise.finally(() => { taskPromise = undefined })
