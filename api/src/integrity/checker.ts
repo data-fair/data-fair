@@ -16,6 +16,10 @@ const debug = Debug('integrity-checker')
 const BATCH = 100
 
 export const checkDataset = async (dataset: DatasetInternal): Promise<{ status: 'ok' | 'breach' | 'unknown', date?: string }> => {
+  // a relay is pending: the stored file legitimately differs from the latest anchor until the
+  // relay writes the new revision — checking now would raise a false breach alert (review finding 2)
+  if (dataset._needsHistorizing) return { status: 'unknown' }
+
   const store = integrityStore()
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)
   const latest = ops.latestKey(await store.listRevisionKeys(prefix))
@@ -40,7 +44,7 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<{ status: 
 
 const runOnce = async () => {
   const cursor = mongo.datasets
-    .find({ 'integrity.active': true })
+    .find({ 'integrity.active': true, _needsHistorizing: { $ne: true } })
     .sort({ 'integrity.lastCheck.date': 1 })
     .limit(BATCH)
   for await (const dataset of cursor) {

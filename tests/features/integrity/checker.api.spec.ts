@@ -34,6 +34,31 @@ test('check is ok after enable, breach after out-of-band tamper, ok again after 
   expect(check.status).toBe('ok')
 })
 
+test('a check during a pending legitimate update never reports a breach', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 1)
+
+  const notif = await collectNotifications()
+  // simulate a legitimate update whose relay has not run yet: new bytes + the flag, atomically
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'new legitimate content' })
+  await admin.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { _needsHistorizing: true })
+
+  // the check may hit the pending window ('unknown') or run after the relay re-anchored ('ok') — never 'breach'
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(['unknown', 'ok']).toContain(check.status)
+
+  // once the relay has anchored the new content the check is 'ok'
+  await waitForIntegrityRevisions(prefix, 2)
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('ok')
+
+  await new Promise(resolve => setTimeout(resolve, 1500)) // settle: allow a stray event to arrive
+  const all = await notif.getAll()
+  expect(all.filter((e: any) => e.topic?.key?.includes('integrity-breach')).length).toBe(0)
+})
+
 test('out-of-band deletion of the stored file is reported as a breach', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
