@@ -35,7 +35,10 @@ const forceStream = !!process.env.FORCE_STREAM
 const installForceStream = (ax: any) => {
   if (forceStream && ax?.interceptors) {
     ax.interceptors.request.use((cfg: any) => {
-      if ((cfg.method ?? 'get').toLowerCase() === 'get' && /\/lines(\?|$)/.test(cfg.url ?? '')) {
+      // skip requests that already carry _stream (in the URL or in params): the server rejects duplicate
+      // query parameters with a 400, and stream-read-lines.api.spec.ts sets _stream=true explicitly.
+      if ((cfg.method ?? 'get').toLowerCase() === 'get' && /\/lines(\?|$)/.test(cfg.url ?? '') &&
+        !/[?&]_stream=/.test(cfg.url ?? '') && cfg.params?._stream === undefined) {
         cfg.params = { ...(cfg.params ?? {}), _stream: 'true' }
       }
       return cfg

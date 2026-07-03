@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, config } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
 // Api equivalence for the streamed `/lines` path. `?_stream=true` (a non-prod opt-in, equivalent to the
@@ -32,6 +32,12 @@ const rows = Array.from({ length: N }, (_, i) => ({
 test.describe('streamed /lines: api equivalence with the buffered path', () => {
   test.beforeAll(async () => {
     await clean()
+    // the 2500 rows (~230KB) exceed the default store_bytes limit (200KB). Without an explicit limit the
+    // setup only passes by racing the async consumption update between bulk chunks — set a high limit so
+    // checkStorage never (correctly!) rejects a chunk with 429.
+    await testUser1.post('/api/v1/limits/user/test_user1',
+      { store_bytes: { limit: 10000000, consumption: 0 }, lastUpdate: new Date().toISOString() },
+      { params: { key: config.secretKeys.limits } })
     await testUser1.put('/api/v1/datasets/' + id, {
       isRest: true,
       title: id,
