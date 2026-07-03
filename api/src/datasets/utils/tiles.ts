@@ -6,7 +6,7 @@ import { transferableRawBuffer, slimDatasetForFlatten } from './worker-transfer.
 const config = _config as any
 
 export const geojson2pbfPiscina = new Piscina({
-  filename: path.resolve(import.meta.dirname, '../../datasets/threads/geojson2pbf.js'),
+  filename: path.resolve(import.meta.dirname, '../../datasets/threads/geojson2pbf.ts'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,
   maxThreads: config.tiles.maxThreads

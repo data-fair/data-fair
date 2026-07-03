@@ -7,9 +7,11 @@ import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 import { rawEsBuffer2geojson } from '../utils/geo-features.ts'
 
-const config = /** @type {any} */(_config)
+const config = _config as any
 
-export default ({ geojson, xyz, vtPrepared, rawBuffer, dataset }) => {
+type Params = { geojson?: any, xyz: number[], vtPrepared?: any, rawBuffer?: Uint8Array, dataset?: any }
+
+export default ({ geojson, xyz, vtPrepared, rawBuffer, dataset }: Params) => {
   // Zero-copy raw-buffer path (neighbors/non-vtPrepared vector tiles): the main thread transferred the raw
   // ES response bytes here — parse them, build geojson (rawEsBuffer2geojson is config-free, safe in a
   // worker) and render with the SAME non-vtPrepared geojson-vt + vt-pbf pipeline used below, returning a
@@ -18,7 +20,7 @@ export default ({ geojson, xyz, vtPrepared, rawBuffer, dataset }) => {
     const { esResponse, geojson: geojsonFC } = rawEsBuffer2geojson(rawBuffer, dataset)
     const tile = geojsonvt(geojsonFC, { indexMaxZoom: 0, tolerance: config.tiles.geojsonvtTolerance, maxZoom: xyz[2] })
       .getTile(xyz[2], xyz[0], xyz[1])
-    const layers = {}
+    const layers: Record<string, any> = {}
     if (tile) layers.results = tile
     const pbf = Buffer.from(vtpbf.fromGeojsonVt(layers, { version: 2 }))
     return { pbf, count: geojsonFC.features.length, total: esResponse.hits.total?.value }
@@ -36,7 +38,7 @@ export default ({ geojson, xyz, vtPrepared, rawBuffer, dataset }) => {
     // indexMaxZoom=0 -> do not pre-render tiles
     const tile = geojsonvt(geojson, { indexMaxZoom: 0, tolerance: config.tiles.geojsonvtTolerance, maxZoom: xyz[2] })
       .getTile(xyz[2], xyz[0], xyz[1])
-    const layers = {}
+    const layers: Record<string, any> = {}
     if (tile) layers.results = tile
     pbf = vtpbf.fromGeojsonVt(layers, { version: 2 })
   }
@@ -48,15 +50,15 @@ class PseudoTileLayer {
   version = 2
   name = 'results'
   extent = 4096
-  length
-  queue
-  geojson
-  constructor (geojson) {
+  length: number
+  queue: any[]
+  geojson: any
+  constructor (geojson: any) {
     this.geojson = geojson
     this.queue = []
     for (let f = 0; f < geojson.features.length; f++) {
       const feature = geojson.features[f]
-      let tile
+      let tile: any
       if (feature.properties._vt) {
         tile = new VectorTile(new Protobuf(Buffer.from(feature.properties._vt, 'base64')))
         delete feature.properties._vt
@@ -71,7 +73,7 @@ class PseudoTileLayer {
   }
 
   lastI = -1
-  feature (i) {
+  feature (i: number) {
     if (i !== this.lastI + 1) throw new Error('PseudoTileLayer can only be read sequentially')
     const item = this.queue[i]
     this.lastI = i
@@ -82,11 +84,11 @@ class PseudoTileLayer {
 }
 
 class PseudoFeature {
-  f
-  type
-  properties
-  id
-  constructor (properties, tile, i) {
+  f: any
+  type: any
+  properties: any
+  id: any
+  constructor (properties: any, tile: any, i: number) {
     this.properties = properties
     this.f = tile.layers.f.feature(i)
     this.type = this.f.type
