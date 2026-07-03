@@ -26,4 +26,24 @@ test.describe('hits-splitter', () => {
       if (aggs) assert.deepEqual(env.aggregations, aggs, `aggs seed ${seed}`)
     }
   })
+
+  test('does not mis-anchor on a pre-hits key whose raw bytes contain "hits":[', () => {
+    // key `weird"hits` serializes as `"weird\"hits"` — the raw bytes contain QUOTE h i t s QUOTE ':' '[',
+    // which a naive needle matches. The anchor must skip it (inside a string) and find the real array.
+    const body = Buffer.from('{"took":1,"weird\\"hits":[1,2],"hits":{"total":{"value":1},"hits":[{"_id":"a","_source":{}}]}}')
+    const emitted: Buffer[] = []
+    const splitter = createHitSplitter(b => emitted.push(b))
+    splitter.write(body)
+    splitter.end()
+    assert.equal(emitted.length, 1)
+    assert.equal(JSON.parse(emitted[0].toString())._id, 'a')
+    assert.equal(splitter.envelope().hits.total.value, 1)
+  })
+
+  test('envelope() surfaces a descriptive error on a non-ES body, not a bare SyntaxError', () => {
+    const splitter = createHitSplitter(() => {})
+    splitter.write(Buffer.from('this is not an ES response'))
+    splitter.end()
+    assert.throws(() => splitter.envelope(), /unexpected ES response envelope/)
+  })
 })
