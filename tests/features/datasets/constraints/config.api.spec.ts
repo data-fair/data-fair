@@ -1,5 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
+import FormData from 'form-data'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
@@ -33,6 +34,39 @@ test.describe('unicity constraint config', () => {
     const res = await testUser1.patch('/api/v1/datasets/cfg-bad', {
       constraints: [{ type: 'unique', properties: ['nope'] }]
     }, { validateStatus: () => true })
+    assert.equal(res.status, 400)
+  })
+
+  test('rejects a REST dataset created with an invalid constraint', async () => {
+    const res = await testUser1.post('/api/v1/datasets/cfg-create-bad', {
+      isRest: true,
+      title: 'cfg-create-bad',
+      schema: [{ key: 'a', type: 'string' }, { key: 'b', type: 'integer' }],
+      constraints: [{ type: 'unique', properties: ['nope'] }]
+    }, { validateStatus: () => true })
+    assert.equal(res.status, 400)
+  })
+
+  test('accepts a REST dataset created with a valid constraint', async () => {
+    const res = await testUser1.post('/api/v1/datasets/cfg-create-ok', {
+      isRest: true,
+      title: 'cfg-create-ok',
+      schema: [{ key: 'a', type: 'string' }, { key: 'b', type: 'integer' }],
+      constraints: [{ type: 'unique', properties: ['a', 'b'] }]
+    })
+    assert.equal(res.status, 201)
+    assert.equal(res.data.status, 'finalized')
+  })
+
+  test('rejects a file dataset created with an invalid constraint', async () => {
+    const form = new FormData()
+    form.append('file', Buffer.from('a,b\nx,1\n'), 'data.csv')
+    form.append('schema', JSON.stringify([{ key: 'a', type: 'string' }, { key: 'b', type: 'string' }]))
+    form.append('constraints', JSON.stringify([{ type: 'unique', properties: ['nope'] }]))
+    const res = await testUser1.post('/api/v1/datasets', form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+      validateStatus: () => true
+    })
     assert.equal(res.status, 400)
   })
 })
