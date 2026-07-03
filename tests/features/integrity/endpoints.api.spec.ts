@@ -86,6 +86,25 @@ test('revisions endpoint lists revisions newest-first and is superadmin-only', a
   await expect(user.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).rejects.toMatchObject({ status: 403 })
 })
 
+test('disabling integrity clears the breach state and error-filter listing', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 1)
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
+  expect((await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data.status).toBe('breach')
+
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
+
+  const status = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data
+  expect(status.active).toBe(false)
+  expect(status.lastCheck).toBeUndefined()
+  // no longer surfaced under the error filter
+  const list = (await admin.get('/api/v1/datasets', { params: { status: 'error', select: 'id,status,integrity' } })).data
+  expect(list.results.find((d: any) => d.id === dataset.id)).toBeUndefined()
+})
+
 test('internal historize fields are stripped from API responses', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)

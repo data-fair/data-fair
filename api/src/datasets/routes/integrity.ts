@@ -27,7 +27,12 @@ export const registerIntegrityRoutes = (router: Router) => {
         $set: { 'integrity.active': true, _needsHistorizing: true, _historizeContext: { operation: 'enable', originator: originatorOf(req) }, updatedAt: new Date().toISOString() }
       })
     } else {
-      await mongo.datasets.updateOne({ id: dataset.id }, { $set: { 'integrity.active': false, updatedAt: new Date().toISOString() } })
+      await mongo.datasets.updateOne({ id: dataset.id }, {
+        $set: { 'integrity.active': false, updatedAt: new Date().toISOString() },
+        // clear the verdict and any pending relay work: a disabled dataset must not keep showing
+        // a breach badge / error-filter listing it no longer allows acting on
+        $unset: { 'integrity.lastCheck': '', _needsHistorizing: '', _historizeContext: '' }
+      })
     }
     res.status(200).json({ active })
   })
