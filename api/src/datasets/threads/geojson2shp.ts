@@ -3,8 +3,7 @@ import _config from 'config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { spawn } from 'node:child_process'
 import { tmpDir } from '../../datasets/utils/files.ts'
-import { getFlatten } from '../../datasets/utils/flatten.ts'
-import { result2geojson } from '../../datasets/utils/geo-features.ts'
+import { rawEsBuffer2geojson } from '../../datasets/utils/geo-features.ts'
 import tmp from 'tmp-promise'
 
 const config = _config as any
@@ -17,16 +16,14 @@ export default async (params: Params) => {
   }
 
   // Zero-copy raw-buffer path (mirror of geojson2pbf's rawBuffer branch): the main thread transferred the
-  // raw ES response bytes here — parse them, build geojson (result2geojson + getFlatten are config-free, safe
-  // in a worker) then JSON.stringify with bbox appended LAST. This yields a string byte-identical to the old
+  // raw ES response bytes here — parse them, build geojson (rawEsBuffer2geojson is config-free, safe in a
+  // worker) then JSON.stringify with bbox appended LAST. This yields a string byte-identical to the old
   // main-thread `JSON.stringify({ ...result2geojson(esResponse, flatten), bbox })`, so ogr2ogr's input (and
   // thus the shapefile) is unchanged.
   let geojsonStr: string
   if (params.rawBuffer) {
-    const esResponse = JSON.parse(Buffer.from(params.rawBuffer).toString())
-    const flatten = getFlatten(params.dataset, true)
-    const geojson: any = result2geojson(esResponse, flatten)
-    geojson.bbox = params.bbox
+    const { geojson } = rawEsBuffer2geojson(params.rawBuffer, params.dataset)
+    geojson.bbox = params.bbox // appended LAST — matches the old main-thread key order (type/total/features/bbox)
     geojsonStr = JSON.stringify(geojson)
   } else {
     geojsonStr = params.geojson as string

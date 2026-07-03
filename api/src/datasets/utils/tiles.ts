@@ -1,6 +1,7 @@
 import path from 'path'
 import { Piscina } from 'piscina'
 import _config from 'config'
+import { transferableRawBuffer, slimDatasetForFlatten } from './worker-transfer.ts'
 
 const config = _config as any
 
@@ -37,18 +38,8 @@ export const geojson2pbf = async (geojson: any, xyz: any, vtPrepared?: any) => {
 // geojson object graph on the main thread. Returns the ES count/total alongside the tile so the caller can
 // set the same x-tilesampling header and VT cache entry the esResponse path produced.
 export const geojson2pbfFromBuffer = async (rawBuffer: Buffer, xyz: any, dataset: any): Promise<{ tile: Buffer | null, count: number, total: number | undefined }> => {
-  // A Node Buffer often shares a pooled ArrayBuffer with unrelated buffers, so transferring rawBuffer.buffer
-  // could detach memory we don't own. Copy into a standalone ArrayBuffer and transfer THAT — after transfer
-  // the main thread's view is detached, which is fine (we never reuse it).
-  const standalone = new ArrayBuffer(rawBuffer.length)
-  const view = new Uint8Array(standalone)
-  view.set(rawBuffer)
-  if (view.byteLength !== rawBuffer.length) throw new Error(`geojson2pbfFromBuffer: transfer buffer length mismatch (${view.byteLength} !== ${rawBuffer.length})`)
-  // Pass only what getFlatten needs: id/finalizedAt (memoize key) + a minimal schema. compileFlatten reads
-  // ONLY prop.key and prop.separator, so this keeps the compiled flatten (and thus the tile bytes) identical
-  // while avoiding a DataCloneError — the full dataset/schema carries non-structured-cloneable values.
-  const slimDataset = { id: dataset.id, finalizedAt: dataset.finalizedAt, schema: (dataset.schema ?? []).map((p: any) => ({ key: p.key, separator: p.separator })) }
-  const { pbf, count, total } = await geojson2pbfPiscina.run({ rawBuffer: view, xyz, dataset: slimDataset }, { transferList: [standalone] })
+  const { payload, transferList } = transferableRawBuffer(rawBuffer)
+  const { pbf, count, total } = await geojson2pbfPiscina.run({ rawBuffer: payload, xyz, dataset: slimDatasetForFlatten(dataset) }, { transferList })
   return { tile: count ? Buffer.from(pbf) : null, count, total }
 }
 

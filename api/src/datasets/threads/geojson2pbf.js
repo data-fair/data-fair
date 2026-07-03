@@ -5,20 +5,17 @@ import vtpbf from 'vt-pbf'
 import _config from 'config'
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
-import { getFlatten } from '../utils/flatten.ts'
-import { result2geojson } from '../utils/geo-features.ts'
+import { rawEsBuffer2geojson } from '../utils/geo-features.ts'
 
 const config = /** @type {any} */(_config)
 
 export default ({ geojson, xyz, vtPrepared, rawBuffer, dataset }) => {
   // Zero-copy raw-buffer path (neighbors/non-vtPrepared vector tiles): the main thread transferred the raw
-  // ES response bytes here — parse them, build geojson (result2geojson + getFlatten are config-free, safe in
-  // a worker) and render with the SAME non-vtPrepared geojson-vt + vt-pbf pipeline used below, returning a
+  // ES response bytes here — parse them, build geojson (rawEsBuffer2geojson is config-free, safe in a
+  // worker) and render with the SAME non-vtPrepared geojson-vt + vt-pbf pipeline used below, returning a
   // plain result object so the wrapper can reuse the ES count/total for headers + cache.
   if (rawBuffer) {
-    const esResponse = JSON.parse(Buffer.from(rawBuffer).toString())
-    const flatten = getFlatten(dataset, true)
-    const geojsonFC = result2geojson(esResponse, flatten)
+    const { esResponse, geojson: geojsonFC } = rawEsBuffer2geojson(rawBuffer, dataset)
     const tile = geojsonvt(geojsonFC, { indexMaxZoom: 0, tolerance: config.tiles.geojsonvtTolerance, maxZoom: xyz[2] })
       .getTile(xyz[2], xyz[0], xyz[1])
     const layers = {}
