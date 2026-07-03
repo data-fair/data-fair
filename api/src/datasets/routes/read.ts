@@ -205,6 +205,7 @@ const readLines: RequestHandler = async (req, res) => {
   let esResponse: any
   let rawTileBuffer: Buffer | undefined
   let rawShpBuffer: Buffer | undefined
+  let rawShpBbox: any
   let streamedSource: LinesSource | undefined
   const esSearchStart = Date.now()
   if (eligible) {
@@ -220,8 +221,13 @@ const readLines: RequestHandler = async (req, res) => {
     // A request that explicitly selects `_attachment_url` stays buffered: search() rewrites that URL
     // (publicUrl→publicBaseUrl + virtual fixup) but the raw worker path has no config/publicBaseUrl to do so,
     // so routing it here would leak the raw stored URL. It falls through to search() below, which rewrites.
+    // bbox (a separate aggregation the worker appends to the geojson) is independent of the hits, so the
+    // two ES round trips run concurrently.
     try {
-      rawShpBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
+      ;[rawShpBuffer, rawShpBbox] = await Promise.all([
+        esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext),
+        esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
+      ])
     } catch (err) {
       await manageESError(req, err)
     }
@@ -292,10 +298,14 @@ const readLines: RequestHandler = async (req, res) => {
   if (query.format === 'geojson') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.geojson'))
     res.type('geojson')
-    // geojson benefits from bbox info — a separate aggregation, independent of the streamed hits
-    const bbox = (await esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext)).bbox
+    // bbox is an independent aggregation: start it now and let streamGeojson await it after the hits are
+    // consumed, so the two ES round trips overlap instead of serializing. The no-op catch prevents an
+    // unhandledRejection if bboxAgg fails while the hits are still being consumed — the real await inside
+    // streamGeojson still surfaces the error before anything is sent.
+    const bboxPromise = esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
+    bboxPromise.catch(() => {})
+    await streamGeojson(req, res, source, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox: bboxPromise })
     observe.reqStep(req, 'bboxAgg')
-    await streamGeojson(req, res, source, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox })
     return
   }
 
@@ -304,9 +314,8 @@ const readLines: RequestHandler = async (req, res) => {
     // appends bbox + JSON.stringifies + feeds ogr2ogr. bbox is a separate agg (independent of the hits) so
     // it's computed here and passed through; the worker appends it LAST, matching the old key order below.
     if (rawShpBuffer) {
-      const bbox = (await esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext)).bbox
-      observe.reqStep(req, 'bboxAgg')
-      const shpZip = await outputs.geojson2shpFromBuffer(rawShpBuffer, bbox, dataset.slug as string, dataset)
+      observe.reqStep(req, 'bboxAgg') // ran concurrently with searchRaw in the mode-selection block
+      const shpZip = await outputs.geojson2shpFromBuffer(rawShpBuffer, rawShpBbox, dataset.slug as string, dataset)
       observe.reqStep(req, 'geojson2shp')
       res.setHeader('content-disposition', contentDisposition(dataset.slug + '.zip'))
       res.type('zip')

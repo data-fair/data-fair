@@ -151,7 +151,7 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
 
 export interface StreamGeojsonContext extends NextContext {
   rewriteAttachmentUrl?: boolean
-  bbox?: any
+  bbox?: any // value or Promise — awaited only after the hits are drained (lets the agg overlap consumption)
 }
 
 // GeoJSON is not a "hard" format: each hit maps to one Feature (geo.hit2feature) and the bbox comes from a
@@ -174,8 +174,11 @@ export async function streamGeojson (req: any, res: any, source: LinesSource, ct
     features.push(JSON.stringify(feature))
   })
   const tail = await safeTail(source) // drain the stream to completion; total lives in the envelope
+  // ctx.bbox may be a promise (read.ts starts the bboxAgg round trip and lets it overlap the hit
+  // consumption); awaited only now, once the hits are drained, and before anything is sent.
+  const bbox = await ctx.bbox
 
   setNextLink(res, ctx, count, lastHit)
   const total = tail?.hits?.total?.value
-  res.status(200).send(buildGeojsonBody(total, features, ctx.bbox))
+  res.status(200).send(buildGeojsonBody(total, features, bbox))
 }
