@@ -60,7 +60,10 @@ Once the core pattern existed, each `/lines` format was routed to the treatment 
   render/build in a worker thread, but the main thread parsed ES and structured-cloned a big object graph
   (geojson / rows) across the thread boundary — on the **hot** tile path, every request. Instead: `searchRaw`
   collects the raw ES bytes and **transfers them zero-copy** (`transferList`) to the worker, which parses +
-  `result2geojson` + renders/`ogr2ogr` in-thread. Main thread does no parse and no clone. Gated off
+  `result2geojson` + renders/`ogr2ogr` in-thread. Main thread does no parse and no clone. Genuinely
+  zero-copy: `worker-transfer.ts` transfers the Buffer's own ArrayBuffer when it owns it exclusively
+  (`Buffer.concat` results > 4 KB — the common case) and the worker wraps the transferred bytes without a
+  `Buffer.from` copy (a first iteration paid two full-response memcpys here). Gated off
   `_attachment_url`-selecting requests (the worker has no config to rewrite that URL → those stay buffered).
 - **xlsx / ods → left buffered (deliberately).** The move *is* valid but low-ROI here: exports are **rare**
   (a user click, not a continuous map), so the same per-request saving is multiplied by far fewer requests,
@@ -88,6 +91,11 @@ Once the core pattern existed, each `/lines` format was routed to the treatment 
   a head-object-splice matching `JSON.stringify`; csv via the same `csvStreams` serializer; geojson/shp via a
   shared config-free `result2geojson`). Verified by parity fuzz + api equivalence tests, and by running the
   whole api suite through the streamed path (`FORCE_STREAM=1`, see below).
+- **`after=`/`count=false` responses stay bounded.** ES omits `hits.total` for them
+  (`track_total_hits:false`), and nothing may depend on knowing the total before the hits are drained: a
+  first iteration pre-pumped the stream "until total is known", which silently buffered those responses
+  whole — every page ≥ 2 of the download loop. The source now consumes nothing at creation and `total` is
+  read from the tail envelope.
 - **The `_attachment_url` ordering subtlety.** `search()` rewrites `hit._source._attachment_url` *up front*,
   so derived fields (the thumbnail hashes it when `attachmentsAsImage`) see the rewritten URL. The streamed
   path must therefore rewrite at the **top** of `prepareResultItem`, before highlight/thumbnail/html/truncate —

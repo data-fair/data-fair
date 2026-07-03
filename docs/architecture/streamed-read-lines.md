@@ -7,7 +7,9 @@
 - `api/src/datasets/es/search-stream.ts`
 - `api/src/datasets/routes/lines-source.ts`
 - `api/src/datasets/routes/lines-pipeline.ts`
+- `api/src/datasets/routes/lines-body.ts` (config-free pure body/link builders)
 - `api/src/datasets/routes/read.ts` (`readLines` handler)
+- `api/src/datasets/utils/worker-transfer.ts` (zero-copy transfer plumbing for the tile/shp workers)
 
 ## 1. Why — and what we deliberately do NOT do
 
@@ -109,17 +111,22 @@ formats need the whole array (bbox, tile rendering, sheets) and stay on `search(
 Both sources flow through **one path** per format — the source is the only difference, so parity holds by
 construction. No `buffered`-vs-`streamed` output branch exists.
 
-**`streamJson`:** iterate bulks; for each row `rows.push(JSON.stringify(prepareResultItem(hit, …)))` and
-drop the object; track the last hit and count; `setImmediate` every 500 rows so a synchronous (buffered)
-source doesn't starve the event loop. Then `await source.tail()`, build the head object in the exact
-pre-refactor key order `{ hint?, total?, next?, totalCollapse? }`, `JSON.stringify` it, strip the closing
-brace, and splice `,"results":[` + `rows.join(',')` + `]}`. This is **byte-identical** to
-`JSON.stringify` of the equivalent object (same key order, `JSON.stringify` per value) → same ETag. `next`
-(a full page: `count === size`) is set both in the body and as the `Link` header.
+All three formats iterate through one shared **`consumeHits(source, perRow)`** loop: a SYNCHRONOUS per-row
+serializer (no per-row await — that would reintroduce the microtask-per-hit overhead the bulk design
+removed), a `setImmediate` yield every 500 rows so a synchronous (buffered) source doesn't starve the event
+loop, count/lastHit tracking, and **destroy-on-error** (see §7). The pure byte-assembly lives in the
+config-free `lines-body.ts` (`buildJsonBody` / `buildGeojsonBody` / `nextLinkHref`), unit-tested without
+loading the app config.
 
-**`streamCsv`:** feed each prepared row into the same compiled `csvStreams` Transform the buffered export
-uses (byte-equal to `results2csv`), collecting the Transform's output Buffers without retaining the row
-objects. Set the `Link` header from the last hit, then `res.send(Buffer.concat(chunks))`.
+**`streamJson`:** for each row `rows.push(JSON.stringify(prepareResultItem(hit, …)))` and drop the object.
+Then `await source.tail()`, read `total` from the envelope, build the head object in the exact pre-refactor
+key order `{ hint?, total?, next?, totalCollapse? }` and splice it with the rows (`buildJsonBody`). This is
+**byte-identical** to `JSON.stringify` of the equivalent object (same key order, `JSON.stringify` per
+value) → same ETag. `next` (a full page: `count === size`) is set both in the body and as the `Link` header.
+
+**`streamCsv`:** the same compiled per-row serializer the buffered export uses (`outputs.compileForRequest`
+→ `prologue` + `row(item)` strings, byte-equal to `results2csv`); no stream machinery — a serializer throw
+propagates synchronously, before anything is sent. `parts.join('')` is the body.
 
 **`collect(source)`** flattens the bulks into an array for the hard formats (xlsx/ods materialize + build).
 
@@ -130,7 +137,10 @@ throttles the Buffer body), exactly as the pre-refactor buffered path did.
 
 The read.ts pagination block still sets the `Link` header for the **hard formats** (shp/wkt/tiles, which read
 `esResponse` directly and `res.send`); json/csv/geojson build their own inside the pipeline (from the
-source's last hit, before `res.send`).
+source's last hit, before `res.send`). Both call the same `nextLinkHref` in `lines-body.ts` — one pagination
+contract. For geojson, read.ts starts the `bboxAgg` round trip without awaiting and `streamGeojson` awaits
+it only after the hits are drained, so the two ES calls overlap (same idea for the shp raw path:
+`Promise.all(searchRaw, bboxAgg)`).
 
 ## 6. No observable difference — this is the whole point
 
@@ -152,13 +162,17 @@ written and becomes a clean HTTP error status via the normal handler path. There
 no `df_internal_error` bookkeeping to distinguish anomalies from client aborts (that machinery, needed only
 for incremental output, was removed).
 
+**Mid-iteration errors release the ES connection.** Any error while iterating (a per-row transform throw or
+a mid-stream ES read error) destroys the source stream (`LinesSource.destroy`, wired inside `consumeHits`
+and the tail drain) before rethrowing — without this the handler would unwind with the ES response stream
+still open, pinning a transport connection until the server times it out.
+
 **Client abort.** The decoded ES stream is destroyed when the `esAbortContext` signal fires (request
 timeout / client disconnect wiring in `createEsRequestOptions`); the source's async iterator then throws and
 the handler unwinds, releasing ES resources.
 
 **Backpressure.** `res.send` writes the assembled Buffer through the `throttleEnd` wrapper, which applies
-the same bandwidth throttling the buffered path always used. The CSV Transform's `drain` is awaited while
-feeding rows so its internal buffer stays bounded.
+the same bandwidth throttling the buffered path always used.
 
 **Gunzip.** When ES negotiates gzip, the `asStream` body bypasses auto-decompression; `search-stream.ts`
 detects `content-encoding: gzip` and pipes through `node:zlib.createGunzip()` before `streamToSource`. (By
