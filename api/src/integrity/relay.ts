@@ -21,9 +21,15 @@ export const historize = async (dataset: DatasetInternal): Promise<void> => {
   // fixIntegrity reconciles) never updates that metadata field, so anchoring it would dedupe and
   // never re-anchor. Hashing the stored file keeps the relay symmetric with the checker (§3.3).
   const currentMd5 = isFileDataset(dataset)
-    ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch(() => undefined)
+    ? await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
+      // missing file (both backends normalize to 404): genuinely nothing to anchor
+      if (err.status === 404) return undefined
+      // anything else (transient storage error): propagate so the worker retries instead of
+      // silently dropping this revision from the trail (review finding 5)
+      throw err
+    })
     : undefined
-  if (!currentMd5) { await clearFlag(); return } // not a file dataset / unreadable file → nothing to anchor
+  if (!currentMd5) { await clearFlag(); return } // not a file dataset / no stored file → nothing to anchor
 
   const store = integrityStore()
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id)

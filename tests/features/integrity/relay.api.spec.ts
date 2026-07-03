@@ -42,6 +42,15 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
   expect((await listIntegrityKeys(prefix)).length).toBe(1)
 })
 
+test('relay clears the flag without writing a revision on a dataset without a file', async () => {
+  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ds = (await ax.post('/api/v1/datasets', { isRest: true, title: 'rest-relay', schema: [{ key: 'a', type: 'string' }] })).data
+  const prefix = `data-fair/${ds.owner.type}-${ds.owner.id}/${ds.id}/`
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { _needsHistorizing: true })
+  await waitForFlagCleared(ds.id)
+  expect((await listIntegrityKeys(prefix)).length).toBe(0)
+})
+
 test('a file replacement writes a new (second) revision', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', ax)
