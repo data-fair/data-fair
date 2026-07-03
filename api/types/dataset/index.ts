@@ -38,11 +38,7 @@ export type DatasetInternal = Dataset & {
   // true when this dataset's current index carries the `_search` / `_search_boosted` catch-all
   // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
   _esCopyToSearch?: boolean
-  integrity?: {
-    active: boolean
-    lastCheck?: { date: string, status: 'ok' | 'breach' }
-    lastRevision?: { i: number, md5: string, date: string }
-  }
+  // `integrity` is part of the public Dataset schema (server-managed, readOnly)
   _needsHistorizing?: boolean
   _historizeContext?: { operation: 'create' | 'update' | 'enable' | 'fixIntegrity', originator: string, reason?: string }
   // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
