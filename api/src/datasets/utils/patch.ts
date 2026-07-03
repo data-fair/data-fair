@@ -28,6 +28,14 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   datasetUtils.setUniqueRefs(patch)
   datasetUtils.curateDataset(patch)
 
+  // `constraints: null` is the documented "unset" idiom (makePatchSchema allows it), meaning
+  // "remove all constraints". Normalize it to `[]` as early as possible so that every consumer
+  // downstream (the constraints check below, applyPatch's $set/$unset choice, and the index-lines
+  // worker's diagnostic-cleanup gate which keys off `dataset.constraints` truthiness) sees the same
+  // "empty array" shape that the UI already produces when a constraint is dropped, instead of a
+  // field that gets entirely $unset from the document.
+  if (patch.constraints === null) patch.constraints = []
+
   // Changed a previously failed dataset, retry the previous step
   if (dataset.status === 'error') {
     if (dataset.errorStatus) {
@@ -100,16 +108,29 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   }
 
   if (patch.extensions) extensions.prepareExtensions(locale, patch.extensions, dataset.extensions ?? [])
+  // extendedSchema computed by either branch below already covers everything checkConstraints
+  // needs (real columns with their final type/x-capabilities/x-refersTo, plus x-calculated and
+  // x-extension columns flagged as such) so it is reused instead of being recomputed a 3rd time.
+  // Note: in the extensions branch, `patch.schema` itself ends up holding the *extensions*-prepared
+  // schema (prepareExtensionsSchema), not the extended one — so we keep a reference to the local
+  // `extendedSchema` from that branch rather than reusing `patch.schema` there.
+  let extendedSchemaForConstraints
   if (patch.extensions || dataset.extensions) {
     const extendedSchema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
     await extensions.checkExtensions(extendedSchema, patch.extensions || dataset.extensions)
     patch.schema = await extensions.prepareExtensionsSchema(patch.schema || dataset.schema, patch.extensions || dataset.extensions)
+    extendedSchemaForConstraints = extendedSchema
   } else if (patch.schema || ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage)) {
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
+    extendedSchemaForConstraints = patch.schema
   }
-  if (patch.constraints || (patch.schema && dataset.constraints?.length)) {
-    const extendedSchemaForConstraints = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
-    checkConstraints(extendedSchemaForConstraints, patch.constraints ?? dataset.constraints)
+  // `constraints: null` was already normalized to `[]` above, so `'constraints' in patch` reliably
+  // means "the request expresses an intent about constraints" (set some, or remove them all) as
+  // opposed to "no opinion, keep whatever the dataset already has".
+  const effectiveConstraints = 'constraints' in patch ? patch.constraints : dataset.constraints
+  if (('constraints' in patch || patch.schema) && effectiveConstraints?.length) {
+    extendedSchemaForConstraints ??= await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
+    checkConstraints(extendedSchemaForConstraints, effectiveConstraints)
   }
   if (patch.schema) {
     await schemaUtils.fixConcepts(dataset, patch.schema)

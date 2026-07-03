@@ -58,6 +58,24 @@ test.describe('unicity constraint config', () => {
     assert.equal(res.data.status, 'finalized')
   })
 
+  test('removes a constraint via constraints:null combined with a schema change dropping a constrained column', async () => {
+    await makeRest('cfg-null-with-schema')
+    let res = await testUser1.patch('/api/v1/datasets/cfg-null-with-schema', {
+      constraints: [{ type: 'unique', properties: ['a', 'b'] }]
+    })
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.constraints, [{ type: 'unique', properties: ['a', 'b'] }])
+
+    // dropping column "b" while unsetting constraints in the same request must not be validated
+    // against the OLD constraint (which still targets "b") - constraints:null means "remove them"
+    res = await testUser1.patch('/api/v1/datasets/cfg-null-with-schema', {
+      schema: [{ key: 'a', type: 'string' }],
+      constraints: null
+    })
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.constraints, [])
+  })
+
   test('rejects a file dataset created with an invalid constraint', async () => {
     const form = new FormData()
     form.append('file', Buffer.from('a,b\nx,1\n'), 'data.csv')

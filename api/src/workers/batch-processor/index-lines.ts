@@ -135,10 +135,9 @@ export default async function (dataset: DatasetInternal) {
     const uniqueConstraints = (dataset.constraints ?? []).filter((c: any) => c.type === 'unique')
     // Only pay the DiagnosticWriter cost (S3 pathExists + Mongo updateOne in discard())
     // for datasets that have or plausibly had a constraint. `dataset.constraints` stays
-    // truthy (an empty array) when a constraint is dropped to [] via the UI, so that path
-    // still gets cleaned up. Residual edge: a direct API PATCH with `constraints: null`
-    // (schema-valid but never sent by the UI) $unsets the field entirely, so a stale
-    // diagnostic from a prior error would not be cleared in that narrow case.
+    // truthy (an empty array) when a constraint is dropped: preparePatch normalizes the
+    // API's `constraints: null` unset idiom to `[]` too, so both the UI path and a direct
+    // API PATCH end up with the same shape here and get cleaned up the same way.
     if (!isRestDataset(dataset) && (uniqueConstraints.length || dataset.constraints)) {
       // Always run through a DiagnosticWriter, even with zero constraints: discard()
       // clears any stale diagnostic left by a prior failed run (e.g. the constraint
