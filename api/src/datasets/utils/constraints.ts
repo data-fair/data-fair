@@ -5,9 +5,18 @@ export const CONSTRAINT_INDEX_PREFIX = 'constraint_unique_'
 /**
  * Validate dataset-wide constraints against the (extended) schema at config time.
  * Throws httpError(400, ...) on the first violation; returns void when all constraints are valid.
+ *
+ * `dataset` is passed by both call sites (creation in service.ts and patch in patch.ts) so that
+ * this single guard can reject constraints declared on virtual or metaOnly datasets: those types
+ * have no indexing worker pass and no Mongo data collection, so a declared constraint would never
+ * actually be enforced. Callers already gate this call behind a non-empty constraints check, so
+ * removing constraints (empty array) never reaches here and is always allowed.
  */
-export const checkConstraints = (schema: any[], constraints: any[] | undefined): void => {
+export const checkConstraints = (schema: any[], constraints: any[] | undefined, dataset?: { isVirtual?: boolean, isMetaOnly?: boolean }): void => {
   if (!constraints || !constraints.length) return
+  if (dataset?.isVirtual || dataset?.isMetaOnly) {
+    throw httpError(400, "Les contraintes d'unicité ne sont pas prises en charge sur les jeux de données virtuels ou sans données (isMetaOnly).")
+  }
   const byKey = new Map((schema || []).map(p => [p.key, p]))
   for (const constraint of constraints) {
     if (constraint.type !== 'unique') continue

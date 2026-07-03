@@ -2,6 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axiosAuth, clean } from '../../../support/axios.ts'
+import { waitForFinalize, sendDataset } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -74,6 +75,70 @@ test.describe('unicity constraint config', () => {
     })
     assert.equal(res.status, 200)
     assert.deepEqual(res.data.constraints, [])
+  })
+
+  test('rejects a constraint added via PATCH on a virtual dataset', async () => {
+    const child = await sendDataset('datasets/dataset1.csv', testUser1)
+    const res = await testUser1.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [child.id] },
+      schema: [{ key: 'id' }],
+      title: 'cfg-virtual-patch'
+    })
+    const virtualDataset = await waitForFinalize(testUser1, res.data.id)
+    const patchRes = await testUser1.patch(`/api/v1/datasets/${virtualDataset.id}`, {
+      constraints: [{ type: 'unique', properties: ['id'] }]
+    }, { validateStatus: () => true })
+    assert.equal(patchRes.status, 400)
+    assert.match(String(patchRes.data), /virtuel/)
+  })
+
+  test('rejects a virtual dataset created with a constraint', async () => {
+    const child = await sendDataset('datasets/dataset1.csv', testUser1)
+    const res = await testUser1.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [child.id] },
+      schema: [{ key: 'id' }],
+      title: 'cfg-virtual-create',
+      constraints: [{ type: 'unique', properties: ['id'] }]
+    }, { validateStatus: () => true })
+    assert.equal(res.status, 400)
+    assert.match(String(res.data), /virtuel/)
+  })
+
+  test('rejects a constraint added via PATCH on a metaOnly dataset', async () => {
+    const id = 'cfg-metaonly-patch'
+    await testUser1.post(`/api/v1/datasets/${id}`, { isMetaOnly: true, title: id, schema: [{ key: 'a', type: 'string' }] })
+    const patchRes = await testUser1.patch(`/api/v1/datasets/${id}`, {
+      constraints: [{ type: 'unique', properties: ['a'] }]
+    }, { validateStatus: () => true })
+    assert.equal(patchRes.status, 400)
+    assert.match(String(patchRes.data), /données/)
+  })
+
+  test('rejects a metaOnly dataset created with a constraint', async () => {
+    const res = await testUser1.post('/api/v1/datasets/cfg-metaonly-create', {
+      isMetaOnly: true,
+      title: 'cfg-metaonly-create',
+      schema: [{ key: 'a', type: 'string' }],
+      constraints: [{ type: 'unique', properties: ['a'] }]
+    }, { validateStatus: () => true })
+    assert.equal(res.status, 400)
+    assert.match(String(res.data), /données/)
+  })
+
+  test('allows removing constraints via PATCH on a virtual dataset without 400 (removal is always safe)', async () => {
+    const child = await sendDataset('datasets/dataset1.csv', testUser1)
+    const res = await testUser1.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [child.id] },
+      title: 'cfg-virtual-remove'
+    })
+    const virtualDataset = await waitForFinalize(testUser1, res.data.id)
+    const patchRes = await testUser1.patch(`/api/v1/datasets/${virtualDataset.id}`, {
+      constraints: null
+    }, { validateStatus: () => true })
+    assert.equal(patchRes.status, 200)
   })
 
   test('rejects a file dataset created with an invalid constraint', async () => {

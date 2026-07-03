@@ -130,7 +130,9 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   const effectiveConstraints = 'constraints' in patch ? patch.constraints : dataset.constraints
   if (('constraints' in patch || patch.schema) && effectiveConstraints?.length) {
     extendedSchemaForConstraints ??= await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
-    checkConstraints(extendedSchemaForConstraints, effectiveConstraints)
+    // isVirtual/isMetaOnly are not patchable (absent from patchKeys), so dataset.isVirtual /
+    // dataset.isMetaOnly always reflect the actual (immutable) type of the dataset being patched.
+    checkConstraints(extendedSchemaForConstraints, effectiveConstraints, dataset)
   }
   if (patch.schema) {
     await schemaUtils.fixConcepts(dataset, patch.schema)

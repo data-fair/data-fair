@@ -65,7 +65,7 @@
             @update:conforms-to="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.conformsTo = c }"
           />
           <dataset-constraints
-            v-if="structureEditFetch.data.value"
+            v-if="structureEditFetch.data.value && !dataset?.isVirtual && !dataset?.isMetaOnly"
             :model-value="structureEditFetch.data.value.constraints"
             :dataset-schema="structureEditFetch.data.value.schema"
             :editable="true"

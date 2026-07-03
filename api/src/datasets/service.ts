@@ -277,7 +277,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
   await fixConcepts(dataset, dataset.schema)
   if (dataset.constraints?.length) {
-    checkConstraints(await datasetUtils.extendedSchema(db, dataset), dataset.constraints)
+    checkConstraints(await datasetUtils.extendedSchema(db, dataset), dataset.constraints, dataset)
   }
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
