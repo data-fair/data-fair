@@ -319,6 +319,6 @@ module.exports = {
   apiKeysMaxDuration: 2 * 365, // in days
   apiKeysExpirationCron: '0 3 * * *', // daily at 3 AM, scan apiKeys expireAt and notify J-3 / J
   experimental: {
-    streamReadLines: false                   // read /lines json/csv hits with asStream (splitter) so the raw ES response is never held whole — collapses peak memory / old-gen GC. Output is still assembled + res.send, so no observable change. See docs/architecture/streamed-read-lines.md
+    streamReadLines: false                   // read /lines json/csv hits with asStream (splitter) so the raw ES response is never held whole — collapses peak memory / old-gen GC. Output is still assembled + res.send, so no observable change. See docs/architecture/read-lines-efficiency.md
   },
 }
