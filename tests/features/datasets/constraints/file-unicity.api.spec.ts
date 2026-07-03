@@ -159,6 +159,33 @@ test.describe('file dataset unique constraint', () => {
     assert.equal((await fetchDiagnostic(ds.id)).status, 404) // and the constraint held (no duplicates)
   })
 
+  test('cancelling an error draft clears the persisted task progress', async () => {
+    // A draft that fails the unicity gate leaves taskProgress = { task: 'index', error: true }
+    // on the journals doc. Cancelling the draft runs no worker afterwards (only finalize ever
+    // $unsets taskProgress), so before the fix the UI task loader showed "Indexation" forever.
+    const csv = 'a,b\nx,1\ny,2\nz,3\n'
+    const ds = await upload(csv, [{ type: 'unique', properties: ['a', 'b'] }])
+    await waitForFinalize(testUser1, ds.id)
+
+    // upload a violating file as a draft -> the draft errors during the index task
+    const badCsv = 'a,b\nx,1\ny,2\nx,1\n'
+    const form = new FormData()
+    form.append('file', Buffer.from(badCsv), 'data.csv')
+    await testUser1.post(`/api/v1/datasets/${ds.id}`, form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+      params: { draft: true }
+    })
+    await waitForDatasetError(testUser1, ds.id, { draft: true })
+
+    const before = (await testUser1.get(`/api/v1/datasets/${ds.id}/task-progress`)).data
+    assert.equal(before.task, 'index')
+    assert.equal(before.error, true)
+
+    await testUser1.delete(`/api/v1/datasets/${ds.id}/draft`)
+    const after = (await testUser1.get(`/api/v1/datasets/${ds.id}/task-progress`)).data
+    assert.deepEqual(after, {}, 'task progress must be cleared when the draft is cancelled')
+  })
+
   test('a combined PATCH changing a validation rule and constraints together escalates past validation-updated', async () => {
     // A compatible-schema validation-rule-only patch on a finalized dataset normally lands on
     // 'validation-updated', which process-file.ts finalizes directly WITHOUT ever reaching

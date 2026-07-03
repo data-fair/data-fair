@@ -132,6 +132,31 @@ Exceptions:
 
 Journal events: `error` for permanent failures, `error-retry` for retriable ones.
 
+## Task Progress
+
+Alongside journal events, workers publish a live progress indicator consumed by the UI task
+loader (`GET /datasets/{id}/task-progress`, shown in the right-hand navigation, the status card
+and the journal view).
+
+- State lives in a single `taskProgress` field on the dataset's `journals` document
+  (`{ task, progress, error? }`) — one per dataset, shared between draft and published
+  processing. Every update is also pushed on the `datasets/{id}/task-progress` websocket
+  channel (`api/src/datasets/utils/task-progress.ts`).
+- `progress` is `-1` (indeterminate) right after a task starts, then a 0-100 percentage,
+  throttled to at most one write per 250ms.
+- On success a non-final task leaves `{ task, progress: 100 }`, immediately superseded when the
+  next task starts. `finalize` — or any task flagged `finalTask`, such as the validate step of
+  a draft cancelled by the worker itself — clears the field entirely.
+- **On failure the field is intentionally kept**, as `{ task, progress, error: true }`: while
+  the dataset sits in `error` status the UI shows which task failed (red bar) and how far it
+  got. It is overwritten as soon as reprocessing starts (constraint dropped, new file
+  uploaded, retry...).
+- Corollary: a terminal transition that discards the errored work *without running another
+  worker* must clear the field explicitly, or the failed task would be displayed forever. The
+  one such transition is user-initiated draft cancellation (`DELETE /datasets/{id}/draft`),
+  which calls `clearTaskProgress` — e.g. a draft that failed the unicity gate during `index`
+  and is then cancelled reverts to the healthy published version with an empty task loader.
+
 ## REST Dataset Partial Updates
 
 REST datasets can receive incremental data updates while remaining in `finalized` status. The `_partialRestStatus` field tracks progress through a mini-pipeline:
@@ -183,5 +208,7 @@ These run on finalized datasets as background housekeeping:
 |------|---------|
 | `shared/statuses.json` | Status display labels and icons |
 | `shared/events.json` | Journal event definitions (start/end per step) |
+| `api/src/datasets/utils/task-progress.ts` | Task progress persistence + websocket emission, `clearTaskProgress` |
+| `ui/src/components/dataset/dataset-task-progress.vue` | UI task loader consuming `GET /task-progress` |
 | `api/src/datasets/service.js` | Dataset CRUD, patch logic, draft merge |
 | `api/src/datasets/router.js` | HTTP endpoints, triggers worker pings |
