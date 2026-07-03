@@ -1,11 +1,12 @@
 import path from 'path'
 import { Piscina } from 'piscina'
 import _config from 'config'
+import { transferableRawBuffer, slimDatasetForFlatten } from './worker-transfer.ts'
 
 const config = _config as any
 
 export const geojson2pbfPiscina = new Piscina({
-  filename: path.resolve(import.meta.dirname, '../../datasets/threads/geojson2pbf.js'),
+  filename: path.resolve(import.meta.dirname, '../../datasets/threads/geojson2pbf.ts'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,
   maxThreads: config.tiles.maxThreads
@@ -30,6 +31,16 @@ export const geojson2pbf = async (geojson: any, xyz: any, vtPrepared?: any) => {
   if (!geojson || !geojson.features || !geojson.features.length) return null
   const buf = Buffer.from(await geojson2pbfPiscina.run({ geojson, xyz, vtPrepared }))
   return buf
+}
+
+// Zero-copy variant for the neighbors/non-vtPrepared vector-tile hot path: transfer the RAW ES response
+// buffer to the worker (which parses + builds geojson + renders), rather than parsing/structured-cloning a
+// geojson object graph on the main thread. Returns the ES count/total alongside the tile so the caller can
+// set the same x-tilesampling header and VT cache entry the esResponse path produced.
+export const geojson2pbfFromBuffer = async (rawBuffer: Buffer, xyz: any, dataset: any): Promise<{ tile: Buffer | null, count: number, total: number | undefined }> => {
+  const { payload, transferList } = transferableRawBuffer(rawBuffer)
+  const { pbf, count, total } = await geojson2pbfPiscina.run({ rawBuffer: payload, xyz, dataset: slimDatasetForFlatten(dataset) }, { transferList })
+  return { tile: count ? Buffer.from(pbf) : null, count, total }
 }
 
 export const defaultSelect = (dataset) => {

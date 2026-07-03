@@ -27,18 +27,38 @@ export const mockAppId = (name: string) => slug(`${mockUrl}/${name}/`, { lower: 
 
 const axiosOpts = { baseURL }
 
-export const axios = (opts = {}) => axiosBuilder({ ...axiosOpts, ...opts })
+// Regression harness: with FORCE_STREAM=1 in the env, append `?_stream=true` to every `/lines` GET so the
+// whole suite exercises the streamed source (json/csv/geojson) instead of the default buffered path — the
+// per-request opt-in is functionally identical to enabling experimental.streamReadLines. Ineligible formats
+// (pbf/xlsx/ods) ignore `_stream`, so this only flips the eligible reads. No effect unless FORCE_STREAM is set.
+const forceStream = !!process.env.FORCE_STREAM
+const installForceStream = (ax: any) => {
+  if (forceStream && ax?.interceptors) {
+    ax.interceptors.request.use((cfg: any) => {
+      // skip requests that already carry _stream (in the URL or in params): the server rejects duplicate
+      // query parameters with a 400, and stream-read-lines.api.spec.ts sets _stream=true explicitly.
+      if ((cfg.method ?? 'get').toLowerCase() === 'get' && /\/lines(\?|$)/.test(cfg.url ?? '') &&
+        !/[?&]_stream=/.test(cfg.url ?? '') && cfg.params?._stream === undefined) {
+        cfg.params = { ...(cfg.params ?? {}), _stream: 'true' }
+      }
+      return cfg
+    })
+  }
+  return ax
+}
+
+export const axios = (opts = {}) => installForceStream(axiosBuilder({ ...axiosOpts, ...opts }))
 export const anonymousAx = axios()
 
-export const axiosAuth = (email: string, org?: string, adminMode = false, opts = {}) => {
-  return _axiosAuth({
+export const axiosAuth = async (email: string, org?: string, adminMode = false, opts = {}) => {
+  return installForceStream(await _axiosAuth({
     email,
     password: 'passwd',
     directoryUrl,
     org,
     axiosOpts: { ...axiosOpts, headers: { 'x-cache-bypass': '1' }, ...opts },
     adminMode
-  })
+  }))
 }
 
 export const waitForWorkerIdle = async (timeoutMs = 5000): Promise<void> => {

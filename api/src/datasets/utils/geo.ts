@@ -219,29 +219,10 @@ export const geometry2fields = async (dataset: Dataset, doc: Record<string, any>
   return fields
 }
 
-export const result2geojson = (esResponse: any, flatten: (o: Record<string, any>) => Record<string, any>) => {
-  return {
-    type: 'FeatureCollection',
-    total: esResponse.hits.total?.value,
-    features: esResponse.hits.hits.map((hit: any) => {
-      const properties = hit._source
-      let geometry = properties._geoshape
-      delete properties._geoshape
-      if (!geometry && properties._geopoint) {
-        const [lat, lon] = properties._geopoint.split(',')
-        delete properties._geopoint
-        geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
-      }
-      properties._id = hit._id
-      return {
-        type: 'Feature',
-        id: hit._id,
-        geometry,
-        properties: flatten(properties)
-      }
-    })
-  }
-}
+// hit2feature and result2geojson live in the config-free geo-features.ts (so the geojson2pbf worker and the
+// streamed geojson pipeline can import them without geo.ts's heavy deps). Re-exported here so existing
+// importers (geo.result2geojson for shp/tiles, geo.hit2feature) keep working unchanged.
+export { hit2feature, result2geojson } from './geo-features.ts'
 
 export const aggs2geojson = (aggsResult: { total: number, aggs: Array<{ centroid: { lon: number, lat: number }, bbox: number[], value: any, [key: string]: any }> }) => {
   return {
