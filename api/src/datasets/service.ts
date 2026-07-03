@@ -29,6 +29,7 @@ import type { Db } from 'mongodb'
 import type { Client } from '@elastic/elasticsearch'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { VirtualDataset } from '#types'
+import { isRestDataset } from '#types/dataset/index.ts'
 import { type Locale } from '../../i18n/utils.ts'
 
 const debugMasterData = debugLib('master-data')
@@ -436,8 +437,8 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     }
   }
 
-  if (dataset.isRest && 'constraints' in patch) {
-    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch } as any)
+  if (isRestDataset(dataset) && 'constraints' in patch) {
+    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch })
   }
 
   if (removedRestProps && removedRestProps.length) {

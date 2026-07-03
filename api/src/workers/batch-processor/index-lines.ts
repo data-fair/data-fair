@@ -19,7 +19,7 @@ import * as attachmentsUtils from '../../datasets/utils/attachments.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
-import type { DatasetInternal } from '#types'
+import type { DatasetInternal, Event } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import config from '#config'
@@ -175,7 +175,7 @@ export default async function (dataset: DatasetInternal) {
           diagnosticErrorCount: fileResult.count,
           diagnosticCapped: fileResult.capped,
           unicityErrorCount
-        } as any)
+        } as Event)
         await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
           params: {
             nbErrors: String(fileResult.count),
