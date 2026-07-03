@@ -103,8 +103,25 @@ piped through `createGunzip` (asStream bypasses auto-decompression).
 `searchStream`/`searchRaw`) · `routes/lines-source.ts` · `routes/lines-pipeline.ts` ·
 `routes/lines-body.ts` · `utils/worker-transfer.ts` · `routes/read.ts` (`readLines` mode selection).
 
+## Monitoring
+
+Two Prometheus metrics (`misc/utils/observe.ts`) track detailed `/lines` usage — how much traffic actually
+goes through an optimized path, per format, in requests and in bytes:
+
+- `df_read_lines_total{format, mode, status}` — request counter. `format` is normalized to a bounded set
+  (`json`/`csv`/`geojson`/`xlsx`/`ods`/`wkt`/`shp`/`pbf`/`other`); `mode` is the **outcome** of mode
+  selection: `streamed` (asStream source), `raw-worker` (zero-copy tile/shp), `cache` (vt-cache hit, no ES
+  query), `buffered` (the non-optimized baseline); `status` is the class (`2xx`…`5xx`).
+- `df_read_lines_bytes{format, mode}` — histogram of successful response body sizes (Content-Length set by
+  `res.send`), buckets 10 KB → 50 MB with a 500 KB edge (the once-considered streaming threshold), so the
+  share of large reads — the population the streamed source exists for — is directly visible.
+
+Durations per format remain on `df_req_step_seconds{routeName="…/lines?format=…", step}`. Grafana: row
+« Lectures de données (/lines) » in the koumoul dashboard (`infrastructure/manifests/misc/grafana-koumoul.yaml`).
+
 ## Rollout
 
 Enable `experimental.streamReadLines` in staging, measure RSS / heap / GC overhead / event-loop lag under
 representative large responses (`/cpu-profile`, `/heap-profile`), keep it on if they improve without a
-latency regression. The buffered source remains the default and the fallback regardless.
+latency regression — the `df_read_lines_*` metrics above give the before/after view per mode. The buffered
+source remains the default and the fallback regardless.

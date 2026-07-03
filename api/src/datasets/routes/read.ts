@@ -57,6 +57,9 @@ const readLines: RequestHandler = async (req, res) => {
   const publicBaseUrl = reqPublicBaseUrl(req)
   observe.reqRouteName(req, `${req.route.path}?format=${req.query.format || 'json'}`)
   observe.reqStep(req, 'middlewares')
+  // usage counters (format / serving mode / status / body bytes) — mode is upgraded from 'buffered' at
+  // the decision points below (vt-cache hit, streamed source, zero-copy raw-worker paths)
+  observe.readLinesStart(req, res)
   const db = mongo.db
   res.throttleEnd()
 
@@ -132,6 +135,7 @@ const readLines: RequestHandler = async (req, res) => {
     if (value) {
       res.type('application/x-protobuf')
       res.setHeader('x-tilesmode', 'cache/' + sampling)
+      observe.readLinesMode(req, 'cache')
       res.throttleEnd('static')
       if (value.count && value.total) res.setHeader('x-tilesampling', value.count + '/' + value.total)
       return res.status(200).send(value.tile ? value.tile.buffer : value.buffer)
@@ -210,6 +214,7 @@ const readLines: RequestHandler = async (req, res) => {
   const esSearchStart = Date.now()
   if (eligible) {
     try {
+      observe.readLinesMode(req, 'streamed')
       streamedSource = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext)
     } catch (err) {
       await manageESError(req, err)
@@ -224,6 +229,7 @@ const readLines: RequestHandler = async (req, res) => {
     // bbox (a separate aggregation the worker appends to the geojson) is independent of the hits, so the
     // two ES round trips run concurrently.
     try {
+      observe.readLinesMode(req, 'raw-worker')
       ;[rawShpBuffer, rawShpBbox] = await Promise.all([
         esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext),
         esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
@@ -241,6 +247,7 @@ const readLines: RequestHandler = async (req, res) => {
     // so routing it here would leak the raw stored URL. The default tile select excludes `_`-prefixed keys,
     // so this only matters when a caller opts in — rare, and kept correct by falling through to search().
     try {
+      observe.readLinesMode(req, 'raw-worker')
       rawTileBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
     } catch (err) {
       await manageESError(req, err)
