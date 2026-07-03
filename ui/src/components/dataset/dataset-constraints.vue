@@ -27,6 +27,7 @@ en:
 import type { Dataset, SchemaProperty } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import datasetContractSchema from '~/../../api/types/dataset/schema.js'
+import equal from 'fast-deep-equal'
 
 type Constraints = NonNullable<Dataset['constraints']>
 
@@ -42,6 +43,10 @@ const { t } = useI18n()
 const editConstraints = ref<{ constraints: Constraints } | null>({ constraints: props.modelValue ? [...props.modelValue] : [] })
 
 watch(() => props.modelValue, (v) => {
+  // skip rebuilding the vjsf model when the parent is just echoing back the value
+  // this component last emitted (e.g. after writing it into an edit buffer) -
+  // otherwise vjsf re-renders mid-edit and can lose focus/close an open menu
+  if (editConstraints.value && equal(v ?? [], editConstraints.value.constraints ?? [])) return
   editConstraints.value = { constraints: v ? [...v] : [] }
 })
 
