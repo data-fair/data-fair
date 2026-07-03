@@ -2,7 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axiosAuth, clean } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError } from '../../../support/workers.ts'
+import { waitForFinalize, waitForDatasetError, doAndWaitForFinalize } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -55,6 +55,41 @@ test.describe('file dataset unique constraint', () => {
     const ds = await upload(csv, [{ type: 'unique', properties: ['a', 'b'] }])
     const finalized = await waitForFinalize(testUser1, ds.id)
     assert.equal(finalized.status, 'finalized')
+    assert.equal((await fetchDiagnostic(ds.id)).status, 404)
+  })
+
+  test('adding a constraint on a finalized dataset that violates it re-triggers indexing and errors', async () => {
+    // uploaded with no constraint at all, so it finalizes despite the duplicate
+    const csv = 'a,b\nx,1\ny,2\nx,1\nz,3\n'
+    const ds = await upload(csv, [])
+    const finalized = await waitForFinalize(testUser1, ds.id)
+    assert.equal(finalized.status, 'finalized')
+
+    await testUser1.patch(`/api/v1/datasets/${ds.id}`, { constraints: [{ type: 'unique', properties: ['a', 'b'] }] })
+    await waitForDatasetError(testUser1, ds.id)
+
+    const errEvent = await findEvent(ds.id, 'validation-error')
+    assert.ok(errEvent, 'expected validation-error event')
+    assert.equal(errEvent.hasDiagnosticFile, true)
+
+    const diag = await fetchDiagnostic(ds.id)
+    assert.equal(diag.status, 200)
+  })
+
+  test('dropping the constraint of an error-state dataset lets it re-finalize', async () => {
+    const csv = 'a,b\n' + [
+      'x,1',
+      'y,2',
+      'x,1',
+      'z,3'
+    ].join('\n') + '\n'
+    const ds = await upload(csv, [{ type: 'unique', properties: ['a', 'b'] }])
+    await waitForDatasetError(testUser1, ds.id)
+
+    const finalized = await doAndWaitForFinalize(testUser1, ds.id, () =>
+      testUser1.patch(`/api/v1/datasets/${ds.id}`, { constraints: [] }))
+    assert.equal(finalized.status, 'finalized')
+    assert.deepEqual(finalized.constraints, [])
     assert.equal((await fetchDiagnostic(ds.id)).status, 404)
   })
 })

@@ -190,6 +190,10 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   } else if (patch.schema && patch.schema.find((f: any) => dataset.schema.find((df: any) => df.key === f.key && !equal(df['x-capabilities'], f['x-capabilities'])))) {
     // x-capabilities changes affect ES analyzers/normalizers and require full re-indexing
     patch.status = reindexerStatus
+  } else if (dataset.file && 'constraints' in patch) {
+    // unique constraints changed (added, removed or dropped to null/[]), trigger full
+    // re-indexing so the index-lines unicity gate re-validates existing data against them
+    patch.status = reindexerStatus
   } else if (removedRestProps.length) {
     patch.status = 'analyzed'
   } else if (dataset.file && patch.schema && datasetUtils.schemasTransformChange(patch.schema, dataset.schema)) {

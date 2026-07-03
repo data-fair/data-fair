@@ -133,25 +133,30 @@ export default async function (dataset: DatasetInternal) {
     // MongoDB unique index). Real stored columns are guaranteed by config-time
     // checkConstraints.
     const uniqueConstraints = (dataset.constraints ?? []).filter((c: any) => c.type === 'unique')
-    if (!isRestDataset(dataset) && uniqueConstraints.length) {
-      await esClient.client.indices.refresh({ index: indexName })
+    if (!isRestDataset(dataset)) {
+      // Always run through a DiagnosticWriter, even with zero constraints: discard()
+      // clears any stale diagnostic left by a prior failed run (e.g. the constraint
+      // that caused the previous error was since dropped from the dataset).
       const writer = new DiagnosticWriter(dataset)
       let unicityErrorCount = 0
-      for (const constraint of uniqueConstraints) {
-        const remaining = DIAGNOSTIC_FILE_CAP - unicityErrorCount
-        if (remaining <= 0) break
-        const groups = await findUnicityDuplicates(indexName, constraint, dataset.schema ?? [], remaining)
-        const field = constraint.properties.join(', ')
-        for (const group of groups) {
-          for (const line of group.lines) {
-            await writer.addError({
-              line,
-              type: 'unicity',
-              field,
-              message: `valeur en double${group.count > group.lines.length ? ` (${group.count} occurrences)` : ''}`,
-              rawValue: group.keyLabel
-            })
-            unicityErrorCount++
+      if (uniqueConstraints.length) {
+        await esClient.client.indices.refresh({ index: indexName })
+        for (const constraint of uniqueConstraints) {
+          const remaining = DIAGNOSTIC_FILE_CAP - unicityErrorCount
+          if (remaining <= 0) break
+          const groups = await findUnicityDuplicates(indexName, constraint, dataset.schema ?? [], remaining)
+          const field = constraint.properties.join(', ')
+          for (const group of groups) {
+            for (const line of group.lines) {
+              await writer.addError({
+                line,
+                type: 'unicity',
+                field,
+                message: `valeur en double${group.count > group.lines.length ? ` (${group.count} occurrences)` : ''}`,
+                rawValue: group.keyLabel
+              })
+              unicityErrorCount++
+            }
           }
         }
       }
