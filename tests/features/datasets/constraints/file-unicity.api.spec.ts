@@ -11,10 +11,12 @@ const fetchDiagnostic = (id: string) =>
 const findEvent = async (id: string, type: string) =>
   (await testUser1.get(`/api/v1/datasets/${id}/journal`)).data.find((e: any) => e.type === type)
 
-const upload = async (csv: string, constraints: any[]) => {
+const defaultSchema = [{ key: 'a', type: 'string' }, { key: 'b', type: 'string' }]
+
+const upload = async (csv: string, constraints: any[], schema: any[] = defaultSchema) => {
   const form = new FormData()
   form.append('file', Buffer.from(csv), 'data.csv')
-  form.append('schema', JSON.stringify([{ key: 'a', type: 'string' }, { key: 'b', type: 'string' }]))
+  form.append('schema', JSON.stringify(schema))
   form.append('constraints', JSON.stringify(constraints))
   return (await testUser1.post('/api/v1/datasets', form, {
     headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
@@ -48,6 +50,32 @@ test.describe('file dataset unique constraint', () => {
     for (const r of rows.slice(1)) assert.match(r, /,unicity,/)
     const lineNumbers = rows.slice(1).map((r: string) => Number(r.split(',')[0])).sort()
     assert.deepEqual(lineNumbers, [1, 3])
+  })
+
+  test('a duplicate key on a date column shows a human-readable date in the diagnostic CSV, not epoch millis', async () => {
+    // ES composite aggregation buckets return date-mapped columns as epoch millis; the
+    // diagnostic raw_value must show the date the user entered instead.
+    const csv = 'a,d\n' + [
+      'x,2024-07-02',
+      'y,2024-07-03',
+      'x,2024-07-02', // duplicate of row 1
+      'z,2024-07-04'
+    ].join('\n') + '\n'
+    const ds = await upload(
+      csv,
+      [{ type: 'unique', properties: ['a', 'd'] }],
+      [{ key: 'a', type: 'string' }, { key: 'd', type: 'string', format: 'date' }]
+    )
+    await waitForDatasetError(testUser1, ds.id)
+
+    const diag = await fetchDiagnostic(ds.id)
+    assert.equal(diag.status, 200)
+    const rows = diag.data.replace(/^\uFEFF/, '').trim().split('\n')
+    const rawValues = rows.slice(1).map((r: string) => r.split(',').pop())
+    for (const rawValue of rawValues) {
+      assert.equal(rawValue, 'x | 2024-07-02')
+      assert.doesNotMatch(rawValue as string, /^\d+$/, 'raw_value must not be a bare epoch-millis number')
+    }
   })
 
   test('a dataset with no duplicates finalizes normally', async () => {

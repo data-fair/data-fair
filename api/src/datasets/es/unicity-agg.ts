@@ -1,5 +1,5 @@
 import es from '#es'
-import { unicityAggField } from './operations.ts'
+import { unicityAggField, unicityKeyPartLabel } from './operations.ts'
 
 export type DuplicateGroup = { keyLabel: string, lines: number[], count: number }
 
@@ -51,7 +51,7 @@ export const findUnicityDuplicates = async (
           .map((h: any) => h._source?._i)
           .filter((i: any) => typeof i === 'number')
         duplicates.push({
-          keyLabel: constraint.properties.map(k => bucket.key[k]).join(' | '),
+          keyLabel: constraint.properties.map(k => unicityKeyPartLabel(byKey.get(k), bucket.key[k])).join(' | '),
           lines,
           count: bucket.doc_count
         })

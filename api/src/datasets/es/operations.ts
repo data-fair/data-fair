@@ -524,6 +524,29 @@ export const unicityAggField = (prop: any): string => {
 }
 
 /**
+ * Human-readable label for one part of a unicity duplicate-group composite key (used to build
+ * `DuplicateGroup.keyLabel`, itself written as `raw_value` in the validation diagnostic CSV).
+ * ES composite `terms` sources on `date`/`date-time` columns return the raw epoch-millis bucket
+ * key, which is meaningless to a user reading the CSV — convert it to the date the user would
+ * recognize: `YYYY-MM-DD` for `format: 'date'` (mirrors the slicing convention already used for
+ * date buckets in `es/values.ts`), full ISO 8601 for `format: 'date-time'`. Every other column
+ * type (string, number, boolean, …) is passed through as its string form, unchanged.
+ * Defensive: composite `terms` sources never enable `missing_bucket`, and ES always emits a
+ * numeric key for a `date`-mapped field, so a null/undefined/non-numeric key should never reach
+ * here — but a stray one must never crash the indexer, so it degrades to '' / the raw string
+ * instead of throwing (a bad `Date` would otherwise silently produce "Invalid Date").
+ */
+export const unicityKeyPartLabel = (prop: any, value: any): string => {
+  if (value === null || value === undefined) return ''
+  const isDateColumn = prop?.type === 'string' && (prop.format === 'date' || prop.format === 'date-time')
+  if (isDateColumn && typeof value === 'number') {
+    const iso = new Date(value).toISOString()
+    return prop.format === 'date' ? iso.slice(0, 10) : iso
+  }
+  return String(value)
+}
+
+/**
  * Builds the aggregations object for the words aggregation.
  * significant_text is costly, and we look for approximative statistics in words-agg
  * not for exhaustivity, so we run it on a sample.
