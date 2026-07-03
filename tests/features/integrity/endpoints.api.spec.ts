@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, anonymousAx } from '../../support/axios.ts'
 import { sendDataset, getRawDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions } from '../../support/integrity.ts'
 
@@ -53,7 +53,7 @@ test('_fix on an unchanged file dedupes (no spurious revision)', async () => {
   expect((await listIntegrityKeys(prefix)).length).toBe(1)
 })
 
-test('revisions endpoint lists revisions newest-first and is superadmin-only', async () => {
+test('revisions endpoint lists revisions newest-first and is readable by the owner admin', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const user = await axiosAuth('test_superadmin@test.com', undefined, false) // same user, no adminMode
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
@@ -82,8 +82,42 @@ test('revisions endpoint lists revisions newest-first and is superadmin-only', a
   expect(page1.results.length).toBe(1)
   expect(page1.results[0].i).toBe(res.results[0].i)
 
-  // superadmin-only
-  await expect(user.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).rejects.toMatchObject({ status: 403 })
+  // the personal owner (admin of the owner account) can read the revisions
+  expect((await user.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data.count).toBe(2)
+})
+
+test('integrity reads are allowed to the owner admin, writes stay superadmin-only', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const owner = await axiosAuth('test_superadmin@test.com', undefined, false) // same user = personal owner, no adminMode
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 1)
+
+  // owner (admin of the owner account) can read status and revisions
+  expect((await owner.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.active).toBe(true)
+  expect((await owner.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data.count).toBe(1)
+  // ...and sees the integrity field on the dataset
+  expect((await owner.get(`/api/v1/datasets/${dataset.id}`)).data.integrity?.active).toBe(true)
+
+  // writes remain superadmin-only
+  await expect(owner.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })).rejects.toMatchObject({ status: 403 })
+  await expect(owner.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).rejects.toMatchObject({ status: 403 })
+  await expect(owner.post(`/api/v1/datasets/${dataset.id}/_integrity/_fix`)).rejects.toMatchObject({ status: 403 })
+})
+
+test('integrity state is hidden from readers who are not owner admins', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 1)
+  // make the dataset publicly readable, then read it anonymously
+  await admin.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ classes: ['list', 'read'] }])
+  const body = (await anonymousAx.get(`/api/v1/datasets/${dataset.id}`)).data
+  expect(body.integrity).toBeUndefined()
+  expect((await anonymousAx.get(`/api/v1/datasets/${dataset.id}`, { params: { select: 'id,integrity' } })).data.integrity).toBeUndefined()
+  await expect(anonymousAx.get(`/api/v1/datasets/${dataset.id}/_integrity`)).rejects.toMatchObject({ status: 403 })
 })
 
 test('disabling integrity clears the breach state and error-filter listing', async () => {

@@ -32,7 +32,7 @@
         <span v-else>{{ t('neverChecked') }}</span>
         <v-spacer />
         <v-btn
-          v-if="state.active"
+          v-if="adminMode && state.active"
           :prepend-icon="mdiShieldRefresh"
           :loading="check.loading.value"
           color="primary"
@@ -43,7 +43,7 @@
           {{ t('checkNow') }}
         </v-btn>
         <v-btn
-          v-if="state.active && state.lastCheck?.status === 'breach'"
+          v-if="adminMode && state.active && state.lastCheck?.status === 'breach'"
           :prepend-icon="mdiWrench"
           :loading="fix.loading.value"
           color="warning"
@@ -55,17 +55,19 @@
         </v-btn>
       </div>
 
-      <v-divider class="my-4" />
+      <template v-if="adminMode">
+        <v-divider class="my-4" />
 
-      <v-switch
-        :model-value="state.active"
-        :label="t('enableLabel')"
-        :loading="toggle.loading.value"
-        color="primary"
-        density="compact"
-        hide-details
-        @update:model-value="(v) => toggle.execute(!!v)"
-      />
+        <v-switch
+          :model-value="state.active"
+          :label="t('enableLabel')"
+          :loading="toggle.loading.value"
+          color="primary"
+          density="compact"
+          hide-details
+          @update:model-value="(v) => toggle.execute(!!v)"
+        />
+      </template>
 
       <template v-if="state.active">
         <v-divider class="my-4" />
@@ -165,6 +167,10 @@ import { mdiShieldRefresh, mdiWrench } from '@mdi/js'
 
 const { t, locale } = useI18n()
 const { dataset } = useDatasetStore()
+const session = useSession()
+// the panel (status + revision history) is visible to the owner's admins; the enable/disable and
+// check/fix write actions stay superadmin-only
+const adminMode = computed(() => !!session.state.user?.adminMode)
 
 type IntegrityState = {
   active: boolean

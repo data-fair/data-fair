@@ -327,7 +327,7 @@
             />
           </v-tabs-window-item>
           <v-tabs-window-item
-            v-if="adminMode"
+            v-if="canReadIntegrity"
             value="integrity"
           >
             <dataset-integrity />
@@ -704,6 +704,9 @@ const { sendUiNotif } = useUiNotif()
 const { accountRole } = useSessionAuthenticated()
 const session = useSession()
 const adminMode = computed(() => !!session.state.user?.adminMode)
+// integrity reads (status + revision history) are open to the owner's admins; the enable/disable
+// and check/fix actions inside the tab stay superadmin-only (gated in dataset-integrity.vue)
+const canReadIntegrity = computed(() => adminMode.value || !!dataset.value?.userPermissions?.includes('readIntegrity'))
 const { canContribDep } = usePermissions()
 const { height: windowHeight } = useWindowSize()
 
@@ -1103,9 +1106,11 @@ const sections = computedDeepDiff(() => {
     }
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
   }
-  // Integrity tab (superadmin only) — appended to the activity section, creating it if eventsIntegration is off
-  if (adminMode.value) {
-    activityTabs.push({ key: 'integrity', title: t('integrity'), icon: mdiShieldKey, agentDesc: 'Superadmin-only data-integrity panel: tamper-detection status, last check, revision history, enable/disable and reconcile (fix) actions for this dataset.' })
+  // Integrity tab — appended to the activity section, creating it if eventsIntegration is off.
+  // Reads (status + revision history) are visible to the owner's admins; the enable/disable and
+  // reconcile (fix) actions inside the panel remain superadmin-only.
+  if (canReadIntegrity.value) {
+    activityTabs.push({ key: 'integrity', title: t('integrity'), icon: mdiShieldKey, agentDesc: 'Data-integrity panel: tamper-detection status, last check and revision history — readable by the owner account admins. The enable/disable and reconcile (fix) actions are superadmin-only.' })
     result.activity = result.activity || { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
   }
 

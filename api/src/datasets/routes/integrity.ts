@@ -4,6 +4,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import config from '#config'
 import mongo from '#mongo'
 import { reqDataset, readDataset } from '../middlewares.ts'
+import * as permissions from '../../misc/utils/permissions.ts'
 import { isFileDataset } from '#types/dataset/index.ts'
 import { integrityStore } from '../../integrity/store-factory.ts'
 import { revisionPrefix, parseRevisionIndex } from '../../integrity/operations.ts'
@@ -37,8 +38,7 @@ export const registerIntegrityRoutes = (router: Router) => {
     res.status(200).json({ active })
   })
 
-  router.get('/:datasetId/_integrity', readDataset({ noCache: true }), async (req, res) => {
-    reqAdminMode(req)
+  router.get('/:datasetId/_integrity', readDataset({ noCache: true }), permissions.middleware('readIntegrity', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
     res.json(dataset.integrity ?? { active: false })
   })
@@ -61,8 +61,7 @@ export const registerIntegrityRoutes = (router: Router) => {
     res.json(await checker.checkDataset(dataset))
   })
 
-  router.get('/:datasetId/_integrity/revisions', readDataset({ noCache: true }), async (req, res) => {
-    reqAdminMode(req)
+  router.get('/:datasetId/_integrity/revisions', readDataset({ noCache: true }), permissions.middleware('readIntegrityRevisions', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
     if (!dataset.integrity?.active) throw httpError(400, 'integrity is not active on this dataset')
     const store = integrityStore()

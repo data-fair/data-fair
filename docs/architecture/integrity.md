@@ -319,7 +319,32 @@ once per environment; on a fresh environment both datasets seed automatically.
 
 ## 7. Access & audit
 
-The historized store is **admin-only**. Two access models, by provider capability:
+### 7.1 Endpoint & field permissions
+
+The integrity API splits read from write:
+
+- **Writes are superadmin-only** (`reqAdminMode`), matching the `_diagnose` pattern: `PUT
+  /datasets/{id}/_integrity` (enable/disable), `POST …/_integrity/_check`, `POST
+  …/_integrity/_fix`. Registered as the superadmin-grouped operations `writeIntegrity`,
+  `checkIntegrity`, `fixIntegrity` (never grantable through permissions).
+- **Reads are open to the owner account's admins** via the registered admin-class operations
+  `readIntegrity` / `readIntegrityRevisions`: `GET /datasets/{id}/_integrity`, `GET
+  …/_integrity/revisions`, and the `integrity` field embedded in dataset responses (which
+  drives the list breach badge and the `status=error` filter row). These are enforced with the
+  standard `permissions.middleware(...)` machinery, so an owner admin holds them implicitly and
+  a superadmin holds them via admin mode.
+- `clean()` (`api/src/datasets/utils/index.ts`) **strips the `integrity` field** from any
+  response whose reader cannot `readIntegrity`, so anonymous/unauthorized readers never see
+  breach verdicts or anchors even when they can otherwise read the dataset. This also scopes the
+  list breach badge to authorized readers.
+- **UI:** the integrity tab is shown when the reader holds `readIntegrity` (or is in admin
+  mode); the enable/disable switch and the check/fix action buttons inside it render only in
+  admin mode. The status alerts and revision-history table are visible to every viewer of the
+  tab.
+
+### 7.2 Store access
+
+The historized store itself is **admin-mediated**. Two access models, by provider capability:
 
 1. **App-mediated (baseline, portable).** The service holds the bucket credentials and serves
    an owner's revisions through its own authz layer (it already knows owner boundaries) —
