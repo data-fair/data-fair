@@ -34,6 +34,18 @@ test('check is ok after enable, breach after out-of-band tamper, ok again after 
   expect(check.status).toBe('ok')
 })
 
+test('out-of-band deletion of the stored file is reported as a breach', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const prefix = `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/`
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(prefix, 1)
+
+  await admin.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { delete: true })
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.status).toBe('breach')
+})
+
 test('breach notification fires once per transition, not on every re-check', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)

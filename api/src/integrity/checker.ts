@@ -22,7 +22,12 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<{ status: 
   if (!latest) return { status: 'unknown' } // no anchor written yet
 
   const expectedMd5 = (await store.getRevision(latest)).hash.md5
-  const actualMd5 = await md5OfStorageFile(datasetUtils.originalFilePath(dataset))
+  // a missing file is the strongest tamper signal (deleted out-of-band) → breach, not an exception;
+  // both storage backends normalize a missing file to httpError(404)
+  const actualMd5 = await md5OfStorageFile(datasetUtils.originalFilePath(dataset)).catch((err) => {
+    if (err.status === 404) return undefined
+    throw err
+  })
   const status: 'ok' | 'breach' = actualMd5 === expectedMd5 ? 'ok' : 'breach'
   const date = new Date().toISOString()
   const wasBreach = dataset.integrity?.lastCheck?.status === 'breach'

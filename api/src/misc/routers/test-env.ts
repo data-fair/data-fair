@@ -249,7 +249,8 @@ router.post('/tamper-dataset-file/:datasetId', async (req, res) => {
   if (!dataset) return res.status(404).send()
   const datasetUtils = await import('../../datasets/utils/index.ts')
   const { filesStorage } = await import('../../files-storage/index.ts')
-  await filesStorage.writeString(datasetUtils.originalFilePath(dataset), req.body?.content ?? 'tampered-out-of-band')
+  if (req.body?.delete) await filesStorage.removeFile(datasetUtils.originalFilePath(dataset))
+  else await filesStorage.writeString(datasetUtils.originalFilePath(dataset), req.body?.content ?? 'tampered-out-of-band')
   res.status(204).send()
 })
 
