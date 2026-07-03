@@ -213,10 +213,6 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   } else if (patch.schema && patch.schema.find((f: any) => dataset.schema.find((df: any) => df.key === f.key && !equal(df['x-capabilities'], f['x-capabilities'])))) {
     // x-capabilities changes affect ES analyzers/normalizers and require full re-indexing
     patch.status = reindexerStatus
-  } else if (dataset.file && 'constraints' in patch) {
-    // unique constraints changed (added, removed or dropped to null/[]), trigger full
-    // re-indexing so the index-lines unicity gate re-validates existing data against them
-    patch.status = reindexerStatus
   } else if (removedRestProps.length) {
     patch.status = 'analyzed'
   } else if (dataset.file && patch.schema && datasetUtils.schemasTransformChange(patch.schema, dataset.schema)) {
@@ -235,6 +231,33 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   } else if (patch.rest) {
     // changes in rest history mode will be processed by the finalizer worker
     patch.status = 'indexed'
+  }
+
+  if (dataset.file && 'constraints' in patch) {
+    // unique constraints changed (added, removed or dropped to null/[]): make sure the
+    // index-lines unicity gate re-runs, no matter what the chain above decided. Applied
+    // as a floor AFTER the chain (rather than as a chain member) so that a combined patch
+    // (e.g. structure tab saving a schema transform/validation-rule change together with a
+    // constraint change) doesn't lose the other status trigger to first-match-wins ordering.
+    //
+    // Statuses that already reach batch-processor/index-lines.ts (the unicity gate) on their
+    // own, directly or via the validateFile task: 'loaded' (full file reprocessing),
+    // 'analyzed' and 'validated' (reindexerStatus for file datasets). Those are left as-is.
+    //
+    // 'validation-updated' is the one exception: process-file.ts finalizes it directly
+    // (dataset.status === 'validation-updated' ? 'finalized' : 'validated', see
+    // process-file.ts:103) without ever going through index-lines, so it must be escalated
+    // to 'analyzed' — this re-runs both the validation rules and the constraint gate.
+    //
+    // Anything else (including no status change at all, e.g. a constraints-only patch that
+    // matched no earlier branch) doesn't reach the gate either and gets the reindexerStatus
+    // floor ('validated' for file datasets).
+    const reachesUnicityGate = ['loaded', 'analyzed', 'validated']
+    if (patch.status === 'validation-updated') {
+      patch.status = 'analyzed'
+    } else if (!patch.status || !reachesUnicityGate.includes(patch.status)) {
+      patch.status = reindexerStatus
+    }
   }
 
   return { removedRestProps, attemptMappingUpdate }

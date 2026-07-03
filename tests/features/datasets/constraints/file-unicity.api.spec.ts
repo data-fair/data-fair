@@ -120,4 +120,79 @@ test.describe('file dataset unique constraint', () => {
     assert.deepEqual(finalized.constraints, [])
     assert.equal((await fetchDiagnostic(ds.id)).status, 404)
   })
+
+  test('a constraint-only PATCH on a finalized dataset triggers exactly the reindexerStatus (validated)', async () => {
+    // no other trigger in the status chain must fire for a plain constraint change
+    const csv = 'a,b\nx,1\ny,2\nz,3\n'
+    const ds = await upload(csv, [])
+    const finalized = await waitForFinalize(testUser1, ds.id)
+    assert.equal(finalized.status, 'finalized')
+
+    const patched = (await testUser1.patch(`/api/v1/datasets/${ds.id}`, {
+      constraints: [{ type: 'unique', properties: ['a', 'b'] }]
+    })).data
+    assert.equal(patched.status, 'validated')
+    await waitForFinalize(testUser1, ds.id)
+  })
+
+  test('a combined PATCH changing an x-transform and constraints together re-applies both (not left at validated)', async () => {
+    // Before the fix, the constraint branch sat above the schemasTransformChange branch in a
+    // first-match-wins else-if chain, so a combined patch got 'validated' and the new
+    // x-transform was never applied to the data.
+    const csv = 'a,b\nX,1\ny,2\nz,3\n'
+    const ds = await upload(csv, [])
+    const finalized = await waitForFinalize(testUser1, ds.id)
+    assert.equal(finalized.status, 'finalized')
+
+    const schema = finalized.schema.map((p: any) => p.key === 'a' ? { ...p, 'x-transform': { expr: 'LOWER(value)' } } : p)
+    const patched = (await testUser1.patch(`/api/v1/datasets/${ds.id}`, {
+      schema,
+      constraints: [{ type: 'unique', properties: ['a', 'b'] }]
+    })).data
+    // 'analyzed' (not 'validated'): the schemasTransformChange branch of the status chain must
+    // still fire so the transform gets (re)applied to the data, on top of the constraint gate.
+    assert.equal(patched.status, 'analyzed')
+
+    await waitForFinalize(testUser1, ds.id)
+    const lines = (await testUser1.get(`/api/v1/datasets/${ds.id}/lines`, { params: { sort: 'b' } })).data.results
+    assert.equal(lines[0].a, 'x') // transform was applied
+    assert.equal((await fetchDiagnostic(ds.id)).status, 404) // and the constraint held (no duplicates)
+  })
+
+  test('a combined PATCH changing a validation rule and constraints together escalates past validation-updated', async () => {
+    // A compatible-schema validation-rule-only patch on a finalized dataset normally lands on
+    // 'validation-updated', which process-file.ts finalizes directly WITHOUT ever reaching
+    // index-lines (see process-file.ts:103). Combined with a constraints change, the floor in
+    // patch.ts must escalate this to 'analyzed' so BOTH the validation rule and the new
+    // constraint actually get (re-)checked.
+    const csv = 'id,val\nabc,1\ndef,1\n'
+    const ds = await upload(csv, [], [{ key: 'id', type: 'string' }, { key: 'val', type: 'string' }])
+    const finalized = await waitForFinalize(testUser1, ds.id)
+    assert.equal(finalized.status, 'finalized')
+
+    // sanity check: the validation-rule-only patch alone (no constraints) would land on
+    // 'validation-updated' and finalize without reprocessing - this is the state the fix must
+    // NOT leave the combined patch at.
+    const schema = finalized.schema.map((p: any) => p.key === 'id' ? { ...p, pattern: '^[a-z]+$' } : p)
+
+    const patched = (await testUser1.patch(`/api/v1/datasets/${ds.id}`, {
+      schema,
+      constraints: [{ type: 'unique', properties: ['val'] }]
+    })).data
+    assert.equal(patched.status, 'analyzed')
+
+    // val=1 is duplicated on both rows: the (re-applied) constraint must catch it.
+    await waitForDatasetError(testUser1, ds.id)
+    const errEvent = await findEvent(ds.id, 'validation-error')
+    assert.ok(errEvent, 'expected validation-error event')
+    assert.ok((errEvent.unicityErrorCount ?? 0) > 0, 'expected unicityErrorCount > 0 - the constraint gate must have run')
+
+    const diag = await fetchDiagnostic(ds.id)
+    assert.equal(diag.status, 200)
+    const rows = diag.data.replace(/^\uFEFF/, '').trim().split('\n').slice(1)
+    assert.ok(rows.length > 0)
+    // both "abc" and "def" satisfy the new pattern, so the only errors are unicity ones -
+    // the validation rule was re-applied (and passed) rather than silently skipped
+    for (const r of rows) assert.match(r, /,unicity,/)
+  })
 })
