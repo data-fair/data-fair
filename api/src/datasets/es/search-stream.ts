@@ -33,8 +33,9 @@ const openSearchStream = async (client: Client, dataset: any, query: any, abortC
     }
   }, { ...abortContext, meta: true, asStream: true }))
 
-  const body = res.body as unknown as Readable
-  const statusCode = (res as any).statusCode as number
+  // with meta:true the transport returns a TransportResult ({ body, statusCode, headers }) — typed
+  // structurally here to avoid depending on @elastic/transport's types directly
+  const { body, statusCode } = res as unknown as { body: Readable, statusCode: number }
   if (statusCode >= 400) {
     // asStream skips body deserialization, so surface a clean error before the first byte is written
     let raw = ''

@@ -598,7 +598,10 @@ export const prepareResultContext = (dataset: any, query: Record<string, any>) =
     truncate,
     skipTruncateKeys,
     geoDistanceParts,
-    schema
+    schema,
+    // set by the /lines pipeline when the source came from searchStream (hits still hold the raw stored
+    // _attachment_url) — see rewriteAttachmentUrl below and prepareResultItem
+    rewriteAttachmentUrl: undefined as boolean | undefined
   }
 }
 

@@ -194,7 +194,7 @@ const readLines: RequestHandler = async (req, res) => {
   // set it as the ETag, and short-circuit `If-None-Match` at the top of readLines — a 304 *before* the query,
   // on top of the existing `finalizedAt`/`Last-Modified` pre-query 304 in the resourceBased middleware.
   const forceStream = process.env.NODE_ENV !== 'production' && query._stream === 'true'
-  const streamOn = (config as any).experimental?.streamReadLines === true || forceStream
+  const streamOn = config.experimental?.streamReadLines === true || forceStream
   const eligible = streamOn && streamEligible(query)
   // `_stream` is an internal, non-prod opt-in — never a public API param. Drop it from the `query` copy
   // once consumed so it does not leak into the `next` pagination link (built from `query`), keeping the
@@ -283,7 +283,7 @@ const readLines: RequestHandler = async (req, res) => {
   // mode the source is the incremental one and esResponse stays undefined (never reached by geo/tile).
   // In the zero-copy tile path esResponse stays undefined (the raw bytes go straight to the worker) and the
   // vector-tile branch below returns before `source` is consumed, so skip building a buffered source then.
-  const source: LinesSource = streamedSource ?? (esResponse ? bufferedSource(esResponse) : undefined as any)
+  const source: LinesSource | undefined = streamedSource ?? (esResponse ? bufferedSource(esResponse) : undefined)
 
   // Pagination (search_after) Link header for the HARD formats only: geojson/shp/wkt/tiles read esResponse
   // directly and res.send, so their last hit is known here. json/csv build their own Link header (and, for
@@ -304,7 +304,7 @@ const readLines: RequestHandler = async (req, res) => {
     // streamGeojson still surfaces the error before anything is sent.
     const bboxPromise = esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
     bboxPromise.catch(() => {})
-    await streamGeojson(req, res, source, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox: bboxPromise })
+    await streamGeojson(req, res, source!, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox: bboxPromise })
     observe.reqStep(req, 'bboxAgg')
     return
   }
@@ -323,7 +323,7 @@ const readLines: RequestHandler = async (req, res) => {
     }
     // Buffered fallback (the `_attachment_url`-selected case, which the raw worker path can't rewrite — see
     // the mode-selection gate above): search() already rewrote the URL, so materialize the whole geojson here.
-    if (!esResponse) return res.status(204).send()
+    // esResponse is guaranteed here: manageESError never returns, so a failed search() cannot fall through.
     const flatten = getFlatten(dataset, true)
     const geojson: any = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
@@ -378,7 +378,7 @@ const readLines: RequestHandler = async (req, res) => {
   if (query.format === 'csv') {
     observe.reqStep(req, 'streamCsv')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
-    await streamCsv(req, res, source, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible })
+    await streamCsv(req, res, source!, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible })
     return
   }
 
@@ -389,7 +389,7 @@ const readLines: RequestHandler = async (req, res) => {
   if (query.format === 'xlsx' || query.format === 'ods') {
     const flatten = getFlatten(dataset, req.query.arrays === 'true')
     const resultCtx = esUtils.prepareResultContext(dataset, query)
-    const hits = await collect(source)
+    const hits = await collect(source!)
     const rows: any[] = []
     for (let i = 0; i < hits.length; i++) {
       if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
@@ -411,7 +411,7 @@ const readLines: RequestHandler = async (req, res) => {
   }
 
   observe.reqStep(req, 'streamJson')
-  await streamJson(req, res, source, {
+  await streamJson(req, res, source!, {
     publicBaseUrl,
     datasetId: dataset.id as string,
     size,
