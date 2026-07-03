@@ -133,7 +133,13 @@ export default async function (dataset: DatasetInternal) {
     // MongoDB unique index). Real stored columns are guaranteed by config-time
     // checkConstraints.
     const uniqueConstraints = (dataset.constraints ?? []).filter((c: any) => c.type === 'unique')
-    if (!isRestDataset(dataset)) {
+    // Only pay the DiagnosticWriter cost (S3 pathExists + Mongo updateOne in discard())
+    // for datasets that have or plausibly had a constraint. `dataset.constraints` stays
+    // truthy (an empty array) when a constraint is dropped to [] via the UI, so that path
+    // still gets cleaned up. Residual edge: a direct API PATCH with `constraints: null`
+    // (schema-valid but never sent by the UI) $unsets the field entirely, so a stale
+    // diagnostic from a prior error would not be cleared in that narrow case.
+    if (!isRestDataset(dataset) && (uniqueConstraints.length || dataset.constraints)) {
       // Always run through a DiagnosticWriter, even with zero constraints: discard()
       // clears any stale diagnostic left by a prior failed run (e.g. the constraint
       // that caused the previous error was since dropped from the dataset).
