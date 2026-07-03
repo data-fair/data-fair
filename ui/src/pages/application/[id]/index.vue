@@ -333,7 +333,20 @@
               {{ t('partOf') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
-              {{ application?.partOf ? t('partOfCurrentDesc', { title: application.partOf.title }) : t('partOfDesc') }}
+              <i18n-t
+                v-if="application?.partOf"
+                keypath="partOfCurrentDesc"
+                tag="span"
+              >
+                <template #title>
+                  <router-link :to="`/application/${application.partOf.id}`">
+                    {{ application.partOf.title }}
+                  </router-link>
+                </template>
+              </i18n-t>
+              <template v-else>
+                {{ t('partOfDesc') }}
+              </template>
             </div>
             <template #append>
               <part-of-dialog
@@ -353,7 +366,7 @@
                     class="ml-4 align-self-center"
                     @click="openPartOfDialog"
                   >
-                    {{ t('partOf') }}
+                    {{ application?.partOf ? t('partOfUnset') : t('partOfDefine') }}
                   </v-btn>
                 </template>
               </part-of-dialog>
@@ -496,7 +509,9 @@ fr:
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer cette application à un autre propriétaire.
   partOf: Ressource parente
-  partOfDesc: Indiquer que cette application n'existe que pour servir une application parente (par exemple un tableau de bord).
+  partOfDefine: Définir comme enfant
+  partOfUnset: Retirer l'attribut enfant
+  partOfDesc: Définir cette application comme n'existant que pour servir une application parente (par exemple un tableau de bord).
   partOfCurrentDesc: "Cette application est actuellement définie comme enfant de : {title}"
   deleteApp: Supprimer l'application
   deleteAppSuccess: L'application a bien été supprimée.
@@ -544,7 +559,9 @@ en:
   changeOwner: Change owner
   changeOwnerDesc: Transfer this application to another owner.
   partOf: Parent resource
-  partOfDesc: Indicate that this application only exists to serve a parent application (e.g. a dashboard).
+  partOfDefine: Define as child
+  partOfUnset: Remove the child attribute
+  partOfDesc: Define this application as existing only to serve a parent application (e.g. a dashboard).
   partOfCurrentDesc: "This application is currently defined as a child of: {title}"
   deleteApp: Delete application
   deleteAppSuccess: Application was deleted successfully.

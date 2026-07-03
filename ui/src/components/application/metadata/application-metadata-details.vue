@@ -72,7 +72,7 @@
       </v-col>
 
       <v-col
-        v-if="nbParentApps > 0"
+        v-if="nbParentApps > 0 && !application.partOf"
         cols="12"
         md="6"
         lg="4"

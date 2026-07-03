@@ -123,7 +123,7 @@
       </template>
 
       <v-col
-        v-if="nbVirtualDatasets > 0"
+        v-if="nbVirtualDatasets > 0 && !dataset.partOf"
         cols="12"
         md="6"
         lg="4"

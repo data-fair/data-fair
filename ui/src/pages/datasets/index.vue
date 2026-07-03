@@ -236,6 +236,9 @@ const facetType = useStringsArraySearchParam('type')
 // Virtual datasets filter (children of a specific dataset)
 const children = useStringSearchParam('children')
 
+// Reveal child datasets (hidden by default): ?partOf=true or ?partOf=<parentId>
+const partOf = useStringSearchParam('partOf')
+
 // Include shared datasets for a given owner
 const shared = useStringSearchParam('shared')
 
@@ -275,6 +278,7 @@ const datasetsQuery = computed(() => {
   if (facetConcepts.value?.length) params.concepts = facetConcepts.value.join(',')
   if (facetType.value?.length) params.type = facetType.value.join(',')
   if (children.value) params.children = children.value
+  if (partOf.value) params.partOf = partOf.value
   if (shared.value) params.shared = shared.value
   else if (showAll.value !== 'true') params.shared = 'false'
   return params

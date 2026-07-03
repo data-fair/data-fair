@@ -406,7 +406,20 @@
               {{ t('partOf') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
-              {{ dataset?.partOf ? t('partOfCurrentDesc', { title: dataset.partOf.title }) : t('partOfDesc') }}
+              <i18n-t
+                v-if="dataset?.partOf"
+                keypath="partOfCurrentDesc"
+                tag="span"
+              >
+                <template #title>
+                  <router-link :to="`/${dataset.partOf.type === 'dataset' ? 'dataset' : 'application'}/${dataset.partOf.id}`">
+                    {{ dataset.partOf.title }}
+                  </router-link>
+                </template>
+              </i18n-t>
+              <template v-else>
+                {{ t('partOfDesc') }}
+              </template>
             </div>
             <template #append>
               <part-of-dialog
@@ -426,7 +439,7 @@
                     class="ml-4 align-self-center"
                     @click="openPartOfDialog"
                   >
-                    {{ t('partOf') }}
+                    {{ dataset?.partOf ? t('partOfUnset') : t('partOfDefine') }}
                   </v-btn>
                 </template>
               </part-of-dialog>
@@ -650,7 +663,9 @@ fr:
   changeOwner: Changer le propriétaire
   changeOwnerDesc: Transférer ce jeu de données à un autre propriétaire.
   partOf: Ressource parente
-  partOfDesc: Indiquer que ce jeu de données n'existe que pour servir une ressource parente (jeu de données virtuel ou application).
+  partOfDefine: Définir comme enfant
+  partOfUnset: Retirer l'attribut enfant
+  partOfDesc: Définir ce jeu de données comme n'existant que pour servir une ressource parente (jeu de données virtuel ou application).
   partOfCurrentDesc: "Ce jeu de données est actuellement défini comme enfant de : {title}"
   deleteAllLines: Supprimer toutes les lignes
   deleteAllLinesDesc: Supprime toutes les lignes du jeu de données. Cette action est irréversible.
@@ -715,7 +730,9 @@ en:
   changeOwner: Change owner
   changeOwnerDesc: Transfer this dataset to another owner.
   partOf: Parent resource
-  partOfDesc: Indicate that this dataset only exists to serve a parent resource (virtual dataset or application).
+  partOfDefine: Define as child
+  partOfUnset: Remove the child attribute
+  partOfDesc: Define this dataset as existing only to serve a parent resource (virtual dataset or application).
   partOfCurrentDesc: "This dataset is currently defined as a child of: {title}"
   deleteAllLines: Delete all lines
   deleteAllLinesDesc: Delete all the lines of the dataset. This action is irreversible.
