@@ -1,27 +1,12 @@
 <template>
-  <v-card
-    variant="outlined"
-    class="mt-4"
-  >
-    <v-card-title>{{ t('title') }}</v-card-title>
-    <v-card-text>
-      <vjsf
-        v-if="editConstraints"
-        v-model="editConstraints"
-        :schema="schema"
-        :options="vjsfOptions"
-        @update:model-value="apply"
-      />
-    </v-card-text>
-  </v-card>
+  <vjsf
+    v-if="editConstraints"
+    v-model="editConstraints"
+    :schema="schema"
+    :options="vjsfOptions"
+    @update:model-value="apply"
+  />
 </template>
-
-<i18n lang="yaml">
-fr:
-  title: Contraintes d'unicité
-en:
-  title: Unicity constraints
-</i18n>
 
 <script setup lang="ts">
 import type { Dataset, SchemaProperty } from '#api/types'
@@ -37,8 +22,6 @@ const props = defineProps<{
   editable?: boolean
 }>()
 const emit = defineEmits<{ 'update:modelValue': [Constraints] }>()
-
-const { t } = useI18n()
 
 const editConstraints = ref<{ constraints: Constraints } | null>({ constraints: props.modelValue ? [...props.modelValue] : [] })
 
@@ -63,8 +46,24 @@ const schema = computed(() => {
   const constraintsSchema = JSON.parse(JSON.stringify(
     (datasetContractSchema as any).properties.constraints
   ))
-  const columnsSchema = constraintsSchema.items.oneOf[0].properties.properties
+  // a single constraint type exists for now: flatten the oneOf so that no type
+  // selector is rendered (the "type" const is auto-filled by vjsf)
+  constraintsSchema.items = { ...constraintsSchema.items, ...constraintsSchema.items.oneOf[0] }
+  delete constraintsSchema.items.oneOf
+  const columnsSchema = constraintsSchema.items.properties.properties
   columnsSchema.items.enum = eligibleKeys.value
+  // compact list rendering: one line per constraint, edition in a small menu
+  constraintsSchema.layout = {
+    title: '', // redundant with the tab name
+    listEditMode: 'menu',
+    listActions: ['add', 'edit', 'delete'],
+    itemTitle: "'Unicité : ' + (item.properties || []).join(', ')"
+  }
+  // hide the read-only preview of the item fields in the list, the itemTitle line
+  // is enough (the "if" must be on the visible case: normalization drops the "if"
+  // of a comp:none case)
+  const hiddenInSummary = { switch: [{ if: '!summary' }, { comp: 'none' }] }
+  columnsSchema.layout = hiddenInSummary
   return { type: 'object', properties: { constraints: constraintsSchema } }
 })
 
