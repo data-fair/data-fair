@@ -113,7 +113,7 @@ test.describe('unicity constraint config', () => {
       constraints: [{ type: 'unique', properties: ['a'] }]
     }, { validateStatus: () => true })
     assert.equal(patchRes.status, 400)
-    assert.match(String(patchRes.data), /données/)
+    assert.match(String(patchRes.data), /isMetaOnly|sans données/)
   })
 
   test('rejects a metaOnly dataset created with a constraint', async () => {
@@ -124,7 +124,7 @@ test.describe('unicity constraint config', () => {
       constraints: [{ type: 'unique', properties: ['a'] }]
     }, { validateStatus: () => true })
     assert.equal(res.status, 400)
-    assert.match(String(res.data), /données/)
+    assert.match(String(res.data), /isMetaOnly|sans données/)
   })
 
   test('allows removing constraints via PATCH on a virtual dataset without 400 (removal is always safe)', async () => {
