@@ -7,10 +7,10 @@
       <v-btn
         v-if="selectedResults.length"
         :title="t('unselectAllLines')"
-        :color="selectedResults.length === results.length ? 'primary' : 'grey'"
+        color="primary"
         :size="dense ? 'md' : 'large'"
         variant="text"
-        :icon="mdiCheckboxMarked"
+        :icon="selectedResults.length === results.length ? mdiCheckboxMarked : mdiMinusBox"
         :disabled="saving"
         @click="selectedResults = []"
       />
@@ -253,7 +253,7 @@
 import type { VForm } from 'vuetify/components'
 import type { RestActionsSummary } from '#api/types'
 import type { ExtendedResult } from '~/composables/dataset/lines'
-import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline, mdiPlusCircle, mdiUpload } from '@mdi/js'
+import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiMinusBox, mdiPencil, mdiTrashCanOutline, mdiPlusCircle, mdiUpload } from '@mdi/js'
 import useDatasetEdition from './use-dataset-edition'
 
 defineProps({

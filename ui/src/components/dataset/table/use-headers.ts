@@ -69,10 +69,6 @@ export const useHeaders = (
       if (dataset.value?.bbox && !noInteraction) {
         headers.unshift({ title: '', key: '_map_preview' })
       }
-      // the _actions column hosts the selection checkboxes, whose only purpose is to drive
-      // the multi-line bulk operations (_bulk_lines) — so it is gated on the bulkLines permission,
-      // like the file upload dialog. can() returns a ComputedRef, hence the explicit .value:
-      // this is a plain .ts module with no template auto-unwrapping.
       if (selectable || (edit && can('bulkLines').value)) {
         headers.unshift({ title: '', key: '_actions', sticky: true })
       } else if (fixed.value) {
