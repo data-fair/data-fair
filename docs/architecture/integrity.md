@@ -1,10 +1,12 @@
 # Data integrity & traceability
 
-> Status: **vision / architecture refinement** — not yet a build plan. This document
-> describes a focused **data-fair feature**, delivered as **three progressive targets**
-> (dataset files → dataset metadata → editable-dataset collections); each target gets its
-> own spec → plan → implementation cycle later (build order in
-> [§10](#10-decomposition--build-order)). Scope deliberately left out for now —
+> Status: **target 1 (dataset files) — level 1 detection delivered.** The shared core
+> (locked-revision store, transactional-outbox relay, sliding checker) plus its superadmin API
+> and admin UI ship in this iteration; [§10](#10-decomposition--build-order) records precisely
+> what is built vs. what remains (level 2 repair, lock renewal, targets 2–3). This document
+> describes a focused **data-fair feature**, delivered as **three progressive targets** (dataset
+> files → dataset metadata → editable-dataset collections); targets 2–3 and level 2 each get
+> their own spec → plan → implementation cycle next. Scope deliberately left out for now —
 > generalization beyond data-fair, an immutable append-only **log posture** (events, HTTP
 > logs), and a central integrity service — is parked in
 > [§14 Deferred scope](#14-deferred-scope--future-directions).
@@ -394,13 +396,17 @@ detect-only where repair is too costly. The shared core primitive (locked-revisi
 write wrapper, checker) is **extracted from target 1 and reused**, not built up front as a
 speculative framework.
 
-1. **Dataset data files** — level 1 reuses the `md5` already in dataset metadata; level 2 copies
-   the file into the historized bucket, size-gated. Simplest payload; proves the locked-bucket
-   + checker + lock-renewal plumbing end to end.
-2. **Dataset Mongo metadata** (datasets / applications / settings) — level 1 = canonical
-   (stable-key-sorted) JSON hash; level 2 stores the full document. Both cheap.
-3. **Editable (REST) datasets** — *ES is not historized* (rebuildable projection, repair =
-   reindex). Target is the Mongo lines collection: level 1 = exact rolling fold over the
+1. **Dataset data files** — ✅ **level 1 (detect) delivered.** The relay historizes the *stored
+   file's* md5 on every finalize (transactional outbox, §3.2), the sliding checker recomputes and
+   compares it, raising a breach on divergence (§3.3), and the superadmin enable/disable/check/fix
+   API plus the admin UI panel (§7) are wired end to end. **Immediate next steps for this target:**
+   *level 2 (repair)* — copy the file into the historized bucket, size-gated — and *lock renewal*
+   (§3.4): the checker currently detects but does **not** yet slide the anchor's lock forward, so
+   the guarantee holds only within the initial lock window.
+2. **Dataset Mongo metadata** (datasets / applications / settings) — ⏳ **next.** Level 1 =
+   canonical (stable-key-sorted) JSON hash; level 2 stores the full document. Both cheap.
+3. **Editable (REST) datasets** — ⏳ **later.** *ES is not historized* (rebuildable projection,
+   repair = reindex). Target is the Mongo lines collection: level 1 = exact rolling fold over the
    precomputed per-line `_hash` (sample only past a threshold); level 2 = the per-line locked
    log (§5), reusing `dataset-revisions` as the projection, cardinality-gated. The hard tail —
    level 1 stays universal, level 2 is gated.
