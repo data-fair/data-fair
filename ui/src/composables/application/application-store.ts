@@ -37,11 +37,12 @@ const createApplicationStore = (id: string) => {
   const configFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration`, { immediate: false })
   const config = ref<AppConfig | null>(null)
   watch(configFetch.data, () => { config.value = configFetch.data.value })
-  const writeConfig = async (newConfig: AppConfig) => {
+  const writeConfig = async (newConfig: AppConfig, childrenAction?: 'delete' | 'unflag') => {
     debug('writeConfig', newConfig)
     await $fetch<AppConfig>('/applications/' + id + '/configuration', {
       method: 'PUT',
       body: newConfig,
+      query: childrenAction ? { childrenAction } : undefined,
       headers: {
         'Content-Type': 'application/json'
       }
