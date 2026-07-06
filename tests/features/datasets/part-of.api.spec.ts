@@ -62,6 +62,29 @@ test.describe('dataset partOf attribute', () => {
     )
   })
 
+  test('cannot define a dataset as a child of an application that is itself a child', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const datasetRef = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
+
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const parentRef = (await ax.get('/api/v1/applications', { params: { id: parentApp.id, select: 'id' } })).data.results[0]
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, { datasets: [{ id: dataset.id, href: datasetRef.href }] })
+
+    const { data: grandParent } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await ax.put(`/api/v1/applications/${grandParent.id}/config`, { applications: [{ id: parentApp.id, href: parentRef.href }] })
+    await ax.patch(`/api/v1/applications/${parentApp.id}`, { partOf: { type: 'application', id: grandParent.id } })
+
+    // parentApp is now itself a child: chaining through it is not allowed
+    await assert.rejects(
+      ax.patch(`/api/v1/datasets/${dataset.id}`, { partOf: { type: 'application', id: parentApp.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
   test('cannot define a dataset as a child when it is used by more than one parent', async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)

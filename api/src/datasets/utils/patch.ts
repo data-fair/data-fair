@@ -151,16 +151,19 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     // a dataset can only be defined as a child if it is used by exactly one parent resource — 0 or
     // 2+ parents (virtual datasets and/or applications combined) makes the relationship ambiguous
     const [virtualParents, appParents] = await Promise.all([
-      db.collection('datasets').find({ 'virtual.children': dataset.id }, { projection: { id: 1, title: 1 } }).toArray(),
-      db.collection('applications').find({ 'configuration.datasets.id': dataset.id }, { projection: { id: 1, title: 1 } }).toArray()
+      db.collection('datasets').find({ 'virtual.children': dataset.id }, { projection: { id: 1, title: 1, partOf: 1 } }).toArray(),
+      db.collection('applications').find({ 'configuration.datasets.id': dataset.id }, { projection: { id: 1, title: 1, partOf: 1 } }).toArray()
     ])
     const parents = [
-      ...virtualParents.map((d: any) => ({ type: 'dataset', id: d.id, title: d.title })),
-      ...appParents.map((a: any) => ({ type: 'application', id: a.id, title: a.title }))
+      ...virtualParents.map((d: any) => ({ type: 'dataset', id: d.id, title: d.title, partOf: d.partOf })),
+      ...appParents.map((a: any) => ({ type: 'application', id: a.id, title: a.title, partOf: a.partOf }))
     ]
     if (parents.length !== 1) throw httpError(400, `Ce jeu de données ne peut être défini comme enfant que s'il est utilisé par une seule ressource parente (jeu de données virtuel ou application) ; il en compte actuellement ${parents.length}.`)
     const [parent] = parents
     if (parent.type !== patch.partOf.type || parent.id !== patch.partOf.id) throw httpError(400, 'La ressource parente indiquée ne correspond pas à l\'unique ressource qui utilise ce jeu de données.')
+    // a resource that is itself a child cannot be a parent: chains would leave silent orphans
+    // behind cascading deletions
+    if (parent.partOf) throw httpError(400, 'La ressource parente est elle-même définie comme enfant d\'une autre ressource, les chaînages ne sont pas autorisés')
     // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
     patch.partOf.title = parent.title
   }
