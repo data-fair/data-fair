@@ -116,9 +116,12 @@ const editSchema = computed(() => {
       }
     }
     if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument' && schema.properties[key].layout?.comp !== 'text-field') {
+      // attachment columns cannot be edited in a bulk patch, drop them from the form and the patch
       delete schema.properties[key]
+      return
     }
     if (schema.properties[key]['x-extension']) {
+      // extension results are computed, they must not be part of a bulk patch
       delete schema.properties[key]
     }
   })
