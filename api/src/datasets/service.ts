@@ -391,14 +391,21 @@ export const countPartOfChildren = async (parentType: 'dataset' | 'application',
   return mongo.datasets.countDocuments({ 'partOf.type': parentType, 'partOf.id': parentId })
 }
 
-// called when deleting a resource that has partOf children: either cascade the deletion, or unflag
-// them so they survive on their own, no longer restricted to their now-deleted parent
-export const handlePartOfChildren = async (app: any, parentType: 'dataset' | 'application', parentId: string, action: 'delete' | 'unflag') => {
+export const listPartOfChildrenIds = async (parentType: 'dataset' | 'application', parentId: string) => {
+  const children = await mongo.datasets.find({ 'partOf.type': parentType, 'partOf.id': parentId }, { projection: { _id: 0, id: 1 } }).toArray()
+  return children.map(c => c.id)
+}
+
+// called when deleting a resource that has partOf children, or editing its configuration in a way
+// that stops referencing some of them (childIds restricts the cascade to those orphans): either
+// cascade the deletion, or unflag them so they survive on their own
+export const handlePartOfChildren = async (app: any, parentType: 'dataset' | 'application', parentId: string, action: 'delete' | 'unflag', childIds?: string[]) => {
+  const filter = { 'partOf.type': parentType, 'partOf.id': parentId, ...(childIds ? { id: { $in: childIds } } : {}) }
   if (action === 'unflag') {
-    await mongo.datasets.updateMany({ 'partOf.type': parentType, 'partOf.id': parentId }, { $unset: { partOf: 1 } })
+    await mongo.datasets.updateMany(filter, { $unset: { partOf: 1 } })
     return
   }
-  const children = await mongo.datasets.find({ 'partOf.type': parentType, 'partOf.id': parentId }).toArray()
+  const children = await mongo.datasets.find(filter).toArray()
   for (const child of children) {
     await deleteDataset(app, child)
   }

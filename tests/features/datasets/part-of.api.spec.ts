@@ -183,6 +183,60 @@ test.describe('dataset partOf attribute', () => {
     )
   })
 
+  test('removing a defined child from a virtual dataset requires an explicit childrenAction, only orphans are affected', async () => {
+    const ax = testUser1
+    const child1 = await sendDataset('datasets/dataset1.csv', ax)
+    const child2 = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [child1.id, child2.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+    await ax.patch(`/api/v1/datasets/${child1.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+    await ax.patch(`/api/v1/datasets/${child2.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    // dropping child1 from the members without an explicit childrenAction is refused
+    await assert.rejects(
+      ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [child2.id] } }),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        return true
+      }
+    )
+    // nothing was applied
+    let res = await ax.get(`/api/v1/datasets/${child1.id}`)
+    assert.deepEqual(res.data.partOf, { type: 'dataset', id: virtualDataset.id, title: virtualDataset.title })
+
+    // unflag: only the dropped child is affected
+    res = await ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [child2.id] } }, { params: { childrenAction: 'unflag' } })
+    assert.equal(res.status, 200)
+    await waitForFinalize(ax, virtualDataset.id)
+    res = await ax.get(`/api/v1/datasets/${child1.id}`)
+    assert.equal(res.data.partOf, undefined)
+    res = await ax.get(`/api/v1/datasets/${child2.id}`)
+    assert.deepEqual(res.data.partOf, { type: 'dataset', id: virtualDataset.id, title: virtualDataset.title })
+  })
+
+  test('removing a defined child from a virtual dataset with childrenAction=delete cascades to the orphan only', async () => {
+    const ax = testUser1
+    const child1 = await sendDataset('datasets/dataset1.csv', ax)
+    const child2 = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent', virtual: { children: [child1.id, child2.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+    await ax.patch(`/api/v1/datasets/${child1.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+    await ax.patch(`/api/v1/datasets/${child2.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    const res = await ax.patch(`/api/v1/datasets/${virtualDataset.id}`, { virtual: { children: [child2.id] } }, { params: { childrenAction: 'delete' } })
+    assert.equal(res.status, 200)
+    await waitForFinalize(ax, virtualDataset.id)
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${child1.id}`),
+      (err: any) => {
+        assert.equal(err.status, 404)
+        return true
+      }
+    )
+    const res2 = await ax.get(`/api/v1/datasets/${child2.id}`)
+    assert.deepEqual(res2.data.partOf, { type: 'dataset', id: virtualDataset.id, title: virtualDataset.title })
+  })
+
   test('deleting a virtual dataset with a defined child requires an explicit childrenAction, then unflag or cascade delete', async () => {
     const ax = testUser1
 

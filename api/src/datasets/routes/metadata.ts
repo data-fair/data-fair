@@ -26,7 +26,7 @@ import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
-import { findDatasets, applyPatch, deleteDataset, countPartOfChildren, handlePartOfChildren } from '../service.ts'
+import { findDatasets, applyPatch, deleteDataset, countPartOfChildren, handlePartOfChildren, listPartOfChildrenIds } from '../service.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -153,6 +153,24 @@ export const registerMetadataRoutes = (router: Router) => {
       const sessionState = reqSessionAuthenticated(req)
 
       const patch: any = (await import('#doc/datasets/patch-req/index.js')).returnValid(req).body
+
+      // dropping members from a virtual dataset can orphan datasets still defined as its partOf
+      // children: mirror the deletion guard, restricted to the members actually removed
+      if (dataset.isVirtual && patch.virtual) {
+        const childrenIds = await listPartOfChildrenIds('dataset', dataset.id)
+        const newChildren: string[] = patch.virtual.children ?? []
+        const orphans = childrenIds.filter(id => !newChildren.includes(id))
+        if (orphans.length) {
+          const childrenAction = req.query.childrenAction as string | undefined
+          if (childrenAction !== 'delete' && childrenAction !== 'unflag') {
+            throw httpError(409, `Cette modification retire ${orphans.length} jeu(x) de données enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
+          }
+          // the child datasets were explicitly opted into this relationship by their own owner (via
+          // the admin-only writePartOf permission on the child itself), so no extra per-child
+          // permission check is required here
+          await handlePartOfChildren(req.app, 'dataset', dataset.id, childrenAction, orphans)
+        }
+      }
 
       const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
 
