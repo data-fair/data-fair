@@ -39,3 +39,27 @@ test('buildContext omits reason when not provided', () => {
     .toEqual({ operation: 'create', originator: 'worker:historize', date: '2026-06-24T00:00:00.000Z' })
   expect(ops.buildContext('fixIntegrity', 'user:1', '2026-06-24T00:00:00.000Z', 'manual fix').reason).toBe('manual fix')
 })
+
+test('needsRenewal is false without a retainUntil and while the lock is fresh', () => {
+  const now = Date.parse('2026-07-06T00:00:00.000Z')
+  const day = 24 * 3600 * 1000
+  expect(ops.needsRenewal(undefined, now, 365)).toBe(false)
+  // a fresh 1-year lock: age ~0 → not due
+  expect(ops.needsRenewal(new Date(now + 365 * day).toISOString(), now, 365)).toBe(false)
+})
+
+test('needsRenewal triggers once the lock is older than RENEW_INTERVAL of the window', () => {
+  const now = Date.parse('2026-07-06T00:00:00.000Z')
+  const day = 24 * 3600 * 1000
+  // 1-year window, RENEW_INTERVAL = 1/12 → due when age > ~30.4d, i.e. remaining < ~334.6d
+  expect(ops.needsRenewal(new Date(now + 334 * day).toISOString(), now, 365)).toBe(true)  // age ~31d
+  expect(ops.needsRenewal(new Date(now + 336 * day).toISOString(), now, 365)).toBe(false) // age ~29d
+})
+
+test('needsRenewal scales to a 1-day (dev/test) window', () => {
+  const now = Date.parse('2026-07-06T00:00:00.000Z')
+  const hour = 3600 * 1000
+  // 1-day window → due when age > 2h, i.e. remaining < 22h
+  expect(ops.needsRenewal(new Date(now + 21 * hour).toISOString(), now, 1)).toBe(true)
+  expect(ops.needsRenewal(new Date(now + 23 * hour).toISOString(), now, 1)).toBe(false)
+})

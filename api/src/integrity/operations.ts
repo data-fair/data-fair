@@ -36,3 +36,20 @@ export const buildContext = (
   date: string,
   reason?: string
 ): RevisionContext => ({ operation, originator, date, ...(reason ? { reason } : {}) })
+
+export const RENEW_INTERVAL = 1 / 12 // ≈ monthly for a 1-year retention window (hardcoded)
+
+// Renew once the current lock is "older" than `interval` of the full retention window.
+// Each renewal resets retainUntil to now + window, so the lock's age = window − remaining.
+export const needsRenewal = (
+  retainUntil: string | undefined,
+  now: number,
+  retentionDays: number,
+  interval = RENEW_INTERVAL
+): boolean => {
+  if (!retainUntil) return false // nothing anchored yet
+  const windowMs = retentionDays * 24 * 3600 * 1000
+  const remainingMs = new Date(retainUntil).getTime() - now
+  const lockAgeMs = windowMs - remainingMs
+  return lockAgeMs > windowMs * interval // i.e. remaining < window × (1 − interval)
+}
