@@ -3,7 +3,7 @@
     :elevation="selectedResults.length >= 2 ? 4 : 0"
     density="compact"
   >
-    <template v-if="results.length >= 2">
+    <template v-if="canBulkLines && results.length >= 2">
       <v-btn
         v-if="selectedResults.length"
         :title="t('unselectAllLines')"
@@ -27,7 +27,7 @@
     </template>
     <template v-if="selectedResults.length >=2">
       <v-btn
-        v-if="canDeleteLine"
+        v-if="canBulkLines"
         :size="dense ? 'md' : 'large'"
         color="warning"
         variant="text"
@@ -37,7 +37,7 @@
         @click="deletingResults = [...selectedResults]; deleteSelectedResultsDialog = true;"
       />
       <v-btn
-        v-if="canUpdateLine && selectedResults.length >= 2"
+        v-if="canBulkLines"
         :icon="mdiPencil"
         :size="dense ? 'md' : 'large'"
         variant="text"
@@ -278,8 +278,6 @@ if (!jsonSchemaFetch.initialized.value) jsonSchemaFetch.refresh()
 
 const deleteSelectedResultsDialog = ref(false)
 
-const canDeleteLine = can('deleteLine')
-const canUpdateLine = can('updateLine')
 const canCreateLine = can('createLine')
 const canBulkLines = can('bulkLines')
 
