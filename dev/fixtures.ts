@@ -234,7 +234,7 @@ async function seedIgnoreAbove () {
  *       { "constraints": [{ "type": "unique", "properties": ["siret", "annee"] },
  *                         { "type": "unique", "properties": ["montant"] }] }
  *     (two rows share a montant) → 400: existing data violates the new constraint.
- *   - In the UI, the "Contraintes d'unicité" panel on the Structure/schema tab
+ *   - In the UI, the "Contraintes" tab of the Structure section
  *     only offers real stored, groupable columns (no calculated/geo/object ones).
  */
 async function seedUniciteRest () {

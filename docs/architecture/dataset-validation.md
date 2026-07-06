@@ -254,7 +254,7 @@ At write time, `applyTransactions` (same file) catches MongoDB bulk-write `11000
 
 ### UI
 
-`ui/src/components/dataset/dataset-constraints.vue` is a schema-driven `<vjsf>` editor for `dataset.constraints`, mounted in the dataset Structure → Schema tab (`ui/src/pages/dataset/[id]/index.vue`) and persisted through the existing `structureEditFetch` patch buffer alongside other schema-tab edits. The list of eligible columns offered to the user mirrors the `checkConstraints` rules (no calculated/extension/geometry/object columns, no columns with `values` disabled).
+`ui/src/components/dataset/dataset-constraints.vue` is a schema-driven `<vjsf>` editor for `dataset.constraints`, mounted in its own "Contraintes" tab of the dataset Structure section (`ui/src/pages/dataset/[id]/index.vue`, hidden for virtual/metaOnly datasets) and persisted through the existing `structureEditFetch` patch buffer alongside other structure edits. Constraints render as a compact one-line-per-item list (edition in a menu, no sort/duplicate actions). The list of eligible columns offered to the user mirrors the `checkConstraints` rules (no calculated/extension/geometry/object columns, no columns with `values` disabled).
 
 ### v1 scoping / follow-ups
 
