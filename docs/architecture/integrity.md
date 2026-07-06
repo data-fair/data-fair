@@ -396,13 +396,17 @@ detect-only where repair is too costly. The shared core primitive (locked-revisi
 write wrapper, checker) is **extracted from target 1 and reused**, not built up front as a
 speculative framework.
 
-1. **Dataset data files** — ✅ **level 1 (detect) delivered.** The relay historizes the *stored
-   file's* md5 on every finalize (transactional outbox, §3.2), the sliding checker recomputes and
-   compares it, raising a breach on divergence (§3.3), and the superadmin enable/disable/check/fix
-   API plus the admin UI panel (§7) are wired end to end. **Immediate next steps for this target:**
-   *level 2 (repair)* — copy the file into the historized bucket, size-gated — and *lock renewal*
-   (§3.4): the checker currently detects but does **not** yet slide the anchor's lock forward, so
-   the guarantee holds only within the initial lock window.
+1. **Dataset data files** — ✅ **level 1 (detect) + lock renewal delivered.** The relay historizes
+   the *stored file's* md5 on every finalize (transactional outbox, §3.2); the sliding checker
+   recomputes and compares it, raising a breach on divergence (§3.3); and it now **renews the
+   anchor's lock by extension** (§3.4 Option B) — pushing the compliance retain-until forward on a
+   ~monthly cadence (`RENEW_INTERVAL = 1/12` of the retention window) so the current state stays
+   protected indefinitely, and surfacing a loud `lastRenewal: failed` state (alert + UI warning) if
+   a provider rejects the prolongation. The superadmin enable/disable/check/fix API plus the admin
+   UI panel (§7) are wired end to end. **Immediate next steps for this target:** *level 2 (repair)*
+   — copy the file into the historized bucket, size-gated; and **re-anchoring (§3.4 Option A)** as
+   the deferred fallback for providers that cannot prolong a lock (the Scaleway prolongation bug,
+   §12) — implemented only if that bug is confirmed to still block us.
 2. **Dataset Mongo metadata** (datasets / applications / settings) — ⏳ **next.** Level 1 =
    canonical (stable-key-sorted) JSON hash; level 2 stores the full document. Both cheap.
 3. **Editable (REST) datasets** — ⏳ **later.** *ES is not historized* (rebuildable projection,
