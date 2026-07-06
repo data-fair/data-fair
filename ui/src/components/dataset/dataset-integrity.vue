@@ -26,6 +26,14 @@
         variant="tonal"
         :text="t('notCheckedBody')"
       />
+      <v-alert
+        v-if="state.active && state.lastRenewal?.status === 'failed'"
+        type="warning"
+        variant="tonal"
+        class="mt-2"
+        :title="t('renewalFailedTitle')"
+        :text="t('renewalFailedBody')"
+      />
 
       <div class="d-flex align-center ga-2 mt-4">
         <span v-if="state.lastCheck">{{ t('lastCheck') }}: {{ formatDate(state.lastCheck.date) }}</span>
@@ -116,6 +124,8 @@ fr:
   breachBody: Le fichier de données a été modifié en dehors du circuit d'écriture légitime.
   okBody: L'intégrité a été vérifiée, aucune divergence détectée.
   notCheckedBody: L'intégrité est activée mais aucun contrôle n'a encore été effectué.
+  renewalFailedTitle: Renouvellement du verrou en échec
+  renewalFailedBody: Le renouvellement de la protection anti-altération échoue. La garantie expirera à la date de rétention de l'ancre si le problème n'est pas résolu.
   lastCheck: Dernier contrôle
   neverChecked: Aucun contrôle effectué
   checkNow: Contrôler maintenant
@@ -141,6 +151,8 @@ en:
   breachBody: The data file was modified outside the legitimate write path.
   okBody: Integrity verified, no divergence detected.
   notCheckedBody: Integrity is enabled but no check has been run yet.
+  renewalFailedTitle: Lock renewal failing
+  renewalFailedBody: Renewal of the tamper-protection lock is failing. The guarantee will lapse at the anchor's retain-until date unless resolved.
   lastCheck: Last check
   neverChecked: No check run yet
   checkNow: Check now
@@ -175,7 +187,8 @@ const adminMode = computed(() => !!session.state.user?.adminMode)
 type IntegrityState = {
   active: boolean
   lastCheck?: { date: string, status: 'ok' | 'breach' }
-  lastRevision?: { i: number, md5: string, date: string }
+  lastRevision?: { i: number, md5: string, date: string, retainUntil?: string }
+  lastRenewal?: { date: string, status: 'ok' | 'failed', retainUntil?: string, error?: string }
 }
 
 type RevisionEntry = { i: number, md5: string, date: string, operation: string, originator: string, reason?: string }
