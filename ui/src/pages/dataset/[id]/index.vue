@@ -509,60 +509,15 @@
       @changed="store.datasetFetch.refresh()"
     />
 
-    <v-dialog
+    <children-action-dialog
       v-model="showDeleteDialog"
-      max-width="500"
-    >
-      <v-card
-        :title="t('deleteDataset')"
-        :loading="confirmRemove.loading.value ? 'warning' : undefined"
-      >
-        <v-card-text class="pb-0">
-          {{ t('deleteMsg', { title: dataset?.title }) }}
-          <template v-if="childrenCount > 0">
-            <v-alert
-              type="warning"
-              variant="outlined"
-              density="compact"
-              class="mt-4"
-            >
-              {{ t('childrenWarning', childrenCount) }}
-            </v-alert>
-            <v-radio-group
-              v-model="childrenAction"
-              class="mt-2"
-              hide-details
-            >
-              <v-radio
-                :label="t('childrenActionUnflag')"
-                value="unflag"
-              />
-              <v-radio
-                :label="t('childrenActionDelete')"
-                value="delete"
-              />
-            </v-radio-group>
-          </template>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            :disabled="confirmRemove.loading.value"
-            @click="showDeleteDialog = false"
-          >
-            {{ t('no') }}
-          </v-btn>
-          <v-btn
-            color="warning"
-            variant="flat"
-            :loading="confirmRemove.loading.value"
-            @click="confirmRemove.execute()"
-          >
-            {{ t('yes') }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      :title="t('deleteDataset')"
+      :message="t('deleteMsg', { title: dataset?.title })"
+      :warning="childrenCount > 0 ? t('childrenWarning', childrenCount) : undefined"
+      kind="datasets"
+      :loading="confirmRemove.loading.value"
+      @confirm="action => confirmRemove.execute(action)"
+    />
 
     <v-dialog
       v-model="showDeleteAllLinesDialog"
@@ -675,8 +630,6 @@ fr:
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   childrenWarning: aucun jeu de données enfant | Ce jeu de données a un jeu de données enfant qui n'existe que dans ce cadre. | Ce jeu de données a {count} jeux de données enfants qui n'existent que dans ce cadre.
-  childrenActionUnflag: Conserver les jeux enfants en leur retirant l'attribut enfant
-  childrenActionDelete: Supprimer aussi les jeux enfants
   deleteDatasetSuccess: Le jeu de données a bien été supprimé.
   deleteAllLinesSuccess: Toutes les lignes ont bien été supprimées.
   yes: Oui
@@ -742,8 +695,6 @@ en:
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
   childrenWarning: no child dataset | This dataset has a child dataset that only exists within this context. | This dataset has {count} child datasets that only exist within this context.
-  childrenActionUnflag: Keep the child datasets and remove their child attribute
-  childrenActionDelete: Also delete the child datasets
   deleteDatasetSuccess: Dataset was deleted successfully.
   deleteAllLinesSuccess: All lines were deleted successfully.
   yes: Yes
@@ -962,16 +913,14 @@ const openPartOfDialog = () => {
 }
 
 const childrenCount = ref(0)
-const childrenAction = ref<'delete' | 'unflag'>('unflag')
 const openDeleteDialog = async () => {
   showDeleteDialog.value = true
-  childrenAction.value = 'unflag'
   const res = await $fetch<{ count: number }>('datasets', { query: { partOf: id, size: 0 } })
   childrenCount.value = res.count
 }
 
-const confirmRemove = useAsyncAction(async () => {
-  await remove(childrenCount.value > 0 ? childrenAction.value : undefined)
+const confirmRemove = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
+  await remove(childrenAction)
   await router.push('/datasets')
 }, { success: t('deleteDatasetSuccess') })
 

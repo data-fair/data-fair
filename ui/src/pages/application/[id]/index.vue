@@ -409,60 +409,15 @@
       @changed="store.applicationFetch.refresh()"
     />
 
-    <v-dialog
+    <children-action-dialog
       v-model="showDeleteDialog"
-      max-width="500"
-    >
-      <v-card
-        :title="t('deleteApp')"
-        :loading="confirmRemove.loading.value ? 'warning' : undefined"
-      >
-        <v-card-text>
-          {{ t('deleteMsg', { title: application?.title }) }}
-          <template v-if="childrenCount > 0">
-            <v-alert
-              type="warning"
-              variant="outlined"
-              density="compact"
-              class="mt-4"
-            >
-              {{ t('childrenWarning', childrenCount) }}
-            </v-alert>
-            <v-radio-group
-              v-model="childrenAction"
-              class="mt-2"
-              hide-details
-            >
-              <v-radio
-                :label="t('childrenActionUnflag')"
-                value="unflag"
-              />
-              <v-radio
-                :label="t('childrenActionDelete')"
-                value="delete"
-              />
-            </v-radio-group>
-          </template>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            :disabled="confirmRemove.loading.value"
-            @click="showDeleteDialog = false"
-          >
-            {{ t('no') }}
-          </v-btn>
-          <v-btn
-            color="warning"
-            variant="flat"
-            :loading="confirmRemove.loading.value"
-            @click="confirmRemove.execute()"
-          >
-            {{ t('yes') }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      :title="t('deleteApp')"
+      :message="t('deleteMsg', { title: application?.title })"
+      :warning="childrenCount > 0 ? t('childrenWarning', childrenCount) : undefined"
+      kind="resources"
+      :loading="confirmRemove.loading.value"
+      @confirm="action => confirmRemove.execute(action)"
+    />
 
     <df-navigation-right>
       <application-actions />
@@ -518,8 +473,6 @@ fr:
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
   deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
   childrenWarning: aucune ressource enfant | Cette application a une ressource enfant qui n'existe que dans ce cadre. | Cette application a {count} ressources enfants qui n'existent que dans ce cadre.
-  childrenActionUnflag: Conserver les ressources enfants en leur retirant l'attribut enfant
-  childrenActionDelete: Supprimer aussi les ressources enfants
   yes: Oui
   no: Non
 en:
@@ -568,8 +521,6 @@ en:
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
   deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
   childrenWarning: no child resource | This application has a child resource that only exists within this context. | This application has {count} child resources that only exist within this context.
-  childrenActionUnflag: Keep the child resources and remove their child attribute
-  childrenActionDelete: Also delete the child resources
   yes: Yes
   no: No
 </i18n>
@@ -714,10 +665,8 @@ const confirmUpgrade = async () => {
 }
 
 const childrenCount = ref(0)
-const childrenAction = ref<'delete' | 'unflag'>('unflag')
 const openDeleteDialog = async () => {
   showDeleteDialog.value = true
-  childrenAction.value = 'unflag'
   const [childDatasets, childApps] = await Promise.all([
     $fetch<{ count: number }>('datasets', { query: { partOf: route.params.id, size: 0 } }),
     $fetch<{ count: number }>('applications', { query: { partOf: route.params.id, size: 0 } })
@@ -725,8 +674,8 @@ const openDeleteDialog = async () => {
   childrenCount.value = childDatasets.count + childApps.count
 }
 
-const confirmRemove = useAsyncAction(async () => {
-  await remove(childrenCount.value > 0 ? childrenAction.value : undefined)
+const confirmRemove = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
+  await remove(childrenAction)
   await router.push('/applications')
 }, { success: t('deleteAppSuccess') })
 
