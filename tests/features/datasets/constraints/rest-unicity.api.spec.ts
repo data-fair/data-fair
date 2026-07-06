@@ -27,6 +27,8 @@ test.describe('REST dataset unique constraint', () => {
     assert.ok(first.status === 200 || first.status === 201, `first insert status ${first.status}`)
     const dup = await testUser1.post('/api/v1/datasets/rest-uniq/lines', { a: 'x', b: 1 }, { validateStatus: () => true })
     assert.equal(dup.status, 409)
+    // the rejection names the violated column combination
+    assert.match(JSON.stringify(dup.data), /Doublon détecté : le couple \(a \+ b\) doit être unique\./)
   })
 
   test('allows a differing line', async () => {

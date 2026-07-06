@@ -250,7 +250,7 @@ REST datasets enforce uniqueness synchronously through a MongoDB index rather th
 
 `configureConstraintIndexes` is called from `initDataset` (new REST datasets) and from `applyPatch` (`api/src/datasets/service.ts`) whenever the patch touches `constraints`. If existing data already violates a newly-added constraint, `createIndex` fails with a duplicate-key error which is mapped to `httpError(400, …)` and the whole `PATCH` is rejected — the constraint is never applied against violating data.
 
-At write time, `applyTransactions` (same file) catches MongoDB bulk-write `11000` (duplicate key) errors: when the failing index name carries the `constraint_unique_` prefix, the offending line gets `_status = 409` and `_error = "valeur en double sur une contrainte d'unicité"`, distinguished from the pre-existing `_i` and `_id`-conflict 11000 branches by matching on the index name in `errmsg`.
+At write time, `applyTransactions` (same file) catches MongoDB bulk-write `11000` (duplicate key) errors: when the failing index name carries the `constraint_unique_` prefix, the offending line gets `_status = 409` and an `_error` built by `unicityViolationMessage` (`api/src/datasets/utils/constraints.ts`) — the failing index name in `errmsg` is mapped back to the dataset constraint so the message can name the violated columns (by schema title when available), e.g. « Doublon détecté : le couple (Poste + SIRET) doit être unique. ». The same helper produces the per-row `message` of the file-dataset validation diagnostic. The `_i`/`_id`-conflict 11000 branches are distinguished by matching on the index name in `errmsg`.
 
 ### UI
 

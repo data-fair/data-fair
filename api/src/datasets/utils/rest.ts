@@ -28,7 +28,7 @@ import { transformFileStreams, formatLine } from './data-streams.ts'
 import { attachmentPath, dataDir, lsAttachments, tmpDir } from './files.ts'
 import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.ts'
-import { CONSTRAINT_INDEX_PREFIX } from './constraints.ts'
+import { CONSTRAINT_INDEX_PREFIX, unicityViolationMessage } from './constraints.ts'
 import indexStream from '../es/index-stream.ts'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import { tabularTypes } from './types.ts'
@@ -679,7 +679,12 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
         if (writeError.err.code === 11000) {
           if (writeError.err.errmsg?.includes(CONSTRAINT_INDEX_PREFIX)) {
             operation._status = 409
-            operation._error = "valeur en double sur une contrainte d'unicité"
+            // the errmsg names the violated index (constraint_unique_<hash>), map it back to
+            // the constraint so the message can name the columns
+            const failedConstraint = (dataset.constraints ?? []).find(ct => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
+            operation._error = failedConstraint
+              ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
+              : "valeur en double sur une contrainte d'unicité"
           } else if (writeError.err.errmsg?.includes('_i_')) {
             console.error(writeError)
             operation._status = 500

@@ -227,7 +227,7 @@ async function seedIgnoreAbove () {
  *   - POST a line reusing an existing (siret, annee) pair, e.g.
  *       POST .../datasets/fixtures-unicite-rest/lines
  *       { "siret": "12345678900011", "annee": 2024, "montant": 100, "objet": "x" }
- *     → 409 "valeur en double sur une contrainte d'unicité".
+ *     → 409 "Doublon détecté : le couple (SIRET + Année) doit être unique."
  *   - POST a line with the SAME siret but a NEW annee → accepted (201): the key
  *     is the pair, not siret alone.
  *   - PATCH the dataset to add a second constraint the existing data violates,

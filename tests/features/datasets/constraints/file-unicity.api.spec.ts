@@ -48,8 +48,28 @@ test.describe('file dataset unique constraint', () => {
     const rows = diag.data.replace(/^\uFEFF/, '').trim().split('\n')
     assert.equal(rows[0], 'line,error_type,field,message,raw_value')
     for (const r of rows.slice(1)) assert.match(r, /,unicity,/)
+    // the message names the violated column combination
+    for (const r of rows.slice(1)) assert.match(r, /Doublon d\u00E9tect\u00E9 : le couple \(a \+ b\) doit \u00EAtre unique\./)
     const lineNumbers = rows.slice(1).map((r: string) => Number(r.split(',')[0])).sort()
     assert.deepEqual(lineNumbers, [1, 3])
+  })
+
+  test('the diagnostic message uses column titles and a dedicated single-column wording', async () => {
+    const csv = 'poste,siret\nchef,123\nchef,456\n'
+    const ds = await upload(
+      csv,
+      [{ type: 'unique', properties: ['poste'] }],
+      [{ key: 'poste', type: 'string', title: 'Poste' }, { key: 'siret', type: 'string' }]
+    )
+    await waitForDatasetError(testUser1, ds.id)
+
+    const diag = await fetchDiagnostic(ds.id)
+    assert.equal(diag.status, 200)
+    const rows = diag.data.replace(/^\uFEFF/, '').trim().split('\n').slice(1)
+    assert.ok(rows.length > 0)
+    for (const r of rows) {
+      assert.match(r, /Doublon d\u00E9tect\u00E9 : le champ \(Poste\) contient d\u00E9j\u00E0 cette valeur\. Chaque valeur de la colonne Poste doit \u00EAtre unique\./)
+    }
   })
 
   test('a duplicate key on a date column shows a human-readable date in the diagnostic CSV, not epoch millis', async () => {

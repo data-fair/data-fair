@@ -25,6 +25,7 @@ import filesStorage from '#files-storage'
 import config from '#config'
 import { DiagnosticWriter, DIAGNOSTIC_FILE_CAP } from '../../datasets/utils/diagnostic-file.ts'
 import { findUnicityDuplicates } from '../../datasets/es/unicity-agg.ts'
+import { unicityViolationMessage } from '../../datasets/utils/constraints.ts'
 import { sendResourceEvent } from '../../misc/utils/notifications.ts'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
@@ -151,13 +152,14 @@ export default async function (dataset: DatasetInternal) {
           if (remaining <= 0) break
           const groups = await findUnicityDuplicates(indexName, constraint, dataset.schema ?? [], remaining)
           const field = constraint.properties.join(', ')
+          const message = unicityViolationMessage(constraint.properties, dataset.schema)
           for (const group of groups) {
             for (const line of group.lines) {
               await writer.addError({
                 line,
                 type: 'unicity',
                 field,
-                message: `valeur en double${group.count > group.lines.length ? ` (${group.count} occurrences)` : ''}`,
+                message: `${message}${group.count > group.lines.length ? ` (${group.count} occurrences)` : ''}`,
                 rawValue: group.keyLabel
               })
               unicityErrorCount++

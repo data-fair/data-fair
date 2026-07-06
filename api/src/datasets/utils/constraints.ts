@@ -12,6 +12,20 @@ export const CONSTRAINT_INDEX_PREFIX = 'constraint_unique_'
  * actually be enforced. Callers already gate this call behind a non-empty constraints check, so
  * removing constraints (empty array) never reaches here and is always allowed.
  */
+/**
+ * User-facing message for a unicity violation, shared by the file-dataset diagnostic
+ * (worker unicity gate) and the REST write rejection (409). Columns are labeled by their
+ * schema title when available, falling back to the key.
+ */
+export const unicityViolationMessage = (properties: string[], schema?: { key: string, title?: string }[]): string => {
+  const labels = properties.map(key => schema?.find(p => p.key === key)?.title || key)
+  if (labels.length === 1) {
+    return `Doublon détecté : le champ (${labels[0]}) contient déjà cette valeur. Chaque valeur de la colonne ${labels[0]} doit être unique.`
+  }
+  const group = labels.length === 2 ? 'le couple' : 'la combinaison'
+  return `Doublon détecté : ${group} (${labels.join(' + ')}) doit être unique.`
+}
+
 export const checkConstraints = (schema: any[], constraints: any[] | undefined, dataset?: { isVirtual?: boolean, isMetaOnly?: boolean }): void => {
   if (!constraints || !constraints.length) return
   if (dataset?.isVirtual || dataset?.isMetaOnly) {

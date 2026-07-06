@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { checkConstraints } from '../../../api/src/datasets/utils/constraints.ts'
+import { checkConstraints, unicityViolationMessage } from '../../../api/src/datasets/utils/constraints.ts'
 
 const schema = [
   { key: 'a', type: 'string' },
@@ -47,5 +47,45 @@ test.describe('checkConstraints', () => {
 
   test('is a no-op for empty/absent constraints', () => {
     assert.doesNotThrow(() => checkConstraints(schema, []))
+  })
+})
+
+test.describe('unicityViolationMessage', () => {
+  const titledSchema = [
+    { key: 'poste', type: 'string', title: 'Poste' },
+    { key: 'siret', type: 'string', title: 'SIRET' },
+    { key: 'annee', type: 'integer' }
+  ]
+
+  test('single column: names the field and states the rule', () => {
+    assert.equal(
+      unicityViolationMessage(['poste'], titledSchema),
+      'Doublon détecté : le champ (Poste) contient déjà cette valeur. Chaque valeur de la colonne Poste doit être unique.'
+    )
+  })
+
+  test('two columns: "le couple"', () => {
+    assert.equal(
+      unicityViolationMessage(['poste', 'siret'], titledSchema),
+      'Doublon détecté : le couple (Poste + SIRET) doit être unique.'
+    )
+  })
+
+  test('three or more columns: "la combinaison"', () => {
+    assert.equal(
+      unicityViolationMessage(['poste', 'siret', 'annee'], titledSchema),
+      'Doublon détecté : la combinaison (Poste + SIRET + annee) doit être unique.'
+    )
+  })
+
+  test('falls back to the column key when there is no title or no schema', () => {
+    assert.equal(
+      unicityViolationMessage(['annee'], titledSchema),
+      'Doublon détecté : le champ (annee) contient déjà cette valeur. Chaque valeur de la colonne annee doit être unique.'
+    )
+    assert.equal(
+      unicityViolationMessage(['a', 'b']),
+      'Doublon détecté : le couple (a + b) doit être unique.'
+    )
   })
 })
