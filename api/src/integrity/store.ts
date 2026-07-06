@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectRetentionCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import type { RevisionContext } from './operations.ts'
 
 export type RevisionBody = {
@@ -54,5 +54,20 @@ export class IntegrityStore {
     const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }))
     const text = await res.Body!.transformToString()
     return JSON.parse(text)
+  }
+
+  // Push the compliance retain-until date forward in place (S3/MinIO allow increasing only;
+  // a shorter date is rejected by the provider). This is architecture §3.4 Option B.
+  async extendRetention (key: string, retainUntil: Date): Promise<void> {
+    await this.client.send(new PutObjectRetentionCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Retention: { Mode: 'COMPLIANCE', RetainUntilDate: retainUntil }
+    }))
+  }
+
+  async getRetention (key: string): Promise<Date | undefined> {
+    const res = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
+    return res.ObjectLockRetainUntilDate
   }
 }

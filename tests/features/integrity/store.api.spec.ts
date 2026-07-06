@@ -73,3 +73,31 @@ test('overwriting a locked key never replaces the locked version: the original i
   await expect(integrityTestClient.send(new DeleteObjectCommand({ Bucket: store.bucket, Key: key, VersionId: versionId })))
     .rejects.toThrow()
 })
+
+test('extendRetention increases a compliance lock and getRetention reflects it', async () => {
+  const store = integrityTestStore
+  const key = `data-fair/test-renew/${Date.now()}/000000000`
+  await store.writeRevision(key, {
+    hash: { md5: 'r' },
+    context: { operation: 'create', originator: 'test', date: new Date().toISOString() },
+    dataset: { id: 'ds-renew' }
+  }, new Date(Date.now() + 24 * 3600 * 1000))
+
+  const target = new Date(Date.now() + 2 * 24 * 3600 * 1000)
+  await store.extendRetention(key, target)
+  const got = await store.getRetention(key)
+  expect(got).toBeTruthy()
+  expect(Math.abs(got!.getTime() - target.getTime())).toBeLessThan(5000)
+})
+
+test('extendRetention cannot shorten a compliance lock', async () => {
+  const store = integrityTestStore
+  const key = `data-fair/test-renew-shorten/${Date.now()}/000000000`
+  await store.writeRevision(key, {
+    hash: { md5: 's' },
+    context: { operation: 'create', originator: 'test', date: new Date().toISOString() },
+    dataset: { id: 'ds-shorten' }
+  }, new Date(Date.now() + 2 * 24 * 3600 * 1000))
+
+  await expect(store.extendRetention(key, new Date(Date.now() + 24 * 3600 * 1000))).rejects.toThrow()
+})
