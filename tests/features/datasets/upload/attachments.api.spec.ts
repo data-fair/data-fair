@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, waitForDatasetError } from '../../../support/workers.ts'
+import { waitForFinalize, lsAttachments } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testUser3 = await axiosAuth('test_user3@test.com')
@@ -104,13 +104,9 @@ test.describe('Attachments', () => {
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./tests/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
-    await assert.rejects(
-      waitForFinalize(ax, dataset.id),
-      (err: any) => {
-        assert.ok(err.message.includes('Valeurs invalides : dir1/test.pdf'))
-        return true
-      }
-    )
+    // a now-missing attachment (dir1/test.pdf is absent from files2.zip) is no longer blocking
+    dataset = await waitForFinalize(ax, dataset.id)
+    assert.equal(dataset.status, 'finalized')
     const form3 = new FormData()
     form3.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put('/api/v1/datasets/' + dataset.id, form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() } })
@@ -121,38 +117,72 @@ test.describe('Attachments', () => {
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
   })
 
-  test('Detect wrong attachment path', async () => {
+  test('Keep processing when some attachment paths are wrong', async () => {
     const ax = testUser3
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-wrong-paths.csv'), 'attachments-wrong-paths.csv')
     form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
-    const dataset = res.data
     assert.equal(res.status, 201)
-    const errorDataset = await waitForDatasetError(ax, dataset.id)
-    assert.equal(errorDataset.status, 'error')
-    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-    const errorEvent = journal.find((e: any) => e.type === 'error')
-    assert.ok(errorEvent.data.includes('une colonne semble contenir des chemins'))
-    assert.ok(errorEvent.data.includes('Valeurs invalides : BADFILE.txt'))
+    // a majority of values match attachments (only BADFILE.txt is wrong), so the
+    // column is still detected and the dataset is processed normally
+    const dataset = await waitForFinalize(ax, res.data.id)
+    assert.equal(dataset.status, 'finalized')
+    assert.ok(dataset.schema.find((f: any) => f['x-refersTo'] === 'http://schema.org/DigitalDocument'))
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.total, 4)
   })
 
-  test('Detect missing attachment paths', async () => {
+  test('Warn without blocking when no column matches the attachments', async () => {
     const ax = testUser3
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
     form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
-    const dataset = res.data
     assert.equal(res.status, 201)
-    const errorDataset = await waitForDatasetError(ax, dataset.id)
-    assert.equal(errorDataset.status, 'error')
+    // no column can be associated with the attachments, but the dataset is still processed
+    const dataset = await waitForFinalize(ax, res.data.id)
+    assert.equal(dataset.status, 'finalized')
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
-    assert.ok(errorEvent.data.includes('aucune colonne ne contient les chemins'))
-    assert.ok(errorEvent.data.includes('Valeurs attendues :'))
+    assert.ok(errorEvent.data.includes('aucune colonne n\'a pu être associée automatiquement'))
+    assert.ok(errorEvent.data.includes('Document Numérique Attaché'))
     assert.ok(errorEvent.data.includes('test.odt'))
-    assert.ok(errorEvent.data.includes('dir1/test.pdf'))
+    // the warning must guide recovery: designate the column, then reload the attachments
+    assert.ok(errorEvent.data.includes('rechargez les pièces jointes'))
+    // unmatched attachments are not kept (they are dropped at finalize)
+    const attachments = await lsAttachments(dataset.id)
+    assert.equal(attachments.length, 0)
+  })
+
+  test('Do not warn again once the attachment column is designated manually', async () => {
+    const ax = testUser3
+    const warnCount = (journal: any[]) => journal.filter((e: any) => e.type === 'error' && typeof e.data === 'string' && e.data.includes('aucune colonne n\'a pu être associée')).length
+
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
+    form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })).data
+    dataset = await waitForFinalize(ax, dataset.id)
+    // auto-detection failed: exactly one warning was emitted
+    assert.equal(warnCount((await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data), 1)
+
+    // recovery step 1: designate the attachment-path column manually
+    const schema = dataset.schema.map((f: any) => f.key === 'comment' ? { ...f, 'x-refersTo': 'http://schema.org/DigitalDocument' } : f)
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })
+    dataset = await waitForFinalize(ax, dataset.id)
+
+    // recovery step 2: reload the attachments now that the concept is present
+    const form2 = new FormData()
+    form2.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
+    form2.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() } })
+    dataset = await waitForFinalize(ax, dataset.id)
+
+    // the concept is already present, so no new warning must be emitted...
+    assert.equal(warnCount((await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data), 1)
+    // ...and this time the reloaded attachments are kept
+    assert.ok((await lsAttachments(dataset.id)).length > 0)
   })
 
   // sendMetadataAttachment helper

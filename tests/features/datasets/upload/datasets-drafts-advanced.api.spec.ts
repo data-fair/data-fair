@@ -67,10 +67,10 @@ test.describe('datasets in draft mode - advanced', () => {
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./tests/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: { 'Content-Length': form2.getLengthSync(), ...form2.getHeaders() }, params: { draft: true } })
-    dataset = await waitForDatasetError(ax, dataset.id, { draft: true })
-    assert.equal(dataset.status, 'error')
-    assert.equal(dataset.errorStatus, 'stored')
-    assert.ok(!dataset.errorRetry)
+    // a now-missing attachment (dir1/test.pdf is absent from files2.zip) is no longer blocking
+    await waitForFinalize(ax, dataset.id)
+    dataset = await getRawDataset(dataset.id)
+    assert.equal(dataset.draft.status, 'finalized')
 
     // then update the data
     const form3 = new FormData()
