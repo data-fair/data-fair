@@ -60,6 +60,67 @@ test.describe('application partOf attribute', () => {
     )
   })
 
+  test('cannot define an application as a child of an application that is itself a child', async () => {
+    const ax = testUser1
+    const { data: appC } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const refC = (await ax.get('/api/v1/applications', { params: { id: appC.id, select: 'id' } })).data.results[0]
+    const { data: appB } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const refB = (await ax.get('/api/v1/applications', { params: { id: appB.id, select: 'id' } })).data.results[0]
+    const { data: appA } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+
+    await ax.put(`/api/v1/applications/${appB.id}/config`, { applications: [{ id: appC.id, href: refC.href }] })
+    await ax.put(`/api/v1/applications/${appA.id}/config`, { applications: [{ id: appB.id, href: refB.href }] })
+    // B becomes a child of A (C is referenced by B's config but not partOf-defined yet, B has no children)
+    await ax.patch(`/api/v1/applications/${appB.id}`, { partOf: { type: 'application', id: appA.id } })
+
+    // B is itself a child: C cannot be defined as a child of B
+    await assert.rejects(
+      ax.patch(`/api/v1/applications/${appC.id}`, { partOf: { type: 'application', id: appB.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
+  test('cannot define an application as a child when it already has partOf children of its own', async () => {
+    const ax = testUser1
+    const { data: appC } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const refC = (await ax.get('/api/v1/applications', { params: { id: appC.id, select: 'id' } })).data.results[0]
+    const childDataset = await sendDataset('datasets/dataset1.csv', ax)
+    const childDatasetRef = (await ax.get('/api/v1/datasets', { params: { id: childDataset.id, select: 'id' } })).data.results[0]
+    const { data: appB } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const refB = (await ax.get('/api/v1/applications', { params: { id: appB.id, select: 'id' } })).data.results[0]
+    const { data: appA } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+
+    await ax.put(`/api/v1/applications/${appB.id}/config`, {
+      applications: [{ id: appC.id, href: refC.href }],
+      datasets: [{ id: childDataset.id, href: childDatasetRef.href }]
+    })
+    await ax.put(`/api/v1/applications/${appA.id}/config`, { applications: [{ id: appB.id, href: refB.href }] })
+
+    // child application case: C is a child of B → B cannot become a child of A
+    await ax.patch(`/api/v1/applications/${appC.id}`, { partOf: { type: 'application', id: appB.id } })
+    await assert.rejects(
+      ax.patch(`/api/v1/applications/${appB.id}`, { partOf: { type: 'application', id: appA.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+
+    // child dataset case: release C, define the dataset as B's child instead → same rejection
+    await ax.patch(`/api/v1/applications/${appC.id}`, { partOf: null })
+    await ax.patch(`/api/v1/datasets/${childDataset.id}`, { partOf: { type: 'application', id: appB.id } })
+    await assert.rejects(
+      ax.patch(`/api/v1/applications/${appB.id}`, { partOf: { type: 'application', id: appA.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
   test('can define, denormalizes the parent title, hides it from the default listing, and can un-define', async () => {
     const ax = testUser1
     const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })

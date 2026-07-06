@@ -19,7 +19,7 @@ import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
 import { setUniqueRefs } from './operations.ts'
 import filesStorage from '#files-storage'
-import { syncApplications } from '../datasets/service.ts'
+import { syncApplications, countPartOfChildren } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 
@@ -256,12 +256,21 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
 export const patchApplication = async (ctx: ApplicationWriteContext, application: Application, patch: any) => {
   if (patch.partOf) {
     if (patch.partOf.id === application.id) throw httpError(400, 'Une application ne peut pas être définie comme son propre enfant')
+    // a resource that has partOf children of its own (datasets or applications) cannot itself be
+    // defined as a child: chains would leave silent orphans behind cascading deletions
+    const [childDatasetsCount, childAppsCount] = await Promise.all([
+      countPartOfChildren('application', application.id),
+      countChildApplications(application.id)
+    ])
+    if (childDatasetsCount + childAppsCount > 0) throw httpError(400, 'Une application qui a des ressources enfants ne peut pas être elle-même définie comme enfant, les chaînages ne sont pas autorisés')
     // an application can only be defined as a child if it is embedded by exactly one parent
     // application — 0 or 2+ parents makes the relationship ambiguous
-    const parents = await mongo.applications.find({ 'configuration.applications.id': application.id }, { projection: { id: 1, title: 1 } }).toArray()
+    const parents = await mongo.applications.find({ 'configuration.applications.id': application.id }, { projection: { id: 1, title: 1, partOf: 1 } }).toArray()
     if (parents.length !== 1) throw httpError(400, `Cette application ne peut être définie comme enfant que si elle est utilisée par une seule application parente ; elle en compte actuellement ${parents.length}.`)
     const [parent] = parents
     if (parent.id !== patch.partOf.id) throw httpError(400, 'La ressource parente indiquée ne correspond pas à l\'unique application qui utilise celle-ci.')
+    // a resource that is itself a child cannot be a parent
+    if (parent.partOf) throw httpError(400, 'L\'application parente est elle-même définie comme enfant d\'une autre ressource, les chaînages ne sont pas autorisés')
     // the parent's title is denormalized on the child, always trust the current value, not the one sent by the client
     patch.partOf.title = parent.title
   }
