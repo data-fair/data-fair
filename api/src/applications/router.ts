@@ -85,6 +85,10 @@ router.get('/:applicationId', readApplication, permissionMiddleware('readDescrip
 // PUT used to create or update
 router.put('/:applicationId', attemptInsert, readApplication, permissionMiddleware('writeDescription', 'write'), async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  // a full replace rewrites the configuration too: guard against orphaned partOf children
+  if (!reqIsNewApplication(req)) {
+    await service.handleConfigOrphans(req.app, ctx, reqApplication(req), req.body.configuration, req.query.childrenAction as string | undefined)
+  }
   const newApplication = await service.replaceApplication(ctx, reqApplication(req), req.body, !!reqIsNewApplication(req))
   res.status(200).json(clean(newApplication, reqPublicBaseUrl(req), reqPublicationSite(req)))
 })

@@ -217,6 +217,41 @@ test.describe('application partOf attribute', () => {
     )
   })
 
+  test('a full-replace PUT preserves partOf and guards its configuration', async () => {
+    const ax = testUser1
+    const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const childRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, { applications: [{ id: childApp.id, href: childRef.href }] })
+    await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id } })
+
+    // a PUT on the child that omits partOf does not drop it
+    let res = await ax.put(`/api/v1/applications/${childApp.id}`, { url: mockAppUrl('monapp1'), title: 'child replaced' })
+    assert.equal(res.status, 200)
+    res = await ax.get(`/api/v1/applications/${childApp.id}`)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+
+    // a PUT cannot inject an arbitrary partOf either
+    const { data: otherApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    res = await ax.put(`/api/v1/applications/${otherApp.id}`, { url: mockAppUrl('monapp1'), title: 'other replaced', partOf: { type: 'application', id: parentApp.id } })
+    assert.equal(res.status, 200)
+    res = await ax.get(`/api/v1/applications/${otherApp.id}`)
+    assert.equal(res.data.partOf, undefined)
+
+    // a PUT on the parent that drops the child from its configuration is guarded
+    await assert.rejects(
+      ax.put(`/api/v1/applications/${parentApp.id}`, { url: mockAppUrl('monapp1'), title: 'parent replaced', configuration: {} }),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        return true
+      }
+    )
+    res = await ax.put(`/api/v1/applications/${parentApp.id}`, { url: mockAppUrl('monapp1'), title: 'parent replaced', configuration: {} }, { params: { childrenAction: 'unflag' } })
+    assert.equal(res.status, 200)
+    res = await ax.get(`/api/v1/applications/${childApp.id}`)
+    assert.equal(res.data.partOf, undefined)
+  })
+
   test('deleting a parent application with defined children (app and dataset) requires an explicit childrenAction', async () => {
     const ax = testUser1
 

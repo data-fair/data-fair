@@ -231,6 +231,10 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
       newApplication[key] = (existingApplication as any)[key]
     }
   }
+  // partOf is managed exclusively through PATCH (admin-only writePartOf gate + eligibility
+  // validation): a full replace neither drops nor sets it
+  if ('partOf' in existingApplication) newApplication.partOf = (existingApplication as any).partOf
+  else delete newApplication.partOf
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: ctx.sessionState.user.id, name: ctx.sessionState.user.name }
   newApplication.created = true
