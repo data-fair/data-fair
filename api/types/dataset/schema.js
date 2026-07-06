@@ -476,6 +476,27 @@ const datasetProperties = {
             format: 'date-time'
           }
         }
+      },
+      lastRenewal: {
+        type: 'object',
+        required: ['date', 'status'],
+        properties: {
+          date: {
+            type: 'string',
+            format: 'date-time'
+          },
+          status: {
+            type: 'string',
+            enum: ['ok', 'failed']
+          },
+          retainUntil: {
+            type: 'string',
+            format: 'date-time'
+          },
+          error: {
+            type: 'string'
+          }
+        }
       }
     }
   },
