@@ -44,6 +44,24 @@ test.describe('dataset partOf attribute', () => {
     )
   })
 
+  test('cannot define a virtual dataset as a child, even when it has a single parent', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const innerRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'inner virtual', virtual: { children: [dataset.id] } })
+    const innerVirtual = await waitForFinalize(ax, innerRes.data.id)
+    const outerRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'outer virtual', virtual: { children: [innerVirtual.id] } })
+    await waitForFinalize(ax, outerRes.data.id)
+
+    // innerVirtual is used by exactly one parent, but virtual datasets can never be children
+    await assert.rejects(
+      ax.patch(`/api/v1/datasets/${innerVirtual.id}`, { partOf: { type: 'dataset', id: outerRes.data.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
   test('cannot define a dataset as a child when it is used by more than one parent', async () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)

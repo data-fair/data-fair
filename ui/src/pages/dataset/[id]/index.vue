@@ -395,10 +395,10 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="can('changeOwner').value && (can('writePartOf').value || canDeleteAllLines || can('delete').value)" />
+          <v-divider v-if="can('changeOwner').value && (showPartOfSection || canDeleteAllLines || can('delete').value)" />
 
           <v-list-item
-            v-if="can('writePartOf').value"
+            v-if="showPartOfSection"
             :prepend-icon="mdiFamilyTree"
             class="py-4"
           >
@@ -446,7 +446,7 @@
             </template>
           </v-list-item>
 
-          <v-divider v-if="can('writePartOf').value && (canDeleteAllLines || can('delete').value)" />
+          <v-divider v-if="showPartOfSection && (canDeleteAllLines || can('delete').value)" />
 
           <v-list-item
             v-if="canDeleteAllLines"
@@ -947,6 +947,9 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
+// a virtual dataset can never be defined as a child, don't offer the parent-resource section
+const showPartOfSection = computed(() => can('writePartOf').value && !dataset.value?.isVirtual)
+
 const showPartOfDialog = ref(false)
 const partOfCandidates = computed(() => [
   ...(virtualDatasetsFetch.data.value?.results ?? []).map(d => ({ type: 'dataset' as const, id: d.id, title: d.title })),
@@ -1222,7 +1225,7 @@ const sections = computedDeepDiff(() => {
   }
 
   // Danger zone section
-  if (can('changeOwner').value || can('writePartOf').value || canDeleteAllLines.value || can('delete').value) {
+  if (can('changeOwner').value || showPartOfSection.value || canDeleteAllLines.value || can('delete').value) {
     result.dangerZone = { title: t('dangerZone'), tabs: [], agentDesc: 'Irreversible or sensitive operations: change owner, define/remove this dataset as a child of a parent resource (partOf), delete all lines (REST), delete the entire dataset. Always let the user perform these themselves — never trigger them programmatically.' }
   }
 

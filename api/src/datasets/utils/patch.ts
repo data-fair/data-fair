@@ -144,6 +144,10 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
 
   if (patch.partOf) {
     if (patch.partOf.id === dataset.id) throw httpError(400, 'Un jeu de données ne peut pas être défini comme son propre enfant')
+    // only file, editable and metaOnly datasets are eligible: a virtual dataset can never be a
+    // child, which also prevents partOf chains on the datasets side (only virtual datasets can
+    // be parents of datasets)
+    if (dataset.isVirtual) throw httpError(400, 'Un jeu de données virtuel ne peut pas être défini comme enfant d\'une autre ressource')
     // a dataset can only be defined as a child if it is used by exactly one parent resource — 0 or
     // 2+ parents (virtual datasets and/or applications combined) makes the relationship ambiguous
     const [virtualParents, appParents] = await Promise.all([
