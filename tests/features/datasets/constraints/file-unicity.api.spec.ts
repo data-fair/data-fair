@@ -206,6 +206,51 @@ test.describe('file dataset unique constraint', () => {
     assert.deepEqual(after, {}, 'task progress must be cleared when the draft is cancelled')
   })
 
+  test('a unicity violation on a compatibleOrCancel draft auto-cancels the draft like a validation error', async () => {
+    // valid initial file with the constraint -> finalized
+    const csv = 'a,b\nx,1\ny,2\nz,3\n'
+    const ds = await upload(csv, [{ type: 'unique', properties: ['a', 'b'] }])
+    await waitForFinalize(testUser1, ds.id)
+
+    // schema-compatible draft carrying a duplicate on (a,b)
+    const badCsv = 'a,b\nx,1\ny,2\nx,1\n'
+    const form = new FormData()
+    form.append('file', Buffer.from(badCsv), 'data.csv')
+    await testUser1.post(`/api/v1/datasets/${ds.id}`, form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+      params: { draft: 'compatibleOrCancel' }
+    })
+
+    // poll for the draft-cancelled event (same pattern as the validation-diagnostic spec)
+    let cancelEvent: any
+    for (let i = 0; i < 60; i++) {
+      const journal = (await testUser1.get(`/api/v1/datasets/${ds.id}/journal`)).data
+      cancelEvent = journal.find((e: any) => e.type === 'draft-cancelled')
+      if (cancelEvent) break
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    assert.ok(cancelEvent, 'expected draft-cancelled event after a unicity violation under compatibleOrCancel')
+    assert.equal(cancelEvent.hasDiagnosticFile, true)
+    assert.ok((cancelEvent.unicityErrorCount ?? 0) > 0, `expected unicityErrorCount > 0, got ${JSON.stringify(cancelEvent)}`)
+
+    // the dataset reverted to the healthy published version: no draft, no error state, data intact
+    const reverted = (await testUser1.get(`/api/v1/datasets/${ds.id}`, { params: { draft: true } })).data
+    assert.equal(reverted.status, 'finalized')
+    assert.equal(reverted.draftReason, undefined)
+    const lines = await testUser1.get(`/api/v1/datasets/${ds.id}/lines`)
+    assert.equal(lines.data.total, 3)
+
+    // canonical diagnostic slot untouched; relocated cancelled-draft diagnostic downloadable
+    assert.equal((await fetchDiagnostic(ds.id)).status, 404)
+    const cancelledDiag = await testUser1.get(`/api/v1/datasets/${ds.id}/cancelled-draft-diagnostic.csv`, { responseType: 'text', validateStatus: () => true })
+    assert.equal(cancelledDiag.status, 200)
+    assert.match(cancelledDiag.data, /,unicity,/)
+
+    // no stale task progress either (the index task ends as a cancelled-draft final task)
+    const tp = (await testUser1.get(`/api/v1/datasets/${ds.id}/task-progress`)).data
+    assert.deepEqual(tp, {})
+  })
+
   test('a combined PATCH changing a validation rule and constraints together escalates past validation-updated', async () => {
     // A compatible-schema validation-rule-only patch on a finalized dataset normally lands on
     // 'validation-updated', which process-file.ts finalizes directly WITHOUT ever reaching

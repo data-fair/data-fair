@@ -14,7 +14,7 @@ import * as datasetsService from '../../datasets/service.ts'
 import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
 import * as heapUtils from '../../misc/utils/heap.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
-import { dataDir } from '../../datasets/utils/files.ts'
+import { dataDir, validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from '../../datasets/utils/files.ts'
 import * as attachmentsUtils from '../../datasets/utils/attachments.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -170,13 +170,36 @@ export default async function (dataset: DatasetInternal) {
       if (unicityErrorCount > 0) {
         const fileResult = await writer.finalize()
         const summary = `${unicityErrorCount} ligne(s) en double sur une contrainte d'unicité`
-        await journals.log('datasets', dataset, {
-          type: 'validation-error',
-          data: summary,
+        const diagnosticEventData = {
           hasDiagnosticFile: true,
           diagnosticErrorCount: fileResult.count,
           diagnosticCapped: fileResult.capped,
           unicityErrorCount
+        }
+        // compatibleOrCancel drafts: same auto-cancel semantics as validation/extension
+        // errors in process-file.ts — relocate the diagnostic out of the draft dir (about
+        // to be wiped) to the stable cancelled-draft slot, log draft-cancelled instead of
+        // validation-error, cancel the draft and return without promoting the temp index
+        // (cancelDraft's deleteIndex removes every non-prod index of the dataset,
+        // including the temp one built by this run)
+        if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
+          const srcDiagnostic = validationDiagnosticFilePath(dataset)
+          if (await filesStorage.pathExists(srcDiagnostic)) {
+            await filesStorage.moveFile(srcDiagnostic, cancelledDraftDiagnosticFilePath(dataset))
+          }
+          await journals.log('datasets', dataset, {
+            type: 'draft-cancelled',
+            data: `annulation automatique : ${summary}`,
+            ...diagnosticEventData
+          } as Event)
+          await datasetsService.cancelDraft(dataset)
+          await datasetsService.applyPatch({ ...dataset, draftReason: null }, { draft: null })
+          return
+        }
+        await journals.log('datasets', dataset, {
+          type: 'validation-error',
+          data: summary,
+          ...diagnosticEventData
         } as Event)
         await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
           params: {
