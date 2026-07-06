@@ -69,6 +69,9 @@ const RECOGNIZED_PARAMS = new Set([
   'percents', 'precision_threshold', 'interval', 'calendar', 'missing', 'analysis', 'sampling',
   // output formatting / export / misc read params
   'collapse', 'arrays', 'explain', 'fields', 'mimeType', 'finalizedAt',
+  // internal, non-prod streamed-/lines opt-in (see datasets/routes/read.ts) — never flagged so the
+  // streamed response's query hint stays identical to the buffered one.
+  '_stream',
 ])
 
 /**

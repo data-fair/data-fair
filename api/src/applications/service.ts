@@ -27,6 +27,7 @@ const filterFields = {
   url: 'url',
   'base-application': 'url',
   dataset: 'configuration.datasets.id',
+  application: 'configuration.applications.id',
   topics: 'topics.id',
   publicationSites: 'publicationSites',
   requestedPublicationSites: 'requestedPublicationSites'

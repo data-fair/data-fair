@@ -457,6 +457,16 @@
     },
     "apiKeysExpirationCron": {
       "type": "string"
+    },
+    "experimental": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "streamReadLines": {
+          "type": "boolean",
+          "default": false
+        }
+      }
     }
   },
   "$defs": {

@@ -58,3 +58,16 @@ declare module '@terraformer/wkt' {
   export const geojsonToWKT: (geojson: any) => string
   export const wktToGeoJSON: (wkt: string) => any
 }
+
+declare module 'geojson-vt' {
+  const geojsonvt: (geojson: any, options?: any) => { getTile: (z: number, x: number, y: number) => any }
+  export default geojsonvt
+}
+
+declare module 'vt-pbf' {
+  const vtpbf: {
+    fromGeojsonVt: (layers: any, options?: any) => Uint8Array
+    fromVectorTileJs: (tile: any) => Uint8Array
+  }
+  export default vtpbf
+}
