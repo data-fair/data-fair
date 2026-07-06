@@ -21,7 +21,7 @@ test.describe('application partOf attribute', () => {
     const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
 
     await assert.rejects(
-      ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { id: parentApp.id } }),
+      ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id } }),
       (err: any) => {
         assert.equal(err.status, 400)
         return true
@@ -33,7 +33,7 @@ test.describe('application partOf attribute', () => {
     const ax = testUser1
     const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     await assert.rejects(
-      ax.patch(`/api/v1/applications/${app.id}`, { partOf: { id: app.id } }),
+      ax.patch(`/api/v1/applications/${app.id}`, { partOf: { type: 'application', id: app.id } }),
       (err: any) => {
         assert.equal(err.status, 400)
         return true
@@ -52,7 +52,7 @@ test.describe('application partOf attribute', () => {
     await ax.put(`/api/v1/applications/${parent2.id}/config`, { applications: [{ id: childApp.id, href: childRef.href }] })
 
     await assert.rejects(
-      ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { id: parent1.id } }),
+      ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parent1.id } }),
       (err: any) => {
         assert.equal(err.status, 400)
         return true
@@ -67,9 +67,9 @@ test.describe('application partOf attribute', () => {
     const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
     await ax.put(`/api/v1/applications/${parentApp.id}/config`, { applications: [{ id: childApp.id, href: childRef.href }] })
 
-    let res = await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { id: parentApp.id, title: 'stale title sent by the client' } })
+    let res = await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id, title: 'stale title sent by the client' } })
     assert.equal(res.status, 200)
-    assert.deepEqual(res.data.partOf, { id: parentApp.id, title: parentApp.title })
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
 
     // hidden from the default listing, without needing any filter param...
     res = await ax.get('/api/v1/applications')
@@ -117,7 +117,7 @@ test.describe('application partOf attribute', () => {
       datasets: [{ id: childDataset.id, href: childDatasetRef.href }]
     })
 
-    await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { id: parentApp.id } })
+    await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id } })
     await ax.patch(`/api/v1/datasets/${childDataset.id}`, { partOf: { type: 'application', id: parentApp.id } })
 
     await assert.rejects(
@@ -135,5 +135,30 @@ test.describe('application partOf attribute', () => {
     assert.equal(appRes.data.partOf, undefined)
     const datasetRes = await ax.get(`/api/v1/datasets/${childDataset.id}`)
     assert.equal(datasetRes.data.partOf, undefined)
+  })
+
+  test('partOf must carry the constant application type', async () => {
+    const ax = testUser1
+    const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const childRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, { applications: [{ id: childApp.id, href: childRef.href }] })
+
+    // missing type: rejected by schema validation
+    await assert.rejects(
+      ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { id: parentApp.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+    // wrong type value: rejected by schema validation
+    await assert.rejects(
+      ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'dataset', id: parentApp.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
   })
 })

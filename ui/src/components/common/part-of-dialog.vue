@@ -149,9 +149,8 @@ en:
 <script setup lang="ts">
 // candidates are built by the caller from freshly fetched resources, title is always populated
 type Candidate = { type: 'dataset' | 'application', id: string, title: string }
-// the currently stored partOf comes straight from the resource's generated type: `type` is absent
-// for applications (always 'application') and `title` is optional in the schema
-type CurrentPartOf = { type?: 'dataset' | 'application', id: string, title?: string }
+// the currently stored partOf comes straight from the resource's generated type, `title` is optional in the schema
+type CurrentPartOf = { type: 'dataset' | 'application', id: string, title?: string }
 
 const props = defineProps<{
   resourceType: 'datasets' | 'applications'
@@ -179,12 +178,9 @@ const save = useAsyncAction(
   async () => {
     const [candidate] = props.candidates
     if (!candidate) return
-    // the application partOf schema has no "type" property: an application can only ever be
-    // the child of another application, so the type is implicit and must not be sent
-    const partOf = props.resourceType === 'applications' ? { id: candidate.id, title: candidate.title } : candidate
     await $fetch(`${props.resourceType}/${props.resource.id}`, {
       method: 'PATCH',
-      body: { partOf }
+      body: { partOf: candidate }
     })
     showDialog.value = false
     emit('changed')

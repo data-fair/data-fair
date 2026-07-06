@@ -187,8 +187,15 @@ export default {
       title: 'Application enfant',
       description: 'Si renseigné, cette application n\'existe que pour être embarquée dans une application parente (par exemple un tableau de bord). Elle est alors masquée des listes par défaut.',
       additionalProperties: false,
-      required: ['id'],
+      required: ['type', 'id'],
       properties: {
+        type: {
+          type: 'string',
+          title: 'Type de la ressource parente',
+          // always 'application' (an application can only be the child of another application):
+          // the constant discriminator is kept so both resource types share the same partOf modeling
+          enum: ['application']
+        },
         id: {
           type: 'string',
           title: 'Identifiant de l\'application parente'
