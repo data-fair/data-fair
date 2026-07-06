@@ -61,6 +61,6 @@ export const historize = async (dataset: DatasetInternal): Promise<void> => {
   // and a follow-up _fix recovers. A generation token on _historizeContext would close it; deferred.
   await mongo.datasets.updateOne(
     { id: dataset.id },
-    { $set: { 'integrity.lastRevision': { i, md5: currentMd5, date } }, $unset: { _needsHistorizing: '', _historizeContext: '' } }
+    { $set: { 'integrity.lastRevision': { i, md5: currentMd5, date, retainUntil: retainUntil.toISOString() } }, $unset: { _needsHistorizing: '', _historizeContext: '' } }
   )
 }

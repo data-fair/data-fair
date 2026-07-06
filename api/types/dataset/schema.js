@@ -470,6 +470,10 @@ const datasetProperties = {
           date: {
             type: 'string',
             format: 'date-time'
+          },
+          retainUntil: {
+            type: 'string',
+            format: 'date-time'
           }
         }
       }
