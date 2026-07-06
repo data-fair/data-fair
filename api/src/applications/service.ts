@@ -19,7 +19,7 @@ import { type LogContext } from '../misc/utils/req-context.ts'
 import { clean, dir, attachmentPath } from './utils.ts'
 import { setUniqueRefs } from './operations.ts'
 import filesStorage from '#files-storage'
-import { syncApplications, countPartOfChildren } from '../datasets/service.ts'
+import { syncApplications, countPartOfChildren, listPartOfChildrenIds, handlePartOfChildren } from '../datasets/service.ts'
 import type { Application, Event } from '#types'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
 
@@ -394,17 +394,41 @@ export const countChildApplications = async (parentId: string) => {
   return mongo.applications.countDocuments({ 'partOf.id': parentId })
 }
 
-// called when deleting an application that has child applications: either cascade the deletion, or
-// unflag them so they survive on their own, no longer restricted to their now-deleted parent
-export const handleChildApplications = async (ctx: ApplicationWriteContext, parentId: string, action: 'delete' | 'unflag') => {
+// called when deleting an application that has child applications, or editing its configuration
+// in a way that stops referencing some of them (childIds restricts the cascade to those orphans):
+// either cascade the deletion, or unflag them so they survive on their own
+export const handleChildApplications = async (ctx: ApplicationWriteContext, parentId: string, action: 'delete' | 'unflag', childIds?: string[]) => {
+  const filter = { 'partOf.id': parentId, ...(childIds ? { id: { $in: childIds } } : {}) }
   if (action === 'unflag') {
-    await mongo.applications.updateMany({ 'partOf.id': parentId }, { $unset: { partOf: 1 } })
+    await mongo.applications.updateMany(filter, { $unset: { partOf: 1 } })
     return
   }
-  const children = await mongo.applications.find({ 'partOf.id': parentId }).toArray()
+  const children = await mongo.applications.find(filter).toArray()
   for (const child of children) {
     await deleteApplication(ctx, child as Application)
   }
+}
+
+// writing an application's production configuration can orphan resources still defined as its
+// partOf children: mirror the deletion guard, restricted to the children no longer referenced
+export const handleConfigOrphans = async (app: any, ctx: ApplicationWriteContext, application: Application, newConfig: any, childrenAction?: string) => {
+  const newDatasetIds = ((newConfig?.datasets ?? []) as any[]).map(d => d?.id).filter(Boolean)
+  const newAppIds = ((newConfig?.applications ?? []) as any[]).map(a => a?.id).filter(Boolean)
+  const [childDatasetIds, childApps] = await Promise.all([
+    listPartOfChildrenIds('application', application.id),
+    mongo.applications.find({ 'partOf.id': application.id }, { projection: { _id: 0, id: 1 } }).toArray()
+  ])
+  const orphanDatasets = childDatasetIds.filter(id => !newDatasetIds.includes(id))
+  const orphanApps = childApps.map(a => a.id).filter(id => !newAppIds.includes(id))
+  if (!orphanDatasets.length && !orphanApps.length) return
+  if (childrenAction !== 'delete' && childrenAction !== 'unflag') {
+    throw httpError(409, `Cette modification retire ${orphanDatasets.length + orphanApps.length} ressource(s) enfant(s) qui n'existent que dans ce cadre. Précisez "childrenAction=delete" pour les supprimer aussi, ou "childrenAction=unflag" pour seulement leur retirer l'attribut enfant.`)
+  }
+  // the children were explicitly opted into this relationship by their own owner (via the
+  // admin-only writePartOf permission on the child itself), so no extra per-child permission
+  // check is required here
+  if (orphanDatasets.length) await handlePartOfChildren(app, 'application', application.id, childrenAction, orphanDatasets)
+  if (orphanApps.length) await handleChildApplications(ctx, application.id, childrenAction, orphanApps)
 }
 
 export const deleteApplication = async (ctx: ApplicationWriteContext, application: Application) => {

@@ -108,6 +108,7 @@ router.patch('/:applicationId',
     }
 
     const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+    if (patch.configuration) await service.handleConfigOrphans(req.app, ctx, application, patch.configuration, req.query.childrenAction as string | undefined)
     let patched
     try {
       patched = await service.patchApplication(ctx, application, patch)
@@ -171,6 +172,7 @@ const writeConfig: express.RequestHandler = async (req, res) => {
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   const ctx = { sessionState: reqSessionAuthenticated(req), logCtx: reqEventLogContext(req) }
+  await service.handleConfigOrphans(req.app, ctx, reqApplication(req), appConfig, req.query.childrenAction as string | undefined)
   await service.writeApplicationConfig(ctx, reqApplication(req), appConfig)
   res.status(200).json(req.body)
 }

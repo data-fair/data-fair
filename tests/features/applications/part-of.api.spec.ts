@@ -164,6 +164,59 @@ test.describe('application partOf attribute', () => {
     )
   })
 
+  test('a configuration write that drops defined children requires an explicit childrenAction, only orphans are affected', async () => {
+    const ax = testUser1
+    const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const childAppRef = (await ax.get('/api/v1/applications', { params: { id: childApp.id, select: 'id' } })).data.results[0]
+    const childDataset = await sendDataset('datasets/dataset1.csv', ax)
+    const childDatasetRef = (await ax.get('/api/v1/datasets', { params: { id: childDataset.id, select: 'id' } })).data.results[0]
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, {
+      applications: [{ id: childApp.id, href: childAppRef.href }],
+      datasets: [{ id: childDataset.id, href: childDatasetRef.href }]
+    })
+    await ax.patch(`/api/v1/applications/${childApp.id}`, { partOf: { type: 'application', id: parentApp.id } })
+    await ax.patch(`/api/v1/datasets/${childDataset.id}`, { partOf: { type: 'application', id: parentApp.id } })
+
+    // dropping the child app from the config (PUT /config) without childrenAction → 409
+    await assert.rejects(
+      ax.put(`/api/v1/applications/${parentApp.id}/config`, { datasets: [{ id: childDataset.id, href: childDatasetRef.href }] }),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        return true
+      }
+    )
+    // nothing was applied
+    let res = await ax.get(`/api/v1/applications/${childApp.id}`)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+
+    // retry with unflag: childApp is released, childDataset (still referenced) is untouched
+    res = await ax.put(`/api/v1/applications/${parentApp.id}/config`, { datasets: [{ id: childDataset.id, href: childDatasetRef.href }] }, { params: { childrenAction: 'unflag' } })
+    assert.equal(res.status, 200)
+    res = await ax.get(`/api/v1/applications/${childApp.id}`)
+    assert.equal(res.data.partOf, undefined)
+    res = await ax.get(`/api/v1/datasets/${childDataset.id}`)
+    assert.deepEqual(res.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+
+    // dropping the child dataset through PATCH configuration: 409 then cascade delete
+    await assert.rejects(
+      ax.patch(`/api/v1/applications/${parentApp.id}`, { configuration: { datasets: [] } }),
+      (err: any) => {
+        assert.equal(err.status, 409)
+        return true
+      }
+    )
+    res = await ax.patch(`/api/v1/applications/${parentApp.id}`, { configuration: { datasets: [] } }, { params: { childrenAction: 'delete' } })
+    assert.equal(res.status, 200)
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${childDataset.id}`),
+      (err: any) => {
+        assert.equal(err.status, 404)
+        return true
+      }
+    )
+  })
+
   test('deleting a parent application with defined children (app and dataset) requires an explicit childrenAction', async () => {
     const ax = testUser1
 
