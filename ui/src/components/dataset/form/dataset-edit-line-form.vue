@@ -132,7 +132,7 @@ watch(simulateExtensionInputStr, () => {
 })
 
 const simulateExtension = useAsyncAction(async (body) => {
-  const res = Object.keys(body).length && await $fetch<Record<string, any>>(`/datasets/${id}/_simulate-extension`, { method: 'POST', body })
+  const res = Object.keys(body).length && await $fetch<Record<string, any>>(`/datasets/${id}/_simulate-extension`, { method: 'POST', body, params: { arrays: true } })
   const newValue = { ...model.value }
   for (const key of extensionKeys.value) {
     if (res && res[key] !== undefined) newValue[key] = res[key]

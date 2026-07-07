@@ -18,6 +18,58 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
   return true
 }
 
+// The keyword `ignore_above` character limit. Values longer than this are dropped from the keyword
+// index and its doc_values (kept only in _source), so term/exists/range/sort/agg on the main keyword
+// field silently miss them. See docs/architecture/load-management.md.
+export const KEYWORD_IGNORE_ABOVE = 200
+
+// A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a plain or uri-reference
+// string. Only these are exposed to the ignore_above truncation problem.
+// Fields with `x-capabilities.nativeWildcard: true` are mapped as ES `wildcard` type and have no
+// ignore_above limit, so they are excluded.
+// Geometry-refersTo string fields are mapped as `{type:keyword, index:false}` (no ignore_above), so
+// they are also excluded — a term filter with a long operand on such a field should silently match
+// nothing rather than 400.
+const GEOMETRY_REFERS_TO = 'https://purl.org/geojson/vocab#geometry'
+export const isLengthLimitedKeyword = (prop: any): boolean =>
+  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format) &&
+  prop?.['x-capabilities']?.nativeWildcard !== true &&
+  prop?.['x-refersTo'] !== GEOMETRY_REFERS_TO
+
+// Exact (term/terms) filter target — OPERAND-DRIVEN, independent of whether the column currently
+// holds long values: a value longer than the limit can never be a keyword term, so
+//  - short values (≤ limit) keep the fast keyword main field
+//  - long values (> limit) route to `.wildcard` when configured, else are impossible (caller 400s).
+export const resolveExactKeywordTarget = (prop: any, values: string[]): { field: string } | { impossible: true } => {
+  if (!isLengthLimitedKeyword(prop)) return { field: prop.key }
+  const anyTooLong = values.some(v => typeof v === 'string' && v.length > KEYWORD_IGNORE_ABOVE)
+  if (!anyTooLong) return { field: prop.key }
+  if (hasCapability(prop, 'wildcard')) return { field: prop.key + '.wildcard' }
+  return { impossible: true }
+}
+
+// Existence-check fields. `flagged` = the column actually dropped values (persisted detection). When
+// not flagged we keep the fast, correct keyword path. When flagged we make existence length-safe with
+// no reindex: `.wildcard` alone if configured, else union keyword (≤ limit docs) with an analyzed
+// sub-field (> limit docs always produce ≥1 token). A flagged pure-keyword column has no safe fallback.
+export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
+  if (!isLengthLimitedKeyword(prop) || !flagged) return [prop.key]
+  if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
+  const fields = [prop.key]
+  if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
+  else if (hasCapability(prop, 'text')) fields.push(prop.key + '.text')
+  return fields
+}
+
+// Prefix (_starts) / range filter field. Un-flagged or non-keyword → fast keyword path, certain.
+// Flagged with `.wildcard` → route there (length-safe). Flagged without wildcard → keep keyword but
+// mark `uncertain` (a short prefix can still match a dropped long value; not validatable by operand).
+export const resolveRangeOrPrefixField = (prop: any, flagged: boolean): { field: string, uncertain: boolean } => {
+  if (!isLengthLimitedKeyword(prop) || !flagged) return { field: prop.key, uncertain: false }
+  if (hasCapability(prop, 'wildcard')) return { field: prop.key + '.wildcard', uncertain: false }
+  return { field: prop.key, uncertain: true }
+}
+
 /**
  * Require a capability on a property, throwing an HTTP error if not present
  */
@@ -177,13 +229,13 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
     }
     if (capabilities.insensitive !== false) {
       // handle case and diacritics for better sorting
-      innerFields.keyword_insensitive = { type: 'keyword', ignore_above: 200, normalizer: 'insensitive_normalizer' }
+      innerFields.keyword_insensitive = { type: 'keyword', ignore_above: KEYWORD_IGNORE_ABOVE, normalizer: 'insensitive_normalizer' }
     }
     if (capabilities.wildcard) {
       // support wildcard filters
       innerFields.wildcard = { type: 'wildcard' }
     }
-    esProp = { type: 'keyword', ignore_above: 200, fields: innerFields, index, doc_values: values }
+    esProp = { type: 'keyword', ignore_above: KEYWORD_IGNORE_ABOVE, fields: innerFields, index, doc_values: values }
   }
   // Do not index geometry, it will be copied and simplified in _geoshape
   if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
@@ -458,6 +510,41 @@ export const escapeFilter = (val: any): any => {
     ) return '\\' + char
     else return char
   }).join('')
+}
+
+/**
+ * ES field to aggregate on for a schema property in a unique constraint.
+ * String columns use the base keyword field, or the length-safe `.wildcard`
+ * sub-field when the wildcard capability is enabled (avoids ignore_above:200
+ * silently dropping long values from the aggregation).
+ */
+export const unicityAggField = (prop: any): string => {
+  if (isLengthLimitedKeyword(prop) && hasCapability(prop, 'wildcard')) return `${prop.key}.wildcard`
+  return prop.key
+}
+
+/**
+ * Human-readable label for one part of a unicity duplicate-group composite key (used to build
+ * `DuplicateGroup.keyLabel`, itself written as `raw_value` in the validation diagnostic CSV).
+ * ES composite `terms` sources on `date`/`date-time` columns return the raw epoch-millis bucket
+ * key, which is meaningless to a user reading the CSV — convert it to the date the user would
+ * recognize: `YYYY-MM-DD` for `format: 'date'` (mirrors the slicing convention already used for
+ * date buckets in `es/values.ts`), full ISO 8601 for `format: 'date-time'`. Every other column
+ * type (string, number, boolean, …) is passed through as its string form, unchanged.
+ * Defensive: composite `terms` sources never enable `missing_bucket`, and ES always emits a
+ * finite numeric key for a `date`-mapped field, so a null/undefined/non-finite/non-numeric key
+ * should never reach here — but a stray one must never crash the indexer, so it degrades to ''
+ * / the raw string instead of throwing (a bad `Date` would otherwise throw a RangeError on
+ * NaN/±Infinity, or silently produce "Invalid Date").
+ */
+export const unicityKeyPartLabel = (prop: any, value: any): string => {
+  if (value === null || value === undefined) return ''
+  const isDateColumn = prop?.type === 'string' && (prop.format === 'date' || prop.format === 'date-time')
+  if (isDateColumn && Number.isFinite(value)) {
+    const iso = new Date(value).toISOString()
+    return prop.format === 'date' ? iso.slice(0, 10) : iso
+  }
+  return String(value)
 }
 
 /**

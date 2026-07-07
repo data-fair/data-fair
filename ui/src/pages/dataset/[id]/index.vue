@@ -66,6 +66,16 @@
           />
         </v-tabs-window-item>
 
+        <v-tabs-window-item value="constraints">
+          <dataset-constraints
+            v-if="structureEditFetch.data.value && !dataset?.isVirtual && !dataset?.isMetaOnly"
+            :model-value="structureEditFetch.data.value.constraints"
+            :dataset-schema="structureEditFetch.data.value.schema"
+            :editable="true"
+            @update:model-value="c => { if (structureEditFetch.data.value) structureEditFetch.data.value.constraints = c }"
+          />
+        </v-tabs-window-item>
+
         <v-tabs-window-item value="extensions">
           <dataset-extension
             v-if="structureEditFetch.data.value"
@@ -552,6 +562,7 @@ fr:
   metadata: Métadonnées
   informations: Informations
   schema: Schéma
+  constraints: Contraintes
   attachments: Pièces jointes
   save: Enregistrer
   cancel: Annuler
@@ -611,6 +622,7 @@ en:
   metadata: Metadata
   informations: Information
   schema: Schema
+  constraints: Constraints
   attachments: Attachments
   save: Save
   cancel: Cancel
@@ -671,7 +683,7 @@ import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -687,7 +699,7 @@ import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-
 import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schema-annotation-tools'
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
-import { hasInvalidExprEvalExtension } from '~/composables/dataset/expr-eval-validation'
+import { hasInvalidExprEvalExtension, hasInvalidRemoteServiceExtension } from '~/composables/dataset/expr-eval-validation'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -756,7 +768,10 @@ function normalizeStructureData (d: any) {
 }
 
 const masterDataFormValid = ref(true)
-const hasInvalidExtension = computed(() => hasInvalidExprEvalExtension(structureEditFetch.data.value))
+const hasInvalidExtension = computed(() =>
+  hasInvalidExprEvalExtension(structureEditFetch.data.value) ||
+  hasInvalidRemoteServiceExtension(structureEditFetch.data.value)
+)
 
 // Sync store.dataset with both editFetch instances
 watch(structureEditFetch.serverData, (d) => {
@@ -906,6 +921,13 @@ const schemaHasDiff = computed(() => {
     !equal(d.conformsTo, s.conformsTo)
 })
 
+const constraintsHasDiff = computed(() => {
+  const d = structureEditFetch.data.value
+  const s = structureEditFetch.serverData.value
+  if (!d || !s) return false
+  return !equal(d.constraints ?? [], s.constraints ?? [])
+})
+
 const extensionsHasDiff = computed(() => {
   const d = structureEditFetch.data.value
   const s = structureEditFetch.serverData.value
@@ -950,7 +972,7 @@ const virtualHasDiff = computed(() => {
   return !equal(d.virtual, s.virtual) || !equal(d.schema, s.schema)
 })
 
-const structureHasRealDiff = computed(() => schemaHasDiff.value || extensionsHasDiff.value || restHasDiff.value || masterDataHasDiff.value || virtualHasDiff.value)
+const structureHasRealDiff = computed(() => schemaHasDiff.value || constraintsHasDiff.value || extensionsHasDiff.value || restHasDiff.value || masterDataHasDiff.value || virtualHasDiff.value)
 
 // Leave guards for unsaved changes
 useLeaveGuard(structureHasRealDiff, { locale })
@@ -979,6 +1001,13 @@ const sections = computedDeepDiff(() => {
     }]
 
     if (!d.isVirtual && !d.isMetaOnly) {
+      structureTabs.push({
+        key: 'constraints',
+        title: t('constraints'),
+        icon: mdiFingerprint,
+        color: constraintsHasDiff.value ? 'accent' : undefined,
+        agentDesc: 'Dataset-level unicity constraints: each constraint selects a combination of columns whose values must be unique across all rows. Not available on virtual and metaOnly datasets. Saving a change re-validates the data: file datasets are reprocessed (violations put the dataset in error with a diagnostic file), REST datasets get a unique index (addition is rejected if existing data violates it).'
+      })
       structureTabs.push({
         key: 'extensions',
         title: t('extensions'),

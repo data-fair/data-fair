@@ -89,6 +89,9 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
         readOnly: cleanProp.readOnly,
         items: itemsProps
       }
+      // keep the extension marker on the array itself, not only on its items, so the edit
+      // form recognizes multi-valued extension fields (otherwise they are never rendered)
+      if (cleanProp['x-extension']) array['x-extension'] = cleanProp['x-extension']
       if (layout.getItems) {
         array.layout = { getItems: layout.getItems }
       }

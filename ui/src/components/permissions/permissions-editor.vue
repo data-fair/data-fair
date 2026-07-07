@@ -82,7 +82,7 @@
     />
   </template>
 
-  <template v-if="!simple && detailedMode && ownerDetails && api">
+  <template v-if="!simple && detailedMode && ownerDetails">
     <permission-dialog
       v-if="!disabled"
       :permission-classes="permissionClasses"
@@ -290,6 +290,7 @@ en:
 <script setup lang="ts">
 import { mdiPencil, mdiDelete } from '@mdi/js'
 import PermissionDialog from './permission-dialog.vue'
+import { permissionClassesPicker, datasetContext } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import type { Permission } from '#api/types'
 
 type PermissibleResource = {
@@ -315,13 +316,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{ save: [value: Permission[]] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const detailedMode = ref(false)
 const ownerDetails = ref<{ type: string, id: string, name?: string, departments?: { id: string, name: string }[] } | null>(null)
-type ApiEndpoint = { operationId: string, summary: string, 'x-permissionClass'?: string, 'x-altPermissions'?: PermissionClassItem[] }
-type ApiDoc = { paths: Record<string, Record<string, ApiEndpoint>> }
-const api = ref<ApiDoc | null>(null)
 
 const orgName = computed(() => props.resource.owner?.name || props.resource.owner?.id || '')
 
@@ -373,35 +371,15 @@ function isContribWriteAllPermission (p: Permission): boolean {
     !!p.classes?.includes('write') && !!p.operations?.includes('delete')
 }
 
-// --- Permission classes built from API doc ---
+// --- Permission classes built from the shared source of truth ---
+// Built from the descriptors in shared/permissions/operations.ts, contextual to the dataset's shape:
+// surfaces every grantable operation with its true permission class — including admin operations that
+// have no documented route.
 
-type PermissionClassItem = { id: string, title: string, class: string }
+type PermissionClassItem = { id: string, title: string }
 const permissionClasses = computed<Record<string, PermissionClassItem[]>>(() => {
-  const classes: Record<string, PermissionClassItem[]> = {
-    list: [{
-      id: 'list',
-      title: 'Lister la ressource',
-      class: 'list'
-    }]
-  }
-  if (api.value) {
-    for (const path of Object.keys(api.value.paths)) {
-      for (const method of Object.keys(api.value.paths[path])) {
-        const endpoint: ApiEndpoint = api.value.paths[path][method]
-        const permClass = endpoint['x-permissionClass']
-        if (!permClass) continue
-        classes[permClass] = (classes[permClass] || []).concat({
-          id: endpoint.operationId,
-          title: endpoint.summary,
-          class: permClass
-        })
-        for (const altPermission of endpoint['x-altPermissions'] || []) {
-          classes[permClass] = (classes[permClass] || []).concat([altPermission])
-        }
-      }
-    }
-  }
-  return classes
+  const ctx = props.resourceType === 'datasets' ? datasetContext(props.resource as any) : undefined
+  return permissionClassesPicker(props.resourceType, locale.value as 'fr' | 'en', ctx)
 })
 
 // --- Computed states ---
@@ -549,9 +527,8 @@ watch(() => props.modelValue, (perms) => {
 watch(detailedMode, async (newVal) => {
   if (newVal) {
     if (!ownerDetails.value) await fetchOwnerDetails()
-    if (!api.value) await fetchApiDoc()
   }
-})
+}, { immediate: true })
 
 // --- Fetch owner details from simple-directory ---
 
@@ -563,15 +540,6 @@ async function fetchOwnerDetails () {
     data.departments.sort((d1: { name: string }, d2: { name: string }) => d1.name.localeCompare(d2.name))
   }
   ownerDetails.value = data
-}
-
-// --- Fetch API doc ---
-
-async function fetchApiDoc () {
-  const docPath = props.resourceType === 'datasets'
-    ? `datasets/${props.resource.id}/private-api-docs.json`
-    : `applications/${props.resource.id}/api-docs.json`
-  api.value = await $fetch(docPath)
 }
 
 // --- Permission CRUD for detailed mode ---

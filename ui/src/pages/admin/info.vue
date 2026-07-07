@@ -79,6 +79,7 @@
       data-fair/agents: Gestion des agents IA
       data-fair/metrics: Suivi d'audience
       data-fair/openapi-viewer: Visualisateur de documentation d'API
+      data-fair/registry: Registre d'applications et services
   en:
     info: Services information
     installed: installed
@@ -95,6 +96,7 @@
       data-fair/agents: AI agents management
       data-fair/metrics: Audience tracking
       data-fair/openapi-viewer: API documentation viewer
+      data-fair/registry: Applications and services registry
   </i18n>
 
 <script setup lang="ts">
@@ -135,6 +137,9 @@ if ($uiConfig.metricsIntegration) {
 }
 if ($uiConfig.openapiViewerIntegration) {
   services.value.push({ name: 'data-fair/openapi-viewer', infoUrl: '/openapi-viewer/api/admin/info' })
+}
+if ($uiConfig.registryIntegration) {
+  services.value.push({ name: 'data-fair/registry', infoUrl: '/registry/api/admin/info' })
 }
 
 const showAgentChat = useShowAgentChat()

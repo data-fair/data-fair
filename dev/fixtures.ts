@@ -191,6 +191,159 @@ async function seedHorairesFuseaux () {
   console.log(`${id}: seeded (${lines.length} lines)`)
 }
 
+/** REST dataset illustrating the keyword `ignore_above:200` truncation handling
+ * (see docs/architecture/load-management.md). It carries TWO long-valued string
+ * columns so a single dataset shows both sides of the fix:
+ *
+ *   - `note_libre`     : a plain string column (keyword, ignore_above:200, NO
+ *                        wildcard). Rows whose value exceeds 200 chars are dropped
+ *                        from the keyword index, so this column is the "problem"
+ *                        case → it raises the `IgnoredKeywordValues` diagnose
+ *                        warning, a `ignored-keyword-values` journal event at
+ *                        finalize, and per-request advisories.
+ *   - `chemin_fichier` : the SAME long values, configured the way a long-valued
+ *                        column should be — `wildcard` enabled (exact/existence
+ *                        filters route to the no-limit `.wildcard` sub-field) AND
+ *                        sortable/groupable disabled (sort & group can NOT be made
+ *                        reliable past 200 chars, so the capability is removed
+ *                        rather than left silently broken). It is therefore fully
+ *                        mitigated → not flagged.
+ *
+ * Things to try once it is finalized (browse / call the API):
+ *   - GET .../datasets/fixtures-ignore-above/_diagnose
+ *       → warnings[] contains IgnoredKeywordValues naming `note_libre` only
+ *         (chemin_fichier is fully mitigated, so it is not flagged).
+ *   - GET .../datasets/fixtures-ignore-above/journal
+ *       → an `ignored-keyword-values` warning event (journal-only, no notification).
+ *   - lines?note_libre_eq=<a >200-char value>      → 400 (impossible on keyword).
+ *   - lines?chemin_fichier_eq=<the same value>     → 1 hit (routed to .wildcard).
+ *   - lines?note_libre_exists=true                 → finds the long-valued rows too
+ *                                                    (union with .text_standard).
+ *   - lines?note_libre_starts=Note&hint=true       → may be incomplete; response
+ *                                                    carries a `hint` advisory.
+ *   - lines?chemin_fichier_starts=/var/exports&hint=true → correct, no hint.
+ */
+async function seedIgnoreAbove () {
+  const id = 'fixtures-ignore-above'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  // pad well past the 200-char ignore_above limit (27 chars * 10 = 270, + prefix)
+  const longText = (prefix: string) => `${prefix} ${'lorem ipsum dolor sit amet '.repeat(10)}`.trim()
+  await dfAx.post(`/api/v1/datasets/${id}`, {
+    isRest: true,
+    title: 'Démonstration ignore_above (valeurs longues)',
+    description: 'Illustre la gestion des valeurs de plus de 200 caractères sur les colonnes "keyword" Elasticsearch : la colonne "note_libre" (non configurée) pose problème, la colonne "chemin_fichier" est correctement configurée (wildcard activé, tri/regroupement désactivés). Voir docs/architecture/load-management.md.',
+    schema: [
+      { key: 'ref', type: 'string', title: 'Référence' },
+      // plain keyword column: long values are dropped from the index (the problem case)
+      { key: 'note_libre', type: 'string', title: 'Note libre (non configurée)' },
+      // correctly configured for long values: wildcard for exact/existence filtering,
+      // and sort/group (values) + case-insensitive sort (insensitive) disabled, since
+      // those cannot be reliable past 200 chars (wildcard does not repair them).
+      { key: 'chemin_fichier', type: 'string', title: 'Chemin de fichier (configuré)', 'x-capabilities': { wildcard: true, values: false, insensitive: false } }
+    ]
+  })
+  const lines = [
+    // short values: behave normally on both columns
+    { ref: 'COURT-1', note_libre: 'Note courte A', chemin_fichier: '/var/exports/court-a.csv' },
+    { ref: 'COURT-2', note_libre: 'Note courte B', chemin_fichier: '/var/exports/court-b.csv' },
+    // long values (> 200 chars): dropped from `note_libre`'s keyword index,
+    // but indexed in `chemin_fichier`'s wildcard sub-field
+    { ref: 'LONG-1', note_libre: longText('Note détaillée concernant le dossier 1'), chemin_fichier: longText('/var/exports/2026/dossier-1') },
+    { ref: 'LONG-2', note_libre: longText('Note détaillée concernant le dossier 2'), chemin_fichier: longText('/var/exports/2026/dossier-2') }
+  ]
+  await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
+  console.log(`${id}: seeded (${lines.length} lines, incl. 2 with >200-char values)`)
+}
+
+/** REST dataset illustrating a dataset-wide UNIQUE CONSTRAINT (multi-column) on
+ * editable data (see docs/architecture/dataset-validation.md § Dataset-wide
+ * constraints). The constraint is `unique (siret, annee)`, enforced by a partial
+ * compound unique index on the REST collection. The seed data is clean (no
+ * duplicates) so the dataset finalizes normally; the point is to let a dev
+ * trigger — and observe — the rejection interactively.
+ *
+ * Things to try once it is finalized (browse the "Modifier les lignes" table or
+ * call the API):
+ *   - POST a line reusing an existing (siret, annee) pair, e.g.
+ *       POST .../datasets/fixtures-unicite-rest/lines
+ *       { "siret": "12345678900011", "annee": 2024, "montant": 100, "objet": "x" }
+ *     → 409 "Doublon détecté : le couple (SIRET + Année) doit être unique."
+ *   - POST a line with the SAME siret but a NEW annee → accepted (201): the key
+ *     is the pair, not siret alone.
+ *   - PATCH the dataset to add a second constraint the existing data violates,
+ *       { "constraints": [{ "type": "unique", "properties": ["siret", "annee"] },
+ *                         { "type": "unique", "properties": ["montant"] }] }
+ *     (two rows share a montant) → 400: existing data violates the new constraint.
+ *   - In the UI, the "Contraintes" tab of the Structure section
+ *     only offers real stored, groupable columns (no calculated/geo/object ones).
+ */
+async function seedUniciteRest () {
+  const id = 'fixtures-unicite-rest'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  await dfAx.post(`/api/v1/datasets/${id}`, {
+    isRest: true,
+    title: 'Subventions (contrainte d’unicité REST)',
+    description: 'Jeu de données éditable avec une contrainte d’unicité multi-colonnes sur (siret, année). Toute tentative d’insérer une ligne en double sur ce couple est rejetée (409). Voir docs/architecture/dataset-validation.md.',
+    schema: [
+      { key: 'siret', type: 'string', title: 'SIRET' },
+      { key: 'annee', type: 'integer', title: 'Année' },
+      { key: 'montant', type: 'number', title: 'Montant (€)' },
+      { key: 'objet', type: 'string', title: 'Objet' }
+    ],
+    constraints: [{ type: 'unique', properties: ['siret', 'annee'] }]
+  })
+  const lines = [
+    { siret: '12345678900011', annee: 2024, montant: 5000, objet: 'Rénovation de locaux' },
+    { siret: '12345678900011', annee: 2025, montant: 7000, objet: 'Achat de matériel' },
+    { siret: '98765432100022', annee: 2025, montant: 3000, objet: 'Formation' },
+    { siret: '55555555500033', annee: 2024, montant: 3000, objet: 'Événement culturel' }
+  ]
+  await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
+  console.log(`${id}: seeded (${lines.length} lines, unique (siret, année))`)
+}
+
+/** File dataset deliberately left in ERROR to illustrate the UNIQUE-CONSTRAINT
+ * rejection + diagnostic on file-backed data. The CSV carries a `unique (email)`
+ * constraint and contains a duplicated email, so the file-dataset gate (a
+ * post-index Elasticsearch composite aggregation, run before the index is
+ * promoted) detects the duplicate, blocks finalization, and writes the offending
+ * rows to the validation-diagnostic CSV — exactly like a schema-validation
+ * failure. This is analogous to the intentionally-flagged `fixtures-ignore-above`
+ * dataset: it is meant to be red.
+ *
+ * Things to try:
+ *   - GET .../datasets/fixtures-unicite-fichier/journal
+ *       → a `validation-error` event with `unicityErrorCount > 0` and
+ *         `hasDiagnosticFile: true`.
+ *   - GET .../datasets/fixtures-unicite-fichier/validation-diagnostic.csv
+ *       → header `line,error_type,field,message,raw_value`; the duplicated email's
+ *         rows appear with `error_type = unicity` (line = 1-based data-row index).
+ *   - Fix it: re-upload the same file without the duplicate row (or drop the
+ *     constraint) → the dataset finalizes and the diagnostic is cleared.
+ */
+async function seedUniciteFichier () {
+  const id = 'fixtures-unicite-fichier'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  const csv = [
+    'email,nom,prenom',
+    'alice@example.org,Martin,Alice',
+    'bob@example.org,Durand,Bob',
+    'alice@example.org,Martin,Alice', // duplicate of the first data row → unicity violation
+    'carol@example.org,Petit,Carol'
+  ].join('\n') + '\n'
+  await uploadCsv(id, 'inscriptions.csv', {
+    title: 'Inscriptions (doublons — démonstration)',
+    description: 'Jeu de données fichier volontairement en erreur : une contrainte d’unicité sur "email" et un email en double. Le contrôle post-indexation bloque la finalisation et liste les lignes fautives dans le diagnostic de validation (error_type = unicity). Voir docs/architecture/dataset-validation.md.',
+    schema: [
+      { key: 'email', type: 'string', title: 'Email' },
+      { key: 'nom', type: 'string', title: 'Nom' },
+      { key: 'prenom', type: 'string', title: 'Prénom' }
+    ],
+    constraints: [{ type: 'unique', properties: ['email'] }]
+  }, csv)
+  console.log(`${id}: seeded (file with a duplicate email → error + unicity diagnostic)`)
+}
+
 async function main () {
   try {
     dfAx = await axiosAuth({ ...creds, org: 'dev_fixtures', axiosOpts: { baseURL: dfBaseURL } })
@@ -216,9 +369,12 @@ async function main () {
   await seedProduits()
   await seedEquipements()
   await seedHorairesFuseaux()
+  await seedIgnoreAbove()
+  await seedUniciteRest()
+  await seedUniciteFichier()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-horaires-fuseaux']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log(`  agents config:   ${dfBaseURL}/admin/agents`)

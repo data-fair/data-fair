@@ -26,6 +26,16 @@ import * as observe from '../../misc/utils/observe.ts'
 import * as findUtils from '../../misc/utils/find.ts'
 import { attachQueryHint } from '../../misc/utils/query-advice.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
+import { bufferedSource, type LinesSource } from './lines-source.ts'
+import { streamJson, streamCsv, streamGeojson, collect } from './lines-pipeline.ts'
+import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
+
+// Formats that can consume a streamed source (serialize row-by-row + res.send). json/csv and geojson
+// qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still needs the
+// whole geojson materialized for the zip, vector tiles need all features spatially indexed, and xlsx/ods
+// build a sheet from all rows — those stay on the buffered search. When unsure → buffered.
+const streamEligible = (query: any): boolean =>
+  !query.format || query.format === 'json' || query.format === 'csv' || query.format === 'geojson'
 
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req: Request, db: any, query: any) {
@@ -47,6 +57,9 @@ const readLines: RequestHandler = async (req, res) => {
   const publicBaseUrl = reqPublicBaseUrl(req)
   observe.reqRouteName(req, `${req.route.path}?format=${req.query.format || 'json'}`)
   observe.reqStep(req, 'middlewares')
+  // usage counters (format / serving mode / status / body bytes) — mode is upgraded from 'buffered' at
+  // the decision points below (vt-cache hit, streamed source, zero-copy raw-worker paths)
+  observe.readLinesStart(req, res)
   const db = mongo.db
   res.throttleEnd()
 
@@ -122,6 +135,7 @@ const readLines: RequestHandler = async (req, res) => {
     if (value) {
       res.type('application/x-protobuf')
       res.setHeader('x-tilesmode', 'cache/' + sampling)
+      observe.readLinesMode(req, 'cache')
       res.throttleEnd('static')
       if (value.count && value.total) res.setHeader('x-tilesampling', value.count + '/' + value.total)
       return res.status(200).send(value.tile ? value.tile.buffer : value.buffer)
@@ -170,9 +184,75 @@ const readLines: RequestHandler = async (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, size] = findUtils.pagination(query)
 
+  // Mode selection: eligible json/csv responses read ES with `asStream` (the splitter parses hits
+  // incrementally so the raw response is never held whole), under the experimental flag or the non-prod
+  // ?_stream opt-in. The json/csv pipeline serializes rows on the fly and `res.send`s the assembled body, so
+  // the source choice (streamed vs the buffered esResponse from search()) is purely internal — it changes
+  // peak memory, never the observable response (same Link/ETag/next/Content-Length). Every geo/tile/sheet
+  // request (ineligible) stays on the buffered search that yields a concrete esResponse consumed directly by
+  // the geo/wkt/tile branches below.
+  //
+  // TODO (shelved optimization): `res.send` already gives every /lines response a strong ETag + `304`. To
+  // also skip the ES query on a cache hit, compute a synthetic validator from what fully determines the body
+  // (dataset.finalizedAt + normalized query + shaping params: select/html/thumbnail/truncate/arrays/format),
+  // set it as the ETag, and short-circuit `If-None-Match` at the top of readLines — a 304 *before* the query,
+  // on top of the existing `finalizedAt`/`Last-Modified` pre-query 304 in the resourceBased middleware.
+  const forceStream = process.env.NODE_ENV !== 'production' && query._stream === 'true'
+  const streamOn = config.experimental?.streamReadLines === true || forceStream
+  const eligible = streamOn && streamEligible(query)
+  // `_stream` is an internal, non-prod opt-in — never a public API param. Drop it from the `query` copy
+  // once consumed so it does not leak into the `next` pagination link (built from `query`), keeping the
+  // streamed link byte-identical to the buffered one. (The hint is kept identical separately: `_stream`
+  // is a RECOGNIZED_PARAM so ignoredParamsAdvice never flags it — see misc/utils/query-advice.ts.)
+  delete query._stream
+
   let esResponse: any
+  let rawTileBuffer: Buffer | undefined
+  let rawShpBuffer: Buffer | undefined
+  let rawShpBbox: any
+  let streamedSource: LinesSource | undefined
   const esSearchStart = Date.now()
-  if (vectorTileRequested && sampling === 'max' && !query.collapse) {
+  if (eligible) {
+    try {
+      observe.readLinesMode(req, 'streamed')
+      streamedSource = await esUtils.searchStream(req.app.get('es'), dataset, query, esAbortContext)
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (query.format === 'shp' && !(query.select && query.select.split(',').includes('_attachment_url'))) {
+    // Zero-copy shp export path (mirror of the vector-tile zero-copy path): fetch the RAW ES response bytes
+    // and hand them (transferred) to the geojson2shp worker, which parses + builds geojson + JSON.stringifies
+    // + feeds ogr2ogr — avoiding a main-thread ES parse + structured-clone of the whole geojson object graph.
+    // A request that explicitly selects `_attachment_url` stays buffered: search() rewrites that URL
+    // (publicUrl→publicBaseUrl + virtual fixup) but the raw worker path has no config/publicBaseUrl to do so,
+    // so routing it here would leak the raw stored URL. It falls through to search() below, which rewrites.
+    // bbox (a separate aggregation the worker appends to the geojson) is independent of the hits, so the
+    // two ES round trips run concurrently.
+    try {
+      observe.readLinesMode(req, 'raw-worker')
+      ;[rawShpBuffer, rawShpBbox] = await Promise.all([
+        esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext),
+        esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
+      ])
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (vectorTileRequested && !vtPrepared && sampling !== 'max' && !query.collapse &&
+    !(query.select && query.select.split(',').includes('_attachment_url'))) {
+    // Zero-copy vector-tile path: fetch the RAW ES response bytes and hand them (transferred) to the render
+    // worker, which parses + builds geojson + renders. Only the neighbors/non-vtPrepared case — max and
+    // vtPrepared stay on the buffered esResponse path below (multi-search concat / `_vt` script_fields).
+    // A tile that explicitly selects `_attachment_url` also stays buffered: search() rewrites that URL
+    // (publicUrl→publicBaseUrl + virtual fixup) but the raw worker path has no config/publicBaseUrl to do so,
+    // so routing it here would leak the raw stored URL. The default tile select excludes `_`-prefixed keys,
+    // so this only matters when a caller opts in — rare, and kept correct by falling through to search().
+    try {
+      observe.readLinesMode(req, 'raw-worker')
+      rawTileBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (vectorTileRequested && sampling === 'max' && !query.collapse) {
     let previousEsResponse
     let totalLength = 0
     for (let i = 0; i < 4; i++) {
@@ -205,40 +285,62 @@ const readLines: RequestHandler = async (req, res) => {
   const esSearchDurationMs = Date.now() - esSearchStart
   observe.reqStep(req, 'search')
 
-  // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
+  // buffered source over the ES response: geo/wkt/tile branches keep consuming esResponse directly,
+  // while json/csv/xlsx/ods route through the shared pipeline (streamJson/streamCsv/collect). In streamed
+  // mode the source is the incremental one and esResponse stays undefined (never reached by geo/tile).
+  // In the zero-copy tile path esResponse stays undefined (the raw bytes go straight to the worker) and the
+  // vector-tile branch below returns before `source` is consumed, so skip building a buffered source then.
+  const source: LinesSource | undefined = streamedSource ?? (esResponse ? bufferedSource(esResponse) : undefined)
 
-  let nextLinkURL
-  if (size && esResponse.hits.hits.length === size) {
-    nextLinkURL = new URL(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/lines`)
-    for (const key of Object.keys(query)) {
-      if (key !== 'page') nextLinkURL.searchParams.set(key, query[key])
-    }
+  // Pagination (search_after) Link header for the HARD formats only: geojson/shp/wkt/tiles read esResponse
+  // directly and res.send, so their last hit is known here. json/csv build their own Link header (and, for
+  // json, the body `next`) inside the pipeline from the source's last hit — see streamJson/streamCsv — so
+  // they are excluded here. https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
+  if (!streamEligible(query) && esResponse && size) {
     const lastHit = esResponse.hits.hits[esResponse.hits.hits.length - 1]
-    nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
-    const link = new LinkHeader()
-    link.set({ rel: 'next', uri: nextLinkURL.href })
-    res.set('Link', link.toString())
+    const href = nextLinkHref({ size, query, publicBaseUrl, datasetId: dataset.id as string }, esResponse.hits.hits.length, lastHit)
+    if (href) res.set('Link', linkHeaderValue(href))
   }
 
-  if (query.format === 'geojson' || query.format === 'shp') {
-    const flatten = getFlatten(dataset, true)
-    const geojson: any = geo.result2geojson(esResponse, flatten)
-    observe.reqStep(req, 'result2geojson')
-    // geojson format benefits from bbox info
-    geojson.bbox = (await esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext)).bbox
+  if (query.format === 'geojson') {
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.geojson'))
+    res.type('geojson')
+    // bbox is an independent aggregation: start it now and let streamGeojson await it after the hits are
+    // consumed, so the two ES round trips overlap instead of serializing. The no-op catch prevents an
+    // unhandledRejection if bboxAgg fails while the hits are still being consumed — the real await inside
+    // streamGeojson still surfaces the error before anything is sent.
+    const bboxPromise = esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
+    bboxPromise.catch(() => {})
+    await streamGeojson(req, res, source!, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible, bbox: bboxPromise })
     observe.reqStep(req, 'bboxAgg')
-    if (query.format === 'geojson') {
-      res.setHeader('content-disposition', contentDisposition(dataset.slug + '.geojson'))
-      res.type('geojson')
-      return res.status(200).send(geojson)
-    }
-    if (query.format === 'shp') {
-      const shpZip = await outputs.geojson2shp(geojson, dataset.slug as string)
+    return
+  }
+
+  if (query.format === 'shp') {
+    // Zero-copy path: the raw ES bytes were transferred to the worker, which parses + builds geojson +
+    // appends bbox + JSON.stringifies + feeds ogr2ogr. bbox is a separate agg (independent of the hits) so
+    // it's computed here and passed through; the worker appends it LAST, matching the old key order below.
+    if (rawShpBuffer) {
+      observe.reqStep(req, 'bboxAgg') // ran concurrently with searchRaw in the mode-selection block
+      const shpZip = await outputs.geojson2shpFromBuffer(rawShpBuffer, rawShpBbox, dataset.slug as string, dataset)
       observe.reqStep(req, 'geojson2shp')
       res.setHeader('content-disposition', contentDisposition(dataset.slug + '.zip'))
       res.type('zip')
       return res.status(200).send(shpZip)
     }
+    // Buffered fallback (the `_attachment_url`-selected case, which the raw worker path can't rewrite — see
+    // the mode-selection gate above): search() already rewrote the URL, so materialize the whole geojson here.
+    // esResponse is guaranteed here: manageESError never returns, so a failed search() cannot fall through.
+    const flatten = getFlatten(dataset, true)
+    const geojson: any = geo.result2geojson(esResponse, flatten)
+    observe.reqStep(req, 'result2geojson')
+    geojson.bbox = (await esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext)).bbox
+    observe.reqStep(req, 'bboxAgg')
+    const shpZip = await outputs.geojson2shp(geojson, dataset.slug as string)
+    observe.reqStep(req, 'geojson2shp')
+    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.zip'))
+    res.type('zip')
+    return res.status(200).send(shpZip)
   }
 
   if (query.format === 'wkt') {
@@ -250,6 +352,21 @@ const readLines: RequestHandler = async (req, res) => {
   }
 
   if (vectorTileRequested) {
+    // Zero-copy path: the raw ES bytes were transferred to the worker, which parsed + built geojson +
+    // rendered and returned count/total so we can reproduce the exact same 204/headers/cache behavior the
+    // esResponse path had.
+    if (rawTileBuffer) {
+      const { tile, count, total } = await tiles.geojson2pbfFromBuffer(rawTileBuffer, xyz, dataset)
+      observe.reqStep(req, 'geojson2pbf')
+      // 204 = no-content, better than 404
+      if (!count) return res.status(204).send()
+      res.type('application/x-protobuf')
+      // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
+      if (useVTCache) cache.set(cacheHash, { tile: new mongodb.Binary(tile), count, total })
+      res.setHeader('x-tilesmode', tilesMode)
+      if (total != null) res.setHeader('x-tilesampling', count + '/' + total)
+      return res.status(200).send(tile)
+    }
     if (!esResponse.hits.hits.length) return res.status(204).send()
     const flatten = getFlatten(dataset, true)
     const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz, vtPrepared)
@@ -265,46 +382,52 @@ const readLines: RequestHandler = async (req, res) => {
     return res.status(200).send(tile)
   }
 
-  let result: any = { total: esResponse.hits.total?.value }
-  if (nextLinkURL) result.next = nextLinkURL.href
-  if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
-  result.results = []
-  const flatten = getFlatten(dataset, req.query.arrays === 'true')
-  const resultCtx = esUtils.prepareResultContext(dataset, query)
-  for (let i = 0; i < esResponse.hits.hits.length; i++) {
-    // avoid blocking the event loop
-    // setImmediate, not setTimeout(0): timers are clamped to ~1ms and run in a later loop phase
-    if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
-    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], dataset, query, flatten, publicBaseUrl, resultCtx))
-  }
-
-  observe.reqStep(req, 'prepareResultItems')
-
   if (query.format === 'csv') {
-    const csv = await outputs.results2csv(req as outputs.ReqWithDataset, result.results)
-    observe.reqStep(req, 'results2csv')
+    observe.reqStep(req, 'streamCsv')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.csv'))
-    res.type('csv')
-    return res.status(200).send(csv)
+    await streamCsv(req, res, source!, { size, query, publicBaseUrl, datasetId: dataset.id as string, rewriteAttachmentUrl: eligible })
+    return
   }
 
-  if (query.format === 'xlsx') {
-    const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, result.results)
-    observe.reqStep(req, 'results2xlsx')
-    res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
-    res.type('xlsx')
-    return res.status(200).send(sheet)
-  }
-  if (query.format === 'ods') {
-    const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, result.results, 'ods')
+  // xlsx/ods cannot be produced incrementally: materialize the rows through the same per-hit transform
+  // the buffered path used, then hand them to results2sheet unchanged. Yield to the event loop every
+  // 500 items (setImmediate) so a very large xlsx/ods export does not block the event loop more than
+  // the pre-refactor path did (pre-refactor code yielded every 500 hits during the per-hit build).
+  if (query.format === 'xlsx' || query.format === 'ods') {
+    const flatten = getFlatten(dataset, req.query.arrays === 'true')
+    const resultCtx = esUtils.prepareResultContext(dataset, query)
+    const hits = await collect(source!)
+    const rows: any[] = []
+    for (let i = 0; i < hits.length; i++) {
+      if (i % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+      rows.push(esUtils.prepareResultItem(hits[i], dataset, query, flatten, publicBaseUrl, resultCtx))
+    }
+    observe.reqStep(req, 'prepareResultItems')
+    if (query.format === 'xlsx') {
+      const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, rows)
+      observe.reqStep(req, 'results2xlsx')
+      res.setHeader('content-disposition', contentDisposition(dataset.slug + '.xlsx'))
+      res.type('xlsx')
+      return res.status(200).send(sheet)
+    }
+    const sheet = await outputs.results2sheet(req as outputs.ReqWithDataset, rows, 'ods')
     observe.reqStep(req, 'results2ods')
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.ods'))
     res.type('ods')
     return res.status(200).send(sheet)
   }
 
-  result = attachQueryHint(req, esSearchDurationMs, result)
-  res.status(200).send(result)
+  observe.reqStep(req, 'streamJson')
+  await streamJson(req, res, source!, {
+    publicBaseUrl,
+    datasetId: dataset.id as string,
+    size,
+    query,
+    esSearchDurationMs,
+    // eligible ⇒ source came from searchStream (raw _attachment_url) ⇒ rewrite in prepareResultItem;
+    // otherwise it came from search() which already rewrote it
+    rewriteAttachmentUrl: eligible
+  })
 }
 
 export const registerReadRoutes = (router: Router) => {

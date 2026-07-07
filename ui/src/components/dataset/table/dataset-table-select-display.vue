@@ -29,6 +29,7 @@
         density="compact"
       >
         <v-list-item
+          :aria-current="displayMode === 'table' ? 'true' : undefined"
           :active="displayMode === 'table'"
           :title="t('displayTable')"
           @click="displayMode = 'table'"
@@ -38,6 +39,7 @@
           </template>
         </v-list-item>
         <v-list-item
+          :aria-current="displayMode === 'table-dense' ? 'true' : undefined"
           :active="displayMode === 'table-dense'"
           :title="t('displayTableDense')"
           @click="displayMode = 'table-dense'"
@@ -48,6 +50,7 @@
         </v-list-item>
         <v-list-item
           v-if="!edit"
+          :aria-current="displayMode === 'list' ? 'true' : undefined"
           :active="displayMode === 'list'"
           :title="t('displayList')"
           @click="displayMode = 'list'"

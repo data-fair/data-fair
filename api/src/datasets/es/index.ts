@@ -1,6 +1,7 @@
 export * from './commons.ts'
 export { createEsRequestOptions, setReqEsAbortContext, reqEsAbortContext, reqEsAbortContextOptional, type EsAbortContext } from './abort.ts'
 export { default as search } from './search.ts'
+export { searchStream, searchRaw } from './search-stream.ts'
 export { default as multiSearch } from './multi-search.ts'
 export { default as count } from './count.ts'
 export { default as valuesAgg } from './values-agg.ts'

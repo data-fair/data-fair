@@ -195,6 +195,14 @@
         "en": "the dataset draft was cancelled"
       },
       "color": "warning"
+    },
+    "ignored-keyword-values": {
+      "color": "warning",
+      "icon": "mdi-alert",
+      "text": {
+        "en": "some columns contain values too long to be exactly filtered, grouped or sorted",
+        "fr": "certaines colonnes contiennent des valeurs trop longues pour être filtrées, groupées ou triées exactement"
+      }
     }
   },
   "dataset-draft": {

@@ -27,7 +27,11 @@ import {
   buildQClauses,
   FILTER_CAPABILITIES,
   getColumnFilters,
-  columnOperationsHint
+  columnOperationsHint,
+  resolveExactKeywordTarget,
+  resolveExistsFields,
+  resolveRangeOrPrefixField,
+  KEYWORD_IGNORE_ABOVE
 } from './operations.ts'
 
 dayjs.extend(utc)
@@ -145,6 +149,23 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
 }
 
 export { hasCapability, requiredCapability, getColumnFilters }
+
+// Collapse validation + query shaping shared by the buffered search(), searchStream and searchRaw — the
+// three /lines entry points must never drift (same 400s, same cardinality agg / precision default).
+export const applyCollapse = (esQuery: any, dataset: any, query: Record<string, any>): void => {
+  if (!query.collapse) return
+  const collapseField = dataset.schema.find((f: any) => f.key === query.collapse)
+  if (!collapseField) {
+    throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il n'existe pas dans le jeu de données.`)
+  }
+  if (collapseField.separator) {
+    throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
+  }
+  esQuery.collapse = { field: query.collapse }
+  // number after which we accept that cardinality is approximative
+  const precisionThreshold = Number(query.precision_threshold ?? '40000')
+  esQuery.aggs = { totalCollapse: { cardinality: { field: query.collapse, precision_threshold: precisionThreshold } } }
+}
 
 export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?: string[], sqsOptions: any = {}, qsAsFilter?: boolean, ignoreInvalidQS?: boolean) => {
   const esQuery: any = {}
@@ -300,6 +321,8 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     if (p['x-concept']?.primary) schemaByConcept.set(p['x-concept'].id, p)
   }
 
+  const ignoredKeywordFields = new Set<string>((dataset as any)._esIgnoredKeywordFields ?? [])
+
   for (const queryKey of Object.keys(query)) {
     const filterSuffix = filterSuffixes.find(suffix => queryKey.endsWith(suffix))
     if (!filterSuffix) continue
@@ -322,54 +345,65 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
         if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-        filter.push({ terms: { [prop.key]: values } })
+        const target = resolveExactKeywordTarget(prop, values)
+        if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : une valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+        filter.push({ terms: { [target.field]: values } })
       } catch (err) {
+        if ((err as any).status === 400) throw err
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     } else if (filterSuffix === '_nin') {
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
         if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-        filter.push({ bool: { must_not: { terms: { [prop.key]: values } } } })
+        const target = resolveExactKeywordTarget(prop, values)
+        if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : une valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+        filter.push({ bool: { must_not: { terms: { [target.field]: values } } } })
       } catch (err) {
+        if ((err as any).status === 400) throw err
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     } else if (filterSuffix === '_eq') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-      filter.push({ term: { [prop.key]: query[queryKey] } })
+      const target = resolveExactKeywordTarget(prop, [query[queryKey]])
+      if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : la valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+      filter.push({ term: { [target.field]: query[queryKey] } })
     } else if (filterSuffix === '_neq') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
-      filter.push({ bool: { must_not: { term: { [prop.key]: query[queryKey] } } } })
+      const target = resolveExactKeywordTarget(prop, [query[queryKey]])
+      if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : la valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+      filter.push({ bool: { must_not: { term: { [target.field]: query[queryKey] } } } })
     } else if (filterSuffix === '_gt') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { gt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
       } else {
-        filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
+        filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { gt: query[queryKey] } } })
       }
     } else if (filterSuffix === '_gte') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { gte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
       } else {
-        filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
+        filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { gte: query[queryKey] } } })
       }
     } else if (filterSuffix === '_lt') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { lt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
       } else {
-        filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
+        filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { lt: query[queryKey] } } })
       }
     } else if (filterSuffix === '_lte') {
       if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { lte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
       } else {
-        filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
+        filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { lte: query[queryKey] } } })
       }
     } else if (filterSuffix === '_starts') {
-      filter.push({ prefix: { [prop.key]: query[queryKey] } })
+      const { field } = resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key))
+      filter.push({ prefix: { [field]: query[queryKey] } })
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
@@ -379,9 +413,13 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
       if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
       must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
     } else if (filterSuffix === '_exists') {
-      filter.push({ exists: { field: prop.key } })
+      const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
+      if (fields.length === 1) filter.push({ exists: { field: fields[0] } })
+      else filter.push({ bool: { should: fields.map(f => ({ exists: { field: f } })), minimum_should_match: 1 } })
     } else if (filterSuffix === '_nexists') {
-      mustNot.push({ exists: { field: prop.key } })
+      const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
+      if (fields.length === 1) mustNot.push({ exists: { field: fields[0] } })
+      else mustNot.push({ bool: { should: fields.map(f => ({ exists: { field: f } })), minimum_should_match: 1 } })
     }
   }
 
@@ -560,8 +598,37 @@ export const prepareResultContext = (dataset: any, query: Record<string, any>) =
     truncate,
     skipTruncateKeys,
     geoDistanceParts,
-    schema
+    schema,
+    // set by the /lines pipeline when the source came from searchStream (hits still hold the raw stored
+    // _attachment_url) — see rewriteAttachmentUrl below and prepareResultItem
+    rewriteAttachmentUrl: undefined as boolean | undefined
   }
+}
+
+// Rewrite an `_attachment_url` from the stored absolute URL to the one the requester should see:
+// oldPublicUrl → publicUrl → the request's publicBaseUrl, plus a virtual-dataset path fixup that reroutes
+// a child dataset's attachment path through the virtual dataset. Shared by the buffered `search()` (which
+// applies it on `hit._source` up front) and `prepareResultItem` (streamed/collected sources, applied on the
+// flattened row via `ctx.rewriteAttachmentUrl`), so both modes produce identical URLs.
+export const rewriteAttachmentUrl = (url: string, dataset: any, publicBaseUrl?: string): string => {
+  if (config.oldPublicUrl) url = url.replace(config.oldPublicUrl, config.publicUrl)
+  if (publicBaseUrl) url = url.replace(config.publicUrl, publicBaseUrl)
+  if (dataset.isVirtual) {
+    // use string manipulation instead of new URL() for performance
+    const attachIdx = url.indexOf('/data-fair/api/v1/datasets/')
+    if (attachIdx !== -1) {
+      const afterPrefix = url.substring(attachIdx + '/data-fair/api/v1/datasets/'.length)
+      const slashIdx = afterPrefix.indexOf('/')
+      if (slashIdx !== -1) {
+        const childDatasetId = afterPrefix.substring(0, slashIdx)
+        url = url.replace(
+          `/data-fair/api/v1/datasets/${childDatasetId}/attachments/`,
+          `/data-fair/api/v1/datasets/${dataset.id}/attachments/${childDatasetId}/`
+        )
+      }
+    }
+  }
+  return url
 }
 
 export const prepareResultItem = (hit: any, dataset: any, query: Record<string, any>, flatten: (source: any) => any, publicBaseUrl: string = config.publicUrl, ctx: any) => {
@@ -569,6 +636,13 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
   res._score = hit._score
 
   if (ctx.selectIncludesId) res._id = hit._id
+
+  // Rewrite the stored `_attachment_url` to the requester's URL (oldPublicUrl→publicUrl→publicBaseUrl +
+  // virtual-dataset fixup) BEFORE any derived field consumes it — the thumbnail block below hashes
+  // `_attachment_url` when `attachmentsAsImage`, so it must see the rewritten URL. This mirrors the buffered
+  // `search()`, which rewrites `hit._source._attachment_url` up front. Only sources from searchStream carry
+  // the raw URL (ctx.rewriteAttachmentUrl); search()'s esResponse already rewrote it (flag false → no-op).
+  if (ctx.rewriteAttachmentUrl && res._attachment_url) res._attachment_url = rewriteAttachmentUrl(res._attachment_url, dataset, publicBaseUrl)
 
   if (ctx.highlightKeys) {
     res._highlight = {}

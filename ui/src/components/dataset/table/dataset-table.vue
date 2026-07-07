@@ -212,7 +212,7 @@
                 :selected="selectedItem === item._id"
                 @hoverstart="hoverStart"
                 @hoverstop="hoverStop"
-                @show-map-preview="showMapPreview = item._id"
+                @show-map-preview="selectMapPreview(item._id)"
                 @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
                 @filter="f => !noInteraction && addFilter(f)"
                 @edit="showEditDialog = item"
@@ -245,7 +245,7 @@
             :selected="selectedItem === item._id"
             @hoverstart="hoverStart"
             @hoverstop="hoverStop"
-            @show-map-preview="showMapPreview = item._id"
+            @show-map-preview="selectMapPreview(item._id)"
             @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
             @filter="f => !noInteraction && addFilter(f)"
             @edit="showEditDialog = item"
@@ -321,6 +321,7 @@
     :model-value="!!showMapPreview"
     :scrim="false"
     max-width="800"
+    @update:model-value="closeMapPreview"
   >
     <v-card v-if="showMapPreview">
       <v-btn
@@ -353,6 +354,7 @@
     v-if="edit"
     :model-value="!!showDeleteDialog"
     max-width="500"
+    persistent
   >
     <v-card :title="t('deleteLine')">
       <v-card-text>
@@ -383,6 +385,7 @@
     v-if="edit"
     :model-value="!!showEditDialog"
     max-width="800"
+    persistent
   >
     <v-card
       :loading="!editedLine"
@@ -687,6 +690,15 @@ const mapHeight = computed(() => {
   return Math.max(400, Math.min(700, height * 0.8))
 })
 const showMapPreview = ref<string>()
+let lastMapPreviewSelect = 0
+const selectMapPreview = (id?: string) => {
+  lastMapPreviewSelect = Date.now()
+  showMapPreview.value = id
+}
+const closeMapPreview = () => {
+  if (Date.now() - lastMapPreviewSelect < 100) return
+  showMapPreview.value = undefined
+}
 
 const showDetailDialog = ref<{ result: ExtendedResult, property?: SchemaProperty }>()
 
