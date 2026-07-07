@@ -8,30 +8,33 @@ test('padIndex zero-pads to width 9', () => {
   expect(ops.padIndex(42)).toBe('000000042')
 })
 
-test('revisionPrefix and revisionKey follow the agreed layout', () => {
-  expect(ops.revisionPrefix(owner, 'ds1')).toBe('data-fair/organization-acme/ds1/')
-  expect(ops.revisionKey(owner, 'ds1', 7)).toBe('data-fair/organization-acme/ds1/000000007')
+test('revisionPrefix and revisionKey follow the class-segmented layout', () => {
+  expect(ops.revisionPrefix(owner, 'ds1', 'file')).toBe('data-fair/organization-acme/ds1/file/')
+  expect(ops.revisionPrefix(owner, 'ds1', 'metadata')).toBe('data-fair/organization-acme/ds1/metadata/')
+  expect(ops.revisionKey(owner, 'ds1', 'file', 7)).toBe('data-fair/organization-acme/ds1/file/000000007')
 })
 
-test('parseRevisionIndex extracts the numeric index from a key', () => {
-  expect(ops.parseRevisionIndex('data-fair/organization-acme/ds1/000000007')).toBe(7)
+test('parseRevisionIndex and parseRevisionClass extract from a class-segmented key', () => {
+  expect(ops.parseRevisionIndex('data-fair/organization-acme/ds1/metadata/000000007')).toBe(7)
+  expect(ops.parseRevisionClass('data-fair/organization-acme/ds1/metadata/000000007')).toBe('metadata')
+  expect(ops.parseRevisionClass('data-fair/organization-acme/ds1/file/000000000')).toBe('file')
 })
 
 test('nextIndex returns 0 for an empty store and max+1 otherwise', () => {
   expect(ops.nextIndex([])).toBe(0)
   expect(ops.nextIndex([
-    'data-fair/organization-acme/ds1/000000000',
-    'data-fair/organization-acme/ds1/000000002'
+    'data-fair/organization-acme/ds1/file/000000000',
+    'data-fair/organization-acme/ds1/file/000000002'
   ])).toBe(3)
 })
 
 test('latestKey returns the highest-index key via lexical sort', () => {
   expect(ops.latestKey([])).toBeUndefined()
   expect(ops.latestKey([
-    'data-fair/organization-acme/ds1/000000002',
-    'data-fair/organization-acme/ds1/000000010',
-    'data-fair/organization-acme/ds1/000000009'
-  ])).toBe('data-fair/organization-acme/ds1/000000010')
+    'data-fair/organization-acme/ds1/file/000000002',
+    'data-fair/organization-acme/ds1/file/000000010',
+    'data-fair/organization-acme/ds1/file/000000009'
+  ])).toBe('data-fair/organization-acme/ds1/file/000000010')
 })
 
 test('buildContext omits reason when not provided', () => {
@@ -62,4 +65,93 @@ test('needsRenewal scales to a 1-day (dev/test) window', () => {
   // 1-day window → due when age > 2h, i.e. remaining < 22h
   expect(ops.needsRenewal(new Date(now + 21 * hour).toISOString(), now, 1)).toBe(true)
   expect(ops.needsRenewal(new Date(now + 23 * hour).toISOString(), now, 1)).toBe(false)
+})
+
+test('coveredMetadata drops underscore fields and the operational denylist', () => {
+  const doc = {
+    id: 'ds1',
+    title: 'T',
+    schema: [{ key: 'a' }],
+    permissions: [],
+    topics: [{ id: 't1' }],
+    status: 'finalized',
+    draft: { title: 'D' },
+    integrity: { active: true },
+    count: 12,
+    storage: { size: 1 },
+    esWarning: 'w',
+    finalizedAt: 'x',
+    dataUpdatedAt: 'x',
+    dataUpdatedBy: 'u',
+    updatedAt: 'x',
+    updatedBy: { id: 'u' },
+    createdBy: { id: 'u' },
+    errorStatus: 'e',
+    errorRetry: 'x',
+    loaded: {},
+    descendants: [],
+    _id: 'mongo',
+    _needsHistorizing: { classes: ['metadata'] },
+    _partialRestStatus: 'indexed'
+  }
+  expect(ops.coveredMetadata(doc)).toEqual({ id: 'ds1', title: 'T', schema: [{ key: 'a' }], permissions: [], topics: [{ id: 't1' }] })
+})
+
+test('coveredMetadata strips worker-maintained churn nested in covered fields', () => {
+  const doc = {
+    id: 'ds1',
+    extensions: [{
+      type: 'remoteService',
+      remoteService: 'r',
+      action: 'a',
+      needsUpdate: true,
+      nextUpdate: 'x',
+      autoUpdate: { active: true }
+    }],
+    rest: {
+      ttl: { active: true, checkedAt: 'x', delay: { value: 1, unit: 'days' } },
+      history: false
+    },
+    extras: { applications: [{ id: 'app1' }], custom: 'kept' }
+  }
+  expect(ops.coveredMetadata(doc)).toEqual({
+    id: 'ds1',
+    extensions: [{
+      type: 'remoteService',
+      remoteService: 'r',
+      action: 'a',
+      autoUpdate: { active: true }
+    }],
+    rest: {
+      ttl: { active: true, delay: { value: 1, unit: 'days' } },
+      history: false
+    },
+    extras: { custom: 'kept' }
+  })
+})
+
+test('metadataHash is stable across key order and volatile-field changes', () => {
+  const a = { id: 'ds1', title: 'T', schema: [{ key: 'a', type: 'string' }] }
+  const b = { schema: [{ type: 'string', key: 'a' }], title: 'T', id: 'ds1', status: 'error', _partialRestStatus: 'indexed' }
+  expect(ops.metadataHash(a)).toBe(ops.metadataHash(b))
+  expect(ops.metadataHash(a)).toMatch(/^[0-9a-f]{64}$/)
+  expect(ops.metadataHash({ ...a, title: 'changed' })).not.toBe(ops.metadataHash(a))
+})
+
+test('coveredPatchKeys keeps only covered top-level keys', () => {
+  expect(ops.coveredPatchKeys({ title: 'T', status: 'indexed', updatedAt: 'x', _needsHistorizing: { classes: [] }, schema: [] }))
+    .toEqual(['title', 'schema'])
+  expect(ops.coveredPatchKeys({ status: 'error', errorStatus: 'e', count: 1 })).toEqual([])
+})
+
+test('stampHistorize merges the outbox stamp into an existing update', () => {
+  const update: any = { $set: { permissions: [] } }
+  ops.stampHistorize(update, ['metadata'], { operation: 'update', originator: 'user:u1' })
+  expect(update).toEqual({
+    $set: { permissions: [], '_needsHistorizing.context': { operation: 'update', originator: 'user:u1' } },
+    $addToSet: { '_needsHistorizing.classes': { $each: ['metadata'] } }
+  })
+  const bare: any = {}
+  ops.stampHistorize(bare, ['file', 'metadata'])
+  expect(bare).toEqual({ $addToSet: { '_needsHistorizing.classes': { $each: ['file', 'metadata'] } } })
 })
