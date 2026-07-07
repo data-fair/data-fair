@@ -137,7 +137,7 @@ export const syncDatasets = async (newApp: any, oldApp: any = {}) => {
   }
 }
 
-export const initNewApplication = async (body: any, owner: AccountKeys, user: { id: string, name: string }, id?: string) => {
+export const initNewApplication = async (body: any, owner: AccountKeys, user: { id: string }, id?: string) => {
   const application = { ...body }
   if (id) application.id = id
   application.owner = owner
