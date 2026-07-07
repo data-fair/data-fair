@@ -1,12 +1,13 @@
 import config from '#config'
-import { Transform } from 'node:stream'
-import { RateLimiter, TokenBucket } from 'limiter' // cf https://github.com/jhurliman/node-rate-limiter/issues/80#issuecomment-1649261071
+import { Transform, PassThrough } from 'node:stream'
+import { RateLimiter } from 'limiter' // cf https://github.com/jhurliman/node-rate-limiter/issues/80#issuecomment-1649261071
 import requestIp from 'request-ip'
 import debug from 'debug'
 import promClient from 'prom-client'
 import { type Request, type Response } from 'express'
 import { reqUser, reqSession, type SessionState } from '@data-fair/lib-express'
 import { ComputeBucket } from './compute-budget.ts'
+import { removeTokensOrAborted, tokenBucketFor, type TokenBucketWrapper } from './throttle-wait.ts'
 import { queryAdvice } from './query-advice.ts'
 import { reqEsAbortContextOptional } from '../../datasets/es/abort.ts'
 
@@ -48,12 +49,6 @@ const computeBudgetExceededCounter = new promClient.Counter({
 })
 
 const tokenBuckets: Record<string, TokenBucketWrapper> = {}
-
-type TokenBucketWrapper = {
-  lastUsed?: number,
-  bucketSize: number,
-  bucket: TokenBucket
-}
 
 // simple cleanup of the limiters every 20 minutes
 setInterval(() => {
@@ -127,38 +122,31 @@ export const debitComputeBudget = (req: Request, limitType: string, ms: number):
 }
 
 const burstFactor = 4
-export const getTokenBucket = (req, limitType, bandwidthType) => {
+// Returns undefined when the tier has no bandwidth limit (0 or absent config) → callers skip throttling.
+export const getTokenBucket = (req, limitType, bandwidthType): TokenBucketWrapper | undefined => {
   const user = rateLimitUser(req)
   const throttlingId = user ? user.id : requestIp.getClientIp(req)
-  const bucketSize = config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] * burstFactor
+  const key = throttlingId + bandwidthType
   // init lastUsed at creation so the 20-min sweep can detect this entry as idle later — every call
   // to res.throttle() creates a bucket via this path but lastUsed is only set inside the Throttle
   // _transform; a stream that never receives bytes (empty body, immediate error before any chunk)
   // would leave lastUsed=undefined and the sweep would skip it forever.
-  const tokenBucket: TokenBucketWrapper = tokenBuckets[throttlingId + bandwidthType] = tokenBuckets[throttlingId + bandwidthType] || {
-    bucketSize,
-    lastUsed: Date.now(),
-    bucket: new TokenBucket({
-      bucketSize,
-      tokensPerInterval: config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType],
-      interval: 1000
-    })
-  }
+  const tokenBucket = tokenBuckets[key] ?? tokenBucketFor(config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType], burstFactor)
+  if (tokenBucket) tokenBuckets[key] = tokenBucket // only cache real buckets (never undefined — the sweep dereferences entries)
   return tokenBucket
 }
 
 class Throttle extends Transform {
   tokenBucket: TokenBucketWrapper
-  // resolves to `true` once the Throttle is closed (normal end or destroy/abort). Used to race against
-  // `removeTokens`: without this the slice currently waiting for tokens would be retained for up to one
-  // refill window (bucketSize / bandwidth seconds) after the request was aborted, multiplied by every
-  // stalled stream from the same client. Underscore-prefixed to avoid clashing with Readable.closed.
-  private _closedPromise: Promise<true>
+  // aborted once the Throttle is closed (normal end or destroy/abort). removeTokensOrAborted races the
+  // token wait against it so a slice waiting for tokens is dropped promptly when the request is torn down,
+  // rather than retained for up to one refill window (bucketSize / bandwidth seconds) per stalled stream.
+  private _abort = new AbortController()
 
   constructor (tokenBucket: TokenBucketWrapper) {
     super()
     this.tokenBucket = tokenBucket
-    this._closedPromise = new Promise<true>(resolve => this.once('close', () => resolve(true)))
+    this.once('close', () => this._abort.abort())
   }
 
   async transformPromise (chunk: Buffer, encoding: string) {
@@ -167,11 +155,7 @@ class Throttle extends Transform {
     while (chunk.length > pos) {
       if (this.destroyed) return
       const slice = chunk.subarray(pos, pos + this.tokenBucket.bucketSize)
-      const stop = await Promise.race([
-        this.tokenBucket.bucket.removeTokens(slice.length).then(() => false as const),
-        this._closedPromise
-      ])
-      if (stop) return // stream torn down mid-wait — drop the slice, let it be GC'd
+      if (!await removeTokensOrAborted(this.tokenBucket.bucket, slice.length, this._abort.signal)) return
       this.push(slice)
       pos += slice.length
     }
@@ -186,16 +170,13 @@ const throttledEnd = async (res: Response, buffer: Buffer, tokenBucket: TokenBuc
   // mirror the Throttle abort race for the wrapped res.end path — if the client disconnects while we're
   // waiting on tokens, stop awaiting and drop the rest of `buffer` instead of holding it for the full
   // refill window
-  const closed = new Promise<true>(resolve => res.once('close', () => resolve(true)))
+  const abort = new AbortController()
+  res.once('close', () => abort.abort())
   let pos = 0
   while (buffer.length > pos) {
     if (res.writableEnded || res.destroyed) return
     const slice = buffer.subarray(pos, pos + tokenBucket.bucketSize)
-    const stop = await Promise.race([
-      tokenBucket.bucket.removeTokens(slice.length).then(() => false as const),
-      closed
-    ])
-    if (stop) return
+    if (!await removeTokensOrAborted(tokenBucket.bucket, slice.length, abort.signal)) return
     res.write(slice)
     pos += slice.length
   }
@@ -234,7 +215,9 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
   }
 
   res.throttle = (bandwidthType) => {
-    const throttle = new Throttle(getTokenBucket(req, limitType, bandwidthType))
+    const tokenBucket = getTokenBucket(req, limitType, bandwidthType)
+    if (!tokenBucket) return new PassThrough() // no bandwidth limit for this tier → pass through unthrottled
+    const throttle = new Throttle(tokenBucket)
     throttle.on('error', () => {
       // nothing, throttle might finish in error if the HTTP request was interrupted or somethin like that
       // we don't care about ERR_STREAM_PREMATURE_CLOSE errors, etc
@@ -251,6 +234,7 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
     res.end = function (buffer) {
       if (!buffer) return res._originalEnd()
       const tokenBucket = getTokenBucket(req, limitType, bandwidthType)
+      if (!tokenBucket) return res._originalEnd(buffer) // no bandwidth limit → send unthrottled
       tokenBucket.lastUsed = Date.now()
       throttledEnd(res, buffer, tokenBucket)
         .catch(err => console.warn('failed to send throttled response', err))
