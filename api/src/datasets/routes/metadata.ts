@@ -222,7 +222,7 @@ export const registerMetadataRoutes = (router: Router) => {
 
     const patch: any = {
       owner: req.body,
-      updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
+      updatedBy: { id: sessionState.user.id },
       updatedAt: moment().toISOString()
     }
 

@@ -743,7 +743,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       {
         $set: {
           dataUpdatedAt: updatedAt.toISOString(),
-          dataUpdatedBy: { id: sessionState.user.id, name: sessionState.user.name },
+          dataUpdatedBy: { id: sessionState.user.id },
           _modified: computeModified({ ...dataset, dataUpdatedAt: updatedAt.toISOString() })
         }
       })
