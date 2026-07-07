@@ -15,6 +15,7 @@ import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.t
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { fixConcepts, getSchemaBreakingChanges } from './utils/data-schema.ts'
+import { checkConstraints } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
@@ -28,6 +29,7 @@ import type { Db } from 'mongodb'
 import type { Client } from '@elastic/elasticsearch'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { VirtualDataset } from '#types'
+import { isRestDataset } from '#types/dataset/index.ts'
 import { type Locale } from '../../i18n/utils.ts'
 
 const debugMasterData = debugLib('master-data')
@@ -291,6 +293,9 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
     dataset.schema = await prepareExtensionsSchema(dataset.schema, dataset.extensions)
   }
   await fixConcepts(dataset, dataset.schema)
+  if (dataset.constraints?.length) {
+    checkConstraints(await datasetUtils.extendedSchema(db, dataset), dataset.constraints, dataset)
+  }
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
 
@@ -446,6 +451,10 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
         { $unset: unset }
       )
     }
+  }
+
+  if (isRestDataset(dataset) && 'constraints' in patch) {
+    await restDatasetsUtils.configureConstraintIndexes({ ...dataset, ...patch })
   }
 
   if (removedRestProps && removedRestProps.length) {

@@ -31,6 +31,7 @@ import { initDatasetIndex, switchAlias } from '../es/manage-indices.ts'
 import * as restDatasetsUtils from '../utils/rest.ts'
 import * as uploadUtils from '../utils/upload.ts'
 import { updateStorage } from '../utils/storage.ts'
+import { clearTaskProgress } from '../utils/task-progress.ts'
 import * as datasetUtils from '../utils/index.ts'
 
 const clean = datasetUtils.clean
@@ -254,6 +255,9 @@ export const registerWriteRoutes = (router: Router) => {
     const patch = { draft: null }
     await cancelDraft(dataset)
     await applyPatch(datasetFull, patch)
+    // the draft may have left a failed task progress (e.g. unicity error during indexing);
+    // no worker will run on the dataset after the cancellation, so clear it here
+    await clearTaskProgress(dataset.id)
     // NOTE: the original call passed a stray 5th `sessionState` arg that journals.log (4 params) ignored;
     // dropped here as a behavior-preserving no-op (parking lot: verify draft-cancelled journal context)
     await journals.log('datasets', dataset, { type: 'draft-cancelled' } as Event, false)

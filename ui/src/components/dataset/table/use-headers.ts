@@ -69,7 +69,11 @@ export const useHeaders = (
       if (dataset.value?.bbox && !noInteraction) {
         headers.unshift({ title: '', key: '_map_preview' })
       }
-      if (selectable || (edit && (can('updateLine') || can('deleteLine') || selectable))) {
+      // the _actions column hosts the per-row edit/delete buttons and the add-line button (single-line
+      // write permissions) as well as the bulk selection checkboxes (bulkLines). Show it as soon as the
+      // user holds any of these permissions; each button inside is then gated on its own permission.
+      const canEditLines = edit && (can('bulkLines').value || can('createLine').value || can('updateLine').value || can('deleteLine').value)
+      if (selectable || canEditLines) {
         headers.unshift({ title: '', key: '_actions', sticky: true })
       } else if (fixed.value) {
         const fixedHeader = headers.find(h => h.key === fixed.value)

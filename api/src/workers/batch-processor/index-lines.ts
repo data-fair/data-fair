@@ -4,6 +4,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Writable } from 'stream'
 import pump from '../../misc/utils/pipe.ts'
 import * as es from '../../datasets/es/index.ts'
+import esClient from '#es'
 import { initDatasetIndex, switchAlias } from '../../datasets/es/manage-indices.ts'
 import getIndexStream from '../../datasets/es/index-stream.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
@@ -13,14 +14,19 @@ import * as datasetsService from '../../datasets/service.ts'
 import * as restDatasetsUtils from '../../datasets/utils/rest.ts'
 import * as heapUtils from '../../misc/utils/heap.ts'
 import taskProgress from '../../datasets/utils/task-progress.ts'
-import { dataDir } from '../../datasets/utils/files.ts'
+import { dataDir, validationDiagnosticFilePath, cancelledDraftDiagnosticFilePath } from '../../datasets/utils/files.ts'
 import * as attachmentsUtils from '../../datasets/utils/attachments.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
-import type { DatasetInternal } from '#types'
+import type { DatasetInternal, Event } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
+import config from '#config'
+import { DiagnosticWriter, DIAGNOSTIC_FILE_CAP } from '../../datasets/utils/diagnostic-file.ts'
+import { findUnicityDuplicates } from '../../datasets/es/unicity-agg.ts'
+import { unicityViolationMessage } from '../../datasets/utils/constraints.ts'
+import { sendResourceEvent } from '../../misc/utils/notifications.ts'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 
@@ -123,6 +129,91 @@ export default async function (dataset: DatasetInternal) {
     result._partialRestStatus = 'indexed'
     result.count = await restDatasetsUtils.count(dataset)
   } else {
+    // Dataset-wide unique constraints: detect duplicates in the freshly-built
+    // temp index before promoting it. File datasets only (REST enforce via a
+    // MongoDB unique index). Real stored columns are guaranteed by config-time
+    // checkConstraints.
+    const uniqueConstraints = (dataset.constraints ?? []).filter((c: any) => c.type === 'unique')
+    // Only pay the DiagnosticWriter cost (S3 pathExists + Mongo updateOne in discard())
+    // for datasets that have or plausibly had a constraint. `dataset.constraints` stays
+    // truthy (an empty array) when a constraint is dropped: preparePatch normalizes the
+    // API's `constraints: null` unset idiom to `[]` too, so both the UI path and a direct
+    // API PATCH end up with the same shape here and get cleaned up the same way.
+    if (!isRestDataset(dataset) && (uniqueConstraints.length || dataset.constraints)) {
+      // Always run through a DiagnosticWriter, even with zero constraints: discard()
+      // clears any stale diagnostic left by a prior failed run (e.g. the constraint
+      // that caused the previous error was since dropped from the dataset).
+      const writer = new DiagnosticWriter(dataset)
+      let unicityErrorCount = 0
+      if (uniqueConstraints.length) {
+        await esClient.client.indices.refresh({ index: indexName })
+        for (const constraint of uniqueConstraints) {
+          const remaining = DIAGNOSTIC_FILE_CAP - unicityErrorCount
+          if (remaining <= 0) break
+          const groups = await findUnicityDuplicates(indexName, constraint, dataset.schema ?? [], remaining)
+          const field = constraint.properties.join(', ')
+          const message = unicityViolationMessage(constraint.properties, dataset.schema)
+          for (const group of groups) {
+            for (const line of group.lines) {
+              await writer.addError({
+                line,
+                type: 'unicity',
+                field,
+                message: `${message}${group.count > group.lines.length ? ` (${group.count} occurrences)` : ''}`,
+                rawValue: group.keyLabel
+              })
+              unicityErrorCount++
+            }
+          }
+        }
+      }
+      if (unicityErrorCount > 0) {
+        const fileResult = await writer.finalize()
+        const summary = `${unicityErrorCount} ligne(s) en double sur une contrainte d'unicité`
+        const diagnosticEventData = {
+          hasDiagnosticFile: true,
+          diagnosticErrorCount: fileResult.count,
+          diagnosticCapped: fileResult.capped,
+          unicityErrorCount
+        }
+        // compatibleOrCancel drafts: same auto-cancel semantics as validation/extension
+        // errors in process-file.ts — relocate the diagnostic out of the draft dir (about
+        // to be wiped) to the stable cancelled-draft slot, log draft-cancelled instead of
+        // validation-error, cancel the draft and return without promoting the temp index
+        // (cancelDraft's deleteIndex removes every non-prod index of the dataset,
+        // including the temp one built by this run)
+        if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
+          const srcDiagnostic = validationDiagnosticFilePath(dataset)
+          if (await filesStorage.pathExists(srcDiagnostic)) {
+            await filesStorage.moveFile(srcDiagnostic, cancelledDraftDiagnosticFilePath(dataset))
+          }
+          await journals.log('datasets', dataset, {
+            type: 'draft-cancelled',
+            data: `annulation automatique : ${summary}`,
+            ...diagnosticEventData
+          } as Event)
+          await datasetsService.cancelDraft(dataset)
+          await datasetsService.applyPatch({ ...dataset, draftReason: null }, { draft: null })
+          return
+        }
+        await journals.log('datasets', dataset, {
+          type: 'validation-error',
+          data: summary,
+          ...diagnosticEventData
+        } as Event)
+        await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validation-error', {
+          params: {
+            nbErrors: String(fileResult.count),
+            diagnosticUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/validation-diagnostic.csv`
+          }
+        })
+        // do not promote the temp index; drop it so it does not leak
+        await esClient.client.indices.delete({ index: indexName }).catch(err => internalError('es-delete-unicity-temp-index', err))
+        throw new Error(`[validation-error] ${summary}`)
+      } else {
+        await writer.discard()
+      }
+    }
     result.status = 'indexed'
     debug('Switch alias to point to new datasets index')
     await switchAlias(dataset, indexName)

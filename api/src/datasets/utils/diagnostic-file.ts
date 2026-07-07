@@ -7,7 +7,7 @@ import mongo from '#mongo'
 import { tmpDir, validationDiagnosticFilePath } from './files.ts'
 import type { Dataset } from '#types'
 
-export type DiagnosticErrorType = 'validation' | 'extension'
+export type DiagnosticErrorType = 'validation' | 'extension' | 'unicity'
 
 export type DiagnosticErrorEntry = {
   line: number

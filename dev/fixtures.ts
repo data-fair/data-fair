@@ -1,7 +1,8 @@
 /**
  * Dev fixtures: seed the RUNNING dev environment with a few example datasets
- * (REST, CSV file, geo) and configure the AI agents integration with a mock
- * provider. Everything is owned by the dedicated `dev_fixtures` org, which is
+ * (REST, CSV file, geo, a date/timezone showcase) and configure the AI agents
+ * integration with a mock provider. Everything is owned by the dedicated
+ * `dev_fixtures` org, which is
  * excluded from the test-suite cleanup (owner ids matching /^test_/ only).
  *
  * Run it (dev env must be up — `bash dev/status.sh`):
@@ -271,6 +272,45 @@ async function seedIntegriteBreach () {
   console.log(`${id}: seeded (integrity active, file tampered, check=${status})`)
 }
 
+/** REST dataset highlighting date / date-time display behaviour:
+ *  - `horodatage` is a date-time whose values keep their source offset (Tahiti,
+ *    UTC-10, no DST). It is shown in that source timezone for every viewer (not
+ *    converted to the browser tz), the column header captions "Heures en
+ *    Pacific/Tahiti (UTC-10)", and hovering a cell reveals the UTC and viewer-
+ *    local equivalents. The first row even crosses the date line vs UTC.
+ *  - `horodatage_utc` holds the SAME instants stored as UTC ("...Z"): with no
+ *    source timezone to honour these fall back to the viewer's timezone (no
+ *    header caption); the tooltip still exposes the UTC value.
+ *  - `jour` is a pure `date`: a timezone-less calendar date, identical for all.
+ *  See docs/architecture/date-management.md. */
+async function seedHorairesFuseaux () {
+  const id = 'fixtures-horaires-fuseaux'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  await dfAx.post(`/api/v1/datasets/${id}`, {
+    isRest: true,
+    title: 'Relevés station (fuseaux horaires)',
+    description: 'Démonstration de l’affichage des dates : un horodatage est montré dans le fuseau ' +
+      'horaire de la donnée (ici Pacific/Tahiti, UTC-10) et non celui du navigateur. Survolez une ' +
+      'cellule d’horodatage pour voir les équivalents UTC et heure locale.',
+    schema: [
+      { key: 'capteur', type: 'string', title: 'Capteur' },
+      { key: 'horodatage', type: 'string', format: 'date-time', timeZone: 'Pacific/Tahiti', title: 'Horodatage (heure locale station)' },
+      { key: 'horodatage_utc', type: 'string', format: 'date-time', title: 'Horodatage (stocké en UTC)' },
+      { key: 'jour', type: 'string', format: 'date', title: 'Jour' }
+    ]
+  })
+  // each row pairs the same instant as a Tahiti-local offset value and as a UTC
+  // ("Z") value; `jour` is the local calendar day. Tahiti is UTC-10 year-round.
+  const lines = [
+    { capteur: 'Temp-01', horodatage: '2024-01-14T20:00:00-10:00', horodatage_utc: '2024-01-15T06:00:00Z', jour: '2024-01-14' },
+    { capteur: 'Temp-01', horodatage: '2024-01-15T08:30:00-10:00', horodatage_utc: '2024-01-15T18:30:00Z', jour: '2024-01-15' },
+    { capteur: 'Houle-A', horodatage: '2024-07-01T17:15:00-10:00', horodatage_utc: '2024-07-02T03:15:00Z', jour: '2024-07-01' },
+    { capteur: 'Houle-A', horodatage: '2024-07-02T11:00:00-10:00', horodatage_utc: '2024-07-02T21:00:00Z', jour: '2024-07-02' }
+  ]
+  await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
+  console.log(`${id}: seeded (${lines.length} lines)`)
+}
+
 /** REST dataset illustrating the keyword `ignore_above:200` truncation handling
  * (see docs/architecture/load-management.md). It carries TWO long-valued string
  * columns so a single dataset shows both sides of the fix:
@@ -335,6 +375,95 @@ async function seedIgnoreAbove () {
   console.log(`${id}: seeded (${lines.length} lines, incl. 2 with >200-char values)`)
 }
 
+/** REST dataset illustrating a dataset-wide UNIQUE CONSTRAINT (multi-column) on
+ * editable data (see docs/architecture/dataset-validation.md § Dataset-wide
+ * constraints). The constraint is `unique (siret, annee)`, enforced by a partial
+ * compound unique index on the REST collection. The seed data is clean (no
+ * duplicates) so the dataset finalizes normally; the point is to let a dev
+ * trigger — and observe — the rejection interactively.
+ *
+ * Things to try once it is finalized (browse the "Modifier les lignes" table or
+ * call the API):
+ *   - POST a line reusing an existing (siret, annee) pair, e.g.
+ *       POST .../datasets/fixtures-unicite-rest/lines
+ *       { "siret": "12345678900011", "annee": 2024, "montant": 100, "objet": "x" }
+ *     → 409 "Doublon détecté : le couple (SIRET + Année) doit être unique."
+ *   - POST a line with the SAME siret but a NEW annee → accepted (201): the key
+ *     is the pair, not siret alone.
+ *   - PATCH the dataset to add a second constraint the existing data violates,
+ *       { "constraints": [{ "type": "unique", "properties": ["siret", "annee"] },
+ *                         { "type": "unique", "properties": ["montant"] }] }
+ *     (two rows share a montant) → 400: existing data violates the new constraint.
+ *   - In the UI, the "Contraintes" tab of the Structure section
+ *     only offers real stored, groupable columns (no calculated/geo/object ones).
+ */
+async function seedUniciteRest () {
+  const id = 'fixtures-unicite-rest'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  await dfAx.post(`/api/v1/datasets/${id}`, {
+    isRest: true,
+    title: 'Subventions (contrainte d’unicité REST)',
+    description: 'Jeu de données éditable avec une contrainte d’unicité multi-colonnes sur (siret, année). Toute tentative d’insérer une ligne en double sur ce couple est rejetée (409). Voir docs/architecture/dataset-validation.md.',
+    schema: [
+      { key: 'siret', type: 'string', title: 'SIRET' },
+      { key: 'annee', type: 'integer', title: 'Année' },
+      { key: 'montant', type: 'number', title: 'Montant (€)' },
+      { key: 'objet', type: 'string', title: 'Objet' }
+    ],
+    constraints: [{ type: 'unique', properties: ['siret', 'annee'] }]
+  })
+  const lines = [
+    { siret: '12345678900011', annee: 2024, montant: 5000, objet: 'Rénovation de locaux' },
+    { siret: '12345678900011', annee: 2025, montant: 7000, objet: 'Achat de matériel' },
+    { siret: '98765432100022', annee: 2025, montant: 3000, objet: 'Formation' },
+    { siret: '55555555500033', annee: 2024, montant: 3000, objet: 'Événement culturel' }
+  ]
+  await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
+  console.log(`${id}: seeded (${lines.length} lines, unique (siret, année))`)
+}
+
+/** File dataset deliberately left in ERROR to illustrate the UNIQUE-CONSTRAINT
+ * rejection + diagnostic on file-backed data. The CSV carries a `unique (email)`
+ * constraint and contains a duplicated email, so the file-dataset gate (a
+ * post-index Elasticsearch composite aggregation, run before the index is
+ * promoted) detects the duplicate, blocks finalization, and writes the offending
+ * rows to the validation-diagnostic CSV — exactly like a schema-validation
+ * failure. This is analogous to the intentionally-flagged `fixtures-ignore-above`
+ * dataset: it is meant to be red.
+ *
+ * Things to try:
+ *   - GET .../datasets/fixtures-unicite-fichier/journal
+ *       → a `validation-error` event with `unicityErrorCount > 0` and
+ *         `hasDiagnosticFile: true`.
+ *   - GET .../datasets/fixtures-unicite-fichier/validation-diagnostic.csv
+ *       → header `line,error_type,field,message,raw_value`; the duplicated email's
+ *         rows appear with `error_type = unicity` (line = 1-based data-row index).
+ *   - Fix it: re-upload the same file without the duplicate row (or drop the
+ *     constraint) → the dataset finalizes and the diagnostic is cleared.
+ */
+async function seedUniciteFichier () {
+  const id = 'fixtures-unicite-fichier'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  const csv = [
+    'email,nom,prenom',
+    'alice@example.org,Martin,Alice',
+    'bob@example.org,Durand,Bob',
+    'alice@example.org,Martin,Alice', // duplicate of the first data row → unicity violation
+    'carol@example.org,Petit,Carol'
+  ].join('\n') + '\n'
+  await uploadCsv(id, 'inscriptions.csv', {
+    title: 'Inscriptions (doublons — démonstration)',
+    description: 'Jeu de données fichier volontairement en erreur : une contrainte d’unicité sur "email" et un email en double. Le contrôle post-indexation bloque la finalisation et liste les lignes fautives dans le diagnostic de validation (error_type = unicity). Voir docs/architecture/dataset-validation.md.',
+    schema: [
+      { key: 'email', type: 'string', title: 'Email' },
+      { key: 'nom', type: 'string', title: 'Nom' },
+      { key: 'prenom', type: 'string', title: 'Prénom' }
+    ],
+    constraints: [{ type: 'unique', properties: ['email'] }]
+  }, csv)
+  console.log(`${id}: seeded (file with a duplicate email → error + unicity diagnostic)`)
+}
+
 async function main () {
   try {
     dfAx = await axiosAuth({ ...creds, org: 'dev_fixtures', axiosOpts: { baseURL: dfBaseURL } })
@@ -365,10 +494,13 @@ async function main () {
   await seedEquipements()
   await seedIntegriteOk()
   await seedIntegriteBreach()
+  await seedHorairesFuseaux()
   await seedIgnoreAbove()
+  await seedUniciteRest()
+  await seedUniciteFichier()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-ignore-above']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log('  (the integrity panel on the two "intégrité" datasets requires admin mode)')

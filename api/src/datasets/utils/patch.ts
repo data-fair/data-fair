@@ -9,6 +9,7 @@ import config from '#config'
 import * as geo from './geo.ts'
 import * as datasetUtils from './index.ts'
 import * as extensions from './extensions.ts'
+import { checkConstraints } from './constraints.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
@@ -27,6 +28,14 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   patch.slug = patch.slug || dataset.slug
   datasetUtils.setUniqueRefs(patch)
   datasetUtils.curateDataset(patch)
+
+  // `constraints: null` is the documented "unset" idiom (makePatchSchema allows it), meaning
+  // "remove all constraints". Normalize it to `[]` as early as possible so that every consumer
+  // downstream (the constraints check below, applyPatch's $set/$unset choice, and the index-lines
+  // worker's diagnostic-cleanup gate which keys off `dataset.constraints` truthiness) sees the same
+  // "empty array" shape that the UI already produces when a constraint is dropped, instead of a
+  // field that gets entirely $unset from the document.
+  if (patch.constraints === null) patch.constraints = []
 
   // Changed a previously failed dataset, retry the previous step
   if (dataset.status === 'error') {
@@ -104,12 +113,31 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   }
 
   if (patch.extensions) extensions.prepareExtensions(locale, patch.extensions, dataset.extensions ?? [])
+  // extendedSchema computed by either branch below already covers everything checkConstraints
+  // needs (real columns with their final type/x-capabilities/x-refersTo, plus x-calculated and
+  // x-extension columns flagged as such) so it is reused instead of being recomputed a 3rd time.
+  // Note: in the extensions branch, `patch.schema` itself ends up holding the *extensions*-prepared
+  // schema (prepareExtensionsSchema), not the extended one — so we keep a reference to the local
+  // `extendedSchema` from that branch rather than reusing `patch.schema` there.
+  let extendedSchemaForConstraints
   if (patch.extensions || dataset.extensions) {
     const extendedSchema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
     await extensions.checkExtensions(extendedSchema, patch.extensions || dataset.extensions)
     patch.schema = await extensions.prepareExtensionsSchema(patch.schema || dataset.schema, patch.extensions || dataset.extensions)
+    extendedSchemaForConstraints = extendedSchema
   } else if (patch.schema || ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage)) {
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
+    extendedSchemaForConstraints = patch.schema
+  }
+  // `constraints: null` was already normalized to `[]` above, so `'constraints' in patch` reliably
+  // means "the request expresses an intent about constraints" (set some, or remove them all) as
+  // opposed to "no opinion, keep whatever the dataset already has".
+  const effectiveConstraints = 'constraints' in patch ? patch.constraints : dataset.constraints
+  if (('constraints' in patch || patch.schema) && effectiveConstraints?.length) {
+    extendedSchemaForConstraints ??= await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
+    // isVirtual/isMetaOnly are not patchable (absent from patchKeys), so dataset.isVirtual /
+    // dataset.isMetaOnly always reflect the actual (immutable) type of the dataset being patched.
+    checkConstraints(extendedSchemaForConstraints, effectiveConstraints, dataset)
   }
   if (patch.schema) {
     await schemaUtils.fixConcepts(dataset, patch.schema)
@@ -208,6 +236,36 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   } else if (patch.rest) {
     // changes in rest history mode will be processed by the finalizer worker
     patch.status = 'indexed'
+  }
+
+  if (dataset.file && 'constraints' in patch) {
+    // unique constraints changed (added, removed or dropped to null/[]): make sure the
+    // index-lines unicity gate re-runs, no matter what the chain above decided. Applied
+    // as a floor AFTER the chain (rather than as a chain member) so that a combined patch
+    // (e.g. structure tab saving a schema transform/validation-rule change together with a
+    // constraint change) doesn't lose the other status trigger to first-match-wins ordering.
+    //
+    // Statuses that already reach batch-processor/index-lines.ts (the unicity gate) on their
+    // own, directly or via the file pipeline (storeFile -> normalizeFile -> analyzeCsv/Geojson
+    // -> validateFile -> indexLines, see tasks.ts): 'loaded' (full file reprocessing), 'stored'
+    // and 'normalized' (set by the error-retry branch above when the previous run failed at the
+    // store/normalize step, see tasks.ts:102-103,144-145), and 'analyzed'/'validated'
+    // (reindexerStatus for file datasets). Those are left as-is.
+    //
+    // 'validation-updated' is the one exception: process-file.ts finalizes it directly
+    // (dataset.status === 'validation-updated' ? 'finalized' : 'validated', see
+    // process-file.ts:103) without ever going through index-lines, so it must be escalated
+    // to 'analyzed' — this re-runs both the validation rules and the constraint gate.
+    //
+    // Anything else (including no status change at all, e.g. a constraints-only patch that
+    // matched no earlier branch) doesn't reach the gate either and gets the reindexerStatus
+    // floor ('validated' for file datasets).
+    const reachesUnicityGate = ['loaded', 'stored', 'normalized', 'analyzed', 'validated']
+    if (patch.status === 'validation-updated') {
+      patch.status = 'analyzed'
+    } else if (!patch.status || !reachesUnicityGate.includes(patch.status)) {
+      patch.status = reindexerStatus
+    }
   }
 
   return { removedRestProps, attemptMappingUpdate }

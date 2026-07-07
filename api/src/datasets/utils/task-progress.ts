@@ -6,6 +6,14 @@ const updateProgress = async (datasetId: string, task: string, progress: number)
   await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress: { task, progress } } })
 }
 
+// a failed task keeps its taskProgress (with error flag) so that the UI can show which task
+// failed while the dataset is in error state; use this when the errored work is discarded
+// without any worker running afterwards (e.g. user-initiated draft cancellation)
+export const clearTaskProgress = async (datasetId: string) => {
+  await wsEmitter.emit('datasets/' + datasetId + '/task-progress', {})
+  await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $unset: { taskProgress: 1 } })
+}
+
 export default (datasetId: string, task: string, nbSteps?: number, progressCallback?: (progress: number) => void) => {
   let step = 0
   let lastProgress = -1
@@ -38,8 +46,7 @@ export default (datasetId: string, task: string, nbSteps?: number, progressCallb
         await wsEmitter.emit('datasets/' + datasetId + '/task-progress', taskProgress)
         await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress } })
       } else if (task === 'finalize' || finalTask) {
-        await wsEmitter.emit('datasets/' + datasetId + '/task-progress', {})
-        await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $unset: { taskProgress: 1 } })
+        await clearTaskProgress(datasetId)
       } else {
         await updateProgress(datasetId, task, 100)
       }
