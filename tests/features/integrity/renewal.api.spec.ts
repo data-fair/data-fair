@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, waitForIntegrityRevisions, integrityTestStore } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
+// reset test-owned datasets + limit counters before each test (the shared suite convention); the
+// integrity specs all run as the single test_superadmin, so without this their datasets accumulate
+// and hit the dev nbDatasets quota. clean() spares dev_fixtures (owner.id !~ /^test_/).
+test.beforeEach(async () => { await clean() })
 
 // poll until fn() returns a truthy value (the relay writes the S3 object then updates mongo
 // lastRevision a moment later, so waiting on the revision alone can race the mongo write)

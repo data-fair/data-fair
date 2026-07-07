@@ -1,10 +1,14 @@
 // tests/features/integrity/checker.api.spec.ts
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { sendDataset, collectNotifications } from '../../support/workers.ts'
 import { ensureIntegrityBucket, waitForIntegrityRevisions } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
+// reset test-owned datasets + limit counters before each test (the shared suite convention); the
+// integrity specs all run as the single test_superadmin, so without this their datasets accumulate
+// and hit the dev nbDatasets quota. clean() spares dev_fixtures (owner.id !~ /^test_/).
+test.beforeEach(async () => { await clean() })
 
 test('check is ok after enable, breach after out-of-band tamper, ok again after _fix re-anchors', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)

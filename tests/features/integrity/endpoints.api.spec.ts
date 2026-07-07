@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl, anonymousAx } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
 import { sendDataset, getRawDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
+// reset test-owned datasets + limit counters before each test (the shared suite convention); the
+// integrity specs all run as the single test_superadmin, so without this their datasets accumulate
+// and hit the dev nbDatasets quota. clean() spares dev_fixtures (owner.id !~ /^test_/).
+test.beforeEach(async () => { await clean() })
 
 // The historize relay is discovered on the worker's periodic poll, so waitForWorkerIdle() races it.
 // Wait on the actual end state instead: revision count, or the flag being cleared (dedupe no-op).

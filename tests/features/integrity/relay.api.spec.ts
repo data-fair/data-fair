@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test'
-import { axiosAuth, apiUrl } from '../../support/axios.ts'
+import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { sendDataset, doAndWaitForFinalize, getRawDataset } from '../../support/workers.ts'
 import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
+// reset test-owned datasets + limit counters before each test (the shared suite convention); the
+// integrity specs all run as the single test_superadmin, so without this their datasets accumulate
+// and hit the dev nbDatasets quota. clean() spares dev_fixtures (owner.id !~ /^test_/).
+test.beforeEach(async () => { await clean() })
 
 // Wait until the historize relay has processed the flag (it clears _needsHistorizing when done),
 // used to assert a *dedupe* no-op where no new revision is written.
