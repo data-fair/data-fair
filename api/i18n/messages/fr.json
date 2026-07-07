@@ -164,6 +164,10 @@
 			"draft-draft-cancelled": {
 				"title": "Brouillon annulé {{label}}",
 				"body": "Le brouillon du jeu de données {{label}} a été annulé, il est de retour à son état validé précédent."
+			},
+			"integrity-breach": {
+				"title": "Atteinte à l'intégrité du jeu de données {{label}}",
+				"body": "Le fichier du jeu de données {{label}} a été modifié hors du circuit d'écriture légitime (divergence détectée par la vérification d'intégrité)."
 			}
 		},
 		"applications": {

@@ -233,6 +233,10 @@ const datasetTasks: DatasetTask[] = [{
     ]
   }),
 }, {
+  name: 'historize',
+  worker: 'shortProcessor',
+  mongoFilter: () => ({ _needsHistorizing: true })
+}, {
   name: 'renewApiKey',
   worker: 'shortProcessor',
   mongoFilter: () => ({ 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } })
