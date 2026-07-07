@@ -54,7 +54,7 @@
           <div class="text-body-small text-medium-emphasis">
             {{ t('metadataUpdated') }}
           </div>
-          <div>{{ application.updatedBy?.name }} {{ formatDate(application.updatedAt) }}</div>
+          <div>{{ formatDate(application.updatedAt) }}</div>
         </v-list-item>
       </v-col>
 
@@ -67,7 +67,7 @@
           <div class="text-body-small text-medium-emphasis">
             {{ t('created') }}
           </div>
-          <div>{{ application.createdBy?.name }} {{ formatDate(application.createdAt) }}</div>
+          <div>{{ formatDate(application.createdAt) }}</div>
         </v-list-item>
       </v-col>
 
