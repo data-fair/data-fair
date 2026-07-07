@@ -95,6 +95,13 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     dataset.value = patchedDataset
   })
 
+  // an empty patch on a dataset in error resumes processing at the failed step;
+  // the draft param is required so that in draft mode the resume applies to the draft
+  const retryProcessing = useAsyncAction(async () => {
+    const patchedDataset = await $fetch<ExtendedDataset>(`datasets/${id}`, { method: 'PATCH', body: {}, query: { draft } })
+    dataset.value = patchedDataset
+  })
+
   const permissionsFetch = useFetch<Permission[]>($apiPath + `/datasets/${id}/permissions`, { immediate: false, watch: false })
   const permissions = ref<Permission[] | null>(null)
   watch(permissionsFetch.data, () => {
@@ -208,6 +215,7 @@ export const createDatasetStore = (id: string, draft?: boolean, html?: boolean |
     webPageField,
     can,
     patchDataset,
+    retryProcessing,
     permissions,
     permissionsFetch,
     savePermissions,

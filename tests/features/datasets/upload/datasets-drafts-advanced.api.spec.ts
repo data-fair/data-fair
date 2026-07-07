@@ -184,6 +184,16 @@ other,unknown address
     dataset = await waitForDatasetError(ax, dataset.id, { draft: true })
     assert.equal(dataset.status, 'error')
     assert.equal(dataset.errorStatus, 'validated')
+
+    // the error is recoverable: once the cause is fixed, an empty patch in draft mode
+    // resumes processing at the failed step (this is what the UI retry button does)
+    await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: 30, lon: 30 } } })
+    await doAndWaitForFinalize(ax, dataset.id, async () => {
+      const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {}, { params: { draft: true } })
+      assert.equal(res.status, 200)
+    })
+    const rawDataset = await getRawDataset(dataset.id)
+    assert.equal(rawDataset.draft.status, 'finalized')
   })
 
   test('Fails when draft file is missing the input properties', async () => {
