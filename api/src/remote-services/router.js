@@ -135,7 +135,6 @@ router.put('/:remoteServiceId', attemptInsert, readService, async (req, res) => 
     }
   }
   newService.updatedAt = moment().toISOString()
-  newService.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
   if (newService.apiDoc) {
     newService.actions = computeActions(newService.apiDoc)
   }
@@ -154,7 +153,6 @@ router.patch('/:remoteServiceId', readService, async (req, res) => {
   const { body: patch } = validatePatch(req)
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
   if (patch.apiDoc) {
     patch.actions = computeActions(patch.apiDoc)
   }
@@ -188,7 +186,6 @@ router.post('/:remoteServiceId/_update', readService, async (req, res) => {
   const reponse = await axios.get(svc.url)
   validateOpenApi(reponse.data)
   svc.updatedAt = moment().toISOString()
-  svc.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
   svc.apiDoc = reponse.data
   svc.actions = computeActions(svc.apiDoc)
   await mongo.remoteServices.replaceOne({
