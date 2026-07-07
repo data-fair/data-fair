@@ -284,7 +284,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   dataset.owner = owner
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date
-  dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
+  dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {

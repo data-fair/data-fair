@@ -106,7 +106,7 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   if (Object.keys(patch).length === 0) return { isEmpty: true }
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
+  patch.updatedBy = { id: sessionState.user.id }
   if (datasetFile || attachmentsFile) {
     patch.dataUpdatedAt = patch.updatedAt
     patch.dataUpdatedBy = patch.updatedBy
