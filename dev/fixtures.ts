@@ -1,7 +1,8 @@
 /**
  * Dev fixtures: seed the RUNNING dev environment with a few example datasets
- * (REST, CSV file, geo) and configure the AI agents integration with a mock
- * provider. Everything is owned by the dedicated `dev_fixtures` org, which is
+ * (REST, CSV file, geo, a date/timezone showcase) and configure the AI agents
+ * integration with a mock provider. Everything is owned by the dedicated
+ * `dev_fixtures` org, which is
  * excluded from the test-suite cleanup (owner ids matching /^test_/ only).
  *
  * Run it (dev env must be up — `bash dev/status.sh`):
@@ -147,6 +148,45 @@ async function seedSuiviDemandes () {
   ]
   // bulk insert in one request so a single finalize recomputes count (posting
   // lines one by one leaves dataset.count stale due to debounced finalizes)
+  await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
+  console.log(`${id}: seeded (${lines.length} lines)`)
+}
+
+/** REST dataset highlighting date / date-time display behaviour:
+ *  - `horodatage` is a date-time whose values keep their source offset (Tahiti,
+ *    UTC-10, no DST). It is shown in that source timezone for every viewer (not
+ *    converted to the browser tz), the column header captions "Heures en
+ *    Pacific/Tahiti (UTC-10)", and hovering a cell reveals the UTC and viewer-
+ *    local equivalents. The first row even crosses the date line vs UTC.
+ *  - `horodatage_utc` holds the SAME instants stored as UTC ("...Z"): with no
+ *    source timezone to honour these fall back to the viewer's timezone (no
+ *    header caption); the tooltip still exposes the UTC value.
+ *  - `jour` is a pure `date`: a timezone-less calendar date, identical for all.
+ *  See docs/architecture/date-management.md. */
+async function seedHorairesFuseaux () {
+  const id = 'fixtures-horaires-fuseaux'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  await dfAx.post(`/api/v1/datasets/${id}`, {
+    isRest: true,
+    title: 'Relevés station (fuseaux horaires)',
+    description: 'Démonstration de l’affichage des dates : un horodatage est montré dans le fuseau ' +
+      'horaire de la donnée (ici Pacific/Tahiti, UTC-10) et non celui du navigateur. Survolez une ' +
+      'cellule d’horodatage pour voir les équivalents UTC et heure locale.',
+    schema: [
+      { key: 'capteur', type: 'string', title: 'Capteur' },
+      { key: 'horodatage', type: 'string', format: 'date-time', timeZone: 'Pacific/Tahiti', title: 'Horodatage (heure locale station)' },
+      { key: 'horodatage_utc', type: 'string', format: 'date-time', title: 'Horodatage (stocké en UTC)' },
+      { key: 'jour', type: 'string', format: 'date', title: 'Jour' }
+    ]
+  })
+  // each row pairs the same instant as a Tahiti-local offset value and as a UTC
+  // ("Z") value; `jour` is the local calendar day. Tahiti is UTC-10 year-round.
+  const lines = [
+    { capteur: 'Temp-01', horodatage: '2024-01-14T20:00:00-10:00', horodatage_utc: '2024-01-15T06:00:00Z', jour: '2024-01-14' },
+    { capteur: 'Temp-01', horodatage: '2024-01-15T08:30:00-10:00', horodatage_utc: '2024-01-15T18:30:00Z', jour: '2024-01-15' },
+    { capteur: 'Houle-A', horodatage: '2024-07-01T17:15:00-10:00', horodatage_utc: '2024-07-02T03:15:00Z', jour: '2024-07-01' },
+    { capteur: 'Houle-A', horodatage: '2024-07-02T11:00:00-10:00', horodatage_utc: '2024-07-02T21:00:00Z', jour: '2024-07-02' }
+  ]
   await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
   console.log(`${id}: seeded (${lines.length} lines)`)
 }
@@ -328,12 +368,13 @@ async function main () {
   await seedSuiviDemandes()
   await seedProduits()
   await seedEquipements()
+  await seedHorairesFuseaux()
   await seedIgnoreAbove()
   await seedUniciteRest()
   await seedUniciteFichier()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log(`  agents config:   ${dfBaseURL}/admin/agents`)
