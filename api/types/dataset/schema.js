@@ -434,6 +434,72 @@ const datasetProperties = {
     format: 'date-time',
     description: 'If defined the task that triggered an error will be retried after a delay.'
   },
+  integrity: {
+    type: 'object',
+    readOnly: true,
+    description: 'Tamper-detection state for the dataset file, managed by the integrity checker. Only present in responses to the owner account admins and superadmins.',
+    required: ['active'],
+    properties: {
+      active: {
+        type: 'boolean'
+      },
+      lastCheck: {
+        type: 'object',
+        required: ['date', 'status'],
+        properties: {
+          date: {
+            type: 'string',
+            format: 'date-time'
+          },
+          status: {
+            type: 'string',
+            enum: ['ok', 'breach']
+          }
+        }
+      },
+      lastRevision: {
+        type: 'object',
+        required: ['i', 'md5', 'date'],
+        properties: {
+          i: {
+            type: 'number'
+          },
+          md5: {
+            type: 'string'
+          },
+          date: {
+            type: 'string',
+            format: 'date-time'
+          },
+          retainUntil: {
+            type: 'string',
+            format: 'date-time'
+          }
+        }
+      },
+      lastRenewal: {
+        type: 'object',
+        required: ['date', 'status'],
+        properties: {
+          date: {
+            type: 'string',
+            format: 'date-time'
+          },
+          status: {
+            type: 'string',
+            enum: ['ok', 'failed']
+          },
+          retainUntil: {
+            type: 'string',
+            format: 'date-time'
+          },
+          error: {
+            type: 'string'
+          }
+        }
+      }
+    }
+  },
   primaryKey: {
     type: 'array',
     description: 'List of properties of the schema used as unique primary key for each line',

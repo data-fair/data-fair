@@ -113,7 +113,23 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     }
   }
 
-  const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
+  // Integrity breaches are surfaced under the existing `error` status filter without mutating the
+  // dataset's real `status` (a breached dataset stays `finalized`). Build the result/count query from a
+  // reqQuery copy with `status` removed, then OR the breach condition in. facetsQuery/sumsQuery below keep
+  // using the original reqQuery + extraFilters so the generic facet machinery is unaffected.
+  const reqQueryForResults = { ...reqQuery }
+  let statusBreachOr: any | undefined
+  if (reqQuery.status && reqQuery.status.split(',').includes('error')) {
+    delete reqQueryForResults.status
+    statusBreachOr = {
+      $or: [
+        { status: { $in: reqQuery.status.split(',') } },
+        { 'integrity.lastCheck.status': 'breach' }
+      ]
+    }
+  }
+  const query = findUtils.query(reqQueryForResults, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
+  if (statusBreachOr) (query.$and ||= []).push(statusBreachOr)
   const rawSort = findUtils.sort(reqQuery.sort || (!reqQuery.q && '-createdAt') || '', reqQuery.q)
   // Sort on `modified` is transparently rewritten to the indexed `_modified` field
   // which fuses modified | dataUpdatedAt | updatedAt (see compute-modified.ts).

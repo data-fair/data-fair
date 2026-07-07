@@ -47,7 +47,10 @@ const agentSettings = {
 
 // Filled in main() so the org-missing hint can wrap their creation.
 let dfAx: any
+let dfAdminAx: any
 let agentsAx: any
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** True if a dataset with this id already exists (200), false on 404.
  * Note: @data-fair/lib-node flattens axios errors — the HTTP status is on
@@ -67,13 +70,78 @@ const datasetExists = async (id: string): Promise<boolean> => {
  * server-side and is done well before anyone browses the dev env. The `body`
  * part fixes the title/description and may pre-tag columns (e.g. geo concepts)
  * so no post-upload schema patch is needed. */
-async function uploadCsv (id: string, filename: string, body: Record<string, any>, csv: string) {
+async function uploadCsv (id: string, filename: string, body: Record<string, any>, csv: string, query = '') {
   const form = new FormData()
   form.append('file', Buffer.from(csv, 'utf8'), { filename, contentType: 'text/csv' })
   form.append('body', JSON.stringify(body))
-  await dfAx.put(`/api/v1/datasets/${id}`, form, {
+  await dfAx.put(`/api/v1/datasets/${id}${query}`, form, {
     headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
   })
+}
+
+// ── Integrity helpers ──────────────────────────────────────────────────────
+// These illustrate the data-integrity feature end-to-end against the real API
+// (enable → WORM revisions → check), using the dev-only tamper endpoint to
+// force a breach. Integrity must be active in config (dev: integrity.active=true).
+
+/** Poll the dataset until it is finalized with a hashed original file — the
+ * precondition for enabling integrity (file dataset with originalFile.md5). */
+async function waitForFinalized (id: string, timeoutMs = 60000) {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const { data } = await dfAx.get(`/api/v1/datasets/${id}`)
+    if (data.status === 'finalized' && data.originalFile?.md5) return
+    await sleep(500)
+  }
+  throw new Error(`timeout waiting for ${id} to finalize`)
+}
+
+/** Current revision index recorded on the dataset (-1 if none yet). */
+async function currentRevisionIndex (id: string): Promise<number> {
+  const { data } = await dfAdminAx.get(`/api/v1/datasets/${id}/_integrity`)
+  return typeof data.lastRevision?.i === 'number' ? data.lastRevision.i : -1
+}
+
+/** Wait until the relay worker writes a revision strictly newer than
+ * `afterIndex`, returning the new index. Relative (not absolute) on purpose:
+ * the relay keys revisions by max-index+1 within a per-dataset prefix and
+ * dedupes by md5, so prior runs' still-WORM-locked revisions under the same
+ * prefix would shift the index — a relative wait tolerates that. */
+async function waitForNewRevision (id: string, afterIndex: number, timeoutMs = 90000): Promise<number> {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const i = await currentRevisionIndex(id)
+    if (i > afterIndex) return i
+    await sleep(500)
+  }
+  throw new Error(`timeout waiting for ${id} revision after ${afterIndex}`)
+}
+
+/** Turn integrity on (admin mode); this flags the dataset for historizing, so
+ * the worker writes the first anchor revision. */
+async function enableIntegrity (id: string) {
+  await dfAdminAx.put(`/api/v1/datasets/${id}/_integrity`, { active: true })
+}
+
+/** Run an on-demand integrity check; returns 'ok' | 'breach' | 'unknown'.
+ * The breach path persists integrity.lastCheck before sending the breach
+ * notification, so if that fire-and-forget send errors we still read the
+ * already-stored verdict instead of failing the fixture. */
+async function runCheck (id: string): Promise<string> {
+  try {
+    const { data } = await dfAdminAx.post(`/api/v1/datasets/${id}/_integrity/_check`)
+    return data.status
+  } catch (err: any) {
+    const { data } = await dfAdminAx.get(`/api/v1/datasets/${id}/_integrity`)
+    if (data.lastCheck?.status) return data.lastCheck.status
+    throw err
+  }
+}
+
+/** Overwrite the stored original file out-of-band (dev-only endpoint), so a
+ * subsequent check diverges from the locked anchor and reports a breach. */
+async function tamperFile (id: string) {
+  await dfAx.post(`/api/v1/test-env/tamper-dataset-file/${id}`, { content: 'ligne falsifiée hors du circuit applicatif\n' })
 }
 
 /** CSV file dataset: tabular reference data (product catalog). */
@@ -150,6 +218,58 @@ async function seedSuiviDemandes () {
   // lines one by one leaves dataset.count stale due to debounced finalizes)
   await dfAx.post(`/api/v1/datasets/${id}/_bulk_lines`, lines)
   console.log(`${id}: seeded (${lines.length} lines)`)
+}
+
+/** Integrity demo — healthy: a file dataset with integrity on, a real version
+ * history (anchor + one published update), and a passing check. */
+async function seedIntegriteOk () {
+  const id = 'fixtures-integrite-ok'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  const header = 'reference,date,objet,decision\n'
+  const v1 = header + [
+    'DEL-2026-001,2026-01-15,Budget primitif 2026,adopté',
+    'DEL-2026-002,2026-02-12,Subvention associations,adopté',
+    'DEL-2026-003,2026-03-19,Marché voirie,reporté'
+  ].join('\n') + '\n'
+  const body = {
+    title: 'Registre des délibérations (certifié)',
+    description: 'Jeu de données fichier avec intégrité activée : historique de révisions horodatées dans un stockage verrouillé (WORM) et contrôle conforme.'
+  }
+  await uploadCsv(id, 'deliberations.csv', body, v1)
+  await waitForFinalized(id)
+  // enable → first anchor revision over the v1 file
+  await enableIntegrity(id)
+  const anchor = await waitForNewRevision(id, -1)
+  // a schema-compatible update with ?draft=compatible auto-validates the draft
+  // (process-file.ts: validationMode !== 'never' ⇒ auto-publish), so the
+  // published file changes and the relay historizes a second revision
+  const v2 = v1 + 'DEL-2026-004,2026-04-23,Acquisition foncière,adopté\n'
+  await uploadCsv(id, 'deliberations.csv', body, v2, '?draft=compatible')
+  await waitForNewRevision(id, anchor)
+  const status = await runCheck(id)
+  console.log(`${id}: seeded (integrity active, 2 revisions, check=${status})`)
+}
+
+/** Integrity demo — breach: integrity on, then the stored file is tampered
+ * out-of-band so the check detects an alteration and raises an alert. */
+async function seedIntegriteBreach () {
+  const id = 'fixtures-integrite-breach'
+  if (await datasetExists(id)) { console.log(`${id}: skipped (exists)`); return }
+  const csv = 'ecriture,date,compte,montant\n' + [
+    'ECR-001,2026-01-31,706000,12450.00',
+    'ECR-002,2026-02-28,706000,9870.50',
+    'ECR-003,2026-03-31,706000,15320.75'
+  ].join('\n') + '\n'
+  await uploadCsv(id, 'ecritures.csv', {
+    title: 'Registre comptable (altéré)',
+    description: 'Jeu de données fichier avec intégrité activée, dont le fichier stocké a été falsifié hors du circuit applicatif : le contrôle détecte une atteinte à l’intégrité.'
+  }, csv)
+  await waitForFinalized(id)
+  await enableIntegrity(id)
+  await waitForNewRevision(id, -1)
+  await tamperFile(id)
+  const status = await runCheck(id)
+  console.log(`${id}: seeded (integrity active, file tampered, check=${status})`)
 }
 
 /** REST dataset highlighting date / date-time display behaviour:
@@ -432,6 +552,10 @@ async function main () {
   // the root origin so we can call the agents service under /agents/api/...
   agentsAx = await axiosAuth({ ...creds, adminMode: true, axiosOpts: { baseURL: root } })
 
+  // admin-mode data-fair session: the integrity endpoints require admin mode
+  // (reqAdminMode). Same dev_fixtures org context as dfAx, but elevated.
+  dfAdminAx = await axiosAuth({ ...creds, org: 'dev_fixtures', adminMode: true, axiosOpts: { baseURL: dfBaseURL } })
+
   await agentsAx.put('/agents/api/settings/organization/dev_fixtures', agentSettings)
   console.log('agent settings written (mock provider) for organization/dev_fixtures')
 
@@ -443,6 +567,8 @@ async function main () {
   await seedSuiviDemandes()
   await seedProduits()
   await seedEquipements()
+  await seedIntegriteOk()
+  await seedIntegriteBreach()
   await seedHorairesFuseaux()
   await seedIgnoreAbove()
   await seedUniciteRest()
@@ -450,9 +576,10 @@ async function main () {
   await seedBrouillonErreur()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-brouillon-erreur']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-brouillon-erreur']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
+  console.log('  (the integrity panel on the two "intégrité" datasets requires admin mode)')
   console.log(`  agents config:   ${dfBaseURL}/admin/agents`)
   console.log(`  agents activity: ${dfBaseURL}/agents-activity`)
 }
