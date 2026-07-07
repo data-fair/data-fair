@@ -464,6 +464,81 @@ async function seedUniciteFichier () {
   console.log(`${id}: seeded (file with a duplicate email → error + unicity diagnostic)`)
 }
 
+/** File-new DRAFT dataset deliberately left in ERROR status. The draft carries a
+ * geocoder extension whose remote service (the dev mock server) is set to answer
+ * 500 while the draft reprocesses; with `errorRetryDelay: 0` the automatic retry
+ * fails instantly too, leaving the draft in the terminal error state (no pending
+ * errorRetry). The mock route is then healed (ndjson echo), so the error is
+ * RECOVERABLE: the point is to observe the draft-in-error UI on the dataset page.
+ *
+ * Things to try:
+ *   - browse the dataset page → red draft banner showing the extension error
+ *     message and a "Relancer" button (no validate/cancel buttons: a file-new
+ *     draft in error can only be retried or deleted).
+ *   - click "Relancer" → the draft reprocesses (the mock geocoder now answers)
+ *     and reaches the normal finalized draft state ("Valider le brouillon").
+ *   - the button issues `PATCH /datasets/{id}?draft=true {}`: an empty patch on a
+ *     dataset in error resumes processing at the failed step (errorStatus).
+ *
+ * Note: a test-suite run clears the dynamic mock routes; if a retry then fails
+ * because the mock geocoder is gone, re-run `npm run dev-fixtures` to re-heal it
+ * (the heal is applied even when the dataset already exists).
+ */
+async function seedBrouillonErreur () {
+  const id = 'fixtures-brouillon-erreur'
+  const mockRoutesUrl = `http://localhost:${process.env.MOCK_PORT}/_test/routes`
+  const healGeocoderMock = () => dfAx.post(mockRoutesUrl, {
+    path: '/geocoder/coords',
+    ndjsonEcho: { fields: { lat: 48.11, lon: -1.68 } }
+  })
+  if (await datasetExists(id)) { await healGeocoderMock(); console.log(`${id}: skipped (exists, geocoder mock re-healed)`); return }
+
+  const waitForDraftStatus = async (accepted: string[], timeoutMs = 30000) => {
+    const deadline = Date.now() + timeoutMs
+    let dataset: any
+    while (Date.now() < deadline) {
+      dataset = (await dfAx.get(`/api/v1/datasets/${id}`, { params: { draft: true } })).data
+      if (accepted.includes(dataset.status) && !dataset.errorRetry) return dataset
+      if (dataset.status === 'error' && !accepted.includes('error')) throw new Error(`draft of ${id} unexpectedly in error`)
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    throw new Error(`draft of ${id} did not reach status ${accepted.join('|')} within ${timeoutMs}ms (last: ${dataset?.status})`)
+  }
+
+  // create the dataset as a file-new draft, with the address concept pre-tagged
+  const csv = [
+    'etablissement,adr',
+    'Siège Koumoul,19 rue de la voie lactée 56890 Saint-Avé',
+    'Mairie de Rennes,Place de la Mairie 35000 Rennes',
+    'Agence inconnue,adresse introuvable'
+  ].join('\n') + '\n'
+  const form = new FormData()
+  form.append('file', Buffer.from(csv, 'utf8'), { filename: 'etablissements.csv', contentType: 'text/csv' })
+  form.append('body', JSON.stringify({
+    title: 'Brouillon en erreur (démonstration)',
+    description: 'Brouillon de jeu de données fichier volontairement en erreur : une extension de géocodage a échoué (le service distant simulé répondait une erreur 500) pendant le traitement du brouillon. Le service répond de nouveau : le bouton "Relancer" du bandeau d’erreur reprend le traitement à l’étape échouée et le brouillon redevient exploitable.',
+    schema: [{ key: 'adr', type: 'string', 'x-refersTo': 'http://schema.org/address' }]
+  }))
+  await dfAx.put(`/api/v1/datasets/${id}`, form, {
+    headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+    params: { draft: true }
+  })
+  await waitForDraftStatus(['finalized'])
+
+  // break the mock geocoder, then activate the extension on the draft
+  await dfAx.post(mockRoutesUrl, { path: '/geocoder/coords', status: 500, body: 'some error', contentType: 'text/plain' })
+  await dfAx.patch(`/api/v1/datasets/${id}`, {
+    extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+  }, { params: { draft: true } })
+
+  // wait for the terminal error state (automatic retry consumed, no errorRetry left)
+  await waitForDraftStatus(['error'])
+
+  // heal the mock so the "Relancer" button actually recovers the draft
+  await healGeocoderMock()
+  console.log(`${id}: seeded (file-new draft in error, retry will succeed)`)
+}
+
 async function main () {
   try {
     dfAx = await axiosAuth({ ...creds, org: 'dev_fixtures', axiosOpts: { baseURL: dfBaseURL } })
@@ -498,9 +573,10 @@ async function main () {
   await seedIgnoreAbove()
   await seedUniciteRest()
   await seedUniciteFichier()
+  await seedBrouillonErreur()
 
   console.log('\nDone. Browse the seeded data at:')
-  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier']) {
+  for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier', 'fixtures-brouillon-erreur']) {
     console.log(`  dataset:         ${dfBaseURL}/dataset/${id}`)
   }
   console.log('  (the integrity panel on the two "intégrité" datasets requires admin mode)')
