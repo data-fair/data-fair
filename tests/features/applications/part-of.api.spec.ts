@@ -286,6 +286,36 @@ test.describe('application partOf attribute', () => {
     assert.equal(datasetRes.data.partOf, undefined)
   })
 
+  test('a still-referenced child identified only by href is not treated as an orphan', async () => {
+    const ax = testUser1
+    const childA = await sendDataset('datasets/dataset1.csv', ax)
+    const childARef = (await ax.get('/api/v1/datasets', { params: { id: childA.id, select: 'id' } })).data.results[0]
+    const childB = await sendDataset('datasets/dataset1.csv', ax)
+    const childBRef = (await ax.get('/api/v1/datasets', { params: { id: childB.id, select: 'id' } })).data.results[0]
+
+    const { data: parentApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    // both children are initially referenced with an id, so each qualifies as used by exactly one parent
+    await ax.put(`/api/v1/applications/${parentApp.id}/config`, {
+      datasets: [{ id: childA.id, href: childARef.href }, { id: childB.id, href: childBRef.href }]
+    })
+
+    await ax.patch(`/api/v1/datasets/${childA.id}`, { partOf: { type: 'application', id: parentApp.id } })
+    await ax.patch(`/api/v1/datasets/${childB.id}`, { partOf: { type: 'application', id: parentApp.id } })
+
+    // drop childB entirely from the config, keep childA but referenced by href only (no id) -> only childB is an orphan
+    const res = await ax.put(`/api/v1/applications/${parentApp.id}/config`, {
+      datasets: [{ href: childARef.href }]
+    }, { params: { childrenAction: 'unflag' } })
+    assert.equal(res.status, 200)
+
+    const datasetBRes = await ax.get(`/api/v1/datasets/${childB.id}`)
+    assert.equal(datasetBRes.data.partOf, undefined)
+
+    // childA is still referenced (by href only) and must keep its partOf
+    const datasetARes = await ax.get(`/api/v1/datasets/${childA.id}`)
+    assert.deepEqual(datasetARes.data.partOf, { type: 'application', id: parentApp.id, title: parentApp.title })
+  })
+
   test('partOf must carry the constant application type', async () => {
     const ax = testUser1
     const { data: childApp } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })

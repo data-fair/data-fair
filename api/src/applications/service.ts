@@ -416,8 +416,10 @@ export const handleChildApplications = async (ctx: ApplicationWriteContext, pare
 // writing an application's production configuration can orphan resources still defined as its
 // partOf children: mirror the deletion guard, restricted to the children no longer referenced
 export const handleConfigOrphans = async (app: any, ctx: ApplicationWriteContext, application: Application, newConfig: any, childrenAction?: string) => {
-  const newDatasetIds = ((newConfig?.datasets ?? []) as any[]).map(d => d?.id).filter(Boolean)
-  const newAppIds = ((newConfig?.applications ?? []) as any[]).map(a => a?.id).filter(Boolean)
+  // config refs only require `href`, `id` is optional: fall back to the href tail, which equals the
+  // referenced resource's own id, so still-referenced children aren't mistaken for orphans
+  const newDatasetIds = ((newConfig?.datasets ?? []) as any[]).map(d => d?.id || d?.href?.split('/').pop()).filter(Boolean)
+  const newAppIds = ((newConfig?.applications ?? []) as any[]).map(a => a?.id || a?.href?.split('/').pop()).filter(Boolean)
   const [childDatasetIds, childApps] = await Promise.all([
     listPartOfChildrenIds('application', application.id),
     mongo.applications.find({ 'partOf.id': application.id }, { projection: { _id: 0, id: 1 } }).toArray()
