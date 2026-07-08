@@ -81,7 +81,8 @@ const getCacheEntry = async (db: any, url: string, filePath: string | null, shar
         } else {
           console.warn(`failed to fetch image for thumbnail "${url}"`, err)
           if (err.status === 404) throw httpError(404, `image not found ${url}`)
-          throw httpError(502, `failed to fetch image ${url}`)
+          // no cache entry to serve as stale content, let getThumbnail redirect to the original image
+          return { entry: null, status: 'FALLBACK' }
         }
       }
     }
@@ -148,11 +149,11 @@ export const getThumbnail = async (req: Request, res: Response, url: string, fil
   const { entry, status } = await getCacheEntry(db, url, filePath, sharpOptions)
 
   const ifModifiedSince = req.get('if-modified-since')
-  if (ifModifiedSince && entry.lastModified === ifModifiedSince) {
+  if (entry && ifModifiedSince && entry.lastModified === ifModifiedSince) {
     debug('if-modified-since matches local date, return 304')
     return res.status(304).send()
   }
-  if (entry.lastModified) res.setHeader('Last-Modified', entry.lastModified)
+  if (entry?.lastModified) res.setHeader('Last-Modified', entry.lastModified)
   res.setHeader('X-Thumbnails-Cache-Status', status)
   if (reqPublicOperation(req)) {
     // force buffering (necessary for caching) of this response in the reverse proxy
@@ -161,8 +162,10 @@ export const getThumbnail = async (req: Request, res: Response, url: string, fil
   } else {
     setNoCache(req, res)
   }
-  if (entry.sharpError) {
-    // res.status(400).type('text/plain').send(entry.sharpError)
+  if (!entry || entry.sharpError) {
+    // either the image could not be fetched (and there is no stale cache entry to fall back on)
+    // or it could not be processed by sharp, in both cases degrade gracefully by redirecting
+    // to the original image instead of failing
     res.redirect(url)
   } else {
     res.setHeader('content-type', entry.mimetype || 'image/png')
