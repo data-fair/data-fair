@@ -88,7 +88,9 @@ export default async function (dataset: DatasetInternal) {
     debug(`Initialize new dataset index ${indexName}`)
   }
 
-  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty })
+  // only the REST path consumes the re-emitted lines (markIndexedStream); for file
+  // datasets the sink is a no-op, so skip the per-line copy on the readable side
+  const indexStream = getIndexStream({ indexName, dataset, attachments: !!attachmentsProperty, reemit: isRestDataset(dataset) })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await filesStorage.pathExists(datasetUtils.fullFilePath(dataset))) {

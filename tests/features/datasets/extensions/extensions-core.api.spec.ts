@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes } from '../../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getMockReceivedRequests } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
@@ -142,6 +142,52 @@ test.describe('Extensions (core)', () => {
     assert.equal(res.status, 200)
     assert.ok(res.data.find((file: any) => file.key === 'original'))
     assert.ok(!res.data.find((file: any) => file.key === 'full'))
+  })
+
+  test('Extend dataset across multiple extension batches', async () => {
+    const ax = testUser1
+    await setupCoordsMock(10)
+
+    // 600 lines with distinct addresses > extensionsBatchSize (250) so the extension
+    // runs in 3 batches (250 + 250 + 100), exercising the batched cache reads/writes
+    const nbLines = 600
+    let content = 'label,adr\n'
+    for (let i = 0; i < nbLines; i++) content += `line${i},${i} rue de la paix paris\n`
+    let form = new FormData()
+    form.append('file', content, 'dataset-batches.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    let dataset = await waitForFinalize(ax, res.data.id)
+
+    dataset.schema.find((field: any) => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+    })
+    assert.equal(res.status, 200)
+    dataset = await waitForFinalize(ax, dataset.id)
+    const extensionKey = dataset.extensions[0].propertyPrefix
+
+    // every line of every batch was extended
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 1000, select: '*' } })
+    assert.equal(res.data.total, nbLines)
+    assert.equal(res.data.results.filter((l: any) => l[extensionKey + '.lat'] === 10).length, nbLines)
+
+    // one request to the remote service per batch of extensionsBatchSize (250)
+    const requests1 = (await getMockReceivedRequests()).filter(r => r.path === '/geocoder/coords')
+    assert.equal(requests1.length, Math.ceil(nbLines / 250))
+
+    // re-upload the same content: all results must be replayed from extensions-cache
+    // without any new request to the remote service
+    form = new FormData()
+    form.append('file', content, 'dataset-batches.csv')
+    res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 200)
+    await waitForFinalize(ax, dataset.id)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 1000, select: '*' } })
+    assert.equal(res.data.total, nbLines)
+    assert.equal(res.data.results.filter((l: any) => l[extensionKey + '.lat'] === 10).length, nbLines)
+    const requests2 = (await getMockReceivedRequests()).filter(r => r.path === '/geocoder/coords')
+    assert.equal(requests2.length, requests1.length)
   })
 
   test('Extend dataset that was previouly converted', async () => {
