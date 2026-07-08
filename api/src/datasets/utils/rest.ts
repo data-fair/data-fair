@@ -39,7 +39,7 @@ import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
-import type { Collection, Filter, UpdateFilter } from 'mongodb'
+import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
 import { isInFilesStorage } from '../../files-storage/utils.ts'
@@ -1385,6 +1385,14 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
     if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
   }
   const c = collection(dataset)
+  // batched write-back: one bulkWrite per batch instead of one updateOne round-trip per line
+  let bulkOps: AnyBulkWriteOperation<DatasetLine>[] = []
+  const flush = async () => {
+    if (!bulkOps.length) return
+    const ops = bulkOps
+    bulkOps = []
+    await c.bulkWrite(ops, { ordered: false })
+  }
   return [new Writable({
     objectMode: true,
     async write (item, encoding, cb) {
@@ -1394,7 +1402,16 @@ export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDatas
           if (key in item && patch.$set) patch.$set[key] = item[key]
           else if (patch.$unset) patch.$unset[key] = item[key]
         }
-        await c.updateOne({ _id: item._id }, patch)
+        bulkOps.push({ updateOne: { filter: { _id: item._id }, update: patch } })
+        if (bulkOps.length >= config.mongo.maxBulkOps) await flush()
+        cb()
+      } catch (err: any) {
+        cb(err)
+      }
+    },
+    async final (cb) {
+      try {
+        await flush()
         cb()
       } catch (err: any) {
         cb(err)
