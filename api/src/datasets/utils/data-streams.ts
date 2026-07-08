@@ -387,7 +387,7 @@ export const sampleValues = async (dataset: Dataset, ignoreKeys?: string[], onDe
         finished = false
         const value = typeof chunk[key] !== 'string' ? '' + chunk[key] : chunk[key]
         // prevent too costly sniffing by truncating long strings
-        sampleValues[key].add(value.length > 300 ? value.slice(300) : value)
+        sampleValues[key].add(value.length > 300 ? value.slice(0, 300) : value)
       }
       currentLine += 1
 

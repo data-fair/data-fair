@@ -25,7 +25,7 @@ import * as fieldsSniffer from './fields-sniffer.ts'
 import intoStream from 'into-stream'
 import { getFlatten } from './flatten.ts'
 import type { Dataset, DatasetLine } from '#types'
-import type { Document, Filter, WithId } from 'mongodb'
+import type { AnyBulkWriteOperation, Document, Filter, WithId } from 'mongodb'
 import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import { arrayBuffer } from 'stream/consumers'
@@ -279,7 +279,7 @@ class ExtensionsStream extends Transform {
   async transformPromise (item: any) {
     this.i += 1
     this.buffer.push(item)
-    if (this.i % 1000 === 0) await this.sendBuffer()
+    if (this.buffer.length >= config.extensionsBatchSize) await this.sendBuffer()
   }
 
   _transform (item: any, encoding: BufferEncoding, cb: (err?: Error) => void) {
@@ -349,7 +349,7 @@ class ExtensionsStream extends Transform {
         if (extension.select && extension.select.length) {
           opts.params.select = extension.select.join(',')
         }
-        const inputs = []
+        const inputs: any[] = []
         for (const i in this.buffer) {
           const input = await extension.inputMapping(this.buffer[i])
           input[extension.idInput.name] = i
@@ -360,22 +360,34 @@ class ExtensionsStream extends Transform {
         debug('is extension local ?', localMasterData, extension.remoteService.server, `${config.publicUrl}/api/v1/datasets/`)
 
         // TODO: no need to use a cache in the special case of a locale master-data dataset ?
-        const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
+        // stringify cannot return undefined here (the input is always an array)
+        const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []])!)
         const extensionCacheKey = extension.remoteService + '/' + extension.action
-        // first get previous results from cache
+        // first get previous results from cache, in bulk: one $in query on the
+        // {extensionKey, input} index and one lastUsed bump, instead of one
+        // findOneAndUpdate round-trip per line
+        const cachedOutputs = new Map<string, any>()
+        if (!localMasterData) {
+          const usableCacheKeys = inputCacheKeys.filter((_, i) => Object.keys(inputs[i]).length > 1)
+          if (usableCacheKeys.length) {
+            const cursor = mongo.db.collection('extensions-cache')
+              .find({ extensionKey: extensionCacheKey, input: { $in: usableCacheKeys } })
+            for await (const cachedValue of cursor) {
+              cachedOutputs.set(cachedValue.input, cachedValue.output)
+            }
+            if (cachedOutputs.size) {
+              await mongo.db.collection('extensions-cache')
+                .updateMany({ extensionKey: extensionCacheKey, input: { $in: [...cachedOutputs.keys()] } }, { $set: { lastUsed: new Date() } })
+            }
+          }
+        }
         for (let i = 0; i < inputs.length; i++) {
           if (Object.keys(inputs[i]).length === 1) continue
-          let cachedValue
-          if (!localMasterData) {
-            // TODO: read cached values in a bulk read ?
-            cachedValue = await mongo.db.collection('extensions-cache')
-              .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
-          }
-
-          if (cachedValue) {
-            const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], cachedValue.output, this.onlyEmitChanges, separatorOutput)
+          if (cachedOutputs.has(inputCacheKeys[i])) {
+            const output = cachedOutputs.get(inputCacheKeys[i])
+            const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], output, this.onlyEmitChanges, separatorOutput)
             if (hasChanges) changesIndexes.add(i)
-            await reportLineError(i, cachedValue.output)
+            await reportLineError(i, output)
           } else opts.data += JSON.stringify(inputs[i]) + '\n'
         }
         if (!opts.data) continue
@@ -401,6 +413,7 @@ class ExtensionsStream extends Transform {
         if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
         const results = data.split('\n').filter((line: string) => !!line).map(JSON.parse)
 
+        const cacheWriteOps: AnyBulkWriteOperation[] = []
         for (const result of results) {
           const selectFields = extension.select || []
           const selectedResult = Object.keys(result)
@@ -409,19 +422,25 @@ class ExtensionsStream extends Transform {
 
           const i = result[extension.idInput.name]
           if (!localMasterData) {
-            // TODO: do this in bulk ?
-            await mongo.db.collection('extensions-cache')
-              .replaceOne(
-                { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
-                { extensionKey: extensionCacheKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
-                { upsert: true }
-              )
+            cacheWriteOps.push({
+              replaceOne: {
+                filter: { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
+                replacement: { extensionKey: extensionCacheKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
+                upsert: true
+              }
+            })
           }
 
           const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], selectedResult, this.onlyEmitChanges, separatorOutput)
           if (hasChanges) changesIndexes.add(i)
 
           await reportLineError(i, selectedResult)
+        }
+        // single round-trip for all cache writes of the batch. Ordered, so duplicate
+        // inputs within a batch upsert-then-replace sequentially like the per-line
+        // writes did (the {extensionKey, input} index is not unique)
+        if (cacheWriteOps.length) {
+          await mongo.db.collection('extensions-cache').bulkWrite(cacheWriteOps)
         }
       } else if (extension.evaluate && extension.property) {
         for (const i in this.buffer) {
@@ -499,16 +518,24 @@ async function prepareInputMapping (action: any, dataset: Dataset, extensionKey:
     )
     return field && [field.key, input.name, field]
   }).filter(Boolean)
+  // resolved once per extension run, not once per line
+  const calculate = fieldMappings.some((mapping: any) => mapping[2]['x-calculated']) ? prepareCalculations(dataset) : null
   return async (item: any) => {
     const mappedItem: any = {}
-    const flatItem = flatten<any, any>(item) // in case the input comes from another extension
+    // flatten the row lazily: it is only needed when an input value is nested (comes
+    // from another extension's result object) or computed by a calculated field — for
+    // plain scalar columns (the common case) reading the own property directly avoids
+    // a full copy of the row per line
+    let flatItem: any = null
+    const getFlatItem = () => { flatItem = flatItem ?? flatten<any, any>(item); return flatItem }
 
-    if (fieldMappings.find((mapping: any) => mapping[2]['x-calculated'])) {
-      await applyCalculations(dataset, flatItem)
-    }
+    if (calculate) await calculate(getFlatItem())
 
     for (const mapping of fieldMappings) {
-      const val = flatItem[mapping[0]]
+      let val = (flatItem ?? item)[mapping[0]]
+      // missing keys and object/array values defer to the flattened view, where they
+      // resolve exactly as before (nested value or dropped)
+      if (val === undefined || (typeof val === 'object' && val !== null)) val = getFlatItem()[mapping[0]]
       if (val !== undefined && val !== '') mappedItem[mapping[1]] = val
     }
     return mappedItem
@@ -636,62 +663,74 @@ export const checkExtensions = async (schema: any[], extensions: any[] = []) => 
   return null
 }
 
-export const applyCalculations = async (dataset: Dataset, item: any) => {
-  let warning = null
-  const flatItem = flatten<any, any>(item, { safe: true })
-
-  // Add base64 content of attachments
+// Prepare a per-line calculated-fields function for a dataset. Everything that only
+// depends on the dataset (schema scans, geo concept detection, separator fields) is
+// resolved once here instead of once per line — this runs for every line of every
+// indexed dataset. The flattened copy of the line is only built when a consumer
+// (attachment or geo calculation) actually needs it.
+export const prepareCalculations = (dataset: Dataset) => {
   const attachmentField = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  if (attachmentField && flatItem[attachmentField.key]) {
-    const attachmentValue = flatItem[attachmentField.key]
-    const isURL = !!parseURL(attachmentValue).host
-    if (!isURL) {
-      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${attachmentValue}`
-      const filePath = attachmentPath(dataset, attachmentValue)
-      if (await filesStorage.pathExists(filePath)) {
-        const stats = await filesStorage.fileStats(filePath)
+  const hasGeopoint = geoUtils.schemaHasGeopoint(dataset.schema)
+  const hasGeometry = geoUtils.schemaHasGeometry(dataset.schema)
+  const separatorFields = (dataset.schema ?? []).filter(f => f.separator)
+  const needsFlatten = !!attachmentField || hasGeopoint || hasGeometry
 
-        if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
-          // -1 is the "unlimited" sentinel used across config.defaultLimits (see storage.ts)
-          if (config.defaultLimits.attachmentIndexed !== -1 && stats.size > config.defaultLimits.attachmentIndexed) {
-            warning = 'Pièce jointe trop volumineuse pour être analysée'
-          } else {
-            const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
-            item._file_raw = Buffer.from(buf).toString('base64')
+  return async (item: any): Promise<string | null> => {
+    let warning: string | null = null
+    const flatItem = needsFlatten ? flatten<any, any>(item, { safe: true }) : null
+
+    // Add base64 content of attachments
+    if (attachmentField && flatItem?.[attachmentField.key]) {
+      const attachmentValue = flatItem[attachmentField.key]
+      const isURL = !!parseURL(attachmentValue).host
+      if (!isURL) {
+        item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${attachmentValue}`
+        const filePath = attachmentPath(dataset, attachmentValue)
+        if (await filesStorage.pathExists(filePath)) {
+          const stats = await filesStorage.fileStats(filePath)
+
+          if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
+            // -1 is the "unlimited" sentinel used across config.defaultLimits (see storage.ts)
+            if (config.defaultLimits.attachmentIndexed !== -1 && stats.size > config.defaultLimits.attachmentIndexed) {
+              warning = 'Pièce jointe trop volumineuse pour être analysée'
+            } else {
+              const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
+              item._file_raw = Buffer.from(buf).toString('base64')
+            }
           }
         }
       }
     }
-  }
 
-  // calculate geopoint and geometry fields depending on concepts
-  if (geoUtils.schemaHasGeopoint(dataset.schema)) {
-    try {
-      Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
-    } catch (err: any) {
-      console.log('failure to parse geopoints', dataset.id, err, flatItem)
-      warning = 'Coordonnée géographique non valide - ' + err.message
+    // calculate geopoint and geometry fields depending on concepts
+    if (hasGeopoint) {
+      try {
+        Object.assign(item, geoUtils.latlon2fields(dataset, flatItem!))
+      } catch (err: any) {
+        console.log('failure to parse geopoints', dataset.id, err, flatItem)
+        warning = 'Coordonnée géographique non valide - ' + err.message
+      }
+    } else if (hasGeometry) {
+      try {
+        Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem!))
+      } catch (err: any) {
+        console.log('failure to parse geometry', dataset.id, err, flatItem)
+        warning = 'Géométrie non valide - ' + err.message
+      }
     }
-  } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
-    try {
-      Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem))
-    } catch (err: any) {
-      console.log('failure to parse geometry', dataset.id, err, flatItem)
-      warning = 'Géométrie non valide - ' + err.message
-    }
-  }
 
-  // Pseudo-random number for the _rand sampling sort. Intentionally NOT seeded from the line id:
-  // _rand is stored at index time, and pagination tie-breaks on the unique _i, so nothing needs it
-  // to be reproducible (a full reindex just reshuffles the random order). This replaces random-seed,
-  // whose per-line ARC4 key scheduling was ~69% of the indexing-thread CPU.
-  item._rand = Math.floor(Math.random() * 1000000)
+    // Pseudo-random number for the _rand sampling sort. Intentionally NOT seeded from the line id:
+    // _rand is stored at index time, and pagination tie-breaks on the unique _i, so nothing needs it
+    // to be reproducible (a full reindex just reshuffles the random order). This replaces random-seed,
+    // whose per-line ARC4 key scheduling was ~69% of the indexing-thread CPU.
+    item._rand = Math.floor(Math.random() * 1000000)
 
-  // split the fields that have a separator in their schema
-  for (const field of dataset.schema ?? []) {
-    if (field.separator && typeof item[field.key] === 'string') {
-      item[field.key] = item[field.key].split((field.separator as string).trim()).map((part: string) => part.trim())
+    // split the fields that have a separator in their schema
+    for (const field of separatorFields) {
+      if (typeof item[field.key] === 'string') {
+        item[field.key] = item[field.key].split((field.separator as string).trim()).map((part: string) => part.trim())
+      }
     }
+    return warning
   }
-  return warning
 }
