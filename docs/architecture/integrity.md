@@ -1,12 +1,15 @@
 # Data integrity & traceability
 
-> Status: **target 1 (dataset files) — level 1 detection delivered.** The shared core
-> (locked-revision store, transactional-outbox relay, sliding checker) plus its superadmin API
-> and admin UI ship in this iteration; [§10](#10-decomposition--build-order) records precisely
-> what is built vs. what remains (level 2 repair, lock renewal, targets 2–3). This document
-> describes a focused **data-fair feature**, delivered as **three progressive targets** (dataset
-> files → dataset metadata → editable-dataset collections); targets 2–3 and level 2 each get
-> their own spec → plan → implementation cycle next. Scope deliberately left out for now —
+> Status: **target 1 (dataset files) — level 1 detection delivered; target 2 (dataset
+> metadata) — level 1 detection delivered.** The shared core (locked-revision store,
+> transactional-outbox relay, sliding checker) is now **class-segmented** — file and metadata
+> anchors live side by side under the same dataset, each with its own revision history, verdict
+> and API/UI surface — plus its superadmin API and admin UI ship in this iteration;
+> [§10](#10-decomposition--build-order) records precisely what is built vs. what remains (level
+> 2 repair for both classes, applications/settings metadata, target 3). This document describes
+> a focused **data-fair feature**, delivered as **three progressive targets** (dataset files →
+> dataset metadata → editable-dataset collections); target 3 and level 2 each get their own
+> spec → plan → implementation cycle next. Scope deliberately left out for now —
 > generalization beyond data-fair, an immutable append-only **log posture** (events, HTTP
 > logs), and a central integrity service — is parked in
 > [§14 Deferred scope](#14-deferred-scope--future-directions).
@@ -68,8 +71,12 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
   - `context` — user or process identity, operation type, timestamp, optional reason. This
     is **retained** even under GDPR pressure; dropping it would gut the forensic value.
   - `payload` — present only at level 2 (the full document/file copy).
-- **Key layout (flat, id-keyed):** `‹service›/‹owner.type›-‹owner.id›/‹resourceId›/‹i›`.
-  The goal is to retrieve a resource's history from its id, not to browse — minimal
+- **Key layout (flat, id-keyed, class-segmented):**
+  `‹service›/‹owner.type›-‹owner.id›/‹resourceId›/‹class›/‹i›`. The `‹class›` segment
+  (`file`, `metadata`, …) keeps each resource class's revision sequence independent — a
+  dataset's file anchors and metadata anchors are siblings under the same `resourceId`
+  prefix, each indexed from `0`, so enabling/checking one class never perturbs the other's
+  index. The goal is to retrieve a resource's history from its id, not to browse — minimal
   traversability is fine. The per-owner prefix makes storage accounting a simple
   prefix-size query (feeds storage accounting, §9) and enables per-owner access scoping (§7).
 - Cold storage (e.g. Scaleway **Glacier**, which supports object-lock) is acceptable for the
@@ -92,9 +99,14 @@ periodic check is meant to surface.
 
 **Primary — transactional outbox (flag-on-the-document).** The cleanest way to honour that
 ordering with no residual gap is to exploit the one transaction we do have (Mongo's): in a
-**single-document** write, record the resource change **and** mark it pending historization (a
-`_needsHistorizing` flag, or an embedded outbox sub-doc). A background **relay** then ships each
-pending revision `{ hash, context, payload? }` to the locked S3 store and clears the flag —
+**single-document** write, record the resource change **and** mark it pending historization via
+an embedded outbox sub-doc, **`_needsHistorizing: { classes, context }`** — `classes` is the set
+of resource classes this write touched (e.g. `['file']`, `['metadata']`, or both), `context` the
+single traceability record (`operation`, `originator`, `reason?`) applied to every class in that
+set. One sub-doc, not one per class: a writer that touches both file and metadata in the same
+update (e.g. enabling integrity) stamps both classes atomically with one `$addToSet` +
+one context write. A background **relay** then ships each pending `{class, revision}` as
+`{ hash, context, payload? }` to the class-segmented locked S3 store (§3.1) and clears the flag —
 **retrying forward, never rolling back**. The write is atomic with no multi-document transaction,
 and the relay only ever acts on already-committed state (ordering preserved).
 
@@ -248,11 +260,17 @@ opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 `npm run dev-fixtures` seeds two datasets in the `dev_fixtures` org that demonstrate the
 feature end-to-end:
 
-- `fixtures-integrite-ok` — integrity enabled, a compatible published update historizes a
-  second revision, on-demand check returns `ok`
-- `fixtures-integrite-breach` — integrity enabled, then the stored file is tampered
-  out-of-band (dev-only `test-env/tamper-dataset-file` endpoint) so the check reports a
-  `breach`
+- `fixtures-integrite-ok` — integrity enabled (both classes anchored), a compatible published
+  update historizes a second **file**-class revision, on-demand check returns `ok` for both
+  classes
+- `fixtures-integrite-breach` — integrity enabled, then **both classes** are tampered
+  out-of-band: the stored file via the dev-only `test-env/tamper-dataset-file` endpoint, and
+  the metadata via a raw `test-env/patch-dataset` write (no outbox stamp) that changes
+  `description` — so the check reports a `breach` on both `file` and `metadata`
+
+The on-demand check's response is per-class (`{ file?: { status }, metadata?: { status } }`);
+the fixtures script logs the **worst-of-classes** verdict (a breach on either class outranks an
+ok/unknown on the other).
 
 Note the WORM retention interacts with re-runs: a revision written today cannot be deleted
 for a day (compliance lock), so re-creating a dataset with the same id and identical content
@@ -263,10 +281,27 @@ once per environment; on a fresh environment both datasets seed automatically.
 
 | Resource class | Level 1 (detect) | Level 2 (repair) | Hashing |
 |---|---|---|---|
-| Mongo metadata docs (dataset/app metadata, settings, …) | trivial | cheap — reasonable | canonical (stable-key-sorted) JSON → hash |
+| Mongo metadata docs (dataset/app metadata, settings, …) | ✅ **delivered for datasets** (target 2); applications/settings deferred | cheap — reasonable, deferred alongside file-class level 2 | canonical (stable-key-sorted) JSON of a **denylist projection** → SHA-256 |
 | Data files | trivial (md5 already stored) | duplication cost — reasonable up to a size threshold | reuse existing `md5` |
 | Editable (REST) dataset — **Mongo lines** (source of truth) | feasible (see below) | size/cardinality-gated | exact fold over the precomputed per-line `_hash`, sorted by `_i` |
 | Editable dataset — **ES index** (derived) | n/a — rebuildable projection | n/a — repair = reindex | not historized (rebuildable projection) |
+
+- **Dataset metadata hashing (delivered).** The hash is SHA-256 of the **stable-key-sorted**
+  JSON serialization of the dataset document with an **operational denylist** removed — every
+  `_`-prefixed field (internal/calculated: `_id`, `_uniqueRefs`, …) plus a fixed top-level list:
+  `status`, `draft`, `integrity`, `count`, `storage`, `esWarning`, `finalizedAt`,
+  `dataUpdatedAt`, `dataUpdatedBy`, `updatedAt`, `updatedBy`, `createdBy`, `errorStatus`,
+  `errorRetry`, `loaded`, `descendants`. These are fields that legitimately churn under normal
+  operation (worker-maintained bookkeeping, cache/derived state) without representing a
+  meaningful metadata edit — hashing them would produce false breaches on ordinary background
+  activity. Three nested strips remove the same kind of churn one level down:
+  `extensions[].needsUpdate` / `extensions[].nextUpdate` (autoUpdateExtension), `rest.ttl.checkedAt`
+  (the TTL worker), and `extras.applications` (syncApplications propagation). **Fail-loud by
+  construction:** the denylist is an explicit exclusion list, not an inclusion allowlist — any
+  *new* field added to the dataset model later is covered by default (hashed, and thus protected)
+  unless deliberately added to the denylist. This mirrors `coveredPatchKeys` (§3.2/§6), which the
+  legitimate-writer instrumentation (`applyPatch`, permissions, `changeOwner`,
+  topics/identities/settings propagation) uses to decide which patches must stamp the outbox.
 
 - **Files** default to level 1. The hash is an md5 of the file, but the **write and verify
   paths both recompute it from the *stored file*** (not from `dataset.originalFile.md5`): that
@@ -407,8 +442,23 @@ speculative framework.
    — copy the file into the historized bucket, size-gated; and **re-anchoring (§3.4 Option A)** as
    the deferred fallback for providers that cannot prolong a lock (the Scaleway prolongation bug,
    §12) — implemented only if that bug is confirmed to still block us.
-2. **Dataset Mongo metadata** (datasets / applications / settings) — ⏳ **next.** Level 1 =
-   canonical (stable-key-sorted) JSON hash; level 2 stores the full document. Both cheap.
+2. **Dataset Mongo metadata** — ✅ **level 1 (detect) delivered this iteration, for datasets.**
+   The revision store is now **class-segmented** (§3.1): a dataset carries independent `file`
+   and `metadata` anchor sequences, revision histories and verdicts under one
+   `integrity: { active, file?, metadata? }` field, sharing one outbox sub-doc
+   (`_needsHistorizing: { classes, context }`, §3.2). Level 1 hashes a canonical
+   (stable-key-sorted) JSON serialization of the dataset document **minus an operational
+   denylist** (§5) → SHA-256, recomputed fresh from Mongo at check time (not from the caller's
+   possibly-cleaned/projected copy). The legitimate write paths are instrumented end to end:
+   `applyPatch` (metadata-field patches, gated by `coveredPatchKeys`), permissions changes,
+   `changeOwner`, and topics/identities/settings propagation (all funneled through
+   `stampHistorizeMany` so a bulk update stamps every affected dataset in one pass). Superadmin
+   API and admin UI (§7) cover both classes uniformly (per-class enable is not exposed — enabling
+   integrity anchors both `file` and `metadata` together). **Explicitly deferred:**
+   applications and settings metadata (this iteration covers **datasets only**); level 2
+   (payload snapshots, diff, restore) for **both** classes together — file-class level 2 (item 1
+   above) and metadata-class level 2 stay a single follow-on unit of work since they share the
+   same payload-storage machinery.
 3. **Editable (REST) datasets** — ⏳ **later.** *ES is not historized* (rebuildable projection,
    repair = reindex). Target is the Mongo lines collection: level 1 = exact rolling fold over the
    precomputed per-line `_hash` (sample only past a threshold); level 2 = the per-line locked

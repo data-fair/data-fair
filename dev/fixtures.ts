@@ -96,10 +96,13 @@ async function waitForFinalized (id: string, timeoutMs = 60000) {
   throw new Error(`timeout waiting for ${id} to finalize`)
 }
 
-/** Current revision index recorded on the dataset (-1 if none yet). */
+/** Current file-class revision index recorded on the dataset (-1 if none
+ * yet). The `_integrity` response is per-class (`{ active, file?, metadata?
+ * }`) — the fixtures only ever wait on file-class anchors (the changes they
+ * make are file uploads / tampers), so this reads `file.lastRevision`. */
 async function currentRevisionIndex (id: string): Promise<number> {
   const { data } = await dfAdminAx.get(`/api/v1/datasets/${id}/_integrity`)
-  return typeof data.lastRevision?.i === 'number' ? data.lastRevision.i : -1
+  return typeof data.file?.lastRevision?.i === 'number' ? data.file.lastRevision.i : -1
 }
 
 /** Wait until the relay worker writes a revision strictly newer than
@@ -123,17 +126,24 @@ async function enableIntegrity (id: string) {
   await dfAdminAx.put(`/api/v1/datasets/${id}/_integrity`, { active: true })
 }
 
-/** Run an on-demand integrity check; returns 'ok' | 'breach' | 'unknown'.
- * The breach path persists integrity.lastCheck before sending the breach
- * notification, so if that fire-and-forget send errors we still read the
- * already-stored verdict instead of failing the fixture. */
+/** Worst-of-classes verdict: the `_check` response is per-class
+ * (`{ file?: ClassCheck, metadata?: ClassCheck }`) — a breach on either class
+ * outranks an ok/unknown on the other. */
+const worst = (d: any) => d.file?.status === 'breach' || d.metadata?.status === 'breach' ? 'breach' : (d.file?.status ?? 'unknown')
+
+/** Run an on-demand integrity check; returns the worst-of-classes verdict
+ * ('ok' | 'breach' | 'unknown'). The breach path persists
+ * integrity.<class>.lastCheck before sending the breach notification, so if
+ * that fire-and-forget send errors we still read the already-stored verdicts
+ * instead of failing the fixture. */
 async function runCheck (id: string): Promise<string> {
   try {
     const { data } = await dfAdminAx.post(`/api/v1/datasets/${id}/_integrity/_check`)
-    return data.status
+    return worst(data)
   } catch (err: any) {
     const { data } = await dfAdminAx.get(`/api/v1/datasets/${id}/_integrity`)
-    if (data.lastCheck?.status) return data.lastCheck.status
+    const lastChecks = { file: data.file?.lastCheck, metadata: data.metadata?.lastCheck }
+    if (lastChecks.file?.status || lastChecks.metadata?.status) return worst(lastChecks)
     throw err
   }
 }
@@ -247,7 +257,7 @@ async function seedIntegriteOk () {
   await uploadCsv(id, 'deliberations.csv', body, v2, '?draft=compatible')
   await waitForNewRevision(id, anchor)
   const status = await runCheck(id)
-  console.log(`${id}: seeded (integrity active, 2 revisions, check=${status})`)
+  console.log(`${id}: seeded (integrity active, file+metadata revisions, check=${status})`)
 }
 
 /** Integrity demo — breach: integrity on, then the stored file is tampered
@@ -268,8 +278,10 @@ async function seedIntegriteBreach () {
   await enableIntegrity(id)
   await waitForNewRevision(id, -1)
   await tamperFile(id)
+  // metadata tamper: a raw mongo write with no outbox stamp (test-env patch-dataset)
+  await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: 'description modifiée hors circuit (démo intégrité)' })
   const status = await runCheck(id)
-  console.log(`${id}: seeded (integrity active, file tampered, check=${status})`)
+  console.log(`${id}: seeded (integrity active, file+metadata tampered, check=${status})`)
 }
 
 /** REST dataset highlighting date / date-time display behaviour:
