@@ -707,6 +707,3 @@ export const prepareCalculations = (dataset: Dataset) => {
     return warning
   }
 }
-
-// compatibility wrapper for per-line callers; prefer prepareCalculations(dataset) reused across lines
-export const applyCalculations = async (dataset: Dataset, item: any) => prepareCalculations(dataset)(item)

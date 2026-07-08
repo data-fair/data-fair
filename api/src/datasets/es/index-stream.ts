@@ -31,7 +31,15 @@ const maxErroredItems = 3
 
 class IndexStream extends Transform {
   options: IndexStreamOptions
-  body: any[]
+  // pre-serialized ndjson lines for the ES bulk request. Serializing here (instead of
+  // letting the ES client serialize the objects) means each line is stringified exactly
+  // once: the string is used both for the maxBulkChars accounting and for the request
+  // (the transport's ndserialize passes strings through untouched).
+  body: string[]
+  // the line objects of the current batch, one entry per bulk operation, kept for
+  // error reporting and (REST only) re-emitting on the readable side
+  items: any[]
+  applyCalculations: (item: any) => Promise<string | null>
   bulkChars: number
   i: number
   nbErroredItems: number
@@ -41,7 +49,9 @@ class IndexStream extends Transform {
     super({ objectMode: true })
     this.options = options
     this.options.refresh = this.options.refresh || false
+    this.applyCalculations = extensionsUtils.prepareCalculations(options.dataset)
     this.body = []
+    this.items = []
     this.bulkChars = 0
     this.i = 0
     this.nbErroredItems = 0
@@ -51,28 +61,29 @@ class IndexStream extends Transform {
   async transformPromise (item: any, encoding?: BufferEncoding) {
     let warning
     if (this.options.updateMode) {
-      warning = await extensionsUtils.applyCalculations(this.options.dataset, item.doc)
+      warning = await this.applyCalculations(item.doc)
       const keys = Object.keys(item.doc)
       if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return
-      this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
-      cleanItem(item.doc)
-      this.body.push({ doc: cleanItem(item.doc) })
-      this.bulkChars += JSON.stringify(item.doc).length
+      this.body.push(JSON.stringify({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } }))
+      const docStr = JSON.stringify({ doc: cleanItem(item.doc) })
+      this.body.push(docStr)
+      this.items.push(item.doc)
+      this.bulkChars += docStr.length
     } else if (item._deleted) {
-      const params = { delete: { _index: this.options.indexName, _id: item._id } }
-      // kinda lame, but pushing the delete query twice keeps parity of the body size that we use in reporting results
-      this.body.push(params)
-      this.body.push(item)
+      this.body.push(JSON.stringify({ delete: { _index: this.options.indexName, _id: item._id } }))
+      this.items.push(item)
     } else {
       cleanItem(item)
       const params: any = { index: { _index: this.options.indexName } }
       // nanoid will prevent risks of collision even when assembling in virtual datasets
       params.index._id = item._id || nanoid()
       delete item._id
-      this.body.push(params)
-      warning = await extensionsUtils.applyCalculations(this.options.dataset, item)
-      this.body.push(item)
-      this.bulkChars += JSON.stringify(item).length
+      warning = await this.applyCalculations(item)
+      this.body.push(JSON.stringify(params))
+      const itemStr = JSON.stringify(item)
+      this.body.push(itemStr)
+      this.items.push(item)
+      this.bulkChars += itemStr.length
     }
     if (warning) {
       this.nbErroredItems += 1
@@ -82,7 +93,7 @@ class IndexStream extends Transform {
     this.i += 1
 
     if (
-      this.body.length / 2 >= config.elasticsearch.maxBulkLines ||
+      this.items.length >= config.elasticsearch.maxBulkLines ||
         this.bulkChars >= config.elasticsearch.maxBulkChars
     ) {
       await this.sendBulk()
@@ -113,13 +124,10 @@ class IndexStream extends Transform {
   }
 
   async sendBulk () {
-    if (this.body.length === 0) return
-    debug(`Send ${this.body.length} lines to bulk indexing`)
-    const bodyClone: any[] = this.body.slice()
+    if (this.items.length === 0) return
+    debug(`Send ${this.items.length} lines to bulk indexing`)
     const bulkOpts: any = {
-      // ES does not want the doc along with a delete instruction,
-      // but we put it in body anyway for our outgoing/reporting logic
-      body: this.body.filter(line => !line._deleted),
+      body: this.body,
       timeout: '4m',
       refresh: this.options.refresh
     }
@@ -131,15 +139,14 @@ class IndexStream extends Transform {
       for (let i = 0; i < res.items.length; i++) {
         const item = res.items[i]
         const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
-        const line = this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1]
-        this.push({ _id, ...line })
+        this.push({ _id, ...this.items[i] })
       }
       if (res.errors) {
         for (let i = 0; i < res.items.length; i++) {
           const item = {
-            _i: (this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1])._i,
+            _i: this.items[i]._i,
             error: (res.items[i].index && res.items[i].index.error) || (res.items[i].update && res.items[i].update.error),
-            input: this.body[(i * 2) + 1]
+            input: this.items[i]
           }
           if (!item.error) continue
 
@@ -153,6 +160,7 @@ class IndexStream extends Transform {
         }
       }
       this.body = []
+      this.items = []
       this.bulkChars = 0
     } catch (err) {
       internalError('es-bulk-index', err)
