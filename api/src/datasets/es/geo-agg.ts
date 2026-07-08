@@ -4,8 +4,7 @@ import geohash from '../../misc/utils/geohash.ts'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResultContext } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import capabilities from '../../../contract/capabilities.js'
-import { columnOperationsHint } from './operations.ts'
-import { assertMetricAccepted } from './metric-agg.ts'
+import { columnOperationsHint, assertMetricAccepted } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 
 export default async (client: Client, dataset: any, query: Record<string, any>, publicBaseUrl: string, flatten: any, abortContext?: EsAbortContext) => {

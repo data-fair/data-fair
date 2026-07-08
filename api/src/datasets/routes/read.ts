@@ -621,6 +621,8 @@ export const registerReadRoutes = (router: Router) => {
     } catch (err) {
       await manageESError(req, err)
     }
+    // correctness hint only (simple_metrics_agg does not time the ES step); perf advice stays off at duration 0
+    result = attachQueryHint(req, 0, result)
     res.status(200).send(result)
   })
 
