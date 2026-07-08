@@ -250,7 +250,11 @@ export const run = async () => {
     server.requestTimeout = (15 * 60 * 1000)
 
     if (!config.listenWhenReady) {
-      server.listen(config.port)
+      // deep accept backlog: a single thread does both accept() and request work, so any event-loop hitch
+      // pauses accepting and connections queue in the kernel. The default 511 overflowed in production
+      // (TcpExt ListenOverflows) under connection bursts, dropping SYNs incl. the liveness probe's.
+      // Requires net.core.somaxconn >= 4096 on the node (checked: 4096), the kernel clamps silently otherwise.
+      server.listen({ port: config.port, backlog: 4096 })
       await eventPromise(server, 'listening')
     }
   }
@@ -331,7 +335,8 @@ export const run = async () => {
     app.set('ui-ready', true)
 
     if (config.listenWhenReady) {
-      server.listen(config.port)
+      // see the early listen above for the backlog rationale
+      server.listen({ port: config.port, backlog: 4096 })
       await eventPromise(server, 'listening')
     }
   }

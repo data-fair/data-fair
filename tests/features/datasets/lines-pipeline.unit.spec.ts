@@ -49,13 +49,17 @@ const load = async () => ({
 })
 
 // A real Writable (streamCsv uses transform.pipe(res)) with the express Response chaining helpers
-// bolted on. Collects everything written and resolves `_done` with the concatenated bytes on end.
+// bolted on, including a header map — sendPrepared reads back Content-Type (to append the charset the
+// way res.send(string) did) and sets the ETag, so parity tests can assert both against the oracle.
+// Collects everything written and resolves `_done` with the concatenated bytes on end.
 const fakeRes = () => {
   const res: any = new PassThrough()
-  res.type = function () { return this }
+  res._headers = {}
+  res.type = function (t: string) { this._headers['content-type'] = 'application/' + t; return this }
   res.status = function () { return this }
-  res.setHeader = function () { return this }
-  res.set = function () { return this }
+  res.setHeader = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
+  res.set = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
+  res.get = function (k: string) { return this._headers[k.toLowerCase()] }
   res.send = function (body: any) { this.end(body); return this }
   const chunks: Buffer[] = []
   res.on('data', (c: Buffer) => chunks.push(Buffer.from(c)))
@@ -75,7 +79,16 @@ test.describe('lines-pipeline parity', () => {
 
     const res = fakeRes()
     await streamJson(req, res, bufferedSource(esResponse()), { publicBaseUrl, esSearchDurationMs: 0 })
-    const streamed = JSON.parse((await res._done).toString())
+    const rawBody = await res._done
+    const streamed = JSON.parse(rawBody.toString())
+
+    // the incrementally computed ETag: weak format carrying the exact body byte length (the hash part
+    // is an opaque content fingerprint — see BodyAccumulator — asserted by its own unit spec), and the
+    // charset that res.send(string) used to append must be reproduced
+    const jsonEtag = res.get('ETag').match(/^W\/"([0-9a-f]+)-[A-Za-z0-9+/]{27}"$/)
+    assert.ok(jsonEtag, `unexpected etag format: ${res.get('ETag')}`)
+    assert.equal(parseInt(jsonEtag[1], 16), rawBody.length)
+    assert.equal(res.get('Content-Type'), 'application/json; charset=utf-8')
 
     // reference built the CURRENT (buffered) way
     const esResp = esResponse()
@@ -110,6 +123,10 @@ test.describe('lines-pipeline parity', () => {
     const refCsv = await outputs.results2csv(req, referenceRows)
 
     assert.equal(bytes.toString(), refCsv)
+    const csvEtag = res.get('ETag').match(/^W\/"([0-9a-f]+)-[A-Za-z0-9+/]{27}"$/)
+    assert.ok(csvEtag, `unexpected etag format: ${res.get('ETag')}`)
+    assert.equal(parseInt(csvEtag[1], 16), bytes.length)
+    assert.equal(res.get('Content-Type'), 'application/csv; charset=utf-8')
   })
 })
 

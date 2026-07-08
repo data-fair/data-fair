@@ -192,7 +192,7 @@ const readLines: RequestHandler = async (req, res) => {
   // request (ineligible) stays on the buffered search that yields a concrete esResponse consumed directly by
   // the geo/wkt/tile branches below.
   //
-  // TODO (shelved optimization): `res.send` already gives every /lines response a strong ETag + `304`. To
+  // TODO (shelved optimization): every /lines response already has a (weak, Express-default) ETag + `304`. To
   // also skip the ES query on a cache hit, compute a synthetic validator from what fully determines the body
   // (dataset.finalizedAt + normalized query + shaping params: select/html/thumbnail/truncate/arrays/format),
   // set it as the ETag, and short-circuit `If-None-Match` at the top of readLines — a 304 *before* the query,
