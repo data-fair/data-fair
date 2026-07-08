@@ -16,6 +16,10 @@ interface IndexStreamOptions {
   refresh?: boolean | string
   updateMode?: boolean
   attachments?: boolean
+  // re-emit indexed lines on the readable side. Only the REST path consumes them
+  // (markIndexedStream); file datasets pipe into a no-op sink, so skipping the
+  // re-emit avoids a full per-line object copy.
+  reemit?: boolean
 }
 
 // remove some properties that must not be indexed
@@ -49,6 +53,7 @@ class IndexStream extends Transform {
     super({ objectMode: true })
     this.options = options
     this.options.refresh = this.options.refresh || false
+    this.options.reemit = this.options.reemit ?? true
     this.applyCalculations = extensionsUtils.prepareCalculations(options.dataset)
     this.body = []
     this.items = []
@@ -136,10 +141,12 @@ class IndexStream extends Transform {
       if (this.options.attachments) bulkOpts.pipeline = 'attachment'
       const res: any = await es.client.bulk(bulkOpts)
       debug('Bulk sent OK')
-      for (let i = 0; i < res.items.length; i++) {
-        const item = res.items[i]
-        const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
-        this.push({ _id, ...this.items[i] })
+      if (this.options.reemit) {
+        for (let i = 0; i < res.items.length; i++) {
+          const item = res.items[i]
+          const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
+          this.push({ _id, ...this.items[i] })
+        }
       }
       if (res.errors) {
         for (let i = 0; i < res.items.length; i++) {
