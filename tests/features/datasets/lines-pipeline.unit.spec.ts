@@ -2,7 +2,6 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { PassThrough } from 'node:stream'
 import path from 'node:path'
-import etag from 'etag'
 
 // The api result/csv modules import `#config` at module load (config.ts validates on import). The unit
 // harness doesn't set NODE_CONFIG_DIR, so point node-config at the real api/config dir — same pattern
@@ -83,9 +82,12 @@ test.describe('lines-pipeline parity', () => {
     const rawBody = await res._done
     const streamed = JSON.parse(rawBody.toString())
 
-    // the incrementally computed ETag must equal what Express's res.send(string) would have generated,
-    // and the charset res.send(string) appended must be reproduced
-    assert.equal(res.get('ETag'), etag(rawBody.toString(), { weak: true }))
+    // the incrementally computed ETag: weak format carrying the exact body byte length (the hash part
+    // is an opaque content fingerprint — see BodyAccumulator — asserted by its own unit spec), and the
+    // charset that res.send(string) used to append must be reproduced
+    const jsonEtag = res.get('ETag').match(/^W\/"([0-9a-f]+)-[A-Za-z0-9+/]{27}"$/)
+    assert.ok(jsonEtag, `unexpected etag format: ${res.get('ETag')}`)
+    assert.equal(parseInt(jsonEtag[1], 16), rawBody.length)
     assert.equal(res.get('Content-Type'), 'application/json; charset=utf-8')
 
     // reference built the CURRENT (buffered) way
@@ -121,7 +123,9 @@ test.describe('lines-pipeline parity', () => {
     const refCsv = await outputs.results2csv(req, referenceRows)
 
     assert.equal(bytes.toString(), refCsv)
-    assert.equal(res.get('ETag'), etag(bytes.toString(), { weak: true }))
+    const csvEtag = res.get('ETag').match(/^W\/"([0-9a-f]+)-[A-Za-z0-9+/]{27}"$/)
+    assert.ok(csvEtag, `unexpected etag format: ${res.get('ETag')}`)
+    assert.equal(parseInt(csvEtag[1], 16), bytes.length)
     assert.equal(res.get('Content-Type'), 'application/csv; charset=utf-8')
   })
 })

@@ -7,14 +7,14 @@
 // Memory strategy: stream the SOURCE (bounded raw input via the splitter) and serialize each row
 // immediately, discarding the transformed objects — only the serialized bytes accumulate (flat
 // allocations, never the full parsed/transformed object graph that drove old-gen GC). Rows accumulate in a
-// BodyAccumulator (lines-body.ts): encoded to Buffers per ~64KB batch inside consumeHits' every-500-rows
-// yield, hashed in a yielded post-pass, so no synchronous pass over the WHOLE body ever blocks the event
-// loop (the previous single join + Express's full-body etag sha1 + utf8 encode inside res.send blocked for
+// BodyAccumulator (lines-body.ts): encoded to Buffers AND sha1-hashed per ~64KB batch inside consumeHits'
+// every-500-rows yield, so no synchronous pass over the WHOLE body ever blocks the event loop (the
+// previous single join + Express's full-body etag sha1 + utf8 encode inside res.send blocked for
 // seconds on large exports — an accept-queue-overflow / liveness-probe aggravator). The final
 // `res.send(buffer)` is one Buffer.concat memcpy. Because we assemble before sending, the last hit is
-// known, so the response keeps its full HTTP semantics: the `Link` header + body `next` pagination, the
-// same (weak, W/-prefixed — Express's default) ETag / Content-Length, and `304` on `If-None-Match`.
-// A transform error throws before anything is sent → a clean HTTP status.
+// known, so the response keeps its full HTTP semantics: the `Link` header + body `next` pagination, a
+// weak content-derived ETag (opaque fingerprint, see BodyAccumulator) / Content-Length, and `304` on
+// `If-None-Match`. A transform error throws before anything is sent → a clean HTTP status.
 //
 // The output MUST be byte-identical to the pre-refactor buffered `readLines`:
 //   - JSON envelope: `{ hint?, total, next?, totalCollapse?, results:[…] }` (the exact key order Express's
@@ -124,7 +124,7 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
 
   // Head object in the exact key order the buffered result had: { hint, total, next?, totalCollapse? }.
   // Serialize it, strip the closing brace, and splice `,"results":[…]}` so the bytes equal JSON.stringify
-  // of the equivalent object (→ identical ETag). `next` also goes into the Link header.
+  // of the equivalent object. `next` also goes into the Link header.
   const head: Record<string, any> = {}
   const hint = (attachQueryHint(req, ctx.esSearchDurationMs, {}) as Record<string, any>).hint
   if (hint) head.hint = hint
@@ -136,7 +136,7 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   if (nextHref) head.next = nextHref
   if (query.collapse && tail?.aggregations?.totalCollapse) head.totalCollapse = tail.aggregations.totalCollapse.value
 
-  const { buffer, etag } = await acc.finish(jsonBodyPrefix(head), jsonBodySuffix)
+  const { buffer, etag } = acc.finish(jsonBodyPrefix(head), jsonBodySuffix)
   sendPrepared(res.type('json'), buffer, etag)
 }
 
@@ -167,7 +167,7 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
   })
 
   setNextLink(res, ctx, count, lastHit)
-  const { buffer, etag } = await acc.finish('', '')
+  const { buffer, etag } = acc.finish('', '')
   sendPrepared(res.type('csv'), buffer, etag)
 }
 
@@ -204,6 +204,6 @@ export async function streamGeojson (req: any, res: any, source: LinesSource, ct
 
   setNextLink(res, ctx, count, lastHit)
   const total = tail?.hits?.total?.value
-  const { buffer, etag } = await acc.finish(geojsonBodyPrefix(total), geojsonBodySuffix(bbox))
+  const { buffer, etag } = acc.finish(geojsonBodyPrefix(total), geojsonBodySuffix(bbox))
   sendPrepared(res, buffer, etag)
 }

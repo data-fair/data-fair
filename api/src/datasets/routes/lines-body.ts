@@ -35,23 +35,28 @@ export const linkHeaderValue = (href: string): string => {
 // Accumulates the body of a /lines response (json/csv/geojson) as pre-encoded Buffer batches instead of
 // one monolithic string, so no single synchronous pass over the whole body ever blocks the event loop
 // (a large export used to block for seconds in join + Express's etag sha1 + utf8 encode inside res.send).
-// push() is fed the exact body substrings (separators included) and encodes them to a Buffer every
-// ~flushChars characters — amortized inside consumeHits' every-500-rows yield, so it needs no yields of
-// its own. finish() takes the envelope prefix/suffix (the prefix — total/next — is only known after the
-// last hit, but must be hashed first) and does the only remaining full-body passes: a sha1 walk yielding
-// every hashYieldBytes, and one Buffer.concat (pure memcpy). The returned etag is byte-identical to what
-// Express generates in res.send (the `etag` package's weak form) — the caller sets it as a header so
-// Express skips its own full-body hash.
+// push() is fed the exact body substrings (separators included); every ~flushChars characters they are
+// encoded to a Buffer AND fed to the sha1 — amortized inside consumeHits' every-500-rows yield, so the
+// accumulator needs no yields of its own. finish() takes the envelope prefix/suffix (the prefix —
+// total/next — is only known after the last hit) and only hashes those two + one Buffer.concat (pure
+// memcpy) — synchronous and O(envelope), not O(body).
+//
+// The etag is an OPAQUE deterministic content fingerprint, not Express's body hash: the hash input order
+// is rows → suffix → prefix (sha1 is sequential and the prefix arrives last), which is fine because an
+// etag only needs same-body ⇒ same-etag (across pods, restarts and flush batching — the prefix/rows split
+// is a deterministic function of the body) and any-change ⇒ different-etag (rows, suffix AND prefix are
+// all hashed — identical rows with a different envelope `total` must not 304). Same weak format as the
+// `etag` package (W/"<hex byte length>-<base64 sha1, 27 chars>"); the value differs, so deploying a
+// scheme change costs each cached client one revalidation miss — harmless.
 export class BodyAccumulator {
   private parts: Buffer[] = []
   private pending: string[] = []
   private pendingChars = 0
   private readonly flushChars: number
-  private readonly hashYieldBytes: number
+  private readonly hash = createHash('sha1')
 
-  constructor (opts?: { flushChars?: number, hashYieldBytes?: number }) {
+  constructor (opts?: { flushChars?: number }) {
     this.flushChars = opts?.flushChars ?? 64 * 1024
-    this.hashYieldBytes = opts?.hashYieldBytes ?? 2 * 1024 * 1024
   }
 
   push (chunk: string): void {
@@ -62,29 +67,22 @@ export class BodyAccumulator {
 
   private flush (): void {
     if (!this.pendingChars) return
-    this.parts.push(Buffer.from(this.pending.join('')))
+    const part = Buffer.from(this.pending.join(''))
+    this.hash.update(part)
+    this.parts.push(part)
     this.pending = []
     this.pendingChars = 0
   }
 
-  async finish (prefix: string, suffix: string): Promise<{ buffer: Buffer, etag: string }> {
+  finish (prefix: string, suffix: string): { buffer: Buffer, etag: string } {
     this.flush()
-    const parts = [Buffer.from(prefix), ...this.parts, Buffer.from(suffix)]
-    const hash = createHash('sha1')
-    let length = 0
-    let sinceYield = 0
-    for (const part of parts) {
-      hash.update(part)
-      length += part.length
-      sinceYield += part.length
-      if (sinceYield >= this.hashYieldBytes) {
-        sinceYield = 0
-        await new Promise(resolve => setImmediate(resolve))
-      }
-    }
-    // the `etag` package's weak format: W/"<byte length in hex>-<base64 sha1 truncated to 27 chars>"
-    const etag = `W/"${length.toString(16)}-${hash.digest('base64').substring(0, 27)}"`
-    return { buffer: Buffer.concat(parts), etag }
+    const prefixBuf = Buffer.from(prefix)
+    const suffixBuf = Buffer.from(suffix)
+    this.hash.update(suffixBuf)
+    this.hash.update(prefixBuf)
+    const buffer = Buffer.concat([prefixBuf, ...this.parts, suffixBuf])
+    const etag = `W/"${buffer.length.toString(16)}-${this.hash.digest('base64').substring(0, 27)}"`
+    return { buffer, etag }
   }
 }
 
