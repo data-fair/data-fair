@@ -124,7 +124,8 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
     statusBreachOr = {
       $or: [
         { status: { $in: reqQuery.status.split(',') } },
-        { 'integrity.lastCheck.status': 'breach' }
+        { 'integrity.file.lastCheck.status': 'breach' },
+        { 'integrity.metadata.lastCheck.status': 'breach' }
       ]
     }
   }

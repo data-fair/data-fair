@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectVersionsCommand } from '@aws-sdk/client-s3'
-import { ensureIntegrityBucket, integrityTestClient, integrityTestStore, listIntegrityKeys } from '../../support/integrity.ts'
+import { ensureIntegrityBucket, integrityTestClient, integrityTestStore } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 
@@ -31,7 +31,7 @@ test('writeRevision stores a compliance-locked object that can be read back and 
 
   const back = await store.getRevision(key)
   expect(back.hash.md5).toBe('abc123')
-  const keys = await listIntegrityKeys('data-fair/test-store/')
+  const keys = (await store.listRevisions('data-fair/test-store/')).map(r => r.key)
   expect(keys).toContain(key)
 })
 

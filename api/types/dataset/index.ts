@@ -39,8 +39,10 @@ export type DatasetInternal = Dataset & {
   // fields (set by the finalize worker); for virtual datasets: true iff every descendant has it.
   _esCopyToSearch?: boolean
   // `integrity` is part of the public Dataset schema (server-managed, readOnly)
-  _needsHistorizing?: boolean
-  _historizeContext?: { operation: 'create' | 'update' | 'enable' | 'fixIntegrity', originator: string, reason?: string }
+  _needsHistorizing?: {
+    classes: ('file' | 'metadata')[],
+    context?: { operation: 'create' | 'update' | 'enable' | 'fixIntegrity', originator: string, reason?: string }
+  }
   // keyword columns detected as having values truncated by ES ignore_above (set by finalize worker)
   _esIgnoredKeywordFields?: string[]
 }
