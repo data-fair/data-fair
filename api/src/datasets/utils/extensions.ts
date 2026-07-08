@@ -499,13 +499,13 @@ async function prepareInputMapping (action: any, dataset: Dataset, extensionKey:
     )
     return field && [field.key, input.name, field]
   }).filter(Boolean)
+  // resolved once per extension run, not once per line
+  const calculate = fieldMappings.some((mapping: any) => mapping[2]['x-calculated']) ? prepareCalculations(dataset) : null
   return async (item: any) => {
     const mappedItem: any = {}
     const flatItem = flatten<any, any>(item) // in case the input comes from another extension
 
-    if (fieldMappings.find((mapping: any) => mapping[2]['x-calculated'])) {
-      await applyCalculations(dataset, flatItem)
-    }
+    if (calculate) await calculate(flatItem)
 
     for (const mapping of fieldMappings) {
       const val = flatItem[mapping[0]]
@@ -636,62 +636,77 @@ export const checkExtensions = async (schema: any[], extensions: any[] = []) => 
   return null
 }
 
-export const applyCalculations = async (dataset: Dataset, item: any) => {
-  let warning = null
-  const flatItem = flatten<any, any>(item, { safe: true })
-
-  // Add base64 content of attachments
+// Prepare a per-line calculated-fields function for a dataset. Everything that only
+// depends on the dataset (schema scans, geo concept detection, separator fields) is
+// resolved once here instead of once per line — this runs for every line of every
+// indexed dataset. The flattened copy of the line is only built when a consumer
+// (attachment or geo calculation) actually needs it.
+export const prepareCalculations = (dataset: Dataset) => {
   const attachmentField = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  if (attachmentField && flatItem[attachmentField.key]) {
-    const attachmentValue = flatItem[attachmentField.key]
-    const isURL = !!parseURL(attachmentValue).host
-    if (!isURL) {
-      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${attachmentValue}`
-      const filePath = attachmentPath(dataset, attachmentValue)
-      if (await filesStorage.pathExists(filePath)) {
-        const stats = await filesStorage.fileStats(filePath)
+  const hasGeopoint = geoUtils.schemaHasGeopoint(dataset.schema)
+  const hasGeometry = geoUtils.schemaHasGeometry(dataset.schema)
+  const separatorFields = (dataset.schema ?? []).filter(f => f.separator)
+  const needsFlatten = !!attachmentField || hasGeopoint || hasGeometry
 
-        if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
-          // -1 is the "unlimited" sentinel used across config.defaultLimits (see storage.ts)
-          if (config.defaultLimits.attachmentIndexed !== -1 && stats.size > config.defaultLimits.attachmentIndexed) {
-            warning = 'Pièce jointe trop volumineuse pour être analysée'
-          } else {
-            const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
-            item._file_raw = Buffer.from(buf).toString('base64')
+  return async (item: any): Promise<string | null> => {
+    let warning: string | null = null
+    const flatItem = needsFlatten ? flatten<any, any>(item, { safe: true }) : null
+
+    // Add base64 content of attachments
+    if (attachmentField && flatItem?.[attachmentField.key]) {
+      const attachmentValue = flatItem[attachmentField.key]
+      const isURL = !!parseURL(attachmentValue).host
+      if (!isURL) {
+        item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${attachmentValue}`
+        const filePath = attachmentPath(dataset, attachmentValue)
+        if (await filesStorage.pathExists(filePath)) {
+          const stats = await filesStorage.fileStats(filePath)
+
+          if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
+            // -1 is the "unlimited" sentinel used across config.defaultLimits (see storage.ts)
+            if (config.defaultLimits.attachmentIndexed !== -1 && stats.size > config.defaultLimits.attachmentIndexed) {
+              warning = 'Pièce jointe trop volumineuse pour être analysée'
+            } else {
+              const buf = await arrayBuffer((await filesStorage.readStream(filePath)).body)
+              item._file_raw = Buffer.from(buf).toString('base64')
+            }
           }
         }
       }
     }
-  }
 
-  // calculate geopoint and geometry fields depending on concepts
-  if (geoUtils.schemaHasGeopoint(dataset.schema)) {
-    try {
-      Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
-    } catch (err: any) {
-      console.log('failure to parse geopoints', dataset.id, err, flatItem)
-      warning = 'Coordonnée géographique non valide - ' + err.message
+    // calculate geopoint and geometry fields depending on concepts
+    if (hasGeopoint) {
+      try {
+        Object.assign(item, geoUtils.latlon2fields(dataset, flatItem!))
+      } catch (err: any) {
+        console.log('failure to parse geopoints', dataset.id, err, flatItem)
+        warning = 'Coordonnée géographique non valide - ' + err.message
+      }
+    } else if (hasGeometry) {
+      try {
+        Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem!))
+      } catch (err: any) {
+        console.log('failure to parse geometry', dataset.id, err, flatItem)
+        warning = 'Géométrie non valide - ' + err.message
+      }
     }
-  } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
-    try {
-      Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem))
-    } catch (err: any) {
-      console.log('failure to parse geometry', dataset.id, err, flatItem)
-      warning = 'Géométrie non valide - ' + err.message
-    }
-  }
 
-  // Pseudo-random number for the _rand sampling sort. Intentionally NOT seeded from the line id:
-  // _rand is stored at index time, and pagination tie-breaks on the unique _i, so nothing needs it
-  // to be reproducible (a full reindex just reshuffles the random order). This replaces random-seed,
-  // whose per-line ARC4 key scheduling was ~69% of the indexing-thread CPU.
-  item._rand = Math.floor(Math.random() * 1000000)
+    // Pseudo-random number for the _rand sampling sort. Intentionally NOT seeded from the line id:
+    // _rand is stored at index time, and pagination tie-breaks on the unique _i, so nothing needs it
+    // to be reproducible (a full reindex just reshuffles the random order). This replaces random-seed,
+    // whose per-line ARC4 key scheduling was ~69% of the indexing-thread CPU.
+    item._rand = Math.floor(Math.random() * 1000000)
 
-  // split the fields that have a separator in their schema
-  for (const field of dataset.schema ?? []) {
-    if (field.separator && typeof item[field.key] === 'string') {
-      item[field.key] = item[field.key].split((field.separator as string).trim()).map((part: string) => part.trim())
+    // split the fields that have a separator in their schema
+    for (const field of separatorFields) {
+      if (typeof item[field.key] === 'string') {
+        item[field.key] = item[field.key].split((field.separator as string).trim()).map((part: string) => part.trim())
+      }
     }
+    return warning
   }
-  return warning
 }
+
+// compatibility wrapper for per-line callers; prefer prepareCalculations(dataset) reused across lines
+export const applyCalculations = async (dataset: Dataset, item: any) => prepareCalculations(dataset)(item)
