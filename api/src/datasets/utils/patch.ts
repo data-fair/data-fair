@@ -4,7 +4,6 @@ import equal from 'deep-equal'
 import moment from 'moment'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
-import md5File from 'md5-file'
 import config from '#config'
 import * as geo from './geo.ts'
 import * as datasetUtils from './index.ts'
@@ -56,9 +55,10 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
 
   if (datasetFile) {
     if (!dataset.file && !dataset.loaded) throw httpError(400, 'this dataset is not file based')
-    // compute md5 of the updated file, matching the create path (service.ts) so originalFile.md5
-    // stays current across file replacements (it was previously only computed on create)
-    const md5 = await md5File(datasetFile.path)
+    // md5 of the updated file (keeps originalFile.md5 current across file replacements) is computed
+    // in-flight while the upload streams to storage (see upload.ts _handleFile) — the update path
+    // streams straight to storage with no local copy, so a local md5File read would ENOENT on S3.
+    const md5 = datasetFile.md5
     patch.loaded = {
       dataset: {
         md5,
