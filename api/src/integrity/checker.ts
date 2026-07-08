@@ -79,7 +79,10 @@ export const checkDataset = async (dataset: DatasetInternal): Promise<{ file?: C
   // writes the new revision — checking now would raise a false breach alert
   if (dataset._needsHistorizing) return { file: { status: 'unknown' }, metadata: { status: 'unknown' } }
   const store = integrityStore()
-  return { file: await checkClass(dataset, store, 'file') }
+  return {
+    file: await checkClass(dataset, store, 'file'),
+    metadata: await checkClass(dataset, store, 'metadata')
+  }
 }
 
 const runOnce = async () => {
