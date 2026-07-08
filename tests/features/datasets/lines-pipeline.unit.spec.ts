@@ -2,6 +2,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { PassThrough } from 'node:stream'
 import path from 'node:path'
+import etag from 'etag'
 
 // The api result/csv modules import `#config` at module load (config.ts validates on import). The unit
 // harness doesn't set NODE_CONFIG_DIR, so point node-config at the real api/config dir — same pattern
@@ -49,13 +50,17 @@ const load = async () => ({
 })
 
 // A real Writable (streamCsv uses transform.pipe(res)) with the express Response chaining helpers
-// bolted on. Collects everything written and resolves `_done` with the concatenated bytes on end.
+// bolted on, including a header map — sendPrepared reads back Content-Type (to append the charset the
+// way res.send(string) did) and sets the ETag, so parity tests can assert both against the oracle.
+// Collects everything written and resolves `_done` with the concatenated bytes on end.
 const fakeRes = () => {
   const res: any = new PassThrough()
-  res.type = function () { return this }
+  res._headers = {}
+  res.type = function (t: string) { this._headers['content-type'] = 'application/' + t; return this }
   res.status = function () { return this }
-  res.setHeader = function () { return this }
-  res.set = function () { return this }
+  res.setHeader = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
+  res.set = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
+  res.get = function (k: string) { return this._headers[k.toLowerCase()] }
   res.send = function (body: any) { this.end(body); return this }
   const chunks: Buffer[] = []
   res.on('data', (c: Buffer) => chunks.push(Buffer.from(c)))
@@ -75,7 +80,13 @@ test.describe('lines-pipeline parity', () => {
 
     const res = fakeRes()
     await streamJson(req, res, bufferedSource(esResponse()), { publicBaseUrl, esSearchDurationMs: 0 })
-    const streamed = JSON.parse((await res._done).toString())
+    const rawBody = await res._done
+    const streamed = JSON.parse(rawBody.toString())
+
+    // the incrementally computed ETag must equal what Express's res.send(string) would have generated,
+    // and the charset res.send(string) appended must be reproduced
+    assert.equal(res.get('ETag'), etag(rawBody.toString(), { weak: true }))
+    assert.equal(res.get('Content-Type'), 'application/json; charset=utf-8')
 
     // reference built the CURRENT (buffered) way
     const esResp = esResponse()
@@ -110,6 +121,8 @@ test.describe('lines-pipeline parity', () => {
     const refCsv = await outputs.results2csv(req, referenceRows)
 
     assert.equal(bytes.toString(), refCsv)
+    assert.equal(res.get('ETag'), etag(bytes.toString(), { weak: true }))
+    assert.equal(res.get('Content-Type'), 'application/csv; charset=utf-8')
   })
 })
 
