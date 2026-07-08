@@ -82,3 +82,36 @@ test('an out-of-band write to an EXCLUDED field neither breaches nor creates a r
   expect(check.metadata.status).toBe('ok')
   expect((await listIntegrityKeys(p.metadata)).length).toBe(1)
 })
+
+test('a legitimate metadata PATCH historizes a new metadata revision (and only that)', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const p = prefixes(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(p.metadata, 1)
+  const fileCountBefore = (await listIntegrityKeys(p.file)).length
+
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'legitimate new description' })
+
+  const keys = await waitForIntegrityRevisions(p.metadata, 2)
+  expect(keys.length).toBe(2)
+  // a metadata-only patch must not re-anchor the file class
+  expect((await listIntegrityKeys(p.file)).length).toBe(fileCountBefore)
+  // and the check stays clean
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.metadata.status).toBe('ok')
+})
+
+test('a permissions change historizes a new metadata revision', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const p = prefixes(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(p.metadata, 1)
+
+  await admin.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ classes: ['list', 'read'] }])
+
+  expect((await waitForIntegrityRevisions(p.metadata, 2)).length).toBe(2)
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.metadata.status).toBe('ok')
+})

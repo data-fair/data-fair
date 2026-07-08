@@ -8,8 +8,9 @@ import { Router } from 'express'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as permissionsClasses from '@data-fair/data-fair-shared/permissions/operations.ts'
 import * as visibilityUtils from './visibility.ts'
-import { getAccountRole, reqSession } from '@data-fair/lib-express'
+import { getAccountRole, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import catalogsPublicationQueue from './catalogs-publication-queue.ts'
+import { stampHistorize } from '../../integrity/operations.ts'
 // The cross-cutting resource / resourceType / bypassPermissions / publicOperation
 // request-context accessors live in the config-free req-context.ts (so config-free
 // consumers can import them without pulling in #config) — see code-conventions.md §2.
@@ -377,7 +378,12 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
           }
         }
       }
-      await resources.updateOne({ id: resource.id }, { $set: { permissions: req.body, updatedAt: new Date().toISOString() } })
+      const permissionsUpdate: any = { $set: { permissions: req.body, updatedAt: new Date().toISOString() } }
+      if (resourceType === 'datasets' && (resource as any).integrity?.active) {
+        // also covers the publications.$.status='waiting' write just above (same request)
+        stampHistorize(permissionsUpdate, ['metadata'], { operation: 'update', originator: `user:${reqSessionAuthenticated(req).user.id}` })
+      }
+      await resources.updateOne({ id: resource.id }, permissionsUpdate)
 
       if (!wasPublic && willBePublic && onPublicCallback) {
         await onPublicCallback(req, { ...resource, permissions: req.body })

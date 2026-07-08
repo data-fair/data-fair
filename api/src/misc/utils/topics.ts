@@ -1,6 +1,7 @@
 import mongo from '#mongo'
 import { type Topics } from '#types/settings/index.js'
 import { type AccountKeys } from '@data-fair/lib-express'
+import { stampHistorizeMany } from '../../integrity/outbox.ts'
 
 // propagate topics modifications to applications and datasets
 export const updateTopics = async (owner: AccountKeys, oldTopics: Topics, newTopics: Topics) => {
@@ -10,6 +11,7 @@ export const updateTopics = async (owner: AccountKeys, oldTopics: Topics, newTop
     if (topicReference.icon) topicReference.icon = { name: topicReference.icon.name, svgPath: topicReference.icon.svgPath }
     const patch = { $set: { 'topics.$': topicReference } }
     await mongo.datasets.updateMany(filter, patch)
+    await stampHistorizeMany(filter)
     await mongo.applications.updateMany(filter, patch)
   }
   for (const oldTopic of oldTopics) {
@@ -17,6 +19,7 @@ export const updateTopics = async (owner: AccountKeys, oldTopics: Topics, newTop
     const filter = { 'owner.type': owner.type, 'owner.id': owner.id, 'topics.id': oldTopic.id }
     const patch = { $pull: { topics: { id: oldTopic.id } } }
     await mongo.datasets.updateMany(filter, patch)
+    await stampHistorizeMany(filter)
     await mongo.applications.updateMany(filter, patch)
   }
 }

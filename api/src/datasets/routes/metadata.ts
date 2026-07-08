@@ -27,6 +27,7 @@ import { syncDataset as syncRemoteService } from '../../remote-services/service.
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
 import { findDatasets, applyPatch, deleteDataset } from '../service.ts'
+import { stampHistorize } from '../../integrity/operations.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from '../utils/data-schema.ts'
@@ -249,8 +250,10 @@ export const registerMetadataRoutes = (router: Router) => {
     })
     await permissions.initResourcePermissions(patch, preservePermissions)
 
+    const changeOwnerUpdate: any = { $set: patch }
+    if (dataset.integrity?.active) stampHistorize(changeOwnerUpdate, ['metadata'], { operation: 'update', originator: `user:${sessionState.user.id}` })
     const patchedDataset: any = await mongo.db.collection('datasets')
-      .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })
+      .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
     // Move all files
     if (dir(dataset) !== dir(patchedDataset)) {
