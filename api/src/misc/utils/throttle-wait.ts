@@ -1,10 +1,11 @@
-import { TokenBucket } from 'limiter'
+import { TokenBucket } from './token-bucket.ts'
 
 // Config-free so it can be unit-tested without a config directory (see rate-limiting.unit.spec.ts), same
-// as its sibling compute-budget.ts. Consumed by the bandwidth throttle in rate-limiting.ts.
+// as its siblings compute-budget.ts and token-bucket.ts. Consumed by the bandwidth throttle in
+// rate-limiting.ts.
 
 export type TokenBucketWrapper = {
-  lastUsed?: number,
+  lastUsed: number,
   bucketSize: number,
   bucket: TokenBucket,
   pendingSends: number
@@ -31,11 +32,11 @@ export const releaseSendSlot = (wrapper: TokenBucketWrapper): void => {
 // `undefined` when `bandwidth` is 0 or absent (`apiRate[type].bandwidth[bandwidthType]` is optional — e.g.
 // remoteService has no `static`): that means "no bandwidth limit", so callers skip throttling entirely.
 // This is the short-circuit that keeps a 0 limit from ever reaching the throttle loop, where a bucketSize
-// of 0 would slice into empty chunks and spin forever (and an undefined one would stall on NaN).
+// of 0 would slice into empty chunks and spin forever.
 export const tokenBucketFor = (bandwidth: number | undefined, burstFactor: number): TokenBucketWrapper | undefined => {
   if (!bandwidth) return undefined
   const bucketSize = bandwidth * burstFactor
-  return { bucketSize, lastUsed: Date.now(), pendingSends: 0, bucket: new TokenBucket({ bucketSize, tokensPerInterval: bandwidth, interval: 1000 }) }
+  return { bucketSize, lastUsed: Date.now(), pendingSends: 0, bucket: new TokenBucket(bucketSize, bandwidth) }
 }
 
 // floor on the retry sleep: when many waiters compete for the same bucket the computed deficit can be
@@ -51,27 +52,24 @@ const abortableSleep = (ms: number, signal: AbortSignal): Promise<void> => new P
 
 // Wait until `bucket` grants `count` tokens, resolving `false` early if `signal` fires first (the stream /
 // response was torn down mid-wait — drop the slice instead of retaining it for up to one refill window).
-// Deliberately NOT implemented with `bucket.removeTokens`: that method retries by AWAITED RECURSION
-// (comeBackLater → wait → removeTokens), so every losing retry adds a retained Promise+PromiseReaction
-// level to a chain that only collapses when the tokens are finally granted — under a saturated per-IP
-// bucket with hundreds of competing waiters, prod heap snapshots showed millions of retained promises in
-// 378–12798-hop chains (the second rate-limiting memory leak, after the Promise.race one fixed in #479).
-// An abandoned removeTokens also keeps running after our caller gave up and still consumes its tokens
-// when granted, starving live waiters. This flat poll loop instead keeps O(1) retained memory per waiter
-// (each iteration's promises settle before the next), holds at most one live timer and one abort listener
+// A flat poll loop on purpose — this replaced the `limiter` lib's removeTokens, whose retry by AWAITED
+// RECURSION added a retained Promise+PromiseReaction level per losing retry (chains up to ~12k hops,
+// millions of retained promises in prod under a saturated per-IP bucket) and whose abandoned calls kept
+// running after abort, still consuming their tokens when granted. Here each iteration's promises settle
+// before the next (O(1) retained memory per waiter), at most one live timer and one abort listener exist
 // at a time, and an aborted waiter never consumes tokens. Returns true when granted, false when aborted
 // first (or when `count` can never fit the bucket).
 export const removeTokensOrAborted = async (
-  bucket: { tryRemoveTokens: (count: number) => boolean, content: number, interval: number, tokensPerInterval: number, bucketSize: number },
+  bucket: Pick<TokenBucket, 'tryTake' | 'msUntil'>,
   count: number,
   signal: AbortSignal
 ): Promise<boolean> => {
-  if (count > bucket.bucketSize) return false // never grantable (removeTokens used to reject here)
   while (true) {
     if (signal.aborted) return false
-    if (bucket.tryRemoveTokens(count)) return true
+    if (bucket.tryTake(count)) return true
     // time for the deficit to drip in, recomputed each round because rival waiters may win the refill
-    const waitMs = Math.ceil((count - bucket.content) * (bucket.interval / bucket.tokensPerInterval))
+    const waitMs = bucket.msUntil(count)
+    if (waitMs === Infinity) return false // can never fit the bucket
     await abortableSleep(Math.max(waitMs, minRetryWaitMs), signal)
   }
 }

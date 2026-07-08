@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { TokenBucket } from 'limiter'
+import { TokenBucket } from '../../../api/src/misc/utils/token-bucket.ts'
 import { removeTokensOrAborted, tokenBucketFor, acquireSendSlot, releaseSendSlot, maxPendingSends } from '../../../api/src/misc/utils/throttle-wait.ts'
 
 // removeTokensOrAborted waits for the token bucket to grant `count` tokens, but bails out early if the
@@ -14,11 +14,10 @@ import { removeTokensOrAborted, tokenBucketFor, acquireSendSlot, releaseSendSlot
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-// a bucket that refills completely in `refillMs`; limiter buckets start EMPTY (content drips up from 0),
-// pass full=true to start it full
-const bucketFor = (size: number, refillMs: number, full = false) => {
-  const bucket = new TokenBucket({ bucketSize: size, tokensPerInterval: size, interval: refillMs })
-  if (full) bucket.content = size
+// a bucket that refills completely in `refillMs`; our buckets start FULL, drained=true empties it
+const bucketFor = (size: number, refillMs: number, drained = false) => {
+  const bucket = new TokenBucket(size, size * 1000 / refillMs)
+  if (drained) assert.ok(bucket.tryTake(size), 'drain the bucket')
   return bucket
 }
 
@@ -38,19 +37,19 @@ function countingSignal () {
 test.describe('removeTokensOrAborted', () => {
   test('resolves true when the bucket grants the tokens', async () => {
     const sig = countingSignal()
-    assert.equal(await removeTokensOrAborted(bucketFor(100, 1000, true) as any, 5, sig as any), true)
+    assert.equal(await removeTokensOrAborted(bucketFor(100, 1000), 5, sig as any), true)
   })
 
   test('waits for the refill then resolves true', async () => {
-    const bucket = bucketFor(100, 100) // starts empty, full after ~100ms
+    const bucket = bucketFor(100, 100, true) // drained, full again after ~100ms
     const sig = countingSignal()
-    assert.equal(await removeTokensOrAborted(bucket as any, 100, sig as any), true)
+    assert.equal(await removeTokensOrAborted(bucket, 100, sig as any), true)
   })
 
   test('resolves false promptly when aborted before the tokens are granted', async () => {
-    const bucket = bucketFor(100, 60000) // starts empty, one-minute refill: only the abort settles quickly
+    const bucket = bucketFor(100, 60000, true) // drained, one-minute refill: only the abort settles quickly
     const sig = countingSignal()
-    const p = removeTokensOrAborted(bucket as any, 100, sig as any)
+    const p = removeTokensOrAborted(bucket, 100, sig as any)
     await sleep(20)
     sig.abort()
     assert.equal(await p, false)
@@ -59,33 +58,33 @@ test.describe('removeTokensOrAborted', () => {
   test('resolves false immediately when the signal is already aborted', async () => {
     const sig = countingSignal()
     sig.abort()
-    assert.equal(await removeTokensOrAborted(bucketFor(100, 1000) as any, 100, sig as any), false)
+    assert.equal(await removeTokensOrAborted(bucketFor(100, 1000), 100, sig as any), false)
   })
 
   test('resolves false for a count that exceeds the bucket size instead of waiting forever', async () => {
     const sig = countingSignal()
-    assert.equal(await removeTokensOrAborted(bucketFor(100, 1000) as any, 101, sig as any), false)
+    assert.equal(await removeTokensOrAborted(bucketFor(100, 1000), 101, sig as any), false)
   })
 
   test('an aborted wait does not consume tokens once the bucket refills (starvation guard)', async () => {
-    // bucket refills completely in 500ms; a full-bucket-sized wait computed by the limiter would be
+    // bucket refills completely in 500ms; a full-bucket-sized wait computed from the deficit would be
     // granted right at ~500ms. If the abandoned wait is still running under the hood (the old
-    // bucket.removeTokens delegation), it steals the whole refill at ~500ms and this tryRemoveTokens
+    // bucket.removeTokens delegation), it steals the whole refill at ~500ms and this tryTake
     // at ~750ms sees a half-empty bucket.
-    const bucket = bucketFor(100, 500) // starts empty, full at ~500ms
+    const bucket = bucketFor(100, 500, true) // drained, full again at ~500ms
     const sig = countingSignal()
-    const p = removeTokensOrAborted(bucket as any, 100, sig as any)
+    const p = removeTokensOrAborted(bucket, 100, sig as any)
     sig.abort()
     assert.equal(await p, false)
     await sleep(750)
-    assert.ok(bucket.tryRemoveTokens(100), 'the aborted wait must not have consumed the refilled tokens')
+    assert.ok(bucket.tryTake(100), 'the aborted wait must not have consumed the refilled tokens')
   })
 
   test('an aborted wait leaves no live timer behind (leak guard)', async () => {
-    const bucket = bucketFor(100, 60000) // starts empty
+    const bucket = bucketFor(100, 60000, true) // drained
     const before = process.getActiveResourcesInfo().filter(r => r === 'Timeout').length
     const sig = countingSignal()
-    const p = removeTokensOrAborted(bucket as any, 100, sig as any)
+    const p = removeTokensOrAborted(bucket, 100, sig as any)
     sig.abort()
     assert.equal(await p, false)
     const after = process.getActiveResourcesInfo().filter(r => r === 'Timeout').length
@@ -93,10 +92,10 @@ test.describe('removeTokensOrAborted', () => {
   })
 
   test('does not accumulate listeners on the shared signal across many grants (leak guard)', async () => {
-    const bucket = bucketFor(1000, 1000, true)
+    const bucket = bucketFor(1000, 1000)
     const sig = countingSignal()
     for (let i = 0; i < 500; i++) {
-      await removeTokensOrAborted(bucket as any, 1, sig as any)
+      await removeTokensOrAborted(bucket, 1, sig as any)
       assert.ok(sig.liveListeners <= 1, `iteration ${i}: ${sig.liveListeners} live listeners`)
     }
     assert.equal(sig.liveListeners, 0, 'no listener residue after the loop')
