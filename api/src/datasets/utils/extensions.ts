@@ -522,12 +522,20 @@ async function prepareInputMapping (action: any, dataset: Dataset, extensionKey:
   const calculate = fieldMappings.some((mapping: any) => mapping[2]['x-calculated']) ? prepareCalculations(dataset) : null
   return async (item: any) => {
     const mappedItem: any = {}
-    const flatItem = flatten<any, any>(item) // in case the input comes from another extension
+    // flatten the row lazily: it is only needed when an input value is nested (comes
+    // from another extension's result object) or computed by a calculated field — for
+    // plain scalar columns (the common case) reading the own property directly avoids
+    // a full copy of the row per line
+    let flatItem: any = null
+    const getFlatItem = () => { flatItem = flatItem ?? flatten<any, any>(item); return flatItem }
 
-    if (calculate) await calculate(flatItem)
+    if (calculate) await calculate(getFlatItem())
 
     for (const mapping of fieldMappings) {
-      const val = flatItem[mapping[0]]
+      let val = (flatItem ?? item)[mapping[0]]
+      // missing keys and object/array values defer to the flattened view, where they
+      // resolve exactly as before (nested value or dropped)
+      if (val === undefined || (typeof val === 'object' && val !== null)) val = getFlatItem()[mapping[0]]
       if (val !== undefined && val !== '') mappedItem[mapping[1]] = val
     }
     return mappedItem
