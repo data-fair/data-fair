@@ -261,25 +261,31 @@ is not. Because MinIO does not auto-create buckets, a one-shot `minio-init` side
 is `true` with a 1-day retention, so the capability is on by default — but it is still
 opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 
-`npm run dev-fixtures` seeds two datasets in the `dev_fixtures` org that demonstrate the
+`npm run dev-fixtures` seeds four datasets in the `dev_fixtures` org that demonstrate the
 feature end-to-end:
 
 - `fixtures-integrite-ok` — integrity enabled (both classes anchored), a compatible published
-  update historizes a second **file**-class revision, on-demand check returns `ok` for both
-  classes
+  update historizes a second **file**-class revision, and a legitimate metadata PATCH through
+  the API historizes a **metadata**-class revision attributed to the editing user
+  (`originator: user:…` in the history tab); on-demand check returns `ok` for both classes
 - `fixtures-integrite-breach` — integrity enabled, then **both classes** are tampered
   out-of-band: the stored file via the dev-only `test-env/tamper-dataset-file` endpoint, and
   the metadata via a raw `test-env/patch-dataset` write (no outbox stamp) that changes
   `description` — so the check reports a `breach` on both `file` and `metadata`
+- `fixtures-integrite-breach-meta` — **per-class independence**: only the metadata document is
+  tampered (raw write); the check reports `metadata: breach` while `file: ok`
+- `fixtures-integrite-reconcilie` — the **reconciliation flow**: a file tamper is detected
+  (`breach`), then a superadmin `_fix` re-anchors the current state with a traced
+  `fixIntegrity` revision and the check returns to `ok`
 
 The on-demand check's response is per-class (`{ file?: { status }, metadata?: { status } }`);
 the fixtures script logs the **worst-of-classes** verdict (a breach on either class outranks an
-ok/unknown on the other).
+ok/unknown on the other), except the per-class demo which logs both verdicts.
 
 Note the WORM retention interacts with re-runs: a revision written today cannot be deleted
 for a day (compliance lock), so re-creating a dataset with the same id and identical content
 dedupes against the still-locked revision. The fixtures are `skip-if-exists` and thus run
-once per environment; on a fresh environment both datasets seed automatically.
+once per environment; on a fresh environment all four datasets seed automatically.
 
 ## 5. Resource taxonomy & per-class feasibility
 
