@@ -1,26 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
 import { sendDataset, doAndWaitForFinalize, getRawDataset } from '../../support/workers.ts'
-import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions } from '../../support/integrity.ts'
+import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
 // integrity specs all run as the single test_superadmin, so without this their datasets accumulate
 // and hit the dev nbDatasets quota. clean() spares dev_fixtures (owner.id !~ /^test_/).
 test.beforeEach(async () => { await clean() })
-
-// Wait until the historize relay has processed the flag (it clears _needsHistorizing when done),
-// used to assert a *dedupe* no-op where no new revision is written.
-const waitForFlagCleared = async (datasetId: string, timeoutMs = 20000) => {
-  const start = Date.now()
-  let raw = await getRawDataset(datasetId)
-  while (raw._needsHistorizing !== undefined && Date.now() - start < timeoutMs) {
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    raw = await getRawDataset(datasetId)
-  }
-  if (raw._needsHistorizing !== undefined) throw new Error('relay did not clear _needsHistorizing within timeout')
-  return raw
-}
 
 test('relay writes a locked revision when _needsHistorizing is set, then dedupes', async () => {
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
@@ -49,7 +36,10 @@ test('relay clears the flag without writing a revision on a dataset without a fi
   const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
   const ds = (await ax.post('/api/v1/datasets', { isRest: true, title: 'rest-relay', schema: [{ key: 'a', type: 'string' }] })).data
   const prefix = `data-fair/${ds.owner.type}-${ds.owner.id}/${ds.id}/file/`
-  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { _needsHistorizing: { classes: ['file'] } })
+  // integrity.active: true is required to pass the relay's enrollment guard (historize() drops
+  // the flag silently on un-enrolled datasets) — without it this test would not actually exercise
+  // the file-class no-file branch, just the early "integrity not active" short-circuit
+  await ax.post(`${apiUrl}/api/v1/test-env/patch-dataset/${ds.id}`, { integrity: { active: true }, _needsHistorizing: { classes: ['file'] } })
   await waitForFlagCleared(ds.id)
   expect((await listIntegrityKeys(prefix)).length).toBe(0)
 })

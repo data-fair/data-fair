@@ -155,3 +155,31 @@ test('stampHistorize merges the outbox stamp into an existing update', () => {
   ops.stampHistorize(bare, ['file', 'metadata'])
   expect(bare).toEqual({ $addToSet: { '_needsHistorizing.classes': { $each: ['file', 'metadata'] } } })
 })
+
+test('stampHistorize with an empty classes array leaves the update untouched', () => {
+  const update: any = { $set: { title: 'T' } }
+  const result = ops.stampHistorize(update, [], { operation: 'update', originator: 'user:u1' })
+  // an empty-classes stamp would be invisible to both the relay filter and the checker sweep
+  expect(result).toEqual({ $set: { title: 'T' } })
+  expect(result.$addToSet).toBeUndefined()
+
+  const bare: any = {}
+  expect(ops.stampHistorize(bare, [])).toEqual({})
+})
+
+test('coveredMetadata strips readApiKey renewal churn but keeps active/interval', () => {
+  const base = {
+    id: 'ds1',
+    readApiKey: { active: true, interval: 'P1M', expiresAt: '2026-07-01T00:00:00.000Z', renewAt: '2026-06-15T00:00:00.000Z' }
+  }
+  const renewed = {
+    id: 'ds1',
+    readApiKey: { active: true, interval: 'P1M', expiresAt: '2026-08-01T00:00:00.000Z', renewAt: '2026-07-15T00:00:00.000Z' }
+  }
+  expect(ops.coveredMetadata(base)).toEqual({ id: 'ds1', readApiKey: { active: true, interval: 'P1M' } })
+  // hash stable across expiresAt/renewAt-only changes (the renewApiKey worker's churn)
+  expect(ops.metadataHash(base)).toBe(ops.metadataHash(renewed))
+  // but sensitive to an actual active flip
+  const disabled = { id: 'ds1', readApiKey: { ...base.readApiKey, active: false } }
+  expect(ops.metadataHash(base)).not.toBe(ops.metadataHash(disabled))
+})

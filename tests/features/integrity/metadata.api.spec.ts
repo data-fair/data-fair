@@ -1,8 +1,8 @@
 // tests/features/integrity/metadata.api.spec.ts
 import { test, expect } from '@playwright/test'
 import { axiosAuth, apiUrl, clean } from '../../support/axios.ts'
-import { sendDataset, collectNotifications, getRawDataset } from '../../support/workers.ts'
-import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions } from '../../support/integrity.ts'
+import { sendDataset, collectNotifications } from '../../support/workers.ts'
+import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, waitForFlagCleared } from '../../support/integrity.ts'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
@@ -11,21 +11,6 @@ const prefixes = (dataset: any) => ({
   file: `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/file/`,
   metadata: `data-fair/${dataset.owner.type}-${dataset.owner.id}/${dataset.id}/metadata/`
 })
-
-// waitForIntegrityRevisions only confirms the S3 object for one class exists; the relay may still
-// be processing the other class (a single trailing mongo update unsets _needsHistorizing only once
-// BOTH classes are done). checkDataset treats a still-set _needsHistorizing as "pending" ('unknown'),
-// so a check run in that window would race a real verdict — wait for the flag to clear too.
-const waitForFlagCleared = async (datasetId: string, timeoutMs = 20000) => {
-  const start = Date.now()
-  let raw = await getRawDataset(datasetId)
-  while (raw._needsHistorizing !== undefined && Date.now() - start < timeoutMs) {
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    raw = await getRawDataset(datasetId)
-  }
-  if (raw._needsHistorizing !== undefined) throw new Error('relay did not clear _needsHistorizing within timeout')
-  return raw
-}
 
 test('enable anchors both classes; check is ok for both', async () => {
   const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
@@ -100,6 +85,13 @@ test('a legitimate metadata PATCH historizes a new metadata revision (and only t
   // and the check stays clean
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.metadata.status).toBe('ok')
+
+  // the revision's originator must reflect the actual user who made the patch (defaulted from
+  // patch.updatedBy in applyPatch), not the generic 'worker:historize' fallback
+  await waitForFlagCleared(dataset.id)
+  const revisions = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`, { params: { class: 'metadata' } })).data
+  expect(revisions.results[0].originator).toMatch(/^user:/)
+  expect(revisions.results[0].originator).not.toBe('worker:historize')
 })
 
 test('a permissions change historizes a new metadata revision', async () => {
@@ -112,6 +104,66 @@ test('a permissions change historizes a new metadata revision', async () => {
   await admin.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ classes: ['list', 'read'] }])
 
   expect((await waitForIntegrityRevisions(p.metadata, 2)).length).toBe(2)
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.metadata.status).toBe('ok')
+})
+
+// CRITICAL 1 regression: stampHistorizeMany used to be called AFTER the destructive propagation
+// write (topics.ts $pull), so its filter ('topics.id': id) matched nothing post-mutation and the
+// removal silently never historized. The fix moves the stamp before the mutation.
+test('a topic removed from owner settings historizes a new metadata revision', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const p = prefixes(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(p.metadata, 1)
+  await waitForFlagCleared(dataset.id)
+
+  const topicId = `integrity-topic-${Date.now()}`
+  const existingTopics = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
+  // add our topic alongside whatever topics already exist (avoid clobbering unrelated test state)
+  await admin.patch('/api/v1/settings/user/test_superadmin', { topics: [...existingTopics, { id: topicId, title: 'Integrity topic' }] })
+
+  // topics is a covered field: assigning it to the dataset is itself a legitimate PATCH that historizes
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { topics: [{ id: topicId, title: 'Integrity topic' }] })
+  expect((await waitForIntegrityRevisions(p.metadata, 2)).length).toBe(2)
+  await waitForFlagCleared(dataset.id)
+
+  // now remove the topic from the owner settings — this fires the propagation $pull on the dataset
+  const settingsBeforeRemoval = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
+  await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsBeforeRemoval.filter((t: any) => t.id !== topicId) })
+
+  await waitForFlagCleared(dataset.id)
+  const keys = await waitForIntegrityRevisions(p.metadata, 3)
+  expect(keys.length).toBe(3)
+  const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
+  expect(check.metadata.status).toBe('ok')
+})
+
+// CRITICAL 1 regression: same self-invalidated-filter bug in deletePublicationSite's stampHistorizeMany
+// (called after the $pull, whose filter matched the very element the pull just removed).
+test('deleting a publication site historizes a new metadata revision', async () => {
+  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const dataset = await sendDataset('datasets/dataset1.csv', admin)
+  const p = prefixes(dataset)
+  await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+  await waitForIntegrityRevisions(p.metadata, 1)
+  await waitForFlagCleared(dataset.id)
+
+  const siteId = `integrity-site-${Date.now()}`
+  await admin.post('/api/v1/settings/user/test_superadmin/publication-sites', { type: 'data-fair-portals', id: siteId, url: 'http://portal.example.test' })
+
+  // publicationSites is a covered field: assigning it to the dataset is itself a legitimate PATCH
+  await admin.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: [`data-fair-portals:${siteId}`] })
+  expect((await waitForIntegrityRevisions(p.metadata, 2)).length).toBe(2)
+  await waitForFlagCleared(dataset.id)
+
+  // deleting the publication site fires the propagation $pull on the dataset
+  await admin.delete(`/api/v1/settings/user/test_superadmin/publication-sites/data-fair-portals/${siteId}`)
+
+  await waitForFlagCleared(dataset.id)
+  const keys = await waitForIntegrityRevisions(p.metadata, 3)
+  expect(keys.length).toBe(3)
   const check = (await admin.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.metadata.status).toBe('ok')
 })

@@ -31,8 +31,12 @@ test('writeRevision stores a compliance-locked object that can be read back and 
 
   const back = await store.getRevision(key)
   expect(back.hash.md5).toBe('abc123')
-  const keys = (await store.listRevisions('data-fair/test-store/')).map(r => r.key)
+  const revisions = await store.listRevisions('data-fair/test-store/')
+  const keys = revisions.map(r => r.key)
   expect(keys).toContain(key)
+  // the revisions endpoint's merge-sort across classes depends on lastModified being present
+  const entry = revisions.find(r => r.key === key)
+  expect(entry?.lastModified).toBeInstanceOf(Date)
 })
 
 test('a written revision is WORM: the locked version cannot be destroyed within retention', async () => {
