@@ -330,6 +330,10 @@ module.exports = {
   assertImmutable: false,
   remoteAttachmentCacheDuration: 1000 * 5,
   extensionUpdateDelay: 600,
+  // lines per request to a remote service (and per extensions-cache bulk read/write) when
+  // applying extensions. Large enough that the per-batch fixed costs (HTTP request, cache
+  // round-trips) stay marginal, small enough to bound the lines held in memory per batch.
+  extensionsBatchSize: 250,
   compatODS: false,
   apiKeysMaxDuration: 2 * 365, // in days
   apiKeysExpirationCron: '0 3 * * *', // daily at 3 AM, scan apiKeys expireAt and notify J-3 / J

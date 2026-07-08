@@ -49,6 +49,7 @@
     "assertImmutable",
     "remoteAttachmentCacheDuration",
     "extensionUpdateDelay",
+    "extensionsBatchSize",
     "apiKeysMaxDuration",
     "apiKeysExpirationCron"
   ],
@@ -474,6 +475,9 @@
       "type": "number"
     },
     "extensionUpdateDelay": {
+      "type": "number"
+    },
+    "extensionsBatchSize": {
       "type": "number"
     },
     "compatODS": {

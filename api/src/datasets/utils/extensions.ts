@@ -279,7 +279,7 @@ class ExtensionsStream extends Transform {
   async transformPromise (item: any) {
     this.i += 1
     this.buffer.push(item)
-    if (this.i % 1000 === 0) await this.sendBuffer()
+    if (this.buffer.length >= config.extensionsBatchSize) await this.sendBuffer()
   }
 
   _transform (item: any, encoding: BufferEncoding, cb: (err?: Error) => void) {
