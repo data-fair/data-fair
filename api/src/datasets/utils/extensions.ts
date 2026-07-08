@@ -25,7 +25,7 @@ import * as fieldsSniffer from './fields-sniffer.ts'
 import intoStream from 'into-stream'
 import { getFlatten } from './flatten.ts'
 import type { Dataset, DatasetLine } from '#types'
-import type { Document, Filter, WithId } from 'mongodb'
+import type { AnyBulkWriteOperation, Document, Filter, WithId } from 'mongodb'
 import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import { arrayBuffer } from 'stream/consumers'
@@ -349,7 +349,7 @@ class ExtensionsStream extends Transform {
         if (extension.select && extension.select.length) {
           opts.params.select = extension.select.join(',')
         }
-        const inputs = []
+        const inputs: any[] = []
         for (const i in this.buffer) {
           const input = await extension.inputMapping(this.buffer[i])
           input[extension.idInput.name] = i
@@ -360,22 +360,34 @@ class ExtensionsStream extends Transform {
         debug('is extension local ?', localMasterData, extension.remoteService.server, `${config.publicUrl}/api/v1/datasets/`)
 
         // TODO: no need to use a cache in the special case of a locale master-data dataset ?
-        const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
+        // stringify cannot return undefined here (the input is always an array)
+        const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []])!)
         const extensionCacheKey = extension.remoteService + '/' + extension.action
-        // first get previous results from cache
+        // first get previous results from cache, in bulk: one $in query on the
+        // {extensionKey, input} index and one lastUsed bump, instead of one
+        // findOneAndUpdate round-trip per line
+        const cachedOutputs = new Map<string, any>()
+        if (!localMasterData) {
+          const usableCacheKeys = inputCacheKeys.filter((_, i) => Object.keys(inputs[i]).length > 1)
+          if (usableCacheKeys.length) {
+            const cursor = mongo.db.collection('extensions-cache')
+              .find({ extensionKey: extensionCacheKey, input: { $in: usableCacheKeys } })
+            for await (const cachedValue of cursor) {
+              cachedOutputs.set(cachedValue.input, cachedValue.output)
+            }
+            if (cachedOutputs.size) {
+              await mongo.db.collection('extensions-cache')
+                .updateMany({ extensionKey: extensionCacheKey, input: { $in: [...cachedOutputs.keys()] } }, { $set: { lastUsed: new Date() } })
+            }
+          }
+        }
         for (let i = 0; i < inputs.length; i++) {
           if (Object.keys(inputs[i]).length === 1) continue
-          let cachedValue
-          if (!localMasterData) {
-            // TODO: read cached values in a bulk read ?
-            cachedValue = await mongo.db.collection('extensions-cache')
-              .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
-          }
-
-          if (cachedValue) {
-            const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], cachedValue.output, this.onlyEmitChanges, separatorOutput)
+          if (cachedOutputs.has(inputCacheKeys[i])) {
+            const output = cachedOutputs.get(inputCacheKeys[i])
+            const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], output, this.onlyEmitChanges, separatorOutput)
             if (hasChanges) changesIndexes.add(i)
-            await reportLineError(i, cachedValue.output)
+            await reportLineError(i, output)
           } else opts.data += JSON.stringify(inputs[i]) + '\n'
         }
         if (!opts.data) continue
@@ -401,6 +413,7 @@ class ExtensionsStream extends Transform {
         if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
         const results = data.split('\n').filter((line: string) => !!line).map(JSON.parse)
 
+        const cacheWriteOps: AnyBulkWriteOperation[] = []
         for (const result of results) {
           const selectFields = extension.select || []
           const selectedResult = Object.keys(result)
@@ -409,19 +422,25 @@ class ExtensionsStream extends Transform {
 
           const i = result[extension.idInput.name]
           if (!localMasterData) {
-            // TODO: do this in bulk ?
-            await mongo.db.collection('extensions-cache')
-              .replaceOne(
-                { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
-                { extensionKey: extensionCacheKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
-                { upsert: true }
-              )
+            cacheWriteOps.push({
+              replaceOne: {
+                filter: { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
+                replacement: { extensionKey: extensionCacheKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
+                upsert: true
+              }
+            })
           }
 
           const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], selectedResult, this.onlyEmitChanges, separatorOutput)
           if (hasChanges) changesIndexes.add(i)
 
           await reportLineError(i, selectedResult)
+        }
+        // single round-trip for all cache writes of the batch. Ordered, so duplicate
+        // inputs within a batch upsert-then-replace sequentially like the per-line
+        // writes did (the {extensionKey, input} index is not unique)
+        if (cacheWriteOps.length) {
+          await mongo.db.collection('extensions-cache').bulkWrite(cacheWriteOps)
         }
       } else if (extension.evaluate && extension.property) {
         for (const i in this.buffer) {
