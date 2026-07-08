@@ -1,9 +1,9 @@
 // inspired by https://github.com/danielgindi/node-autodetect-decoder-stream/blob/master/index.js
 
 import iconv, { type DecoderStream } from 'iconv-lite'
-import chardet from 'chardet'
 import { Transform, type TransformCallback } from 'stream'
 import outOfCharacter from 'out-of-character'
+import { detectEncoding } from './detect-encoding.ts'
 
 const sampleSize = 32768 // 32kb
 
@@ -23,7 +23,7 @@ class DecodeStream extends Transform {
     if (!this.decoder) {
       if (chunk) this._buffer = Buffer.concat([this._buffer!, chunk])
       if (this._buffer!.length > sampleSize || flush) {
-        const encoding = chardet.detect(this._buffer!) ?? 'UTF-8'
+        const encoding = detectEncoding(this._buffer!)
         this.decoder = iconv.getDecoder(encoding, iconvOpts)
         chunk = this._buffer!
         delete this._buffer
