@@ -58,10 +58,12 @@ defence; the in-app limiter (§4) backs it up and adds cost-awareness.
 
 ## 4. In-app rate limiting (`api/src/misc/utils/rate-limiting.ts`)
 
-Implementation: the `limiter` library, **in-memory, per pod**. Because the limiters live in process
-memory, correctness across replicas relies on the reverse proxy hashing by client IP
-(`upstream-hash-by: $remote_addr`). Stale limiters/buckets are swept every 20 min. A limiter is
-keyed by `throttlingKey + (userId | clientIp) + limitType`. Limit types come from
+Implementation: homegrown `TokenBucket` + `SweptStore` (`api/src/misc/utils/`), **in-memory, per
+pod** (the `limiter` library was dropped after causing two production memory leaks — see below).
+Because the limiters live in process memory, correctness across replicas relies on the reverse
+proxy hashing by client IP (`upstream-hash-by: $remote_addr`). Stale limiters/buckets are swept
+every 20 min (one `SweptStore` rule for all three registries). A limiter is keyed by
+`throttlingKey + (userId | clientIp) + limitType`. Limit types come from
 `config.defaultLimits.apiRate` (`api/config/default.cjs`):
 
 | limitType | window | requests / window | `dynamic` bandwidth | `static` bandwidth |
@@ -72,25 +74,28 @@ keyed by `throttlingKey + (userId | clientIp) + limitType`. Limit types come fro
 | `postApplicationKey` | 60 s | 1 | — | — |
 | `appCaptures` | 60 s | 5 | — | — |
 
-Each request consumes **exactly one token** (`consume()` → `tryRemoveTokens(1)`), regardless of how
-expensive the query is. Bandwidth is throttled separately: handlers call `res.throttle()` /
+Each request consumes **exactly one token** (`consume()` → `TokenBucket.tryTake(1)`), regardless of
+how expensive the query is. Bandwidth is throttled separately: handlers call `res.throttle()` /
 `res.throttleEnd()` which wrap the response body in a token-bucket `Transform` (bucket size = rate ×
-4 burst factor). The middleware picks `user` vs `anonymous` based on `reqUser(req)`; specific limit
-types are passed explicitly elsewhere (application keys, captures, remote services). The header
-`x-ignore-rate-limiting: <SECRET_IGNORE_RATE_LIMITING>` bypasses everything (internal callers).
+4 burst factor). All buckets start **full**: the burst allowance is immediately usable, then
+sustained transfers converge to the configured rate. The middleware picks `user` vs `anonymous`
+based on `reqUser(req)`; specific limit types are passed explicitly elsewhere (application keys,
+captures, remote services). The header `x-ignore-rate-limiting: <SECRET_IGNORE_RATE_LIMITING>`
+bypasses everything (internal callers).
 
 The wait for bandwidth tokens lives in `api/src/misc/utils/throttle-wait.ts` and deliberately does
-**not** use the `limiter` library's `removeTokens`: that method retries by awaited recursion, so under
-a saturated bucket every losing retry adds a retained Promise+PromiseReaction level to a chain that
-only collapses on the final grant — a prod pod accumulated millions of retained promises this way
-(chains up to ~12k hops) and died in a GC spiral every ~4 h. `removeTokensOrAborted` instead polls
-`tryRemoveTokens` in a flat loop with an abortable sleep: O(1) retained memory per waiter, and an
-aborted waiter (client disconnect) exits without ever consuming tokens (an abandoned `removeTokens`
-keeps running and still debits the bucket when granted, starving live waiters). On top of that, at
-most `maxPendingSends` (100) sends may wait on one bucket (i.e. per client × bandwidth type); beyond
-the cap the response is torn down (`df_throttle_queue_full_total{limitType}`) instead of queued,
-because each queued send pins its full response body for the whole starvation window — the same
-incident had ~1400 queued responses pinning 700+ MB of buffers on a single per-IP bucket.
+**not** delegate the wait to the bucket (the dropped `limiter` library's `removeTokens` retried by
+awaited recursion, so under a saturated bucket every losing retry added a retained
+Promise+PromiseReaction level to a chain that only collapsed on the final grant — a prod pod
+accumulated millions of retained promises this way, chains up to ~12k hops, and died in a GC spiral
+every ~4 h; its abandoned waits also kept running after abort and still debited the bucket when
+granted, starving live waiters). `removeTokensOrAborted` instead polls `tryTake` in a flat loop
+with an abortable sleep sized by `msUntil`: O(1) retained memory per waiter, and an aborted waiter
+(client disconnect) exits without ever consuming tokens. On top of that, at most `maxPendingSends`
+(100) sends may wait on one bucket (i.e. per client × bandwidth type); beyond the cap the response
+is torn down (`df_throttle_queue_full_total{limitType}`) instead of queued, because each queued
+send pins its full response body for the whole starvation window — the same incident had ~1400
+queued responses pinning 700+ MB of buffers on a single per-IP bucket.
 
 > **Who counts as a "user":** the limiter keys the tier and the bucket off `rateLimitUser(req)`, not
 > `reqUser(req)` directly. It returns the request's user **except** for application-key sessions
