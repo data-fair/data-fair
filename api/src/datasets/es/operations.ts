@@ -267,6 +267,97 @@ export const esProperty = (prop: any, defaultAnalyzer: string): any => {
   return esProp
 }
 
+// ---- metric aggregations (metric_agg, simple_metrics_agg, values_agg/geo_agg metric params) ----
+
+export const acceptedMetricAggsByType: Record<string, string[]> = {
+  number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles', 'cardinality'],
+  string: ['min', 'max', 'cardinality', 'value_count'],
+  other: ['value_count']
+}
+export const acceptedMetricAggs: string[] = []
+for (const metrics of Object.values(acceptedMetricAggsByType)) {
+  for (const metric of metrics) {
+    if (!acceptedMetricAggs.includes(metric)) acceptedMetricAggs.push(metric)
+  }
+}
+export const defaultMetricAggsByType: Record<string, string[]> = {
+  number: ['min', 'max'],
+  string: ['cardinality'],
+  other: []
+}
+
+export const getMetricType = (field: any): 'number' | 'string' | 'other' => {
+  if (field.type === 'integer' || field.type === 'number') {
+    return 'number'
+  } else if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
+    return 'number'
+  } else if (field.type === 'string') {
+    return 'string'
+  } else {
+    return 'other'
+  }
+}
+
+// ES types that can serve the doc-values based metric aggregations. Geo types, object/nested
+// and disabled mappings cannot.
+const METRIC_AGGREGATABLE_ES_TYPES = new Set(['long', 'integer', 'double', 'boolean', 'date', 'keyword', 'wildcard'])
+
+// Whether metric aggregations can run at all on the column. Derived from the actual ES mapping
+// (esProperty) so it cannot drift from it: geometry-concept columns are mapped
+// {type: keyword, doc_values: false}, `values: false` columns lose their doc_values, the geo
+// calculated columns are geo_point / geo_shape, etc. Aggregating on any of those makes ES fail
+// the whole request ("all shards failed" / fielddata errors).
+export const isMetricAggregatable = (prop: any): boolean => {
+  const esProp = esProperty(prop, '')
+  if (!esProp?.type || !METRIC_AGGREGATABLE_ES_TYPES.has(esProp.type)) return false
+  return esProp.doc_values !== false
+}
+
+export const assertMetricAccepted = (field: any, metric: string): void => {
+  const acceptedAggs = acceptedMetricAggsByType[getMetricType(field)]
+  if (!acceptedAggs?.includes(metric)) {
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. La métrique "${metric}", n'est pas supportée pour ce type de champ.`)
+  }
+  if (!isMetricAggregatable(field)) {
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. Ce champ ne supporte pas les agrégations de métriques.`)
+  }
+}
+
+// The effective columns list of /simple_metrics_agg — shared by the aggregations builder
+// (metric-agg.ts) and the per-request hint (query-advice.ts) so they always agree.
+// Explicit `fields` values are strictly validated (400 before any ES call); the default list
+// keeps only the columns that can actually serve the requested (or default) metrics, so it
+// never produces an ES-level failure.
+export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>): string[] => {
+  const globalMetrics: string[] | undefined = query.metrics ? String(query.metrics).split(',') : undefined
+  if (globalMetrics) {
+    for (const metric of globalMetrics) {
+      if (!acceptedMetricAggs.includes(metric)) throw httpError(400, `La métrique "${metric}" n'existe pas.`)
+    }
+  }
+  if (query.fields) {
+    const fields: string[] = String(query.fields).split(',')
+    for (const key of fields) {
+      const field = dataset.schema.find((f: any) => f.key === key)
+      if (!field) throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      if (!hasCapability(field, 'values')) {
+        throw httpError(400, `Impossible de calculer une métrique sur le champ ${key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
+      }
+      if (!isMetricAggregatable(field)) {
+        throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}. Ce champ ne supporte pas les agrégations de métriques.`)
+      }
+      if (globalMetrics) {
+        for (const metric of globalMetrics) assertMetricAccepted(field, metric)
+      }
+    }
+    return fields
+  }
+  return dataset.schema
+    .filter((f: any) => !f['x-calculated'] && hasCapability(f, 'values') && isMetricAggregatable(f))
+    .filter((f: any) => !globalMetrics || globalMetrics.every(m => acceptedMetricAggsByType[getMetricType(f)].includes(m)))
+    .map((f: any) => f.key)
+}
+
 // A dataset whose `q` query would otherwise expand into a huge `fields` array is given a
 // `_search` catch-all field, and its `q` query targets `_search` plus the small handful of
 // boost-eligible columns (label / description / DefinedTermSet) as per-field entries with

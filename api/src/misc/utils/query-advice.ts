@@ -1,6 +1,6 @@
 import { type Request } from 'express'
 import i18n from 'i18n'
-import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE } from '../../datasets/es/operations.ts'
+import { hasManyQSearchFields, FILTER_CAPABILITIES, isLengthLimitedKeyword, hasCapability, KEYWORD_IGNORE_ABOVE, getSimpleMetricsFields } from '../../datasets/es/operations.ts'
 import { SLOW_REQUEST_THRESHOLD_MS } from './observe.ts'
 import { reqPublicOperation, reqDatasetOptional, setReqDataset } from './req-context.ts'
 
@@ -145,6 +145,28 @@ export const uncertainFilterAdvice = (req: Request): string => {
   return ' ' + req.__('errors.queryAdviceUncertainIntro', String(KEYWORD_IGNORE_ABOVE)) + ' : ' + items.join(', ') + '.'
 }
 
+// Correctness advisory (duration-independent) for /simple_metrics_agg: the metrics read
+// doc_values, which silently miss the values ES dropped on columns that exceeded ignore_above
+// (dataset._esIgnoredKeywordFields, from finalize detection). Sibling of uncertainFilterAdvice
+// for the aggregated columns rather than the filters.
+export const truncatedMetricsAdvice = (req: Request): string => {
+  if (!/\/simple_metrics_agg\/?$/.test(req.path)) return ''
+  const dataset = reqDatasetOptional(req)
+  const flaggedSet = new Set<string>((dataset as any)?._esIgnoredKeywordFields ?? [])
+  if (!flaggedSet.size) return ''
+  let fields: string[]
+  try {
+    fields = getSimpleMetricsFields(dataset, (req.query ?? {}) as Record<string, any>)
+  } catch {
+    return '' // invalid explicit fields/metrics 400 before any result could carry a hint
+  }
+  const byKey = new Map((dataset?.schema ?? []).map((p: any) => [p.key, p]))
+  const affected = fields.filter(k => flaggedSet.has(k) && isLengthLimitedKeyword(byKey.get(k)))
+  if (!affected.length) return ''
+  const items = affected.map(k => req.__('errors.queryAdviceUncertainFilter', k))
+  return ' ' + req.__('errors.queryAdviceTruncatedMetricsIntro', String(KEYWORD_IGNORE_ABOVE)) + ' : ' + items.join(', ') + '.'
+}
+
 export type HintMode = 'auto' | 'true' | 'false'
 
 /**
@@ -190,7 +212,7 @@ export const attachQueryHint = <T extends Record<string, any>> (
     adviceReq = englishReq
   }
   // correctness advice (misused/ignored params) is duration-independent — always on unless hint=false
-  const ignored = [ignoredParamsAdvice(adviceReq).trim(), uncertainFilterAdvice(adviceReq).trim()].filter(Boolean).join(' ')
+  const ignored = [ignoredParamsAdvice(adviceReq).trim(), uncertainFilterAdvice(adviceReq).trim(), truncatedMetricsAdvice(adviceReq).trim()].filter(Boolean).join(' ')
   // performance advice keeps its slow-auto / explicit-true gate
   const perf = shouldEmitHint(mode, esStepDurationMs) ? queryAdvice(adviceReq).trim() : ''
   const advice = [ignored, perf].filter(Boolean).join(' ')
