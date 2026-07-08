@@ -46,6 +46,9 @@ function fitToColumn (arrayOfArray) {
   return arrayOfArray[0].map((a, i) => ({ wch: Math.min(100, Math.max(...arrayOfArray.map(a2 => val2string(a2[i]).length))) }))
 }
 
+/**
+ * @param {{ rawBuffer: Uint8Array, bookType: string, query: any, dataset: any, publicBaseUrl: string, downloadUrl: string, labels: any, datasetsMetadata: any }} params
+ */
 export default ({ rawBuffer, bookType, query, dataset, publicBaseUrl, downloadUrl, labels, datasetsMetadata }) => {
   // Zero-copy path: the main thread transferred the RAW ES response bytes — parse here (wrap without
   // copying, see rawEsBuffer2geojson) and run the SAME per-hit preparation read.ts used to run.
@@ -57,7 +60,7 @@ export default ({ rawBuffer, bookType, query, dataset, publicBaseUrl, downloadUr
   const flatten = getFlatten(dataset, query.arrays === 'true')
   const resultCtx = prepareResultContext(dataset, query)
   resultCtx.rewriteAttachmentUrl = true
-  const results = hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx))
+  const results = hits.map((/** @type {any} */ hit) => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx))
   const count = hits.length
   const lastHitSort = hits[hits.length - 1]?.sort
 
