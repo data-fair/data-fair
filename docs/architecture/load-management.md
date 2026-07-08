@@ -79,6 +79,19 @@ expensive the query is. Bandwidth is throttled separately: handlers call `res.th
 types are passed explicitly elsewhere (application keys, captures, remote services). The header
 `x-ignore-rate-limiting: <SECRET_IGNORE_RATE_LIMITING>` bypasses everything (internal callers).
 
+The wait for bandwidth tokens lives in `api/src/misc/utils/throttle-wait.ts` and deliberately does
+**not** use the `limiter` library's `removeTokens`: that method retries by awaited recursion, so under
+a saturated bucket every losing retry adds a retained Promise+PromiseReaction level to a chain that
+only collapses on the final grant — a prod pod accumulated millions of retained promises this way
+(chains up to ~12k hops) and died in a GC spiral every ~4 h. `removeTokensOrAborted` instead polls
+`tryRemoveTokens` in a flat loop with an abortable sleep: O(1) retained memory per waiter, and an
+aborted waiter (client disconnect) exits without ever consuming tokens (an abandoned `removeTokens`
+keeps running and still debits the bucket when granted, starving live waiters). On top of that, at
+most `maxPendingSends` (100) sends may wait on one bucket (i.e. per client × bandwidth type); beyond
+the cap the response is torn down (`df_throttle_queue_full_total{limitType}`) instead of queued,
+because each queued send pins its full response body for the whole starvation window — the same
+incident had ~1400 queued responses pinning 700+ MB of buffers on a single per-IP bucket.
+
 > **Who counts as a "user":** the limiter keys the tier and the bucket off `rateLimitUser(req)`, not
 > `reqUser(req)` directly. It returns the request's user **except** for application-key sessions
 > (the pseudo-user the application-key middleware sets for embed / public `?key=` access, flagged

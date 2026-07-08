@@ -7,7 +7,7 @@ import promClient from 'prom-client'
 import { type Request, type Response } from 'express'
 import { reqUser, reqSession, type SessionState } from '@data-fair/lib-express'
 import { ComputeBucket } from './compute-budget.ts'
-import { removeTokensOrAborted, tokenBucketFor, type TokenBucketWrapper } from './throttle-wait.ts'
+import { removeTokensOrAborted, tokenBucketFor, acquireSendSlot, releaseSendSlot, type TokenBucketWrapper } from './throttle-wait.ts'
 import { queryAdvice } from './query-advice.ts'
 import { reqEsAbortContextOptional } from '../../datasets/es/abort.ts'
 
@@ -49,6 +49,12 @@ const computeBudgetExceededCounter = new promClient.Counter({
 })
 
 const tokenBuckets: Record<string, TokenBucketWrapper> = {}
+
+const throttleQueueFullCounter = new promClient.Counter({
+  name: 'df_throttle_queue_full_total',
+  help: 'Number of responses torn down because too many sends were already queued on the client\'s bandwidth token bucket',
+  labelNames: ['limitType']
+})
 
 // simple cleanup of the limiters every 20 minutes
 setInterval(() => {
@@ -146,7 +152,12 @@ class Throttle extends Transform {
   constructor (tokenBucket: TokenBucketWrapper) {
     super()
     this.tokenBucket = tokenBucket
-    this.once('close', () => this._abort.abort())
+    // the send slot was acquired by res.throttle just before construction; 'close' fires exactly once
+    // (normal end or destroy) so the release is guaranteed
+    this.once('close', () => {
+      this._abort.abort()
+      releaseSendSlot(tokenBucket)
+    })
   }
 
   async transformPromise (chunk: Buffer, encoding: string) {
@@ -217,6 +228,18 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
   res.throttle = (bandwidthType) => {
     const tokenBucket = getTokenBucket(req, limitType, bandwidthType)
     if (!tokenBucket) return new PassThrough() // no bandwidth limit for this tier → pass through unthrottled
+    if (!acquireSendSlot(tokenBucket)) {
+      // too many sends already queued on this client's bucket — tear down instead of queueing: each
+      // queued send pins its buffers for the whole starvation window (the prod OOM was ~1400 queued
+      // responses on one saturated per-IP bucket)
+      debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
+      throttleQueueFullCounter.labels(limitType).inc()
+      res.destroy()
+      const dead = new PassThrough()
+      dead.on('error', () => {}) // same as Throttle: pipeline teardown errors are expected, not actionable
+      dead.destroy(new Error('too many pending throttled sends'))
+      return dead
+    }
     const throttle = new Throttle(tokenBucket)
     throttle.on('error', () => {
       // nothing, throttle might finish in error if the HTTP request was interrupted or somethin like that
@@ -235,9 +258,16 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
       if (!buffer) return res._originalEnd()
       const tokenBucket = getTokenBucket(req, limitType, bandwidthType)
       if (!tokenBucket) return res._originalEnd(buffer) // no bandwidth limit → send unthrottled
+      if (!acquireSendSlot(tokenBucket)) {
+        // see res.throttle: don't queue a full response body behind an already-saturated bucket
+        debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
+        throttleQueueFullCounter.labels(limitType).inc()
+        return res.destroy()
+      }
       tokenBucket.lastUsed = Date.now()
       throttledEnd(res, buffer, tokenBucket)
         .catch(err => console.warn('failed to send throttled response', err))
+        .finally(() => releaseSendSlot(tokenBucket))
     }
   }
   next()
