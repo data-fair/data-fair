@@ -79,7 +79,8 @@ export default async (dataset: any, query: Record<string, any>, addGeoData: any,
 
   // number of hit results inside the last level of aggregation
   const size = query.size ? Number(query.size) : 0
-  combinedMaxSize *= size
+  // size=0 must not zero the product: the warning below tracks the BUCKET volume the query can return
+  combinedMaxSize *= Math.max(size, 1)
   // TODO: remove the condition on size and only use combinedMaxSize, but to do this we must check if we break some existing usage
   if (size > 100 && combinedMaxSize > 100000) throw httpError(400, '"size" x "agg_size" cannot be more than 100000')
   if (combinedMaxSize > 100000) {
