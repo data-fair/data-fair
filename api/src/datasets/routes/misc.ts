@@ -154,7 +154,7 @@ export const registerMiscRoutes = (router: Router) => {
     } else {
       const imageField = dataset.schema.find((f: any) => f['x-refersTo'] === 'http://schema.org/image')
       const count = await esUtils.count(dataset, {
-        qs: `${esUtils.escapeFilter(imageField.key)}:${esUtils.escapeFilter(url)}`
+        qs: `${esUtils.escapeFilter(imageField.key)}:"${esUtils.escapeFilter(url)}"`
       })
       if (!count) return res.status(404).send('thumbnail does not match a URL from this dataset')
       await getThumbnail(req, res, url, null, dataset.thumbnails)

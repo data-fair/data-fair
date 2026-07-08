@@ -31,7 +31,8 @@ test.describe('datasets - features', () => {
     res = await ax.post('/api/v1/datasets/thumbnails1/_bulk_lines', [
       { imageUrl: `${mockUrl}/image.png`, desc: '1 image' },
       { imageUrl: `${mockUrl}/avatar.jpg`, desc: '2 avatar' },
-      { imageUrl: `${mockUrl}/wikipedia.gif`, desc: '3 wikipedia animated' }
+      { imageUrl: `${mockUrl}/wikipedia.gif`, desc: '3 wikipedia animated' },
+      { imageUrl: `${mockUrl}/iiif/full/!300,300/0/default.jpg`, desc: '4 iiif comma' }
     ])
     await waitForFinalize(ax, 'thumbnails1')
 
@@ -39,12 +40,14 @@ test.describe('datasets - features', () => {
     await setupMockRoute({ path: '/image.png', status: 200, body: '', contentType: 'image/png' })
     await setupMockRoute({ path: '/avatar.jpg', status: 200, bodyBase64: fs.readFileSync('./tests/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
     await setupMockRoute({ path: '/wikipedia.gif', status: 200, bodyBase64: fs.readFileSync('./tests/resources/wikipedia.gif').toString('base64'), contentType: 'image/gif' })
+    await setupMockRoute({ path: '/iiif/full/!300,300/0/default.jpg', status: 200, bodyBase64: fs.readFileSync('./tests/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
 
     res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
-    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results.length, 4)
     assert.equal(res.data.results[0].desc, '1 image')
     assert.equal(res.data.results[1].desc, '2 avatar')
     assert.equal(res.data.results[2].desc, '3 wikipedia animated')
+    assert.equal(res.data.results[3].desc, '4 iiif comma')
     assert.ok(res.data.results[0]._thumbnail.endsWith('width=300&height=200'))
 
     // Empty image should redirect
@@ -59,6 +62,10 @@ test.describe('datasets - features', () => {
     assert.equal(thumbresGif.headers['content-type'], 'image/webp')
     assert.equal(thumbresGif.headers['x-thumbnails-cache-status'], 'MISS')
     assert.equal(thumbresGif.headers['cache-control'], 'must-revalidate, private, max-age=0')
+
+    const thumbresIiif = await ax.get(res.data.results[3]._thumbnail)
+    assert.equal(thumbresIiif.headers['content-type'], 'image/png')
+    assert.equal(thumbresIiif.headers['x-thumbnails-cache-status'], 'MISS')
 
     await clearMockRoutes()
   })
