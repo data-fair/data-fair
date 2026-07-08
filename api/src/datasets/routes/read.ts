@@ -210,6 +210,7 @@ const readLines: RequestHandler = async (req, res) => {
   let rawTileBuffer: Buffer | undefined
   let rawShpBuffer: Buffer | undefined
   let rawShpBbox: any
+  let rawWktBuffer: Buffer | undefined
   let streamedSource: LinesSource | undefined
   const esSearchStart = Date.now()
   if (eligible) {
@@ -234,6 +235,17 @@ const readLines: RequestHandler = async (req, res) => {
         esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext),
         esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext).then((r: any) => r.bbox)
       ])
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  } else if (query.format === 'wkt') {
+    // Zero-copy wkt path (mirror of the shp path above): the render worker parses the raw bytes and
+    // serializes the whole page to WKT off the main thread (~220ms of sync CPU for a 10k-polygon page).
+    // wkt outputs only geometries (select is forced to _geoshape), so the _attachment_url rewrite that
+    // forces shp's buffered fallback cannot occur — every wkt request takes this path.
+    try {
+      observe.readLinesMode(req, 'raw-worker')
+      rawWktBuffer = await esUtils.searchRaw(req.app.get('es'), dataset, query, esAbortContext)
     } catch (err) {
       await manageESError(req, err)
     }
@@ -344,8 +356,14 @@ const readLines: RequestHandler = async (req, res) => {
   }
 
   if (query.format === 'wkt') {
-    const wkt = geo.result2wkt(esResponse)
+    const { wkt, count, lastHitSort } = await outputs.result2wktFromBuffer(rawWktBuffer!)
     observe.reqStep(req, 'result2wkt')
+    // reproduce the Link header the buffered path set from esResponse (the shared block above is skipped
+    // because esResponse is undefined on this path)
+    if (size && lastHitSort) {
+      const href = nextLinkHref({ size, query, publicBaseUrl, datasetId: dataset.id as string }, count, { sort: lastHitSort })
+      if (href) res.set('Link', linkHeaderValue(href))
+    }
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.wkt'))
     res.type('text/plain')
     return res.status(200).send(wkt)

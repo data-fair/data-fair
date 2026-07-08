@@ -11,7 +11,7 @@ import vtpbf from 'vt-pbf'
 import { exec } from 'child-process-promise'
 import tmp from 'tmp-promise'
 import proj4 from 'proj4'
-import { wktToGeoJSON, geojsonToWKT } from '@terraformer/wkt'
+import { wktToGeoJSON } from '@terraformer/wkt'
 import debugLib from 'debug'
 import { geometrySelfIntersects } from './geo-self-intersection.ts'
 import { simplifyToVertexBudget } from './geo-simplify.ts'
@@ -244,20 +244,7 @@ export const aggs2geojson = (aggsResult: { total: number, aggs: Array<{ centroid
   }
 }
 
-export const result2wkt = (esResponse: any): string => {
-  const geometryCollection = {
-    type: 'GeometryCollection',
-    geometries: esResponse.hits.hits.map((hit: any) => {
-      let geometry = hit._source._geoshape
-      if (!geometry && hit._source._geopoint) {
-        const [lat, lon] = hit._source._geopoint.split(',')
-        geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
-      }
-      return geometry
-    }).filter((geometry: any) => !!geometry)
-  }
-  return geojsonToWKT(geometryCollection)
-}
+export { result2wkt } from './geo-features.ts'
 
 // Simple wrapping of the command line prepair https://github.com/tudelft3d/prepair
 // help fixing some polygons

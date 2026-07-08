@@ -113,6 +113,16 @@ export const geojson2shp = async (geojson: any, baseName: string): Promise<any> 
   return geojson2shpPiscina.run({ geojson: JSON.stringify(geojson), baseName })
 }
 
+// Zero-copy wkt export (mirror of geojson2shpFromBuffer below): transfer the RAW ES bytes to the render
+// worker (named `wkt` export sharing the shp pool) which parses + builds the GeometryCollection +
+// geojsonToWKTs — the monolithic WKT serialize leaves the main thread entirely. count + lastHitSort let
+// read.ts reproduce the exact Link header the buffered path built from esResponse.
+export const result2wktFromBuffer = async (rawBuffer: Buffer): Promise<{ wkt: Buffer, count: number, lastHitSort?: any[] }> => {
+  const { payload, transferList } = transferableRawBuffer(rawBuffer)
+  const res = await geojson2shpPiscina.run({ rawBuffer: payload }, { name: 'wkt', transferList })
+  return { wkt: Buffer.from(res.wkt), count: res.count, lastHitSort: res.lastHitSort }
+}
+
 // Zero-copy variant for the shp export hot path (mirror of tiles.geojson2pbfFromBuffer): transfer the RAW ES
 // response buffer to the worker (which parses + builds geojson + JSON.stringifies + feeds ogr2ogr), rather
 // than parsing/structured-cloning a geojson object graph on the main thread. bbox is a separate agg computed

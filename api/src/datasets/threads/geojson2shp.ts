@@ -3,12 +3,18 @@ import _config from 'config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { spawn } from 'node:child_process'
 import { tmpDir } from '../../datasets/utils/files.ts'
-import { rawEsBuffer2geojson } from '../../datasets/utils/geo-features.ts'
+import { rawEsBuffer2geojson, rawEsBuffer2wkt } from '../../datasets/utils/geo-features.ts'
 import tmp from 'tmp-promise'
 
 const config = _config as any
 
 type Params = { geojson?: string, rawBuffer?: Uint8Array, bbox?: any, baseName: string, dataset?: any }
+
+// format=wkt render (named piscina export sharing this pool, run via { name: 'wkt' }): parse the
+// TRANSFERRED raw ES bytes and serialize the page to WKT exactly like geo.result2wkt did on the main
+// thread (~220ms of sync CPU for a 10k-polygon page). count + lastHitSort go back so read.ts reproduces
+// the exact Link header the buffered path emitted.
+export const wkt = ({ rawBuffer }: { rawBuffer: Uint8Array }) => rawEsBuffer2wkt(rawBuffer)
 
 export default async (params: Params) => {
   if (config.ogr2ogr.skip) {
