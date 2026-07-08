@@ -92,21 +92,28 @@ export const csvStreams = (dataset: Dataset, query: Record<string, string> = {},
   ]
 }
 
-export const results2sheet = async (req: ReqWithDataset, results: Record<string, any>[], bookType: string = 'xlsx'): Promise<Buffer> => {
+// Zero-copy sheet export: transfer the RAW ES response bytes to the sheet worker, which parses them and
+// runs the same per-hit preparation the buffered path ran on the main thread (identical rows via the
+// shared ctx.rewriteAttachmentUrl contract) before building the workbook — both the structured clone of
+// the prepared rows array (~40-230ms at 10k rows) and the per-row prep leave the main thread entirely.
+// count + lastHitSort let read.ts reproduce the exact Link header the buffered path built from esResponse.
+export const results2sheetFromBuffer = async (req: ReqWithDataset, rawBuffer: Buffer, bookType: string = 'xlsx'): Promise<{ sheet: Buffer, count: number, lastHitSort?: any[] }> => {
   const rawDataset = reqDataset(req) as Dataset & { __isProxy?: boolean, __proxyTarget?: Dataset }
   const dataset = rawDataset.__isProxy ? rawDataset.__proxyTarget as Dataset : rawDataset
   const settings = await mongo.db.collection('settings')
     .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { datasetsMetadata: 1 } })
-  const buf = Buffer.from(await results2sheetPiscina.run({
-    results,
+  const { payload, transferList } = transferableRawBuffer(rawBuffer)
+  const res = await results2sheetPiscina.run({
+    rawBuffer: payload,
     bookType,
     query: req.query,
     dataset,
+    publicBaseUrl: reqPublicBaseUrl(req),
     downloadUrl: reqPublicBaseUrl(req) + req.originalUrl,
     labels: req.__('sheets'),
     datasetsMetadata: (settings as { datasetsMetadata?: any } | null)?.datasetsMetadata ?? {}
-  }))
-  return buf
+  }, { transferList })
+  return { sheet: Buffer.from(res.sheet), count: res.count, lastHitSort: res.lastHitSort }
 }
 
 export const geojson2shp = async (geojson: any, baseName: string): Promise<any> => {
