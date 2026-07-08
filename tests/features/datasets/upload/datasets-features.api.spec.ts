@@ -63,6 +63,36 @@ test.describe('datasets - features', () => {
     await clearMockRoutes()
   })
 
+  test('should redirect to the original image when fetching it fails without a previous cache entry', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/thumbnails-fallback', {
+      isRest: true,
+      title: 'thumbnails-fallback',
+      schema: [{ key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
+    })
+    await ax.post('/api/v1/datasets/thumbnails-fallback/_bulk_lines', [
+      { imageUrl: `${mockUrl}/rate-limited.jpg` },
+      { imageUrl: `${mockUrl}/missing.jpg` }
+    ])
+    await waitForFinalize(ax, 'thumbnails-fallback')
+
+    // the image host answers 429 (e.g. wikimedia rate-limiting our server IP)
+    await setupMockRoute({ path: '/rate-limited.jpg', status: 429, body: 'too many requests', contentType: 'text/plain' })
+    await setupMockRoute({ path: '/missing.jpg', status: 404, body: 'not found', contentType: 'text/plain' })
+
+    const res = await ax.get('/api/v1/datasets/thumbnails-fallback/lines', { params: { thumbnail: true, sort: 'imageUrl' } })
+    // no previous cache entry to serve as stale content -> redirect to the original image instead of failing
+    await assert.rejects(ax.get(res.data.results[1]._thumbnail, { maxRedirects: 0 }), (err: any) => {
+      assert.equal(err.status, 302)
+      assert.equal(err.headers.location, `${mockUrl}/rate-limited.jpg`)
+      return true
+    })
+    // a missing image is still a 404, not a redirect
+    await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err: any) => err.status === 404)
+
+    await clearMockRoutes()
+  })
+
   test('should create thumbnail for the image metadata of a dataset', async () => {
     const ax = testUser1
     await setupMockRoute({ path: '/dataset-image.jpg', status: 200, bodyBase64: fs.readFileSync('./tests/resources/avatar.jpeg').toString('base64'), contentType: 'image/jpeg' })
