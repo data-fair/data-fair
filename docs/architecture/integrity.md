@@ -81,6 +81,10 @@ reasonable (it may never be reasonable for large editable datasets — see §5).
   prefix-size query (feeds storage accounting, §9) and enables per-owner access scoping (§7).
 - Cold storage (e.g. Scaleway **Glacier**, which supports object-lock) is acceptable for the
   historized store, since it is not on the hot read path.
+- Keys are **owner-scoped** (`‹owner.type›-‹owner.id›` segment): an owner transfer therefore
+  re-anchors **both** classes under the new owner's prefix (`changeOwner` stamps `[file, metadata]`,
+  not just `metadata`), since the old-prefix anchors do not carry over. The old prefix's anchors
+  simply age out at their existing retention — they are not migrated or deleted.
 
 ### 3.2 The inline write wrapper — *this is the definition of a legitimate write*
 

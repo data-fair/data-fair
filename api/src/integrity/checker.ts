@@ -46,7 +46,14 @@ const maybeRenew = async (dataset: DatasetInternal, store: ReturnType<typeof int
 const checkClass = async (dataset: DatasetInternal, store: ReturnType<typeof integrityStore>, cls: ops.IntegrityClass): Promise<ClassCheck> => {
   const prefix = ops.revisionPrefix(dataset.owner, dataset.id, cls)
   const latest = ops.latestKey((await store.listRevisions(prefix)).map((r) => r.key))
-  if (!latest) return { status: 'unknown' } // no anchor written yet
+  if (!latest) {
+    // no anchor written yet (e.g. right after an owner transfer, before the relay re-anchors this
+    // class under the new prefix): persist the verdict so a stale pre-transfer 'ok' cannot linger
+    // and the sweep cursor (sorted on lastCheck.date) advances past this dataset
+    const date = new Date().toISOString()
+    await mongo.datasets.updateOne({ id: dataset.id }, { $set: { [`integrity.${cls}.lastCheck`]: { date, status: 'unknown' } } })
+    return { status: 'unknown', date }
+  }
 
   const expected = (await store.getRevision(latest)).hash
   let match: boolean
@@ -68,7 +75,9 @@ const checkClass = async (dataset: DatasetInternal, store: ReturnType<typeof int
   const wasBreach = (dataset.integrity as any)?.[cls]?.lastCheck?.status === 'breach'
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { [`integrity.${cls}.lastCheck`]: { date, status } } })
   if (status === 'breach' && !wasBreach) {
-    await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', 'integrity-breach')
+    // per-class event key/i18n (integrity-breach-file / integrity-breach-metadata): a class-blind
+    // key+wording would tell an owner "the data file was tampered" when it was actually the metadata
+    await notifications.sendResourceEvent('datasets', dataset as any, 'worker:integrity-checker', `integrity-breach-${cls}`)
   }
   if (status === 'ok') await maybeRenew(dataset, store, cls, latest)
   return { status, date }

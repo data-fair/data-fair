@@ -508,7 +508,11 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
     if (coveredKeys.length) {
       const classes = new Set<integrityOps.IntegrityClass>(patch._needsHistorizing?.classes ?? dataset._needsHistorizing?.classes ?? [])
       classes.add('metadata')
-      patch._needsHistorizing = { classes: [...classes], ...(patch._needsHistorizing?.context ? { context: patch._needsHistorizing.context } : {}) }
+      // preserve an explicitly provided context; otherwise default it from the patch's own
+      // updatedBy so the revision's originator reflects the actual user, not the historize worker
+      const context = patch._needsHistorizing?.context ??
+        (patch.updatedBy?.id ? { operation: 'update', originator: 'user:' + patch.updatedBy.id } : undefined)
+      patch._needsHistorizing = { classes: [...classes], ...(context ? { context } : {}) }
     }
   }
 

@@ -197,8 +197,10 @@ const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: O
     // clean up the metadata off datasets when its definition was removed from the settings
     if (!newDatasetsMetadata.custom?.some(nc => nc.key === oldMeta.key)) {
       const customMetadataFilter = { 'owner.type': owner.type, 'owner.id': owner.id, [`customMetadata.${oldMeta.key}`]: { $exists: true } }
-      await mongo.datasets.updateMany(customMetadataFilter, { $unset: { [`customMetadata.${oldMeta.key}`]: 1 } })
+      // stamp BEFORE the $unset: the unset removes the very key this filter's $exists checks,
+      // so stamping after would match nothing (over-stamping here is harmless, the relay dedupes)
       await stampHistorizeMany(customMetadataFilter)
+      await mongo.datasets.updateMany(customMetadataFilter, { $unset: { [`customMetadata.${oldMeta.key}`]: 1 } })
       await mongo.datasets.updateMany(
         { 'owner.type': owner.type, 'owner.id': owner.id, [`draft.customMetadata.${oldMeta.key}`]: { $exists: true } },
         { $unset: { [`draft.customMetadata.${oldMeta.key}`]: 1 } })
@@ -317,7 +319,9 @@ export const deletePublicationSite = async (ctx: SettingsWriteContext, siteType:
   await mongo.settings.replaceOne(ownerFilter, settings, { upsert: true })
   const ref = `${siteType}:${siteId}`
   const publicationSitesFilter = { publicationSites: ref }
-  await mongo.datasets.updateMany(publicationSitesFilter, { $pull: { publicationSites: ref } })
+  // stamp BEFORE the $pull: the pull removes the very element this filter matches, so stamping
+  // after would match nothing (over-stamping here is harmless, the relay dedupes)
   await stampHistorizeMany(publicationSitesFilter)
+  await mongo.datasets.updateMany(publicationSitesFilter, { $pull: { publicationSites: ref } })
   await mongo.applications.updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
 }

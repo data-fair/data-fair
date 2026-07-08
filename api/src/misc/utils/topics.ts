@@ -18,8 +18,10 @@ export const updateTopics = async (owner: AccountKeys, oldTopics: Topics, newTop
     if (newTopics.find(t => t.id === oldTopic.id)) continue
     const filter = { 'owner.type': owner.type, 'owner.id': owner.id, 'topics.id': oldTopic.id }
     const patch = { $pull: { topics: { id: oldTopic.id } } }
-    await mongo.datasets.updateMany(filter, patch)
+    // stamp BEFORE the $pull: the pull removes the very field ('topics.id') this filter matches,
+    // so stamping after would match nothing (over-stamping here is harmless, the relay dedupes)
     await stampHistorizeMany(filter)
+    await mongo.datasets.updateMany(filter, patch)
     await mongo.applications.updateMany(filter, patch)
   }
 }

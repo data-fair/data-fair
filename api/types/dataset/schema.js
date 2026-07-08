@@ -963,7 +963,7 @@ const dataset = {
           required: ['date', 'status'],
           properties: {
             date: { type: 'string', format: 'date-time' },
-            status: { type: 'string', enum: ['ok', 'breach'] }
+            status: { type: 'string', enum: ['ok', 'breach', 'unknown'] }
           }
         },
         lastRevision: {

@@ -51,6 +51,12 @@ export const coveredMetadata = (dataset: Record<string, any>): Record<string, an
     const { applications, ...extras } = covered.extras
     covered.extras = extras
   }
+  if (covered.readApiKey && ('expiresAt' in covered.readApiKey || 'renewAt' in covered.readApiKey)) {
+    // renewApiKey worker patches these on its own clock (every interval/2); anchoring them would
+    // churn a new locked WORM revision on every renewal for no security value. active/interval stay covered.
+    const { expiresAt, renewAt, ...readApiKey } = covered.readApiKey
+    covered.readApiKey = readApiKey
+  }
   return covered
 }
 
@@ -90,6 +96,9 @@ export const stampHistorize = (
   classes: IntegrityClass[],
   context?: HistorizeContextHint
 ) => {
+  // an empty-classes stamp would be invisible to both the relay's filter ('_needsHistorizing.classes.0')
+  // and the checker's sweep (no class ever anchored) — guard rather than write a dead stamp
+  if (!classes.length) return update
   update.$addToSet = { ...update.$addToSet, '_needsHistorizing.classes': { $each: classes } }
   if (context) update.$set = { ...update.$set, '_needsHistorizing.context': context }
   return update
