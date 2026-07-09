@@ -8,7 +8,7 @@ import { reqUser, reqSession, type SessionState } from '@data-fair/lib-express'
 import { ComputeBucket } from './compute-budget.ts'
 import { TokenBucket } from './token-bucket.ts'
 import { SweptStore } from './swept-store.ts'
-import { removeTokensOrAborted, tokenBucketFor, acquireSendSlot, releaseSendSlot, type TokenBucketWrapper } from './throttle-wait.ts'
+import { tokenBucketFor, acquireSendSlot, releaseSendSlot, throttledSend, throttledSendParts, writeWithBackpressure, writeParts, type TokenBucketWrapper } from './throttle-wait.ts'
 import { queryAdvice } from './query-advice.ts'
 import { reqEsAbortContextOptional } from '../../datasets/es/abort.ts'
 
@@ -21,6 +21,10 @@ declare global {
     interface Response {
       throttle: (bandwidthType?: string) => Transform
       throttleEnd: (bandwidthType?: string) => void
+      // installed by throttleEnd: end the response by writing pre-split body parts sequentially
+      // (throttled when the tier has a bandwidth limit), consuming the array as it goes so sent parts
+      // become collectable during the send — see sendPreparedParts in datasets/routes/lines-pipeline.ts
+      endParts?: (parts: Buffer[]) => void
       _originalEnd?: Response['end']
     }
   }
@@ -123,21 +127,6 @@ const getTokenBucket = (req: Request, limitType: string, bandwidthType: string):
   return tokenBuckets.getOrCreate(rateLimitClientId(req) + bandwidthType, () => tokenBucketFor(bandwidth, burstFactor)!)
 }
 
-// The slice/wait/write loop shared by the Throttle stream and the wrapped res.end path. Waits for
-// bandwidth tokens per slice and resolves false when the request is torn down mid-wait (abort) —
-// the caller just stops, dropping the rest of the buffer.
-const throttledSend = async (tokenBucket: TokenBucketWrapper, write: (slice: Buffer) => void, buffer: Buffer, signal: AbortSignal): Promise<boolean> => {
-  let pos = 0
-  while (pos < buffer.length) {
-    if (signal.aborted) return false
-    const slice = buffer.subarray(pos, pos + tokenBucket.bucketSize)
-    if (!await removeTokensOrAborted(tokenBucket.bucket, slice.length, signal)) return false
-    write(slice)
-    pos += slice.length
-  }
-  return true
-}
-
 class Throttle extends Transform {
   tokenBucket: TokenBucketWrapper
   // fired on 'close' (normal end or destroy/abort) so a slice waiting for tokens is dropped promptly
@@ -158,20 +147,24 @@ class Throttle extends Transform {
   _transform (chunk: Buffer, encoding: string, cb: (err?: any) => void) {
     // touch lastUsed per chunk so the sweep never drops the bucket under a long-running download
     this.tokenBucket.lastUsed = Date.now()
-    throttledSend(this.tokenBucket, slice => this.push(slice), chunk, this._abort.signal).then(() => cb(), cb)
+    throttledSend(this.tokenBucket, slice => { this.push(slice) }, chunk, this._abort.signal).then(() => cb(), cb)
   }
 }
 
-const throttledEnd = async (res: Response, buffer: Buffer, tokenBucket: TokenBucketWrapper) => {
-  // mirror the Throttle abort wiring for the wrapped res.end path — if the client disconnects while
-  // we're waiting on tokens, stop awaiting and drop the rest of `buffer` instead of holding it for
-  // the full refill window
+// End `res` by writing the pre-split body parts sequentially — dripped under `tokenBucket` when the
+// tier has a bandwidth limit, plain backpressured writes otherwise (the memory shape is the point,
+// not the pacing). One function for both tiers so the teardown wiring cannot drift between them.
+// Mirrors the Throttle abort wiring: if the client disconnects while we're waiting on tokens or on
+// drain, stop awaiting and drop the rest of the parts instead of holding them for the full refill
+// window.
+const endWithParts = async (res: Response, parts: Buffer[], tokenBucket?: TokenBucketWrapper) => {
   const abort = new AbortController()
   res.once('close', () => abort.abort())
-  const write = (slice: Buffer) => { if (!res.destroyed && !res.writableEnded) res.write(slice) }
-  const sent = await throttledSend(tokenBucket, write, buffer, abort.signal)
-  // @ts-ignore
-  if (sent && !res.destroyed && !res.writableEnded) res._originalEnd()
+  if (res.destroyed || res.writableEnded) abort.abort() // 'close' may have fired before the wiring
+  const sent = tokenBucket
+    ? await throttledSendParts(tokenBucket, slice => writeWithBackpressure(res, slice, abort.signal), parts, abort.signal)
+    : await writeParts(res, parts, abort.signal)
+  if (sent && !res.destroyed && !res.writableEnded) res._originalEnd!()
 }
 
 // builds a rate-limiting middleware; `_limitType` forces a tier, otherwise it is auto-detected
@@ -204,16 +197,21 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
     })
   }
 
+  // too many sends already queued on this client's bucket — tear down instead of queueing: each
+  // queued send pins its buffers for the whole starvation window (the prod OOM was ~1400 queued
+  // responses on one saturated per-IP bucket). One policy shared by throttle/end/endParts.
+  const acquireSendSlotOrDestroy = (tokenBucket: TokenBucketWrapper): boolean => {
+    if (acquireSendSlot(tokenBucket)) return true
+    debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
+    throttleQueueFullCounter.labels(limitType).inc()
+    res.destroy()
+    return false
+  }
+
   res.throttle = (bandwidthType) => {
     const tokenBucket = getTokenBucket(req, limitType, bandwidthType)
     if (!tokenBucket) return new PassThrough() // no bandwidth limit for this tier → pass through unthrottled
-    if (!acquireSendSlot(tokenBucket)) {
-      // too many sends already queued on this client's bucket — tear down instead of queueing: each
-      // queued send pins its buffers for the whole starvation window (the prod OOM was ~1400 queued
-      // responses on one saturated per-IP bucket)
-      debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
-      throttleQueueFullCounter.labels(limitType).inc()
-      res.destroy()
+    if (!acquireSendSlotOrDestroy(tokenBucket)) {
       const dead = new PassThrough()
       dead.on('error', () => {}) // same as Throttle: pipeline teardown errors are expected, not actionable
       dead.destroy(new Error('too many pending throttled sends'))
@@ -227,23 +225,31 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
     return throttle
   }
   res.throttleEnd = (bandwidthType = 'dynamic') => {
-    if (ignoreRateLimiting) return
-
     // prevent inifinite loop if res.throttleEnd is called twice
     if (res._originalEnd) return
-
     res._originalEnd = res.end
+
+    // pre-split body parts (the /lines sequential-write path): same bucket / send-slot rules as the
+    // wrapped res.end below, but the body is dripped part by part and never concatenated
+    let endPartsCalled = false
+    res.endParts = (parts: Buffer[]) => {
+      if (endPartsCalled) return // mirror the wrapped res.end's reentrancy protection
+      endPartsCalled = true
+      const tokenBucket = ignoreRateLimiting ? undefined : getTokenBucket(req, limitType, bandwidthType)
+      if (tokenBucket && !acquireSendSlotOrDestroy(tokenBucket)) return
+      endWithParts(res, parts, tokenBucket)
+        .catch(err => console.warn('failed to send response parts', err))
+        .finally(() => { if (tokenBucket) releaseSendSlot(tokenBucket) })
+    }
+
+    if (ignoreRateLimiting) return // res.end stays original; endParts above skips the bucket
+
     res.end = function (buffer) {
       if (!buffer) return res._originalEnd()
       const tokenBucket = getTokenBucket(req, limitType, bandwidthType)
       if (!tokenBucket) return res._originalEnd(buffer) // no bandwidth limit → send unthrottled
-      if (!acquireSendSlot(tokenBucket)) {
-        // see res.throttle: don't queue a full response body behind an already-saturated bucket
-        debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
-        throttleQueueFullCounter.labels(limitType).inc()
-        return res.destroy()
-      }
-      throttledEnd(res, buffer, tokenBucket)
+      if (!acquireSendSlotOrDestroy(tokenBucket)) return
+      endWithParts(res, [buffer], tokenBucket)
         .catch(err => console.warn('failed to send throttled response', err))
         .finally(() => releaseSendSlot(tokenBucket))
     }

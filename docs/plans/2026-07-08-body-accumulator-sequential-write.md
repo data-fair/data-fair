@@ -1,7 +1,9 @@
 # Direction: sequential-write /lines body (drop the final Buffer.concat)
 
-Status: **direction agreed, not implemented** (2026-07-08). Follow-up to the event-loop stall fixes
-(`2026-07-08-event-loop-stall-fixes.md`); do this as its own PR with its own parity tests.
+Status: **implemented** (2026-07-09, branch `perf-lines-partial-writes`). Follow-up to the event-loop
+stall fixes (`2026-07-08-event-loop-stall-fixes.md`). The durable record lives in
+`docs/architecture/read-lines-efficiency.md` ("The central choice" + the rejected table note); this file
+is kept as the design rationale.
 
 ## Problem
 

@@ -16,17 +16,37 @@ holding all N objects at once.
 
 Streaming the HTTP *output* (`res.write`, headers first) was rejected: it cannot carry the `Link: next`
 header (the `search_after` cursor is the last hit's `sort` — CSV's only pagination signal, used by the UI
-download loop) nor a strong ETag. Instead the **source and the processing stream, and the assembled body is
-`res.send`'d**:
+download loop) nor a content-derived ETag (ours is weak-format, `W/"…"` — see BodyAccumulator). Instead the **source and the processing stream, and the fully-determined
+body is then written out sequentially**:
 
 - ES is read with `asStream` + an incremental hits splitter, so the raw response is never held whole;
 - each row is serialized on the fly and the transformed object discarded — only the serialized bytes
   accumulate (flat allocations that die young, no old-gen graph);
-- the complete body is assembled and sent: every HTTP semantic (`Link` + body `next`, strong ETag,
-  `Content-Length`, `304`, exact key order) is preserved with **zero observable change**.
+- the complete body is determined before the first byte: every HTTP semantic (`Link` + body `next`, the
+  weak content-derived ETag, `Content-Length`, `304`, HEAD, exact key order) is preserved with **zero
+  observable change**.
 
-Peak drops to ~1× the payload (bounded per request by `maxPageSize`). Going lower would require true output
-streaming, i.e. giving up the response contract — the deliberate trade is to stop at ~1×.
+The assemble-then-send contract needs the body fully *determined*, not *contiguous* — so the accumulated
+~64 KB parts are never `Buffer.concat`'d (except tiny bodies: at or below one flush threshold the parts
+collapse to a single part, one token round + one write on the dominant small page).
+`BodyAccumulator.finish()` returns `{ parts, length, etag }` (the sha1 was fed incrementally per part;
+`Content-Length` is the sum; the parts array is consumed destructively by the send — ownership moves) and
+`sendPreparedParts` (`lines-pipeline.ts`) writes the parts sequentially through `res.endParts` (installed
+by `res.throttleEnd`, `rate-limiting.ts`). Together they keep the whole pre-refactor wire contract: the
+charset suffix `res.send(string)` used to append, `req.fresh` → 304 (delegated back to express's
+`res.send` with an empty chunk), HEAD, explicit `Content-Length`, and — previously the wrapped
+`res.end`'s job, not `res.send`'s — the bandwidth token bucket and the send-slot queue-full teardown.
+The write loop honors backpressure (parking on `drain` once ~1 MB is buffered — bounded buffering
+without a per-64KB event-loop round trip) and consumes the parts array as it goes, so the old 2×-body
+concat transient is gone **and memory decreases during the send** instead of pinning ~1× body for the
+duration of a slow-client throttled download (the prod heap profile's "transient assemble-then-send
+body/Buffer" spike, ~1.2 GB external). One consequence to know: a send slot is now held for the
+client-paced duration of the send (each pending send pins ~1 MB, not its full body), so `maxPendingSends`
+bounds slow-client concurrency rather than token pacing.
+
+Peak drops to ~1× the payload at assembly time (bounded per request by `maxPageSize`), decaying during
+the send. Going lower would require true output streaming, i.e. giving up the response contract — the
+deliberate trade is to stop at ~1×.
 
 Because the buffered↔streamed choice cannot change any client-visible output, it is safe behind a flag:
 `experimental.streamReadLines` (default off), with a non-prod `?_stream=true` opt-in for tests. Rollout is a
@@ -86,8 +106,8 @@ rewritten at the **top** of `prepareResultItem`, before derived fields (thumbnai
 
 ## Errors and limits
 
-Everything resolves **before** `res.send`: an ES non-200, a transform throw, or a mid-stream read error
-becomes a clean HTTP error with no partial body. Any error while iterating destroys the source stream
+Everything resolves **before the first byte is written**: an ES non-200, a transform throw, or a
+mid-stream read error becomes a clean HTTP error with no partial body. Any error while iterating destroys the source stream
 (`LinesSource.destroy`) so the ES transport connection is released; client abort destroys it via the
 `esAbortContext` signal. Bandwidth throttling (`res.throttleEnd()`) and all caching layers (pre-query
 `finalizedAt` 304, `?finalizedAt=` cache, ETag 304) apply identically to both sources. Gzip from ES is
@@ -97,7 +117,7 @@ piped through `createGunzip` (asStream bypasses auto-decompression).
 
 | Idea | Verdict | Why (record) |
 |---|---|---|
-| Stream the HTTP response | **Rejected** | Loses `Link: next` + strong ETag — the response contract is worth more than the last ~1× of peak. |
+| Stream the HTTP response | **Rejected** | Loses `Link: next` + the content-derived ETag — the response contract is worth more than the last ~1× of peak. This rejection is about streaming *while consuming ES* (headers before the body is known); writing the assembled parts sequentially **after** the body is fully determined (`sendPreparedParts`, 2026-07) keeps every header byte-identical and does not contradict it — it refines it. |
 | Streaming/SIMD JSON parsers (`@streamparser/json`, `jsonparse`, `stream-json`, `simdjson`) | **Negative** | V8 allocates least and is fastest on total bytes — `benchmark/results/streaming-parse-bakeoff.md`. Total-bytes was the wrong axis; peak-live was the right one (same code, opposite conclusion). |
 | Rust napi hot path | **Negative** | v1 ~2.3× slower; `serde_json::Value` can't beat V8. |
 | Compiled fused `(hit)→jsonString` serializer | **Shelved** | ~1.41× on the plain slice only; rich requests are dominated by `marked`/`sanitize-html` — `benchmark/results/compiled-serializer.md`. |

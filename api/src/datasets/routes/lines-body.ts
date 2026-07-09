@@ -38,8 +38,10 @@ export const linkHeaderValue = (href: string): string => {
 // push() is fed the exact body substrings (separators included); every ~flushChars characters they are
 // encoded to a Buffer AND fed to the sha1 — amortized inside consumeHits' every-500-rows yield, so the
 // accumulator needs no yields of its own. finish() takes the envelope prefix/suffix (the prefix —
-// total/next — is only known after the last hit) and only hashes those two + one Buffer.concat (pure
-// memcpy) — synchronous and O(envelope), not O(body).
+// total/next — is only known after the last hit), hashes those two and returns the parts UNJOINED
+// ({ parts, length, etag }) — synchronous and O(envelope), not O(body). No Buffer.concat: the parts are
+// written sequentially to the response (see sendPreparedParts in lines-pipeline.ts), so the 2×-body
+// transient of a final concat never exists and sent parts become collectable during the send.
 //
 // The etag is an OPAQUE deterministic content fingerprint, not Express's body hash: the hash input order
 // is rows → suffix → prefix (sha1 is sequential and the prefix arrives last), which is fine because an
@@ -74,15 +76,27 @@ export class BodyAccumulator {
     this.pendingChars = 0
   }
 
-  finish (prefix: string, suffix: string): { buffer: Buffer, etag: string } {
+  // The returned array is CONSUMED ON SEND: the write loop shifts parts out as they are accepted so
+  // sent bytes become collectable. Ownership moves to the caller here (the accumulator drops its
+  // reference) — a second finish() yields an empty body, never a corrupt shared array.
+  finish (prefix: string, suffix: string): { parts: Buffer[], length: number, etag: string } {
     this.flush()
     const prefixBuf = Buffer.from(prefix)
     const suffixBuf = Buffer.from(suffix)
     this.hash.update(suffixBuf)
     this.hash.update(prefixBuf)
-    const buffer = Buffer.concat([prefixBuf, ...this.parts, suffixBuf])
-    const etag = `W/"${buffer.length.toString(16)}-${this.hash.digest('base64').substring(0, 27)}"`
-    return { buffer, etag }
+    let parts = this.parts
+    this.parts = []
+    if (suffixBuf.length) parts.push(suffixBuf)
+    if (prefixBuf.length) parts.unshift(prefixBuf)
+    let length = 0
+    for (const part of parts) length += part.length
+    // the dominant tiny page (a few KB of json) goes out as ONE part: below the flush threshold a
+    // concat is a sub-64KB memcpy with no transient worth avoiding, and one part costs one
+    // token-bucket round + one socket write instead of three on the hottest request shape
+    if (length <= this.flushChars && parts.length > 1) parts = [Buffer.concat(parts, length)]
+    const etag = `W/"${length.toString(16)}-${this.hash.digest('base64').substring(0, 27)}"`
+    return { parts, length, etag }
   }
 }
 

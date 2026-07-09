@@ -83,7 +83,8 @@ const gen = (seed: number) => {
 const chunked = (buf: Buffer, size: number) => Readable.from((function * () { for (let i = 0; i < buf.length; i += size) yield buf.subarray(i, i + size) })())
 
 // A real Writable with the express Response chaining helpers bolted on, including a header map —
-// sendPrepared reads back Content-Type and sets the ETag (mirrors lines-pipeline.unit.spec).
+// sendPreparedParts reads back Content-Type and sets the ETag (mirrors lines-pipeline.unit.spec);
+// endParts is the write-the-parts contract res.throttleEnd installs in production.
 const fakeRes = () => {
   const res: any = new PassThrough()
   res._headers = {}
@@ -93,6 +94,7 @@ const fakeRes = () => {
   res.set = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
   res.get = function (k: string) { return this._headers[k.toLowerCase()] }
   res.send = function (body: any) { this.end(body); return this }
+  res.endParts = function (parts: Buffer[]) { for (const part of parts) this.write(part); this.end() }
   const chunks: Buffer[] = []
   res.on('data', (c: Buffer) => chunks.push(Buffer.from(c)))
   res._done = new Promise<Buffer>(resolve => res.on('end', () => resolve(Buffer.concat(chunks))))

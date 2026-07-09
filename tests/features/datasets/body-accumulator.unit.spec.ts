@@ -4,16 +4,19 @@ import { BodyAccumulator, buildJsonBody } from '../../../api/src/datasets/routes
 
 // The accumulator replaces the single monolithic join + Express-internal sha1 + utf8-encode of /lines
 // bodies with per-batch encoding and hashing inside the consume loop's yields. Its contract:
-//   - the final buffer is BYTE-IDENTICAL to the string the old path sent;
+//   - the parts, in order, are BYTE-IDENTICAL to the string the old path sent (no final concat: they are
+//     written sequentially to the response, so `length` must be the exact total byte count);
 //   - the ETag is an OPAQUE deterministic content fingerprint (weak format) — NOT Express's body hash.
 //     Same body ⇒ same etag (across pods/restarts/batching), any body change (rows OR envelope,
 //     e.g. a different `total` with identical rows) ⇒ different etag.
-//   - finish() is synchronous: hashing happened at flush time, only the concat remains.
+//   - finish() is synchronous: hashing happened at flush time, only the envelope remains.
 test.describe('BodyAccumulator (pure)', () => {
   const build = (rows: string[], prefix: string, suffix: string, flushChars?: number) => {
     const acc = new BodyAccumulator(flushChars ? { flushChars } : undefined)
     rows.forEach((row, i) => acc.push(i === 0 ? row : ',' + row))
-    return acc.finish(prefix, suffix)
+    const result = acc.finish(prefix, suffix)
+    // test-side reference of what the parts spell once written sequentially
+    return { ...result, buffer: Buffer.concat(result.parts) }
   }
 
   const rows = [JSON.stringify({ a: 'plain' }), JSON.stringify({ a: 'accented é 💥' })]
@@ -24,6 +27,32 @@ test.describe('BodyAccumulator (pure)', () => {
     const result = build(rows, headStr.slice(0, -1) + ',"results":[', ']}')
     assert.ok(!(result instanceof Promise))
     assert.equal(result.buffer.toString(), buildJsonBody(head, rows))
+  })
+
+  test('length is the exact total byte count and no part is empty', () => {
+    const { parts, length, buffer } = build(rows, '{"results":[', ']}')
+    assert.equal(length, buffer.length)
+    // csv uses finish('', '') — empty envelope buffers must not become useless zero-length writes
+    const csvLike = build(rows, '', '')
+    assert.equal(csvLike.length, csvLike.buffer.length)
+    for (const part of [...parts, ...csvLike.parts]) assert.ok(part.length > 0)
+  })
+
+  test('small bodies collapse to a single part, larger-than-flush bodies stay multi-part', () => {
+    // one part = one token-bucket round + one socket write on the dominant tiny page
+    assert.equal(build(rows, '{"results":[', ']}').parts.length, 1)
+    // a tiny flush threshold stands in for a body larger than flushChars
+    assert.ok(build(rows, '{"results":[', ']}', 8).parts.length > 1)
+  })
+
+  test('finish transfers ownership of the parts and cannot be called twice', () => {
+    const acc = new BodyAccumulator()
+    rows.forEach((row, i) => acc.push(i === 0 ? row : ',' + row))
+    const first = acc.finish('[', ']')
+    assert.ok(first.length > 2)
+    // the send loop consumes first.parts destructively; the accumulator no longer aliases the array
+    // and a second finish fails loudly (sha1 already digested) instead of emitting a corrupt body
+    assert.throws(() => acc.finish('[', ']'))
   })
 
   test('etag: weak format with the exact body byte length in hex', () => {
