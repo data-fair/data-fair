@@ -703,8 +703,8 @@ async function createFileDataset () {
     formData.append('dataset_encoding', fileEncoding.value)
   }
 
-  for (const [key, val] of Object.entries(normalizeOptions.value)) {
-    if (val !== undefined) formData.append(key, String(val))
+  if (Object.keys(normalizeOptions.value).length) {
+    formData.append('dataset_normalizeOptions', JSON.stringify(normalizeOptions.value))
   }
 
   const body: Record<string, any> = {}
