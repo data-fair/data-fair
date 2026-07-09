@@ -28,21 +28,20 @@ body is then written out sequentially**:
 
 The assemble-then-send contract needs the body fully *determined*, not *contiguous* — so the accumulated
 ~64 KB parts are never `Buffer.concat`'d (except tiny bodies: at or below one flush threshold the parts
-collapse to a single part, one token round + one write on the dominant small page).
+collapse to a single part, one write on the dominant small page — the exact pre-refactor profile).
 `BodyAccumulator.finish()` returns `{ parts, length, etag }` (the sha1 was fed incrementally per part;
 `Content-Length` is the sum; the parts array is consumed destructively by the send — ownership moves) and
-`sendPreparedParts` (`lines-pipeline.ts`) writes the parts sequentially through `res.endParts` (installed
-by `res.throttleEnd`, `rate-limiting.ts`). Together they keep the whole pre-refactor wire contract: the
-charset suffix `res.send(string)` used to append, `req.fresh` → 304 (delegated back to express's
-`res.send` with an empty chunk), HEAD, explicit `Content-Length`, and — previously the wrapped
-`res.end`'s job, not `res.send`'s — the bandwidth token bucket and the send-slot queue-full teardown.
-The write loop honors backpressure (parking on `drain` once ~1 MB is buffered — bounded buffering
-without a per-64KB event-loop round trip) and consumes the parts array as it goes, so the old 2×-body
-concat transient is gone **and memory decreases during the send** instead of pinning ~1× body for the
-duration of a slow-client throttled download (the prod heap profile's "transient assemble-then-send
-body/Buffer" spike, ~1.2 GB external). One consequence to know: a send slot is now held for the
-client-paced duration of the send (each pending send pins ~1 MB, not its full body), so `maxPendingSends`
-bounds slow-client concurrency rather than token pacing.
+`sendPreparedParts` (`lines-pipeline.ts`) hands the parts to `res.endParts` (installed by
+`res.throttleEnd`, `rate-limiting.ts`), which pipes a `Readable` over a shifting generator through the
+SAME `res.throttle()` bandwidth Transform the raw-download routes use — no bespoke write loop: the pipe
+provides the backpressure, `res.throttle` the token bucket + send-slot queue-full teardown, the streams'
+high-water marks bound read-ahead to ~1 MB, and the generator's `shift()` releases each part as the pipe
+pulls it. Together they keep the whole pre-refactor wire contract: the charset suffix `res.send(string)`
+used to append, `req.fresh` → 304 (delegated back to express's `res.send` with an empty chunk), HEAD,
+explicit `Content-Length`, and — previously the wrapped `res.end`'s job, not `res.send`'s — the
+bandwidth throttling. The old 2×-body concat transient is gone **and memory decreases during the send**
+instead of pinning ~1× body for the duration of a slow-client throttled download (the prod heap
+profile's "transient assemble-then-send body/Buffer" spike, ~1.2 GB external).
 
 Peak drops to ~1× the payload at assembly time (bounded per request by `maxPageSize`), decaying during
 the send. Going lower would require true output streaming, i.e. giving up the response contract — the

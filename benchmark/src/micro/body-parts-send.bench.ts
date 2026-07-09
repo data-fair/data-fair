@@ -6,8 +6,8 @@
 // last byte reaches the client.
 //
 // Sequential shape (implemented): finish() returns the parts unjoined; sendPreparedParts →
-// res.endParts writes them one by one under backpressure and shifts each part out of the array once
-// accepted — peak stays ~1× and the retained set DECREASES during the send.
+// res.endParts pipes them through the bandwidth throttle, the source generator shifting each part out
+// of the array as the pipe pulls it — peak stays ~1× and the retained set DECREASES during the send.
 //
 // This bench reproduces both retained-set shapes with the send loop stubbed (the socket doesn't
 // matter, the live-buffer graph does) and samples post-GC external memory at each phase.
