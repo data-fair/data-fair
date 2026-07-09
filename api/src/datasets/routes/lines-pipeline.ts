@@ -69,13 +69,13 @@ export interface StreamJsonContext extends NextContext {
 // rows, count/lastHit tracking. On ANY error — a per-row transform throw or a mid-stream ES read error —
 // destroy the source (releases the ES asStream connection) before rethrowing; without this the handler
 // unwinds with the ES response stream still open.
-export const consumeHits = async (source: LinesSource, perRow: (hit: any) => void): Promise<{ count: number, lastHit: any }> => {
+export const consumeHits = async (source: LinesSource, perRow: (hit: any) => void, yieldEvery = 500): Promise<{ count: number, lastHit: any }> => {
   let count = 0
   let lastHit: any
   try {
     for await (const bulk of source.hits) {
       for (let k = 0; k < bulk.length; k++) {
-        if (count % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+        if (count % yieldEvery === yieldEvery - 1) await new Promise(resolve => setImmediate(resolve))
         perRow(bulk[k])
         count++
       }
@@ -106,6 +106,10 @@ export async function collect (source: LinesSource): Promise<any[]> {
   return items
 }
 
+// wkt=true parses + WKT-serializes the raw geometry column per row (unbounded vertex counts — a 500-row
+// batch of large polygons measured ~600ms of sync work), so those requests yield 10x more often
+const wktYieldEvery = (query: any) => query.wkt === 'true' ? 50 : 500
+
 export async function streamJson (req: any, res: any, source: LinesSource, ctx: StreamJsonContext): Promise<void> {
   const dataset = reqDataset(req)
   const query = req.query
@@ -119,7 +123,7 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   const { count, lastHit } = await consumeHits(source, hit => {
     acc.push(sep + JSON.stringify(esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)))
     sep = ','
-  })
+  }, wktYieldEvery(query))
   const tail = await safeTail(source)
 
   // Head object in the exact key order the buffered result had: { hint, total, next?, totalCollapse? }.
@@ -164,7 +168,7 @@ export async function streamCsv (req: any, res: any, source: LinesSource, ctx: S
   acc.push(prologue)
   const { count, lastHit } = await consumeHits(source, hit => {
     acc.push(row(esUtils.prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)))
-  })
+  }, wktYieldEvery(query))
 
   setNextLink(res, ctx, count, lastHit)
   const { buffer, etag } = acc.finish('', '')

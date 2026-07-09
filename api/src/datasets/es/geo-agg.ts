@@ -53,23 +53,33 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
   return prepareGeoAggResponse(esResponse, dataset, query, publicBaseUrl, flatten)
 }
 
-const prepareGeoAggResponse = (esResponse: any, dataset: any, query: Record<string, any>, publicBaseUrl: string, flatten: any) => {
+const prepareGeoAggResponse = async (esResponse: any, dataset: any, query: Record<string, any>, publicBaseUrl: string, flatten: any) => {
   const response: any = { total: esResponse.hits.total.value }
   const resultCtx = prepareResultContext(dataset, query)
-  response.aggs = esResponse.aggregations.geo.buckets.map((b: any) => {
+  response.aggs = []
+  // agg_size × size can legally reach 100000 prepared top hits: yield every 500 like the /lines pipeline
+  let prepared = 0
+  for (const b of esResponse.aggregations.geo.buckets) {
     const center = geohash.hash2coord(b.key)
+    const results = []
+    if (b.topHits) {
+      for (const hit of b.topHits.hits.hits) {
+        if (prepared++ % 500 === 499) await new Promise(resolve => setImmediate(resolve))
+        results.push(prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx))
+      }
+    }
     const aggItem: any = {
       total: b.doc_count,
       value: b.key,
       centroid: b.centroid.location,
       center: { lat: center[1], lon: center[0] },
       bbox: geohash.hash2bbox(b.key),
-      results: b.topHits ? b.topHits.hits.hits.map((hit: any) => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl, resultCtx)) : []
+      results
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
     }
-    return aggItem
-  })
+    response.aggs.push(aggItem)
+  }
   return response
 }

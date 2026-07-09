@@ -205,12 +205,46 @@ export const transforms: Record<TransformType, (value: any, timezone?: string, e
   // dayjs format does not match odsql
   // https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-functions/date_format()
   // https://day.js.org/docs/en/display/format
+  // date_format() used to run dayjs(dateStr).tz() per value — the same per-value Intl cost isoWithOffset
+  // had (see the comment above getDtf). Resolve the instant's offset via the cached Intl formatter
+  // instead, then format from a fixed offset: identical output, ~10x cheaper. The odsql→dayjs format
+  // rewrite (two regexes) is also memoized — it ran per value on a per-query constant.
   date_transform: (dateStr, timezone, format) => {
-    const dayjsFormat = format
-      ?.replace(/yy/g, 'YY')
-      .replace(/d/g, 'D')
-    return dayjs(dateStr).tz(timezone ?? 'utc').format(dayjsFormat)
+    const dayjsFormat = odsFormat2dayjs(format)
+    const tz = timezone ?? 'utc'
+    // offset/abbreviation tokens (Z, z) need a tz-plugin instance (and both dayjs.tz and dayjs.utcOffset
+    // route offset math through host-local Dates): keep the historical dayjs.tz path for those formats,
+    // including the undefined default format (which ends with Z)
+    if (dayjsFormat === undefined || /[zZ]/.test(dayjsFormat.replace(/\[[^\]]*\]/g, ''))) {
+      return dayjs(dateStr).tz(tz).format(dayjsFormat)
+    }
+    if (tz.toLowerCase() === 'utc') return dayjs.utc(dateStr).format(dayjsFormat)
+    // offset-free format: shift the instant by the tz offset (resolved via the cached Intl formatter,
+    // like isoWithOffset above) and render the UTC wall clock — identical output, ~10x cheaper, and
+    // host-timezone independent (pure ms arithmetic, no local-Date round trip)
+    const date = new Date(dateStr)
+    return dayjs.utc(date.getTime() + tzOffsetMinutes(date, tz) * 60000).format(dayjsFormat)
   }
+}
+
+const dayjsFormatCache = new Map<string, string>()
+const odsFormat2dayjs = (format?: string) => {
+  if (format === undefined) return undefined
+  let f = dayjsFormatCache.get(format)
+  if (f === undefined) {
+    f = format.replace(/yy/g, 'YY').replace(/d/g, 'D')
+    dayjsFormatCache.set(format, f)
+  }
+  return f
+}
+
+// offset in minutes of an instant in a timezone, from the same cached Intl formatter isoWithOffset uses
+const tzOffsetMinutes = (date: Date, timezone: string) => {
+  let offset = '+00:00'
+  for (const part of getDtf(timezone).formatToParts(date)) {
+    if (part.type === 'timeZoneName') { offset = parseOffset(part.value); break }
+  }
+  return (offset.startsWith('-') ? -1 : 1) * (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)))
 }
 
 export const applyAliases = (result: any, aliases: Aliases, selectTransforms: Transforms, timezone?: string) => {

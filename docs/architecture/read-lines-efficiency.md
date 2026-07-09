@@ -65,16 +65,24 @@ rewritten at the **top** of `prepareResultItem`, before derived fields (thumbnai
 - **json / csv / geojson → streamed source** (flag-gated). Each hit maps independently to output; geojson's
   `bbox` is a separate `bboxAgg` that runs concurrently with hit consumption; csv rows go through the same
   compiled serializer as the buffered export.
-- **pbf tiles (neighbors, non-vtPrepared) and shp → zero-copy raw-buffer-to-worker** (always on,
-  byte-identical). These render in a worker anyway; the main thread used to parse ES and structured-clone a
-  big geojson graph across the thread boundary on every tile. Now `searchRaw` keeps the raw bytes and
-  transfers the Buffer's own ArrayBuffer (`utils/worker-transfer.ts`; copy only for small pooled buffers),
-  and the worker wraps the transferred bytes without copying — the main thread does no parse and no clone.
-  Gated off `_attachment_url`-selecting requests (the worker can't rewrite that URL → buffered path).
-- **xlsx / ods → deliberately buffered.** Exports are rare (a click, not a map), the worker would be heavy
-  (rich `prepareResultItem` → `marked`/`sanitize-html`), and CSV-string interchange would lose typed cells.
-  If ever optimized: transfer the 2D value array (`aoa`), not CSV.
-- **wkt, vtPrepared / max-sampling tiles → unchanged** (niche / multi-search / script_fields).
+- **pbf tiles (neighbors, non-vtPrepared), shp, wkt, xlsx / ods → zero-copy raw-buffer-to-worker** (always
+  on, byte-identical). These render/serialize whole pages, so the main thread used to parse ES and either
+  run the serialization itself (wkt: one monolithic `geojsonToWKT`, ~220ms at 10k polygons) or
+  structured-clone a big object graph across the thread boundary (tiles/shp: the geojson; sheets: the
+  prepared rows array, 38–234ms at 10k rows). Now `searchRaw` keeps the raw bytes and transfers the
+  Buffer's own ArrayBuffer (`utils/worker-transfer.ts`; copy only for small pooled buffers), and the worker
+  wraps the transferred bytes without copying — the main thread does no parse, no per-row prep and no
+  clone. Two flavors of the `_attachment_url` question: shp/tiles are *gated off* requests selecting it
+  (their geojson build can't rewrite it → buffered fallback), while the sheet worker runs the full
+  `prepareResultItem` with `ctx.rewriteAttachmentUrl = true` — the same shared-function contract the
+  streamed json/csv/geojson modes rely on (pinned by `sheet-zero-copy.unit.spec.ts` /
+  `wkt-zero-copy.unit.spec.ts`). Workers that report page pagination (wkt, sheets) return
+  `count + lastHitSort` so read.ts emits the exact `Link` header the buffered path produced.
+- **vtPrepared / max-sampling tiles → still buffered.** `max` fetches up to 4 sequential pages where each
+  `after` cursor comes from the *parsed* last hit of the previous page — a raw-buffer path would have to
+  parse on the main thread anyway. Bounded: the concat is capped at 10 MB of ES content (~47ms worst-case
+  clone, measured). vtPrepared rides the same path (`max` is its default sampling) and additionally needs
+  `script_fields` shaping that `searchRaw` deliberately omits.
 
 ## Errors and limits
 
@@ -95,7 +103,8 @@ piped through `createGunzip` (asStream bypasses auto-decompression).
 | Compiled fused `(hit)→jsonString` serializer | **Shelved** | ~1.41× on the plain slice only; rich requests are dominated by `marked`/`sanitize-html` — `benchmark/results/compiled-serializer.md`. |
 | Size threshold for streaming (500 KB content-length gate, `streamReadLinesMinBytes`) | **Dropped** | The gate was designed for the earlier streamed-*output* model, where streaming a response also changed its HTTP semantics — small responses were spared that plus streaming's *relative* CPU tax (~1.0–1.3× fat rows … ~2.7–4× tiny rows, `benchmark/results/streaming-threshold-sweep.md`). The assemble-then-send pivot removed the semantics difference entirely, and the only responses a threshold can exempt are small ones — where the absolute overhead is negligible. The relative tax on *large* tiny-row responses exists with or without a gate (it's the memory-for-CPU trade itself; watch CPU in the staging measurement). No gate also means one single code path per format once the flag is retired. |
 | Synthetic pre-query ETag (skip ES on `If-None-Match`) | **Shelved** | The pre-query `finalizedAt`/`Last-Modified` 304 already covers most of it. |
-| xlsx zero-copy worker | **Shelved** | Rare + typed cells; `aoa`-transfer is the shape if it ever surfaces. |
+| xlsx zero-copy worker | **Done (2026-07)** | Un-shelved by the stall audit: the rows-array clone measured 38–234ms of main-thread stall per export. Shipped as raw-buffer + in-worker `prepareResultItem` (not `aoa`-transfer): the worker parses the transferred ES bytes and preps rows itself, so the per-row cost leaves the loop too. |
+| pbf `max`/vtPrepared zero-copy | **Rejected (2026-07)** | Sequential `after` pagination needs the parsed last hit per page — raw-buffer transfer can't avoid the main-thread parse. Bounded at ~47ms by the 10 MB concat cap. |
 
 ## Key modules
 
