@@ -41,8 +41,8 @@
           color="accent"
           variant="flat"
           :disabled="!masterDataFormValid || hasInvalidExtension"
-          :loading="structureEditFetch.save.loading.value"
-          @click="structureEditFetch.save.execute()"
+          :loading="structureEditFetch.save.loading.value || saveStructure.loading.value"
+          @click="saveStructure.execute()"
         >
           {{ t('save') }}
         </v-btn>
@@ -519,6 +519,18 @@
       @confirm="action => confirmRemove.execute(action)"
     />
 
+    <children-action-dialog
+      v-model="showVirtualOrphansDialog"
+      :title="t('virtualOrphansTitle')"
+      :message="t('virtualOrphansMsg')"
+      :warning="t('virtualOrphansWarning', virtualOrphansCount)"
+      kind="datasets"
+      :loading="structureEditFetch.save.loading.value"
+      :cancel-label="t('cancel')"
+      :confirm-label="t('save')"
+      @confirm="action => saveStructure.execute(action)"
+    />
+
     <v-dialog
       v-model="showDeleteAllLinesDialog"
       max-width="500"
@@ -630,6 +642,9 @@ fr:
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   childrenWarning: aucun jeu de données enfant | Ce jeu de données a un jeu de données enfant qui n'existe que dans ce cadre. | Ce jeu de données a {count} jeux de données enfants qui n'existent que dans ce cadre.
+  virtualOrphansTitle: Jeux de données enfants
+  virtualOrphansMsg: Cette modification retire des jeux de données définis comme enfants de ce jeu virtuel, ils n'existent que dans ce cadre.
+  virtualOrphansWarning: aucun jeu de données enfant retiré | Un jeu de données enfant est retiré des jeux de données agrégés. | {count} jeux de données enfants sont retirés des jeux de données agrégés.
   deleteDatasetSuccess: Le jeu de données a bien été supprimé.
   deleteAllLinesSuccess: Toutes les lignes ont bien été supprimées.
   yes: Oui
@@ -695,6 +710,9 @@ en:
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
   childrenWarning: no child dataset | This dataset has a child dataset that only exists within this context. | This dataset has {count} child datasets that only exist within this context.
+  virtualOrphansTitle: Child datasets
+  virtualOrphansMsg: This change removes datasets defined as children of this virtual dataset, they only exist within this context.
+  virtualOrphansWarning: no child dataset removed | A child dataset is removed from the aggregated datasets. | {count} child datasets are removed from the aggregated datasets.
   deleteDatasetSuccess: Dataset was deleted successfully.
   deleteAllLinesSuccess: All lines were deleted successfully.
   yes: Yes
@@ -930,6 +948,30 @@ const confirmDeleteAllLines = useAsyncAction(async () => {
   showDeleteAllLinesDialog.value = false
   await $fetch(`datasets/${id}/lines`, { method: 'DELETE' })
 }, { success: t('deleteAllLinesSuccess') })
+
+// saving the structure of a virtual dataset can drop members that are still defined as its partOf
+// children: offer the same delete-vs-unflag choice as the deletion flow before persisting, otherwise
+// the API rightfully refuses the patch with a 409
+const showVirtualOrphansDialog = ref(false)
+const virtualOrphansCount = ref(0)
+
+const saveStructure = useAsyncAction(async (childrenAction?: 'delete' | 'unflag') => {
+  if (!childrenAction && dataset.value?.isVirtual) {
+    const newChildren: string[] = structureEditFetch.data.value?.virtual?.children ?? []
+    const serverChildren: string[] = structureEditFetch.serverData.value?.virtual?.children ?? []
+    if (!equal(newChildren, serverChildren)) {
+      const partOfChildren = await $fetch<{ results: { id: string }[] }>('datasets', { query: { partOf: id, size: 1000, select: 'id' } })
+      const orphans = partOfChildren.results.filter(c => !newChildren.includes(c.id))
+      if (orphans.length) {
+        virtualOrphansCount.value = orphans.length
+        showVirtualOrphansDialog.value = true
+        return
+      }
+    }
+  }
+  await structureEditFetch.save.execute(childrenAction ? { childrenAction } : undefined)
+  showVirtualOrphansDialog.value = false
+})
 
 useDatasetWatch(store, ['journal', 'info', 'taskProgress'])
 
