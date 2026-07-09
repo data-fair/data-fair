@@ -48,19 +48,24 @@ const load = async () => ({
   ...await import('../../../api/src/misc/utils/public-base-url.ts')
 })
 
-// A real Writable (streamCsv uses transform.pipe(res)) with the express Response chaining helpers
-// bolted on, including a header map — sendPrepared reads back Content-Type (to append the charset the
-// way res.send(string) did) and sets the ETag, so parity tests can assert both against the oracle.
-// Collects everything written and resolves `_done` with the concatenated bytes on end.
+// A real Writable with the express Response chaining helpers bolted on, including a header map —
+// sendPreparedParts reads back Content-Type (to append the charset the way res.send(string) did) and
+// sets the ETag / Content-Length, so parity tests can assert them against the oracle. `endParts` is
+// what res.throttleEnd installs in production (a hard contract of sendPreparedParts) — the fake's
+// version is a plain write loop; `send` stands in for express's res.send, which sendPreparedParts
+// delegates the `req.fresh` → 304 path to. Collects everything written and resolves `_done` with the
+// concatenated bytes on end.
 const fakeRes = () => {
   const res: any = new PassThrough()
   res._headers = {}
   res.type = function (t: string) { this._headers['content-type'] = 'application/' + t; return this }
-  res.status = function () { return this }
+  res.status = function (code: number) { this.statusCode = code; return this }
   res.setHeader = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
   res.set = function (k: string, v: string) { this._headers[k.toLowerCase()] = v; return this }
   res.get = function (k: string) { return this._headers[k.toLowerCase()] }
+  res.removeHeader = function (k: string) { delete this._headers[k.toLowerCase()] }
   res.send = function (body: any) { this.end(body); return this }
+  res.endParts = function (parts: Buffer[]) { for (const part of parts) this.write(part); this.end() }
   const chunks: Buffer[] = []
   res.on('data', (c: Buffer) => chunks.push(Buffer.from(c)))
   res._done = new Promise<Buffer>(resolve => res.on('end', () => resolve(Buffer.concat(chunks))))
@@ -89,6 +94,9 @@ test.describe('lines-pipeline parity', () => {
     assert.ok(jsonEtag, `unexpected etag format: ${res.get('ETag')}`)
     assert.equal(parseInt(jsonEtag[1], 16), rawBody.length)
     assert.equal(res.get('Content-Type'), 'application/json; charset=utf-8')
+    // Content-Length is set explicitly (express's res.send used to do it): without it Node would fall
+    // back to chunked transfer encoding — an observable header change on the wire
+    assert.equal(res.get('Content-Length'), String(rawBody.length))
 
     // reference built the CURRENT (buffered) way
     const esResp = esResponse()
@@ -127,6 +135,60 @@ test.describe('lines-pipeline parity', () => {
     assert.ok(csvEtag, `unexpected etag format: ${res.get('ETag')}`)
     assert.equal(parseInt(csvEtag[1], 16), bytes.length)
     assert.equal(res.get('Content-Type'), 'application/csv; charset=utf-8')
+    assert.equal(res.get('Content-Length'), String(bytes.length))
+  })
+})
+
+// The parts are written sequentially instead of going through express's res.send, so the send-time
+// semantics that used to live INSIDE res.send are either reproduced by sendPreparedParts (HEAD,
+// Content-Length) or explicitly delegated back to res.send (`req.fresh` → 304 — express owns the
+// header-stripping there; the 304 wire behavior is pinned end-to-end by cache-headers.api.spec.ts).
+// Both go through streamJson so the assertions cover the real call path, not the helper in isolation.
+test.describe('lines-pipeline send semantics (what res.send used to do)', () => {
+  const makeReq = (extra: Record<string, any>) => ({ path: '/ds1/lines', query: {}, __: (k: string) => k, ...extra }) as any
+
+  test('fresh request (If-None-Match matched) delegates the 304 to res.send with no body parts', async () => {
+    const { bufferedSource, streamJson, setReqDataset, setReqPublicBaseUrl } = await load()
+    const req = makeReq({ fresh: true })
+    setReqDataset(req, dataset)
+    setReqPublicBaseUrl(req, publicBaseUrl)
+
+    const res = fakeRes()
+    const sendCalls: any[] = []
+    const passthroughSend = res.send.bind(res)
+    res.send = (body: any) => { sendCalls.push(body); return passthroughSend(body) }
+    await streamJson(req, res, bufferedSource(esResponse()), { publicBaseUrl, esSearchDurationMs: 0 })
+    const rawBody = await res._done
+
+    assert.equal(rawBody.length, 0, '304 must not carry a body')
+    assert.deepEqual(sendCalls, [''], 'the empty-chunk res.send call express turns into the 304')
+    assert.ok(res.get('ETag'), 'the etag is what the client revalidates against')
+    assert.equal(res.get('Content-Length'), undefined, 'the real Content-Length must not be set on the fresh path')
+  })
+
+  test('HEAD gets the exact GET headers (ETag, Content-Length) and no body', async () => {
+    const { bufferedSource, streamJson, setReqDataset, setReqPublicBaseUrl } = await load()
+
+    // GET reference for the header values
+    const getReq = makeReq({})
+    setReqDataset(getReq, dataset)
+    setReqPublicBaseUrl(getReq, publicBaseUrl)
+    const getRes = fakeRes()
+    await streamJson(getReq, getRes, bufferedSource(esResponse()), { publicBaseUrl, esSearchDurationMs: 0 })
+    const getBody = await getRes._done
+
+    const headReq = makeReq({ method: 'HEAD' })
+    setReqDataset(headReq, dataset)
+    setReqPublicBaseUrl(headReq, publicBaseUrl)
+    const headRes = fakeRes()
+    await streamJson(headReq, headRes, bufferedSource(esResponse()), { publicBaseUrl, esSearchDurationMs: 0 })
+    const headBody = await headRes._done
+
+    assert.equal(headBody.length, 0, 'HEAD must not carry a body')
+    assert.equal(headRes.statusCode, 200)
+    assert.equal(headRes.get('ETag'), getRes.get('ETag'))
+    assert.equal(headRes.get('Content-Length'), String(getBody.length))
+    assert.equal(headRes.get('Content-Type'), getRes.get('Content-Type'))
   })
 })
 

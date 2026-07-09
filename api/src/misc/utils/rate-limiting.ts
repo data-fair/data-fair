@@ -1,5 +1,5 @@
 import config from '#config'
-import { Transform, PassThrough } from 'node:stream'
+import { Transform, PassThrough, Readable, pipeline } from 'node:stream'
 import requestIp from 'request-ip'
 import debug from 'debug'
 import promClient from 'prom-client'
@@ -21,6 +21,11 @@ declare global {
     interface Response {
       throttle: (bandwidthType?: string) => Transform
       throttleEnd: (bandwidthType?: string) => void
+      // installed by throttleEnd: end the response by piping pre-split body parts through the same
+      // res.throttle() bandwidth Transform the raw-download routes use, consuming the array as the
+      // pipe pulls so sent parts become collectable during the send — see sendPreparedParts in
+      // datasets/routes/lines-pipeline.ts
+      endParts?: (parts: Buffer[]) => void
       _originalEnd?: Response['end']
     }
   }
@@ -204,16 +209,21 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
     })
   }
 
+  // too many sends already queued on this client's bucket — tear down instead of queueing: each
+  // queued send pins its buffers for the whole starvation window (the prod OOM was ~1400 queued
+  // responses on one saturated per-IP bucket). One policy shared by throttle/end/endParts.
+  const acquireSendSlotOrDestroy = (tokenBucket: TokenBucketWrapper): boolean => {
+    if (acquireSendSlot(tokenBucket)) return true
+    debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
+    throttleQueueFullCounter.labels(limitType).inc()
+    res.destroy()
+    return false
+  }
+
   res.throttle = (bandwidthType) => {
     const tokenBucket = getTokenBucket(req, limitType, bandwidthType)
     if (!tokenBucket) return new PassThrough() // no bandwidth limit for this tier → pass through unthrottled
-    if (!acquireSendSlot(tokenBucket)) {
-      // too many sends already queued on this client's bucket — tear down instead of queueing: each
-      // queued send pins its buffers for the whole starvation window (the prod OOM was ~1400 queued
-      // responses on one saturated per-IP bucket)
-      debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
-      throttleQueueFullCounter.labels(limitType).inc()
-      res.destroy()
+    if (!acquireSendSlotOrDestroy(tokenBucket)) {
       const dead = new PassThrough()
       dead.on('error', () => {}) // same as Throttle: pipeline teardown errors are expected, not actionable
       dead.destroy(new Error('too many pending throttled sends'))
@@ -227,22 +237,36 @@ const buildMiddleware = (_limitType) => async (req, res, next) => {
     return throttle
   }
   res.throttleEnd = (bandwidthType = 'dynamic') => {
-    if (ignoreRateLimiting) return
-
     // prevent inifinite loop if res.throttleEnd is called twice
     if (res._originalEnd) return
-
     res._originalEnd = res.end
+
+    // pre-split body parts (the /lines sequential-write path): pipe them through the SAME
+    // res.throttle() Transform the raw-download routes use — the pipe provides the backpressure,
+    // res.throttle the token bucket + send-slot queue-full teardown (slot released on the Throttle's
+    // 'close'), and the shifting generator releases each part as the pipe pulls it, so sent parts
+    // become collectable during the send (bounded read-ahead by the streams' high-water marks)
+    let endPartsCalled = false
+    res.endParts = (parts: Buffer[]) => {
+      if (endPartsCalled) return // mirror the wrapped res.end's reentrancy protection
+      endPartsCalled = true
+      const source = Readable.from((function * () { while (parts.length) yield parts.shift()! })())
+      const done = (err: NodeJS.ErrnoException | null) => {
+        // teardowns are expected, not actionable: client aborts surface as premature-close, and a
+        // queue-full res.destroy() (inside res.throttle) is already counted + debug-logged there
+        if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE' && !res.destroyed) console.warn('failed to send response parts', err)
+      }
+      if (ignoreRateLimiting) pipeline(source, res, done)
+      else pipeline(source, res.throttle(bandwidthType), res, done)
+    }
+
+    if (ignoreRateLimiting) return // res.end stays original; endParts above skips the throttle
+
     res.end = function (buffer) {
       if (!buffer) return res._originalEnd()
       const tokenBucket = getTokenBucket(req, limitType, bandwidthType)
       if (!tokenBucket) return res._originalEnd(buffer) // no bandwidth limit → send unthrottled
-      if (!acquireSendSlot(tokenBucket)) {
-        // see res.throttle: don't queue a full response body behind an already-saturated bucket
-        debugLimits('throttleQueueFull', limitType, user, requestIp.getClientIp(req))
-        throttleQueueFullCounter.labels(limitType).inc()
-        return res.destroy()
-      }
+      if (!acquireSendSlotOrDestroy(tokenBucket)) return
       throttledEnd(res, buffer, tokenBucket)
         .catch(err => console.warn('failed to send throttled response', err))
         .finally(() => releaseSendSlot(tokenBucket))
