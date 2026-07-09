@@ -278,6 +278,19 @@ Exemple: ma_colonne,-ma_colonne2`
   }
 }
 
+// a dataset is a "reference" (master-data) dataset as soon as its masterData object carries any
+// actual content: shared with partners, or exposed as searchable / standard-schema / virtual-dataset
+// reference data. The UI normalizes an untouched masterData to a bag of empty structures, so a mere
+// object-presence test would yield false positives — check for real content instead.
+/** @param {any} masterData */
+export const isReferenceData = (masterData) => !!masterData && !!(
+  masterData.shareOrgs?.length ||
+  masterData.singleSearchs?.length ||
+  masterData.bulkSearchs?.length ||
+  masterData.virtualDatasets?.active ||
+  masterData.standardSchema?.active
+)
+
 export const endpoints = (dataset) => {
   const endpoints = {}
   if (!dataset.masterData) return endpoints

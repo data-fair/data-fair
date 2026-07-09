@@ -730,6 +730,7 @@ import { useAgentSchemaAnnotationTools } from '~/composables/dataset/agent-schem
 import { useAgentPropertyConfigTools } from '~/composables/dataset/agent-property-config-tools'
 import { useAgentDatasetPageGuidance } from '~/composables/dataset/agent-page-guidance-tools'
 import { hasInvalidExprEvalExtension, hasInvalidRemoteServiceExtension } from '~/composables/dataset/expr-eval-validation'
+import { isReferenceData } from '~/../../api/contract/master-data.js'
 
 const { t, locale } = useI18n()
 const route = useRoute<'/dataset/[id]/'>()
@@ -899,7 +900,8 @@ const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('d
 const canDeleteAllLines = computed(() => dataset.value?.isRest && can('deleteLine').value)
 
 // a virtual dataset can never be defined as a child, don't offer the parent-resource section
-const showPartOfSection = computed(() => can('writePartOf').value && !dataset.value?.isVirtual)
+// a reference (master-data) dataset is meant to be reused broadly, it cannot be defined as a child (see preparePatch guard)
+const showPartOfSection = computed(() => can('writePartOf').value && !dataset.value?.isVirtual && !isReferenceData(dataset.value?.masterData))
 
 const showPartOfDialog = ref(false)
 const partOfCandidates = computed(() => [
@@ -1074,7 +1076,8 @@ const sections = computedDeepDiff(() => {
       })
     }
 
-    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin') {
+    // reciprocally, a dataset defined as a child of another resource cannot be turned into reference data (see preparePatch guard)
+    if (!d.draftReason && !d.isMetaOnly && accountRole.value === 'admin' && !d.partOf) {
       structureTabs.push({
         key: 'master-data',
         title: t('masterData'),

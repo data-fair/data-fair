@@ -277,4 +277,51 @@ test.describe('dataset partOf attribute', () => {
       }
     )
   })
+
+  test('cannot define a reference (master-data) dataset as a child', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [dataset.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+
+    // turning the dataset into reference data (here just by sharing it as such) makes it ineligible
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { masterData: { shareOrgs: [{ id: 'anotherorg', name: 'Another org' }] } })
+
+    await assert.rejects(
+      ax.patch(`/api/v1/datasets/${dataset.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
+
+  test('an empty master-data object does not prevent defining a dataset as a child', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [dataset.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+
+    // the UI normalizes an untouched masterData to a bag of empty structures — this must not count as reference data
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { masterData: { standardSchema: {}, virtualDatasets: {}, singleSearchs: [], bulkSearchs: [], shareOrgs: [] } })
+
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+    assert.equal(res.status, 200)
+  })
+
+  test('cannot turn a dataset already defined as a child into reference (master-data) data', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const virtualRes = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', virtual: { children: [dataset.id] } })
+    const virtualDataset = await waitForFinalize(ax, virtualRes.data.id)
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { partOf: { type: 'dataset', id: virtualDataset.id } })
+
+    await assert.rejects(
+      ax.patch(`/api/v1/datasets/${dataset.id}`, { masterData: { shareOrgs: [{ id: 'anotherorg', name: 'Another org' }] } }),
+      (err: any) => {
+        assert.equal(err.status, 400)
+        return true
+      }
+    )
+  })
 })

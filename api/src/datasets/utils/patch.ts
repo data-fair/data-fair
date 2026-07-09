@@ -10,6 +10,7 @@ import * as datasetUtils from './index.ts'
 import * as extensions from './extensions.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
+import { isReferenceData } from '../../../contract/master-data.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -140,6 +141,19 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   }
   if (patch.readApiKey === null) {
     patch._readApiKey = null
+  }
+
+  // a reference (master-data) dataset exists to be reused across many contexts, so it cannot be
+  // defined as a child of a single parent — and, reciprocally, a dataset already defined as a child
+  // cannot be turned into reference data. Only guard the patch that actively establishes one of the
+  // two states, checking it against the effective value of the other.
+  const effectiveMasterData = 'masterData' in patch ? patch.masterData : dataset.masterData
+  const effectivePartOf = 'partOf' in patch ? patch.partOf : dataset.partOf
+  if ('partOf' in patch && patch.partOf && isReferenceData(effectiveMasterData)) {
+    throw httpError(400, 'Un jeu de données de référence ne peut pas être défini comme enfant d\'une autre ressource')
+  }
+  if ('masterData' in patch && isReferenceData(patch.masterData) && effectivePartOf) {
+    throw httpError(400, 'Un jeu de données défini comme enfant d\'une autre ressource ne peut pas devenir une donnée de référence')
   }
 
   if (patch.partOf) {
