@@ -56,7 +56,8 @@ export const useHeaders = (
   fixed: Ref<string | undefined>,
   syntheticColumns?: MaybeRefOrGetter<SyntheticColumn[]>,
   headerKeys?: MaybeRefOrGetter<boolean>,
-  titleOverrides?: MaybeRefOrGetter<Record<string, string>>
+  titleOverrides?: MaybeRefOrGetter<Record<string, string>>,
+  ownLines = false
 ) => {
   const { dataset, imageField, can } = useDatasetStore()
   const { vocabulary } = useStore()
@@ -90,7 +91,11 @@ export const useHeaders = (
       // the _actions column hosts the per-row edit/delete buttons and the add-line button (single-line
       // write permissions) as well as the bulk selection checkboxes (bulkLines). Show it as soon as the
       // user holds any of these permissions; each button inside is then gated on its own permission.
-      const canEditLines = edit && (can('bulkLines').value || can('createLine').value || can('updateLine').value || can('deleteLine').value)
+      // own-lines mode gates on the *OwnLine classes instead, granted to a plain manageOwnLines holder.
+      const editOps = ownLines
+        ? ['bulkOwnLines', 'createOwnLine', 'updateOwnLine', 'deleteOwnLine']
+        : ['bulkLines', 'createLine', 'updateLine', 'deleteLine']
+      const canEditLines = edit && editOps.some(op => can(op).value)
       if (selectable || canEditLines) {
         headers.unshift({ title: '', key: '_actions', sticky: true })
       } else if (fixed.value) {

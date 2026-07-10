@@ -12,6 +12,7 @@
       :height="windowHeight"
       :no-interaction="!interaction"
       :edit="true"
+      :own-lines="ownLines"
     />
   </v-container>
 </template>
@@ -38,4 +39,6 @@ const display = useStringSearchParam('display', 'table')
 const q = useStringSearchParam('q')
 const sort = useStringSearchParam('sort')
 const interaction = useBooleanSearchParam('interaction', true)
+// ?ownLines=true restricts the embedded editable table to the active account's own lines
+const ownLines = useBooleanSearchParam('ownLines')
 </script>
