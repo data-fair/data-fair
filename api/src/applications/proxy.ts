@@ -4,6 +4,9 @@ import fs from 'fs'
 import path from 'path'
 import https from 'https'
 import http from 'http'
+import { createReadStream } from 'node:fs'
+import fsp from 'node:fs/promises'
+import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import * as parse5 from 'parse5'
 import pump from '../misc/utils/pipe.ts'
 import CacheableLookup from 'cacheable-lookup'
@@ -13,6 +16,8 @@ import { refreshConfigDatasetsRefs } from './utils.ts'
 import { buildManifest, buildLoginHtml } from './operations.ts'
 import { setProxyResource, reqApplication, reqMatchingApplicationKey } from './middlewares.ts'
 import { getManifestBaseApp, getProxyBaseAppAndLimits, fetchHTML, getHtmlCache } from './proxy-service.ts'
+import { ensureBaseAppDir, parseArtefactId } from '../base-applications/registry.ts'
+import { MIME } from '../base-applications/assets-router.ts'
 import Debug from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { reqSession, reqSiteUrl, reqUserAuthenticated } from '@data-fair/lib-express'
@@ -128,24 +133,47 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
 
   // merge incoming an target URL elements
   const incomingUrl = new URL('http://host' + req.url)
-  const targetUrl = new URL(cleanApplicationUrl.replace(config.applicationsPrivateMapping[0], config.applicationsPrivateMapping[1]))
   const extraPathParts = req.params.extraPath ? [...req.params.extraPath] : []
-  if (!req.params.extraPath || incomingUrl.pathname.endsWith('/')) extraPathParts.push('index.html')
-  targetUrl.pathname = path.join(targetUrl.pathname, ...extraPathParts)
-  targetUrl.search = incomingUrl.searchParams.toString()
+  const wantsIndex = extraPathParts.length === 0 || (extraPathParts.length === 1 && extraPathParts[0] === 'index.html') ||
+    (incomingUrl.pathname.endsWith('/') && extraPathParts.length === 0)
 
-  if (extraPathParts.length !== 1 || extraPathParts[0] !== 'index.html') {
-    // TODO: check the logs in production, if this line never appears then we can cleanup the code
-    console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
-    await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
-    return
+  let rawHtml: string
+  let assetsBase: string | null = null
+
+  if (baseApp.artefactId) {
+    const { dir, version } = await ensureBaseAppDir(baseApp.artefactId)
+    if (!wantsIndex && extraPathParts.length) {
+      // any non-index path is a file of the extracted app bundle: serve it directly.
+      // This is the fallback for legacy webpack/nuxt builds whose runtime resolves
+      // lazy chunks against the document URL (/app/:id/...) instead of the script URL.
+      await serveBaseAppFile(res, dir, extraPathParts.join('/'))
+      return
+    }
+    rawHtml = await fsp.readFile(path.join(dir, 'index.html'), 'utf8')
+    const { packageName, minor } = parseArtefactId(baseApp.artefactId)
+    const basePath = new URL(reqPublicBaseUrl(req)).pathname.replace(/\/$/, '')
+    assetsBase = `${basePath}/app-assets/${packageName}/${minor}/${version}/`
+  } else {
+    // legacy external-url base app (removed in the cleanup task)
+    const targetUrl = new URL(cleanApplicationUrl.replace(config.applicationsPrivateMapping[0], config.applicationsPrivateMapping[1]))
+    const legacyExtraParts = [...extraPathParts]
+    if (!req.params.extraPath || incomingUrl.pathname.endsWith('/')) legacyExtraParts.push('index.html')
+    targetUrl.pathname = path.join(targetUrl.pathname, ...legacyExtraParts)
+    targetUrl.search = incomingUrl.searchParams.toString()
+    if (legacyExtraParts.length !== 1 || legacyExtraParts[0] !== 'index.html') {
+      // TODO: check the logs in production, if this line never appears then we can cleanup the code
+      console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
+      await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
+      return
+    }
+    rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
   }
+
   res.setHeader('x-resource', JSON.stringify({ type: permissions.reqResourceType(req), id: permissions.reqResource(req).id, title: encodeURIComponent(permissions.reqResource(req).title) }))
   res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openApplication', track: 'openApplication' }))
   const ownerHeader: { type: string, id: string, department?: string } = { type: permissions.reqResource(req).owner.type, id: permissions.reqResource(req).owner.id }
   if (permissions.reqResource(req).owner.department) ownerHeader.department = permissions.reqResource(req).owner.department
   res.setHeader('x-owner', JSON.stringify(ownerHeader))
-  const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
 
   const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(application)))
   const html = document.childNodes.find((c: any) => c.tagName === 'html') as any
@@ -153,6 +181,20 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   const head = html.childNodes.find((c: any) => c.tagName === 'head')
   const body = html.childNodes.find((c: any) => c.tagName === 'body')
   if (!head || !body) throw new Error(req.__('errors.brokenHTML'))
+
+  // point the app's own relative asset refs at the shared immutable assets mount
+  if (assetsBase) {
+    const rewriteRef = (value: string) => {
+      if (/^(https?:)?\/\//.test(value) || value.startsWith('/') || value.startsWith('data:') || value.startsWith('#')) return value
+      return assetsBase + value.replace(/^\.\//, '')
+    }
+    for (const node of [...head.childNodes, ...body.childNodes]) {
+      for (const attrName of ['src', 'href']) {
+        const attr = node.attrs?.find((a: any) => a.name === attrName)
+        if (attr?.value) attr.value = rewriteRef(attr.value)
+      }
+    }
+  }
 
   const pushHeadNode = (node: any, text?: string, prepend = false) => {
     node.parentNode = head
@@ -332,4 +374,25 @@ const deprecatedProxy = async (cleanApplicationUrl: string, targetUrl: URL, req:
     cacheAppReq.on('error', err => reject(err))
     cacheAppReq.end()
   })
+}
+
+const serveBaseAppFile = async (res: express.Response, dir: string, filePath: string) => {
+  let resolved: string
+  try {
+    resolved = resolvePath(dir, filePath)
+  } catch {
+    res.status(404).type('text/plain').send()
+    return
+  }
+  const stats = await fsp.stat(resolved).catch(() => null)
+  if (!stats || !stats.isFile()) {
+    res.status(404).type('text/plain').send()
+    return
+  }
+  res.setHeader('content-type', MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream')
+  res.setHeader('x-content-type-options', 'nosniff')
+  // per-application URL: cacheable but short, the shared /app-assets mount is the long-lived tier
+  res.setHeader('cache-control', 'public, max-age=300')
+  res.setHeader('content-length', stats.size)
+  await pump(createReadStream(resolved), res)
 }
