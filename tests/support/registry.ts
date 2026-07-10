@@ -51,3 +51,8 @@ export const publishMockApps = async () => {
     })
   }
 }
+
+/** Patch a mock app's registry artefact (e.g. to flip `deprecated` or `privateAccess`). */
+export const patchMockAppArtefact = async (name: string, patch: Record<string, unknown>) => {
+  await internalAx.patch(`/api/v1/artefacts/${encodeURIComponent(mockAppArtefactId(name))}`, patch)
+}

@@ -197,7 +197,7 @@ export async function initBaseAppFromArtefact (artefactId: string, locale?: stri
     updatedAt: new Date().toISOString(),
     // registry-authoritative metadata
     public: artefact.public === true,
-    privateAccess: (artefact.privateAccess ?? []).map((a: any) => ({ type: a.type, id: a.id })),
+    privateAccess: (artefact.privateAccess ?? []).map((a: any) => ({ type: a.type, id: a.id, name: a.name })),
     deprecated: artefact.deprecated === true
   }
   const title = localizedRegistryField(artefact.title, effectiveLocale)
@@ -231,15 +231,29 @@ export async function initBaseAppFromArtefact (artefactId: string, locale?: stri
   return storedBaseApp as BaseApp
 }
 
+// Fetch every 'application' npm artefact visible in the registry, paginating through
+// the registry's hard-capped page size (100) with skip-based pages.
+async function listAllRegistryAppArtefacts () {
+  const pageSize = 100
+  const maxPages = 1000 // guard against an infinite loop if the registry misbehaves
+  const artefacts: any[] = []
+  for (let page = 0; page < maxPages; page++) {
+    const { results } = (await axios.get(`${config.privateRegistryUrl}/api/v1/artefacts`, {
+      params: { format: 'npm', category: 'application', size: pageSize, skip: page * pageSize, includeDeprecated: 'true' },
+      headers: registryArtefactHeaders()
+    })).data
+    artefacts.push(...results)
+    if (results.length < pageSize) break
+  }
+  return artefacts
+}
+
 // Sync every 'application' npm artefact visible in the registry into base-applications.
 export async function syncRegistryBaseApps () {
   const failures: { artefactId: string, error: string }[] = []
   let synced = 0
-  const { results } = (await axios.get(`${config.privateRegistryUrl}/api/v1/artefacts`, {
-    params: { format: 'npm', category: 'application', size: 1000 },
-    headers: registryArtefactHeaders()
-  })).data
-  for (const artefact of results) {
+  const artefacts = await listAllRegistryAppArtefacts()
+  for (const artefact of artefacts) {
     try {
       const baseApp = await initBaseAppFromArtefact(artefact._id)
       await syncBaseApp(baseApp)
