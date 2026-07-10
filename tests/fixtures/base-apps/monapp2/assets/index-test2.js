@@ -1,1 +1,1 @@
-console.log('monapp1 test asset')
+console.log('monapp2 test asset')
