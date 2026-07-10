@@ -39,6 +39,15 @@ const toCssKey = (key: string) => key.replace(/[^a-zA-Z0-9_-]/g, '__')
 export const visibleCalculatedCols = ['_updatedAt', '_updatedBy', '_owner']
 export const isVisibleCol = (property: SchemaProperty) => !property['x-calculated'] || visibleCalculatedCols.includes(property.key)
 
+// shorter labels for some columns, whose schema title describes the data rather than reading well as
+// a header ; keyed by column key, they never leave the table (the schema itself is untouched).
+// hasOwnProperty rather than a plain lookup: column keys come from the data and a "constructor" column
+// survives escapeKey, so it would otherwise pick up the Object.prototype member as its label.
+export const colLabel = (property: SchemaProperty, overrides?: Record<string, string>) => {
+  if (overrides && Object.prototype.hasOwnProperty.call(overrides, property.key)) return overrides[property.key]
+  return property.title || property['x-originalName'] || property.key
+}
+
 export const useHeaders = (
   selectedCols: Ref<string[]>,
   noInteraction: boolean,
@@ -47,8 +56,6 @@ export const useHeaders = (
   fixed: Ref<string | undefined>,
   syntheticColumns?: MaybeRefOrGetter<SyntheticColumn[]>,
   headerKeys?: MaybeRefOrGetter<boolean>,
-  // shorter labels for some columns, whose schema title describes the data rather than reading well as
-  // a header ; keyed by column key, they never leave the table (the schema itself is untouched)
   titleOverrides?: MaybeRefOrGetter<Record<string, string>>
 ) => {
   const { dataset, imageField, can } = useDatasetStore()
@@ -58,11 +65,7 @@ export const useHeaders = (
     if (!dataset.value?.schema) return
     const useKeyAsTitle = toValue(headerKeys) === true
     const overrides = toValue(titleOverrides)
-    const headerTitle = (p: SchemaProperty) => {
-      if (useKeyAsTitle) return p.key
-      if (overrides && Object.hasOwn(overrides, p.key)) return overrides[p.key]
-      return p.title || p['x-originalName'] || p.key
-    }
+    const headerTitle = (p: SchemaProperty) => useKeyAsTitle ? p.key : colLabel(p, overrides)
     let headers: TableHeader[] | undefined = dataset.value?.schema?.filter(p => selectedCols.value.includes(p.key)).map((p) => ({
       key: p.key,
       cssKey: toCssKey(p.key),
