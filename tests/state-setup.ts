@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'child_process'
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { test as setup } from '@playwright/test'
-import { apiUrl } from './support/axios.ts'
+import { apiUrl, axiosAuth } from './support/axios.ts'
 
 const ax = axiosBuilder()
 
@@ -38,6 +38,10 @@ Last error: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
   // Publish the mock base apps to the dev/test registry
   const { publishMockApps } = await import('./support/registry.ts')
   await publishMockApps()
+
+  // Sync them into base-applications so the whole suite sees registry-backed docs
+  const superadminAx = await axiosAuth('test_superadmin@test.com', undefined, true)
+  await superadminAx.post('/api/v1/base-applications/_sync')
 
   // More visible dev server logs straight in the test output
   try {

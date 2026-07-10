@@ -15,6 +15,7 @@
  */
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import FormData from 'form-data'
+import { publishMockApps } from '../tests/support/registry.ts'
 
 const root = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1}`
 const directoryUrl = `${root}/simple-directory`
@@ -563,6 +564,12 @@ async function main () {
   // gates the assistant UI). PATCH merges, so it preserves any other settings.
   await dfAx.patch('/api/v1/settings/organization/dev_fixtures', { agentChat: true })
   console.log('agent chat activated on organization/dev_fixtures settings')
+
+  // publish the mock base apps to the dev/test registry and sync them into base-applications
+  // (idempotent — safe to re-run on every `npm run dev-fixtures`)
+  await publishMockApps()
+  await dfAdminAx.post('/api/v1/base-applications/_sync')
+  console.log('mock base applications published to the registry and synced')
 
   await seedSuiviDemandes()
   await seedProduits()

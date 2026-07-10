@@ -1,19 +1,22 @@
 import { test, expect } from '../../fixtures/login.ts'
-import { axiosAuth, anonymousAx, apiUrl, clean, mockAppUrl } from '../../support/axios.ts'
+import { axiosAuth, clean, mockAppUrl } from '../../support/axios.ts'
+import { patchMockAppArtefact } from '../../support/registry.ts'
 
 test.describe('new application stepper', () => {
   test.beforeEach(async () => {
     await clean()
-    // Make monapp2 (App test2) public so it appears in base app selection.
-    // App test2 has an empty config schema (no dataset requirement) so it is never disabled.
-    await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'applications.1.public', value: true })
-    await anonymousAx.post(`${apiUrl}/api/v1/test-env/reload-base-apps`)
+    // Make monapp2 (App test monapp2) public so it appears in base app selection.
+    // monapp2 has an empty config schema (no dataset requirement) so it is never disabled.
+    await patchMockAppArtefact('monapp2', { public: true })
+    const superadminAx = await axiosAuth('test_superadmin@test.com', undefined, true)
+    await superadminAx.post('/api/v1/base-applications/_sync')
   })
 
   test.afterAll(async () => {
     // Restore monapp2 to non-public
-    await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'applications.1.public', value: false })
-    await anonymousAx.post(`${apiUrl}/api/v1/test-env/reload-base-apps`)
+    await patchMockAppArtefact('monapp2', { public: false })
+    const superadminAx = await axiosAuth('test_superadmin@test.com', undefined, true)
+    await superadminAx.post('/api/v1/base-applications/_sync')
   })
 
   test('base app creation: full stepper flow', async ({ page, goToWithAuth }) => {
@@ -27,8 +30,8 @@ test.describe('new application stepper', () => {
     // Step 2: Base app selection - verify category heading and base apps appear
     await expect(page.getByText('Application de type')).toBeVisible({ timeout: 10000 })
 
-    // Click "App test2" base app card (the one without dataset requirement, so not disabled)
-    const appCard = page.locator('.v-card-title', { hasText: 'App test2' })
+    // Click "App test monapp2" base app card (the one without dataset requirement, so not disabled)
+    const appCard = page.locator('.v-card-title', { hasText: 'App test monapp2' })
     await expect(appCard).toBeVisible({ timeout: 10000 })
     await appCard.click()
 

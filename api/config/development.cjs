@@ -116,19 +116,6 @@ module.exports = {
     sendMails: 'testkey',
     registry: 'secret-registry-internal'
   },
-  applications: [{
-    title: 'App test1',
-    url: `http://localhost:${process.env.MOCK_PORT}/monapp1`,
-    public: true
-  }, {
-    title: 'App test2',
-    url: `http://localhost:${process.env.MOCK_PORT}/monapp2`,
-    public: false
-  }, {
-    title: 'App test3',
-    url: `http://localhost:${process.env.MOCK_PORT}/monapp3`,
-    public: true
-  }],
   remoteServices: [{
     title: 'Geocoder',
     url: `http://localhost:${process.env.MOCK_PORT}/geocoder/api-docs.json`

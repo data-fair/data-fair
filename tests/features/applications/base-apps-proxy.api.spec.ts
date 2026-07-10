@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { test } from '@playwright/test'
-import { axiosAuth } from '../../support/axios.ts'
+import { axiosAuth, mockAppUrl } from '../../support/axios.ts'
 import { publishMockApps } from '../../support/registry.ts'
 
 test.describe('application proxy serving from registry extract', () => {
@@ -10,11 +10,7 @@ test.describe('application proxy serving from registry extract', () => {
     await adminAx.post('/api/v1/base-applications/_sync')
 
     const ax = await axiosAuth('test_user1@test.com')
-    // NOTE: mockAppUrl still returns the legacy mock-server url until Task 6;
-    // this test uses the new-style url directly
-    const newUrl = (await adminAx.get('/api/v1/admin/base-applications')).data.results
-      .find((a: any) => a.artefactId === '@test/monapp1@0.1').url
-    const { data: app } = await ax.post('/api/v1/applications', { url: newUrl })
+    const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
 
     const res = await ax.get(`/app/${app.id}/`)
     assert.equal(res.status, 200)

@@ -19,11 +19,11 @@ export const baseURL = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT1
 export const wsUrl = `ws://localhost:${process.env.DEV_API_PORT}`
 export const mockUrl = `http://localhost:${process.env.MOCK_PORT}`
 
-/** Get the full URL for a mock application (e.g. mockAppUrl('monapp1') → 'http://localhost:8999/monapp1/') */
-export const mockAppUrl = (name: string) => `${mockUrl}/${name}/`
+/** Canonical url of a mock base application, now served by data-fair itself from the registry artefact */
+export const mockAppUrl = (name: string) => `${baseURL}/app-assets/@test/${name}/0.1/`
 
-/** Get the base-application ID for a mock app (slugified URL) */
-export const mockAppId = (name: string) => slug(`${mockUrl}/${name}/`, { lower: true })
+/** The id of the base application (slug of its canonical url) */
+export const mockAppId = (name: string) => slug(mockAppUrl(name), { lower: true })
 
 const axiosOpts = { baseURL }
 
