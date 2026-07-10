@@ -155,6 +155,87 @@ async function tamperFile (id: string) {
   await dfAx.post(`/api/v1/test-env/tamper-dataset-file/${id}`, { content: 'ligne falsifiée hors du circuit applicatif\n' })
 }
 
+// ── Topics (group/filter the demo datasets by illustrated functionality) ───
+// Each fixture dataset is tagged with the functionality it demonstrates, so
+// the datasets list can group/filter them with the thematic chips. Stable
+// slug ids (never server-generated nanoids) keep re-runs idempotent.
+
+const fixtureTopics = [
+  { id: 'demo-integrite', title: 'Intégrité', color: '#B71C1C' },
+  { id: 'demo-editable', title: 'Éditable (REST)', color: '#1565C0' },
+  { id: 'demo-fichier', title: 'Fichier tabulaire', color: '#455A64' },
+  { id: 'demo-geo', title: 'Géographique', color: '#2E7D32' },
+  { id: 'demo-dates', title: 'Dates et fuseaux', color: '#6A1B9A' },
+  { id: 'demo-unicite', title: 'Unicité', color: '#E65100' },
+  { id: 'demo-recherche', title: 'Recherche et filtres', color: '#00838F' }
+]
+
+const datasetTopics: Record<string, string[]> = {
+  'fixtures-suivi-demandes': ['demo-editable'],
+  'fixtures-produits': ['demo-fichier'],
+  'fixtures-equipements': ['demo-geo'],
+  'fixtures-integrite-ok': ['demo-integrite'],
+  'fixtures-integrite-breach': ['demo-integrite'],
+  'fixtures-integrite-breach-meta': ['demo-integrite'],
+  'fixtures-integrite-reconcilie': ['demo-integrite'],
+  'fixtures-horaires-fuseaux': ['demo-dates'],
+  'fixtures-ignore-above': ['demo-recherche'],
+  'fixtures-unicite-rest': ['demo-unicite', 'demo-editable'],
+  'fixtures-unicite-fichier': ['demo-unicite', 'demo-fichier']
+}
+
+/** Upsert the demo topics into the org settings — merge by id so manually
+ * added topics survive. Topic renames propagate to datasets server-side. */
+async function ensureTopics () {
+  const { data: settings } = await dfAx.get('/api/v1/settings/organization/dev_fixtures')
+  const topics = [...(settings.topics ?? [])]
+  let changed = false
+  for (const t of fixtureTopics) {
+    const i = topics.findIndex((e: any) => e.id === t.id)
+    if (i === -1) { topics.push(t); changed = true } else if (topics[i].title !== t.title || topics[i].color !== t.color) { topics[i] = { ...topics[i], ...t }; changed = true }
+  }
+  if (changed) await dfAx.patch('/api/v1/settings/organization/dev_fixtures', { topics })
+  console.log(`topics ${changed ? 'upserted into' : 'already present in'} organization/dev_fixtures settings`)
+}
+
+/** Tag every fixture dataset with its topics. Runs after seeding so it also
+ * upgrades datasets seeded by earlier runs (they are skip-if-exists).
+ *
+ * Integrity interaction: a topics PATCH is a legitimate covered-field write,
+ * so on integrity-active datasets it historizes a metadata revision — which
+ * RE-ANCHORS the current document. On the two fixtures whose demo is a
+ * metadata tamper this would legitimize the tampered description and heal
+ * the breach, so after tagging them we wait for the re-anchor and re-apply
+ * the raw out-of-band tamper, then re-run the check to persist the verdict. */
+async function ensureDatasetTopics () {
+  // datasets whose demo state includes an out-of-band METADATA tamper that a
+  // legitimate re-anchor would erase — re-tampered after tagging. The re-tamper
+  // string must DIFFER from the seed-time one: the re-anchor legitimized the
+  // doc as it stood (tampered description included), so re-writing the same
+  // bytes would match the fresh anchor and the check would come back ok.
+  const metadataTampered: Record<string, string> = {
+    'fixtures-integrite-breach': 'description modifiée hors circuit, après ré-ancrage (démo intégrité)',
+    'fixtures-integrite-breach-meta': 'description falsifiée hors circuit, après ré-ancrage (démo intégrité par classe)'
+  }
+  for (const [id, topicIds] of Object.entries(datasetTopics)) {
+    if (!await datasetExists(id)) continue
+    const { data: current } = await dfAx.get(`/api/v1/datasets/${id}`, { params: { select: 'id,topics,integrity' } })
+    const currentIds = (current.topics ?? []).map((t: any) => t.id).sort().join(',')
+    if (currentIds === [...topicIds].sort().join(',')) continue
+    const integrityActive = !!current.integrity?.active
+    const metaAnchor = integrityActive ? await currentRevisionIndex(id, 'metadata') : -1
+    await dfAx.patch(`/api/v1/datasets/${id}`, { topics: topicIds.map(tid => fixtureTopics.find(t => t.id === tid)) })
+    if (integrityActive) await waitForNewRevision(id, metaAnchor, 'metadata')
+    if (metadataTampered[id]) {
+      await dfAdminAx.post(`/api/v1/test-env/patch-dataset/${id}`, { description: metadataTampered[id] })
+      const check = await runCheck(id)
+      console.log(`${id}: topics set (${topicIds.join(', ')}), tamper re-applied (check: file=${check.file?.status} metadata=${check.metadata?.status})`)
+    } else {
+      console.log(`${id}: topics set (${topicIds.join(', ')})`)
+    }
+  }
+}
+
 /** CSV file dataset: tabular reference data (product catalog). */
 async function seedProduits () {
   const id = 'fixtures-produits'
@@ -563,6 +644,8 @@ async function main () {
   await dfAx.patch('/api/v1/settings/organization/dev_fixtures', { agentChat: true })
   console.log('agent chat activated on organization/dev_fixtures settings')
 
+  await ensureTopics()
+
   await seedSuiviDemandes()
   await seedProduits()
   await seedEquipements()
@@ -574,6 +657,9 @@ async function main () {
   await seedIgnoreAbove()
   await seedUniciteRest()
   await seedUniciteFichier()
+
+  // after seeding so it also upgrades datasets skipped by earlier runs
+  await ensureDatasetTopics()
 
   console.log('\nDone. Browse the seeded data at:')
   for (const id of ['fixtures-suivi-demandes', 'fixtures-produits', 'fixtures-equipements', 'fixtures-integrite-ok', 'fixtures-integrite-breach', 'fixtures-integrite-breach-meta', 'fixtures-integrite-reconcilie', 'fixtures-horaires-fuseaux', 'fixtures-ignore-above', 'fixtures-unicite-rest', 'fixtures-unicite-fichier']) {
